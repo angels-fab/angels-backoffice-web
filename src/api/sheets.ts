@@ -33,14 +33,15 @@ export function cell(r: SheetRow, i: number): string {
 
 // ── 공지 새 글쓰기 (Apps Script doPost) ──
 export interface AddNoticePayload {
-  /** 작성 비밀번호 — Apps Script의 WRITE_KEY와 일치해야 저장됨 */
+  /** 게시자 이름 — '담당자' 시트 B열과 일치해야 함 */
+  author: string
+  /** 게시자 본인 비밀번호 — '담당자' 시트 C열과 대조 */
   key: string
   cat: string
   title: string
   body: string
   dept?: string
   deptMgr?: string
-  author?: string
   target?: string
   end?: string
   ref?: string

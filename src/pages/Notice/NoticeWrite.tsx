@@ -35,7 +35,8 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
     setError(null)
     if (!title.trim()) return setError('제목을 입력해주세요')
     if (!body.trim()) return setError('내용을 입력해주세요')
-    if (!key.trim()) return setError('작성 비밀번호를 입력해주세요')
+    if (!author.trim()) return setError('게시자(이름)를 입력해주세요')
+    if (!key.trim()) return setError('비밀번호를 입력해주세요')
     setSaving(true)
     try {
       const num = await addNotice({
@@ -78,8 +79,8 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
               </select>
             </label>
             <label className="mfield">
-              <span className="mlabel">게시자</span>
-              <input className="minput" value={author} onChange={e => setAuthor(e.target.value)} placeholder="이름" />
+              <span className="mlabel">게시자 *</span>
+              <input className="minput" value={author} onChange={e => setAuthor(e.target.value)} placeholder="이름 (담당자 명단과 동일하게)" />
             </label>
           </div>
           <label className="mfield">
@@ -116,13 +117,13 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
             </label>
           </div>
           <label className="mfield">
-            <span className="mlabel">작성 비밀번호 *</span>
+            <span className="mlabel">본인 비밀번호 *</span>
             <input
               className="minput"
               type="password"
               value={key}
               onChange={e => setKey(e.target.value)}
-              placeholder="팀 공용 비밀번호"
+              placeholder="게시자 본인의 비밀번호"
               autoComplete="off"
             />
           </label>
