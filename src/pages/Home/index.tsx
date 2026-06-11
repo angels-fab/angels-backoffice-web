@@ -3,6 +3,7 @@ import CampaignIcon from '@mui/icons-material/Campaign'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import Greeting from './Greeting'
+import BentoStats from './BentoStats'
 import RoadmapTimeline from './RoadmapTimeline'
 import EqSummaryInner from '@/components/EqSummaryInner'
 import { CalPreview, EqPreview, NoticePreview, WorkPreview, useWorkCountBadge } from './previews'
@@ -15,6 +16,9 @@ export default function Home() {
     <div id="home">
       <main>
         <Greeting />
+
+        {/* 벤토 KPI 타일 */}
+        <BentoStats />
 
         {/* 장비 현황 (전체) */}
         <div className="eq-summary" onClick={() => navigate('/equipment')} role="button" tabIndex={0}>

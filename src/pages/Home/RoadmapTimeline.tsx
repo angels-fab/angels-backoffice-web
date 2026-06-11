@@ -10,7 +10,8 @@ export default function RoadmapTimeline() {
       <div className="dash-header">
         <span className="dash-title">FAB 구축 로드맵</span>
       </div>
-      <div className="rm-timeline-wrap">
+      <div className="bento-panel">
+        <div className="rm-timeline-wrap">
         <div className="rm-timeline-track" />
         <div className="rm-steps">
           {ROADMAP_STEPS.map(step => (
@@ -23,6 +24,7 @@ export default function RoadmapTimeline() {
               <div className={`rm-step-status ${STATUS_CLS[step.status]}`}>{STATUS_LABEL[step.status]}</div>
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>
