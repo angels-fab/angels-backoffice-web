@@ -30,3 +30,32 @@ export function cell(r: SheetRow, i: number): string {
   const v = r[i]
   return v === null || v === undefined ? '' : String(v).trim()
 }
+
+// ── 공지 새 글쓰기 (Apps Script doPost) ──
+export interface AddNoticePayload {
+  /** 작성 비밀번호 — Apps Script의 WRITE_KEY와 일치해야 저장됨 */
+  key: string
+  cat: string
+  title: string
+  body: string
+  dept?: string
+  deptMgr?: string
+  author?: string
+  target?: string
+  end?: string
+  ref?: string
+}
+
+export async function addNotice(p: AddNoticePayload): Promise<number> {
+  // 주의: 헤더를 추가하면 CORS 프리플라이트가 발생해 실패함 — body만 보낼 것 (text/plain 단순 요청)
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'addNotice', ...p }) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string; num?: number }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 글쓰기를 지원하지 않습니다 (Apps Script 업데이트 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '저장 실패')
+  return json.num || 0
+}

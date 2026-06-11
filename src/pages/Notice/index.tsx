@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import CampaignIcon from '@mui/icons-material/Campaign'
+import EditNoteIcon from '@mui/icons-material/EditNote'
 import SearchIcon from '@mui/icons-material/Search'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
 import { todaySeoul } from '@/utils/date'
 import type { Notice as NoticeItem } from '@/types'
 import TitleLoad from '@/components/TitleLoad'
+import NoticeWrite from './NoticeWrite'
 
 const NOTICE_CAT_STYLE: Record<string, CSSProperties> = {
   긴급: { background: 'rgba(248,81,73,.14)', color: '#f87171', borderColor: 'rgba(248,81,73,.32)' },
@@ -42,6 +44,7 @@ export default function Notice() {
   const [cat, setCat] = useState('전체')
   const [query, setQuery] = useState('')
   const [openId, setOpenId] = useState<number | null>(null)
+  const [writeOpen, setWriteOpen] = useState(false)
 
   // 연번 딥링크(/notice/12)로 진입한 경우 해당 공지 펼치기
   useEffect(() => {
@@ -59,7 +62,7 @@ export default function Notice() {
       }, 60)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, num])
+  }, [ready, num, items])
 
   // 데이터에 존재하는 분류 + 기본 분류 순서
   const cats = useMemo(() => {
@@ -110,6 +113,15 @@ export default function Notice() {
     dispatch(loadNoticeData())
   }
 
+  // 새 글 저장 완료 → 목록 새로고침 후 방금 쓴 글을 펼쳐서 보여줌
+  const handleSaved = (savedNum: number) => {
+    setWriteOpen(false)
+    setCat('전체')
+    setQuery('')
+    dispatch(loadNoticeData())
+    if (savedNum > 0) navigate(`/notice/${savedNum}`, { replace: true })
+  }
+
   return (
     <div className="page active" id="page-공지사항">
       <div className="page-header">
@@ -117,7 +129,12 @@ export default function Notice() {
           <CampaignIcon /> 공지사항
         </div>
         <TitleLoad loading={loading} text={error ? '불러오기 실패' : updatedAt} />
+        <button className="write-btn" onClick={() => setWriteOpen(true)}>
+          <EditNoteIcon sx={{ fontSize: 17 }} /> 새 글쓰기
+        </button>
       </div>
+
+      <NoticeWrite open={writeOpen} onClose={() => setWriteOpen(false)} onSaved={handleSaved} />
 
       {/* 툴바: 분류 필터(좌) + 검색창(우) */}
       <div className="notice-toolbar">
