@@ -51,6 +51,12 @@ export default function Notice() {
     if (n && openId !== n.id) {
       setOpenId(n.id)
       dispatch(bumpNoticeViews(n.id))
+      // 딥링크 진입 시에도 펼친 항목이 화면에 보이도록
+      setTimeout(() => {
+        document
+          .querySelector(`.ntc-item[data-id="${n.id}"]`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }, 60)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, num])
