@@ -3,6 +3,9 @@ import type { CSSProperties } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import EditNoteIcon from '@mui/icons-material/EditNote'
+import LinkIcon from '@mui/icons-material/Link'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import PushPinIcon from '@mui/icons-material/PushPin'
 import SearchIcon from '@mui/icons-material/Search'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
@@ -18,6 +21,14 @@ const NOTICE_CAT_STYLE: Record<string, CSSProperties> = {
   행사: { background: 'rgba(63,185,80,.14)', color: '#3FB950', borderColor: 'rgba(63,185,80,.3)' },
 }
 const noticeCatStyle = (cat: string) => NOTICE_CAT_STYLE[cat] || NOTICE_CAT_STYLE['공지']
+
+/** 관련자료(H열)에서 첫 URL 추출 — 있으면 첨부 아이콘 표시 */
+const refUrl = (n: NoticeItem) => String(n.ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
+/** 종료일자 → '6/26' 형태 (제목 뒤 (~6/26) 표기용) */
+const endShort = (n: NoticeItem) => {
+  const m = String(n.end || '').match(/\d{4}-(\d{2})-(\d{2})/)
+  return m ? `${Number(m[1])}/${Number(m[2])}` : null
+}
 
 // 본문을 안전하게 표시 (시트 텍스트의 줄바꿈 → <p>, URL 자동 링크)
 // 이미 HTML 태그(<p> 등)가 들어있으면 그대로 신뢰 (관리자 작성 시트)
@@ -167,6 +178,15 @@ export default function Notice() {
       </div>
 
       <div className="notice-board notice-accordion">
+        {/* 컬럼 헤더: 번호/구분/제목/게시자/작성일/첨부 */}
+        <div className="ntc-colhead">
+          <span>번호</span>
+          <span>구분</span>
+          <span className="ntc-ch-title">제목</span>
+          <span className="ntc-ch-author">게시자</span>
+          <span className="ntc-ch-date">작성일</span>
+          <span><LinkIcon sx={{ fontSize: 16 }} /></span>
+        </div>
         {!ready ? (
           <>
             <div className="ntc-skel" />
@@ -178,24 +198,43 @@ export default function Notice() {
         ) : (
           filtered.map(n => {
             const open = openId === n.id
-            const deptMgr = [n.dept, n.deptMgr].filter(Boolean).join(' | ')
+            const url = refUrl(n)
             return (
               <div
                 key={n.id}
-                className={`ntc-item${open ? ' open' : ''}${isExpired(n) ? ' expired' : ''}`}
+                className={`ntc-item${open ? ' open' : ''}${isExpired(n) ? ' expired' : ''}${n.pinned ? ' pinned' : ''}`}
                 data-id={n.id}
               >
-                <button className="ntc-summary" onClick={() => toggle(n)}>
-                  <span className="ntc-cat-inner" style={noticeCatStyle(n.cat)}>{n.cat}</span>
+                <div className="ntc-summary" role="button" tabIndex={0} onClick={() => toggle(n)}>
+                  <span className="ntc-num">
+                    {n.pinned && <PushPinIcon className="ntc-pin" sx={{ fontSize: 12 }} />}
+                    {n.num}
+                  </span>
+                  <span className="ntc-cat-cell">
+                    <span className="ntc-cat-inner" style={noticeCatStyle(n.cat)}>{n.cat}</span>
+                  </span>
                   <span className="ntc-title-text">
+                    {n.dept && <span className="ntc-dept-tag">[{n.dept}]</span>}
                     {n.title}
+                    {endShort(n) && <span className="ntc-end-tag">(~{endShort(n)})</span>}
                     {n.isNew && <span className="ntc-new">N</span>}
                   </span>
-                  <span className="ntc-meta">
-                    {deptMgr && <span className="ntc-deptmgr">{deptMgr}</span>}
-                    <span className="ntc-date">{n.date}</span>
+                  <span className="ntc-author">{n.author}</span>
+                  <span className="ntc-date">{n.date}</span>
+                  <span className="ntc-att">
+                    {url && (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="첨부 링크 열기"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        <OpenInNewIcon sx={{ fontSize: 16 }} />
+                      </a>
+                    )}
                   </span>
-                </button>
+                </div>
                 {open && (
                   <div className="ntc-panel">
                     <div className="ntc-panel-inner">
