@@ -54,25 +54,27 @@ export default function Notice() {
   const { items, ready, loading, error, updatedAt } = useAppSelector(s => s.notice)
   const [cat, setCat] = useState('전체')
   const [query, setQuery] = useState('')
-  const [openId, setOpenId] = useState<number | null>(null)
   const [writeOpen, setWriteOpen] = useState(false)
 
-  // 연번 딥링크(/notice/12)로 진입한 경우 해당 공지 펼치기
-  useEffect(() => {
-    if (!ready || !num) return
+  // 펼친 글 = URL(/notice/연번)에서 직접 계산 — 상태 동기화가 없어 무한루프 원천 차단
+  const openId = useMemo(() => {
+    if (!num) return null
     const n = items.find(x => String(x.num) === String(num))
-    if (n && openId !== n.id) {
-      setOpenId(n.id)
-      dispatch(bumpNoticeViews(n.id))
-      // 딥링크 진입 시에도 펼친 항목이 화면에 보이도록
-      setTimeout(() => {
-        document
-          .querySelector(`.ntc-item[data-id="${n.id}"]`)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-      }, 60)
-    }
+    return n ? n.id : null
+  }, [items, num])
+
+  // 글이 펼쳐질 때 1회: 조회수 증가 + 화면 스크롤
+  useEffect(() => {
+    if (!ready || openId == null) return
+    dispatch(bumpNoticeViews(openId))
+    const t = setTimeout(() => {
+      document
+        .querySelector(`.ntc-item[data-id="${openId}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 60)
+    return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, num, items])
+  }, [ready, openId])
 
   // 데이터에 존재하는 분류 + 기본 분류 순서
   const cats = useMemo(() => {
@@ -98,28 +100,21 @@ export default function Notice() {
   const today = todaySeoul()
   const isExpired = (n: NoticeItem) => !!n.end && n.end < today
 
-  // 아코디언 토글 — 한 번에 하나만 열림
+  // 아코디언 토글 — URL만 바꾸면 위 useMemo가 펼침을 계산 (한 번에 하나만 열림)
   const toggle = (n: NoticeItem) => {
-    if (openId === n.id) {
-      setOpenId(null)
-      navigate('/notice', { replace: true })
-      return
-    }
-    setOpenId(n.id)
-    dispatch(bumpNoticeViews(n.id))
-    navigate(`/notice/${n.num}`, { replace: true })
-    // 펼친 항목이 화면에 보이도록 부드럽게 스크롤
-    setTimeout(() => {
-      document
-        .querySelector(`.ntc-item[data-id="${n.id}"]`)
-        ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    }, 60)
+    if (openId === n.id) navigate('/notice', { replace: true })
+    else navigate(`/notice/${n.num}`, { replace: true })
+  }
+
+  // 분류·검색 변경 시 펼침 닫기 (URL 정리)
+  const closeOpen = () => {
+    if (num) navigate('/notice', { replace: true })
   }
 
   const refresh = () => {
     setCat('전체')
     setQuery('')
-    setOpenId(null)
+    closeOpen()
     dispatch(loadNoticeData())
   }
 
@@ -155,7 +150,7 @@ export default function Notice() {
               className={`nflt-btn${cat === c ? ' active' : ''}`}
               onClick={() => {
                 setCat(c)
-                setOpenId(null) // 분류 바꾸면 펼침 닫기
+                closeOpen() // 분류 바꾸면 펼침 닫기
               }}
             >
               {c}
@@ -171,7 +166,7 @@ export default function Notice() {
             value={query}
             onChange={e => {
               setQuery(e.target.value)
-              setOpenId(null)
+              closeOpen()
             }}
           />
         </span>

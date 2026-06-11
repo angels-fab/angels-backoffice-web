@@ -138,6 +138,11 @@ function addNotice_(req) {
   set(['해당자', '대상'], String(req.target || ''));
 
   sh.appendRow(row);
+  // B열 상단체크: 새 행에 체크박스 서식 적용 → 체크(TRUE)/해제(FALSE)가 박스로 표시됨
+  const pinCol = col(['상단체크', '상단고정', '고정']);
+  if (pinCol >= 0) {
+    sh.getRange(sh.getLastRow(), pinCol + 1).insertCheckboxes().setValue(req.pinned === true);
+  }
   return json_({ status: 'ok', num: newNum });
 }
 
