@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import CloseIcon from '@mui/icons-material/Close'
 import EditNoteIcon from '@mui/icons-material/EditNote'
-import { addNotice } from '@/api/sheets'
+import { addNotice, fetchAuthors } from '@/api/sheets'
 
 const CATS = ['긴급', '공지', '일반', '행사']
 
@@ -21,11 +21,24 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
   const [dept, setDept] = useState('')
   const [deptMgr, setDeptMgr] = useState('')
   const [author, setAuthor] = useState('')
-  const [target, setTarget] = useState('')
+  const [targets, setTargets] = useState<string[]>([]) // 해당자 — 버튼 선택식
+  const [targetText, setTargetText] = useState('') // 명단 로드 실패 시 직접 입력 폴백
+  const [pinned, setPinned] = useState(false)
   const [end, setEnd] = useState('')
   const [key, setKey] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [authors, setAuthors] = useState<string[] | null>(null)
+  const [authorsFail, setAuthorsFail] = useState(false)
+
+  // 모달 첫 오픈 시 담당자 명단(이름만) 로드 — 해당자 선택 버튼용
+  useEffect(() => {
+    if (!open || authors !== null || authorsFail) return
+    fetchAuthors()
+      .then(setAuthors)
+      .catch(() => setAuthorsFail(true))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
 
   if (!open) return null
 
@@ -40,12 +53,12 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
     setSaving(true)
     try {
       const num = await addNotice({
-        key: key.trim(), cat, title: title.trim(), body,
+        key: key.trim(), cat, title: title.trim(), body, pinned,
         dept: dept.trim(), deptMgr: deptMgr.trim(), author: author.trim(),
-        target: target.trim(), end,
+        target: authorsFail ? targetText.trim() : targets.join(', '), end,
       })
       setSaving(false)
-      setTitle(''); setBody(''); setTarget(''); setEnd('')
+      setTitle(''); setBody(''); setTargets([]); setTargetText(''); setEnd(''); setPinned(false)
       onSaved(num)
     } catch (err) {
       setError(err instanceof Error ? err.message : '저장 실패')
@@ -106,15 +119,44 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
               <input className="minput" value={deptMgr} onChange={e => setDeptMgr(e.target.value)} />
             </label>
           </div>
+          <div className="mfield">
+            <span className="mlabel">해당자 (선택) — 누르면 선택/해제</span>
+            {authorsFail ? (
+              <input
+                className="minput"
+                value={targetText}
+                onChange={e => setTargetText(e.target.value)}
+                placeholder="예: 박주봉, 조성범"
+              />
+            ) : authors === null ? (
+              <span className="mhint">담당자 명단 불러오는 중...</span>
+            ) : (
+              <div className="mchip-row">
+                {authors.map(a => (
+                  <button
+                    key={a}
+                    type="button"
+                    className={`mchip${targets.includes(a) ? ' active' : ''}`}
+                    onClick={() => setTargets(t => (t.includes(a) ? t.filter(x => x !== a) : [...t, a]))}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="mrow">
-            <label className="mfield">
-              <span className="mlabel">해당자 (선택)</span>
-              <input className="minput" value={target} onChange={e => setTarget(e.target.value)} placeholder="예: 전 직원" />
-            </label>
             <label className="mfield">
               <span className="mlabel">게시 종료일 (선택)</span>
               <input className="minput" type="date" value={end} onChange={e => setEnd(e.target.value)} />
             </label>
+            <div className="mfield">
+              <span className="mlabel">상단고정</span>
+              <label className="mcheck">
+                <input type="checkbox" checked={pinned} onChange={e => setPinned(e.target.checked)} />
+                게시판 맨 위에 고정
+              </label>
+            </div>
           </div>
           <label className="mfield">
             <span className="mlabel">본인 비밀번호 *</span>

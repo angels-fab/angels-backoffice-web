@@ -658,6 +658,13 @@ body.eq-wide main{max-width:98vw}
 .mbtn-primary:hover{filter:brightness(1.08);color:#000}
 .mbtn-primary:disabled{opacity:.6;cursor:default}
 .mbtn:disabled,.modal-x:disabled{opacity:.5;cursor:default}
+.mchip-row{display:flex;flex-wrap:wrap;gap:6px}
+.mchip{padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-family:inherit;cursor:pointer;transition:all .12s}
+.mchip:hover{color:var(--text);border-color:var(--text3)}
+.mchip.active{background:rgba(88,166,255,.14);border-color:var(--blue);color:var(--blue);font-weight:600}
+.mcheck{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;user-select:none;padding:8px 0}
+.mcheck input{width:16px;height:16px;accent-color:var(--amber);cursor:pointer}
+.mhint{font-size:12px;color:var(--text3);padding:6px 0}
 
 /* ── Post detail ── */
 .post-wrap{background:var(--ink2);border:0.5px solid var(--border);border-radius:10px;overflow:hidden}
