@@ -150,15 +150,6 @@ export default function Notice() {
         </span>
       </div>
 
-      {/* 컬럼 헤더: 번호 / 구분 / 제목 / 부서|담당자 / 작성일 */}
-      <div className="ntc-colhead">
-        <span className="ntc-ch-num">번호</span>
-        <span className="ntc-ch-cat">구분</span>
-        <span className="ntc-ch-title">제목</span>
-        <span className="ntc-ch-dept">부서 | 담당자</span>
-        <span className="ntc-ch-date">작성일</span>
-      </div>
-
       <div className="notice-board notice-accordion">
         {!ready ? (
           <>
@@ -179,18 +170,15 @@ export default function Notice() {
                 data-id={n.id}
               >
                 <button className="ntc-summary" onClick={() => toggle(n)}>
-                  <span className="ntc-num">{n.num}</span>
-                  <span className="ntc-cat-badge">
-                    <span className="ntc-cat-inner" style={noticeCatStyle(n.cat)}>
-                      {n.cat}
-                    </span>
-                  </span>
+                  <span className="ntc-cat-inner" style={noticeCatStyle(n.cat)}>{n.cat}</span>
                   <span className="ntc-title-text">
                     {n.title}
                     {n.isNew && <span className="ntc-new">N</span>}
                   </span>
-                  <span className="ntc-deptmgr">{deptMgr}</span>
-                  <span className="ntc-date">{n.date}</span>
+                  <span className="ntc-meta">
+                    {deptMgr && <span className="ntc-deptmgr">{deptMgr}</span>}
+                    <span className="ntc-date">{n.date}</span>
+                  </span>
                 </button>
                 {open && (
                   <div className="ntc-panel">

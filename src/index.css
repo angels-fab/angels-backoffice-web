@@ -569,39 +569,28 @@ body.eq-wide main{max-width:98vw}
 .notice-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
 .notice-toolbar .notice-filter-bar{margin-bottom:0;flex:1 1 auto}
 .notice-search-wrap{flex:0 0 auto}
-/* 컬럼 정렬: 번호 / 구분 / 제목(가변) / 부서|담당자 / 작성일 */
-.ntc-colhead,.ntc-summary{display:grid;grid-template-columns:46px 64px minmax(0,1fr) 180px 100px;align-items:center;gap:0}
-/* 게시판 전체를 하나의 테두리로 감싸기 */
-.notice-board.notice-accordion{display:block;border:0.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--ink2)}
+/* 게시판 전체를 하나의 테두리로 감싸기 — 컬럼 헤더 없는 모던 보드 */
+.notice-board.notice-accordion{display:block;border:1px solid var(--border2);border-radius:16px;overflow:hidden;background:var(--ink2)}
 .notice-board.notice-accordion>*{border-radius:0}
-/* 고정 컬럼 헤더 — 게시글과 붙이고 아래 구분선 */
-.ntc-colhead{margin:0;padding:0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:var(--ink3);font-size:13px;font-weight:700;color:var(--text);letter-spacing:.3px}
-.ntc-colhead>span{text-align:center;padding:13px 10px;border-left:0.5px solid var(--border2)}
-.ntc-colhead>span:first-child{border-left:none}
 .ntc-item{border:none;border-top:0.5px solid var(--border2);border-radius:0;background:transparent;overflow:hidden;transition:background .15s}
 .ntc-item:first-child{border-top:none}
 .ntc-item:hover{background:var(--ink3)}
 .ntc-item.open{background:rgba(88,166,255,.05)}
 .ntc-item.open:hover{background:rgba(88,166,255,.07)}
-.ntc-summary{width:100%;padding:0;background:transparent;border:none;cursor:pointer;font-family:inherit;text-align:left}
-/* 닫힌 줄 각 셀 — 세로 구분선 + 패딩 */
-.ntc-summary>span{padding:13px 10px;border-left:0.5px solid var(--border2);height:100%;display:flex;align-items:center}
-.ntc-summary>span:first-child{border-left:none}
-.ntc-num{justify-content:center;font-size:13px;font-weight:700;color:var(--text2);font-variant-numeric:tabular-nums}
-.ntc-item.open .ntc-num{color:#58A6FF}
-.ntc-cat-badge{justify-content:center}
-.ntc-cat-inner{padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.2px;white-space:nowrap}
-.ntc-title-text{min-width:0;font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 닫힌 줄: [배지] [제목] ... [부서·담당 | 날짜] 한 줄 플렉스 */
+.ntc-summary{display:flex;align-items:center;gap:11px;width:100%;padding:14px 18px;background:transparent;border:none;cursor:pointer;font-family:inherit;text-align:left}
+.ntc-cat-inner{padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.2px;white-space:nowrap;flex-shrink:0}
+.ntc-title-text{flex:1;min-width:0;font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ntc-item.open .ntc-title-text{white-space:normal;overflow:visible}
 .ntc-item.expired .ntc-title-text{color:var(--text3);font-weight:500}
-.ntc-item.expired .ntc-num{color:var(--text3);opacity:.7}
 .ntc-new{display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:#fff;font-size:8px;font-weight:800;min-width:14px;height:14px;padding:0 3px;border-radius:7px;margin-left:7px;flex-shrink:0;letter-spacing:.3px}
-.ntc-deptmgr{font-size:11.5px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;justify-content:center}
-.ntc-date{font-size:11.5px;color:var(--text2);font-variant-numeric:tabular-nums;white-space:nowrap;justify-content:center}
+.ntc-meta{margin-left:auto;display:flex;align-items:center;gap:14px;flex-shrink:0}
+.ntc-deptmgr{font-size:11.5px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ntc-date{font-size:11.5px;color:var(--text3);font-variant-numeric:tabular-nums;white-space:nowrap}
 /* 펼침 패널 */
 .ntc-panel{overflow:hidden;animation:ntcSlide .22s ease}
 @keyframes ntcSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-.ntc-panel-inner{padding:16px 20px 22px 56px;border-top:0.5px solid var(--border2);background:var(--ink)}
+.ntc-panel-inner{padding:2px 18px 20px;background:transparent}
 .ntc-body{font-size:13px;color:var(--text2);line-height:1.85}
 .ntc-body p{margin:0 0 11px}
 .ntc-body p:last-child{margin-bottom:0}
@@ -616,15 +605,11 @@ body.eq-wide main{max-width:98vw}
 @keyframes ntcShimmer{from{background-position:200% 0}to{background-position:-200% 0}}
 .ntc-empty{text-align:center;padding:48px 20px;color:var(--text3);font-size:13px}
 @media(max-width:620px){
-  /* 모바일: 부서|담당자 컬럼 숨기고 간결하게 */
-  .ntc-colhead{grid-template-columns:38px 56px minmax(0,1fr) 84px}
-  .ntc-colhead .ntc-ch-dept{display:none}
-  .ntc-summary{grid-template-columns:38px 56px minmax(0,1fr) 84px}
+  /* 모바일: 부서|담당자 숨기고 간결하게 */
   .ntc-deptmgr{display:none}
-  .ntc-summary>span{padding:11px 6px}
-  .ntc-colhead>span{padding:11px 6px;font-size:12px}
+  .ntc-summary{padding:12px 14px;gap:9px}
   .ntc-title-text{font-size:13px}
-  .ntc-panel-inner{padding:14px 14px 18px}
+  .ntc-panel-inner{padding:2px 14px 16px}
   .notice-search-wrap{width:100%}
   .notice-search-wrap .wflt-search{width:100%}
 }
@@ -687,8 +672,8 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .nav-flyout a:hover{background:var(--ink3);color:var(--text)}
 .nav-flyout .fl-ico{width:33px;display:inline-flex;align-items:center;justify-content:center;font-size:23px;line-height:1}
 .nav-flyout .fl-sub{display:none}
-.page-title{font-size:18px;font-weight:600;display:flex;align-items:center;gap:7px}
-.page-title svg{font-size:21px;color:var(--text2)}
+.page-title{font-size:20px;font-weight:600;display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
+.page-title svg{font-size:22px;color:var(--text2)}
 .search-wrap{position:relative;display:inline-flex;align-items:center}
 .search-wrap>svg{position:absolute;left:9px;font-size:16px;color:var(--text3);pointer-events:none}
 .search-wrap .wflt-search{padding-left:30px}
