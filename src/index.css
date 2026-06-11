@@ -84,7 +84,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .eq-prev-val{font-weight:600;font-family:"IBM Plex Mono",monospace}
 /* ── 미니 KPI (홈 장비현황 미리보기) ── */
 .eqm{display:grid;grid-template-columns:1.1fr 1.6fr;gap:8px;width:100%}
-.eqm-big{background:linear-gradient(135deg,#0d2440,#0a1828);border:1px solid #1f4068;border-radius:10px;padding:11px 13px;display:flex;flex-direction:column;justify-content:center;gap:5px}
+.eqm-big{background:rgba(88,166,255,.10);border:none;border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;justify-content:center;gap:5px}
 .eqm-big-lbl{font-size:11px;font-weight:700;color:#4d9fff}
 .eqm-big-num{font-size:24px;font-weight:800;color:#fff;line-height:1}
 .eqm-big-num .u{font-size:11px;font-weight:600;color:var(--text2);margin-left:1px}
@@ -734,20 +734,32 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .eqs-col{display:flex;flex-direction:column;align-items:center}
 .eqs-col-graph{flex:1;min-height:14px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px}
 
-/* ── 홈: 벤토 KPI 타일 ── */
-.bento-stats{width:100%;max-width:1180px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px}
-.bento-tile{border:none;border-radius:18px;padding:15px 17px;display:flex;flex-direction:column;gap:8px;cursor:pointer;font-family:inherit;text-align:left;transition:transform .15s,opacity .15s;-webkit-tap-highlight-color:transparent}
-.bento-tile:hover{transform:translateY(-2px)}
-.bt-head{display:flex;align-items:center;justify-content:space-between;width:100%}
-.bt-head svg{font-size:17px}
-.bt-label{font-size:12px;font-weight:600}
-.bt-num{font-size:27px;font-weight:700;color:#fff;line-height:1}
-.bt-num .u{font-size:12px;font-weight:500;margin-left:3px}
-.bt-purple{background:rgba(188,140,255,.10)}.bt-purple .bt-label,.bt-purple .bt-head svg{color:var(--purple)}.bt-purple .bt-num .u{color:#a89cd9}
-.bt-amber{background:rgba(240,180,41,.10)}.bt-amber .bt-label,.bt-amber .bt-head svg{color:var(--amber)}.bt-amber .bt-num .u{color:#c2a266}
-.bt-green{background:rgba(63,185,80,.10)}.bt-green .bt-label,.bt-green .bt-head svg{color:var(--green)}.bt-green .bt-num .u{color:#7dba8a}
-.bt-blue{background:rgba(88,166,255,.10)}.bt-blue .bt-label,.bt-blue .bt-head svg{color:var(--blue)}.bt-blue .bt-num .u{color:#86aed9}
-@media(max-width:640px){.bento-stats{grid-template-columns:repeat(2,1fr);gap:9px}.bt-num{font-size:22px}.bento-tile{padding:13px 14px;border-radius:16px}}
+/* ── 홈: 벤토 모자이크 (타일 = 숫자 배지 + 미리보기 통합) ── */
+.bento-grid{width:100%;max-width:1180px;display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.bento-card{background:var(--ink2);border:1px solid var(--border2);border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:transform .15s,border-color .15s;-webkit-tap-highlight-color:transparent;min-width:0}
+.bento-card:hover{transform:translateY(-2px);border-color:var(--border)}
+.bc-eq{grid-column:span 7}
+.bc-work{grid-column:span 5}
+.bc-notice{grid-column:span 6}
+.bc-cal{grid-column:span 6}
+@media(max-width:860px){.bc-eq,.bc-work,.bc-notice,.bc-cal{grid-column:1/-1}}
+.bc-head{display:flex;align-items:center;gap:9px;width:100%}
+.bc-ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.bci-blue{background:rgba(88,166,255,.12);color:var(--blue)}
+.bci-amber{background:rgba(240,180,41,.12);color:var(--amber)}
+.bci-red{background:rgba(248,81,73,.12);color:var(--red)}
+.bci-purple{background:rgba(188,140,255,.12);color:var(--purple)}
+.bc-name{font-size:14px;font-weight:600;color:var(--text)}
+.bc-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;white-space:nowrap}
+.bcb-blue{background:rgba(88,166,255,.12);color:var(--blue)}
+.bcb-amber{background:rgba(240,180,41,.12);color:var(--amber)}
+.bcb-red{background:rgba(248,81,73,.14);color:var(--red)}
+.bcb-purple{background:rgba(188,140,255,.12);color:var(--purple)}
+/* 장비 타일 내부 미리보기 중간 사이즈 보정 */
+.bc-eq .eqm{grid-template-columns:1.1fr 2fr;gap:10px}
+.bc-eq .eqm-grid{grid-template-columns:repeat(2,1fr);gap:8px}
+.bc-eq .eqm-big-num{font-size:28px}
+.bc-eq .eqm-cell{padding:9px 12px}
 
 /* ── 홈: 벤토 패널 (로드맵 등 큰 섹션 타일) ── */
 .bento-panel{background:var(--ink2);border:1px solid var(--border2);border-radius:18px;padding:6px 22px 16px}

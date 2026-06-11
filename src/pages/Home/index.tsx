@@ -2,109 +2,50 @@ import { useNavigate } from 'react-router-dom'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import AssessmentIcon from '@mui/icons-material/Assessment'
+import MemoryIcon from '@mui/icons-material/Memory'
 import Greeting from './Greeting'
-import BentoStats from './BentoStats'
 import RoadmapTimeline from './RoadmapTimeline'
-import EqSummaryInner from '@/components/EqSummaryInner'
 import { CalPreview, EqPreview, NoticePreview, WorkPreview, useWorkCountBadge } from './previews'
+import { useAppSelector } from '@/store/hooks'
+import { selectEqCounts } from '@/store/selectors'
+import { CAL_EVENTS } from '@/constants/calendar'
+import { todaySeoul } from '@/utils/date'
 
+// 홈 = 인사말 → 로드맵(1순위) → 벤토 모자이크(타일마다 숫자 배지 + 미리보기 통합)
 export default function Home() {
   const navigate = useNavigate()
   const workBadge = useWorkCountBadge()
+  const eqReady = useAppSelector(s => s.eq.ready)
+  const eq = useAppSelector(selectEqCounts)
+  const noticeReady = useAppSelector(s => s.notice.ready)
+  const newCnt = useAppSelector(s => s.notice.items).filter(n => n.isNew).length
+  const todayCnt = CAL_EVENTS.filter(e => e.date === todaySeoul()).length
 
   return (
     <div id="home">
       <main>
         <Greeting />
 
-        {/* 벤토 KPI 타일 */}
-        <BentoStats />
-
-        {/* 장비 현황 (전체) */}
-        <div className="eq-summary" onClick={() => navigate('/equipment')} role="button" tabIndex={0}>
-          <EqSummaryInner showSeeAll />
-        </div>
-
         <RoadmapTimeline />
 
-        {/* 장비현황 (PC) */}
-        <div className="dashboard d-only">
-          <div className="dash-header">
-            <span className="dash-title">장비현황</span>
-            <span className="see-all" onClick={() => navigate('/equipment')} role="button" tabIndex={0}>
-              전체보기 ›
-            </span>
-          </div>
-          <div className="eq-dash" onClick={() => navigate('/equipment')} role="button" tabIndex={0}>
+        <div className="bento-grid">
+          {/* 장비현황 — 우선순위 2 */}
+          <div className="bento-card bc-eq" onClick={() => navigate('/equipment')} role="button" tabIndex={0}>
+            <div className="bc-head">
+              <span className="bc-ico bci-blue"><MemoryIcon fontSize="inherit" /></span>
+              <span className="bc-name">장비현황</span>
+              {eqReady && <span className="bc-badge bcb-blue">{eq.types}종 · {eq.total}대</span>}
+              <span className="see-all">전체보기 ›</span>
+            </div>
             <EqPreview />
           </div>
-        </div>
 
-        {/* 메뉴 카드 (PC) */}
-        <div className="menu-label d-only">미리보기</div>
-        <div className="grid d-only">
-          <div className="card c-notice" onClick={() => navigate('/notice')} role="button" tabIndex={0}>
-            <div className="card-header-row">
-              <div className="icon"><CampaignIcon fontSize="inherit" htmlColor="#f85149" /></div>
-              <div className="card-name">공지사항</div>
-            </div>
-            <NoticePreview />
-          </div>
-
-          <div className="card c-meeting" onClick={() => navigate('/calendar')} role="button" tabIndex={0}>
-            <div className="card-header-row">
-              <div className="icon"><CalendarMonthIcon fontSize="inherit" htmlColor="#bc8cff" /></div>
-              <div className="card-name">업무일정</div>
-            </div>
-            <CalPreview />
-          </div>
-
-          <div
-            className="card c0"
-            onClick={() => navigate('/work')}
-            role="button"
-            tabIndex={0}
-            style={{ flexDirection: 'column', gap: 10, alignItems: 'stretch', gridColumn: '1 / -1' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div className="icon" style={{ width: 34, height: 34, fontSize: 18, borderRadius: 8 }}><AssessmentIcon fontSize="inherit" htmlColor="#f0b429" /></div>
-              <div className="card-name" style={{ textAlign: 'left' }}>업무현황</div>
-              <span className="hdr-badge">{workBadge}</span>
-            </div>
-            <div className="work-preview">
-              <WorkPreview />
-            </div>
-          </div>
-        </div>
-
-        {/* 메뉴 카드 (모바일) */}
-        <div className="menu-stack">
-          <div
-            className="card c-notice"
-            onClick={() => navigate('/notice')}
-            role="button"
-            tabIndex={0}
-            style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}
-          >
-            <div className="card-top">
-              <div className="icon"><CampaignIcon fontSize="inherit" htmlColor="#f85149" /></div>
-              <div className="card-name">공지사항</div>
-              <span className="see-all">전체보기 ›</span>
-            </div>
-            <NoticePreview />
-          </div>
-
-          <div
-            className="card c0"
-            onClick={() => navigate('/work')}
-            role="button"
-            tabIndex={0}
-            style={{ flexDirection: 'column', gap: 10, alignItems: 'stretch' }}
-          >
-            <div className="card-top">
-              <div className="icon" style={{ background: 'rgba(240,180,41,.12)' }}><AssessmentIcon fontSize="inherit" htmlColor="#f0b429" /></div>
-              <div className="card-name">업무현황</div>
-              <span className="hdr-badge">{workBadge}</span>
+          {/* 업무현황 */}
+          <div className="bento-card bc-work" onClick={() => navigate('/work')} role="button" tabIndex={0}>
+            <div className="bc-head">
+              <span className="bc-ico bci-amber"><AssessmentIcon fontSize="inherit" /></span>
+              <span className="bc-name">업무현황</span>
+              {workBadge && <span className="bc-badge bcb-amber">{workBadge}</span>}
               <span className="see-all">전체보기 ›</span>
             </div>
             <div className="work-preview">
@@ -112,16 +53,23 @@ export default function Home() {
             </div>
           </div>
 
-          <div
-            className="card c-meeting"
-            onClick={() => navigate('/calendar')}
-            role="button"
-            tabIndex={0}
-            style={{ flexDirection: 'column', alignItems: 'stretch', gap: 10 }}
-          >
-            <div className="card-top">
-              <div className="icon"><CalendarMonthIcon fontSize="inherit" htmlColor="#bc8cff" /></div>
-              <div className="card-name">업무일정</div>
+          {/* 공지사항 */}
+          <div className="bento-card bc-notice" onClick={() => navigate('/notice')} role="button" tabIndex={0}>
+            <div className="bc-head">
+              <span className="bc-ico bci-red"><CampaignIcon fontSize="inherit" /></span>
+              <span className="bc-name">공지사항</span>
+              {noticeReady && newCnt > 0 && <span className="bc-badge bcb-red">NEW {newCnt}</span>}
+              <span className="see-all">전체보기 ›</span>
+            </div>
+            <NoticePreview />
+          </div>
+
+          {/* 업무일정 */}
+          <div className="bento-card bc-cal" onClick={() => navigate('/calendar')} role="button" tabIndex={0}>
+            <div className="bc-head">
+              <span className="bc-ico bci-purple"><CalendarMonthIcon fontSize="inherit" /></span>
+              <span className="bc-name">업무일정</span>
+              <span className="bc-badge bcb-purple">오늘 {todayCnt}건</span>
               <span className="see-all">전체보기 ›</span>
             </div>
             <CalPreview />
