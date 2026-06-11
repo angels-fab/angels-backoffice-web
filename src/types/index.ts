@@ -13,12 +13,14 @@ export interface WorkItem {
   loc: string
   mgr: string
   end: string
-  /** L열: 관련 링크 (URL) */
+  /** M열: 관련 링크 (URL) */
   link: string
-  /** J열 공유여부 '1' → 진행중 업무 */
+  /** J열 체크 → 진행중 업무 */
   share: boolean
-  /** K열 Remind '1' → 지난 업무 최상단 고정 */
+  /** K열 체크 → Remind */
   remind: boolean
+  /** L열 체크 → 센터장 Check */
+  chief: boolean
 }
 
 // ── 장비현황 ──
@@ -108,18 +110,31 @@ export interface CalEvent {
   loc: string
 }
 
-// ── 공지사항 ──
-export type NoticeCat = '긴급' | '공지' | '일반' | '행사'
-
+// ── 공지사항 ('공지사항' 시트 1행 = Notice) ──
+// 시트 열: A연번 B업무(분류) C부서 D부서담당자 E제목 F내용
+//         G관련자료 H회신일자 I시작일자 J시작시간 K종료일자 L게시자 M해당자 N조회수
 export interface Notice {
   id: number
-  cat: NoticeCat
+  /** A열 연번 — 정렬·딥링크(/notice/연번) 기준 */
+  num: string
+  cat: string
+  dept: string
+  deptMgr: string
   title: string
-  author: string
+  /** F열 내용 — 일반 텍스트 또는 관리자 작성 HTML */
+  body: string
+  ref: string
+  /** 닫힌 줄 표시용 작성일 (시작일자 → 회신일자 순) */
   date: string
+  reply: string
+  start: string
+  stime: string
+  /** K열 종료일자 — 오늘보다 이전이면 만료(제목 회색) */
+  end: string
+  author: string
+  target: string
   views: number
   isNew: boolean
-  body: ReactNode
 }
 
 // ── 바로가기 ──

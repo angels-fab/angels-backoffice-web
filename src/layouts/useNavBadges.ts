@@ -1,7 +1,6 @@
 import { useAppSelector } from '@/store/hooks'
 import { selectCurrentWork } from '@/store/selectors'
 import { CAL_EVENTS } from '@/constants/calendar'
-import { NOTICES } from '@/constants/notices'
 import { todaySeoul } from '@/utils/date'
 
 function dayDiff(ds: string, todayMid: Date): number {
@@ -12,13 +11,14 @@ function dayDiff(ds: string, todayMid: Date): number {
 export function useNavBadges() {
   const workReady = useAppSelector(s => s.work.ready)
   const currentWork = useAppSelector(selectCurrentWork)
+  const noticeItems = useAppSelector(s => s.notice.items)
 
   const todayMid = new Date(todaySeoul() + 'T00:00:00')
   const cal = CAL_EVENTS.filter(e => {
     const d = dayDiff(e.date, todayMid)
     return d >= 0 && d <= 7 // 일정: 오늘~앞으로 7일
   }).length
-  const notice = NOTICES.filter(n => {
+  const notice = noticeItems.filter(n => {
     const d = dayDiff(n.date, todayMid)
     return d <= 0 && d >= -7 // 공지: 최근 7일 내 등록
   }).length

@@ -2,7 +2,6 @@
 import { useAppSelector } from '@/store/hooks'
 import { selectCurrentWork, selectEqCounts } from '@/store/selectors'
 import { CAL_CAT_MAP, CAL_EVENTS } from '@/constants/calendar'
-import { NOTICES } from '@/constants/notices'
 import { parseStartDate, todaySeoul } from '@/utils/date'
 import { workCatRank, workCatStyle } from '@/utils/workCat'
 import { hexA } from '@/utils/color'
@@ -108,7 +107,10 @@ const NOTICE_BADGE_STYLE: Record<string, { bg: string; c: string; bd: string }> 
 }
 
 export function NoticePreview() {
-  const arr = [...NOTICES].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 3)
+  const ready = useAppSelector(s => s.notice.ready)
+  const items = useAppSelector(s => s.notice.items)
+  if (!ready) return <PreviewLoading />
+  const arr = [...items].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 3)
   if (!arr.length) return null
   const fmtMD = (d: string) => {
     const m = String(d).match(/\d{4}-(\d{2})-(\d{2})/)

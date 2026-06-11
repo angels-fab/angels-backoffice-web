@@ -4,6 +4,7 @@ import AttachFileIcon from '@mui/icons-material/AttachFile'
 import ScheduleIcon from '@mui/icons-material/Schedule'
 import FolderCopyIcon from '@mui/icons-material/FolderCopy'
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
+import PushPinIcon from '@mui/icons-material/PushPin'
 import SearchIcon from '@mui/icons-material/Search'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData } from '@/store/slices/workSlice'
@@ -13,7 +14,7 @@ import type { WorkItem } from '@/types'
 import TitleLoad from '@/components/TitleLoad'
 import WorkRow from './WorkRow'
 
-type WorkTab = 'cur' | 'past' | 'remind'
+type WorkTab = 'cur' | 'past' | 'remind' | 'chief'
 
 const ATT_ICON = <AttachFileIcon sx={{ fontSize: 13 }} />
 
@@ -28,14 +29,16 @@ function WorkBox({
   items,
   visible,
   emptyMsg,
+  variant,
 }: {
   items: WorkItem[]
   visible: boolean
   emptyMsg: string
+  variant?: string
 }) {
   if (!visible) return null
   return (
-    <div className="work-box">
+    <div className={`work-box${variant ? ' ' + variant : ''}`}>
       {items.length > 0 && (
         <div className="cur-head">
           <span className="cur-c-cat">업무 구분</span>
@@ -72,6 +75,7 @@ export default function Work() {
       cur: flt(items.filter(t => t.share)).sort(cmp),
       past: flt(items.filter(t => !t.share && !t.remind)).sort(cmp),
       remind: flt(items.filter(t => !t.share && t.remind)).sort(cmp),
+      chief: flt(items.filter(t => t.chief)).sort(cmp), // L열 체크 — 진행중/지난 무관하게 모두
     }
   }, [items, cat, mgr, query])
 
@@ -95,13 +99,14 @@ export default function Work() {
     return ['전체', ...set.sort((a, b) => workCatRank(a) - workCatRank(b))]
   }, [items])
 
-  // 담당자 필터 — 진행중/지난: 발의일자 최근 6개월 업무의 담당자만 / Remind: 전체
+  // 담당자 필터 — 진행중/지난: 발의일자 최근 6개월 업무의 담당자만 / Remind·센터장: 전체
   const presentMgrs = useMemo(() => {
     let pool: WorkItem[]
     if (tab === 'cur') pool = items.filter(t => t.share)
     else if (tab === 'past') pool = items.filter(t => !t.share && !t.remind)
+    else if (tab === 'chief') pool = items.filter(t => t.chief)
     else pool = items.filter(t => !t.share && t.remind)
-    if (tab !== 'remind') {
+    if (tab !== 'remind' && tab !== 'chief') {
       const cutoff = new Date()
       cutoff.setMonth(cutoff.getMonth() - 6)
       cutoff.setHours(0, 0, 0, 0)
@@ -174,6 +179,17 @@ export default function Work() {
             <span className="wkpi-icon ic-amber"><NotificationsActiveIcon fontSize="inherit" htmlColor="#f0b429" /></span>
           </span>
         </button>
+        <button className={`wkpi-card${tab === 'chief' ? ' active' : ''}`} onClick={() => switchTab('chief')}>
+          <span className="wkpi-main">
+            <span className="wkpi-body">
+              <span className="wkpi-label">센터장 Check</span>
+              <span className="wkpi-numline">
+                <span className="wkpi-num">{filtered.chief.length}</span>
+              </span>
+            </span>
+            <span className="wkpi-icon ic-purple"><PushPinIcon fontSize="inherit" htmlColor="#bc8cff" /></span>
+          </span>
+        </button>
       </div>
 
       {/* 담당자 필터 */}
@@ -212,7 +228,8 @@ export default function Work() {
 
       <WorkBox items={filtered.cur} visible={tab === 'cur'} emptyMsg="진행중 업무가 없습니다" />
       <WorkBox items={filtered.past} visible={tab === 'past'} emptyMsg="지난 업무가 없습니다" />
-      <WorkBox items={filtered.remind} visible={tab === 'remind'} emptyMsg="Remind 업무가 없습니다" />
+      <WorkBox items={filtered.remind} visible={tab === 'remind'} emptyMsg="Remind 업무가 없습니다" variant="work-box-remind" />
+      <WorkBox items={filtered.chief} visible={tab === 'chief'} emptyMsg="센터장 Check 업무가 없습니다" variant="work-box-chief" />
     </div>
   )
 }

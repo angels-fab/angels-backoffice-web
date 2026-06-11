@@ -228,6 +228,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wkpi-icon.ic-blue{background:rgba(88,166,255,.14)}
 .wkpi-icon.ic-green{background:rgba(63,185,80,.14)}
 .wkpi-icon.ic-amber{background:rgba(240,180,41,.14)}
+.wkpi-icon.ic-purple{background:rgba(188,140,255,.14)}
 .wkpi-body{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto}
 .wkpi-numline{display:flex;flex-direction:column;gap:3px}
 .wkpi-label{font-size:15px;color:var(--text2);font-weight:600}
@@ -248,6 +249,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .work-box-remind{border-color:rgba(240,180,41,.35)}
 .work-box-remind .work-box-head{border-bottom-color:rgba(240,180,41,.25)}
 .work-box-remind .work-box-title{color:var(--amber)}
+.work-box-chief{border-color:rgba(188,140,255,.35)}
+.work-box-chief .work-box-head{border-bottom-color:rgba(188,140,255,.25)}
+.work-box-chief .work-box-title{color:var(--purple)}
 
 /* ── Equipment list ── */
 .eq-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;width:100%}
@@ -558,6 +562,71 @@ body.eq-wide main{max-width:98vw}
 .notice-meta{font-size:11px;color:var(--text3);flex-shrink:0;display:flex;gap:12px}
 .notice-new{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--blue);margin-left:5px;vertical-align:middle;flex-shrink:0}
 .new-badge{display:inline-block;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.3px;line-height:1.6}
+
+/* ── 아코디언 공지사항 (시트 연동) ── */
+/* 툴바: 분류 필터(좌) + 검색창(우) */
+.notice-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.notice-toolbar .notice-filter-bar{margin-bottom:0;flex:1 1 auto}
+.notice-search-wrap{flex:0 0 auto}
+/* 컬럼 정렬: 번호 / 구분 / 제목(가변) / 부서|담당자 / 작성일 */
+.ntc-colhead,.ntc-summary{display:grid;grid-template-columns:46px 64px minmax(0,1fr) 180px 100px;align-items:center;gap:0}
+/* 게시판 전체를 하나의 테두리로 감싸기 */
+.notice-board.notice-accordion{display:block;border:0.5px solid var(--border);border-radius:10px;overflow:hidden;background:var(--ink2)}
+.notice-board.notice-accordion>*{border-radius:0}
+/* 고정 컬럼 헤더 — 게시글과 붙이고 아래 구분선 */
+.ntc-colhead{margin:0;padding:0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:var(--ink3);font-size:13px;font-weight:700;color:var(--text);letter-spacing:.3px}
+.ntc-colhead>span{text-align:center;padding:13px 10px;border-left:0.5px solid var(--border2)}
+.ntc-colhead>span:first-child{border-left:none}
+.ntc-item{border:none;border-top:0.5px solid var(--border2);border-radius:0;background:transparent;overflow:hidden;transition:background .15s}
+.ntc-item:first-child{border-top:none}
+.ntc-item:hover{background:var(--ink3)}
+.ntc-item.open{background:rgba(88,166,255,.05)}
+.ntc-item.open:hover{background:rgba(88,166,255,.07)}
+.ntc-summary{width:100%;padding:0;background:transparent;border:none;cursor:pointer;font-family:inherit;text-align:left}
+/* 닫힌 줄 각 셀 — 세로 구분선 + 패딩 */
+.ntc-summary>span{padding:13px 10px;border-left:0.5px solid var(--border2);height:100%;display:flex;align-items:center}
+.ntc-summary>span:first-child{border-left:none}
+.ntc-num{justify-content:center;font-size:13px;font-weight:700;color:var(--text2);font-variant-numeric:tabular-nums}
+.ntc-item.open .ntc-num{color:#58A6FF}
+.ntc-cat-badge{justify-content:center}
+.ntc-cat-inner{padding:3px 9px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.2px;white-space:nowrap}
+.ntc-title-text{min-width:0;font-size:13.5px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ntc-item.open .ntc-title-text{white-space:normal;overflow:visible}
+.ntc-item.expired .ntc-title-text{color:var(--text3);font-weight:500}
+.ntc-item.expired .ntc-num{color:var(--text3);opacity:.7}
+.ntc-new{display:inline-flex;align-items:center;justify-content:center;background:var(--red);color:#fff;font-size:8px;font-weight:800;min-width:14px;height:14px;padding:0 3px;border-radius:7px;margin-left:7px;flex-shrink:0;letter-spacing:.3px}
+.ntc-deptmgr{font-size:11.5px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;justify-content:center}
+.ntc-date{font-size:11.5px;color:var(--text2);font-variant-numeric:tabular-nums;white-space:nowrap;justify-content:center}
+/* 펼침 패널 */
+.ntc-panel{overflow:hidden;animation:ntcSlide .22s ease}
+@keyframes ntcSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.ntc-panel-inner{padding:16px 20px 22px 56px;border-top:0.5px solid var(--border2);background:var(--ink)}
+.ntc-body{font-size:13px;color:var(--text2);line-height:1.85}
+.ntc-body p{margin:0 0 11px}
+.ntc-body p:last-child{margin-bottom:0}
+.ntc-body img{max-width:100%;border-radius:8px;margin:14px 0;border:0.5px solid var(--border);display:block}
+.ntc-body a{word-break:break-all}
+/* 하단 메타(회신일자·해당자) — 박스 없이 가벼운 구분선 */
+.ntc-submeta{display:flex;flex-wrap:wrap;gap:18px;margin-top:16px;padding-top:13px;border-top:0.5px solid var(--border2);font-size:12px}
+.ntc-submeta-item{display:flex;gap:7px}
+.ntc-submeta-k{color:var(--text3);font-weight:600}
+.ntc-submeta-v{color:var(--text2)}
+.ntc-skel{height:48px;border-bottom:0.5px solid var(--border2);background:linear-gradient(90deg,var(--ink2) 25%,var(--ink3) 50%,var(--ink2) 75%);background-size:200% 100%;animation:ntcShimmer 1.3s infinite}
+@keyframes ntcShimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.ntc-empty{text-align:center;padding:48px 20px;color:var(--text3);font-size:13px}
+@media(max-width:620px){
+  /* 모바일: 부서|담당자 컬럼 숨기고 간결하게 */
+  .ntc-colhead{grid-template-columns:38px 56px minmax(0,1fr) 84px}
+  .ntc-colhead .ntc-ch-dept{display:none}
+  .ntc-summary{grid-template-columns:38px 56px minmax(0,1fr) 84px}
+  .ntc-deptmgr{display:none}
+  .ntc-summary>span{padding:11px 6px}
+  .ntc-colhead>span{padding:11px 6px;font-size:12px}
+  .ntc-title-text{font-size:13px}
+  .ntc-panel-inner{padding:14px 14px 18px}
+  .notice-search-wrap{width:100%}
+  .notice-search-wrap .wflt-search{width:100%}
+}
 
 /* ── Post detail ── */
 .post-wrap{background:var(--ink2);border:0.5px solid var(--border);border-radius:10px;overflow:hidden}

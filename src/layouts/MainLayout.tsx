@@ -6,17 +6,20 @@ import BottomNav from './BottomNav'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
 import { loadWorkData } from '@/store/slices/workSlice'
+import { loadNoticeData } from '@/store/slices/noticeSlice'
 
 export default function MainLayout() {
   const { pathname } = useLocation()
   const dispatch = useAppDispatch()
   const eqReady = useAppSelector(s => s.eq.ready)
   const workReady = useAppSelector(s => s.work.ready)
+  const noticeReady = useAppSelector(s => s.notice.ready)
 
-  // 앱 진입 시 장비/업무 데이터 미리 로드 (홈 미리보기 표시용)
+  // 앱 진입 시 장비/업무/공지 데이터 미리 로드 (홈 미리보기 표시용)
   useEffect(() => {
     if (!eqReady) dispatch(loadEqData())
     if (!workReady) dispatch(loadWorkData())
+    if (!noticeReady) dispatch(loadNoticeData())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -2,7 +2,6 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import MainLayout from '@/layouts/MainLayout'
 import Home from '@/pages/Home'
 import Notice from '@/pages/Notice'
-import NoticeDetail from '@/pages/Notice/NoticeDetail'
 import Calendar from '@/pages/Calendar'
 import Work from '@/pages/Work'
 import Equipment from '@/pages/Equipment'
@@ -14,7 +13,8 @@ export function AppRouter() {
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/notice" element={<Notice />} />
-        <Route path="/notice/:id" element={<NoticeDetail />} />
+        {/* 연번 딥링크(/notice/12) — 해당 공지를 아코디언으로 펼친 채 진입 */}
+        <Route path="/notice/:num" element={<Notice />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/work" element={<Work />} />
         <Route path="/equipment" element={<Equipment />} />
