@@ -114,7 +114,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wflt-row{display:flex;justify-content:flex-start;align-items:center;gap:10px;width:100%;max-width:960px;margin-bottom:12px;flex-wrap:wrap}
 .wflt-cats{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .wflt-label{font-size:11px;font-weight:700;color:var(--text3);flex-shrink:0;width:42px}
-.wflt-btn{padding:4px 11px;font-size:12px;border:1px solid var(--border);background:var(--ink2);color:var(--text2);border-radius:99px;cursor:pointer;font-family:inherit;transition:all .12s}
+.wflt-btn{padding:4px 11px;font-size:12px;border:1px solid var(--border);background:transparent;color:var(--text2);border-radius:8px;cursor:pointer;font-family:inherit;transition:all .12s}
 .wflt-btn:hover{color:var(--text);border-color:var(--text3)}
 .wflt-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
 .wflt-search{padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--ink2);color:var(--text);font-size:13px;font-family:inherit;outline:none;width:260px;max-width:100%}
@@ -213,7 +213,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .sub-text{flex:1;min-width:0;word-break:break-word}
 /* ── 진행중/지난 탭 ── */
 .wkpi-row{display:flex;gap:12px;width:100%;max-width:960px;margin-bottom:16px;flex-wrap:wrap}
-.wkpi-card{flex:1 1 0;min-width:200px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 18px;background:var(--ink2);border:1px solid var(--border);border-radius:12px;cursor:pointer;font-family:inherit;text-align:left;transition:border-color .15s,background .15s}
+.wkpi-card{flex:1 1 0;min-width:200px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 18px;background:var(--ink2);border:1px solid var(--border2);border-radius:16px;cursor:pointer;font-family:inherit;text-align:left;transition:border-color .15s,background .15s}
 .wkpi-card:hover{background:var(--ink3)}
 .wkpi-card.active{background:var(--ink3)}
 #wtab-cur:hover,#wtab-cur.active{border-color:var(--blue)}
@@ -240,7 +240,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wkpi-sub.amber{color:var(--amber)}
 .task-group-title{padding:8px 18px 4px;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-weight:600}
 /* ── 업무현황 박스 (현재/지난) ── */
-.work-box{background:var(--ink2);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;width:100%;max-width:960px}
+.work-box{background:var(--ink2);border:0.5px solid var(--border);border-radius:14px;overflow:hidden;width:100%;max-width:960px}
 .work-box-head{display:flex;align-items:center;gap:9px;padding:13px 18px;border-bottom:0.5px solid var(--border2)}
 .work-box-title{font-size:14px;font-weight:600;color:var(--text)}
 .work-box-count{font-size:11px;background:var(--ink3);color:var(--text2);padding:1px 9px;border-radius:99px;font-weight:500}
@@ -256,7 +256,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 
 /* ── Equipment list ── */
 .eq-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center;width:100%}
-.eq-flt-btn{padding:4px 13px;border:1px solid var(--border);border-radius:99px;background:transparent;color:var(--text2);font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s}
+.eq-flt-btn{padding:4px 13px;border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--text2);font-size:11px;cursor:pointer;font-family:inherit;transition:all .15s}
 .eq-flt-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .eq-flt-label{font-size:11px;color:var(--text3);font-weight:600;min-width:48px}
 .eq-flt-btn:hover{border-color:var(--text2);color:var(--text)}
@@ -523,7 +523,7 @@ body.eq-wide main{max-width:98vw}
 .eq-variant{background:var(--ink2);border:1px solid var(--border2);border-radius:8px;padding:10px 12px}
 .eq-variant-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border2)}
 .eq-variant-name{font-size:12px;font-weight:600;color:var(--text)}
-.eq-flt-btn{padding:4px 12px;border-radius:99px;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s}
+.eq-flt-btn{padding:4px 12px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s}
 .eq-flt-btn:hover{color:var(--text);border-color:var(--text2)}
 .eq-flt-btn.active{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
 
@@ -547,7 +547,7 @@ body.eq-wide main{max-width:98vw}
 
 /* ── Notice board ── */
 .notice-filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
-.nflt-btn{padding:3px 12px;border-radius:99px;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s}
+.nflt-btn{padding:3px 12px;border-radius:8px;font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s}
 .nflt-btn:hover{color:var(--text);border-color:var(--text2)}
 .nflt-btn.active{background:var(--amber);border-color:var(--amber);color:#000;font-weight:600}
 .notice-board{display:flex;flex-direction:column;gap:0;border:0.5px solid var(--border);border-radius:10px;overflow:hidden}
@@ -572,7 +572,7 @@ body.eq-wide main{max-width:98vw}
 /* 컬럼 정렬: 번호 / 구분 / 제목(가변) / 부서|담당자 / 작성일 */
 .ntc-colhead,.ntc-summary{display:grid;grid-template-columns:46px 64px minmax(0,1fr) 180px 100px;align-items:center;gap:0}
 /* 게시판 전체를 하나의 테두리로 감싸기 */
-.notice-board.notice-accordion{display:block;border:0.5px solid var(--border);border-radius:10px;overflow:hidden;background:var(--ink2)}
+.notice-board.notice-accordion{display:block;border:0.5px solid var(--border);border-radius:14px;overflow:hidden;background:var(--ink2)}
 .notice-board.notice-accordion>*{border-radius:0}
 /* 고정 컬럼 헤더 — 게시글과 붙이고 아래 구분선 */
 .ntc-colhead{margin:0;padding:0;border:none;border-bottom:1px solid var(--border);border-radius:0;background:var(--ink3);font-size:13px;font-weight:700;color:var(--text);letter-spacing:.3px}
