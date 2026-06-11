@@ -111,25 +111,29 @@ export interface CalEvent {
 }
 
 // ── 공지사항 ('공지사항' 시트 1행 = Notice) ──
-// 시트 열: A연번 B업무(분류) C부서 D부서담당자 E제목 F내용
-//         G관련자료 H회신일자 I시작일자 J시작시간 K종료일자 L게시자 M해당자 N조회수
+// 시트 열: A연번 B상단체크 C업무(분류) D부서 E부서담당자 F제목 G내용
+//         H관련자료 I시작일자 J작성일자 K작성시간 L종료일자 M게시자 N해당자
 export interface Notice {
   id: number
   /** A열 연번 — 정렬·딥링크(/notice/연번) 기준 */
   num: string
+  /** B열 상단체크 — true면 게시판 최상단 고정 */
+  pinned: boolean
   cat: string
   dept: string
   deptMgr: string
   title: string
-  /** F열 내용 — 일반 텍스트 또는 관리자 작성 HTML */
+  /** G열 내용 — 일반 텍스트 또는 관리자 작성 HTML */
   body: string
+  /** H열 관련자료 — URL이면 첨부 링크 아이콘 표시 */
   ref: string
-  /** 닫힌 줄 표시용 작성일 (시작일자 → 회신일자 순) */
+  /** 닫힌 줄 표시용 날짜 (작성일자 → 시작일자 순) */
   date: string
   reply: string
   start: string
-  stime: string
-  /** K열 종료일자 — 오늘보다 이전이면 만료(제목 회색) */
+  /** K열 작성시간 */
+  ctime: string
+  /** L열 종료일자 — 오늘보다 이전이면 만료(제목 회색) */
   end: string
   author: string
   target: string

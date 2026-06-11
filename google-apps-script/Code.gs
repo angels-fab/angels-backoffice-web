@@ -15,8 +15,25 @@ const SHEET_ID = '1lnS34m1cQ2mY6W6cBi7kOjDNtNaXtDSg3VRqgFWmUjU';
 const READABLE_SHEETS = ['공지사항', '센터 업무 현황', '장비 총괄표', '장비타임라인'];
 
 // ── 읽기: ?sheet=시트이름 → 해당 시트 전체를 JSON으로 ──
+//        ?authors=1 → 담당자 이름 목록만 (비밀번호 제외, 글쓰기 폼 버튼용)
 function doGet(e) {
-  const name = String((e && e.parameter && e.parameter.sheet) || '').trim();
+  const p = (e && e.parameter) || {};
+  try {
+    if (String(p.authors || '') === '1') {
+      const dsh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('담당자');
+      if (!dsh) return json_({ status: 'error', message: "'담당자' 시트가 없습니다" });
+      const dv = dsh.getDataRange().getValues();
+      const authors = [];
+      for (let i = 3; i < dv.length; i++) { // 4행(B4)부터
+        const nm = String(dv[i][1] || '').trim(); // B열만 — 비밀번호(C열)는 절대 내보내지 않음
+        if (nm) authors.push(nm);
+      }
+      return json_({ status: 'ok', authors: authors });
+    }
+  } catch (err) {
+    return json_({ status: 'error', message: String(err) });
+  }
+  const name = String(p.sheet || '').trim();
   try {
     if (READABLE_SHEETS.indexOf(name) < 0) {
       return json_({ status: 'error', message: '읽기가 허용되지 않은 시트: ' + name });
@@ -96,24 +113,29 @@ function addNotice_(req) {
   }
   const newNum = maxNum + 1;
 
-  const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  const now = new Date();
+  const today = Utilities.formatDate(now, 'Asia/Seoul', 'yyyy-MM-dd');
+  const nowTime = Utilities.formatDate(now, 'Asia/Seoul', 'HH:mm');
   const row = new Array(head.length).fill('');
   const set = function (names, val) {
     const i = col(names);
     if (i >= 0) row[i] = val;
   };
   set(['연번', '번호'], newNum);
+  // B열 상단체크: 폼의 '상단고정' 체크 여부 그대로 (체크박스 true/false)
+  set(['상단체크', '상단고정', '고정'], req.pinned === true);
   set(['업무', '구분', '분류'], String(req.cat || '공지'));
   set(['부서', '관련부서'], String(req.dept || ''));
   set(['부서담당자', '담당자'], String(req.deptMgr || ''));
   set(['제목'], String(req.title).trim());
   set(['내용', '본문'], String(req.body));
   set(['관련자료', '첨부', '링크'], String(req.ref || ''));
-  set(['시작일자'], today); // 작성일 = 오늘(KST)
+  // J·K열: 게시 시점의 날짜·시간 자동 기록 (KST)
+  set(['작성일자', '게시일', '등록일'], today);
+  set(['작성시간', '등록시간'], nowTime);
   set(['종료일자'], String(req.end || ''));
   set(['게시자', '작성자'], author);
   set(['해당자', '대상'], String(req.target || ''));
-  set(['조회수', '조회'], 0);
 
   sh.appendRow(row);
   return json_({ status: 'ok', num: newNum });

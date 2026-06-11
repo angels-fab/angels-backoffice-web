@@ -40,11 +40,22 @@ export interface AddNoticePayload {
   cat: string
   title: string
   body: string
+  /** 상단고정 — true면 시트 B열 상단체크에 체크됨 */
+  pinned?: boolean
   dept?: string
   deptMgr?: string
   target?: string
   end?: string
   ref?: string
+}
+
+/** 담당자 이름 목록 (해당자 선택 버튼용 — 비밀번호는 서버가 내보내지 않음) */
+export async function fetchAuthors(): Promise<string[]> {
+  const res = await fetch(`${SCRIPT_URL}?authors=1`)
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  const json = (await res.json()) as { status: string; authors?: string[]; message?: string }
+  if (json.status !== 'ok') throw new Error(json.message || '오류')
+  return json.authors || []
 }
 
 export async function addNotice(p: AddNoticePayload): Promise<number> {

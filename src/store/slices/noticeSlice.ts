@@ -37,53 +37,64 @@ export const loadNoticeData = createAsyncThunk('notice/load', async (): Promise<
     }
     return fallbackIdx
   }
+  // 실제 시트 열: A연번 B상단체크 C업무 D부서 E부서담당자 F제목 G내용 H관련자료 I시작일자 J작성일자 K작성시간 L종료일자 M게시자 N해당자
   const ci = {
     num: colAny(['연번', '번호', 'No', 'no'], 0),
-    cat: colAny(['업무', '구분', '분류'], 1),
-    dept: colAny(['부서', '관련부서'], 2),
-    deptMgr: colAny(['부서담당자', '담당자'], 3),
-    title: colAny(['제목'], 4),
-    body: colAny(['내용', '본문'], 5),
-    ref: colAny(['관련자료', '첨부', '링크'], 6),
-    reply: colAny(['회신일자', '게시일', '작성일', '등록일'], 7),
+    pinned: colAny(['상단체크', '상단고정', '고정'], 1),
+    cat: colAny(['업무', '구분', '분류'], 2),
+    dept: colAny(['부서', '관련부서'], 3),
+    deptMgr: colAny(['부서담당자', '담당자'], 4),
+    title: colAny(['제목'], 5),
+    body: colAny(['내용', '본문'], 6),
+    ref: colAny(['관련자료', '첨부', '링크'], 7),
     start: colAny(['시작일자'], 8),
-    stime: colAny(['시작시간'], 9),
-    end: colAny(['종료일자'], 10),
-    author: colAny(['게시자', '작성자'], 11),
-    target: colAny(['해당자', '대상'], 12),
-    views: colAny(['조회수', '조회'], 13),
+    created: colAny(['작성일자', '게시일', '작성일', '등록일'], 9),
+    ctime: colAny(['작성시간', '등록시간'], 10),
+    end: colAny(['종료일자'], 11),
+    author: colAny(['게시자', '작성자'], 12),
+    target: colAny(['해당자', '대상'], 13),
+    reply: colAny(['회신일자'], -1),
+    views: colAny(['조회수', '조회'], -1),
+  }
+  // 체크박스 값: 불리언 true/문자 'TRUE'/'1'/'Y' 등 모두 인식
+  const isChk = (v: unknown) => {
+    if (v === true) return true
+    const s = String(v == null ? '' : v).trim().toUpperCase()
+    return s === 'TRUE' || s === '1' || s === 'Y' || s === '예' || s === 'O' || s === '✓'
   }
 
   const list = rows
     .slice(hIdx + 1)
-    .filter(r => cell(r, ci.title) !== '') // 제목 있는 행만
+    .filter(r => cell(r, ci.title) !== '') // 제목 있는 행만 — 시트에서 행을 지우면 게시판에서도 사라짐
     .map((r, idx): Notice => {
-      const replyDate = fmtDate(cell(r, ci.reply))
+      const createdDate = fmtDate(cell(r, ci.created))
       const startDate = fmtDate(cell(r, ci.start))
       const endDate = fmtDate(cell(r, ci.end))
       return {
         id: idx + 1,
         num: cell(r, ci.num) || String(idx + 1),
+        pinned: isChk(r[ci.pinned]),
         cat: cell(r, ci.cat) || '공지',
         dept: cell(r, ci.dept),
         deptMgr: cell(r, ci.deptMgr),
         title: cell(r, ci.title),
         body: cell(r, ci.body),
         ref: cell(r, ci.ref),
-        date: startDate || replyDate, // 닫힌 줄 표시 = 작성일(시작일자 I열)
-        reply: replyDate, // 펼침 표시 = 회신일자(H열)
+        date: createdDate || startDate, // 닫힌 줄 표시 = 작성일자(J열)
+        reply: fmtDate(cell(r, ci.reply)),
         start: startDate,
-        stime: cell(r, ci.stime),
+        ctime: cell(r, ci.ctime),
         end: endDate,
         author: cell(r, ci.author),
         target: cell(r, ci.target),
         views: Number(cell(r, ci.views).replace(/[^0-9]/g, '')) || 0,
-        isNew: isNoticeNew(startDate || replyDate),
+        isNew: isNoticeNew(createdDate || startDate),
       }
     })
 
-  // 연번 최신순 정렬 (번호 큰 것이 위, 1번이 맨 아래)
+  // 상단고정 우선 → 연번 최신순 (번호 큰 것이 위)
   list.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
     const na = Number(a.num)
     const nb = Number(b.num)
     if (!isNaN(na) && !isNaN(nb)) return nb - na
