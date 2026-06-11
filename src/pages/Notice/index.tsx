@@ -49,8 +49,7 @@ export default function Notice() {
   // 연번 딥링크(/notice/12)로 진입한 경우 해당 공지 펼치기
   useEffect(() => {
     if (!ready || !num) return
-    const n =
-      items.find(x => String(x.num) === String(num)) || items.find(x => String(x.id) === String(num))
+    const n = items.find(x => String(x.num) === String(num))
     if (n && openId !== n.id) {
       setOpenId(n.id)
       dispatch(bumpNoticeViews(n.id))

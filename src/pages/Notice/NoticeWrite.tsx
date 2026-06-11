@@ -53,11 +53,17 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
   }
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <form className="modal-card" onClick={e => e.stopPropagation()} onSubmit={submit}>
+    // 배경에서 mousedown이 시작된 경우에만 닫기 (textarea 드래그가 배경에서 끝나도 안 닫히게)
+    <div
+      className="modal-backdrop"
+      onMouseDown={e => {
+        if (e.target === e.currentTarget && !saving) onClose()
+      }}
+    >
+      <form className="modal-card" onSubmit={submit}>
         <div className="modal-title">
           <EditNoteIcon /> 공지사항 새 글쓰기
-          <button type="button" className="modal-x" onClick={onClose} aria-label="닫기">
+          <button type="button" className="modal-x" onClick={onClose} disabled={saving} aria-label="닫기">
             <CloseIcon sx={{ fontSize: 18 }} />
           </button>
         </div>
@@ -122,7 +128,7 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
           </label>
           {error && <div className="merror">{error}</div>}
           <div className="mactions">
-            <button type="button" className="mbtn" onClick={onClose}>취소</button>
+            <button type="button" className="mbtn" onClick={onClose} disabled={saving}>취소</button>
             <button type="submit" className="mbtn mbtn-primary" disabled={saving}>
               {saving ? '저장 중...' : '등록'}
             </button>

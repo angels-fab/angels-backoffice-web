@@ -66,8 +66,8 @@ function addNotice_(req) {
     return -1;
   };
 
-  // 다음 연번 = 기존 최댓값 + 1
-  const numCol = col(['연번', '번호']);
+  // 다음 연번 = 기존 최댓값 + 1 (읽기 쪽 noticeSlice와 같은 후보 이름 사용)
+  const numCol = col(['연번', '번호', 'No', 'no']);
   let maxNum = 0;
   for (let i = hIdx + 1; i < values.length; i++) {
     const v = Number(numCol >= 0 ? values[i][numCol] : NaN);

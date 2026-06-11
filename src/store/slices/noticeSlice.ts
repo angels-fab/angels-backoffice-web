@@ -132,7 +132,7 @@ const noticeSlice = createSlice({
         state.updatedAt = nowStamp()
       })
       .addCase(loadNoticeData.rejected, state => {
-        state.items = []
+        // 재로딩 실패 시 직전 목록 유지 — 화면이 통째로 비지 않도록
         state.ready = true
         state.loading = false
         state.error = true

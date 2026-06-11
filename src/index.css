@@ -640,6 +640,7 @@ body.eq-wide main{max-width:98vw}
 .mbtn-primary{background:var(--amber);border-color:var(--amber);color:#000;font-weight:600}
 .mbtn-primary:hover{filter:brightness(1.08);color:#000}
 .mbtn-primary:disabled{opacity:.6;cursor:default}
+.mbtn:disabled,.modal-x:disabled{opacity:.5;cursor:default}
 
 /* ── Post detail ── */
 .post-wrap{background:var(--ink2);border:0.5px solid var(--border);border-radius:10px;overflow:hidden}
