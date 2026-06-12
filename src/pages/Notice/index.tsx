@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
+import DOMPurify from 'dompurify'
 import { useNavigate, useParams } from 'react-router-dom'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import EditNoteIcon from '@mui/icons-material/EditNote'
@@ -30,12 +31,19 @@ const endShort = (n: NoticeItem) => {
   return m ? `${Number(m[1])}/${Number(m[2])}` : null
 }
 
+// target="_blank" 링크는 살균 후에도 rel="noopener noreferrer"를 강제 (탭나빙 방지)
+DOMPurify.addHook('afterSanitizeAttributes', node => {
+  if (node.tagName === 'A' && node.getAttribute('target') === '_blank') {
+    node.setAttribute('rel', 'noopener noreferrer')
+  }
+})
+
 // 본문을 안전하게 표시 (시트 텍스트의 줄바꿈 → <p>, URL 자동 링크)
-// 이미 HTML 태그(<p> 등)가 들어있으면 그대로 신뢰 (관리자 작성 시트)
+// HTML 태그가 들어있으면 DOMPurify로 살균 후 렌더 (스크립트·이벤트 핸들러 제거)
 function noticeBodyHTML(body: string): string {
   const s = String(body || '')
   const looksHTML = /<\/?(p|br|div|ul|li|ol|strong|b|em|img|a|h[1-6])\b/i.test(s)
-  if (looksHTML) return s
+  if (looksHTML) return DOMPurify.sanitize(s, { ADD_ATTR: ['target'] })
   let t = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   t = t.replace(
     /(https?:\/\/[^\s]+)/g,
