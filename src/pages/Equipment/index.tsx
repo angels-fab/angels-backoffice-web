@@ -4,7 +4,6 @@ import SearchIcon from '@mui/icons-material/Search'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
 import TitleLoad from '@/components/TitleLoad'
-import EqKpi from './EqKpi'
 import EqItem from './EqItem'
 import EqCard, { catColor } from './EqCard'
 import { GanttHeader } from './gantt'
@@ -97,8 +96,6 @@ export default function Equipment() {
         </div>
         <TitleLoad loading={loading} text={error ? '연결 실패' : updatedAt} />
       </div>
-
-      <EqKpi />
 
       {/* 필터 + 검색 + 범례 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginBottom: 12, width: '100%' }}>

@@ -4,6 +4,7 @@ import { loadEqData } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
 import TitleLoad from '@/components/TitleLoad'
 import EqSummaryInner from '@/components/EqSummaryInner'
+import EqKpi from '@/pages/Equipment/EqKpi'
 import equipImg from '@/assets/equip-img.png'
 import stateCalendarImg from '@/assets/stateimg-calendar.png'
 import stateTargetImg from '@/assets/stateimg-target.png'
@@ -79,6 +80,11 @@ export default function EquipmentOps() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* 예산 카드 (장비도입관리에서 이동) */}
+        <div style={{ marginTop: 38 }}>
+          <EqKpi />
         </div>
       </div>
     </div>
