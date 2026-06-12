@@ -1,0 +1,40 @@
+name: Build and Deploy
+
+# main에 push될 때마다 자동 실행 (수동 실행도 가능)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 소스 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Node 설치
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: 의존성 설치
+        run: npm ci
+
+      - name: 빌드 (dist/ 생성)
+        run: npm run build
+
+      # dist/ 결과물을 angels-fab.github.io 저장소의 main으로 push = 배포
+      - name: angels-fab.github.io 로 배포
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          personal_token: ${{ secrets.DEPLOY_TOKEN }}
+          external_repository: angels-fab/angels-fab.github.io
+          publish_branch: main
+          publish_dir: ./dist
+          # 빌드 결과로 통째 교체. .nojekyll은 자동 추가됨.
+          # legacy.html·favicon.png은 public/에 있어 dist에 항상 포함됨.
+          user_name: github-actions[bot]
+          user_email: github-actions[bot]@users.noreply.github.com
+          commit_message: "deploy: ${{ github.event.head_commit.message }}"
