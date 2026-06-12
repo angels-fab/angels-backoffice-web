@@ -31,6 +31,24 @@ export function cell(r: SheetRow, i: number): string {
   return v === null || v === undefined ? '' : String(v).trim()
 }
 
+// ── 구글캘린더 일정 (?calendar=1) ──
+export interface RawCalEvent {
+  title: string
+  /** 'yyyy-MM-ddTHH:mm' (KST) */
+  start: string
+  end: string
+  allDay: boolean
+  loc: string
+}
+
+export async function fetchCalendarEvents(): Promise<RawCalEvent[]> {
+  const res = await fetch(`${SCRIPT_URL}?calendar=1`)
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  const json = (await res.json()) as { status: string; message?: string; data?: RawCalEvent[] }
+  if (json.status !== 'ok') throw new Error(json.message || '오류')
+  return json.data || []
+}
+
 // ── 공지 새 글쓰기 (Apps Script doPost) ──
 export interface AddNoticePayload {
   /** 게시자 이름 — '담당자' 시트 B열과 일치해야 함 */

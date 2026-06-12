@@ -8,7 +8,6 @@ import RoadmapTimeline from './RoadmapTimeline'
 import { CalPreview, EqPreview, NoticePreview, WorkPreview, useWorkCountBadge } from './previews'
 import { useAppSelector } from '@/store/hooks'
 import { selectEqCounts } from '@/store/selectors'
-import { CAL_EVENTS } from '@/constants/calendar'
 import { todaySeoul } from '@/utils/date'
 
 // 홈 = 인사말 → 로드맵(1순위) → 벤토 모자이크(타일마다 숫자 배지 + 미리보기 통합)
@@ -19,7 +18,7 @@ export default function Home() {
   const eq = useAppSelector(selectEqCounts)
   const noticeReady = useAppSelector(s => s.notice.ready)
   const newCnt = useAppSelector(s => s.notice.items).filter(n => n.isNew).length
-  const todayCnt = CAL_EVENTS.filter(e => e.date === todaySeoul()).length
+  const todayCnt = useAppSelector(s => s.cal.events).filter(e => e.date === todaySeoul()).length
 
   return (
     <div id="home">

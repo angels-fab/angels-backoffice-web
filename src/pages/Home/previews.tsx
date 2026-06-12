@@ -1,7 +1,7 @@
 // 홈 카드 미리보기들 — 원본 renderWorkPreview / renderCalPreview / renderNoticePreview / renderEqPreview
 import { useAppSelector } from '@/store/hooks'
 import { selectCurrentWork, selectEqCounts } from '@/store/selectors'
-import { CAL_CAT_MAP, CAL_EVENTS } from '@/constants/calendar'
+import { CAL_CAT_MAP } from '@/constants/calendar'
 import { parseStartDate, todaySeoul } from '@/utils/date'
 import { workCatRank, workCatStyle } from '@/utils/workCat'
 import { hexA } from '@/utils/color'
@@ -61,8 +61,11 @@ export function useWorkCountBadge(): string {
 
 // ── 업무일정 미리보기: 다가오는 일정 3건 + D-day 배지 ──
 export function CalPreview() {
+  const calReady = useAppSelector(s => s.cal.ready)
+  const calEvents = useAppSelector(s => s.cal.events)
   const today = new Date(todaySeoul() + 'T00:00:00')
-  const upcoming = CAL_EVENTS.map(e => {
+  if (!calReady) return <PreviewLoading />
+  const upcoming = calEvents.map(e => {
     const d = new Date(e.date + 'T00:00:00')
     return { ...e, d, diff: Math.round((d.getTime() - today.getTime()) / 86400000) }
   })

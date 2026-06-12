@@ -13,12 +13,16 @@
 const SHEET_ID = '1lnS34m1cQ2mY6W6cBi7kOjDNtNaXtDSg3VRqgFWmUjU';
 // 읽기 허용 시트 — 이 목록 밖의 시트('담당자' 등)는 절대 노출하지 않음
 const READABLE_SHEETS = ['공지사항', '센터 업무 현황', '장비운영관리', '장비도입관리'];
+// 업무일정에 보여줄 구글캘린더 (이 스크립트 소유 계정과 공유돼 있어야 함)
+const CALENDAR_ID = 'gist.angels@gmail.com';
 
 // ── 읽기: ?sheet=시트이름 → 해당 시트 전체를 JSON으로 ──
 //        ?authors=1 → 담당자 이름 목록만 (비밀번호 제외, 글쓰기 폼 버튼용)
+//        ?calendar=1 → 구글캘린더 일정 (3개월 전 ~ 6개월 후)
 function doGet(e) {
   const p = (e && e.parameter) || {};
   try {
+    if (String(p.calendar || '') === '1') return calendarEvents_();
     if (String(p.authors || '') === '1') {
       const dsh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('담당자');
       if (!dsh) return json_({ status: 'error', message: "'담당자' 시트가 없습니다" });
@@ -163,6 +167,33 @@ function addNotice_(req) {
     sh.getRange(sh.getLastRow(), pinCol + 1).insertCheckboxes().setValue(req.pinned === true);
   }
   return json_({ status: 'ok', num: newNum });
+}
+
+// ── 캘린더: 공유 캘린더의 일정을 JSON으로 (제목/시작/끝/종일/장소만 — 설명은 내보내지 않음) ──
+function calendarEvents_() {
+  const cal = CalendarApp.getCalendarById(CALENDAR_ID);
+  if (!cal) {
+    return json_({ status: 'error', message: '캘린더를 찾을 수 없습니다 (공유 여부 확인): ' + CALENDAR_ID });
+  }
+  const now = new Date();
+  const from = new Date(now.getTime() - 92 * 24 * 3600 * 1000); // 3개월 전
+  const to = new Date(now.getTime() + 187 * 24 * 3600 * 1000);  // 6개월 후
+  const data = cal.getEvents(from, to).map(function (ev) {
+    return {
+      title: ev.getTitle(),
+      start: Utilities.formatDate(ev.getStartTime(), 'Asia/Seoul', "yyyy-MM-dd'T'HH:mm"),
+      end: Utilities.formatDate(ev.getEndTime(), 'Asia/Seoul', "yyyy-MM-dd'T'HH:mm"),
+      allDay: ev.isAllDayEvent(),
+      loc: ev.getLocation() || '',
+    };
+  });
+  return json_({ status: 'ok', data: data });
+}
+
+// 캘린더 권한 승인용 — 편집기에서 이 함수를 한 번 실행해 권한을 허용하면 됨
+function authorizeCalendar() {
+  const cal = CalendarApp.getCalendarById(CALENDAR_ID);
+  Logger.log(cal ? '연결 성공: ' + cal.getName() : '캘린더를 찾을 수 없음 — 공유 여부를 확인하세요');
 }
 
 function json_(obj) {

@@ -3,11 +3,12 @@ import type { MouseEvent } from 'react'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { CAL_CATS, CAL_CAT_MAP, CAL_EVENTS } from '@/constants/calendar'
+import { CAL_CATS, CAL_CAT_MAP } from '@/constants/calendar'
 import type { CalCatId, CalEvent } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import TitleLoad from '@/components/TitleLoad'
-import { nowStamp } from '@/utils/date'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { loadCalEvents } from '@/store/slices/calSlice'
 
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월']
 
@@ -48,11 +49,12 @@ function buildCells(year: number, month: number): CalCell[] {
 export default function Calendar() {
   // 원본은 2026년 6월 고정이었으나 현재 월 기준으로 초기화
   const today = new Date(todaySeoul() + 'T00:00:00')
+  const dispatch = useAppDispatch()
+  const { events: allEvents, loading, error, updatedAt } = useAppSelector(s => s.cal)
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
   const [activeCats, setActiveCats] = useState<CalCatId[]>(['all'])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
-  const [stamp, setStamp] = useState<string | null>(null)
 
   const move = (d: number) => {
     let m = month + d
@@ -86,8 +88,8 @@ export default function Calendar() {
   }
 
   const events = useMemo(
-    () => (activeCats.includes('all') ? CAL_EVENTS : CAL_EVENTS.filter(e => activeCats.includes(e.cat))),
-    [activeCats],
+    () => (activeCats.includes('all') ? allEvents : allEvents.filter(e => activeCats.includes(e.cat))),
+    [allEvents, activeCats],
   )
 
   const evMap = useMemo(() => {
@@ -109,13 +111,13 @@ export default function Calendar() {
       <div className="page-header">
         <div
           className="page-title"
-          onClick={() => setStamp(nowStamp())}
+          onClick={() => dispatch(loadCalEvents())}
           style={{ cursor: 'pointer' }}
           title="클릭하면 새로고침"
         >
           <CalendarMonthIcon /> Calendar
         </div>
-        <TitleLoad loading={false} text={stamp} />
+        <TitleLoad loading={loading} text={error ? '불러오기 실패' : updatedAt} />
       </div>
       <div style={{ width: '100%' }}>
         {/* 카테고리 필터 */}
