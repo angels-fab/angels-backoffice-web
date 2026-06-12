@@ -6,7 +6,7 @@ import { loadEqData } from '@/store/slices/eqSlice'
 import TitleLoad from '@/components/TitleLoad'
 import EqKpi from './EqKpi'
 import EqItem from './EqItem'
-import EqCard from './EqCard'
+import EqCard, { catColor } from './EqCard'
 import { GanttHeader } from './gantt'
 
 const TYPE_FILTERS = ['전체', '내자', '외자']
@@ -23,7 +23,7 @@ const TL_LEGEND = [
 
 export default function Equipment() {
   const dispatch = useAppDispatch()
-  const { raw, groups, months, loading, error, updatedAt } = useAppSelector(s => s.eq)
+  const { groups, months, loading, error, updatedAt } = useAppSelector(s => s.eq)
   const [fltType, setFltType] = useState('전체')
   const [fltMgr, setFltMgr] = useState('전체')
   const [search, setSearch] = useState('')
@@ -44,22 +44,30 @@ export default function Equipment() {
     return arr
   }, [groups, fltType, fltMgr, search])
 
-  // 도입 장비 카드 — 상태가 '도입예정'/'도입중'인 장비만 (필터·검색 동일 적용)
-  const cardItems = useMemo(() => {
-    let arr = raw.filter(e => {
+  // 도입 장비 카드 — 같은 장비명끼리 묶인 그룹 중 상태가 '도입예정'/'도입중'인 것만,
+  // '분류' 값(공정 → 분석 → 기타 순)으로 그루핑 (필터·검색은 위 filtered와 동일 적용)
+  const cardGroups = useMemo(() => {
+    const items = filtered.filter(e => {
       const s = (e.state || '').trim()
       return s === '도입예정' || s === '도입중'
     })
-    if (fltType !== '전체') arr = arr.filter(e => e.type === fltType)
-    if (fltMgr !== '전체') arr = arr.filter(e => (e.mgr || '').trim() === fltMgr)
-    const q = search.trim().toLowerCase()
-    if (q) {
-      arr = arr.filter(e =>
-        [e.name, e.mgr, e.maker, e.model, e.code, e.cat, e.use].join(' ').toLowerCase().includes(q),
-      )
-    }
-    return arr
-  }, [raw, fltType, fltMgr, search])
+    const order = ['공정', '분석']
+    const byCat = new Map<string, typeof items>()
+    items.forEach(e => {
+      const c = (e.cat || '').trim() || '기타'
+      if (!byCat.has(c)) byCat.set(c, [])
+      byCat.get(c)!.push(e)
+    })
+    const cats = [...byCat.keys()].sort((a, b) => {
+      const ia = order.indexOf(a)
+      const ib = order.indexOf(b)
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b, 'ko')
+    })
+    return cats.map(c => ({ cat: c, items: byCat.get(c)! }))
+  }, [filtered])
+
+  const cardTypes = cardGroups.reduce((s, g) => s + g.items.length, 0)
+  const cardTotal = cardGroups.reduce((s, g) => s + g.items.reduce((x, e) => x + e.count, 0), 0)
 
   const setFilter = (setter: (v: string) => void) => (v: string) => {
     setter(v)
@@ -123,19 +131,30 @@ export default function Equipment() {
         </div>
       </div>
 
-      {/* ── 도입 장비 카드 (상태: 도입예정·도입중) ── */}
+      {/* ── 도입 장비 카드 (상태: 도입예정·도입중, 분류별 그루핑) ── */}
       <div className="eq-sec-head">
         <span className="eq-sec-title">도입 장비</span>
-        <span className="eq-sec-count">{cardItems.length}대</span>
+        <span className="eq-sec-count">{cardTypes}종 {cardTotal}대</span>
       </div>
-      {cardItems.length === 0 ? (
+      {cardGroups.length === 0 ? (
         <div className="task-empty" style={{ width: '100%' }}>도입예정·도입중 장비가 없습니다</div>
       ) : (
-        <div className="eq-card-grid">
-          {cardItems.map(e => (
-            <EqCard key={`${e.num}-${e.code}`} eq={e} />
-          ))}
-        </div>
+        cardGroups.map(g => (
+          <div key={g.cat} style={{ width: '100%' }}>
+            <div className="eq-cat-row">
+              <span className="eq-cat-dot" style={{ background: catColor(g.cat) }} />
+              <span className="eq-cat-name">{g.cat} 장비</span>
+              <span className="eq-sec-count">
+                {g.items.length}종 {g.items.reduce((s, e) => s + e.count, 0)}대
+              </span>
+            </div>
+            <div className="eq-card-grid">
+              {g.items.map(e => (
+                <EqCard key={e.name} eq={e} />
+              ))}
+            </div>
+          </div>
+        ))
       )}
 
       {/* ── 도입 타임라인 ── */}
@@ -153,14 +172,11 @@ export default function Equipment() {
           ))}
         </div>
       </div>
+      {/* 헤더 한 줄: 연번·관리번호·장비명과 연/월 타임라인 헤더가 같은 레벨 */}
       <div className="eq-list-header" style={{ width: '100%' }}>
         <span>연번</span>
         <span>관리번호</span>
         <span>장비명</span>
-        <span></span>
-      </div>
-      {/* 연도·월 헤더 — 타임라인 칼럼 위에만 정렬 (#gantt-header-slot 그리드) */}
-      <div id="gantt-header-slot">
         <GanttHeader months={months} />
       </div>
 
