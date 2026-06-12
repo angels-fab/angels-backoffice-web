@@ -1,21 +1,24 @@
 import type { EqGroup } from '@/types'
 import { eqStateColor } from './EqItem'
 
-// 분류별 구분색 (장비운영관리 시트의 '분류' 열 값 기준)
-export const CAT_COLOR: Record<string, string> = {
-  공정: '#58A6FF', // 파랑
-  분석: '#BC8CFF', // 보라
+// 분류별 구분색 (장비운영관리 시트의 '분류' 열 값 기준) — 배경까지 확실히 구분되는 톤
+const CAT_STYLE: Record<string, { bg: string; border: string; color: string }> = {
+  공정: { bg: '#0d1f33', border: '#1f4068', color: '#58A6FF' }, // 파랑
+  분석: { bg: '#1d1433', border: '#3a2a66', color: '#BC8CFF' }, // 보라
 }
-export const catColor = (cat: string) => CAT_COLOR[(cat || '').trim()] || '#8B949E'
+const DEFAULT_STYLE = { bg: '#1a1d23', border: '#30363d', color: '#8B949E' }
+export const catStyle = (cat: string) => CAT_STYLE[(cat || '').trim()] || DEFAULT_STYLE
+export const catColor = (cat: string) => catStyle(cat).color
 
 // 도입 장비 카드 — 같은 장비명끼리 묶어 대수·합계 금액 표시
 export default function EqCard({ eq }: { eq: EqGroup }) {
   const typeColor = eq.type === '외자' ? '#F0B429' : '#58A6FF'
-  const cColor = catColor(eq.cat)
+  const st = catStyle(eq.cat)
+  const cColor = st.color
   const codeShort = eq.codes.length > 1 ? eq.codes[0] + '~' : eq.codes[0] || '-'
 
   return (
-    <div className="eq-card" style={{ background: cColor + '0d', borderColor: cColor + '38' }}>
+    <div className="eq-card" style={{ background: st.bg, borderColor: st.border }}>
       <div className="eq-card-top">
         <span className="eq-card-code">{codeShort}</span>
         <span className="eq-card-state">
