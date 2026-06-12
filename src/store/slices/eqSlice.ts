@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import { cell, fetchSheet, SHEET_NAME_EQ, SHEET_NAME_TL } from '@/api/sheets'
+import { cell, fetchSheet, SHEET_NAME_EQ, SHEET_NAME_SCHEDULE } from '@/api/sheets'
 import { nowStamp } from '@/utils/date'
 import type { EqGroup, EqRawItem, TlMonth } from '@/types'
 
@@ -15,61 +15,62 @@ interface EqPayload {
 }
 
 export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayload> => {
-  // 장비 총괄표 + 장비타임라인 동시 로드
-  const [rows, tlResult] = await Promise.all([
+  // 장비 총괄표 + 장비도입일정(타임라인 원천 데이터) 동시 로드
+  const [rows, schedResult] = await Promise.all([
     fetchSheet(SHEET_NAME_EQ),
-    fetchSheet(SHEET_NAME_TL).catch(e => {
-      console.warn('타임라인 로드 실패', e)
+    fetchSheet(SHEET_NAME_SCHEDULE).catch(e => {
+      console.warn('도입일정 로드 실패', e)
       return []
     }),
   ])
 
-  // 타임라인 파싱 — '장비타임라인'(거울 시트) 구조:
-  // '연번'으로 시작하는 헤더 행을 찾고, 그 위 행=연도(병합), 헤더 행=월(한 달=반월 2칸, G열부터),
-  // 헤더 아래 보조숫자 행을 건너뛴 다음부터 장비 행(관리번호 r[1] 기준)
-  const TL_COL0 = 6 // 타임라인 그리드 시작 열 (G열)
-  let hRow = -1
-  for (let i = 0; i < Math.min(tlResult.length, 8); i++) {
-    if (String(tlResult[i]?.[0] ?? '').trim().startsWith('연번')) { hRow = i; break }
+  // 타임라인 계산 — '장비도입일정' 시트에서 직접:
+  // B관리번호 / F시작년월 / G~L = 사·공·평·협·제·설 단계별 기간(개월, 0.5 단위)
+  // 한 달 = 반월 2칸. 시작일이 15일 이후면 그 달의 후반 칸부터 시작 (시트 수식과 동일 규칙)
+  const TL_PHASES = ['사', '공', '평', '협', '제', '설']
+  const TL_BASE_YEAR = 2026
+  let schedStart = -1
+  for (let i = 0; i < Math.min(schedResult.length, 8); i++) {
+    if (String(schedResult[i]?.[0] ?? '').trim().startsWith('연번')) { schedStart = i + 1; break }
   }
   let months: TlMonth[] = []
   const tlMap: Record<string, string[]> = {}
-  if (hRow >= 1) {
-    const yearRow = tlResult[hRow - 1] || []
-    const tlMonthRow = tlResult[hRow] || []
-    const rawMonths: TlMonth[] = []
-    let curYear = ''
-    for (let c = TL_COL0; c < tlMonthRow.length; c += 2) {
-      const y = String(yearRow[c] ?? '').trim()
-      if (/\d{4}년/.test(y)) curYear = y // 연도는 병합 셀이라 등장할 때만 갱신
-      const m = String(tlMonthRow[c] ?? '').trim()
-      if (!/^\d+월$/.test(m)) break
-      rawMonths.push({ year: curYear, month: m })
-    }
-
+  if (schedStart > 0) {
     const rawMap: Record<string, string[]> = {}
-    tlResult.slice(hRow + 2).forEach(r => {
-      const code = String(r[1] ?? '').trim()
-      if (code) rawMap[code] = r.slice(TL_COL0, TL_COL0 + rawMonths.length * 2).map(c => String(c ?? '').trim())
-    })
-
-    // 일정이 하나라도 있는 구간만 남기기 (앞쪽 2026년 등 빈 달 제거)
     let firstHalf = Infinity
     let lastHalf = -1
-    Object.values(rawMap).forEach(cells => {
-      cells.forEach((v, i) => {
-        if (v) {
-          if (i < firstHalf) firstHalf = i
-          if (i > lastHalf) lastHalf = i
-        }
+    schedResult.slice(schedStart).forEach(r => {
+      const code = String(r[1] ?? '').trim()
+      const d = new Date(String(r[5] ?? ''))
+      if (!code || isNaN(d.getTime())) return
+      // 시트의 날짜는 KST 기준 — UTC로 직렬화된 값을 +9시간 보정해 연·월·일 추출
+      const k = new Date(d.getTime() + 9 * 3600 * 1000)
+      const startHalf =
+        ((k.getUTCFullYear() - TL_BASE_YEAR) * 12 + k.getUTCMonth()) * 2 + (k.getUTCDate() <= 14 ? 0 : 1)
+      if (startHalf < 0) return
+      const cells: string[] = new Array(startHalf).fill('')
+      TL_PHASES.forEach((ch, pi) => {
+        const halfLen = Math.max(0, Math.round(Number(r[6 + pi] || 0) * 2))
+        for (let j = 0; j < halfLen; j++) cells.push(ch)
       })
+      if (cells.length > startHalf) {
+        rawMap[code] = cells
+        if (startHalf < firstHalf) firstHalf = startHalf
+        if (cells.length - 1 > lastHalf) lastHalf = cells.length - 1
+      }
     })
+
+    // 일정이 있는 구간만 남기고 월 헤더 생성
     if (lastHalf >= 0) {
       const m0 = Math.floor(firstHalf / 2)
       const m1 = Math.floor(lastHalf / 2)
-      months = rawMonths.slice(m0, m1 + 1)
+      for (let mi = m0; mi <= m1; mi++) {
+        months.push({ year: TL_BASE_YEAR + Math.floor(mi / 12) + '년', month: (mi % 12) + 1 + '월' })
+      }
+      const width = (m1 + 1) * 2
       Object.entries(rawMap).forEach(([code, cells]) => {
-        tlMap[code] = cells.slice(m0 * 2, (m1 + 1) * 2)
+        const padded = cells.concat(new Array(Math.max(0, width - cells.length)).fill(''))
+        tlMap[code] = padded.slice(m0 * 2, width)
       })
     }
   }

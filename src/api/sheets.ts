@@ -4,7 +4,7 @@ const SCRIPT_URL =
 
 export const SHEET_NAME_WORK = '센터 업무 현황'
 export const SHEET_NAME_EQ = '장비 총괄표'
-export const SHEET_NAME_TL = '장비타임라인'
+export const SHEET_NAME_SCHEDULE = '장비도입일정'
 export const SHEET_NAME_NOTICE = '공지사항'
 
 type SheetCell = string | number | null | undefined
