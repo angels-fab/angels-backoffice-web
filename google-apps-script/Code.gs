@@ -40,7 +40,15 @@ function doGet(e) {
     }
     const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(name);
     if (!sh) return json_({ status: 'error', message: '시트 없음: ' + name });
-    return json_({ status: 'ok', sheet: name, data: sh.getDataRange().getValues() });
+    // 일부 시트(장비타임라인)에서 getValues가 "Unexpected error ... on object Range"로
+    // 실패하는 경우가 있어 표시값 읽기로 폴백 (프런트는 어차피 문자열로만 사용)
+    let data;
+    try {
+      data = sh.getDataRange().getValues();
+    } catch (e) {
+      data = sh.getDataRange().getDisplayValues();
+    }
+    return json_({ status: 'ok', sheet: name, data: data });
   } catch (err) {
     return json_({ status: 'error', message: String(err) });
   }
