@@ -27,7 +27,6 @@ export default function Equipment() {
   const [fltType, setFltType] = useState('전체')
   const [fltMgr, setFltMgr] = useState('전체')
   const [search, setSearch] = useState('')
-  const [openIdx, setOpenIdx] = useState<number | null>(null)
 
   const filtered = useMemo(() => {
     let arr = groups
@@ -64,7 +63,6 @@ export default function Equipment() {
 
   const setFilter = (setter: (v: string) => void) => (v: string) => {
     setter(v)
-    setOpenIdx(null)
   }
 
   // 버튼그룹(세그먼트) 형식 — 버튼들이 한 덩어리로 붙어 있는 형태
@@ -112,10 +110,7 @@ export default function Equipment() {
                 type="text"
                 placeholder="장비명, 담당자 등 검색..."
                 value={search}
-                onChange={e => {
-                  setSearch(e.target.value)
-                  setOpenIdx(null)
-                }}
+                onChange={e => setSearch(e.target.value)}
                 style={{
                   width: 320, maxWidth: '100%', padding: '7px 12px 7px 30px',
                   border: '1px solid var(--border)', borderRadius: 8,
@@ -162,8 +157,7 @@ export default function Equipment() {
         <span>연번</span>
         <span>관리번호</span>
         <span>장비명</span>
-        <span>담당자</span>
-        <span style={{ textAlign: 'center' }}>도입 타임라인</span>
+        <span></span>
       </div>
       {/* 연도·월 헤더 — 타임라인 칼럼 위에만 정렬 (#gantt-header-slot 그리드) */}
       <div id="gantt-header-slot">
@@ -175,16 +169,7 @@ export default function Equipment() {
         {filtered.length === 0 ? (
           <div className="task-empty">조건에 맞는 장비가 없습니다</div>
         ) : (
-          filtered.map((eq, i) => (
-            <EqItem
-              key={eq.name}
-              eq={eq}
-              index={i}
-              isOpen={openIdx === i}
-              months={months}
-              onToggle={() => setOpenIdx(openIdx === i ? null : i)}
-            />
-          ))
+          filtered.map((eq, i) => <EqItem key={eq.name} eq={eq} index={i} months={months} />)
         )}
       </div>
     </div>

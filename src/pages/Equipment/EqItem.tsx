@@ -17,102 +17,19 @@ export function eqStateColor(s: string): string {
   return '#9CA3AF'
 }
 
-function Drow({ label, value, amber }: { label: string; value?: string; amber?: boolean }) {
-  if (!value) return null
-  return (
-    <div className="eq-drow">
-      <span className="eq-dlbl">{label}</span>
-      <span className="eq-dval" style={amber ? { color: 'var(--amber)' } : undefined}>
-        {value}
-      </span>
-    </div>
-  )
-}
-
-function EqDetail({ eq }: { eq: EqGroup }) {
-  if (eq.hasVariant) {
-    // 세부 항목들을 하위 카드로 표시
-    return (
-      <div className="eq-detail">
-        <div className="eq-variant-list">
-          {eq.variants.map(v => {
-            const vColor = v.type === '외자' ? '#F0B429' : '#58A6FF'
-            return (
-              <div className="eq-variant" key={v.code || v.name}>
-                <div className="eq-variant-head">
-                  <span className="eq-variant-name">{v.name}</span>
-                  <span
-                    className="eq-type-badge"
-                    style={{ background: vColor + '22', color: vColor, border: `1px solid ${vColor}44` }}
-                  >
-                    {v.type}
-                  </span>
-                </div>
-                <div className="eq-detail-grid">
-                  <Drow label="관리번호" value={v.code} />
-                  <Drow label="용도" value={v.use} />
-                  <Drow label="입찰방법" value={v.bid} />
-                  <Drow label="도입금액" value={v.price ? v.price.toLocaleString() + '원' : ''} amber />
-                  <Drow label="담당자" value={v.mgr} />
-                  <Drow label="비고" value={v.note} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
-
-  // 일반 장비 상세 (표 컬럼과 정렬)
-  const catUse = [eq.cat, eq.use].filter(Boolean).join(' · ')
-  const fundType = [eq.fund, eq.type].filter(Boolean).join(' / ')
-  return (
-    <div className="eq-detail">
-      <div className="eq-detail-aligned">
-        <div className="eq-dcol-left">
-          <div className="eq-dcell">
-            <span className="eq-dlbl2">분류·용도</span>
-            <span className="eq-dval2">{catUse || '-'}</span>
-          </div>
-          <div className="eq-dcell">
-            <span className="eq-dlbl2">조달구분</span>
-            <span className="eq-dval2">{fundType || '-'}</span>
-          </div>
-        </div>
-        <div className="eq-dcol-right">
-          <div className="eq-dcell">
-            <span className="eq-dlbl2">입찰방법</span>
-            <span className="eq-dval2">{eq.bid || '-'}</span>
-          </div>
-          <div className="eq-dcell">
-            <span className="eq-dlbl2">도입금액</span>
-            <span className="eq-dval2" style={{ color: 'var(--amber)' }}>
-              {eq.price
-                ? eq.price.toLocaleString() + '원' + (eq.count > 1 ? ` (${eq.count}대)` : '')
-                : '-'}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 interface Props {
   eq: EqGroup
   index: number
-  isOpen: boolean
   months: TlMonth[]
-  onToggle: () => void
 }
 
-export default function EqItem({ eq, index, isOpen, months, onToggle }: Props) {
+// 도입 타임라인 행 (연번 | 관리번호 | 장비명 | 간트 막대)
+export default function EqItem({ eq, index, months }: Props) {
   const codeShort = eq.codes.length > 1 ? eq.codes[0] + '~' : eq.codes[0] || '-'
 
   return (
     <div className="eq-item">
-      <div className="eq-row" onClick={onToggle}>
+      <div className="eq-row">
         <span className="eq-seq">{index + 1}</span>
         <span className="eq-code">{codeShort}</span>
         <div className="eq-main">
@@ -123,12 +40,10 @@ export default function EqItem({ eq, index, isOpen, months, onToggle }: Props) {
             )}
           </span>
         </div>
-        <span className="eq-mgr">{eq.mgr}</span>
         <div className="eq-tl-cell">
           <GanttBar tl={eq.timeline} months={months} />
         </div>
       </div>
-      {isOpen && <EqDetail eq={eq} />}
     </div>
   )
 }
