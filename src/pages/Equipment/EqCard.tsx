@@ -19,19 +19,16 @@ export default function EqCard({ eq }: { eq: EqGroup }) {
 
   return (
     <div className="eq-card" style={{ background: st.bg, borderColor: st.border }}>
+      {/* 1줄: 관리번호 + 장비명 */}
       <div className="eq-card-top">
         <span className="eq-card-code">{codeShort}</span>
-        <span className="eq-card-state">
-          <span className="eq-state-dot" style={{ background: eqStateColor(eq.state) }} />
-          {(eq.state || '').trim() || '-'}
-        </span>
-      </div>
-      {/* 장비명(좌) + 분류·용도·구분 칩(우) 한 줄 — 카드 높이 절약 */}
-      <div className="eq-card-name-row">
         <span className="eq-card-name">
           {eq.name}
           {eq.count > 1 && <span className="eq-card-count">{eq.count}대</span>}
         </span>
+      </div>
+      {/* 2줄: 칩 모음(분류·용도·구분·담당자) 좌 + 상태 우 */}
+      <div className="eq-card-sub">
         <span className="eq-card-badges">
           {eq.cat && (
             <span
@@ -50,9 +47,21 @@ export default function EqCard({ eq }: { eq: EqGroup }) {
               {eq.type}
             </span>
           )}
+          {eq.mgr && <span className="eq-badge">{eq.mgr}</span>}
+        </span>
+        <span className="eq-card-state">
+          <span className="eq-state-dot" style={{ background: eqStateColor(eq.state) }} />
+          {(eq.state || '').trim() || '-'}
         </span>
       </div>
+      {/* 정보: 도입금액 → 입찰방법 → 재원 */}
       <div className="eq-card-rows">
+        <div className="eq-crow">
+          <span className="eq-crow-k">도입금액</span>
+          <span className="eq-crow-v" style={{ color: 'var(--amber)' }}>
+            {eq.price ? eq.price.toLocaleString() + '원' + (eq.count > 1 ? ` (${eq.count}대)` : '') : '-'}
+          </span>
+        </div>
         <div className="eq-crow">
           <span className="eq-crow-k">입찰방법</span>
           <span className="eq-crow-v">{eq.bid || '-'}</span>
@@ -60,16 +69,6 @@ export default function EqCard({ eq }: { eq: EqGroup }) {
         <div className="eq-crow">
           <span className="eq-crow-k">재원</span>
           <span className="eq-crow-v">{eq.fund || '-'}</span>
-        </div>
-        <div className="eq-crow">
-          <span className="eq-crow-k">담당자</span>
-          <span className="eq-crow-v">{eq.mgr || '-'}</span>
-        </div>
-        <div className="eq-crow">
-          <span className="eq-crow-k">도입금액</span>
-          <span className="eq-crow-v" style={{ color: 'var(--amber)' }}>
-            {eq.price ? eq.price.toLocaleString() + '원' + (eq.count > 1 ? ` (${eq.count}대)` : '') : '-'}
-          </span>
         </div>
       </div>
     </div>
