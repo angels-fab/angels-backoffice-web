@@ -24,18 +24,55 @@ export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayloa
     }),
   ])
 
-  // 타임라인 파싱 — [0]=컬럼헤더, [1]=월헤더("2027년 1월"...), [2~]=장비별(관리번호 r[1] 기준)
-  const monthRow = tlResult[1] ? tlResult[1].slice(3) : []
-  const months: TlMonth[] = monthRow.map(m => {
-    const s = String(m || '').trim()
-    const match = s.match(/(\d+)년\s*(\d+)월/)
-    return match ? { year: match[1] + '년', month: match[2] + '월' } : { year: '', month: s }
-  })
+  // 타임라인 파싱 — '장비타임라인'(거울 시트) 구조:
+  // '연번'으로 시작하는 헤더 행을 찾고, 그 위 행=연도(병합), 헤더 행=월(한 달=반월 2칸, G열부터),
+  // 헤더 아래 보조숫자 행을 건너뛴 다음부터 장비 행(관리번호 r[1] 기준)
+  const TL_COL0 = 6 // 타임라인 그리드 시작 열 (G열)
+  let hRow = -1
+  for (let i = 0; i < Math.min(tlResult.length, 8); i++) {
+    if (String(tlResult[i]?.[0] ?? '').trim().startsWith('연번')) { hRow = i; break }
+  }
+  let months: TlMonth[] = []
   const tlMap: Record<string, string[]> = {}
-  tlResult.slice(2).forEach(r => {
-    const code = String(r[1] || '').trim()
-    if (code) tlMap[code] = r.slice(3).map(c => String(c || '').trim())
-  })
+  if (hRow >= 1) {
+    const yearRow = tlResult[hRow - 1] || []
+    const tlMonthRow = tlResult[hRow] || []
+    const rawMonths: TlMonth[] = []
+    let curYear = ''
+    for (let c = TL_COL0; c < tlMonthRow.length; c += 2) {
+      const y = String(yearRow[c] ?? '').trim()
+      if (/\d{4}년/.test(y)) curYear = y // 연도는 병합 셀이라 등장할 때만 갱신
+      const m = String(tlMonthRow[c] ?? '').trim()
+      if (!/^\d+월$/.test(m)) break
+      rawMonths.push({ year: curYear, month: m })
+    }
+
+    const rawMap: Record<string, string[]> = {}
+    tlResult.slice(hRow + 2).forEach(r => {
+      const code = String(r[1] ?? '').trim()
+      if (code) rawMap[code] = r.slice(TL_COL0, TL_COL0 + rawMonths.length * 2).map(c => String(c ?? '').trim())
+    })
+
+    // 일정이 하나라도 있는 구간만 남기기 (앞쪽 2026년 등 빈 달 제거)
+    let firstHalf = Infinity
+    let lastHalf = -1
+    Object.values(rawMap).forEach(cells => {
+      cells.forEach((v, i) => {
+        if (v) {
+          if (i < firstHalf) firstHalf = i
+          if (i > lastHalf) lastHalf = i
+        }
+      })
+    })
+    if (lastHalf >= 0) {
+      const m0 = Math.floor(firstHalf / 2)
+      const m1 = Math.floor(lastHalf / 2)
+      months = rawMonths.slice(m0, m1 + 1)
+      Object.entries(rawMap).forEach(([code, cells]) => {
+        tlMap[code] = cells.slice(m0 * 2, (m1 + 1) * 2)
+      })
+    }
+  }
 
   // 헤더 행 찾기 (연번)
   let dataStart = 0

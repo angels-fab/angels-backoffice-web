@@ -1,7 +1,7 @@
 // 도입 타임라인 간트차트 — 월 단위 그리드, 각 월 안에 반달(전반/후반) 2칸
 import type { TlMonth } from '@/types'
 
-export const TL_VISIBLE_MONTHS = 24 // 2027.01 ~ 2028.12 고정 (모든 일정이 2028년 내 종료)
+export const TL_VISIBLE_MONTHS = 36 // 표시 최대 월 수 — 실제 구간은 시트에 일정이 있는 범위를 따라감 (eqSlice에서 앞뒤 빈 달 제거)
 
 export const TL_STAGE_COLOR: Record<string, string> = {
   사: '#F85149', // 사전규격
@@ -76,13 +76,14 @@ export function GanttHeader({ months: allMonths }: { months: TlMonth[] }) {
 }
 
 // 각 장비 간트 막대
-export function GanttBar({ tl, months }: { tl: string[]; months: TlMonth[] }) {
+export function GanttBar({ tl, months: allMonths }: { tl: string[]; months: TlMonth[] }) {
+  const months = allMonths.slice(0, TL_VISIBLE_MONTHS)
   const template = ganttGridTemplate(months)
   const cols = []
-  for (let mi = 0; mi < TL_VISIBLE_MONTHS; mi++) {
-    const m = months[mi] || { year: '', month: '' }
+  for (let mi = 0; mi < months.length; mi++) {
+    const m = months[mi]
     const isYearStart = mi === 0 || (months[mi - 1] && months[mi - 1].year !== m.year)
-    const isYearEnd = mi === TL_VISIBLE_MONTHS - 1 || (months[mi + 1] && months[mi + 1].year !== m.year)
+    const isYearEnd = mi === months.length - 1 || (months[mi + 1] && months[mi + 1].year !== m.year)
     const s1 = (tl[mi * 2] || '').trim()
     const s2 = (tl[mi * 2 + 1] || '').trim()
     cols.push({ mi, m, isYearStart, isYearEnd, s1, s2 })
