@@ -6,6 +6,7 @@ import { loadEqData } from '@/store/slices/eqSlice'
 import TitleLoad from '@/components/TitleLoad'
 import EqKpi from './EqKpi'
 import EqItem from './EqItem'
+import EqCard from './EqCard'
 import { GanttHeader } from './gantt'
 
 const TYPE_FILTERS = ['전체', '내자', '외자']
@@ -22,7 +23,7 @@ const TL_LEGEND = [
 
 export default function Equipment() {
   const dispatch = useAppDispatch()
-  const { groups, months, loading, error, updatedAt } = useAppSelector(s => s.eq)
+  const { raw, groups, months, loading, error, updatedAt } = useAppSelector(s => s.eq)
   const [fltType, setFltType] = useState('전체')
   const [fltMgr, setFltMgr] = useState('전체')
   const [search, setSearch] = useState('')
@@ -43,6 +44,23 @@ export default function Equipment() {
     }
     return arr
   }, [groups, fltType, fltMgr, search])
+
+  // 도입 장비 카드 — 상태가 '도입예정'/'도입중'인 장비만 (필터·검색 동일 적용)
+  const cardItems = useMemo(() => {
+    let arr = raw.filter(e => {
+      const s = (e.state || '').trim()
+      return s === '도입예정' || s === '도입중'
+    })
+    if (fltType !== '전체') arr = arr.filter(e => e.type === fltType)
+    if (fltMgr !== '전체') arr = arr.filter(e => (e.mgr || '').trim() === fltMgr)
+    const q = search.trim().toLowerCase()
+    if (q) {
+      arr = arr.filter(e =>
+        [e.name, e.mgr, e.maker, e.model, e.code, e.cat, e.use].join(' ').toLowerCase().includes(q),
+      )
+    }
+    return arr
+  }, [raw, fltType, fltMgr, search])
 
   const setFilter = (setter: (v: string) => void) => (v: string) => {
     setter(v)
@@ -108,22 +126,38 @@ export default function Equipment() {
             </span>
           </div>
         </div>
-        <div className="eq-flt-row" style={{ justifyContent: 'flex-end' }}>
-          <div className="tl-legend" style={{ width: 'auto' }}>
-            {TL_LEGEND.map(l => (
-              <span
-                key={l.label}
-                className="tl-leg-badge"
-                style={{ background: l.bg, color: l.color, borderColor: l.border }}
-              >
-                {l.label}
-              </span>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* 헤더 */}
+      {/* ── 도입 장비 카드 (상태: 도입예정·도입중) ── */}
+      <div className="eq-sec-head">
+        <span className="eq-sec-title">도입 장비</span>
+        <span className="eq-sec-count">{cardItems.length}대</span>
+      </div>
+      {cardItems.length === 0 ? (
+        <div className="task-empty" style={{ width: '100%' }}>도입예정·도입중 장비가 없습니다</div>
+      ) : (
+        <div className="eq-card-grid">
+          {cardItems.map(e => (
+            <EqCard key={`${e.num}-${e.code}`} eq={e} />
+          ))}
+        </div>
+      )}
+
+      {/* ── 도입 타임라인 ── */}
+      <div className="eq-sec-head" style={{ marginTop: 10 }}>
+        <span className="eq-sec-title">도입 타임라인</span>
+        <div className="tl-legend" style={{ width: 'auto', marginLeft: 'auto' }}>
+          {TL_LEGEND.map(l => (
+            <span
+              key={l.label}
+              className="tl-leg-badge"
+              style={{ background: l.bg, color: l.color, borderColor: l.border }}
+            >
+              {l.label}
+            </span>
+          ))}
+        </div>
+      </div>
       <div className="eq-list-header" style={{ width: '100%' }}>
         <span>연번</span>
         <span>관리번호</span>

@@ -14,34 +14,46 @@ interface EqPayload {
   months: TlMonth[]
 }
 
+// 헤더 셀 정규화 — 공백·'(자동)' 꼬리를 떼고 이름으로 비교 (열 위치가 바뀌어도 이름으로 찾기 위함)
+const normH = (v: unknown) => String(v ?? '').replace(/\s+/g, '').replace(/\(자동\)/g, '')
+
 export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayload> => {
-  // 장비 총괄표 + 장비도입일정(타임라인 원천 데이터) 동시 로드
+  // 장비운영관리(목록·예산·상태) + 장비도입관리(타임라인 원천) 동시 로드
   const [rows, schedResult] = await Promise.all([
     fetchSheet(SHEET_NAME_EQ),
     fetchSheet(SHEET_NAME_SCHEDULE).catch(e => {
-      console.warn('도입일정 로드 실패', e)
+      console.warn('장비도입관리 로드 실패', e)
       return []
     }),
   ])
 
-  // 타임라인 계산 — '장비도입일정' 시트에서 직접:
-  // B관리번호 / F시작년월 / G~L = 사·공·평·협·제·설 단계별 기간(개월, 0.5 단위)
+  // 타임라인 계산 — '장비도입관리' 시트에서 직접:
+  // 관리번호·시작년월·단계별 기간(개월, 0.5 단위) 열을 헤더 이름으로 찾는다
   // 한 달 = 반월 2칸. 시작일이 15일 이후면 그 달의 후반 칸부터 시작 (시트 수식과 동일 규칙)
-  const TL_PHASES = ['사', '공', '평', '협', '제', '설']
   const TL_BASE_YEAR = 2026
-  let schedStart = -1
+  let schedHead = -1
   for (let i = 0; i < Math.min(schedResult.length, 8); i++) {
-    if (String(schedResult[i]?.[0] ?? '').trim().startsWith('연번')) { schedStart = i + 1; break }
+    if (normH(schedResult[i]?.[0]) === '연번') { schedHead = i; break }
   }
   let months: TlMonth[] = []
   const tlMap: Record<string, string[]> = {}
-  if (schedStart > 0) {
+  if (schedHead >= 0) {
+    const sHeads = (schedResult[schedHead] || []).map(normH)
+    const scol = (name: string) => sHeads.indexOf(name)
+    const cCode = scol('관리번호')
+    const cStart = scol('시작년월')
+    // 단계 헤더명 ↔ 간트 약어
+    const PHASES: [string, string][] = [
+      ['사전규격', '사'], ['구매공고', '공'], ['기술평가', '평'],
+      ['기술협상', '협'], ['장비제작', '제'], ['장비설치', '설'],
+    ]
+    const phaseCols = PHASES.map(([h]) => scol(h))
     const rawMap: Record<string, string[]> = {}
     let firstHalf = Infinity
     let lastHalf = -1
-    schedResult.slice(schedStart).forEach(r => {
-      const code = String(r[1] ?? '').trim()
-      const d = new Date(String(r[5] ?? ''))
+    schedResult.slice(schedHead + 1).forEach(r => {
+      const code = cCode >= 0 ? String(r[cCode] ?? '').trim() : ''
+      const d = new Date(String(cStart >= 0 ? r[cStart] ?? '' : ''))
       if (!code || isNaN(d.getTime())) return
       // 시트의 날짜는 KST 기준 — UTC로 직렬화된 값을 +9시간 보정해 연·월·일 추출
       const k = new Date(d.getTime() + 9 * 3600 * 1000)
@@ -49,8 +61,9 @@ export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayloa
         ((k.getUTCFullYear() - TL_BASE_YEAR) * 12 + k.getUTCMonth()) * 2 + (k.getUTCDate() <= 14 ? 0 : 1)
       if (startHalf < 0) return
       const cells: string[] = new Array(startHalf).fill('')
-      TL_PHASES.forEach((ch, pi) => {
-        const halfLen = Math.max(0, Math.round(Number(r[6 + pi] || 0) * 2))
+      PHASES.forEach(([, ch], pi) => {
+        const ci = phaseCols[pi]
+        const halfLen = ci < 0 ? 0 : Math.max(0, Math.round(Number(r[ci] || 0) * 2))
         for (let j = 0; j < halfLen; j++) cells.push(ch)
       })
       if (cells.length > startHalf) {
@@ -75,31 +88,50 @@ export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayloa
     }
   }
 
-  // 헤더 행 찾기 (연번)
-  let dataStart = 0
+  // ── '장비운영관리' 파싱 — 2단 헤더(그룹행 + 세부행)를 병합해 이름으로 열을 찾는다 ──
+  // 예: 그룹행 "구매" 아래 세부행 "구분/입찰 방법/재원/담당자" → 세부행 이름이 우선
+  let eqHead = -1
   for (let i = 0; i < Math.min(rows.length, 6); i++) {
-    if (String(rows[i][0]).trim() === '연번') {
-      dataStart = i + 1
-      break
-    }
+    if (normH(rows[i]?.[0]) === '연번') { eqHead = i; break }
   }
+  const topH = eqHead >= 0 ? rows[eqHead] : []
+  const hasSub = eqHead >= 0 && rows[eqHead + 1] != null && normH(rows[eqHead + 1][0]) === ''
+  const subH = hasSub ? rows[eqHead + 1] : []
+  const heads: string[] = []
+  for (let c = 0; c < Math.max(topH.length, subH.length); c++) {
+    heads.push(normH(subH[c]) || normH(topH[c]))
+  }
+  const hcol = (...names: string[]) => {
+    for (const n of names) {
+      const i = heads.indexOf(n)
+      if (i >= 0) return i
+    }
+    return -1
+  }
+  const CI = {
+    num: hcol('연번'), code: hcol('관리번호'), name: hcol('장비명'), cat: hcol('분류'),
+    use: hcol('용도'), type: hcol('구분', '구매구분'), bid: hcol('입찰방법'), fund: hcol('재원'),
+    mgr: hcol('담당자'), start: hcol('시작년월'), assetNo: hcol('자산번호'), nfec: hcol('NFEC번호'),
+    maker: hcol('제조사'), model: hcol('모델명'), price: hcol('도입금액'), installDate: hcol('설치일자'),
+    installLoc: hcol('설치장소'), vendor: hcol('업체명'), mgr2: hcol('엔지니어'), contact: hcol('연락처'),
+    state: hcol('상태'), note: hcol('비고'),
+  }
+  const dataStart = eqHead < 0 ? 0 : eqHead + (hasSub ? 2 : 1)
 
   const raw: EqRawItem[] = rows
     .slice(dataStart)
     .filter(r => r[0] !== '' && r[0] !== null && !isNaN(Number(String(r[0]).trim())) && String(r[0]).trim() !== '')
     .map(r => {
       const g = (i: number) => cell(r, i)
-      // 열 배치 (2026-06 시트 개편 후): A연번 B관리번호 C장비명 D분류 E용도 F구매구분
-      // G입찰방법 H재원 I담당자 J시작년월 K자산번호 L NFEC M제조사 N모델명 O도입금액
-      // P설치일자 Q설치장소 R업체명 S엔지니어 T연락처 U상태 (비고 열은 없어짐)
-      const price = r[14] ? Number(String(r[14]).replace(/,/g, '') || 0) : 0
+      const priceRaw = CI.price >= 0 ? r[CI.price] : ''
+      const price = priceRaw ? Number(String(priceRaw).replace(/,/g, '') || 0) : 0
       return {
-        num: g(0), code: g(1), name: g(2), cat: g(3), use: g(4), type: g(5),
-        bid: g(6), fund: g(7), mgr: g(8), status: g(20), start: g(9),
-        assetNo: g(10), nfec: g(11), maker: g(12), model: g(13), price,
-        installDate: g(15), installLoc: g(16), state: g(20), mgr2: g(18),
-        vendor: g(17), contact: g(19), note: g(21),
-        timeline: tlMap[g(1)] || [],
+        num: g(CI.num), code: g(CI.code), name: g(CI.name), cat: g(CI.cat), use: g(CI.use), type: g(CI.type),
+        bid: g(CI.bid), fund: g(CI.fund), mgr: g(CI.mgr), status: g(CI.state), start: g(CI.start),
+        assetNo: g(CI.assetNo), nfec: g(CI.nfec), maker: g(CI.maker), model: g(CI.model), price,
+        installDate: g(CI.installDate), installLoc: g(CI.installLoc), state: g(CI.state), mgr2: g(CI.mgr2),
+        vendor: g(CI.vendor), contact: g(CI.contact), note: g(CI.note),
+        timeline: tlMap[g(CI.code)] || [],
       }
     })
 

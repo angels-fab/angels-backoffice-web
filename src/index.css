@@ -274,6 +274,24 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .eq-flt-group .eq-flt-btn:first-child{border-left:none}
 .eq-flt-group .eq-flt-btn:hover{background:var(--ink3);color:var(--text)}
 .eq-flt-group .eq-flt-btn.active{background:var(--amber);color:#000;font-weight:600}
+/* ── 도입 장비 카드 그리드 ── */
+.eq-sec-head{display:flex;align-items:center;gap:10px;width:100%;margin:6px 0 12px}
+.eq-sec-title{font-size:16px;font-weight:600;color:var(--text)}
+.eq-sec-count{font-size:11px;background:var(--ink3);color:var(--text2);padding:1px 9px;border-radius:99px;font-weight:500}
+.eq-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;width:100%;margin-bottom:30px}
+.eq-card{background:var(--ink2);border:1px solid var(--border2);border-radius:16px;padding:15px 17px;display:flex;flex-direction:column;gap:9px;transition:border-color .15s,background .15s}
+.eq-card:hover{background:var(--ink3);border-color:var(--border)}
+.eq-card-top{display:flex;align-items:center;gap:8px}
+.eq-card-num{font-size:11px;color:var(--text3);font-family:"IBM Plex Mono",monospace}
+.eq-card-code{font-size:12px;font-weight:700;color:var(--text2);font-family:"IBM Plex Mono",monospace}
+.eq-card-state{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);white-space:nowrap}
+.eq-card-name{font-size:15px;font-weight:600;color:var(--text);line-height:1.4}
+.eq-card-badges{display:flex;gap:5px;flex-wrap:wrap}
+.eq-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;border:1px solid var(--border);background:var(--ink3);color:var(--text2);white-space:nowrap}
+.eq-card-rows{display:flex;flex-direction:column;gap:4px;margin-top:2px;border-top:0.5px solid var(--border2);padding-top:9px}
+.eq-crow{display:flex;justify-content:space-between;gap:10px;font-size:12px}
+.eq-crow-k{color:var(--text3);flex-shrink:0}
+.eq-crow-v{color:var(--text2);text-align:right;min-width:0}
 .eq-flt-search{margin-left:auto;background:var(--ink2);border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--text);font-size:11px;font-family:inherit;outline:none;width:180px;transition:border-color .15s}
 .eq-flt-search:focus{border-color:var(--blue)}
 .eq-flt-search::placeholder{color:var(--text3)}
