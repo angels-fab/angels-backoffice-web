@@ -26,28 +26,31 @@ export default function EqCard({ eq }: { eq: EqGroup }) {
           {(eq.state || '').trim() || '-'}
         </span>
       </div>
-      <div className="eq-card-name">
-        {eq.name}
-        {eq.count > 1 && <span className="eq-card-count">{eq.count}대</span>}
-      </div>
-      <div className="eq-card-badges">
-        {eq.cat && (
-          <span
-            className="eq-badge"
-            style={{ background: cColor + '22', color: cColor, borderColor: cColor + '44' }}
-          >
-            {eq.cat}
-          </span>
-        )}
-        {eq.use && <span className="eq-badge">{eq.use}</span>}
-        {eq.type && (
-          <span
-            className="eq-badge"
-            style={{ background: typeColor + '22', color: typeColor, borderColor: typeColor + '44' }}
-          >
-            {eq.type}
-          </span>
-        )}
+      {/* 장비명(좌) + 분류·용도·구분 칩(우) 한 줄 — 카드 높이 절약 */}
+      <div className="eq-card-name-row">
+        <span className="eq-card-name">
+          {eq.name}
+          {eq.count > 1 && <span className="eq-card-count">{eq.count}대</span>}
+        </span>
+        <span className="eq-card-badges">
+          {eq.cat && (
+            <span
+              className="eq-badge"
+              style={{ background: cColor + '22', color: cColor, borderColor: cColor + '44' }}
+            >
+              {eq.cat}
+            </span>
+          )}
+          {eq.use && <span className="eq-badge">{eq.use}</span>}
+          {eq.type && (
+            <span
+              className="eq-badge"
+              style={{ background: typeColor + '22', color: typeColor, borderColor: typeColor + '44' }}
+            >
+              {eq.type}
+            </span>
+          )}
+        </span>
       </div>
       <div className="eq-card-rows">
         <div className="eq-crow">

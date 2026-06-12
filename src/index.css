@@ -111,7 +111,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .load-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 .preview-loading{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text3);font-size:12px;padding:18px 4px}
 /* 업무 구분 필터 + 검색 */
-.wflt-row{display:flex;justify-content:flex-start;align-items:center;gap:10px;width:100%;max-width:960px;margin-bottom:12px;flex-wrap:wrap}
+.wflt-row{display:flex;justify-content:flex-start;align-items:center;gap:10px;width:100%;margin-bottom:12px;flex-wrap:wrap}
 .wflt-cats{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .wflt-label{font-size:11px;font-weight:700;color:var(--text3);flex-shrink:0;width:42px}
 .wflt-btn{padding:4px 11px;font-size:12px;border:1px solid var(--border);background:transparent;color:var(--text2);border-radius:8px;cursor:pointer;font-family:inherit;transition:all .12s}
@@ -219,7 +219,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   .cur-row{padding:12px 14px}
 }
 /* ── 진행중/지난 탭 ── */
-.wkpi-row{display:flex;gap:12px;width:100%;max-width:960px;margin-bottom:16px;flex-wrap:wrap}
+.wkpi-row{display:flex;gap:12px;width:100%;margin-bottom:16px;flex-wrap:wrap}
 .wkpi-card{flex:1 1 0;min-width:200px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 18px;background:var(--ink2);border:1px solid var(--border2);border-radius:16px;cursor:pointer;font-family:inherit;text-align:left;transition:border-color .15s,background .15s}
 .wkpi-card:hover{background:var(--ink3)}
 .wkpi-card.active{background:var(--ink3)}
@@ -247,7 +247,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wkpi-sub.amber{color:var(--amber)}
 .task-group-title{padding:8px 18px 4px;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-weight:600}
 /* ── 업무현황 박스 (현재/지난) ── */
-.work-box{background:var(--ink2);border:1px solid var(--border2);border-radius:16px;overflow:hidden;width:100%;max-width:960px}
+.work-box{background:var(--ink2);border:1px solid var(--border2);border-radius:16px;overflow:hidden;width:100%}
 .work-box-head{display:flex;align-items:center;gap:9px;padding:13px 18px;border-bottom:0.5px solid var(--border2)}
 .work-box-title{font-size:14px;font-weight:600;color:var(--text)}
 .work-box-count{font-size:11px;background:var(--ink3);color:var(--text2);padding:1px 9px;border-radius:99px;font-weight:500}
@@ -278,7 +278,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .eq-sec-head{display:flex;align-items:center;gap:10px;width:100%;margin:6px 0 12px}
 .eq-sec-title{font-size:16px;font-weight:600;color:var(--text)}
 .eq-sec-count{font-size:11px;background:var(--ink3);color:var(--text2);padding:1px 9px;border-radius:99px;font-weight:500}
-.eq-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;width:100%;margin-bottom:22px}
+.eq-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;width:100%;margin-bottom:22px}
 .eq-cat-row{display:flex;align-items:center;gap:8px;margin:2px 0 10px}
 .eq-cat-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
 .eq-cat-name{font-size:13.5px;font-weight:600;color:var(--text2)}
@@ -289,8 +289,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .eq-card-num{font-size:11px;color:var(--text3);font-family:"IBM Plex Mono",monospace}
 .eq-card-code{font-size:12px;font-weight:700;color:var(--text2);font-family:"IBM Plex Mono",monospace}
 .eq-card-state{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);white-space:nowrap}
-.eq-card-name{font-size:15px;font-weight:600;color:var(--text);line-height:1.4}
-.eq-card-badges{display:flex;gap:5px;flex-wrap:wrap}
+.eq-card-name-row{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.eq-card-name{font-size:15px;font-weight:600;color:var(--text);line-height:1.4;min-width:0}
+.eq-card-badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
 .eq-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;border:1px solid var(--border);background:var(--ink3);color:var(--text2);white-space:nowrap}
 .eq-card-rows{display:flex;flex-direction:column;gap:4px;margin-top:2px;border-top:0.5px solid var(--border2);padding-top:9px}
 .eq-crow{display:flex;justify-content:space-between;gap:10px;font-size:12px}
@@ -717,7 +718,7 @@ body.eq-wide main{max-width:98vw}
 .post-nav span{cursor:pointer;transition:color .15s;display:inline-flex;align-items:center;gap:3px}.post-nav span:hover{color:var(--text)}
 
 /* ── Page ── */
-.page{display:none;flex:1;flex-direction:column;max-width:960px;width:100%;margin:0 auto;padding:32px 24px}
+.page{display:none;flex:1;flex-direction:column;max-width:1320px;width:100%;margin:0 auto;padding:32px 24px}
 .page.active{display:flex}
 .page-header{display:flex;align-items:center;gap:12px;margin-bottom:28px}
 .back-btn{background:var(--ink2);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
@@ -779,7 +780,7 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 /* ── 홈: 장비 현황 요약 카드 ── */
 .eq-summary{width:100%;max-width:960px;background:linear-gradient(135deg,#0d2440,#0a1828);border:1px solid #1f4068;border-radius:18px;padding:18px 20px;margin-bottom:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;position:relative;overflow:hidden;-webkit-tap-highlight-color:rgba(88,166,255,.2)}
 .eq-summary:hover{border-color:var(--blue);box-shadow:0 8px 24px rgba(0,0,0,.3);transform:translateY(-2px)}
-.eq-summary-page{cursor:default;margin-bottom:0}
+.eq-summary-page{cursor:default;margin-bottom:0;max-width:none}
 .eq-summary-page:hover{border-color:#1f4068;box-shadow:none;transform:none}
 .eqs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .eqs-title{font-size:14px;font-weight:700;color:#cfe3ff}
