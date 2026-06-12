@@ -88,13 +88,16 @@ export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayloa
     .filter(r => r[0] !== '' && r[0] !== null && !isNaN(Number(String(r[0]).trim())) && String(r[0]).trim() !== '')
     .map(r => {
       const g = (i: number) => cell(r, i)
-      const price = r[15] ? Number(String(r[15]).replace(/,/g, '') || 0) : 0
+      // 열 배치 (2026-06 시트 개편 후): A연번 B관리번호 C장비명 D분류 E용도 F구매구분
+      // G입찰방법 H재원 I담당자 J시작년월 K자산번호 L NFEC M제조사 N모델명 O도입금액
+      // P설치일자 Q설치장소 R업체명 S엔지니어 T연락처 U상태 (비고 열은 없어짐)
+      const price = r[14] ? Number(String(r[14]).replace(/,/g, '') || 0) : 0
       return {
         num: g(0), code: g(1), name: g(2), cat: g(3), use: g(4), type: g(5),
-        bid: g(6), fund: g(7), mgr: g(8), status: g(9), start: g(10),
-        assetNo: g(11), nfec: g(12), maker: g(13), model: g(14), price,
-        installDate: g(16), installLoc: g(17), state: g(18), mgr2: g(19),
-        vendor: g(20), contact: g(21), note: g(22),
+        bid: g(6), fund: g(7), mgr: g(8), status: g(20), start: g(9),
+        assetNo: g(10), nfec: g(11), maker: g(12), model: g(13), price,
+        installDate: g(15), installLoc: g(16), state: g(20), mgr2: g(18),
+        vendor: g(17), contact: g(19), note: g(21),
         timeline: tlMap[g(1)] || [],
       }
     })
