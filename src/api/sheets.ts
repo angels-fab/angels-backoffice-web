@@ -3,8 +3,8 @@ const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbxwvgPPyZDVTnWl6g7M_Y2vv1U-mrYitz0KUy9SBxfCtSWOzjX1w9oZp90b7don9Fmd/exec'
 
 export const SHEET_NAME_WORK = '센터 업무 현황'
-export const SHEET_NAME_EQ = '장비 총괄표'
-export const SHEET_NAME_SCHEDULE = '장비도입일정'
+export const SHEET_NAME_EQ = '장비운영관리'
+export const SHEET_NAME_SCHEDULE = '장비도입관리'
 export const SHEET_NAME_NOTICE = '공지사항'
 
 type SheetCell = string | number | null | undefined

@@ -4,6 +4,7 @@ import CampaignIcon from '@mui/icons-material/Campaign'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import MonitorIcon from '@mui/icons-material/Monitor'
+import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import LinkIcon from '@mui/icons-material/Link'
 import { useNavBadges } from './useNavBadges'
 
@@ -39,7 +40,10 @@ export default function SideNav() {
     },
     {
       label: '장비',
-      items: [{ icon: <MonitorIcon />, label: '장비현황', path: '/equipment' }],
+      items: [
+        { icon: <MonitorIcon />, label: '장비운영관리', path: '/equipment-ops' },
+        { icon: <LocalShippingIcon />, label: '장비도입관리', path: '/equipment' },
+      ],
     },
     {
       label: '정보',

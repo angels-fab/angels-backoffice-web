@@ -12,7 +12,7 @@
 // 팹센터 구축총괄시트 ID (시트 URL의 /d/ 와 /edit 사이 문자열)
 const SHEET_ID = '1lnS34m1cQ2mY6W6cBi7kOjDNtNaXtDSg3VRqgFWmUjU';
 // 읽기 허용 시트 — 이 목록 밖의 시트('담당자' 등)는 절대 노출하지 않음
-const READABLE_SHEETS = ['공지사항', '센터 업무 현황', '장비 총괄표', '장비타임라인', '장비도입일정'];
+const READABLE_SHEETS = ['공지사항', '센터 업무 현황', '장비운영관리', '장비도입관리'];
 
 // ── 읽기: ?sheet=시트이름 → 해당 시트 전체를 JSON으로 ──
 //        ?authors=1 → 담당자 이름 목록만 (비밀번호 제외, 글쓰기 폼 버튼용)

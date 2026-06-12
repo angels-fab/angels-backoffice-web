@@ -109,8 +109,6 @@ interface Props {
 
 export default function EqItem({ eq, index, isOpen, months, onToggle }: Props) {
   const codeShort = eq.codes.length > 1 ? eq.codes[0] + '~' : eq.codes[0] || '-'
-  const stColor = eqStateColor(eq.state)
-  const stName = (eq.state || '').trim() || '-'
 
   return (
     <div className="eq-item">
@@ -125,10 +123,6 @@ export default function EqItem({ eq, index, isOpen, months, onToggle }: Props) {
             )}
           </span>
         </div>
-        <span className="eq-state">
-          <span className="eq-state-dot" style={{ background: stColor }} />
-          {stName}
-        </span>
         <span className="eq-mgr">{eq.mgr}</span>
         <div className="eq-tl-cell">
           <GanttBar tl={eq.timeline} months={months} />
