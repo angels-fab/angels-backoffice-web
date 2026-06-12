@@ -58,7 +58,18 @@ function doGet(e) {
 function doPost(e) {
   try {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    if (req.action === 'addNotice') return addNotice_(req);
+    if (req.action === 'addNotice') {
+      // 동시 쓰기 잠금 — 두 명이 동시에 등록해도 연번이 겹치지 않게 한 번에 한 명씩 처리
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(10000)) {
+        return json_({ status: 'error', message: '저장 요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
+      }
+      try {
+        return addNotice_(req);
+      } finally {
+        lock.releaseLock();
+      }
+    }
     return json_({ status: 'error', message: '알 수 없는 action: ' + req.action });
   } catch (err) {
     return json_({ status: 'error', message: String(err) });
