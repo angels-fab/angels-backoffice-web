@@ -60,10 +60,10 @@ export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayloa
       }
     })
 
-    // 일정이 있는 구간만 남기고 월 헤더 생성
+    // 일정이 있는 구간 앞뒤로 한 달씩 여유를 두고 월 헤더 생성
     if (lastHalf >= 0) {
-      const m0 = Math.floor(firstHalf / 2)
-      const m1 = Math.floor(lastHalf / 2)
+      const m0 = Math.max(0, Math.floor(firstHalf / 2) - 1)
+      const m1 = Math.floor(lastHalf / 2) + 1
       for (let mi = m0; mi <= m1; mi++) {
         months.push({ year: TL_BASE_YEAR + Math.floor(mi / 12) + '년', month: (mi % 12) + 1 + '월' })
       }

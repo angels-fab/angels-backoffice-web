@@ -142,10 +142,10 @@ export default function Equipment() {
         <span>장비명</span>
         <span>상태</span>
         <span>담당자</span>
-        <span></span>
         <span style={{ textAlign: 'center' }}>도입 타임라인</span>
       </div>
-      <div style={{ width: '100%' }}>
+      {/* 연도·월 헤더 — 타임라인 칼럼 위에만 정렬 (#gantt-header-slot 그리드) */}
+      <div id="gantt-header-slot">
         <GanttHeader months={months} />
       </div>
 

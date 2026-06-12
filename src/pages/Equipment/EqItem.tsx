@@ -1,5 +1,3 @@
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import type { EqGroup, TlMonth } from '@/types'
 import { GanttBar } from './gantt'
 
@@ -132,9 +130,6 @@ export default function EqItem({ eq, index, isOpen, months, onToggle }: Props) {
           {stName}
         </span>
         <span className="eq-mgr">{eq.mgr}</span>
-        <span className="eq-chevron">
-          {isOpen ? <KeyboardArrowUpIcon sx={{ fontSize: 16 }} /> : <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />}
-        </span>
         <div className="eq-tl-cell">
           <GanttBar tl={eq.timeline} months={months} />
         </div>
