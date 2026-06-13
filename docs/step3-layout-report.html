@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 3 — Layout System 구축 (완료 보고)</title>
+<style>
+  :root{
+    --bg:#0F1117; --surface:#131722; --card:#161B22; --hover:#1D2635;
+    --border:#293244; --divider:#232C3A;
+    --text:#FFFFFF; --text2:#AAB4C3; --muted:#7D8899;
+    --blue:#5491DA; --green:#4DA167; --amber:#D6A23E; --red:#E05B54;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:'IBM Plex Sans KR','Segoe UI',system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:48px 24px 80px}
+  header.top{position:sticky;top:0;background:rgba(19,23,34,.85);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);margin:-48px -24px 32px;padding:16px 24px}
+  .tag{display:inline-block;font-size:11px;font-weight:600;color:var(--blue);
+    border:1px solid var(--border);border-radius:8px;padding:2px 8px;margin-bottom:8px}
+  h1{font-size:27px;font-weight:700;letter-spacing:-.01em;margin:0}
+  .sub{color:var(--text2);font-size:14px;margin-top:6px}
+  h2{font-size:19px;font-weight:700;margin:38px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--divider)}
+  h3{font-size:14px;font-weight:600;color:var(--text2);margin:20px 0 8px}
+  p,li{font-size:14px;color:var(--text2)} li{margin:4px 0}
+  code{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;color:var(--text)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;
+    background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--divider)}
+  th{color:var(--text2);font-weight:600;background:var(--surface);font-size:12px}
+  tr:last-child td{border-bottom:none}
+  td b{color:var(--text)} .after{color:var(--green);font-weight:600}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin:14px 0}
+  ul{padding-left:20px;margin:8px 0}
+  a{color:var(--blue)}
+  .ok{color:var(--green)} .no{color:var(--amber)}
+  /* layout diagram */
+  .diagram{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text2)}
+  .d-shell{display:flex;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px}
+  .d-side{width:120px;flex-shrink:0;background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text)}
+  .d-main{flex:1;display:flex;flex-direction:column;gap:8px}
+  .d-box{border:1px dashed var(--border);border-radius:8px;padding:10px;color:var(--text2)}
+  .d-box.hl{border-style:solid;border-color:var(--blue);color:var(--text)}
+  .d-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}
+  .d-kpi{background:var(--hover);border:1px solid var(--border);border-radius:6px;padding:8px;text-align:center;font-size:11px;color:var(--text)}
+  .pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:6px;border:1px solid var(--border);color:var(--text2);margin-left:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="tag">STEP 3</span>
+    <h1>Layout System 구축</h1>
+    <div class="sub">작업일 2026-06-13 · 범위: <b>레이아웃 시스템 컴포넌트 구축 + 적용 방식 문서화</b> (페이지 디자인/구조/기능 미수정)</div>
+  </header>
+
+  <h2>1) Layout 구조도</h2>
+  <div class="card diagram">
+    <div class="d-shell">
+      <div class="d-side">AppLayout<br><span style="color:var(--muted)">Sidebar 256<br>(데스크톱 고정,<br>모바일 Drawer)</span></div>
+      <div class="d-main">
+        <div class="d-box hl">PageContainer <span class="pill">폭 1400 / 좌우 24 / 상단 32</span></div>
+        <div class="d-box">PageHeader <span class="pill">아이콘 + 제목 + 업데이트시간 + 액션</span></div>
+        <div class="d-box">ContentSection — KPI 영역
+          <div class="d-grid"><div class="d-kpi">KPI</div><div class="d-kpi">KPI</div><div class="d-kpi">KPI</div><div class="d-kpi">KPI</div></div>
+          <div style="margin-top:4px;color:var(--muted)">CardGrid · KPI↔KPI 16</div>
+        </div>
+        <div class="d-box">ContentSection — 목록 영역 <span class="pill">Section↔Section 24</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h2>2) 신규/확장 컴포넌트</h2>
+  <table>
+    <tr><th>컴포넌트</th><th>역할</th><th>상태</th></tr>
+    <tr><td><code>AppLayout</code></td><td>최상위 셸 — Sidebar + Main + 반응형(데스크톱 고정 / 모바일 햄버거+Drawer)</td><td>신규</td></tr>
+    <tr><td><code>PageContainer</code></td><td>폭(wide 1400 / detail 1200)·좌우·상단 padding 통일</td><td>신규</td></tr>
+    <tr><td><code>ContentSection</code></td><td>섹션 단위, 하단 간격 24 통일 (+ SectionHeader 동반)</td><td>신규</td></tr>
+    <tr><td><code>CardGrid</code></td><td>KPI·카드 반응형 그리드, 간격 16 (Mobile 1 / Tablet 2 / Desktop N)</td><td>신규</td></tr>
+    <tr><td><code>PageHeader</code></td><td>아이콘 + 페이지명 + 업데이트시간 + 우측 액션</td><td>확장</td></tr>
+    <tr><td><code>SectionHeader</code></td><td>제목 + 설명(선택) + 액션(선택)</td><td>확장</td></tr>
+  </table>
+
+  <h2>3) 기존 페이지 적용 방식 (이관 레시피 — STEP 4+ 적용)</h2>
+  <div class="card">
+<pre style="margin:0;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--text2);white-space:pre-wrap">&lt;PageContainer&gt;                          <span style="color:var(--green)">// 폭·여백 통일</span>
+  &lt;PageHeader icon={…} title="제목" updatedAt="…" actions={…} /&gt;
+  &lt;ContentSection title="KPI"&gt;
+    &lt;CardGrid columns={4}&gt;{kpis}&lt;/CardGrid&gt;   <span style="color:var(--green)">// KPI 16px</span>
+  &lt;/ContentSection&gt;
+  &lt;ContentSection title="목록" last&gt;
+    &lt;CardGrid minColWidth={290}&gt;{cards}&lt;/CardGrid&gt;
+  &lt;/ContentSection&gt;
+&lt;/PageContainer&gt;</pre>
+  </div>
+  <p>현재는 컴포넌트만 구축하고 7개 페이지에는 적용하지 않음(명세 "페이지 수정 금지"). STEP 4(홈 리디자인)부터 위 레시피로 점진 이관.</p>
+
+  <h2>4) Before / After 비교</h2>
+  <p>실측 조사(9개 영역 병렬 스캔) 결과 — 현재 페이지별 폭·여백이 제각각:</p>
+  <table>
+    <tr><th>항목</th><th>Before (현재, 페이지별 상이)</th><th>After (통일)</th></tr>
+    <tr><td>콘텐츠 최대폭</td><td>홈 1180 · .page 1320 · 요약 960 · 타임라인 98vw</td><td class="after">1400 (목록) / 1200 (상세)</td></tr>
+    <tr><td>상단 padding</td><td>main 36 (+ .page 32 중복 → 공지 68)</td><td class="after">32</td></tr>
+    <tr><td>Header → 첫 Section</td><td>홈 20 · .page 28</td><td class="after">24</td></tr>
+    <tr><td>Section ↔ Section</td><td>12 / 14 / 16 / 20 / 28 / 38</td><td class="after">24</td></tr>
+    <tr><td>Card ↔ Card</td><td>12 / 14 / 18</td><td class="after">16</td></tr>
+    <tr><td>KPI ↔ KPI</td><td>10 / 12 / 14</td><td class="after">16</td></tr>
+    <tr><td>Card 내부 padding</td><td>16×18 / 20 / 22×24 / 13×15</td><td class="after">24</td></tr>
+  </table>
+
+  <h2>5) 검증 &amp; 확인</h2>
+  <div class="card">
+    <p><span class="ok">✓ type-check 통과</span> · <span class="ok">✓ build 성공</span> · <span class="ok">✓ 7개 페이지·셸 미수정(git 확인)</span></p>
+    <p>적대적 검증(3관점 리뷰 → 재검증) 6건 중:</p>
+    <ul>
+      <li><span class="ok">수정</span> StatusChip <code>#fff</code> 하드코딩 → 토큰(<code>common.white</code>)</li>
+      <li><span class="ok">수정</span> PageContainer 하단 <code>60px</code> → <code>pageBottom</code> 토큰화</li>
+      <li><span class="no">기각</span> "내비 Drawer에 24px 미적용" — 24px 규칙은 상세용 <code>AppDrawer</code>(이미 준수) 대상, 내비 Drawer 아님</li>
+      <li><span class="no">기각</span> "7개 페이지 미적용=위반" — 명세가 "페이지 수정 금지·Layout만 구축"이라 미적용이 의도. STEP 4부터 적용</li>
+    </ul>
+    <p>확인 URL (dev 3600):
+      <a href="http://localhost:3600/#/layout-system">/#/layout-system</a> (레이아웃 시스템) ·
+      <a href="http://localhost:3600/#/design-system">/#/design-system</a> (컴포넌트) ·
+      <a href="http://localhost:3600/">/</a> (기존 페이지)
+    </p>
+  </div>
+
+  <h2>다음 단계 예고 — STEP 4</h2>
+  <p>Dashboard(Home) 리디자인. Layout System을 홈에 처음 적용하며 위 이관 레시피로 진행. (현재 단계에서는 Dashboard 변경 안 함.)</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 2 — ThemeProvider / Design Token 재정비</title>
+<style>
+  :root{
+    --bg:#0F1117; --surface:#131722; --card:#161B22; --hover:#1D2635;
+    --border:#293244; --divider:#232C3A;
+    --text:#FFFFFF; --text2:#AAB4C3; --muted:#7D8899;
+    --blue:#5491DA; --green:#4DA167; --amber:#D6A23E; --red:#E05B54; --purple:#A98AE0; --teal:#46B7BE;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:'IBM Plex Sans KR','Segoe UI',system-ui,sans-serif;line-height:1.55;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:48px 24px 80px}
+  header.top{position:sticky;top:0;background:rgba(19,23,34,.85);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);margin:-48px -24px 32px;padding:16px 24px}
+  header.top .tag{display:inline-block;font-size:11px;font-weight:600;color:var(--blue);
+    border:1px solid var(--border);border-radius:8px;padding:2px 8px;margin-bottom:8px}
+  h1{font-size:28px;font-weight:700;letter-spacing:-.01em;margin:0}
+  .sub{color:var(--text2);font-size:14px;margin-top:6px}
+  h2{font-size:20px;font-weight:700;letter-spacing:-.01em;margin:40px 0 14px;
+    padding-bottom:8px;border-bottom:1px solid var(--divider)}
+  h3{font-size:15px;font-weight:600;color:var(--text2);margin:22px 0 10px}
+  p,li{font-size:14px;color:var(--text2)}
+  code{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;color:var(--text)}
+  ul{padding-left:20px;margin:8px 0}
+  li{margin:4px 0}
+  table{width:100%;border-collapse:collapse;margin:10px 0 4px;font-size:13px;
+    background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--divider)}
+  th{color:var(--text2);font-weight:600;background:var(--surface);font-size:12px}
+  tr:last-child td{border-bottom:none}
+  td b{color:var(--text)}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;border:1px solid rgba(255,255,255,.18);
+    vertical-align:-1px;margin-right:6px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin:14px 0}
+  .ok{color:var(--green);font-weight:600}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .chip{font-size:12px;font-weight:600;padding:4px 10px;border-radius:8px;border:1px solid}
+  .c-green{color:var(--green);background:rgba(77,161,103,.12);border-color:rgba(77,161,103,.32)}
+  .c-amber{color:var(--amber);background:rgba(214,162,62,.12);border-color:rgba(214,162,62,.32)}
+  .c-red{color:var(--red);background:rgba(224,91,84,.12);border-color:rgba(224,91,84,.32)}
+  .c-blue{color:var(--blue);background:rgba(84,145,218,.12);border-color:rgba(84,145,218,.32)}
+  .c-purple{color:var(--purple);background:rgba(169,138,224,.12);border-color:rgba(169,138,224,.32)}
+  .c-teal{color:var(--teal);background:rgba(70,183,190,.12);border-color:rgba(70,183,190,.32)}
+  a{color:var(--blue)}
+  .note{font-size:13px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="tag">STEP 2</span>
+    <h1>ThemeProvider / Design Token 재정비</h1>
+    <div class="sub">작업일 2026-06-13 · 범위: <b>테마·토큰만</b> 개선 (페이지 레이아웃·구조·기능 변경 없음)</div>
+  </header>
+
+  <h2>작업 원칙</h2>
+  <ul>
+    <li>ThemeProvider와 Design Token만 개선 (페이지 수정 금지)</li>
+    <li>색 하드코딩 금지 — 정본은 <code>src/theme/tokens.ts</code></li>
+    <li>참고: Linear · Vercel · Notion Dark · MUI Dashboard</li>
+    <li>기존 페이지는 MUI를 안 쓰므로, 배경을 <code>#000</code> 계열 → <code>#0F1117</code>로 바꾸려
+        <code>index.css :root</code>의 CSS 변수를 <b>같은 값으로 미러링</b> (레이아웃 불변, 색값만)</li>
+  </ul>
+
+  <h2>1) 변경된 Theme 구조</h2>
+  <table>
+    <tr><th>파일</th><th>내용</th></tr>
+    <tr><td><code>src/theme/tokens.ts</code></td><td>토큰 정본 — 표면/텍스트 3단계, 채도 낮춘 상태색, Radius, hoverShadow</td></tr>
+    <tr><td><code>src/theme/theme.ts</code></td><td>팔레트 wiring, 컴포넌트별 Radius, 통일 Focus Ring, Typography, 컴포넌트 기본 스타일</td></tr>
+    <tr><td><code>src/index.css :root</code></td><td>레거시 페이지용 CSS 변수 동일 값 미러링</td></tr>
+    <tr><td><code>components/ds/AppCard.tsx</code></td><td>hover 약한 그림자 규칙 적용</td></tr>
+  </table>
+  <p>통일한 MUI 컴포넌트: <code>Paper · Card · Button · IconButton · Chip · OutlinedInput · Drawer · Tooltip · Divider</code></p>
+
+  <h2>2) Design Token (Before → After)</h2>
+
+  <h3>표면 / 텍스트</h3>
+  <table>
+    <tr><th>토큰</th><th>Before</th><th>After</th></tr>
+    <tr><td>Background</td><td>#0A0A0C</td><td><span class="sw" style="background:#0F1117"></span><b>#0F1117</b></td></tr>
+    <tr><td>Surface (헤더/사이드바)</td><td>rgba(10,10,12)</td><td><span class="sw" style="background:#131722"></span><b>#131722</b></td></tr>
+    <tr><td>Card</td><td>#141417</td><td><span class="sw" style="background:#161B22"></span><b>#161B22</b></td></tr>
+    <tr><td>Hover Surface</td><td>#1C1C21</td><td><span class="sw" style="background:#1D2635"></span><b>#1D2635</b></td></tr>
+    <tr><td>Border</td><td>rgba(255,255,255,.09)</td><td><span class="sw" style="background:#293244"></span><b>#293244</b></td></tr>
+    <tr><td>Divider</td><td>rgba(255,255,255,.055)</td><td><span class="sw" style="background:#232C3A"></span><b>#232C3A</b></td></tr>
+    <tr><td>Primary Text</td><td>#EDEDEF</td><td><span class="sw" style="background:#FFFFFF"></span><b>#FFFFFF</b></td></tr>
+    <tr><td>Secondary Text</td><td>#9A9DA3</td><td><span class="sw" style="background:#AAB4C3"></span><b>#AAB4C3</b></td></tr>
+    <tr><td>Muted Text</td><td>#63666E</td><td><span class="sw" style="background:#7D8899"></span><b>#7D8899</b></td></tr>
+  </table>
+
+  <h3>상태 색상 (채도 낮춘 SaaS 톤)</h3>
+  <table>
+    <tr><th>토큰</th><th>Before</th><th>After</th><th>비고</th></tr>
+    <tr><td>Success</td><td>#3FB950</td><td><span class="sw" style="background:#4DA167"></span><b>#4DA167</b></td><td>채도↓</td></tr>
+    <tr><td>Warning</td><td>#F0B429</td><td><span class="sw" style="background:#D6A23E"></span><b>#D6A23E</b></td><td>네온옐로 제거·골드</td></tr>
+    <tr><td>Error</td><td>#F85149</td><td><span class="sw" style="background:#E05B54"></span><b>#E05B54</b></td><td>부드러운 레드</td></tr>
+    <tr><td>Info / Primary</td><td>#58A6FF</td><td><span class="sw" style="background:#5491DA"></span><b>#5491DA</b></td><td>차분한 블루</td></tr>
+    <tr><td>Purple</td><td>#BC8CFF</td><td><span class="sw" style="background:#A98AE0"></span><b>#A98AE0</b></td><td>보조</td></tr>
+    <tr><td>Teal</td><td>#39D0D8</td><td><span class="sw" style="background:#46B7BE"></span><b>#46B7BE</b></td><td>보조</td></tr>
+  </table>
+  <div class="chips">
+    <span class="chip c-green">운영중</span>
+    <span class="chip c-amber">입고예정</span>
+    <span class="chip c-red">지연</span>
+    <span class="chip c-blue">설치중</span>
+    <span class="chip c-purple">검수</span>
+    <span class="chip c-teal">예약</span>
+  </div>
+  <div class="note">↑ 새 상태색으로 그린 StatusChip 예시</div>
+
+  <h3>Radius / Hover / Focus</h3>
+  <table>
+    <tr><th>규칙</th><th>값</th></tr>
+    <tr><td>Radius</td><td>Card <b>12</b> · Button <b>10</b> · Chip <b>8</b> · Input <b>10</b></td></tr>
+    <tr><td>Hover (인터랙티브 카드)</td><td><code>translateY(-2px)</code> + 약한 그림자 <code>0 2px 10px rgba(0,0,0,.22)</code> (glow 금지)</td></tr>
+    <tr><td>Focus Ring</td><td><code>0 0 0 3px rgba(84,145,218,.4)</code> — 버튼·입력·검색·칩 공통, ThemeProvider 관리</td></tr>
+  </table>
+
+  <h3>Typography</h3>
+  <p><code>h1~caption</code> MUI 체계 정의 · 폰트 <code>IBM Plex Sans KR</code> · 페이지별 font-size 하드코딩 금지</p>
+
+  <h2>3) Before / After 차이</h2>
+  <ul>
+    <li>순흑(#0A0A0C) → 푸른 기 도는 SaaS 다크(#0F1117), 표면 위계 또렷</li>
+    <li>테두리: 투명 흰선 → 솔리드 슬레이트(#293244)</li>
+    <li>상태색: 네온기 제거 → 차분한 SaaS 톤</li>
+    <li>헤더/하단바: 검은 막대 → Surface 톤 + 블러</li>
+    <li>Radius/Focus/Hover를 테마에서 일괄 관리 → 일관성 확보</li>
+  </ul>
+
+  <h2>4) 검증 &amp; 확인</h2>
+  <div class="card">
+    <p><span class="ok">✓ type-check 통과</span> &nbsp;·&nbsp; <span class="ok">✓ build 성공</span></p>
+    <ul>
+      <li>기존 페이지 새 팔레트: <a href="http://localhost:3600/">http://localhost:3600/</a></li>
+      <li>테마 컴포넌트(Radius/Focus/Hover): <a href="http://localhost:3600/#/design-system">http://localhost:3600/#/design-system</a></li>
+    </ul>
+  </div>
+
+  <h2>다음 단계 (승인 후)</h2>
+  <p>페이지를 우선순위대로 디자인 시스템으로 점진 이관하며 <code>index.css</code> 의존부 제거 —
+     홈 → 업무현황 → 업무일정 → 장비운영관리 → 장비도입관리 → 공지사항 → 바로가기</p>
+</div>
+</body>
+</html>

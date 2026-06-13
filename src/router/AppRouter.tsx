@@ -7,10 +7,15 @@ import Work from '@/pages/Work'
 import Equipment from '@/pages/Equipment'
 import EquipmentOps from '@/pages/EquipmentOps'
 import Links from '@/pages/Links'
+import DesignSystemShowcase from '@/pages/_DesignSystem'
+import LayoutSystemShowcase from '@/pages/_LayoutSystem'
 
 export function AppRouter() {
   return (
     <Routes>
+      {/* 디자인/레이아웃 시스템 쇼케이스 — 내비 미노출, 앱 셸(MainLayout) 바깥 독립 라우트 */}
+      <Route path="/design-system" element={<DesignSystemShowcase />} />
+      <Route path="/layout-system" element={<LayoutSystemShowcase />} />
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/notice" element={<Notice />} />

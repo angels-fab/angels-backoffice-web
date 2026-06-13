@@ -3,14 +3,15 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  /* Linear풍 뉴트럴: 더 깊은 배경, 희미한 테두리, 정돈된 텍스트 위계 */
-  --ink:#0A0A0C;--ink2:#141417;--ink3:#1C1C21;
-  --border:rgba(255,255,255,.09);--border2:rgba(255,255,255,.055);--text:#EDEDEF;--text2:#9A9DA3;--text3:#63666E;
-  --amber:#F0B429;--blue:#58A6FF;--green:#3FB950;--purple:#BC8CFF;--teal:#39D0D8;--red:#F85149;
+  /* SaaS 다크 토큰 — src/theme/tokens.ts 와 동일 값 미러링(정본은 tokens.ts).
+     STEP2: Pure Black(#000 계열) → 현대적 SaaS 다크(#0F1117). 페이지 이관 시 점진 제거. */
+  --ink:#0F1117;--ink2:#161B22;--ink3:#1D2635;
+  --border:#293244;--border2:#232C3A;--text:#FFFFFF;--text2:#AAB4C3;--text3:#7D8899;
+  --amber:#D6A23E;--blue:#5491DA;--green:#4DA167;--purple:#A98AE0;--teal:#46B7BE;--red:#E05B54;
 }
 body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
 
-header{background:rgba(10,10,12,.92);border-bottom:1px solid var(--border);display:flex;flex-direction:row;align-items:center;padding:0 24px;height:48px;gap:10px;position:sticky;top:0;z-index:10}
+header{background:rgba(19,23,34,.85);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);display:flex;flex-direction:row;align-items:center;padding:0 24px;height:48px;gap:10px;position:sticky;top:0;z-index:10}
 .header-logo{height:21px;width:auto;object-fit:contain}
 
 .header-sub{font-size:11px;color:var(--text3)}
@@ -967,7 +968,7 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .ntc-cat{padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700;flex-shrink:0;white-space:nowrap;text-align:center;min-width:34px}
 
 /* ── 하단 탭 내비게이션 ── */
-.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;background:rgba(10,10,12,.94);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;background:rgba(19,23,34,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
 .bnav-item{flex:1;background:none;border:none;color:var(--text2);font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;font-size:10px;font-weight:500;transition:color .15s;-webkit-tap-highlight-color:transparent}
 .bnav-item .bnav-ico{font-size:18px;line-height:1}
 .bnav-item.active{color:var(--blue)}
