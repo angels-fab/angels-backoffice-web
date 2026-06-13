@@ -33,12 +33,16 @@ export function cell(r: SheetRow, i: number): string {
 
 // ── 구글캘린더 일정 (?calendar=1) ──
 export interface RawCalEvent {
+  /** 구글캘린더 이벤트 고유 ID — 수정/삭제 대상 지정용 */
+  id: string
   title: string
   /** 'yyyy-MM-ddTHH:mm' (KST) */
   start: string
   end: string
   allDay: boolean
   loc: string
+  /** 반복 일정 여부 */
+  recurring: boolean
 }
 
 export async function fetchCalendarEvents(): Promise<RawCalEvent[]> {
@@ -88,4 +92,51 @@ export async function addNotice(p: AddNoticePayload): Promise<number> {
   }
   if (json.status !== 'ok') throw new Error(json.message || '저장 실패')
   return json.num || 0
+}
+
+// ── 캘린더 일정 추가/수정/삭제 (Apps Script doPost) ──
+/** 수정/삭제 적용 범위 — 반복 일정에서 그 회차만(single) vs 전체 시리즈(series) */
+export type CalScope = 'single' | 'series'
+
+export interface CalEventInput {
+  /** 게시자 이름 — '담당자' 시트와 일치해야 함 */
+  author: string
+  /** 게시자 본인 비밀번호 */
+  key: string
+  title: string
+  loc?: string
+  allDay: boolean
+  /** allDay=false일 때: 'yyyy-MM-ddTHH:mm' (KST) */
+  start?: string
+  end?: string
+  /** allDay=true일 때: 'yyyy-MM-dd' */
+  startDate?: string
+  /** 종일 일정의 마지막 날(포함). 비우면 하루짜리 */
+  endDate?: string
+}
+
+// 인증·CORS 주의는 addNotice와 동일 (단순 요청, body만 전송)
+async function postCal(payload: Record<string, unknown>): Promise<{ note?: string }> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string; note?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 캘린더 편집을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '처리 실패')
+  return { note: json.note }
+}
+
+export function addCalEvent(p: CalEventInput): Promise<{ note?: string }> {
+  return postCal({ action: 'addCalEvent', ...p })
+}
+
+export function updateCalEvent(p: CalEventInput & { id: string; scope: CalScope }): Promise<{ note?: string }> {
+  return postCal({ action: 'updateCalEvent', ...p })
+}
+
+export function deleteCalEvent(p: { id: string; scope: CalScope; author: string; key: string }): Promise<{ note?: string }> {
+  return postCal({ action: 'deleteCalEvent', ...p })
 }

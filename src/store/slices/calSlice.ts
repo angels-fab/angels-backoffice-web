@@ -28,10 +28,14 @@ export const loadCalEvents = createAsyncThunk('cal/load', async (): Promise<CalE
     const eTime = ev.end.slice(11)
     const time = ev.allDay ? '종일' : sTime + (eTime !== sTime ? '-' + eTime : '')
     const cat = evCat(ev.title)
-    // 여러 날짜에 걸친 일정은 날짜마다 한 칸씩 (최대 60일 안전장치)
+    // 여러 날짜에 걸친 일정은 날짜마다 한 칸씩 (최대 60일 안전장치).
+    // 수정/삭제는 원본 이벤트 기준이라 id·start·end·allDay·recurring을 모든 칸에 그대로 싣는다.
     let t = new Date(s.getFullYear(), s.getMonth(), s.getDate())
     for (let i = 0; i < 60 && t <= e; i++) {
-      out.push({ date: dstr(t), title: ev.title, cat, time, loc: ev.loc })
+      out.push({
+        date: dstr(t), title: ev.title, cat, time, loc: ev.loc,
+        id: ev.id, start: ev.start, end: ev.end, allDay: ev.allDay, recurring: ev.recurring,
+      })
       t = new Date(t.getTime() + DAY)
     }
   })

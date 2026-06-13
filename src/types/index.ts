@@ -108,6 +108,15 @@ export interface CalEvent {
   cat: Exclude<CalCatId, 'all'>
   time: string
   loc: string
+  /** 구글캘린더 이벤트 고유 ID — 수정/삭제 대상 지정용 */
+  id: string
+  /** 원본 시작 'yyyy-MM-ddTHH:mm' (KST) — 여러 날 일정도 원본 기준으로 편집 */
+  start: string
+  /** 원본 종료 'yyyy-MM-ddTHH:mm' (KST) */
+  end: string
+  allDay: boolean
+  /** 반복 일정 여부 — 수정/삭제 시 '이 일정만/전체 시리즈' 선택 */
+  recurring: boolean
 }
 
 // ── 공지사항 ('공지사항' 시트 1행 = Notice) ──

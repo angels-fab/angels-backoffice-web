@@ -74,6 +74,9 @@ function doPost(e) {
         lock.releaseLock();
       }
     }
+    if (req.action === 'addCalEvent') return addCalEvent_(req);
+    if (req.action === 'updateCalEvent') return updateCalEvent_(req);
+    if (req.action === 'deleteCalEvent') return deleteCalEvent_(req);
     return json_({ status: 'error', message: '알 수 없는 action: ' + req.action });
   } catch (err) {
     return json_({ status: 'error', message: String(err) });
@@ -180,20 +183,150 @@ function calendarEvents_() {
   const to = new Date(now.getTime() + 187 * 24 * 3600 * 1000);  // 6개월 후
   const data = cal.getEvents(from, to).map(function (ev) {
     return {
+      id: ev.getId(),
       title: ev.getTitle(),
       start: Utilities.formatDate(ev.getStartTime(), 'Asia/Seoul', "yyyy-MM-dd'T'HH:mm"),
       end: Utilities.formatDate(ev.getEndTime(), 'Asia/Seoul', "yyyy-MM-dd'T'HH:mm"),
       allDay: ev.isAllDayEvent(),
       loc: ev.getLocation() || '',
+      recurring: ev.isRecurringEvent(),
     };
   });
   return json_({ status: 'ok', data: data });
 }
 
-// 캘린더 권한 승인용 — 편집기에서 이 함수를 한 번 실행해 권한을 허용하면 됨
+// ── 캘린더 쓰기 공통 ──
+const CAL_DAY_MS = 24 * 3600 * 1000;
+
+// 'yyyy-MM-ddTHH:mm' → KST Date (appsscript.json timeZone=Asia/Seoul 기준)
+function parseDateTime_(s) {
+  const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
+}
+// 'yyyy-MM-dd' → 자정 Date
+function parseDate_(s) {
+  const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
+// 인증 통과 후 캘린더 핸들을 콜백에 넘김 (실패 시 에러 JSON 반환)
+function withCalAuth_(req, fn) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const cal = CalendarApp.getCalendarById(CALENDAR_ID);
+  if (!cal) return json_({ status: 'error', message: '캘린더를 찾을 수 없습니다 (공유 여부 확인): ' + CALENDAR_ID });
+  return fn(cal);
+}
+
+// 추가: {title, loc, allDay, start, end} 또는 종일이면 {startDate, endDate?}
+function addCalEvent_(req) {
+  return withCalAuth_(req, function (cal) {
+    const title = String(req.title || '').trim();
+    if (!title) return json_({ status: 'error', message: '제목을 입력해주세요' });
+    const loc = String(req.loc || '').trim();
+    const opts = loc ? { location: loc } : {};
+    if (req.allDay === true) {
+      const sd = parseDate_(req.startDate);
+      if (!sd) return json_({ status: 'error', message: '시작 날짜가 올바르지 않습니다' });
+      const ed = parseDate_(req.endDate);
+      if (ed && ed.getTime() >= sd.getTime()) {
+        // createAllDayEvent의 종료일은 '미포함'이라 +1일
+        cal.createAllDayEvent(title, sd, new Date(ed.getTime() + CAL_DAY_MS), opts);
+      } else {
+        cal.createAllDayEvent(title, sd, opts);
+      }
+    } else {
+      const s = parseDateTime_(req.start);
+      const e = parseDateTime_(req.end);
+      if (!s || !e) return json_({ status: 'error', message: '시작/종료 시각이 올바르지 않습니다' });
+      if (e.getTime() <= s.getTime()) return json_({ status: 'error', message: '종료가 시작보다 빨라요' });
+      cal.createEvent(title, s, e, opts);
+    }
+    return json_({ status: 'ok' });
+  });
+}
+
+// 수정: {id, scope:'single'|'series', title, loc, allDay, start, end / startDate, endDate}
+// 반복 일정의 'series'는 제목·장소만 수정 (시간 변경은 '이 일정만' 또는 캘린더 앱에서)
+function updateCalEvent_(req) {
+  return withCalAuth_(req, function (cal) {
+    const id = String(req.id || '');
+    if (!id) return json_({ status: 'error', message: '대상 일정 ID가 없습니다' });
+    const title = String(req.title || '').trim();
+    if (!title) return json_({ status: 'error', message: '제목을 입력해주세요' });
+    const loc = String(req.loc || '').trim();
+
+    if (String(req.scope || 'single') === 'series') {
+      const series = cal.getEventSeriesById(id);
+      if (!series) return json_({ status: 'error', message: '반복 일정을 찾을 수 없습니다 (이미 변경/삭제됐을 수 있어요)' });
+      series.setTitle(title);
+      series.setLocation(loc);
+      return json_({ status: 'ok', note: '전체 시리즈의 제목·장소를 수정했어요 (시간 변경은 적용 안 됨)' });
+    }
+
+    const ev = cal.getEventById(id);
+    if (!ev) return json_({ status: 'error', message: '일정을 찾을 수 없습니다 (이미 변경/삭제됐을 수 있어요)' });
+    ev.setTitle(title);
+    ev.setLocation(loc);
+    if (req.allDay === true) {
+      const sd = parseDate_(req.startDate);
+      if (!sd) return json_({ status: 'error', message: '시작 날짜가 올바르지 않습니다' });
+      const ed = parseDate_(req.endDate);
+      if (ed && ed.getTime() >= sd.getTime()) {
+        ev.setAllDayDates(sd, new Date(ed.getTime() + CAL_DAY_MS));
+      } else {
+        ev.setAllDayDate(sd);
+      }
+    } else {
+      const s = parseDateTime_(req.start);
+      const e = parseDateTime_(req.end);
+      if (!s || !e) return json_({ status: 'error', message: '시작/종료 시각이 올바르지 않습니다' });
+      if (e.getTime() <= s.getTime()) return json_({ status: 'error', message: '종료가 시작보다 빨라요' });
+      ev.setTime(s, e);
+    }
+    return json_({ status: 'ok' });
+  });
+}
+
+// 삭제: {id, scope:'single'|'series'}
+function deleteCalEvent_(req) {
+  return withCalAuth_(req, function (cal) {
+    const id = String(req.id || '');
+    if (!id) return json_({ status: 'error', message: '대상 일정 ID가 없습니다' });
+    if (String(req.scope || 'single') === 'series') {
+      const series = cal.getEventSeriesById(id);
+      if (!series) return json_({ status: 'error', message: '반복 일정을 찾을 수 없습니다 (이미 삭제됐을 수 있어요)' });
+      series.deleteEventSeries();
+      return json_({ status: 'ok', note: '전체 시리즈를 삭제했어요' });
+    }
+    const ev = cal.getEventById(id);
+    if (!ev) return json_({ status: 'error', message: '일정을 찾을 수 없습니다 (이미 삭제됐을 수 있어요)' });
+    ev.deleteEvent();
+    return json_({ status: 'ok' });
+  });
+}
+
+// 캘린더 쓰기 권한 승인·진단용 — 편집기에서 이 함수를 한 번 실행해 권한을 허용한다.
+// 실행 시 새 권한(캘린더 일정 관리) 동의 화면이 뜨고, 승인 후 쓰기 가능 여부를 로그로 확인할 수 있다.
 function authorizeCalendar() {
   const cal = CalendarApp.getCalendarById(CALENDAR_ID);
-  Logger.log(cal ? '연결 성공: ' + cal.getName() : '캘린더를 찾을 수 없음 — 공유 여부를 확인하세요');
+  if (!cal) {
+    Logger.log('캘린더를 찾을 수 없음 — 공유 여부 확인: ' + CALENDAR_ID);
+    return;
+  }
+  Logger.log('읽기 연결 성공: ' + cal.getName());
+  try {
+    const now = new Date();
+    const ev = cal.createEvent('[권한테스트] 자동삭제됨', new Date(now.getTime() + 3600000), new Date(now.getTime() + 7200000));
+    ev.deleteEvent();
+    Logger.log('쓰기 권한 OK — 테스트 일정 생성 후 삭제 완료. 이제 웹에서 추가/수정/삭제가 동작합니다.');
+  } catch (e) {
+    Logger.log('쓰기 실패: ' + e);
+    Logger.log('→ 이 계정이 캘린더 "' + CALENDAR_ID + '"에 변경 권한이 없을 수 있습니다. ' +
+      '구글 캘린더에서 이 캘린더 공유 설정을 "일정 변경 권한"으로 올려주세요.');
+  }
 }
 
 function json_(obj) {
