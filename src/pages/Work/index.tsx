@@ -1,235 +1,272 @@
 import { useMemo, useState } from 'react'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import IconButton from '@mui/material/IconButton'
 import AssessmentIcon from '@mui/icons-material/Assessment'
-import AttachFileIcon from '@mui/icons-material/AttachFile'
-import ScheduleIcon from '@mui/icons-material/Schedule'
-import FolderCopyIcon from '@mui/icons-material/FolderCopy'
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
-import PushPinIcon from '@mui/icons-material/PushPin'
-import SearchIcon from '@mui/icons-material/Search'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import {
+  PageContainer,
+  PageHeader,
+  ContentSection,
+  AppCard,
+  CardGrid,
+  FilterBar,
+  SearchBar,
+  StatusChip,
+  StatTile,
+  RatioBar,
+  EmptyState,
+} from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData } from '@/store/slices/workSlice'
-import { dateSortValue, parseStartDate } from '@/utils/date'
+import { dateSortValue, fmtDate, parseStartDate } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import TitleLoad from '@/components/TitleLoad'
-import WorkRow from './WorkRow'
+import { W_STATUS, classify, taskLink, taskTitle } from './workMeta'
+import TaskCard from './TaskCard'
+import TaskDetailDrawer from './TaskDetailDrawer'
 
-type WorkTab = 'cur' | 'past' | 'remind' | 'chief'
+type Tab = 'inProgress' | 'past' | 'remind' | 'chief'
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'inProgress', label: '진행중' },
+  { key: 'past', label: '지난' },
+  { key: 'remind', label: 'Remind' },
+  { key: 'chief', label: '센터장 Check' },
+]
 
-const ATT_ICON = <AttachFileIcon sx={{ fontSize: 13 }} />
-
-// 1순위: 구분 우선순위로 묶기 → 2순위: 같은 구분 내 시작일자 최근순
-function cmp(a: WorkItem, b: WorkItem): number {
+const MD = (s: string) => {
+  const d = parseStartDate(s)
+  return d ? `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}` : ''
+}
+// 구분 우선순위 → 시작일자 최근순
+const cmp = (a: WorkItem, b: WorkItem) => {
   const ra = workCatRank(a.cat)
   const rb = workCatRank(b.cat)
   return ra !== rb ? ra - rb : dateSortValue(b.start) - dateSortValue(a.start)
 }
 
-function WorkBox({
-  items,
-  visible,
-  emptyMsg,
-  variant,
-}: {
-  items: WorkItem[]
-  visible: boolean
-  emptyMsg: string
-  variant?: string
-}) {
-  if (!visible) return null
-  return (
-    <div className={`work-box${variant ? ' ' + variant : ''}`}>
-      {items.length > 0 && (
-        <div className="cur-head">
-          <span className="cur-c-cat">업무 구분</span>
-          <span className="cur-c-body">업무 내용</span>
-          <span className="cur-c-mgr">담당자</span>
-          <span className="cur-c-date">발의일자</span>
-          <span className="cur-c-att" title="첨부 링크">{ATT_ICON}</span>
-        </div>
-      )}
-      <ul className="task-list">
-        {items.length ? items.map(t => <WorkRow key={t.id} t={t} />) : <li className="task-empty">{emptyMsg}</li>}
-      </ul>
-    </div>
-  )
-}
-
 export default function Work() {
   const dispatch = useAppDispatch()
-  const { items, loading, error, updatedAt } = useAppSelector(s => s.work)
-  const [tab, setTab] = useState<WorkTab>('cur')
+  const { items, loading, error, updatedAt } = useAppSelector((s) => s.work)
+  const [tab, setTab] = useState<Tab>('inProgress')
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
   const [query, setQuery] = useState('')
+  const [picked, setPicked] = useState<WorkItem | null>(null)
 
-  // 구분 필터 + 담당자 + 검색어 적용
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const matchCat = (t: WorkItem) => cat === '전체' || normCat(t.cat) === normCat(cat)
-    const matchMgr = (t: WorkItem) => mgr === '전체' || (t.mgr || '') === mgr
-    const matchQ = (t: WorkItem) =>
-      !q || `${t.task} ${t.mgr} ${t.cat} ${t.dept} ${t.num}`.toLowerCase().includes(q)
-    const flt = (arr: WorkItem[]) => arr.filter(matchCat).filter(matchMgr).filter(matchQ)
-    return {
-      cur: flt(items.filter(t => t.share)).sort(cmp),
-      past: flt(items.filter(t => !t.share && !t.remind)).sort(cmp),
-      remind: flt(items.filter(t => !t.share && t.remind)).sort(cmp),
-      chief: flt(items.filter(t => t.chief)).sort(cmp), // L열 체크 — 진행중/지난 무관하게 모두
+  // ── 전체 집계(Command Center용, 필터 무관) ──
+  const counts = useMemo(() => {
+    let inProgress = 0, remind = 0, past = 0, chief = 0
+    for (const t of items) {
+      const c = classify(t)
+      if (c === 'inProgress') inProgress++
+      else if (c === 'remind') remind++
+      else past++
+      if (t.chief) chief++
     }
-  }, [items, cat, mgr, query])
-
-  // 이번주 신규 건수 (필터 적용된 목록 기준)
-  const weekCount = (arr: WorkItem[]) => {
-    const today0 = new Date()
-    today0.setHours(0, 0, 0, 0)
-    const week0 = new Date(today0)
-    week0.setDate(week0.getDate() - 7)
-    return arr.filter(t => {
-      const d = parseStartDate(t.start)
-      if (!d) return false
-      d.setHours(0, 0, 0, 0)
-      return d >= week0 && d <= today0
-    }).length
-  }
-
-  // 구분 필터: 데이터에 존재하는 구분을 우선순위 순으로
-  const presentCats = useMemo(() => {
-    const set = [...new Set(items.map(t => t.cat).filter(Boolean))]
-    return ['전체', ...set.sort((a, b) => workCatRank(a) - workCatRank(b))]
+    return { inProgress, remind, past, chief, total: items.length }
   }, [items])
 
-  // 담당자 필터 — 진행중/지난: 발의일자 최근 6개월 업무의 담당자만 / Remind·센터장: 전체
-  const presentMgrs = useMemo(() => {
-    let pool: WorkItem[]
-    if (tab === 'cur') pool = items.filter(t => t.share)
-    else if (tab === 'past') pool = items.filter(t => !t.share && !t.remind)
-    else if (tab === 'chief') pool = items.filter(t => t.chief)
-    else pool = items.filter(t => !t.share && t.remind)
-    if (tab !== 'remind' && tab !== 'chief') {
-      const cutoff = new Date()
-      cutoff.setMonth(cutoff.getMonth() - 6)
-      cutoff.setHours(0, 0, 0, 0)
-      const today = new Date()
-      today.setHours(23, 59, 59, 999)
-      pool = pool.filter(t => {
-        const d = parseStartDate(t.start)
-        return d !== null && d >= cutoff && d <= today
-      })
+  // 긴급: 센터장 Check + Remind (센터장 우선 → 최근 발의)
+  const urgent = useMemo(
+    () =>
+      items
+        .filter((t) => t.chief || t.remind)
+        .sort((a, b) => (a.chief === b.chief ? dateSortValue(b.start) - dateSortValue(a.start) : a.chief ? -1 : 1))
+        .slice(0, 5),
+    [items],
+  )
+
+  // (마감 기반 '이번주 마감' 섹션은 실제 '마감일' 컬럼 추가 후 STEP10+에서 구현)
+
+  // 담당자별 집계
+  const managers = useMemo(() => {
+    const map = new Map<string, { mgr: string; inProgress: number; remind: number; chief: number; total: number }>()
+    for (const t of items) {
+      const name = t.mgr || '미지정'
+      const m = map.get(name) ?? { mgr: name, inProgress: 0, remind: 0, chief: 0, total: 0 }
+      const c = classify(t)
+      if (c === 'inProgress') m.inProgress++
+      else if (c === 'remind') m.remind++
+      if (t.chief) m.chief++
+      m.total++
+      map.set(name, m)
     }
-    const mgrs = [...new Set(pool.map(t => t.mgr).filter(Boolean))].sort((a, b) =>
-      a.localeCompare(b, 'ko'),
-    )
-    return ['전체', ...mgrs]
+    return [...map.values()].sort((a, b) => b.inProgress - a.inProgress || b.total - a.total)
+  }, [items])
+  const busiest = managers.find((m) => m.mgr !== '미지정' && m.inProgress > 0) ?? managers[0]
+
+  // ── 전체 목록(탭 + 필터) ──
+  const presentCats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
+
+  const tabPool = useMemo(() => {
+    if (tab === 'chief') return items.filter((t) => t.chief)
+    return items.filter((t) => classify(t) === tab)
   }, [items, tab])
 
-  const switchTab = (which: WorkTab) => {
-    setTab(which)
-    setMgr('전체') // 탭마다 담당자 목록이 달라지므로 선택 초기화
+  const presentMgrs = useMemo(() => ['전체', ...[...new Set(tabPool.map((t) => t.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [tabPool])
+
+  const listed = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return tabPool
+      .filter((t) => cat === '전체' || normCat(t.cat) === normCat(cat))
+      .filter((t) => mgr === '전체' || (t.mgr || '') === mgr)
+      .filter((t) => !q || `${t.task} ${t.mgr} ${t.cat} ${t.dept} ${t.num}`.toLowerCase().includes(q))
+      .sort(cmp)
+  }, [tabPool, cat, mgr, query])
+
+  const switchTab = (k: Tab) => {
+    setTab(k)
+    setMgr('전체')
   }
 
   return (
-    <div className="page active" id="page-업무현황">
-      <div className="page-header">
-        <div
-          className="page-title"
-          onClick={() => dispatch(loadWorkData())}
-          style={{ cursor: 'pointer' }}
-          title="클릭하면 새로고침"
-        >
-          <AssessmentIcon /> 업무현황
-        </div>
-        <TitleLoad loading={loading} text={error ? '불러오기 실패' : updatedAt} />
-      </div>
+    <PageContainer>
+      <PageHeader
+        icon={<AssessmentIcon />}
+        title="업무현황"
+        updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
+        actions={
+          <IconButton aria-label="새로고침" onClick={() => dispatch(loadWorkData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
+            <RefreshIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        }
+      />
 
-      {/* KPI 카드 (탭 역할): 진행중 / 지난 / Remind */}
-      <div className="wkpi-row">
-        <button className={`wkpi-card${tab === 'cur' ? ' active' : ''}`} onClick={() => switchTab('cur')}>
-          <span className="wkpi-main">
-            <span className="wkpi-body">
-              <span className="wkpi-label">진행중 업무</span>
-              <span className="wkpi-numline">
-                <span className="wkpi-num">{filtered.cur.length}</span>
-                <span className="wkpi-sub blue">이번주 +{weekCount(filtered.cur)}건</span>
-              </span>
-            </span>
-            <span className="wkpi-icon ic-blue"><ScheduleIcon fontSize="inherit" htmlColor="#58a6ff" /></span>
-          </span>
-        </button>
-        <button className={`wkpi-card${tab === 'past' ? ' active' : ''}`} onClick={() => switchTab('past')}>
-          <span className="wkpi-main">
-            <span className="wkpi-body">
-              <span className="wkpi-label">지난 업무</span>
-              <span className="wkpi-numline">
-                <span className="wkpi-num">{filtered.past.length}</span>
-                <span className="wkpi-sub green">이번주 +{weekCount(filtered.past)}건</span>
-              </span>
-            </span>
-            <span className="wkpi-icon ic-green"><FolderCopyIcon fontSize="inherit" htmlColor="#3fb950" /></span>
-          </span>
-        </button>
-        <button className={`wkpi-card${tab === 'remind' ? ' active' : ''}`} onClick={() => switchTab('remind')}>
-          <span className="wkpi-main">
-            <span className="wkpi-body">
-              <span className="wkpi-label">Remind</span>
-              <span className="wkpi-numline">
-                <span className="wkpi-num">{filtered.remind.length}</span>
-              </span>
-            </span>
-            <span className="wkpi-icon ic-amber"><NotificationsActiveIcon fontSize="inherit" htmlColor="#f0b429" /></span>
-          </span>
-        </button>
-        <button className={`wkpi-card${tab === 'chief' ? ' active' : ''}`} onClick={() => switchTab('chief')}>
-          <span className="wkpi-main">
-            <span className="wkpi-body">
-              <span className="wkpi-label">센터장 Check</span>
-              <span className="wkpi-numline">
-                <span className="wkpi-num">{filtered.chief.length}</span>
-              </span>
-            </span>
-            <span className="wkpi-icon ic-purple"><PushPinIcon fontSize="inherit" htmlColor="#bc8cff" /></span>
-          </span>
-        </button>
-      </div>
-
-      {/* 담당자 필터 */}
-      <div className="wflt-row">
-        <span className="wflt-label">담당자</span>
-        <div className="wflt-cats">
-          {presentMgrs.map(m => (
-            <button key={m} className={`wflt-btn${mgr === m ? ' active' : ''}`} onClick={() => setMgr(m)}>
-              {m}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 구분 필터 + 검색 */}
-      <div className="wflt-row" style={{ marginTop: -4 }}>
-        <span className="wflt-label">구분</span>
-        <div className="wflt-cats">
-          {presentCats.map(c => (
-            <button key={c} className={`wflt-btn${cat === c ? ' active' : ''}`} onClick={() => setCat(c)}>
-              {c}
-            </button>
-          ))}
-        </div>
-        <span className="search-wrap" style={{ marginLeft: 'auto' }}>
-          <SearchIcon />
-          <input
-            type="text"
-            placeholder="업무명, 담당자 등 검색..."
-            className="wflt-search"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
+      {/* ① KPI + 상태 비율 */}
+      <ContentSection>
+        <AppCard padding={18} sx={{ mb: 2 }}>
+          <RatioBar
+            segments={[
+              { label: '진행중', value: counts.inProgress, status: 'success' },
+              { label: 'Remind', value: counts.remind, status: 'warning' },
+              { label: '지난', value: counts.past, status: 'neutral' },
+            ]}
           />
-        </span>
-      </div>
+        </AppCard>
+        <CardGrid columns={4}>
+          <StatTile value={counts.inProgress} unit="건" label="진행중" status="success" selected={tab === 'inProgress'} onClick={() => switchTab('inProgress')} />
+          <StatTile value={counts.past} unit="건" label="지난" status="neutral" selected={tab === 'past'} onClick={() => switchTab('past')} />
+          <StatTile value={counts.remind} unit="건" label="Remind" status="warning" selected={tab === 'remind'} onClick={() => switchTab('remind')} />
+          <StatTile value={counts.chief} unit="건" label="센터장 Check" status="purple" selected={tab === 'chief'} onClick={() => switchTab('chief')} />
+        </CardGrid>
+      </ContentSection>
 
-      <WorkBox items={filtered.cur} visible={tab === 'cur'} emptyMsg="진행중 업무가 없습니다" />
-      <WorkBox items={filtered.past} visible={tab === 'past'} emptyMsg="지난 업무가 없습니다" />
-      <WorkBox items={filtered.remind} visible={tab === 'remind'} emptyMsg="Remind 업무가 없습니다" variant="work-box-remind" />
-      <WorkBox items={filtered.chief} visible={tab === 'chief'} emptyMsg="센터장 Check 업무가 없습니다" variant="work-box-chief" />
-    </div>
+      {/* ② 긴급 업무 */}
+      <ContentSection title="긴급 업무" description="센터장 Check · Remind 상위 5건" count={urgent.length}>
+        {urgent.length === 0 ? (
+          <AppCard padding={0}><EmptyState size="sm" title="긴급 업무가 없습니다" /></AppCard>
+        ) : (
+          <CardGrid minColWidth={260}>
+            {urgent.map((t) => (
+              <TaskCard key={t.id} t={t} right={`발의 ${MD(t.start)}`} onPick={setPicked} />
+            ))}
+          </CardGrid>
+        )}
+      </ContentSection>
+
+      {/* ③ 담당자 현황 */}
+      <ContentSection title="담당자 현황">
+        {busiest && busiest.inProgress > 0 && (
+          <AppCard padding={18} sx={{ mb: 2 }}>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>가장 바쁜 담당자</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 0.5 }}>
+              <Typography variant="h3" sx={{ fontWeight: 800 }}>{busiest.mgr}</Typography>
+              <Typography variant="body2">진행중 {busiest.inProgress}건</Typography>
+            </Box>
+          </AppCard>
+        )}
+        <CardGrid minColWidth={200}>
+          {managers.map((m) => (
+            <AppCard key={m.mgr} padding={16}>
+              <Typography variant="subtitle1" sx={{ mb: 1 }}>{m.mgr}</Typography>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                <StatusChip status="success" label={`진행중 ${m.inProgress}`} />
+                {m.remind > 0 && <StatusChip status="warning" label={`Remind ${m.remind}`} />}
+                {m.chief > 0 && <StatusChip status="purple" label={`센터장 ${m.chief}`} />}
+              </Box>
+            </AppCard>
+          ))}
+        </CardGrid>
+      </ContentSection>
+
+      {/* ④ 전체 업무 목록 */}
+      <ContentSection title="전체 업무 목록" count={listed.length} last>
+        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
+          {TABS.map((tb) => (
+            <StatusChip key={tb.key} status="neutral" label={`${tb.label} ${tb.key === 'chief' ? counts.chief : counts[tb.key]}`} selected={tab === tb.key} onClick={() => switchTab(tb.key)} />
+          ))}
+        </Box>
+        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무·담당자 검색" />}>
+          {presentCats.map((c) => (
+            <StatusChip key={c} status="neutral" label={c} selected={cat === c} onClick={() => setCat(c)} />
+          ))}
+        </FilterBar>
+        {presentMgrs.length > 1 && (
+          <FilterBar>
+            {presentMgrs.map((m) => (
+              <StatusChip key={m} status="info" label={m} selected={mgr === m} onClick={() => setMgr(m)} />
+            ))}
+          </FilterBar>
+        )}
+
+        <AppCard padding={0}>
+          {listed.length === 0 ? (
+            <EmptyState size="sm" title="해당 업무가 없습니다" />
+          ) : (
+            <Box>
+              {listed.map((t) => {
+                const st = W_STATUS[classify(t)]
+                const link = taskLink(t)
+                return (
+                  <Box
+                    key={t.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`업무: ${taskTitle(t)}`}
+                    onClick={() => setPicked(t)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setPicked(t)
+                      }
+                    }}
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      flexWrap: 'wrap',
+                      px: 2,
+                      py: 1.25,
+                      cursor: 'pointer',
+                      borderBottom: 1,
+                      borderColor: 'divider',
+                      '&:last-of-type': { borderBottom: 0 },
+                      '&:hover': { bgcolor: 'background.elevated' },
+                    }}
+                  >
+                    <StatusChip status={st.status} label={st.label} />
+                    {t.cat && <StatusChip status="neutral" label={t.cat} />}
+                    <Typography variant="body1" sx={{ flex: 1, minWidth: 140, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {taskTitle(t)}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t.mgr || '미지정'}</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>
+                    {link && (
+                      <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="링크 열기" onClick={(e) => e.stopPropagation()} sx={{ color: 'text.secondary' }}>
+                        <OpenInNewIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    )}
+                  </Box>
+                )
+              })}
+            </Box>
+          )}
+        </AppCard>
+      </ContentSection>
+
+      <TaskDetailDrawer task={picked} onClose={() => setPicked(null)} />
+    </PageContainer>
   )
 }

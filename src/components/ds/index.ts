@@ -29,6 +29,9 @@ export type { CardGridProps } from './CardGrid'
 export { default as RatioBar } from './RatioBar'
 export type { RatioBarProps, RatioSegment } from './RatioBar'
 
+export { default as StatTile } from './StatTile'
+export type { StatTileProps } from './StatTile'
+
 export { default as FilterBar } from './FilterBar'
 export type { FilterBarProps } from './FilterBar'
 

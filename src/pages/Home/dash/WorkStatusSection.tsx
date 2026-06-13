@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
-import { AppCard, CardGrid, RatioBar } from '@/components/ds'
-import StatTile from './StatTile'
+import { AppCard, CardGrid, RatioBar, StatTile } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { todayMidMs, workStatusCounts } from './derive'
 
