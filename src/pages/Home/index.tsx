@@ -1,80 +1,62 @@
 import { useNavigate } from 'react-router-dom'
-import CampaignIcon from '@mui/icons-material/Campaign'
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
-import AssessmentIcon from '@mui/icons-material/Assessment'
-import MemoryIcon from '@mui/icons-material/Memory'
-import Greeting from './Greeting'
-import RoadmapTimeline from './RoadmapTimeline'
-import { CalPreview, EqPreview, NoticePreview, WorkPreview, useWorkCountBadge } from './previews'
+import Button from '@mui/material/Button'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import SpaceDashboardIcon from '@mui/icons-material/SpaceDashboard'
+import { PageContainer, PageHeader, ContentSection } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
-import { selectEqCounts } from '@/store/selectors'
-import { todaySeoul } from '@/utils/date'
+import KpiOverview from './dash/KpiOverview'
+import ScheduleSection from './dash/ScheduleSection'
+import WorkStatusSection from './dash/WorkStatusSection'
+import EquipmentSection from './dash/EquipmentSection'
+import NoticeSection from './dash/NoticeSection'
 
-// 홈 = 인사말 → 로드맵(1순위) → 벤토 모자이크(타일마다 숫자 배지 + 미리보기 통합)
+/**
+ * 홈 = 연구센터 운영 대시보드(STEP4).
+ *
+ * 정보 위계: ① KPI → ② 오늘/다가오는 일정 → ③ 업무 현황 → ④ 장비 현황 → ⑤ 공지.
+ * 소개·환영·배너 없음. STEP4.5에서 FAB 로드맵은 전용 메뉴(/roadmap)로 분리.
+ * 신규 섹션은 STEP3 Layout System(PageContainer/PageHeader/ContentSection/CardGrid)으로 구성.
+ */
 export default function Home() {
   const navigate = useNavigate()
-  const workBadge = useWorkCountBadge()
-  const eqReady = useAppSelector(s => s.eq.ready)
-  const eq = useAppSelector(selectEqCounts)
-  const noticeReady = useAppSelector(s => s.notice.ready)
-  const newCnt = useAppSelector(s => s.notice.items).filter(n => n.isNew).length
-  const todayCnt = useAppSelector(s => s.cal.events).filter(e => e.date === todaySeoul()).length
+  const updatedAt = useAppSelector(
+    (s) => s.cal.updatedAt || s.work.updatedAt || s.notice.updatedAt || s.eq.updatedAt || '',
+  )
+
+  const moreBtn = (to: string) => (
+    <Button variant="text" size="small" endIcon={<ChevronRightIcon />} onClick={() => navigate(to)} sx={{ color: 'text.secondary' }}>
+      전체보기
+    </Button>
+  )
 
   return (
-    <div id="home">
-      <main>
-        <Greeting />
+    <PageContainer>
+      <PageHeader icon={<SpaceDashboardIcon />} title="운영 대시보드" updatedAt={updatedAt || undefined} />
 
-        <RoadmapTimeline />
+      {/* ① KPI Overview */}
+      <ContentSection>
+        <KpiOverview />
+      </ContentSection>
 
-        <div className="bento-grid">
-          {/* 장비현황 — 우선순위 2 */}
-          <div className="bento-card bc-eq" onClick={() => navigate('/equipment')} role="button" tabIndex={0}>
-            <div className="bc-head">
-              <span className="bc-ico bci-blue"><MemoryIcon fontSize="inherit" /></span>
-              <span className="bc-name">장비현황</span>
-              {eqReady && <span className="bc-badge bcb-blue">{eq.types}종 · {eq.total}대</span>}
-              <span className="see-all">전체보기 ›</span>
-            </div>
-            <EqPreview />
-          </div>
+      {/* ② 오늘 일정 + 다가오는 일정 */}
+      <ContentSection>
+        <ScheduleSection />
+      </ContentSection>
 
-          {/* 업무현황 */}
-          <div className="bento-card bc-work" onClick={() => navigate('/work')} role="button" tabIndex={0}>
-            <div className="bc-head">
-              <span className="bc-ico bci-amber"><AssessmentIcon fontSize="inherit" /></span>
-              <span className="bc-name">업무현황</span>
-              {workBadge && <span className="bc-badge bcb-amber">{workBadge}</span>}
-              <span className="see-all">전체보기 ›</span>
-            </div>
-            <div className="work-preview">
-              <WorkPreview />
-            </div>
-          </div>
+      {/* ③ 업무 현황 */}
+      <ContentSection title="업무 현황" action={moreBtn('/work')}>
+        <WorkStatusSection />
+      </ContentSection>
 
-          {/* 공지사항 */}
-          <div className="bento-card bc-notice" onClick={() => navigate('/notice')} role="button" tabIndex={0}>
-            <div className="bc-head">
-              <span className="bc-ico bci-red"><CampaignIcon fontSize="inherit" /></span>
-              <span className="bc-name">공지사항</span>
-              {noticeReady && newCnt > 0 && <span className="bc-badge bcb-red">NEW {newCnt}</span>}
-              <span className="see-all">전체보기 ›</span>
-            </div>
-            <NoticePreview />
-          </div>
+      {/* ④ 장비 현황 */}
+      <ContentSection title="장비 현황" action={moreBtn('/equipment')}>
+        <EquipmentSection />
+      </ContentSection>
 
-          {/* 업무일정 */}
-          <div className="bento-card bc-cal" onClick={() => navigate('/calendar')} role="button" tabIndex={0}>
-            <div className="bc-head">
-              <span className="bc-ico bci-purple"><CalendarMonthIcon fontSize="inherit" /></span>
-              <span className="bc-name">업무일정</span>
-              <span className="bc-badge bcb-purple">오늘 {todayCnt}건</span>
-              <span className="see-all">전체보기 ›</span>
-            </div>
-            <CalPreview />
-          </div>
-        </div>
-      </main>
-    </div>
+      {/* ⑤ 공지사항 */}
+      <ContentSection title="공지사항" action={moreBtn('/notice')} last>
+        <NoticeSection />
+      </ContentSection>
+    </PageContainer>
   )
 }

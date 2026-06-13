@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEP 4 — Dashboard(Home) 리디자인</title>
+<style>
+  :root{
+    --bg:#0F1117; --surface:#131722; --card:#161B22; --hover:#1D2635;
+    --border:#293244; --divider:#232C3A; --text:#FFFFFF; --text2:#AAB4C3; --muted:#7D8899;
+    --blue:#5491DA; --green:#4DA167; --amber:#D6A23E; --red:#E05B54; --purple:#A98AE0; --teal:#46B7BE;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'IBM Plex Sans KR','Segoe UI',system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:48px 24px 80px}
+  header.top{position:sticky;top:0;background:rgba(19,23,34,.85);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);margin:-48px -24px 32px;padding:16px 24px}
+  .tag{display:inline-block;font-size:11px;font-weight:600;color:var(--blue);border:1px solid var(--border);border-radius:8px;padding:2px 8px;margin-bottom:8px}
+  h1{font-size:27px;font-weight:700;letter-spacing:-.01em;margin:0}
+  .sub{color:var(--text2);font-size:14px;margin-top:6px}
+  h2{font-size:19px;font-weight:700;margin:38px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--divider)}
+  p,li{font-size:14px;color:var(--text2)} li{margin:4px 0}
+  code{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12.5px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1px 6px;color:var(--text)}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--divider);vertical-align:top}
+  th{color:var(--text2);font-weight:600;background:var(--surface);font-size:12px}
+  tr:last-child td{border-bottom:none}
+  td b,.after{color:var(--text)} .after{color:var(--green);font-weight:600}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;margin:14px 0}
+  ul{padding-left:20px;margin:8px 0}
+  a{color:var(--blue)} .ok{color:var(--green)} .no{color:var(--amber)}
+  /* wireframe */
+  .wf{display:flex;flex-direction:column;gap:12px}
+  .wf-row{display:grid;gap:10px}
+  .b{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--surface)}
+  .b .t{font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600;letter-spacing:.3px}
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  .kpi{background:var(--hover);border:1px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center}
+  .kpi .n{font-size:20px;font-weight:800;color:var(--blue)} .kpi .l{font-size:10px;color:var(--text2);margin-top:2px}
+  .two{grid-template-columns:1.3fr 1fr}
+  .four{grid-template-columns:repeat(4,1fr)}
+  .chip{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;border:1px solid}
+  .c-green{color:var(--green);background:rgba(77,161,103,.12);border-color:rgba(77,161,103,.32)}
+  .c-blue{color:var(--blue);background:rgba(84,145,218,.12);border-color:rgba(84,145,218,.32)}
+  .c-teal{color:var(--teal);background:rgba(70,183,190,.12);border-color:rgba(70,183,190,.32)}
+  .c-red{color:var(--red);background:rgba(224,91,84,.12);border-color:rgba(224,91,84,.32)}
+  .c-gray{color:var(--text2);background:rgba(139,148,158,.12);border-color:var(--border)}
+  .demote{opacity:.6}
+  .note{font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="tag">STEP 4</span>
+    <h1>Dashboard(Home) 리디자인</h1>
+    <div class="sub">작업일 2026-06-13 · 첫 실제 페이지 리디자인 — 소개 화면 → <b>연구센터 운영 대시보드</b></div>
+  </header>
+
+  <h2>1) 기존 구조 문제점</h2>
+  <ul>
+    <li><b>소개 페이지 성격</b>: 최상단이 환영 배너 + FAB 로드맵 hero(76px) → 운영 정보가 아래로 밀림</li>
+    <li><b>정보 위계 역전</b>: 참고 정보(로드맵)가 1순위, 오늘 일정·진행중 업무는 작은 미리보기 3건만</li>
+    <li><b>5초 파악 불가</b>: 진입 시 오늘 할 일이 한눈에 안 들어옴</li>
+    <li><b>레이아웃 제각각</b>: 홈 전용 bento(1180), 다른 페이지(1320)와 불일치</li>
+  </ul>
+
+  <h2>2) 새로운 정보구조 (와이어프레임)</h2>
+  <div class="card wf">
+    <div class="b"><div class="t">PAGE HEADER — 운영 대시보드 · 업데이트 시간</div></div>
+    <div class="b"><div class="t">① KPI OVERVIEW (CardGrid 6열)</div>
+      <div class="kpis">
+        <div class="kpi"><div class="n">20</div><div class="l">전체 장비</div></div>
+        <div class="kpi"><div class="n">29</div><div class="l">운영 중</div></div>
+        <div class="kpi"><div class="n">7</div><div class="l">진행중 업무</div></div>
+        <div class="kpi"><div class="n">3</div><div class="l">오늘 일정</div></div>
+        <div class="kpi"><div class="n">2</div><div class="l">신규 공지</div></div>
+        <div class="kpi"><div class="n">4</div><div class="l">이번달 도입</div></div>
+      </div>
+    </div>
+    <div class="wf-row two">
+      <div class="b"><div class="t">② 오늘 일정 (중요도 최상)</div><div class="note">09:00 · 장비 점검 회의 &nbsp;<span class="chip c-blue">회의/미팅</span></div></div>
+      <div class="b"><div class="t">다가오는 일정 (7일)</div><div class="note">06/15(월) 교육 &nbsp;<span class="chip c-gray">D-2</span></div></div>
+    </div>
+    <div class="b"><div class="t">③ 업무 현황 (StatusChip · CardGrid 4열)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip c-green">진행중</span><span class="chip c-blue">예정</span><span class="chip c-gray">완료</span><span class="chip c-red">지연</span></div>
+    </div>
+    <div class="b"><div class="t">④ 장비 현황 (→ /equipment)</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><span class="chip c-green">운영중</span><span class="chip c-teal">설치중</span><span class="chip c-blue">도입예정</span><span class="chip c-red">비가동</span></div>
+    </div>
+    <div class="b"><div class="t">⑤ 공지사항 최근 5건 (클릭 → Drawer 상세)</div>
+      <div class="note"><span class="chip c-red">NEW</span> 6월 정기 안전교육 안내 &nbsp;·&nbsp; 06.13</div>
+    </div>
+    <div class="b demote"><div class="t">⑥ FAB 구축 로드맵 — 하단 참고(강등)</div></div>
+  </div>
+
+  <h2>3) 적용된 Layout System (STEP 3)</h2>
+  <ul>
+    <li><code>PageContainer</code> 폭 1400 · 상단 32 · 좌우 24 (홈 전용 <code>&lt;main&gt;</code> 제거 → 이중 패딩 해소)</li>
+    <li><code>PageHeader</code> 아이콘 + 제목 + 업데이트 시간</li>
+    <li><code>ContentSection</code> ×6 — 섹션 간격 24 통일</li>
+    <li><code>CardGrid</code> KPI 6열 / 상태 4열, 간격 16, 반응형(Mobile 1 · Tablet 2)</li>
+  </ul>
+
+  <h2>4) 적용된 Design System (STEP 1·2)</h2>
+  <ul>
+    <li><code>KpiCard</code> ×6 (숫자 강조) · <code>StatusChip</code>(업무·장비·공지 상태) · <code>AppCard</code>(섹션 표면)</li>
+    <li><code>AppDrawer</code>(공지 상세, 본문 DOMPurify 살균) · <code>EmptyState</code> · <code>SectionHeader</code></li>
+    <li>색은 전부 테마 토큰/데이터 기반(하드코딩 제거)</li>
+  </ul>
+
+  <h2>5) Before / After</h2>
+  <table>
+    <tr><th>항목</th><th>Before</th><th>After</th></tr>
+    <tr><td>성격</td><td>소개 · 메뉴 진입</td><td class="after">운영 관제 대시보드</td></tr>
+    <tr><td>최상단</td><td>환영 배너 + 로드맵 hero</td><td class="after">KPI 6 + 오늘 일정</td></tr>
+    <tr><td>오늘 일정</td><td>벤토 미리보기 3건</td><td class="after">전체 표시 + 다가오는 7일</td></tr>
+    <tr><td>업무</td><td>진행중 3건 미리보기</td><td class="after">상태 4분류 집계</td></tr>
+    <tr><td>공지</td><td>미리보기 3건</td><td class="after">최근 5건 + Drawer 상세</td></tr>
+    <tr><td>로드맵</td><td>1순위 hero</td><td class="after">하단 참고 강등</td></tr>
+    <tr><td>환영/소개 문구</td><td>있음</td><td class="after">제거</td></tr>
+    <tr><td>레이아웃</td><td>홈 전용 bento(1180)</td><td class="after">공통 Layout System(1400)</td></tr>
+  </table>
+
+  <h2>6) 화면 확인 &amp; 데이터 주의</h2>
+  <div class="card">
+    <p><span class="ok">✓ type-check</span> · <span class="ok">✓ build</span> · <span class="ok">✓ 다른 6개 페이지·셸 미수정</span></p>
+    <p>확인: <a href="http://localhost:3600/">http://localhost:3600/</a> (dev, HMR) — 자동 캡처는 브라우저 미연동으로 생략</p>
+    <p class="note"><b>데이터 주의(투명 공개)</b>:<br>
+      · 캘린더 이벤트에 <b>담당자 필드 없음</b> → 일정은 시간·유형·장소로 표시<br>
+      · 업무 상태는 시트에 명시 컬럼 없어 <b>파생</b>(완료=완료일자 / 진행중=share / 예정=시작일 미래 / 지연=그 외 미완료) — 운영 방식과 다르면 조정<br>
+      · "이번달 도입" = installDate가 이번 달인 장비 수
+    </p>
+    <p class="note">적대적 검증 9건 중 6 confirmed → 5건 수정(색 하드코딩·업무상태 누락·KPI 보조문구·공지 키보드 접근성), 1건 문서화(로드맵 레거시 스타일은 추후 이관). 죽은 코드(Greeting/previews) 정리는 별도 과제.</p>
+  </div>
+
+  <h2>다음 단계 — STEP 5</h2>
+  <p>일정관리(Calendar) 리디자인 예정.</p>
+</div>
+</body>
+</html>

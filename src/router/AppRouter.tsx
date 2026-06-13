@@ -7,6 +7,7 @@ import Work from '@/pages/Work'
 import Equipment from '@/pages/Equipment'
 import EquipmentOps from '@/pages/EquipmentOps'
 import Links from '@/pages/Links'
+import Roadmap from '@/pages/Roadmap'
 import DesignSystemShowcase from '@/pages/_DesignSystem'
 import LayoutSystemShowcase from '@/pages/_LayoutSystem'
 
@@ -26,6 +27,7 @@ export function AppRouter() {
         <Route path="/equipment" element={<Equipment />} />
         <Route path="/equipment-ops" element={<EquipmentOps />} />
         <Route path="/links" element={<Links />} />
+        <Route path="/roadmap" element={<Roadmap />} />
         {/* 원본 한글 페이지명 별칭 ('회의'는 캘린더로 — goPage alias 대응) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

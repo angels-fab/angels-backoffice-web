@@ -26,6 +26,9 @@ export type { ContentSectionProps } from './ContentSection'
 export { default as CardGrid } from './CardGrid'
 export type { CardGridProps } from './CardGrid'
 
+export { default as RatioBar } from './RatioBar'
+export type { RatioBarProps, RatioSegment } from './RatioBar'
+
 export { default as FilterBar } from './FilterBar'
 export type { FilterBarProps } from './FilterBar'
 
