@@ -38,8 +38,8 @@ export const selectEqCounts = createSelector(
   },
 )
 
-/** 진행중 업무 (share=1) */
+/** 진행중 업무 (상태='진행중') */
 export const selectCurrentWork = createSelector(
   (s: RootState) => s.work.items,
-  items => items.filter(t => t.share),
+  items => items.filter(t => (t.status || '').trim() === '진행중'),
 )

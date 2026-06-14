@@ -18,8 +18,7 @@ export const loadWorkData = createAsyncThunk('work/load', async (): Promise<Work
   if (hIdx < 0) throw new Error('헤더(구분/업무)를 찾지 못함')
 
   const head = rows[hIdx].map(c => String(c || '').trim())
-  const col = (n: string) => head.indexOf(n)
-  // 헤더 이름이 여러 후보일 수 있어 폴백 목록으로 탐색, 없으면 고정 열 위치 사용
+  // 헤더 이름으로 열을 찾되(위치가 바뀌어도 동작), 못 찾으면 폴백 열 위치 사용
   const colAny = (names: string[], fallbackIdx: number) => {
     for (const n of names) {
       const i = head.indexOf(n)
@@ -28,17 +27,25 @@ export const loadWorkData = createAsyncThunk('work/load', async (): Promise<Work
     return fallbackIdx
   }
   const ci = {
-    num: col('번호'), cat: col('구분'), task: col('업무'), dept: col('관련부서'),
-    mat: col('관련자료'), start: col('시작일자'), time: col('시간'), loc: col('장소'),
-    mgr: col('담당자'), end: col('완료일자'),
-    // J열(진행중): '회의'/'공유여부' 등 어떤 이름이어도, 없으면 9번(J) 고정
-    share: colAny(['회의', '공유여부', '진행중', '공유'], 9),
-    // K열(Remind): 없으면 10번(K) 고정
-    remind: colAny(['Remind', 'remind', '리마인드'], 10),
-    // L열(센터장): 'Check'/'센터장 Check' 등, 없으면 11번(L) 고정
-    chief: colAny(['Check', '센터장 Check', '센터장', '센터장체크', 'check'], 11),
-    // M열(링크): 없으면 12번(M) 고정
-    link: colAny(['링크', '관련링크', 'link'], 12),
+    num: colAny(['번호', '연번', 'No'], 0),
+    cat: colAny(['구분', '분류'], 1),
+    task: colAny(['업무', '업무명', '제목'], 2),
+    dept: colAny(['관련부서', '부서'], 3),
+    mat: colAny(['관련자료', '자료'], 4),
+    // 발의일자(구 '시작일자')
+    start: colAny(['발의일자', '시작일자', '발의', '등록일자'], 5),
+    // 예정일 — 회의 등 업무일정 날짜
+    plan: colAny(['예정일', '예정일자', '일정'], 6),
+    time: colAny(['시간'], 7),
+    loc: colAny(['장소'], 8),
+    mgr: colAny(['담당자'], 9),
+    // 상태 — 진행중/보류/완료 (정식 상태 열)
+    status: colAny(['상태', '진행상태', '업무상태'], 10),
+    end: colAny(['완료일자', '완료일'], 11),
+    remind: colAny(['Remind', 'remind', '리마인드'], 12),
+    // 센터장 검토(구 '센터장 Check')
+    chief: colAny(['센터장 검토', '센터장검토', '센터장 Check', '센터장', 'Check', 'check'], 13),
+    link: colAny(['링크', '관련링크', 'link'], 14),
   }
   // 체크박스 값: 불리언 true/문자 'TRUE'/'1'/'Y'/'예' 모두 인식
   const isChk = (v: unknown) => {
@@ -53,12 +60,12 @@ export const loadWorkData = createAsyncThunk('work/load', async (): Promise<Work
     .map((r, idx) => ({
       id: idx + 1,
       num: cell(r, ci.num), cat: cell(r, ci.cat), task: cell(r, ci.task), dept: cell(r, ci.dept),
-      mat: cell(r, ci.mat), start: cell(r, ci.start), time: cell(r, ci.time), loc: cell(r, ci.loc),
-      mgr: cell(r, ci.mgr), end: cell(r, ci.end),
-      link: cell(r, ci.link), // M열: 관련 링크 (URL)
-      share: isChk(r[ci.share]), // J열 체크 → 진행중 업무
-      remind: isChk(r[ci.remind]), // K열 체크 → Remind
-      chief: isChk(r[ci.chief]), // L열 체크 → 센터장 Check
+      mat: cell(r, ci.mat), start: cell(r, ci.start), plan: cell(r, ci.plan),
+      time: cell(r, ci.time), loc: cell(r, ci.loc),
+      mgr: cell(r, ci.mgr), status: cell(r, ci.status), end: cell(r, ci.end),
+      link: cell(r, ci.link), // 관련 링크 (URL)
+      remind: isChk(r[ci.remind]), // Remind 체크
+      chief: isChk(r[ci.chief]), // 센터장 검토 체크
     }))
 })
 

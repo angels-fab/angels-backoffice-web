@@ -84,7 +84,7 @@ export default function GlobalSearchDialog({ open, onClose }: GlobalSearchDialog
     const workHits: Hit[] = work
       .filter((t) => {
         const st = W_STATUS[classify(t)].label
-        const flags = `${t.chief ? '센터장 Check' : ''} ${t.remind ? 'Remind' : ''}`
+        const flags = `${t.chief ? '센터장 검토' : ''} ${t.remind ? 'Remind' : ''}`
         return match(`${t.task} ${t.mgr} ${t.cat} ${st} ${flags}`)
       })
       .map((t) => {

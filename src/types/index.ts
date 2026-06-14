@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 
 // ── 업무현황 ('센터 업무 현황' 시트 1행 = WorkItem) ──
+// 시트 열(헤더 기준 자동 인식): 번호 구분 업무 관련부서 관련자료 발의일자 예정일
+//   시간 장소 담당자 상태 완료일자 Remind 센터장검토 링크
 export interface WorkItem {
   id: number
   num: string
@@ -8,18 +10,22 @@ export interface WorkItem {
   task: string
   dept: string
   mat: string
+  /** 발의일자 */
   start: string
+  /** 예정일 — 회의 등 업무일정 날짜 */
+  plan: string
   time: string
   loc: string
   mgr: string
+  /** 상태 — 시트 '상태' 열 (진행중 / 보류 / 완료, 빈값=미정) */
+  status: string
+  /** 완료일자 */
   end: string
-  /** M열: 관련 링크 (URL) */
+  /** 관련 링크 (URL) */
   link: string
-  /** J열 체크 → 진행중 업무 */
-  share: boolean
-  /** K열 체크 → Remind */
+  /** Remind 체크 */
   remind: boolean
-  /** L열 체크 → 센터장 Check */
+  /** 센터장 검토 체크 */
   chief: boolean
 }
 

@@ -28,12 +28,12 @@ import { W_STATUS, classify, taskLink, taskTitle } from './workMeta'
 import TaskCard from './TaskCard'
 import TaskDetailDrawer from './TaskDetailDrawer'
 
-type Tab = 'inProgress' | 'past' | 'remind' | 'chief'
+type Tab = 'inProgress' | 'hold' | 'done' | 'chief'
 const TABS: { key: Tab; label: string }[] = [
   { key: 'inProgress', label: '진행중' },
-  { key: 'past', label: '지난' },
-  { key: 'remind', label: 'Remind' },
-  { key: 'chief', label: '센터장 Check' },
+  { key: 'hold', label: '보류' },
+  { key: 'done', label: '완료' },
+  { key: 'chief', label: '센터장 검토' },
 ]
 
 const MD = (s: string) => {
@@ -71,15 +71,17 @@ export default function Work() {
 
   // ── 전체 집계(Command Center용, 필터 무관) ──
   const counts = useMemo(() => {
-    let inProgress = 0, remind = 0, past = 0, chief = 0
+    let inProgress = 0, hold = 0, done = 0, etc = 0, chief = 0, remind = 0
     for (const t of items) {
       const c = classify(t)
       if (c === 'inProgress') inProgress++
-      else if (c === 'remind') remind++
-      else past++
+      else if (c === 'hold') hold++
+      else if (c === 'done') done++
+      else etc++
       if (t.chief) chief++
+      if (t.remind) remind++
     }
-    return { inProgress, remind, past, chief, total: items.length }
+    return { inProgress, hold, done, etc, chief, remind, total: items.length }
   }, [items])
 
   // 긴급: 센터장 Check + Remind (센터장 우선 → 최근 발의)
@@ -100,9 +102,8 @@ export default function Work() {
     for (const t of items) {
       const name = t.mgr || '미지정'
       const m = map.get(name) ?? { mgr: name, inProgress: 0, remind: 0, chief: 0, total: 0 }
-      const c = classify(t)
-      if (c === 'inProgress') m.inProgress++
-      else if (c === 'remind') m.remind++
+      if (classify(t) === 'inProgress') m.inProgress++
+      if (t.remind) m.remind++
       if (t.chief) m.chief++
       m.total++
       map.set(name, m)
@@ -154,16 +155,17 @@ export default function Work() {
           <RatioBar
             segments={[
               { label: '진행중', value: counts.inProgress, status: 'success' },
-              { label: 'Remind', value: counts.remind, status: 'warning' },
-              { label: '지난', value: counts.past, status: 'neutral' },
+              { label: '보류', value: counts.hold, status: 'warning' },
+              { label: '완료', value: counts.done, status: 'neutral' },
+              ...(counts.etc > 0 ? [{ label: '미정', value: counts.etc, status: 'neutral' as const }] : []),
             ]}
           />
         </AppCard>
         <CardGrid columns={4}>
           <StatTile value={counts.inProgress} unit="건" label="진행중" status="success" selected={tab === 'inProgress'} onClick={() => switchTab('inProgress')} />
-          <StatTile value={counts.past} unit="건" label="지난" status="neutral" selected={tab === 'past'} onClick={() => switchTab('past')} />
-          <StatTile value={counts.remind} unit="건" label="Remind" status="warning" selected={tab === 'remind'} onClick={() => switchTab('remind')} />
-          <StatTile value={counts.chief} unit="건" label="센터장 Check" status="purple" selected={tab === 'chief'} onClick={() => switchTab('chief')} />
+          <StatTile value={counts.hold} unit="건" label="보류" status="warning" selected={tab === 'hold'} onClick={() => switchTab('hold')} />
+          <StatTile value={counts.done} unit="건" label="완료" status="neutral" selected={tab === 'done'} onClick={() => switchTab('done')} />
+          <StatTile value={counts.chief} unit="건" label="센터장 검토" status="purple" selected={tab === 'chief'} onClick={() => switchTab('chief')} />
         </CardGrid>
       </ContentSection>
 

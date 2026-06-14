@@ -1,45 +1,30 @@
-import { parseStartDate, todaySeoul } from '@/utils/date'
+import { todaySeoul } from '@/utils/date'
 import type { CalEvent, WorkItem } from '@/types'
 
 export interface WorkCounts {
-  done: number
   inProgress: number
-  upcoming: number
-  delayed: number
+  hold: number
+  done: number
+  etc: number
   total: number
 }
 
 /**
- * 업무 상태 집계(파생). 시트에 상태 컬럼이 없어 다음 기준으로 분류한다.
- * 완료 + 진행중 + 예정 + 지연 = 전체(미완료는 전부 한 버킷에 귀속).
- * - 완료: 완료일자(end) 입력됨
- * - 진행중: 미완료 + 진행중 체크(share)
- * - 예정: 미완료 + 진행중 아님 + 시작일자 미래
- * - 지연: 그 외 미완료(시작일 과거이거나 미입력)
+ * 업무 상태 집계 — 시트 '상태' 열(진행중/보류/완료) 기준. 빈값은 미정(etc).
  */
-export function workStatusCounts(items: WorkItem[], todayMid: number): WorkCounts {
-  const startMs = (t: WorkItem) => {
-    const d = parseStartDate(t.start)
-    if (!d) return null
-    d.setHours(0, 0, 0, 0)
-    return d.getTime()
-  }
-  // 완료일자(end)가 '입력됨'이면 완료(명세 기준). 파싱 가능 여부가 아니라 값 존재로 판단.
-  const isDone = (t: WorkItem) => !!String(t.end || '').trim()
-  let done = 0
+export function workStatusCounts(items: WorkItem[]): WorkCounts {
   let inProgress = 0
-  let upcoming = 0
-  let delayed = 0
+  let hold = 0
+  let done = 0
+  let etc = 0
   for (const t of items) {
-    if (isDone(t)) done++
-    else if (t.share) inProgress++
-    else {
-      const ms = startMs(t)
-      if (ms != null && ms > todayMid) upcoming++
-      else delayed++
-    }
+    const s = (t.status || '').trim()
+    if (s === '진행중') inProgress++
+    else if (s === '보류') hold++
+    else if (s === '완료') done++
+    else etc++
   }
-  return { done, inProgress, upcoming, delayed, total: items.length }
+  return { inProgress, hold, done, etc, total: items.length }
 }
 
 /** 오늘(00:00 KST) 기준 밀리초 */

@@ -2,22 +2,24 @@ import type { StatusKind } from '@/components/ds'
 import type { WorkItem } from '@/types'
 
 /**
- * 업무 상태(데이터 충실형) — 시트 실제 플래그 기준.
- * 진행중(share) / Remind(!share&&remind) / 지난(!share&&!remind) 은 전체를 분할.
- * 센터장 Check(chief)는 직교 플래그(위 분류와 겹칠 수 있음).
+ * 업무 상태 — 시트 '상태' 열(진행중/보류/완료) 기준. 빈값은 '미정'.
+ * Remind·센터장 검토는 직교 플래그(상태와 겹칠 수 있음).
  */
-export type WStatus = 'inProgress' | 'remind' | 'past'
+export type WStatus = 'inProgress' | 'hold' | 'done' | 'etc'
 
 export const W_STATUS: Record<WStatus, { label: string; status: StatusKind }> = {
   inProgress: { label: '진행중', status: 'success' },
-  remind: { label: 'Remind', status: 'warning' },
-  past: { label: '지난', status: 'neutral' },
+  hold: { label: '보류', status: 'warning' },
+  done: { label: '완료', status: 'neutral' },
+  etc: { label: '미정', status: 'neutral' },
 }
 
 export function classify(t: WorkItem): WStatus {
-  if (t.share) return 'inProgress'
-  if (t.remind) return 'remind'
-  return 'past'
+  const s = (t.status || '').trim()
+  if (s === '진행중') return 'inProgress'
+  if (s === '보류') return 'hold'
+  if (s === '완료') return 'done'
+  return 'etc'
 }
 
 /** 업무 내용 첫 줄 = 제목 */
