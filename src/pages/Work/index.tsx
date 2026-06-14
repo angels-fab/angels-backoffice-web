@@ -50,12 +50,8 @@ const MD = (s: string) => {
   const d = parseStartDate(s)
   return d ? `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}` : ''
 }
-// 구분 우선순위 → 발의일자 최근순
-const cmp = (a: WorkItem, b: WorkItem) => {
-  const ra = workCatRank(a.cat)
-  const rb = workCatRank(b.cat)
-  return ra !== rb ? ra - rb : dateSortValue(b.start) - dateSortValue(a.start)
-}
+// 발의일자 최신순 (최근 업무가 위)
+const cmp = (a: WorkItem, b: WorkItem) => dateSortValue(b.start) - dateSortValue(a.start)
 
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
 

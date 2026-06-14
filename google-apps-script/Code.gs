@@ -422,6 +422,8 @@ function createWork_(req) {
   const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
   const status = String(req.status || '진행중').trim();
   const endVal = workEndAuto_(status, String(req.end || '').trim(), today);
+  // 완료되면 '검토 필요'는 자동 해제
+  const chiefVal = status === '완료' ? false : (req.chief === true);
 
   const row = new Array(head.length).fill('');
   const set = function (i, v) { if (i >= 0) row[i] = v; };
@@ -439,11 +441,11 @@ function createWork_(req) {
   set(C.end, endVal);
   set(C.link, String(req.link || ''));
   set(C.remind, req.remind === true);
-  set(C.chief, req.chief === true);
+  set(C.chief, chiefVal);
   sh.appendRow(row);
   const last = sh.getLastRow();
   if (C.remind >= 0) sh.getRange(last, C.remind + 1).insertCheckboxes().setValue(req.remind === true);
-  if (C.chief >= 0) sh.getRange(last, C.chief + 1).insertCheckboxes().setValue(req.chief === true);
+  if (C.chief >= 0) sh.getRange(last, C.chief + 1).insertCheckboxes().setValue(chiefVal);
   return json_({ status: 'ok', num: newNum });
 }
 
@@ -469,6 +471,8 @@ function updateWork_(req) {
   const status = String(req.status || '진행중').trim();
   const endGiven = req.end !== undefined ? String(req.end || '').trim() : wDate_(values[rowIdx][C.end]);
   const endVal = workEndAuto_(status, endGiven, today);
+  // 완료되면 '검토 필요'는 자동 해제
+  const chiefVal = status === '완료' ? false : (req.chief === true);
 
   const set = function (i, v) { if (i >= 0) sh.getRange(sheetRow, i + 1).setValue(v); };
   set(C.cat, String(req.cat || ''));
@@ -484,7 +488,7 @@ function updateWork_(req) {
   set(C.end, endVal);
   set(C.link, String(req.link || ''));
   if (C.remind >= 0) sh.getRange(sheetRow, C.remind + 1).insertCheckboxes().setValue(req.remind === true);
-  if (C.chief >= 0) sh.getRange(sheetRow, C.chief + 1).insertCheckboxes().setValue(req.chief === true);
+  if (C.chief >= 0) sh.getRange(sheetRow, C.chief + 1).insertCheckboxes().setValue(chiefVal);
   return json_({ status: 'ok', num: Number(num) || num });
 }
 

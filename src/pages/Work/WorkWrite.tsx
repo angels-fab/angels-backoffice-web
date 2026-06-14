@@ -112,7 +112,15 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
             </label>
             <label className="mfield">
               <span className="mlabel">상태</span>
-              <select className="minput" value={status} onChange={(e) => setStatus(e.target.value)}>
+              <select
+                className="minput"
+                value={status}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setStatus(v)
+                  if (v === '완료') setChief(false) // 완료 시 검토 필요 자동 해제
+                }}
+              >
                 {WORK_STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -177,8 +185,8 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
             <div className="mfield">
               <span className="mlabel">검토 필요</span>
               <label className="mcheck">
-                <input type="checkbox" checked={chief} onChange={(e) => setChief(e.target.checked)} />
-                검토 필요 표시
+                <input type="checkbox" checked={chief} disabled={status === '완료'} onChange={(e) => setChief(e.target.checked)} />
+                {status === '완료' ? '완료 시 자동 해제됨' : '검토 필요 표시'}
               </label>
             </div>
           </div>
