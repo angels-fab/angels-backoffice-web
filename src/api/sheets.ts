@@ -90,6 +90,8 @@ export interface AddNoticePayload {
   target?: string
   end?: string
   ref?: string
+  /** 게시일(작성일자) yyyy-MM-dd — 비우면 서버가 오늘로 기록 */
+  date?: string
 }
 
 /** 담당자 이름 목록 (해당자 선택 버튼용 — 비밀번호는 서버가 내보내지 않음) */
@@ -113,6 +115,37 @@ export async function addNotice(p: AddNoticePayload): Promise<number> {
   }
   if (json.status !== 'ok') throw new Error(json.message || '저장 실패')
   return json.num || 0
+}
+
+export interface UpdateNoticePayload extends AddNoticePayload {
+  /** 수정 대상 공지 연번 */
+  num: string | number
+}
+
+/** 공지 수정 — 연번 기준으로 시트 행 갱신(게시자는 원본 유지). CORS 주의는 addNotice와 동일. */
+export async function updateNotice(p: UpdateNoticePayload): Promise<void> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateNotice', ...p }) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 공지 수정을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '수정 실패')
+}
+
+/** 공지 삭제 — 연번 기준으로 시트 행 삭제. */
+export async function deleteNotice(p: { num: string | number; author: string; key: string }): Promise<void> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteNotice', ...p }) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 공지 삭제를 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '삭제 실패')
 }
 
 // ── 캘린더 일정 추가/수정/삭제 (Apps Script doPost) ──

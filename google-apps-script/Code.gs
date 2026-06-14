@@ -61,14 +61,16 @@ function doGet(e) {
 function doPost(e) {
   try {
     const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    if (req.action === 'addNotice') {
-      // 동시 쓰기 잠금 — 두 명이 동시에 등록해도 연번이 겹치지 않게 한 번에 한 명씩 처리
+    // 공지 쓰기(추가/수정/삭제) — 동시 쓰기 잠금으로 연번 충돌·행 삭제 경합 방지
+    if (req.action === 'addNotice' || req.action === 'updateNotice' || req.action === 'deleteNotice') {
       const lock = LockService.getScriptLock();
       if (!lock.tryLock(10000)) {
         return json_({ status: 'error', message: '저장 요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
       }
       try {
-        return addNotice_(req);
+        if (req.action === 'addNotice') return addNotice_(req);
+        if (req.action === 'updateNotice') return updateNotice_(req);
+        return deleteNotice_(req);
       } finally {
         lock.releaseLock();
       }
@@ -199,8 +201,8 @@ function addNotice_(req) {
   set(['제목'], String(req.title).trim());
   set(['내용', '본문'], String(req.body));
   set(['관련자료', '첨부', '링크'], String(req.ref || ''));
-  // J·K열: 게시 시점의 날짜·시간 자동 기록 (KST)
-  set(['작성일자', '게시일', '등록일'], today);
+  // J·K열: 게시일(폼에서 지정 가능, 비우면 오늘) + 작성시간(자동, KST)
+  set(['작성일자', '게시일', '등록일'], String(req.date || '').trim() || today);
   set(['작성시간', '등록시간'], nowTime);
   set(['종료일자'], String(req.end || ''));
   set(['게시자', '작성자'], author);
@@ -213,6 +215,99 @@ function addNotice_(req) {
     sh.getRange(sh.getLastRow(), pinCol + 1).insertCheckboxes().setValue(req.pinned === true);
   }
   return json_({ status: 'ok', num: newNum });
+}
+
+// '공지사항' 시트 + 헤더 위치 컨텍스트 (수정/삭제 공용). 실패 시 { error }.
+function noticeCtx_() {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('공지사항');
+  if (!sh) return { error: "'공지사항' 시트가 없습니다" };
+  const values = sh.getDataRange().getValues();
+  let hIdx = -1;
+  for (let i = 0; i < Math.min(values.length, 8); i++) {
+    const r = values[i].map(function (c) { return String(c || '').trim(); });
+    if (r.indexOf('제목') >= 0 && r.indexOf('내용') >= 0) { hIdx = i; break; }
+  }
+  if (hIdx < 0) return { error: '헤더(제목/내용)를 찾지 못함' };
+  const head = values[hIdx].map(function (c) { return String(c || '').trim(); });
+  const col = function (names) {
+    for (let k = 0; k < names.length; k++) {
+      const i = head.indexOf(names[k]);
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  return { sh: sh, values: values, hIdx: hIdx, head: head, col: col };
+}
+
+// 연번(num)으로 데이터 행 인덱스(values 기준 0-base) 찾기. 없으면 -1.
+function findNoticeRow_(ctx, num) {
+  const numCol = ctx.col(['연번', '번호', 'No', 'no']);
+  if (numCol < 0) return -2; // 연번 열 자체가 없음
+  const target = String(num).trim();
+  for (let i = ctx.hIdx + 1; i < ctx.values.length; i++) {
+    if (String(ctx.values[i][numCol] || '').trim() === target) return i;
+  }
+  return -1;
+}
+
+// 공지 수정 — 연번으로 행을 찾아 분류·제목·내용·게시일 등 갱신 (게시자는 원본 유지)
+function updateNotice_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+
+  const num = String(req.num || '').trim();
+  if (!num) return json_({ status: 'error', message: '대상 공지 연번이 없습니다' });
+  if (!String(req.title || '').trim()) return json_({ status: 'error', message: '제목이 비었습니다' });
+  if (!String(req.body || '').trim()) return json_({ status: 'error', message: '내용이 비었습니다' });
+
+  const ctx = noticeCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const rowIdx = findNoticeRow_(ctx, num);
+  if (rowIdx === -2) return json_({ status: 'error', message: '연번 열을 찾지 못함' });
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상 공지를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
+
+  const sh = ctx.sh;
+  const sheetRow = rowIdx + 1; // 1-base 시트 행번호
+  const setCell = function (names, val) {
+    const c = ctx.col(names);
+    if (c >= 0) sh.getRange(sheetRow, c + 1).setValue(val);
+  };
+  setCell(['업무', '구분', '분류'], String(req.cat || '공지'));
+  setCell(['제목'], String(req.title).trim());
+  setCell(['내용', '본문'], String(req.body));
+  if (req.dept !== undefined) setCell(['부서', '관련부서'], String(req.dept || ''));
+  if (req.deptMgr !== undefined) setCell(['부서담당자', '담당자'], String(req.deptMgr || ''));
+  if (req.target !== undefined) setCell(['해당자', '대상'], String(req.target || ''));
+  if (req.end !== undefined) setCell(['종료일자'], String(req.end || ''));
+  if (req.ref !== undefined) setCell(['관련자료', '첨부', '링크'], String(req.ref || ''));
+  // 게시일(작성일자) — 값이 있을 때만 갱신
+  if (String(req.date || '').trim()) setCell(['작성일자', '게시일', '등록일'], String(req.date).trim());
+  // 상단고정(중요) — 체크박스 유지
+  const pinCol = ctx.col(['상단체크', '상단고정', '고정']);
+  if (pinCol >= 0 && req.pinned !== undefined) {
+    sh.getRange(sheetRow, pinCol + 1).insertCheckboxes().setValue(req.pinned === true);
+  }
+  return json_({ status: 'ok', num: Number(num) || num });
+}
+
+// 공지 삭제 — 연번으로 행을 찾아 시트에서 행 자체를 삭제
+function deleteNotice_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+
+  const num = String(req.num || '').trim();
+  if (!num) return json_({ status: 'error', message: '대상 공지 연번이 없습니다' });
+
+  const ctx = noticeCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const rowIdx = findNoticeRow_(ctx, num);
+  if (rowIdx === -2) return json_({ status: 'error', message: '연번 열을 찾지 못함' });
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상 공지를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
+
+  ctx.sh.deleteRow(rowIdx + 1);
+  return json_({ status: 'ok' });
 }
 
 // ── 캘린더: 공유 캘린더의 일정을 JSON으로 (제목/시작/끝/종일/장소만 — 설명은 내보내지 않음) ──

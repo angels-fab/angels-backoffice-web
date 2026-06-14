@@ -2,6 +2,8 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import EditIcon from '@mui/icons-material/Edit'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { AppDrawer, StatusChip } from '@/components/ds'
 import type { Notice } from '@/types'
 import { noticeBodyHTML, noticeCatStatus } from './noticeMeta'
@@ -20,10 +22,14 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 export interface NoticeDrawerProps {
   notice: Notice | null
   onClose: () => void
+  /** 관리자 모드 — 수정/삭제 액션 노출 */
+  isAdmin?: boolean
+  onEdit?: (notice: Notice) => void
+  onDelete?: (notice: Notice) => void
 }
 
-/** 공지 상세 Drawer — 제목·분류·작성자·작성일·본문. */
-export default function NoticeDrawer({ notice, onClose }: NoticeDrawerProps) {
+/** 공지 상세 Drawer — 제목·분류·작성자·작성일·본문. 관리자면 수정/삭제. */
+export default function NoticeDrawer({ notice, onClose, isAdmin, onEdit, onDelete }: NoticeDrawerProps) {
   const url = notice ? refUrl(notice) : null
   return (
     <AppDrawer
@@ -33,11 +39,27 @@ export default function NoticeDrawer({ notice, onClose }: NoticeDrawerProps) {
       subtitle={notice ? `${notice.cat || '공지'} · ${notice.date}` : ''}
       width={520}
       footer={
-        url ? (
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="contained" startIcon={<OpenInNewIcon />} onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}>
-              관련 자료 열기
-            </Button>
+        notice && (url || isAdmin) ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+            <Box>
+              {isAdmin && (
+                <Button color="error" variant="text" startIcon={<DeleteOutlineIcon />} onClick={() => onDelete?.(notice)}>
+                  삭제
+                </Button>
+              )}
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {url && (
+                <Button variant="outlined" startIcon={<OpenInNewIcon />} onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}>
+                  관련 자료
+                </Button>
+              )}
+              {isAdmin && (
+                <Button variant="contained" startIcon={<EditIcon />} onClick={() => onEdit?.(notice)}>
+                  수정
+                </Button>
+              )}
+            </Box>
           </Box>
         ) : undefined
       }
