@@ -3,9 +3,18 @@ import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
+import Button from '@mui/material/Button'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogActions from '@mui/material/DialogActions'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import AddIcon from '@mui/icons-material/Add'
 import {
   PageContainer,
   PageHeader,
@@ -21,41 +30,51 @@ import {
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData } from '@/store/slices/workSlice'
+import { deleteWork } from '@/api/sheets'
+import { useRole } from '@/auth/role'
 import { dateSortValue, fmtDate, parseStartDate } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { W_STATUS, classify, taskLink, taskTitle } from './workMeta'
+import { W_STATUS, W_STATUS_TABS, classify, taskLink, taskTitle, type WStatus } from './workMeta'
 import TaskCard from './TaskCard'
 import TaskDetailDrawer from './TaskDetailDrawer'
+import WorkWrite from './WorkWrite'
 
-type Tab = 'inProgress' | 'hold' | 'done' | 'chief'
-const TABS: { key: Tab; label: string }[] = [
-  { key: 'inProgress', label: '진행중' },
-  { key: 'hold', label: '보류' },
-  { key: 'done', label: '완료' },
-  { key: 'chief', label: '검토 필요' },
+type StatusTab = 'all' | WStatus
+const STATUS_CHIPS: { key: StatusTab; label: string }[] = [
+  { key: 'all', label: '전체' },
+  ...W_STATUS_TABS.map((k) => ({ key: k as StatusTab, label: W_STATUS[k].label })),
 ]
 
 const MD = (s: string) => {
   const d = parseStartDate(s)
   return d ? `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}` : ''
 }
-// 구분 우선순위 → 시작일자 최근순
+// 구분 우선순위 → 발의일자 최근순
 const cmp = (a: WorkItem, b: WorkItem) => {
   const ra = workCatRank(a.cat)
   const rb = workCatRank(b.cat)
   return ra !== rb ? ra - rb : dateSortValue(b.start) - dateSortValue(a.start)
 }
 
+type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
+
 export default function Work() {
   const dispatch = useAppDispatch()
   const { items, loading, error, updatedAt } = useAppSelector((s) => s.work)
+  const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [tab, setTab] = useState<Tab>('inProgress')
+  const [tab, setTab] = useState<StatusTab>('all')
+  const [chiefOnly, setChiefOnly] = useState(false)
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<WorkItem | null>(null)
+  const [writeOpen, setWriteOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<WorkItem | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<WorkItem | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
 
   // 통합검색 딥링크(/work?focus=<id>) → 해당 업무 상세 Drawer 자동 오픈
   useEffect(() => {
@@ -69,32 +88,28 @@ export default function Work() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, items])
 
-  // ── 전체 집계(Command Center용, 필터 무관) ──
+  // ── 전체 집계(필터 무관) ──
   const counts = useMemo(() => {
-    let inProgress = 0, hold = 0, done = 0, etc = 0, chief = 0, remind = 0
+    let inProgress = 0, done = 0, hold = 0, cancelled = 0, etc = 0, chief = 0, remind = 0
     for (const t of items) {
       const c = classify(t)
       if (c === 'inProgress') inProgress++
-      else if (c === 'hold') hold++
       else if (c === 'done') done++
+      else if (c === 'hold') hold++
+      else if (c === 'cancelled') cancelled++
       else etc++
       if (t.chief) chief++
       if (t.remind) remind++
     }
-    return { inProgress, hold, done, etc, chief, remind, total: items.length }
+    return { inProgress, done, hold, cancelled, etc, chief, remind, total: items.length }
   }, [items])
+  const statusCount = (k: StatusTab) => (k === 'all' ? counts.total : counts[k])
 
-  // 긴급: 센터장 Check + Remind (센터장 우선 → 최근 발의)
+  // 긴급 업무 = Remind 체크 (상태와 별개) — 최근 발의순
   const urgent = useMemo(
-    () =>
-      items
-        .filter((t) => t.chief || t.remind)
-        .sort((a, b) => (a.chief === b.chief ? dateSortValue(b.start) - dateSortValue(a.start) : a.chief ? -1 : 1))
-        .slice(0, 5),
+    () => items.filter((t) => t.remind).sort((a, b) => dateSortValue(b.start) - dateSortValue(a.start)),
     [items],
   )
-
-  // (마감 기반 '이번주 마감' 섹션은 실제 '마감일' 컬럼 추가 후 STEP10+에서 구현)
 
   // 담당자별 집계
   const managers = useMemo(() => {
@@ -112,28 +127,59 @@ export default function Work() {
   }, [items])
   const busiest = managers.find((m) => m.mgr !== '미지정' && m.inProgress > 0) ?? managers[0]
 
-  // ── 전체 목록(탭 + 필터) ──
+  // ── 전체 목록(상태 탭 + 검토필요 + 필터 + 검색) ──
   const presentCats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
 
-  const tabPool = useMemo(() => {
-    if (tab === 'chief') return items.filter((t) => t.chief)
-    return items.filter((t) => classify(t) === tab)
-  }, [items, tab])
+  const pool = useMemo(() => {
+    let p = tab === 'all' ? items : items.filter((t) => classify(t) === tab)
+    if (chiefOnly) p = p.filter((t) => t.chief)
+    return p
+  }, [items, tab, chiefOnly])
 
-  const presentMgrs = useMemo(() => ['전체', ...[...new Set(tabPool.map((t) => t.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [tabPool])
+  const presentMgrs = useMemo(() => ['전체', ...[...new Set(pool.map((t) => t.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [pool])
 
   const listed = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return tabPool
+    return pool
       .filter((t) => cat === '전체' || normCat(t.cat) === normCat(cat))
       .filter((t) => mgr === '전체' || (t.mgr || '') === mgr)
-      .filter((t) => !q || `${t.task} ${t.mgr} ${t.cat} ${t.dept} ${t.num}`.toLowerCase().includes(q))
+      .filter((t) => !q || `${t.task} ${t.mgr} ${t.dept} ${t.cat} ${t.loc}`.toLowerCase().includes(q))
       .sort(cmp)
-  }, [tabPool, cat, mgr, query])
+  }, [pool, cat, mgr, query])
 
-  const switchTab = (k: Tab) => {
-    setTab(k)
+  const pickStatus = (k: StatusTab) => {
+    setTab((prev) => (prev === k ? 'all' : k))
     setMgr('전체')
+  }
+
+  // ── CRUD ──
+  const showSnack = (msg: string, severity: 'success' | 'error' = 'success') => setSnack({ open: true, msg, severity })
+
+  const handleSaved = async (num: number, isEdit: boolean) => {
+    setWriteOpen(false)
+    setEditTarget(null)
+    showSnack(isEdit ? '업무를 수정했습니다.' : '업무를 등록했습니다.', 'success')
+    const list = await dispatch(loadWorkData()).unwrap().catch(() => null)
+    if (isEdit && num && Array.isArray(list)) {
+      setPicked(list.find((t) => String(t.num) === String(num)) ?? null)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleting) return
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    setDeleting(true)
+    try {
+      await deleteWork({ num: deleteTarget.num, author: user, key: authKey })
+      setDeleting(false)
+      setDeleteTarget(null)
+      setPicked(null)
+      showSnack('업무를 삭제했습니다.', 'success')
+      dispatch(loadWorkData())
+    } catch (err) {
+      setDeleting(false)
+      showSnack(err instanceof Error ? err.message : '삭제 실패', 'error')
+    }
   }
 
   return (
@@ -143,9 +189,16 @@ export default function Work() {
         title="업무현황"
         updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
         actions={
-          <IconButton aria-label="새로고침" onClick={() => dispatch(loadWorkData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-            <RefreshIcon sx={{ fontSize: 20 }} />
-          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {isAdmin && (
+              <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => { setEditTarget(null); setWriteOpen(true) }}>
+                업무 등록
+              </Button>
+            )}
+            <IconButton aria-label="새로고침" onClick={() => dispatch(loadWorkData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
+              <RefreshIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </Box>
         }
       />
 
@@ -155,24 +208,26 @@ export default function Work() {
           <RatioBar
             segments={[
               { label: '진행중', value: counts.inProgress, status: 'success' },
-              { label: '보류', value: counts.hold, status: 'warning' },
               { label: '완료', value: counts.done, status: 'neutral' },
+              { label: '보류', value: counts.hold, status: 'warning' },
+              { label: '취소', value: counts.cancelled, status: 'error' },
               ...(counts.etc > 0 ? [{ label: '미정', value: counts.etc, status: 'neutral' as const }] : []),
             ]}
           />
         </AppCard>
-        <CardGrid columns={4}>
-          <StatTile value={counts.inProgress} unit="건" label="진행중" status="success" selected={tab === 'inProgress'} onClick={() => switchTab('inProgress')} />
-          <StatTile value={counts.hold} unit="건" label="보류" status="warning" selected={tab === 'hold'} onClick={() => switchTab('hold')} />
-          <StatTile value={counts.done} unit="건" label="완료" status="neutral" selected={tab === 'done'} onClick={() => switchTab('done')} />
-          <StatTile value={counts.chief} unit="건" label="검토 필요" status="purple" selected={tab === 'chief'} onClick={() => switchTab('chief')} />
+        <CardGrid columns={5}>
+          <StatTile value={counts.inProgress} unit="건" label="진행중" status="success" selected={tab === 'inProgress'} onClick={() => pickStatus('inProgress')} />
+          <StatTile value={counts.done} unit="건" label="완료" status="neutral" selected={tab === 'done'} onClick={() => pickStatus('done')} />
+          <StatTile value={counts.hold} unit="건" label="보류" status="warning" selected={tab === 'hold'} onClick={() => pickStatus('hold')} />
+          <StatTile value={counts.cancelled} unit="건" label="취소" status="error" selected={tab === 'cancelled'} onClick={() => pickStatus('cancelled')} />
+          <StatTile value={counts.chief} unit="건" label="검토 필요" status="purple" selected={chiefOnly} onClick={() => setChiefOnly((v) => !v)} />
         </CardGrid>
       </ContentSection>
 
-      {/* ② 긴급 업무 */}
-      <ContentSection title="긴급 업무" description="검토 필요 · Remind 상위 5건" count={urgent.length}>
+      {/* ② 긴급 업무 (Remind) */}
+      <ContentSection title="긴급 업무" description="Remind 체크 업무" count={urgent.length}>
         {urgent.length === 0 ? (
-          <AppCard padding={0}><EmptyState size="sm" title="긴급 업무가 없습니다" /></AppCard>
+          <AppCard padding={0}><EmptyState size="sm" title="Remind된 업무가 없습니다" /></AppCard>
         ) : (
           <CardGrid minColWidth={260}>
             {urgent.map((t) => (
@@ -200,7 +255,7 @@ export default function Work() {
               <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                 <StatusChip status="success" label={`진행중 ${m.inProgress}`} />
                 {m.remind > 0 && <StatusChip status="warning" label={`Remind ${m.remind}`} />}
-                {m.chief > 0 && <StatusChip status="purple" label={`검토필요 ${m.chief}`} />}
+                {m.chief > 0 && <StatusChip status="purple" label={`검토 필요 ${m.chief}`} />}
               </Box>
             </AppCard>
           ))}
@@ -209,12 +264,14 @@ export default function Work() {
 
       {/* ④ 전체 업무 목록 */}
       <ContentSection title="전체 업무 목록" count={listed.length} last>
-        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
-          {TABS.map((tb) => (
-            <StatusChip key={tb.key} status="neutral" label={`${tb.label} ${tb.key === 'chief' ? counts.chief : counts[tb.key]}`} selected={tab === tb.key} onClick={() => switchTab(tb.key)} />
+        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5, alignItems: 'center' }}>
+          {STATUS_CHIPS.map((tb) => (
+            <StatusChip key={tb.key} status="neutral" label={`${tb.label} ${statusCount(tb.key)}`} selected={tab === tb.key} onClick={() => pickStatus(tb.key)} />
           ))}
+          <Box sx={{ width: 1, height: 18, bgcolor: 'divider', mx: 0.5 }} />
+          <StatusChip status="purple" label={`검토 필요 ${counts.chief}`} selected={chiefOnly} onClick={() => setChiefOnly((v) => !v)} />
         </Box>
-        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무·담당자 검색" />}>
+        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무명·담당자·부서·구분·장소 검색" />}>
           {presentCats.map((c) => (
             <StatusChip key={c} status="neutral" label={c} selected={cat === c} onClick={() => setCat(c)} />
           ))}
@@ -265,6 +322,7 @@ export default function Work() {
                   >
                     <StatusChip status={st.status} label={st.label} />
                     {t.cat && <StatusChip status="neutral" label={t.cat} />}
+                    {t.chief && <StatusChip status="purple" label="검토" />}
                     <Typography variant="body1" sx={{ flex: 1, minWidth: 140, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {taskTitle(t)}
                     </Typography>
@@ -283,7 +341,50 @@ export default function Work() {
         </AppCard>
       </ContentSection>
 
-      <TaskDetailDrawer task={picked} onClose={() => setPicked(null)} />
+      <TaskDetailDrawer
+        task={picked}
+        onClose={() => setPicked(null)}
+        isAdmin={isAdmin}
+        onEdit={(t) => setEditTarget(t)}
+        onDelete={(t) => setDeleteTarget(t)}
+      />
+
+      {isAdmin && (
+        <WorkWrite
+          open={writeOpen || !!editTarget}
+          editing={editTarget}
+          onClose={() => { setWriteOpen(false); setEditTarget(null) }}
+          onSaved={handleSaved}
+        />
+      )}
+
+      {/* 삭제 확인 Dialog */}
+      <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
+        <DialogTitle>정말 삭제하시겠습니까?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.secondary' }}>
+            「{deleteTarget ? taskTitle(deleteTarget) : ''}」 업무를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button color="error" variant="contained" onClick={confirmDelete} disabled={deleting}>
+            {deleting ? '삭제 중…' : '삭제'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 결과 Snackbar */}
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={3000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>
+          {snack.msg}
+        </Alert>
+      </Snackbar>
     </PageContainer>
   )
 }

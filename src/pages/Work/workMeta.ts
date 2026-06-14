@@ -2,25 +2,33 @@ import type { StatusKind } from '@/components/ds'
 import type { WorkItem } from '@/types'
 
 /**
- * 업무 상태 — 시트 '상태' 열(진행중/보류/완료) 기준. 빈값은 '미정'.
- * Remind·센터장 검토는 직교 플래그(상태와 겹칠 수 있음).
+ * 업무 상태 — 시트 '상태' 열 기준(진행중/완료/보류/취소). 빈값/기타는 '미정'.
+ * Remind·검토 필요는 직교 플래그(상태와 겹칠 수 있음).
  */
-export type WStatus = 'inProgress' | 'hold' | 'done' | 'etc'
+export type WStatus = 'inProgress' | 'done' | 'hold' | 'cancelled' | 'etc'
 
 export const W_STATUS: Record<WStatus, { label: string; status: StatusKind }> = {
   inProgress: { label: '진행중', status: 'success' },
-  hold: { label: '보류', status: 'warning' },
   done: { label: '완료', status: 'neutral' },
+  hold: { label: '보류', status: 'warning' },
+  cancelled: { label: '취소', status: 'error' },
   etc: { label: '미정', status: 'neutral' },
 }
+
+/** 상태 필터에 노출할 정식 상태 (미정 제외) */
+export const W_STATUS_TABS: WStatus[] = ['inProgress', 'done', 'hold', 'cancelled']
 
 export function classify(t: WorkItem): WStatus {
   const s = (t.status || '').trim()
   if (s === '진행중') return 'inProgress'
-  if (s === '보류') return 'hold'
   if (s === '완료') return 'done'
+  if (s === '보류') return 'hold'
+  if (s === '취소') return 'cancelled'
   return 'etc'
 }
+
+/** 등록/수정 폼의 상태 선택지 */
+export const WORK_STATUS_OPTIONS = ['진행중', '완료', '보류', '취소']
 
 /** 업무 내용 첫 줄 = 제목 */
 export function taskTitle(t: WorkItem): string {

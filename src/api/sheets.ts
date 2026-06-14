@@ -148,6 +148,84 @@ export async function deleteNotice(p: { num: string | number; author: string; ke
   if (json.status !== 'ok') throw new Error(json.message || '삭제 실패')
 }
 
+// ── 센터 업무 현황 CRUD (헤더명 기준, Apps Script) ──
+/** getWorks가 반환하는 업무 1건 (헤더명→객체, 백엔드에서 변환) */
+export interface WorkRow {
+  num: string
+  cat: string
+  task: string
+  dept: string
+  mat: string
+  start: string
+  plan: string
+  time: string
+  loc: string
+  mgr: string
+  status: string
+  end: string
+  link: string
+  remind: boolean
+  chief: boolean
+}
+
+/** 업무 목록 읽기 — 백엔드가 헤더명으로 행을 객체로 변환해 반환 */
+export async function getWorks(): Promise<WorkRow[]> {
+  const res = await fetch(`${SCRIPT_URL}?action=getWorks`)
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  const json = (await res.json()) as { status: string; items?: WorkRow[]; message?: string }
+  if (json.status !== 'ok') throw new Error(json.message || '오류')
+  return json.items || []
+}
+
+export interface WorkInput {
+  /** 게시자(관리자) 이름 — 인증용 */
+  author: string
+  /** 관리자 비밀번호 — 인증용 */
+  key: string
+  cat: string
+  task: string
+  dept?: string
+  mat?: string
+  start?: string
+  plan?: string
+  time?: string
+  loc?: string
+  mgr?: string
+  status: string
+  /** 완료일자 — 비우면 백엔드가 상태에 따라 자동 처리 */
+  end?: string
+  link?: string
+  remind?: boolean
+  chief?: boolean
+}
+
+async function postWork(payload: Record<string, unknown>): Promise<{ num?: number }> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string; num?: number }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 업무 편집을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '처리 실패')
+  return { num: json.num }
+}
+
+/** 업무 신규 등록 → 새 번호 반환 */
+export async function createWork(p: WorkInput): Promise<number> {
+  const { num } = await postWork({ action: 'createWork', ...p })
+  return num || 0
+}
+/** 업무 수정 (번호 기준) */
+export async function updateWork(p: WorkInput & { num: string | number }): Promise<void> {
+  await postWork({ action: 'updateWork', ...p })
+}
+/** 업무 삭제 (번호 기준) */
+export async function deleteWork(p: { num: string | number; author: string; key: string }): Promise<void> {
+  await postWork({ action: 'deleteWork', ...p })
+}
+
 // ── 캘린더 일정 추가/수정/삭제 (Apps Script doPost) ──
 /** 수정/삭제 적용 범위 — 반복 일정에서 그 회차만(single) vs 전체 시리즈(series) */
 export type CalScope = 'single' | 'series'

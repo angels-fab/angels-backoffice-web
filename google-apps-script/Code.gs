@@ -33,6 +33,8 @@ function doGet(e) {
       }
       return json_({ status: 'ok', authors: authors });
     }
+    // 센터 업무 현황 읽기 — 헤더명 기준으로 행을 객체로 변환
+    if (String(p.action || '') === 'getWorks') return getWorks_();
   } catch (err) {
     return json_({ status: 'error', message: String(err) });
   }
@@ -71,6 +73,20 @@ function doPost(e) {
         if (req.action === 'addNotice') return addNotice_(req);
         if (req.action === 'updateNotice') return updateNotice_(req);
         return deleteNotice_(req);
+      } finally {
+        lock.releaseLock();
+      }
+    }
+    // 센터 업무 현황 쓰기(추가/수정/삭제) — 잠금 하에 처리(번호 충돌·행삭제 경합 방지)
+    if (req.action === 'createWork' || req.action === 'updateWork' || req.action === 'deleteWork') {
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(10000)) {
+        return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
+      }
+      try {
+        if (req.action === 'createWork') return createWork_(req);
+        if (req.action === 'updateWork') return updateWork_(req);
+        return deleteWork_(req);
       } finally {
         lock.releaseLock();
       }
@@ -306,6 +322,186 @@ function deleteNotice_(req) {
   if (rowIdx === -2) return json_({ status: 'error', message: '연번 열을 찾지 못함' });
   if (rowIdx < 0) return json_({ status: 'error', message: '대상 공지를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
 
+  ctx.sh.deleteRow(rowIdx + 1);
+  return json_({ status: 'ok' });
+}
+
+// ── 센터 업무 현황 CRUD (헤더명 기준, 열 위치 비의존) ──
+const WORK_SHEET_NAME = '센터 업무 현황';
+
+// 시트 + 헤더 위치 컨텍스트. 모든 열을 헤더명(동의어)으로 인식. 실패 시 { error }.
+function workCtx_() {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(WORK_SHEET_NAME);
+  if (!sh) return { error: "'센터 업무 현황' 시트가 없습니다" };
+  const values = sh.getDataRange().getValues();
+  let hIdx = -1;
+  for (let i = 0; i < Math.min(values.length, 8); i++) {
+    const r = values[i].map(function (c) { return String(c || '').trim(); });
+    if (r.indexOf('구분') >= 0 && r.indexOf('업무') >= 0) { hIdx = i; break; }
+  }
+  if (hIdx < 0) return { error: '헤더(구분/업무)를 찾지 못함' };
+  const head = values[hIdx].map(function (c) { return String(c || '').trim(); });
+  const col = function (names) {
+    for (let k = 0; k < names.length; k++) { const i = head.indexOf(names[k]); if (i >= 0) return i; }
+    return -1;
+  };
+  const C = {
+    num: col(['번호', '연번', 'No']),
+    cat: col(['구분', '분류']),
+    task: col(['업무', '업무명', '제목']),
+    dept: col(['관련부서', '부서']),
+    mat: col(['관련자료', '자료']),
+    start: col(['발의일자', '시작일자', '발의', '등록일자']),
+    plan: col(['예정일', '예정일자', '일정']),
+    time: col(['시간']),
+    loc: col(['장소']),
+    mgr: col(['담당자']),
+    status: col(['상태', '진행상태', '업무상태']),
+    end: col(['완료일자', '완료일']),
+    remind: col(['Remind', 'remind', '리마인드']),
+    chief: col(['검토 필요', '검토필요', '센터장 검토', '센터장검토', '센터장 Check', '센터장', 'Check', 'check']),
+    link: col(['링크', '관련링크', 'link']),
+  };
+  return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
+}
+
+function wIsChk_(v) {
+  if (v === true) return true;
+  const s = String(v == null ? '' : v).trim().toUpperCase();
+  return s === 'TRUE' || s === '1' || s === 'Y' || s === '예' || s === 'O' || s === '✓';
+}
+function wDate_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd');
+  return v == null ? '' : String(v).trim();
+}
+function wTime_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Seoul', 'HH:mm');
+  return v == null ? '' : String(v).trim();
+}
+
+// 읽기: 헤더명 기준으로 각 행을 객체로 변환
+function getWorks_() {
+  const ctx = workCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const values = ctx.values, C = ctx.C, hIdx = ctx.hIdx;
+  const t = function (r, i) { return i < 0 ? '' : (r[i] == null ? '' : String(r[i]).trim()); };
+  const items = [];
+  for (let i = hIdx + 1; i < values.length; i++) {
+    const r = values[i];
+    if (t(r, C.task) === '') continue;
+    items.push({
+      num: t(r, C.num), cat: t(r, C.cat), task: t(r, C.task), dept: t(r, C.dept), mat: t(r, C.mat),
+      start: wDate_(r[C.start]), plan: wDate_(r[C.plan]), time: wTime_(r[C.time]),
+      loc: t(r, C.loc), mgr: t(r, C.mgr), status: t(r, C.status), end: wDate_(r[C.end]),
+      link: t(r, C.link), remind: wIsChk_(r[C.remind]), chief: wIsChk_(r[C.chief]),
+    });
+  }
+  return json_({ status: 'ok', items: items });
+}
+
+// 완료일자 자동 규칙: 상태 '완료'면 채우고(미지정 시 오늘), 그 외 상태면 비움
+function workEndAuto_(status, endGiven, today) {
+  if (status === '완료') return endGiven ? endGiven : today;
+  return '';
+}
+
+function createWork_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  if (!String(req.task || '').trim()) return json_({ status: 'error', message: '업무 내용이 비었습니다' });
+
+  const ctx = workCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, head = ctx.head, C = ctx.C;
+
+  let maxNum = 0;
+  if (C.num >= 0) for (let i = hIdx + 1; i < values.length; i++) {
+    const v = Number(values[i][C.num]); if (!isNaN(v) && v > maxNum) maxNum = v;
+  }
+  const newNum = maxNum + 1;
+  const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  const status = String(req.status || '진행중').trim();
+  const endVal = workEndAuto_(status, String(req.end || '').trim(), today);
+
+  const row = new Array(head.length).fill('');
+  const set = function (i, v) { if (i >= 0) row[i] = v; };
+  set(C.num, newNum);
+  set(C.cat, String(req.cat || ''));
+  set(C.task, String(req.task).trim());
+  set(C.dept, String(req.dept || ''));
+  set(C.mat, String(req.mat || ''));
+  set(C.start, String(req.start || ''));
+  set(C.plan, String(req.plan || ''));
+  set(C.time, String(req.time || ''));
+  set(C.loc, String(req.loc || ''));
+  set(C.mgr, String(req.mgr || ''));
+  set(C.status, status);
+  set(C.end, endVal);
+  set(C.link, String(req.link || ''));
+  set(C.remind, req.remind === true);
+  set(C.chief, req.chief === true);
+  sh.appendRow(row);
+  const last = sh.getLastRow();
+  if (C.remind >= 0) sh.getRange(last, C.remind + 1).insertCheckboxes().setValue(req.remind === true);
+  if (C.chief >= 0) sh.getRange(last, C.chief + 1).insertCheckboxes().setValue(req.chief === true);
+  return json_({ status: 'ok', num: newNum });
+}
+
+function updateWork_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const num = String(req.num || '').trim();
+  if (!num) return json_({ status: 'error', message: '대상 업무 번호가 없습니다' });
+  if (!String(req.task || '').trim()) return json_({ status: 'error', message: '업무 내용이 비었습니다' });
+
+  const ctx = workCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  if (C.num < 0) return json_({ status: 'error', message: '번호 열을 찾지 못함' });
+  let rowIdx = -1;
+  for (let i = hIdx + 1; i < values.length; i++) {
+    if (String(values[i][C.num] || '').trim() === num) { rowIdx = i; break; }
+  }
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상 업무를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
+
+  const sheetRow = rowIdx + 1;
+  const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  const status = String(req.status || '진행중').trim();
+  const endGiven = req.end !== undefined ? String(req.end || '').trim() : wDate_(values[rowIdx][C.end]);
+  const endVal = workEndAuto_(status, endGiven, today);
+
+  const set = function (i, v) { if (i >= 0) sh.getRange(sheetRow, i + 1).setValue(v); };
+  set(C.cat, String(req.cat || ''));
+  set(C.task, String(req.task).trim());
+  set(C.dept, String(req.dept || ''));
+  set(C.mat, String(req.mat || ''));
+  set(C.start, String(req.start || ''));
+  set(C.plan, String(req.plan || ''));
+  set(C.time, String(req.time || ''));
+  set(C.loc, String(req.loc || ''));
+  set(C.mgr, String(req.mgr || ''));
+  set(C.status, status);
+  set(C.end, endVal);
+  set(C.link, String(req.link || ''));
+  if (C.remind >= 0) sh.getRange(sheetRow, C.remind + 1).insertCheckboxes().setValue(req.remind === true);
+  if (C.chief >= 0) sh.getRange(sheetRow, C.chief + 1).insertCheckboxes().setValue(req.chief === true);
+  return json_({ status: 'ok', num: Number(num) || num });
+}
+
+function deleteWork_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const num = String(req.num || '').trim();
+  if (!num) return json_({ status: 'error', message: '대상 업무 번호가 없습니다' });
+  const ctx = workCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  if (C.num < 0) return json_({ status: 'error', message: '번호 열을 찾지 못함' });
+  let rowIdx = -1;
+  for (let i = hIdx + 1; i < values.length; i++) {
+    if (String(values[i][C.num] || '').trim() === num) { rowIdx = i; break; }
+  }
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상 업무를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
   ctx.sh.deleteRow(rowIdx + 1);
   return json_({ status: 'ok' });
 }

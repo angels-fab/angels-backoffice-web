@@ -21,8 +21,9 @@ export default function WorkStatusSection() {
         <RatioBar
           segments={[
             { label: '진행중', value: c.inProgress, status: 'success' },
-            { label: '보류', value: c.hold, status: 'warning' },
             { label: '완료', value: c.done, status: 'neutral' },
+            { label: '보류', value: c.hold, status: 'warning' },
+            { label: '취소', value: c.cancelled, status: 'error' },
             ...(c.etc > 0 ? [{ label: '미정', value: c.etc, status: 'neutral' as const }] : []),
           ]}
         />
@@ -31,9 +32,9 @@ export default function WorkStatusSection() {
       {/* 상태별 집계 타일 */}
       <CardGrid columns={4}>
         <StatTile value={c.inProgress} unit="건" label="진행중" status="success" onClick={go} />
-        <StatTile value={c.hold} unit="건" label="보류" status="warning" onClick={go} />
         <StatTile value={c.done} unit="건" label="완료" status="neutral" onClick={go} />
-        <StatTile value={c.total} unit="건" label="전체" status="info" onClick={go} />
+        <StatTile value={c.hold} unit="건" label="보류" status="warning" onClick={go} />
+        <StatTile value={c.cancelled} unit="건" label="취소" status="error" onClick={go} />
       </CardGrid>
     </Box>
   )
