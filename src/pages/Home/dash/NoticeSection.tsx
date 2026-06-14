@@ -3,18 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import DOMPurify from 'dompurify'
 import { AppCard, AppDrawer, CardGrid, StatusChip, EmptyState } from '@/components/ds'
-import type { StatusKind } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import type { Notice } from '@/types'
-
-const CAT_STATUS: Record<string, StatusKind> = {
-  긴급: 'error',
-  공지: 'info',
-  행사: 'success',
-  일반: 'neutral',
-}
+import { noticeBodyHTML, noticeCatStatus } from '@/pages/Notice/noticeMeta'
 
 const fmtMD = (d: string) => {
   const m = String(d).match(/\d{4}-(\d{2})-(\d{2})/)
@@ -31,7 +23,6 @@ export default function NoticeSection() {
   const [sel, setSel] = useState<Notice | null>(null)
 
   const recent = items.slice(0, 5) // store에서 상단고정→연번 최신순 정렬됨
-  const isHtml = sel ? /<[a-z][\s\S]*>/i.test(sel.body) : false
 
   if (!ready) {
     return (
@@ -81,7 +72,7 @@ export default function NoticeSection() {
               }}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                {n.isNew ? <StatusChip status="error" label="NEW" /> : <StatusChip status={CAT_STATUS[n.cat] ?? 'neutral'} label={n.cat} />}
+                {n.isNew ? <StatusChip status="error" label="NEW" /> : <StatusChip status={noticeCatStatus(n.cat)} label={n.cat} />}
                 <Typography variant="caption" sx={{ flexShrink: 0, fontFamily: 'monospace' }}>
                   {fmtMD(n.date)}
                 </Typography>
@@ -137,19 +128,13 @@ export default function NoticeSection() {
         {sel && (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <StatusChip status={sel.isNew ? 'error' : CAT_STATUS[sel.cat] ?? 'neutral'} label={sel.isNew ? 'NEW' : sel.cat} />
+              <StatusChip status={sel.isNew ? 'error' : noticeCatStatus(sel.cat)} label={sel.isNew ? 'NEW' : sel.cat} />
               {sel.author && <StatusChip status="neutral" label={sel.author} />}
             </Box>
-            {isHtml ? (
-              <Box
-                sx={{ fontSize: 14, lineHeight: 1.7, color: 'text.secondary', '& a': { color: 'primary.main' }, '& img': { maxWidth: '100%', borderRadius: 1 } }}
-                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(sel.body) }}
-              />
-            ) : (
-              <Typography variant="body1" sx={{ whiteSpace: 'pre-line', color: 'text.secondary' }}>
-                {sel.body || '내용이 없습니다.'}
-              </Typography>
-            )}
+            <Box
+              sx={{ fontSize: 14, lineHeight: 1.7, color: 'text.secondary', '& a': { color: 'primary.main' }, '& img': { maxWidth: '100%', borderRadius: 1 }, '& p': { m: 0, mb: 1 } }}
+              dangerouslySetInnerHTML={{ __html: noticeBodyHTML(sel.body) }}
+            />
           </Box>
         )}
       </AppDrawer>

@@ -24,12 +24,11 @@ function doGet(e) {
   try {
     if (String(p.calendar || '') === '1') return calendarEvents_();
     if (String(p.authors || '') === '1') {
-      const dsh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('담당자');
-      if (!dsh) return json_({ status: 'error', message: "'담당자' 시트가 없습니다" });
-      const dv = dsh.getDataRange().getValues();
+      const m = findManagerCols_(); // 헤더 자동 인식 — 이름 열만 사용(비밀번호는 절대 내보내지 않음)
+      if (!m) return json_({ status: 'error', message: "'담당자' 시트가 없습니다" });
       const authors = [];
-      for (let i = 3; i < dv.length; i++) { // 4행(B4)부터
-        const nm = String(dv[i][1] || '').trim(); // B열만 — 비밀번호(C열)는 절대 내보내지 않음
+      for (let i = m.hIdx + 1; i < m.values.length; i++) {
+        const nm = m.cName >= 0 ? String(m.values[i][m.cName] || '').trim() : '';
         if (nm) authors.push(nm);
       }
       return json_({ status: 'ok', authors: authors });
@@ -74,6 +73,12 @@ function doPost(e) {
         lock.releaseLock();
       }
     }
+    // 관리자 모드(내부 UI 게이트) — '담당자' 시트 사번+비밀번호 검증. 비밀번호는 노출하지 않음.
+    // 성공 시 담당자 이름을 함께 반환(공지 작성 게시자명 자동 사용).
+    if (req.action === 'verifyAdmin') {
+      const name = loginByEmp_(String(req.empNo || '').trim(), String(req.key || '').trim());
+      return json_({ status: 'ok', valid: !!name, name: name || '' });
+    }
     if (req.action === 'addCalEvent') return addCalEvent_(req);
     if (req.action === 'updateCalEvent') return updateCalEvent_(req);
     if (req.action === 'deleteCalEvent') return deleteCalEvent_(req);
@@ -83,17 +88,55 @@ function doPost(e) {
   }
 }
 
-// 게시자 인증 — '담당자' 시트(B열 이름, C열 비밀번호, 4행부터)와 대조.
+// '담당자' 시트의 열 위치를 헤더명으로 자동 인식 (열을 옮겨도 동작).
+// 반환: { values, hIdx, cName, cEmp, cPw } 또는 null
+function findManagerCols_() {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('담당자');
+  if (!sh) return null;
+  const values = sh.getDataRange().getValues();
+  const NAME = ['이름', '성명', '담당자', '담당자명'];
+  const EMP = ['사번', '사원번호', '직원번호'];
+  const PW = ['비밀번호', '패스워드', 'password', 'pw'];
+  for (let i = 0; i < Math.min(values.length, 8); i++) {
+    let cName = -1, cEmp = -1, cPw = -1;
+    for (let j = 0; j < values[i].length; j++) {
+      const v = String(values[i][j] || '').trim();
+      const lv = v.toLowerCase();
+      if (cName < 0 && NAME.indexOf(v) >= 0) cName = j;
+      if (cEmp < 0 && EMP.indexOf(v) >= 0) cEmp = j;
+      if (cPw < 0 && (PW.indexOf(v) >= 0 || PW.indexOf(lv) >= 0)) cPw = j;
+    }
+    if (cEmp >= 0 && cPw >= 0) return { values: values, hIdx: i, cName: cName, cEmp: cEmp, cPw: cPw };
+  }
+  return null;
+}
+
+// 사번+비밀번호 → 담당자 이름 (일치 없으면 null). 관리자 로그인용.
+function loginByEmp_(empNo, pw) {
+  if (!empNo || !pw) return null;
+  const m = findManagerCols_();
+  if (!m) return null;
+  for (let i = m.hIdx + 1; i < m.values.length; i++) {
+    const e = String(m.values[i][m.cEmp] || '').trim();
+    const p = String(m.values[i][m.cPw] || '').trim();
+    if (e && p && e === String(empNo).trim() && p === String(pw).trim()) {
+      return m.cName >= 0 ? String(m.values[i][m.cName] || '').trim() : e;
+    }
+  }
+  return null;
+}
+
+// 게시자 인증 — '담당자' 시트 이름+비밀번호(헤더 자동 인식)와 대조.
 // 통과 시 null, 실패 시 에러 메시지 반환.
 function authError_(author, key) {
   if (!author) return '게시자(이름)를 입력해주세요';
   if (!key) return '비밀번호를 입력해주세요';
-  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('담당자');
-  if (!sh) return "'담당자' 시트가 없습니다";
-  const values = sh.getDataRange().getValues();
-  for (let i = 3; i < values.length; i++) { // 4행(B4)부터
-    const name = String(values[i][1] || '').trim(); // B열: 담당자 이름
-    const pw = String(values[i][2] || '').trim();   // C열: 비밀번호
+  const m = findManagerCols_();
+  if (!m) return "'담당자' 시트를 읽을 수 없습니다";
+  if (m.cName < 0) return "'담당자' 시트에 이름 열이 없습니다";
+  for (let i = m.hIdx + 1; i < m.values.length; i++) {
+    const name = String(m.values[i][m.cName] || '').trim();
+    const pw = String(m.values[i][m.cPw] || '').trim();
     if (name && pw && name === author && pw === key) return null;
   }
   return '등록된 게시자가 아니거나 비밀번호가 일치하지 않습니다';

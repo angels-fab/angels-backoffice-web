@@ -1,190 +1,200 @@
 import { useMemo, useState } from 'react'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import IconButton from '@mui/material/IconButton'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
-import SearchIcon from '@mui/icons-material/Search'
+import RefreshIcon from '@mui/icons-material/Refresh'
+import {
+  PageContainer,
+  PageHeader,
+  ContentSection,
+  AppCard,
+  CardGrid,
+  FilterBar,
+  SearchBar,
+  StatusChip,
+  StatTile,
+  RatioBar,
+  EmptyState,
+} from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
-import TitleLoad from '@/components/TitleLoad'
-import EqItem from './EqItem'
-import EqCard, { catColor } from './EqCard'
-import { GanttHeader } from './gantt'
+import type { EqGroup } from '@/types'
+import { STAGE, STAGE_ORDER, groupStage, phaseChip, todayHalfIndex, type StageCode, type StageInfo } from './stageMeta'
+import { GanttHeader, GanttBar } from './gantt'
+import EqProjectDrawer from './EqProjectDrawer'
 
-const TYPE_FILTERS = ['전체', '내자', '외자']
-const MGR_FILTERS = ['전체', '박주봉', '조성범', '박세리']
+function ProgressBar({ value }: { value: number }) {
+  return (
+    <Box sx={{ height: 6, borderRadius: 999, bgcolor: 'background.elevated', overflow: 'hidden' }}>
+      <Box sx={{ height: '100%', width: `${Math.round(value * 100)}%`, bgcolor: 'primary.main' }} />
+    </Box>
+  )
+}
 
-const TL_LEGEND = [
-  { label: '사전규격', bg: 'rgba(248,81,73,.15)', color: '#F85149', border: 'rgba(248,81,73,.35)' },
-  { label: '구매공고', bg: 'rgba(240,180,41,.15)', color: '#F0B429', border: 'rgba(240,180,41,.35)' },
-  { label: '기술평가', bg: 'rgba(63,185,80,.15)', color: '#3FB950', border: 'rgba(63,185,80,.35)' },
-  { label: '기술협상', bg: 'rgba(57,208,216,.15)', color: '#39D0D8', border: 'rgba(57,208,216,.35)' },
-  { label: '장비제작', bg: 'rgba(88,166,255,.15)', color: '#58A6FF', border: 'rgba(88,166,255,.35)' },
-  { label: '장비설치', bg: 'rgba(188,140,255,.15)', color: '#BC8CFF', border: 'rgba(188,140,255,.35)' },
-]
+const GANTT_NAME_W = 168
 
 export default function Equipment() {
   const dispatch = useAppDispatch()
-  const { groups, months, loading, error, updatedAt } = useAppSelector(s => s.eq)
+  const { groups, months, loading, error, updatedAt } = useAppSelector((s) => s.eq)
   const [fltType, setFltType] = useState('전체')
   const [fltMgr, setFltMgr] = useState('전체')
-  const [search, setSearch] = useState('')
+  const [query, setQuery] = useState('')
+  const [picked, setPicked] = useState<EqGroup | null>(null)
 
+  const todayHalf = useMemo(() => todayHalfIndex(months), [months])
+  const infoMap = useMemo(() => {
+    const m = new Map<string, StageInfo>()
+    groups.forEach((g) => m.set(g.name, groupStage(g.timeline, months, todayHalf)))
+    return m
+  }, [groups, months, todayHalf])
+
+  // 도입 개요(보조) + 단계 파이프라인
+  const overview = useMemo(() => {
+    let progress = 0, done = 0, upcoming = 0
+    const tally = Object.fromEntries(STAGE_ORDER.map((c) => [c, 0])) as Record<StageCode, number>
+    groups.forEach((g) => {
+      const info = infoMap.get(g.name)!
+      if (info.phase === 'done') { done++; if (info.code) tally[info.code]++ }
+      else if (info.phase === 'progress') { progress++; if (info.code) tally[info.code]++ }
+      else if (info.phase === 'upcoming') upcoming++
+    })
+    return { total: groups.length, progress, done, upcoming, tally }
+  }, [groups, infoMap])
+
+  // 필터
+  const presentTypes = useMemo(() => ['전체', ...[...new Set(groups.map((g) => g.type).filter(Boolean))]], [groups])
+  const presentMgrs = useMemo(() => ['전체', ...[...new Set(groups.map((g) => g.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [groups])
   const filtered = useMemo(() => {
-    let arr = groups
-    if (fltType !== '전체') arr = arr.filter(e => e.type === fltType)
-    if (fltMgr !== '전체') arr = arr.filter(e => (e.mgr || '').trim() === fltMgr)
-    const q = search.trim().toLowerCase()
-    if (q) {
-      arr = arr.filter(e => {
-        const hay = [e.name, e.mgr, e.maker, e.model, e.installLoc, e.codes.join(' ')]
-          .join(' ')
-          .toLowerCase()
-        return hay.includes(q)
-      })
-    }
-    return arr
-  }, [groups, fltType, fltMgr, search])
-
-  // 도입 장비 카드 — 같은 장비명끼리 묶인 그룹 중 상태가 '도입예정'/'도입중'인 것만,
-  // '분류' 값(공정 → 분석 → 기타 순)으로 그루핑 (필터·검색은 위 filtered와 동일 적용)
-  const cardGroups = useMemo(() => {
-    const items = filtered.filter(e => {
-      const s = (e.state || '').trim()
-      return s === '도입예정' || s === '도입중'
-    })
-    const order = ['공정', '분석']
-    const byCat = new Map<string, typeof items>()
-    items.forEach(e => {
-      const c = (e.cat || '').trim() || '기타'
-      if (!byCat.has(c)) byCat.set(c, [])
-      byCat.get(c)!.push(e)
-    })
-    const cats = [...byCat.keys()].sort((a, b) => {
-      const ia = order.indexOf(a)
-      const ib = order.indexOf(b)
-      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b, 'ko')
-    })
-    return cats.map(c => ({ cat: c, items: byCat.get(c)! }))
-  }, [filtered])
-
-  const cardTypes = cardGroups.reduce((s, g) => s + g.items.length, 0)
-  const cardTotal = cardGroups.reduce((s, g) => s + g.items.reduce((x, e) => x + e.count, 0), 0)
-
-  const setFilter = (setter: (v: string) => void) => (v: string) => {
-    setter(v)
-  }
-
-  // 버튼그룹(세그먼트) 형식 — 버튼들이 한 덩어리로 붙어 있는 형태
-  const fltBtns = (list: string[], cur: string, set: (v: string) => void) => (
-    <div className="eq-flt-group">
-      {list.map(f => (
-        <button key={f} className={`eq-flt-btn${cur === f ? ' active' : ''}`} onClick={() => set(f)}>
-          {f}
-        </button>
-      ))}
-    </div>
-  )
+    const q = query.trim().toLowerCase()
+    return groups
+      .filter((g) => fltType === '전체' || g.type === fltType)
+      .filter((g) => fltMgr === '전체' || (g.mgr || '') === fltMgr)
+      .filter((g) => !q || `${g.name} ${g.codes.join(' ')} ${g.mgr} ${g.maker} ${g.model}`.toLowerCase().includes(q))
+  }, [groups, fltType, fltMgr, query])
 
   return (
-    <div className="page active" id="page-장비도입관리">
-      <div className="page-header">
-        <div
-          className="page-title"
-          onClick={() => dispatch(loadEqData())}
-          style={{ cursor: 'pointer' }}
-          title="클릭하면 새로고침"
-        >
-          <LocalShippingIcon /> 장비도입관리
-        </div>
-        <TitleLoad loading={loading} text={error ? '연결 실패' : updatedAt} />
-      </div>
+    <PageContainer>
+      <PageHeader
+        icon={<LocalShippingIcon />}
+        title="장비도입관리"
+        subtitle="장비 도입 프로젝트 진행 — 단계·타임라인"
+        updatedAt={error ? '연결 실패' : updatedAt || undefined}
+        actions={
+          <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
+            <RefreshIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        }
+      />
 
-      {/* 필터 + 검색 + 범례 */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 0, marginBottom: 12, width: '100%' }}>
-        <div className="eq-flt-row">
-          <span className="eq-flt-label">구분</span>
-          {fltBtns(TYPE_FILTERS, fltType, setFilter(setFltType))}
-        </div>
-        <div className="eq-flt-row" style={{ justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span className="eq-flt-label">담당자</span>
-            {fltBtns(MGR_FILTERS, fltMgr, setFilter(setFltMgr))}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-            <span className="search-wrap" style={{ marginBottom: 9 }}>
-              <SearchIcon />
-              <input
-                type="text"
-                placeholder="장비명, 담당자 등 검색..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                style={{
-                  width: 320, maxWidth: '100%', padding: '7px 12px 7px 30px',
-                  border: '1px solid var(--border)', borderRadius: 8,
-                  background: 'var(--ink2)', color: 'var(--text)',
-                  fontSize: 13, fontFamily: 'inherit', outline: 'none',
-                }}
-              />
-            </span>
-          </div>
-        </div>
-      </div>
+      {/* ① 도입 개요 (보조 KPI) */}
+      <ContentSection>
+        <CardGrid columns={4}>
+          <StatTile value={overview.total} unit="종" label="전체 도입장비" status="info" />
+          <StatTile value={overview.progress} unit="종" label="진행중" status="warning" />
+          <StatTile value={overview.done} unit="종" label="설치완료" status="success" />
+          <StatTile value={overview.upcoming} unit="종" label="착수 전" status="neutral" />
+        </CardGrid>
+      </ContentSection>
 
-      {/* ── 도입 장비 카드 (상태: 도입예정·도입중, 분류별 그루핑) ── */}
-      <div className="eq-sec-head">
-        <span className="eq-sec-title">도입 장비</span>
-        <span className="eq-sec-count">{cardTypes}종 {cardTotal}대</span>
-      </div>
-      {cardGroups.length === 0 ? (
-        <div className="task-empty" style={{ width: '100%' }}>도입예정·도입중 장비가 없습니다</div>
-      ) : (
-        cardGroups.map(g => (
-          <div key={g.cat} style={{ width: '100%' }}>
-            <div className="eq-cat-row">
-              <span className="eq-cat-dot" style={{ background: catColor(g.cat) }} />
-              <span className="eq-cat-name">{g.cat} 장비</span>
-              <span className="eq-sec-count">
-                {g.items.length}종 {g.items.reduce((s, e) => s + e.count, 0)}대
-              </span>
-            </div>
-            <div className="eq-card-grid">
-              {g.items.map(e => (
-                <EqCard key={e.name} eq={e} />
-              ))}
-            </div>
-          </div>
-        ))
-      )}
+      {/* ② 단계 파이프라인 */}
+      <ContentSection title="단계 파이프라인" description="구매 절차 단계별 현재 장비 수">
+        <AppCard padding={18}>
+          <RatioBar
+            segments={STAGE_ORDER.map((c) => ({ label: STAGE[c].label, value: overview.tally[c], status: STAGE[c].status }))}
+          />
+        </AppCard>
+      </ContentSection>
 
-      {/* ── 도입 타임라인 ── */}
-      <div className="eq-sec-head" style={{ marginTop: 10 }}>
-        <span className="eq-sec-title">도입 타임라인</span>
-        <div className="tl-legend" style={{ width: 'auto', marginLeft: 'auto' }}>
-          {TL_LEGEND.map(l => (
-            <span
-              key={l.label}
-              className="tl-leg-badge"
-              style={{ background: l.bg, color: l.color, borderColor: l.border }}
-            >
-              {l.label}
-            </span>
+      {/* ③ 도입 진행 현황 (메인) */}
+      <ContentSection title="도입 진행 현황" count={`${filtered.length}종`}>
+        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="장비명·담당자 검색" />}>
+          {presentTypes.map((t) => (
+            <StatusChip key={t} status="neutral" label={t} selected={fltType === t} onClick={() => setFltType(t)} />
           ))}
-        </div>
-      </div>
-      {/* 헤더 한 줄: 연번·관리번호·장비명과 연/월 타임라인 헤더가 같은 레벨 */}
-      <div className="eq-list-header" style={{ width: '100%' }}>
-        <span>연번</span>
-        <span>관리번호</span>
-        <span>장비명</span>
-        <GanttHeader months={months} />
-      </div>
-
-      {/* 목록 */}
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-        {filtered.length === 0 ? (
-          <div className="task-empty">조건에 맞는 장비가 없습니다</div>
-        ) : (
-          filtered.map((eq, i) => <EqItem key={eq.name} eq={eq} index={i} months={months} />)
+        </FilterBar>
+        {presentMgrs.length > 1 && (
+          <FilterBar>
+            {presentMgrs.map((m) => (
+              <StatusChip key={m} status="info" label={m} selected={fltMgr === m} onClick={() => setFltMgr(m)} />
+            ))}
+          </FilterBar>
         )}
-      </div>
-    </div>
+
+        {filtered.length === 0 ? (
+          <AppCard padding={0}><EmptyState size="sm" title="조건에 맞는 장비가 없습니다" /></AppCard>
+        ) : (
+          <CardGrid minColWidth={280}>
+            {filtered.map((g) => {
+              const info = infoMap.get(g.name)!
+              const chip = phaseChip(info)
+              return (
+                <AppCard key={g.name} interactive onClick={() => setPicked(g)} padding={16}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                      <StatusChip status={chip.status} label={chip.label} />
+                      {g.type && <StatusChip status="neutral" label={g.type} />}
+                    </Box>
+                    <Typography variant="subtitle1" sx={{ lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {g.name}{g.count > 1 ? ` (${g.count}대)` : ''}
+                    </Typography>
+                    <ProgressBar value={info.progress} />
+                    <Box sx={{ mt: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, pt: 0.5 }}>
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>{g.mgr || '담당 미지정'}</Typography>
+                      <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{info.dueMonth ? `도입 ${info.dueMonth}` : ''}</Typography>
+                    </Box>
+                  </Box>
+                </AppCard>
+              )
+            })}
+          </CardGrid>
+        )}
+      </ContentSection>
+
+      {/* ④ 도입 타임라인 (간트) */}
+      <ContentSection title="도입 타임라인" description="구매 절차 단계 간트 (가로 스크롤)" last>
+        <AppCard padding={12}>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Box sx={{ minWidth: GANTT_NAME_W + Math.max(months.length, 8) * 38 }}>
+              {/* 헤더 */}
+              <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1, mb: 0.5 }}>
+                <Box sx={{ width: GANTT_NAME_W, flexShrink: 0 }} />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <GanttHeader months={months} />
+                </Box>
+              </Box>
+              {/* 행 */}
+              {filtered.length === 0 ? (
+                <EmptyState size="sm" title="조건에 맞는 장비가 없습니다" />
+              ) : (
+                filtered.map((g) => {
+                  const chip = phaseChip(infoMap.get(g.name)!)
+                  return (
+                    <Box
+                      key={g.name}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setPicked(g)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicked(g) } }}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, cursor: 'pointer', borderTop: 1, borderColor: 'divider', '&:hover': { bgcolor: 'background.elevated' } }}
+                    >
+                      <Box sx={{ width: GANTT_NAME_W, flexShrink: 0, minWidth: 0, pr: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</Typography>
+                        <StatusChip status={chip.status} label={chip.label} />
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <GanttBar tl={g.timeline} months={months} />
+                      </Box>
+                    </Box>
+                  )
+                })
+              )}
+            </Box>
+          </Box>
+        </AppCard>
+      </ContentSection>
+
+      <EqProjectDrawer group={picked} months={months} todayHalf={todayHalf} onClose={() => setPicked(null)} />
+    </PageContainer>
   )
 }

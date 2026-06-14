@@ -3,8 +3,9 @@ import type { FormEvent } from 'react'
 import CloseIcon from '@mui/icons-material/Close'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import { addNotice, fetchAuthors } from '@/api/sheets'
+import { useRole } from '@/auth/role'
 
-const CATS = ['긴급', '공지', '일반', '행사']
+const CATS = ['긴급', '공지', '일반', '회의', '교육', '행사', '점검']
 
 interface Props {
   open: boolean
@@ -13,19 +14,18 @@ interface Props {
   onSaved: (num: number) => void
 }
 
-// 공지 새 글쓰기 모달 — 저장 시 구글시트 '공지사항' 시트에 행 추가
+// 공지 새 글쓰기 모달 — 게시자/비밀번호는 로그인한 관리자 정보를 자동 사용(재입력 없음).
 export default function NoticeWrite({ open, onClose, onSaved }: Props) {
+  const { user, authKey } = useRole()
   const [cat, setCat] = useState('공지')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [dept, setDept] = useState('')
   const [deptMgr, setDeptMgr] = useState('')
-  const [author, setAuthor] = useState('')
-  const [targets, setTargets] = useState<string[]>([]) // 해당자 — 버튼 선택식
-  const [targetText, setTargetText] = useState('') // 명단 로드 실패 시 직접 입력 폴백
+  const [targets, setTargets] = useState<string[]>([])
+  const [targetText, setTargetText] = useState('')
   const [pinned, setPinned] = useState(false)
   const [end, setEnd] = useState('')
-  const [key, setKey] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [authors, setAuthors] = useState<string[] | null>(null)
@@ -46,15 +46,14 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
     e.preventDefault()
     if (saving) return
     setError(null)
+    if (!user || !authKey) return setError('관리자 로그인이 필요합니다')
     if (!title.trim()) return setError('제목을 입력해주세요')
     if (!body.trim()) return setError('내용을 입력해주세요')
-    if (!author.trim()) return setError('게시자(이름)를 입력해주세요')
-    if (!key.trim()) return setError('비밀번호를 입력해주세요')
     setSaving(true)
     try {
       const num = await addNotice({
-        key: key.trim(), cat, title: title.trim(), body, pinned,
-        dept: dept.trim(), deptMgr: deptMgr.trim(), author: author.trim(),
+        key: authKey, author: user, cat, title: title.trim(), body, pinned,
+        dept: dept.trim(), deptMgr: deptMgr.trim(),
         target: authorsFail ? targetText.trim() : targets.join(', '), end,
       })
       setSaving(false)
@@ -67,7 +66,6 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
   }
 
   return (
-    // 배경에서 mousedown이 시작된 경우에만 닫기 (textarea 드래그가 배경에서 끝나도 안 닫히게)
     <div
       className="modal-backdrop"
       onMouseDown={e => {
@@ -92,8 +90,8 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
               </select>
             </label>
             <label className="mfield">
-              <span className="mlabel">게시자 *</span>
-              <input className="minput" value={author} onChange={e => setAuthor(e.target.value)} placeholder="이름 (담당자 명단과 동일하게)" />
+              <span className="mlabel">게시자</span>
+              <input className="minput" value={user || ''} readOnly disabled />
             </label>
           </div>
           <label className="mfield">
@@ -158,17 +156,6 @@ export default function NoticeWrite({ open, onClose, onSaved }: Props) {
               </label>
             </div>
           </div>
-          <label className="mfield">
-            <span className="mlabel">본인 비밀번호 *</span>
-            <input
-              className="minput"
-              type="password"
-              value={key}
-              onChange={e => setKey(e.target.value)}
-              placeholder="게시자 본인의 비밀번호"
-              autoComplete="off"
-            />
-          </label>
           {error && <div className="merror">{error}</div>}
           <div className="mactions">
             <button type="button" className="mbtn" onClick={onClose} disabled={saving}>취소</button>

@@ -31,6 +31,27 @@ export function cell(r: SheetRow, i: number): string {
   return v === null || v === undefined ? '' : String(v).trim()
 }
 
+/**
+ * 관리자 모드 검증 — '담당자' 시트 사번+비밀번호를 **백엔드에서 대조**(열 위치는 헤더로 자동 인식).
+ * 비밀번호는 절대 프런트로 내려오지 않음(공지 작성과 동일한 인증 경로).
+ * @returns { valid, name } — 일치 시 valid=true, name=담당자 이름
+ */
+export async function verifyAdmin(empNo: string, password: string): Promise<{ valid: boolean; name: string }> {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'verifyAdmin', empNo, key: password }),
+  })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; valid?: boolean; name?: string; message?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 관리자 검증을 지원하지 않습니다 (Apps Script 배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '검증 실패')
+  return { valid: !!json.valid, name: json.name || '' }
+}
+
 // ── 구글캘린더 일정 (?calendar=1) ──
 export interface RawCalEvent {
   /** 구글캘린더 이벤트 고유 ID — 수정/삭제 대상 지정용 */

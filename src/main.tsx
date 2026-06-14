@@ -5,6 +5,7 @@ import { HashRouter } from 'react-router-dom'
 import { ThemeProvider } from '@mui/material/styles'
 import { store } from '@/store'
 import { darkTheme } from '@/theme/theme'
+import { RoleProvider } from '@/auth/role'
 import App from '@/App'
 import '@/index.css'
 
@@ -17,9 +18,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>
       <ThemeProvider theme={darkTheme}>
-        <HashRouter>
-          <App />
-        </HashRouter>
+        <RoleProvider>
+          <HashRouter>
+            <App />
+          </HashRouter>
+        </RoleProvider>
       </ThemeProvider>
     </Provider>
   </React.StrictMode>,

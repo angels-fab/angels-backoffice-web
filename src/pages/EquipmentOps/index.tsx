@@ -14,7 +14,6 @@ import {
   SearchBar,
   StatusChip,
   StatTile,
-  RatioBar,
   EmptyState,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -26,13 +25,13 @@ import EqDetailDrawer from './EqDetailDrawer'
 
 const k = (v: number) => Math.round(v / 1000).toLocaleString()
 
-/** 장비 카드(도입 우선/목록 공용). 장비명·담당자·종류·도입금액·관리번호 Compact 표시. */
-function EqCard({ g, onPick, emphasis }: { g: EqGroup; onPick: (g: EqGroup) => void; emphasis?: boolean }) {
+/** 장비 카드(전체 목록). 장비명·담당자·종류·도입금액·관리번호 Compact. */
+function EqCard({ g, onPick }: { g: EqGroup; onPick: (g: EqGroup) => void }) {
   const meta = EQ_STATE[eqStateKey(g.state)]
   const code = g.codes.filter(Boolean)[0]
   const codeLabel = code ? `${code}${g.count > 1 ? ` 외 ${g.count - 1}` : ''}` : ''
   return (
-    <AppCard interactive onClick={() => onPick(g)} padding={16} sx={emphasis ? { bgcolor: 'background.elevated' } : undefined}>
+    <AppCard interactive onClick={() => onPick(g)} padding={16}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
           <StatusChip status={meta.status} label={meta.label} />
@@ -76,21 +75,7 @@ export default function EquipmentOps() {
     return { won, local, nat }
   }, [raw])
 
-  // 도입 우선 장비: 상태 우선순위(비가동>설치중>도입예정) → 같은 단계면 도입금액 큰 순, 상위 5
-  const attention = useMemo(
-    () =>
-      groups
-        .filter((g) => eqStateKey(g.state) !== '가동중')
-        .sort((a, b) => {
-          const pa = EQ_STATE[eqStateKey(a.state)].priority
-          const pb = EQ_STATE[eqStateKey(b.state)].priority
-          return pa !== pb ? pa - pb : (b.price || 0) - (a.price || 0)
-        })
-        .slice(0, 5),
-    [groups],
-  )
-
-  // 카테고리 현황 (raw 단위 집계)
+  // 카테고리별 현황 (raw 단위 집계 + 예산)
   const categories = useMemo(() => {
     const map = new Map<string, { cat: string; total: number; op: number; install: number; plan: number; down: number; budget: number }>()
     for (const e of raw) {
@@ -98,6 +83,23 @@ export default function EquipmentOps() {
       const m = map.get(name) ?? { cat: name, total: 0, op: 0, install: 0, plan: 0, down: 0, budget: 0 }
       m.total++
       m.budget += e.price || 0
+      const key = eqStateKey(e.state)
+      if (key === '가동중') m.op++
+      else if (key === '도입중') m.install++
+      else if (key === '도입예정') m.plan++
+      else m.down++
+      map.set(name, m)
+    }
+    return [...map.values()].sort((a, b) => b.total - a.total)
+  }, [raw])
+
+  // 담당자별 장비 현황 (raw 단위)
+  const managers = useMemo(() => {
+    const map = new Map<string, { mgr: string; total: number; op: number; install: number; plan: number; down: number }>()
+    for (const e of raw) {
+      const name = e.mgr || '미지정'
+      const m = map.get(name) ?? { mgr: name, total: 0, op: 0, install: 0, plan: 0, down: 0 }
+      m.total++
       const key = eqStateKey(e.state)
       if (key === '가동중') m.op++
       else if (key === '도입중') m.install++
@@ -118,12 +120,14 @@ export default function EquipmentOps() {
       .filter((g) => !q || `${g.name} ${g.codes.join(' ')} ${g.mgr} ${g.maker} ${g.model}`.toLowerCase().includes(q))
   }, [groups, stateTab, cat, query])
 
+  const tabCount = (s: '전체' | EqStateKey) => (s === '전체' ? c.total : c.units[s])
+
   return (
     <PageContainer>
       <PageHeader
         icon={<MonitorIcon />}
         title="장비운영관리"
-        subtitle="FAB 구축 준비 현황 — 장비 도입 진행 상황 요약"
+        subtitle="장비 총괄 현황 — 전체 자산·상태·담당"
         updatedAt={error ? '연결 실패' : updatedAt || undefined}
         actions={
           <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
@@ -132,46 +136,19 @@ export default function EquipmentOps() {
         }
       />
 
-      {/* ① 구축 단계 현황 (KPI) */}
-      <ContentSection title="구축 단계 현황" description="현재 전 장비가 도입예정 — FAB 구축 준비 단계">
+      {/* ① KPI — 총 장비 / 상태별 (대수 + 종 보조) */}
+      <ContentSection>
         <CardGrid columns={5}>
           <StatTile value={c.total} unit="대" label="총 장비" status="info" sub={`${c.types}종`} />
-          <StatTile value={c.units['가동중']} unit="대" label="운영중" status="success" sub="가동 단계" />
-          <StatTile value={c.units['도입중']} unit="대" label="설치중" status="teal" sub="설치 단계" />
-          <StatTile value={c.units['도입예정']} unit="대" label="도입예정" status="info" sub="구축 준비중" />
-          <StatTile value={c.units['비가동']} unit="대" label="비가동" status="error" sub="점검 필요" />
+          <StatTile value={c.units['가동중']} unit="대" label="운영중" status="success" sub={`${c.typesBy['가동중']}종`} />
+          <StatTile value={c.units['도입중']} unit="대" label="설치중" status="teal" sub={`${c.typesBy['도입중']}종`} />
+          <StatTile value={c.units['도입예정']} unit="대" label="도입예정" status="info" sub={`${c.typesBy['도입예정']}종`} />
+          <StatTile value={c.units['비가동']} unit="대" label="비가동" status="error" sub={`${c.typesBy['비가동']}종`} />
         </CardGrid>
       </ContentSection>
 
-      {/* ② 도입 단계 비율 */}
-      <ContentSection title="도입 단계 비율">
-        <AppCard padding={18}>
-          <RatioBar
-            segments={[
-              { label: '운영중', value: c.units['가동중'], status: 'success' },
-              { label: '설치중', value: c.units['도입중'], status: 'teal' },
-              { label: '도입예정', value: c.units['도입예정'], status: 'info' },
-              { label: '비가동', value: c.units['비가동'], status: 'error' },
-            ]}
-          />
-        </AppCard>
-      </ContentSection>
-
-      {/* ③ 도입 우선 장비 (도입금액 큰 순) */}
-      <ContentSection title="도입 우선 장비" description="도입금액 큰 순 · 상위 5건" count={attention.length}>
-        {attention.length === 0 ? (
-          <AppCard padding={0}><EmptyState size="sm" title="도입 예정 장비가 없습니다" /></AppCard>
-        ) : (
-          <CardGrid minColWidth={260}>
-            {attention.map((g) => (
-              <EqCard key={g.name} g={g} onPick={setPicked} emphasis />
-            ))}
-          </CardGrid>
-        )}
-      </ContentSection>
-
-      {/* ④ 카테고리 현황 */}
-      <ContentSection title="카테고리 현황">
+      {/* ② 카테고리 현황 */}
+      <ContentSection title="카테고리 현황" description="분류별 장비 수 · 도입예산 · 상태">
         <CardGrid minColWidth={220}>
           {categories.map((m) => (
             <AppCard key={m.cat} padding={16}>
@@ -183,8 +160,8 @@ export default function EquipmentOps() {
                 도입예산 <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>{k(m.budget)}</Box> 천원
               </Typography>
               <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1 }}>
-                <StatusChip status="success" label={`운영 ${m.op}`} />
-                <StatusChip status="teal" label={`설치 ${m.install}`} />
+                {m.op > 0 && <StatusChip status="success" label={`운영 ${m.op}`} />}
+                {m.install > 0 && <StatusChip status="teal" label={`설치 ${m.install}`} />}
                 {m.plan > 0 && <StatusChip status="info" label={`예정 ${m.plan}`} />}
                 {m.down > 0 && <StatusChip status="error" label={`비가동 ${m.down}`} />}
               </Box>
@@ -193,7 +170,27 @@ export default function EquipmentOps() {
         </CardGrid>
       </ContentSection>
 
-      {/* ⑤ 예산 현황 (compact) */}
+      {/* ③ 담당자별 장비 현황 */}
+      <ContentSection title="담당자별 장비 현황">
+        <CardGrid minColWidth={200}>
+          {managers.map((m) => (
+            <AppCard key={m.mgr} padding={16}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 1 }}>
+                <Typography variant="subtitle1">{m.mgr}</Typography>
+                <Typography variant="body2"><Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>{m.total}</Box>대</Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1 }}>
+                {m.op > 0 && <StatusChip status="success" label={`운영 ${m.op}`} />}
+                {m.install > 0 && <StatusChip status="teal" label={`설치 ${m.install}`} />}
+                {m.plan > 0 && <StatusChip status="info" label={`예정 ${m.plan}`} />}
+                {m.down > 0 && <StatusChip status="error" label={`비가동 ${m.down}`} />}
+              </Box>
+            </AppCard>
+          ))}
+        </CardGrid>
+      </ContentSection>
+
+      {/* ④ 예산 현황 (compact) */}
       <ContentSection title="예산 현황" description="단위: 천원">
         <CardGrid columns={3}>
           <AppCard padding={16}>
@@ -211,20 +208,20 @@ export default function EquipmentOps() {
         </CardGrid>
       </ContentSection>
 
-      {/* ⑥ 전체 장비 목록 */}
+      {/* ⑤ 전체 장비 목록 */}
       <ContentSection title="전체 장비 목록" count={listed.length} last>
         <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
           {STATE_TABS.map((s) => (
             <StatusChip
               key={s}
               status={s === '전체' ? 'neutral' : EQ_STATE[s].status}
-              label={s === '전체' ? '전체' : EQ_STATE[s].label}
+              label={`${s === '전체' ? '전체' : EQ_STATE[s].label} ${tabCount(s)}`}
               selected={stateTab === s}
               onClick={() => setStateTab(s)}
             />
           ))}
         </Box>
-        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호 검색" />}>
+        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호·담당자 검색" />}>
           {presentCats.map((cName) => (
             <StatusChip key={cName} status="neutral" label={cName} selected={cat === cName} onClick={() => setCat(cName)} />
           ))}

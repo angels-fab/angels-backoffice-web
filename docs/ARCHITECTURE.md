@@ -30,7 +30,8 @@ GIST ANGELS FAB(반도체 팹) 구축·운영 관리 대시보드. 내부용 SPA
 
 ```
 src/
-├─ main.tsx              앱 진입. <Provider>(redux) + <ThemeProvider>(다크) + <HashRouter> + <App>
+├─ main.tsx              앱 진입. <Provider>(redux) + <ThemeProvider>(다크) + <RoleProvider>(권한) + <HashRouter> + <App>
+├─ auth/role.tsx         RoleProvider/useRole — Guest/Admin 모드(localStorage.role, 설정 시트 admin_password)
 ├─ App.tsx               → <AppRouter/>
 ├─ router/AppRouter.tsx  라우트 정의
 │

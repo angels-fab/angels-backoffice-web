@@ -52,10 +52,17 @@
       "Bash(wc:*)",
       "Bash(sort:*)",
       "Bash(uniq:*)",
-      "Bash(which:*)"
+      "Bash(which:*)",
+      "mcp__ccd_session__mark_chapter",
+      "mcp__ccd_session__spawn_task",
+      "mcp__ccd_session__dismiss_task",
+      "mcp__ccd_session__read_widget_context",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "ToolSearch",
+      "Bash(git push:*)"
     ],
     "ask": [
-      "Bash(git push:*)",
       "Bash(git reset:*)",
       "Bash(git clean:*)",
       "Bash(git rebase:*)",

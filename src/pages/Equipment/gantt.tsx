@@ -1,19 +1,12 @@
 // 도입 타임라인 간트차트 — 월 단위 그리드, 각 월 안에 반달(전반/후반) 2칸
 import type { TlMonth } from '@/types'
+import { STAGE, STAGE_ORDER } from './stageMeta'
 
 export const TL_VISIBLE_MONTHS = 36 // 표시 최대 월 수 — 실제 구간은 시트에 일정이 있는 범위를 따라감 (eqSlice에서 앞뒤 빈 달 제거)
 
-export const TL_STAGE_COLOR: Record<string, string> = {
-  사: '#F85149', // 사전규격
-  공: '#F0B429', // 구매공고
-  평: '#3FB950', // 기술평가
-  협: '#39D0D8', // 기술협상
-  제: '#58A6FF', // 장비제작
-  설: '#BC8CFF', // 장비설치
-}
-export const TL_STAGE_NAME: Record<string, string> = {
-  사: '사전규격', 공: '구매공고', 평: '기술평가', 협: '기술협상', 제: '장비제작', 설: '장비설치',
-}
+// 단계 색·이름은 stageMeta(디자인 시스템 accent 토큰)에서 통일해 가져온다
+export const TL_STAGE_COLOR: Record<string, string> = Object.fromEntries(STAGE_ORDER.map((c) => [c, STAGE[c].color]))
+export const TL_STAGE_NAME: Record<string, string> = Object.fromEntries(STAGE_ORDER.map((c) => [c, STAGE[c].label]))
 
 // 월별 너비 비율: 한 자리 월=2, 두 자리 월=3 (숫자 하나만큼 더 넓게)
 function monthWidthUnits(monthStr: string): number {

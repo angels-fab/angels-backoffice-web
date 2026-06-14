@@ -7,6 +7,7 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import LinkIcon from '@mui/icons-material/Link'
 import TimelineIcon from '@mui/icons-material/Timeline'
+import SettingsIcon from '@mui/icons-material/Settings'
 import { useNavBadges } from './useNavBadges'
 
 interface SideNavItem {
@@ -52,6 +53,7 @@ export default function SideNav() {
         { icon: <CampaignIcon />, label: '공지사항', path: '/notice', badge: badges.notice },
         { icon: <TimelineIcon />, label: '구축 로드맵', path: '/roadmap' },
         { icon: <LinkIcon />, label: '바로가기', path: '/links' },
+        { icon: <SettingsIcon />, label: '설정', path: '/settings' },
       ],
     },
   ]
