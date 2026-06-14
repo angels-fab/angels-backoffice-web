@@ -510,6 +510,41 @@ function deleteWork_(req) {
   return json_({ status: 'ok' });
 }
 
+// 시트에서 '상태'를 '완료'로 바꾸면 같은 행의 '검토 필요' 체크를 자동 해제.
+// 설치형 onEdit 트리거 핸들러 — 독립형 스크립트라 단순 onEdit는 동작하지 않으므로
+// setupWorkEditTrigger()를 편집기에서 1회 실행해 트리거를 설치해야 한다.
+function onWorkStatusEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sh = e.range.getSheet();
+    if (sh.getName() !== WORK_SHEET_NAME) return;
+    const ctx = workCtx_();
+    if (ctx.error) return;
+    const C = ctx.C, hIdx = ctx.hIdx;
+    if (C.status < 0 || C.chief < 0) return;
+    const col0 = e.range.getColumn() - 1;
+    const row0 = e.range.getRow() - 1;
+    if (col0 !== C.status || row0 <= hIdx) return; // 상태 열의 데이터 행만
+    const v = e.value != null ? e.value : e.range.getValue();
+    if (String(v).trim() === '완료') {
+      sh.getRange(e.range.getRow(), C.chief + 1).setValue(false); // 검토 필요 해제
+    }
+  } catch (err) {
+    // 편집 흐름을 방해하지 않도록 조용히 무시
+  }
+}
+
+// ⚙️ 1회 실행(편집기에서 직접 Run): 위 onWorkStatusEdit를 '센터 업무 현황' 시트의 편집 트리거로 설치.
+// 실행 시 권한 동의 화면이 뜨며, 승인 후부터 시트에서 상태를 완료로 바꾸면 검토 필요가 자동 해제됨.
+function setupWorkEditTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onWorkStatusEdit') ScriptApp.deleteTrigger(triggers[i]);
+  }
+  ScriptApp.newTrigger('onWorkStatusEdit').forSpreadsheet(SHEET_ID).onEdit().create();
+  Logger.log('설치 완료 — 시트에서 상태=완료 시 검토 필요 자동 해제 (센터 업무 현황)');
+}
+
 // ── 캘린더: 공유 캘린더의 일정을 JSON으로 (제목/시작/끝/종일/장소만 — 설명은 내보내지 않음) ──
 function calendarEvents_() {
   const cal = CalendarApp.getCalendarById(CALENDAR_ID);
