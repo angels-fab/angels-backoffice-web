@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
@@ -49,11 +50,24 @@ const cmp = (a: WorkItem, b: WorkItem) => {
 export default function Work() {
   const dispatch = useAppDispatch()
   const { items, loading, error, updatedAt } = useAppSelector((s) => s.work)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>('inProgress')
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<WorkItem | null>(null)
+
+  // 통합검색 딥링크(/work?focus=<id>) → 해당 업무 상세 Drawer 자동 오픈
+  useEffect(() => {
+    const focus = searchParams.get('focus')
+    if (!focus || !items.length) return
+    const item = items.find((t) => String(t.id) === focus)
+    if (item) setPicked(item)
+    const next = new URLSearchParams(searchParams)
+    next.delete('focus')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, items])
 
   // ── 전체 집계(Command Center용, 필터 무관) ──
   const counts = useMemo(() => {
@@ -244,6 +258,7 @@ export default function Work() {
                       borderColor: 'divider',
                       '&:last-of-type': { borderBottom: 0 },
                       '&:hover': { bgcolor: 'background.elevated' },
+                      '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },
                     }}
                   >
                     <StatusChip status={st.status} label={st.label} />

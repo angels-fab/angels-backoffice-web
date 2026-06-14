@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
@@ -62,10 +63,23 @@ export default function EquipmentOps() {
   const dispatch = useAppDispatch()
   const { raw, groups, loading, error, updatedAt } = useAppSelector((s) => s.eq)
   const c = useAppSelector(selectEqCounts)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [stateTab, setStateTab] = useState<'전체' | EqStateKey>('전체')
   const [cat, setCat] = useState('전체')
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<EqGroup | null>(null)
+
+  // 통합검색 딥링크(/equipment-ops?focus=<장비명>) → 해당 장비 상세 Drawer 자동 오픈
+  useEffect(() => {
+    const focus = searchParams.get('focus')
+    if (!focus || !groups.length) return
+    const g = groups.find((x) => x.name === focus)
+    if (g) setPicked(g)
+    const next = new URLSearchParams(searchParams)
+    next.delete('focus')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, groups])
 
   // 예산 (천원)
   const budget = useMemo(() => {

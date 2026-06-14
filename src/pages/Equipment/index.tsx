@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
@@ -37,10 +38,23 @@ const GANTT_NAME_W = 168
 export default function Equipment() {
   const dispatch = useAppDispatch()
   const { groups, months, loading, error, updatedAt } = useAppSelector((s) => s.eq)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [fltType, setFltType] = useState('전체')
   const [fltMgr, setFltMgr] = useState('전체')
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<EqGroup | null>(null)
+
+  // 통합검색 딥링크(/equipment?focus=<장비명>) → 해당 도입 프로젝트 상세 Drawer 자동 오픈
+  useEffect(() => {
+    const focus = searchParams.get('focus')
+    if (!focus || !groups.length) return
+    const g = groups.find((x) => x.name === focus)
+    if (g) setPicked(g)
+    const next = new URLSearchParams(searchParams)
+    next.delete('focus')
+    setSearchParams(next, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, groups])
 
   const todayHalf = useMemo(() => todayHalfIndex(months), [months])
   const infoMap = useMemo(() => {
@@ -174,9 +188,10 @@ export default function Equipment() {
                       key={g.name}
                       role="button"
                       tabIndex={0}
+                      aria-label={`도입 프로젝트: ${g.name}`}
                       onClick={() => setPicked(g)}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicked(g) } }}
-                      sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, cursor: 'pointer', borderTop: 1, borderColor: 'divider', '&:hover': { bgcolor: 'background.elevated' } }}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, cursor: 'pointer', borderTop: 1, borderColor: 'divider', '&:hover': { bgcolor: 'background.elevated' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 } }}
                     >
                       <Box sx={{ width: GANTT_NAME_W, flexShrink: 0, minWidth: 0, pr: 1 }}>
                         <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</Typography>
