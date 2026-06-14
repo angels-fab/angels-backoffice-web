@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import { createPortal } from 'react-dom'
 import CloseIcon from '@mui/icons-material/Close'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import { addNotice, fetchAuthors, updateNotice } from '@/api/sheets'
@@ -113,7 +114,8 @@ export default function NoticeWrite({ open, onClose, editing, onSaved, onError }
     }
   }
 
-  return (
+  // body로 포털 — 상세 Drawer(포털, z-index 1200) 위에 모달이 뜨도록 상위 stacking context 탈출
+  return createPortal(
     <div
       className="modal-backdrop"
       onMouseDown={e => {
@@ -218,6 +220,7 @@ export default function NoticeWrite({ open, onClose, editing, onSaved, onError }
           </div>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   )
 }
