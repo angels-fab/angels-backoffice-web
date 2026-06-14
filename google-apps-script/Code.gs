@@ -510,9 +510,10 @@ function deleteWork_(req) {
   return json_({ status: 'ok' });
 }
 
-// 시트에서 '상태'를 '완료'로 바꾸면 같은 행의 '검토 필요' 체크를 자동 해제.
-// 설치형 onEdit 트리거 핸들러 — 독립형 스크립트라 단순 onEdit는 동작하지 않으므로
-// setupWorkEditTrigger()를 편집기에서 1회 실행해 트리거를 설치해야 한다.
+// 시트에서 '상태'를 바꾸면 웹과 동일 규칙을 적용 (설치형 onEdit 핸들러):
+//  - 완료  → 같은 행 '검토 필요' 해제 + '완료일자'에 오늘 날짜(비어있을 때만)
+//  - 완료 아님 → '완료일자' 비움 (완료일자는 완료일 때만 유효)
+// 독립형 스크립트라 단순 onEdit는 동작하지 않으므로 setupWorkEditTrigger()를 1회 실행해 설치한다.
 function onWorkStatusEdit(e) {
   try {
     if (!e || !e.range) return;
@@ -521,13 +522,23 @@ function onWorkStatusEdit(e) {
     const ctx = workCtx_();
     if (ctx.error) return;
     const C = ctx.C, hIdx = ctx.hIdx;
-    if (C.status < 0 || C.chief < 0) return;
+    if (C.status < 0) return;
     const col0 = e.range.getColumn() - 1;
     const row0 = e.range.getRow() - 1;
     if (col0 !== C.status || row0 <= hIdx) return; // 상태 열의 데이터 행만
-    const v = e.value != null ? e.value : e.range.getValue();
-    if (String(v).trim() === '완료') {
-      sh.getRange(e.range.getRow(), C.chief + 1).setValue(false); // 검토 필요 해제
+    const sheetRow = e.range.getRow();
+    const v = String(e.value != null ? e.value : e.range.getValue()).trim();
+    if (v === '완료') {
+      if (C.chief >= 0) sh.getRange(sheetRow, C.chief + 1).setValue(false); // 검토 필요 해제
+      if (C.end >= 0) {
+        const endCell = sh.getRange(sheetRow, C.end + 1);
+        const cur = endCell.getValue();
+        if (cur === '' || cur == null) {
+          endCell.setValue(Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd')); // 완료일자 = 오늘
+        }
+      }
+    } else if (C.end >= 0) {
+      sh.getRange(sheetRow, C.end + 1).setValue(''); // 완료 아님 → 완료일자 비움
     }
   } catch (err) {
     // 편집 흐름을 방해하지 않도록 조용히 무시
