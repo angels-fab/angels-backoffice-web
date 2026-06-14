@@ -1,7 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { cell, fetchSheet, SHEET_NAME_EQ, SHEET_NAME_SCHEDULE } from '@/api/sheets'
-import { nowStamp } from '@/utils/date'
-import type { EqGroup, EqRawItem, TlMonth } from '@/types'
+import { fmtDate, nowStamp } from '@/utils/date'
+import type { EqGroup, EqRawItem, ScheduleItem, TlMonth } from '@/types'
 
 function baseName(n: string): string {
   const m = n.match(/^([^(]+)\s*\(/)
@@ -12,6 +12,8 @@ interface EqPayload {
   raw: EqRawItem[]
   groups: EqGroup[]
   months: TlMonth[]
+  /** 장비도입관리 시트 행 1:1 (CRUD·도입관리 페이지 표시 단위) */
+  schedule: ScheduleItem[]
 }
 
 // 헤더 셀 정규화 — 공백·'(자동)' 꼬리를 떼고 이름으로 비교 (열 위치가 바뀌어도 이름으로 찾기 위함)
@@ -37,6 +39,7 @@ export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayloa
   }
   let months: TlMonth[] = []
   const tlMap: Record<string, string[]> = {}
+  const schedule: ScheduleItem[] = []
   if (schedHead >= 0) {
     const sHeads = (schedResult[schedHead] || []).map(normH)
     const scol = (name: string) => sHeads.indexOf(name)
@@ -86,6 +89,29 @@ export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayloa
         tlMap[code] = padded.slice(m0 * 2, width)
       })
     }
+
+    // 도입관리 시트 행 1:1 → ScheduleItem (헤더명 기반). 단계 소요기간·메타 포함.
+    const cSeq = scol('연번'), cName = scol('장비명'), cMgr = scol('담당자')
+    const cStatus = scol('진행상태'), cDur = scol('총소요기간'), cCat = scol('구분')
+    const cMethod = scol('도입방법'), cPrice = scol('도입금액')
+    const sg = (r: (string | number | null | undefined)[], i: number) => (i < 0 ? '' : String(r[i] ?? '').trim())
+    schedResult.slice(schedHead + 1).forEach(r => {
+      const code = cCode >= 0 ? String(r[cCode] ?? '').trim() : ''
+      const name = sg(r, cName)
+      if (!code && !name) return // 빈 행 제외
+      const priceRaw = cPrice >= 0 ? r[cPrice] : ''
+      schedule.push({
+        seq: sg(r, cSeq), code, name, mgr: sg(r, cMgr), status: sg(r, cStatus),
+        start: fmtDate(sg(r, cStart)),
+        stages: {
+          사전규격: sg(r, phaseCols[0]), 구매공고: sg(r, phaseCols[1]), 기술평가: sg(r, phaseCols[2]),
+          기술협상: sg(r, phaseCols[3]), 장비제작: sg(r, phaseCols[4]), 장비설치: sg(r, phaseCols[5]),
+        },
+        duration: sg(r, cDur), cat: sg(r, cCat), method: sg(r, cMethod),
+        price: priceRaw ? Number(String(priceRaw).replace(/,/g, '') || 0) : 0,
+        timeline: tlMap[code] || [],
+      })
+    })
   }
 
   // ── '장비운영관리' 파싱 — 2단 헤더(그룹행 + 세부행)를 병합해 이름으로 열을 찾는다 ──
@@ -163,13 +189,14 @@ export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayloa
     if (!grp.timeline || !grp.timeline.length) grp.timeline = eq.timeline
   })
 
-  return { raw, groups: Object.values(grouped), months }
+  return { raw, groups: Object.values(grouped), months, schedule }
 })
 
 interface EqState {
   raw: EqRawItem[]
   groups: EqGroup[]
   months: TlMonth[]
+  schedule: ScheduleItem[]
   /** 로드 완료 여부 (성공·실패 무관 — 미리보기 로딩 표시용) */
   ready: boolean
   loading: boolean
@@ -181,6 +208,7 @@ const initialState: EqState = {
   raw: [],
   groups: [],
   months: [],
+  schedule: [],
   ready: false,
   loading: false,
   error: false,
@@ -201,6 +229,7 @@ const eqSlice = createSlice({
         state.raw = action.payload.raw
         state.groups = action.payload.groups
         state.months = action.payload.months
+        state.schedule = action.payload.schedule
         state.ready = true
         state.loading = false
         state.updatedAt = nowStamp()
@@ -208,6 +237,7 @@ const eqSlice = createSlice({
       .addCase(loadEqData.rejected, state => {
         state.raw = []
         state.groups = []
+        state.schedule = []
         state.ready = true
         state.loading = false
         state.error = true

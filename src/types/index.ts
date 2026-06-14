@@ -89,6 +89,32 @@ export interface EqGroup {
   timeline: string[]
 }
 
+/** '장비도입관리' 시트 1행 = 도입 프로젝트 1건 (CRUD 표시 단위, 헤더명 기반) */
+export interface ScheduleItem {
+  /** 연번(자동) */
+  seq: string
+  /** 관리번호 — 행 식별 키 */
+  code: string
+  name: string
+  mgr: string
+  /** 진행상태 */
+  status: string
+  /** 시작년월 yyyy-MM-dd */
+  start: string
+  /** 단계별 소요기간(개월) — 키: 사전규격/구매공고/기술평가/기술협상/장비제작/장비설치 */
+  stages: Record<string, string>
+  /** 총 소요기간(자동) */
+  duration: string
+  /** 구분 */
+  cat: string
+  /** 도입방법 */
+  method: string
+  /** 도입금액 */
+  price: number
+  /** 반월 단위 단계 코드 (간트) */
+  timeline: string[]
+}
+
 /** 상태별 집계 (대수 + 종 수) */
 export interface EqCounts {
   total: number

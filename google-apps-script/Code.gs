@@ -91,6 +91,20 @@ function doPost(e) {
         lock.releaseLock();
       }
     }
+    // 장비도입관리 쓰기(추가/수정/삭제) — 잠금 하에 처리
+    if (req.action === 'createSchedule' || req.action === 'updateSchedule' || req.action === 'deleteSchedule') {
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(10000)) {
+        return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
+      }
+      try {
+        if (req.action === 'createSchedule') return createSchedule_(req);
+        if (req.action === 'updateSchedule') return updateSchedule_(req);
+        return deleteSchedule_(req);
+      } finally {
+        lock.releaseLock();
+      }
+    }
     // 관리자 모드(내부 UI 게이트) — '담당자' 시트 사번+비밀번호 검증. 비밀번호는 노출하지 않음.
     // 성공 시 담당자 이름을 함께 반환(공지 작성 게시자명 자동 사용).
     if (req.action === 'verifyAdmin') {
@@ -554,6 +568,129 @@ function setupWorkEditTrigger() {
   }
   ScriptApp.newTrigger('onWorkStatusEdit').forSpreadsheet(SHEET_ID).onEdit().create();
   Logger.log('설치 완료 — 시트에서 상태=완료 시 검토 필요 자동 해제 (센터 업무 현황)');
+}
+
+// ── 장비도입관리 CRUD (헤더명 기반, 열 위치 비의존) ──
+const SCHEDULE_SHEET_NAME = '장비도입관리';
+const SCHEDULE_STAGES = ['사전규격', '구매공고', '기술평가', '기술협상', '장비제작', '장비설치'];
+
+// 헤더 정규화: 공백·'(자동)' 제거 후 비교 ('장비명 (자동)' → '장비명')
+function normSched_(v) {
+  return String(v == null ? '' : v).replace(/\s+/g, '').replace(/\(자동\)/g, '');
+}
+
+// 시트 + 헤더 위치 컨텍스트. 모든 열을 헤더명(정규화)으로 인식. 실패 시 { error }.
+function scheduleCtx_() {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SCHEDULE_SHEET_NAME);
+  if (!sh) return { error: "'장비도입관리' 시트가 없습니다" };
+  const values = sh.getDataRange().getValues();
+  let hIdx = -1;
+  for (let i = 0; i < Math.min(values.length, 8); i++) {
+    if (normSched_(values[i][0]) === '연번') { hIdx = i; break; }
+  }
+  if (hIdx < 0) {
+    for (let i = 0; i < Math.min(values.length, 8); i++) {
+      const hs = values[i].map(normSched_);
+      if (hs.indexOf('장비명') >= 0 && hs.indexOf('시작년월') >= 0) { hIdx = i; break; }
+    }
+  }
+  if (hIdx < 0) return { error: '헤더(연번/장비명)를 찾지 못함' };
+  const head = values[hIdx].map(normSched_);
+  const col = function (name) { return head.indexOf(name); };
+  const C = {
+    seq: col('연번'), code: col('관리번호'), name: col('장비명'), mgr: col('담당자'),
+    status: col('진행상태'), start: col('시작년월'),
+    duration: col('총소요기간'), cat: col('구분'), method: col('도입방법'), price: col('도입금액'),
+    stage: SCHEDULE_STAGES.map(function (s) { return col(s); }),
+  };
+  return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
+}
+
+// 숫자형 셀: 빈값은 '', 그 외 숫자로 (콤마 제거). 파싱 불가면 원문 유지.
+function numCell_(v) {
+  if (v === '' || v == null) return '';
+  const n = Number(String(v).replace(/,/g, ''));
+  return isNaN(n) ? v : n;
+}
+
+// 편집 가능한 도입관리 필드를 setter(i,v)로 기록. (연번·총소요기간은 시트 자동값이라 건드리지 않음)
+function applyScheduleFields_(set, C, req) {
+  set(C.code, String(req.code || ''));
+  set(C.name, String(req.name || ''));
+  set(C.mgr, String(req.mgr || ''));
+  set(C.status, String(req.status || ''));
+  set(C.start, String(req.start || ''));
+  const stages = req.stages || {};
+  for (var i = 0; i < SCHEDULE_STAGES.length; i++) {
+    var sn = SCHEDULE_STAGES[i];
+    set(C.stage[i], stages[sn] === undefined || stages[sn] === '' ? '' : numCell_(stages[sn]));
+  }
+  set(C.cat, String(req.cat || ''));
+  set(C.method, String(req.method || ''));
+  set(C.price, req.price === undefined || req.price === '' ? '' : numCell_(req.price));
+}
+
+function createSchedule_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  if (!String(req.code || '').trim() && !String(req.name || '').trim()) {
+    return json_({ status: 'error', message: '관리번호 또는 장비명을 입력해주세요' });
+  }
+  const ctx = scheduleCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, head = ctx.head, C = ctx.C;
+
+  let maxSeq = 0;
+  if (C.seq >= 0) for (let i = hIdx + 1; i < values.length; i++) {
+    const v = Number(values[i][C.seq]); if (!isNaN(v) && v > maxSeq) maxSeq = v;
+  }
+  const row = new Array(head.length).fill('');
+  const set = function (i, v) { if (i >= 0) row[i] = v; };
+  if (C.seq >= 0) set(C.seq, maxSeq + 1);
+  applyScheduleFields_(set, C, req);
+  sh.appendRow(row);
+  return json_({ status: 'ok', code: String(req.code || '').trim(), seq: maxSeq + 1 });
+}
+
+function updateSchedule_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  // 행 식별: 원본 관리번호(origCode) 우선, 없으면 code
+  const target = String(req.origCode || req.code || '').trim();
+  if (!target) return json_({ status: 'error', message: '대상 관리번호가 없습니다' });
+
+  const ctx = scheduleCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  if (C.code < 0) return json_({ status: 'error', message: '관리번호 열을 찾지 못함' });
+  let rowIdx = -1;
+  for (let i = hIdx + 1; i < values.length; i++) {
+    if (String(values[i][C.code] || '').trim() === target) { rowIdx = i; break; }
+  }
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상 장비를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
+
+  const sheetRow = rowIdx + 1;
+  const set = function (i, v) { if (i >= 0) sh.getRange(sheetRow, i + 1).setValue(v); };
+  applyScheduleFields_(set, C, req);
+  return json_({ status: 'ok', code: String(req.code || target).trim() });
+}
+
+function deleteSchedule_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const target = String(req.code || '').trim();
+  if (!target) return json_({ status: 'error', message: '대상 관리번호가 없습니다' });
+  const ctx = scheduleCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  if (C.code < 0) return json_({ status: 'error', message: '관리번호 열을 찾지 못함' });
+  let rowIdx = -1;
+  for (let i = hIdx + 1; i < values.length; i++) {
+    if (String(values[i][C.code] || '').trim() === target) { rowIdx = i; break; }
+  }
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상 장비를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
+  ctx.sh.deleteRow(rowIdx + 1);
+  return json_({ status: 'ok' });
 }
 
 // ── 캘린더: 공유 캘린더의 일정을 JSON으로 (제목/시작/끝/종일/장소만 — 설명은 내보내지 않음) ──

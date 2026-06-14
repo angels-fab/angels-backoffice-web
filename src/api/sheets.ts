@@ -226,6 +226,65 @@ export async function deleteWork(p: { num: string | number; author: string; key:
   await postWork({ action: 'deleteWork', ...p })
 }
 
+// ── 장비도입관리 CRUD (헤더명 기준) ──
+export interface ScheduleInput {
+  author: string
+  key: string
+  /** 관리번호 (행 식별 키) */
+  code: string
+  name: string
+  mgr?: string
+  status?: string
+  /** 시작년월 yyyy-MM-dd */
+  start?: string
+  /** 단계 소요기간(개월) — 키: 사전규격/구매공고/기술평가/기술협상/장비제작/장비설치 */
+  stages?: Record<string, string>
+  cat?: string
+  method?: string
+  /** 도입금액 */
+  price?: string | number
+}
+
+/** 장비 도입 신규 등록 → 관리번호 반환 */
+export async function createSchedule(p: ScheduleInput): Promise<string> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'createSchedule', ...p }) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string; code?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 장비 도입 편집을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '저장 실패')
+  return json.code || ''
+}
+
+/** 장비 도입 수정 — 원본 관리번호(origCode)로 행을 찾아 갱신 */
+export async function updateSchedule(p: ScheduleInput & { origCode: string }): Promise<void> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateSchedule', ...p }) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 장비 도입 수정을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '수정 실패')
+}
+
+/** 장비 도입 삭제 (관리번호 기준) */
+export async function deleteSchedule(p: { code: string; author: string; key: string }): Promise<void> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteSchedule', ...p }) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 장비 도입 삭제를 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '삭제 실패')
+}
+
 // ── 캘린더 일정 추가/수정/삭제 (Apps Script doPost) ──
 /** 수정/삭제 적용 범위 — 반복 일정에서 그 회차만(single) vs 전체 시리즈(series) */
 export type CalScope = 'single' | 'series'
