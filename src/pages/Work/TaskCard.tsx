@@ -19,7 +19,7 @@ export default function TaskCard({ t, right, onPick }: TaskCardProps) {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
           <StatusChip status={st.status} label={st.label} />
-          {t.chief && <StatusChip status="purple" label="센터장" />}
+          {t.chief && <StatusChip status="purple" label="검토 필요" />}
           {t.remind && <StatusChip status="warning" label="Remind" />}
           {t.cat && <StatusChip status="neutral" label={t.cat} />}
         </Box>

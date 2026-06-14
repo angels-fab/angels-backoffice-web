@@ -25,7 +25,7 @@ export interface WorkItem {
   link: string
   /** Remind 체크 */
   remind: boolean
-  /** 센터장 검토 체크 */
+  /** 검토 필요 체크 (구 센터장 검토) */
   chief: boolean
 }
 

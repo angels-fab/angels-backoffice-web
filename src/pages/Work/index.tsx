@@ -33,7 +33,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'inProgress', label: '진행중' },
   { key: 'hold', label: '보류' },
   { key: 'done', label: '완료' },
-  { key: 'chief', label: '센터장 검토' },
+  { key: 'chief', label: '검토 필요' },
 ]
 
 const MD = (s: string) => {
@@ -165,12 +165,12 @@ export default function Work() {
           <StatTile value={counts.inProgress} unit="건" label="진행중" status="success" selected={tab === 'inProgress'} onClick={() => switchTab('inProgress')} />
           <StatTile value={counts.hold} unit="건" label="보류" status="warning" selected={tab === 'hold'} onClick={() => switchTab('hold')} />
           <StatTile value={counts.done} unit="건" label="완료" status="neutral" selected={tab === 'done'} onClick={() => switchTab('done')} />
-          <StatTile value={counts.chief} unit="건" label="센터장 검토" status="purple" selected={tab === 'chief'} onClick={() => switchTab('chief')} />
+          <StatTile value={counts.chief} unit="건" label="검토 필요" status="purple" selected={tab === 'chief'} onClick={() => switchTab('chief')} />
         </CardGrid>
       </ContentSection>
 
       {/* ② 긴급 업무 */}
-      <ContentSection title="긴급 업무" description="센터장 Check · Remind 상위 5건" count={urgent.length}>
+      <ContentSection title="긴급 업무" description="검토 필요 · Remind 상위 5건" count={urgent.length}>
         {urgent.length === 0 ? (
           <AppCard padding={0}><EmptyState size="sm" title="긴급 업무가 없습니다" /></AppCard>
         ) : (
@@ -200,7 +200,7 @@ export default function Work() {
               <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                 <StatusChip status="success" label={`진행중 ${m.inProgress}`} />
                 {m.remind > 0 && <StatusChip status="warning" label={`Remind ${m.remind}`} />}
-                {m.chief > 0 && <StatusChip status="purple" label={`센터장 ${m.chief}`} />}
+                {m.chief > 0 && <StatusChip status="purple" label={`검토필요 ${m.chief}`} />}
               </Box>
             </AppCard>
           ))}

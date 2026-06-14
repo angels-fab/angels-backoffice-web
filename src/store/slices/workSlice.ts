@@ -43,8 +43,8 @@ export const loadWorkData = createAsyncThunk('work/load', async (): Promise<Work
     status: colAny(['상태', '진행상태', '업무상태'], 10),
     end: colAny(['완료일자', '완료일'], 11),
     remind: colAny(['Remind', 'remind', '리마인드'], 12),
-    // 센터장 검토(구 '센터장 Check')
-    chief: colAny(['센터장 검토', '센터장검토', '센터장 Check', '센터장', 'Check', 'check'], 13),
+    // 검토 필요(구 '센터장 검토' / '센터장 Check')
+    chief: colAny(['검토 필요', '검토필요', '센터장 검토', '센터장검토', '센터장 Check', '센터장', 'Check', 'check'], 13),
     link: colAny(['링크', '관련링크', 'link'], 14),
   }
   // 체크박스 값: 불리언 true/문자 'TRUE'/'1'/'Y'/'예' 모두 인식
