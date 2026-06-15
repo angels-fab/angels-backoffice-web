@@ -4,8 +4,8 @@ Claude Code and Codex use this folder to pass concise handoff messages through t
 
 ## Role Split
 
-- Claude Code owns implementation, local development commands, and git sync (`pull`, `commit`, `push`).
-- Codex owns review, risk analysis, project-state整理, and writing the next Claude development prompt.
+- Claude Code owns implementation, local development commands, git sync (`pull`, `commit`, `push`), and UI/UX screenshot capture for Codex review.
+- Codex owns review, risk analysis, project-state整理, and writing the next Claude development prompt. Codex does NOT capture screenshots.
 - Codex should not edit source code or run git sync unless the user explicitly asks.
 - If Codex finds a required fix, it should write a precise prompt for Claude instead of taking over implementation by default.
 
@@ -18,6 +18,7 @@ Claude Code and Codex use this folder to pass concise handoff messages through t
 - `outbox/next-claude-prompt.md`: prompt to paste into Claude Code.
 - `outbox/next-codex-prompt.md`: prompt to paste into Codex.
 - `logs/`: dated work notes. Keep long details here instead of bloating `state.md`.
+- `screenshots/`: Claude Code saves UI/UX screenshots here so Codex can review on any machine without re-running the app (Claude only — Codex does not capture).
 
 ## Operating Rules
 
@@ -28,6 +29,17 @@ Claude Code and Codex use this folder to pass concise handoff messages through t
 5. At the end of work, update one inbox file for the other agent and one outbox prompt if the next step is clear.
 6. Do not store secrets, passwords, tokens, or private credentials in this folder.
 7. Prefer Claude Code for commit/push and cross-device sync. This bridge shares context, not runtime state.
+
+## Screenshots (Claude Code only)
+
+Only Claude Code captures screenshots; Codex never does. The point is that Codex (or a different machine) can review UI/UX changes without re-running the app.
+
+- Save to `.agents/bridge/screenshots/`. Filename includes date + task, e.g. `2026-06-15-step21-equipment-ops-dropdown-desktop.png`.
+- Capture whenever you change screen structure, buttons, Drawer, Dialog, dropdown, menu, cards, or responsive layout.
+- At least 1 desktop shot. Add 1 mobile shot if the change affects responsive layout.
+- For state-change UI, capture before/after (or closed/open). For dropdown/menu/modal, include the OPEN state.
+- Always record the screenshot paths in `inbox/claude-to-codex.md` under a `## Screenshots` section.
+- If capture is impossible, write the reason in `claude-to-codex.md` instead of a path.
 
 ## Recommended Turn Ending
 
