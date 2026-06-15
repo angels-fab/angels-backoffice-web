@@ -69,7 +69,8 @@ export function GanttHeader({ months: allMonths }: { months: TlMonth[] }) {
 }
 
 // 각 장비 간트 막대
-export function GanttBar({ tl, months: allMonths }: { tl: string[]; months: TlMonth[] }) {
+// previewPx: 드래그 중 실시간 미리보기용 가로 이동량(px). 색 막대 레이어만 이동(격자선 고정).
+export function GanttBar({ tl, months: allMonths, previewPx = 0 }: { tl: string[]; months: TlMonth[]; previewPx?: number }) {
   const months = allMonths.slice(0, TL_VISIBLE_MONTHS)
   const template = ganttGridTemplate(months)
   const cols = []
@@ -93,7 +94,14 @@ export function GanttBar({ tl, months: allMonths }: { tl: string[]; months: TlMo
           />
         ))}
       </div>
-      <div className="gantt-bar" style={{ gridTemplateColumns: template }}>
+      <div
+        className="gantt-bar"
+        style={{
+          gridTemplateColumns: template,
+          transform: previewPx ? `translateX(${previewPx}px)` : undefined,
+          willChange: previewPx ? 'transform' : undefined,
+        }}
+      >
         {cols.map(c => (
           <div key={c.mi} className="gantt-month">
             <div

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -28,12 +29,13 @@ import {
   EmptyState,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { loadEqData } from '@/store/slices/eqSlice'
-import { deleteSchedule } from '@/api/sheets'
+import { loadEqData, shiftScheduleStart } from '@/store/slices/eqSlice'
+import { deleteSchedule, updateSchedule } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import type { ScheduleItem } from '@/types'
 import { STAGE, STAGE_ORDER, groupStage, phaseChip, todayHalfIndex, type StageCode } from './stageMeta'
 import { GanttHeader, GanttBar } from './gantt'
+import { calcHalfDelta } from './timeline'
 import EqProjectDrawer from './EqProjectDrawer'
 import ScheduleWrite from './ScheduleWrite'
 
@@ -137,6 +139,90 @@ export default function Equipment() {
     }
   }
 
+  // ── STEP15: 타임라인 전체 이동 (드래그) ── 단계 길이는 불변, start만 반월 단위로 이동
+  const barAreaRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ code: string; startX: number; halfPx: number } | null>(null)
+  const lastDeltaRef = useRef(0)
+  const draggedRef = useRef(false)
+  const [preview, setPreview] = useState<{ code: string; px: number } | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const [movedCodes, setMovedCodes] = useState<Set<string>>(new Set())
+  const [savingMoves, setSavingMoves] = useState(false)
+
+  const startDrag = (e: ReactMouseEvent, code: string) => {
+    if (!isAdmin || !code) return
+    const w = barAreaRef.current?.offsetWidth || 0
+    const halfPx = w / Math.max(1, months.length * 2) // 반월 한 칸 픽셀폭(가변 월폭 평균)
+    if (!halfPx) return
+    dragRef.current = { code, startX: e.clientX, halfPx }
+    lastDeltaRef.current = 0
+    draggedRef.current = false
+    setPreview({ code, px: 0 })
+    setDragging(true)
+    e.preventDefault()
+  }
+
+  useEffect(() => {
+    if (!dragging) return
+    const onMove = (e: MouseEvent) => {
+      const d = dragRef.current
+      if (!d) return
+      const px = e.clientX - d.startX
+      if (Math.abs(px) > 3) draggedRef.current = true // 3px 이상 움직이면 클릭(상세 열기) 억제
+      const dh = calcHalfDelta(px, d.halfPx)
+      lastDeltaRef.current = dh
+      setPreview({ code: d.code, px: dh * d.halfPx }) // 반월 스냅된 위치로만 미리보기
+    }
+    const onUp = () => {
+      const d = dragRef.current
+      const dh = lastDeltaRef.current
+      if (d && dh) {
+        dispatch(shiftScheduleStart({ code: d.code, deltaHalves: dh }))
+        setMovedCodes(prev => new Set(prev).add(d.code))
+      }
+      dragRef.current = null
+      lastDeltaRef.current = 0
+      setPreview(null)
+      setDragging(false)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [dragging, dispatch])
+
+  // 이동분 저장 — 기존 updateSchedule(시작년월 기록) 재사용
+  const saveMoves = async () => {
+    if (savingMoves || movedCodes.size === 0) return
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    setSavingMoves(true)
+    try {
+      for (const code of movedCodes) {
+        const it = schedule.find(s => s.code === code)
+        if (!it) continue
+        await updateSchedule({
+          origCode: it.code, code: it.code, author: user, key: authKey,
+          name: it.name, mgr: it.mgr, status: it.status, start: it.start,
+          stages: it.stages, cat: it.cat, method: it.method, price: it.price,
+        })
+      }
+      setMovedCodes(new Set())
+      setSavingMoves(false)
+      showSnack('이동한 타임라인을 저장했습니다.', 'success')
+      dispatch(loadEqData())
+    } catch (err) {
+      setSavingMoves(false)
+      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+    }
+  }
+
+  const revertMoves = () => {
+    setMovedCodes(new Set())
+    dispatch(loadEqData())
+  }
+
   return (
     <PageContainer>
       <PageHeader
@@ -222,14 +308,23 @@ export default function Equipment() {
       </ContentSection>
 
       {/* ④ 도입 타임라인 (간트) */}
-      <ContentSection title="도입 타임라인" description="구매 절차 단계 간트 (가로 스크롤)" last>
+      <ContentSection title="도입 타임라인" description={isAdmin ? '구매 절차 단계 간트 — 막대를 드래그해 전체 일정 이동 (가로 스크롤)' : '구매 절차 단계 간트 (가로 스크롤)'} last>
+        {isAdmin && movedCodes.size > 0 && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, px: 1.5, py: 1, borderRadius: 1, bgcolor: 'background.elevated', border: 1, borderColor: 'divider' }}>
+            <Typography variant="body2" sx={{ flex: 1, color: 'text.secondary' }}>
+              타임라인 {movedCodes.size}건 이동됨 — 저장하면 시트에 반영됩니다.
+            </Typography>
+            <Button size="small" onClick={revertMoves} disabled={savingMoves} sx={{ color: 'text.secondary' }}>되돌리기</Button>
+            <Button size="small" variant="contained" onClick={saveMoves} disabled={savingMoves}>{savingMoves ? '저장 중…' : '저장'}</Button>
+          </Box>
+        )}
         <AppCard padding={12}>
           <Box sx={{ overflowX: 'auto' }}>
             <Box sx={{ minWidth: GANTT_NAME_W + Math.max(months.length, 8) * 38 }}>
               {/* 헤더 */}
               <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1, mb: 0.5 }}>
                 <Box sx={{ width: GANTT_NAME_W, flexShrink: 0 }} />
-                <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Box ref={barAreaRef} sx={{ flex: 1, minWidth: 0 }}>
                   <GanttHeader months={months} />
                 </Box>
               </Box>
@@ -245,7 +340,7 @@ export default function Equipment() {
                       role="button"
                       tabIndex={0}
                       aria-label={`도입 프로젝트: ${it.name || it.code}`}
-                      onClick={() => setPicked(it)}
+                      onClick={() => { if (draggedRef.current) { draggedRef.current = false; return } setPicked(it) }}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicked(it) } }}
                       sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75, cursor: 'pointer', borderTop: 1, borderColor: 'divider', '&:hover': { bgcolor: 'background.elevated' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 } }}
                     >
@@ -253,8 +348,11 @@ export default function Equipment() {
                         <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.name || it.code}</Typography>
                         <StatusChip status={chip.status} label={chip.label} />
                       </Box>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <GanttBar tl={it.timeline} months={months} />
+                      <Box
+                        sx={{ flex: 1, minWidth: 0, cursor: isAdmin ? 'grab' : undefined, userSelect: 'none' }}
+                        onMouseDown={isAdmin ? (e) => startDrag(e, it.code) : undefined}
+                      >
+                        <GanttBar tl={it.timeline} months={months} previewPx={preview?.code === it.code ? preview.px : 0} />
                       </Box>
                     </Box>
                   )

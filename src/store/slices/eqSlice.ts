@@ -1,6 +1,8 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import type { PayloadAction } from '@reduxjs/toolkit'
 import { cell, fetchSheet, SHEET_NAME_EQ, SHEET_NAME_SCHEDULE } from '@/api/sheets'
 import { fmtDate, nowStamp } from '@/utils/date'
+import { buildTimelines, shiftStart } from '@/pages/Equipment/timeline'
 import type { EqGroup, EqRawItem, ScheduleItem, TlMonth } from '@/types'
 
 function baseName(n: string): string {
@@ -218,7 +220,21 @@ const initialState: EqState = {
 const eqSlice = createSlice({
   name: 'eq',
   initialState,
-  reducers: {},
+  reducers: {
+    // STEP15 — 도입 일정 전체 이동: start를 deltaHalves(반월)만큼 옮기고 타임라인 재파생.
+    // 단계 길이(stages)는 불변. months 축과 schedule·raw timeline을 buildTimelines로 일괄 갱신.
+    shiftScheduleStart(state, action: PayloadAction<{ code: string; deltaHalves: number }>) {
+      const { code, deltaHalves } = action.payload
+      if (!code || !deltaHalves) return
+      const item = state.schedule.find(s => s.code === code)
+      if (!item) return
+      item.start = shiftStart(item.start, deltaHalves)
+      const { months, byCode } = buildTimelines(state.schedule)
+      state.months = months
+      state.schedule.forEach(s => { s.timeline = byCode[s.code] ?? [] })
+      state.raw.forEach(r => { r.timeline = byCode[r.code] ?? [] })
+    },
+  },
   extraReducers: builder => {
     builder
       .addCase(loadEqData.pending, state => {
@@ -246,4 +262,5 @@ const eqSlice = createSlice({
   },
 })
 
+export const { shiftScheduleStart } = eqSlice.actions
 export default eqSlice.reducer
