@@ -15,6 +15,8 @@ import DialogActions from '@mui/material/DialogActions'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
+import UndoIcon from '@mui/icons-material/Undo'
+import RedoIcon from '@mui/icons-material/Redo'
 import {
   PageContainer,
   PageHeader,
@@ -29,7 +31,7 @@ import {
   EmptyState,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { loadEqData, shiftScheduleStart, resizeScheduleStage } from '@/store/slices/eqSlice'
+import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
 import { deleteSchedule, updateSchedule } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import type { ScheduleItem } from '@/types'
@@ -62,6 +64,14 @@ type PendingChange = {
   before: string
   after: string
   delta: string
+}
+// STEP18C: Undo/Redo 히스토리 항목 (저장된 변경의 before/after 절대값)
+type HistEntry = {
+  code: string
+  kind: 'move' | 'resize'
+  stage?: string
+  before: { start?: string; stageMonths?: string }
+  after: { start?: string; stageMonths?: string }
 }
 
 export default function Equipment() {
@@ -165,9 +175,12 @@ export default function Equipment() {
   const [tip, setTip] = useState<DragTipData | null>(null) // STEP18A: 드래그 프리뷰 툴팁(표시 전용)
   const [pending, setPending] = useState<PendingChange | null>(null) // STEP18B: 드래그 후 확인 모달
   const [applying, setApplying] = useState(false)
+  const [undoStack, setUndoStack] = useState<HistEntry[]>([]) // STEP18C
+  const [redoStack, setRedoStack] = useState<HistEntry[]>([])
+  const [histBusy, setHistBusy] = useState(false)
 
   const startDrag = (e: ReactMouseEvent, code: string) => {
-    if (!isAdmin || !code || pending) return // 모달 열려 있으면 추가 드래그 금지
+    if (!isAdmin || !code || pending || histBusy) return // 모달/undo·redo 중엔 드래그 금지
     const halfPx = HALF_MONTH_WIDTH // 고정 반월 너비 — 헤더/바/리사이즈와 동일 기준
     dragRef.current = { code, startX: e.clientX, halfPx }
     lastDeltaRef.current = 0
@@ -244,7 +257,7 @@ export default function Equipment() {
   const [resizePrev, setResizePrev] = useState<{ code: string; tl: string[] } | null>(null)
 
   const startResize = (e: ReactMouseEvent, code: string, stageCode: string) => {
-    if (!isAdmin || !code || pending) return // 모달 열려 있으면 추가 드래그 금지
+    if (!isAdmin || !code || pending || histBusy) return // 모달/undo·redo 중엔 드래그 금지
     const label = STAGE[stageCode as StageCode]?.label
     if (!label) return
     const halfPx = HALF_MONTH_WIDTH // 고정 반월 너비 — 이동/헤더/바와 동일 기준
@@ -334,15 +347,26 @@ export default function Equipment() {
         name: it.name, mgr: it.mgr, status: it.status, start: newStart,
         stages: newStages, cat: it.cat, method: it.method, price: it.price,
       })
+      // STEP18C: 저장 성공 → 히스토리 기록(undo 스택, 최근 50건), redo 비움
+      const entry: HistEntry =
+        p.kind === 'move'
+          ? { code: p.code, kind: 'move', before: { start: it.start }, after: { start: newStart } }
+          : {
+              code: p.code, kind: 'resize', stage: p.stage,
+              before: { stageMonths: String(Math.max(1, Math.round(Number(it.stages?.[p.stage!] || 0) * 2)) / 2) },
+              after: { stageMonths: newStages[p.stage!] },
+            }
+      setUndoStack(s => [...s, entry].slice(-50))
+      setRedoStack([])
       setApplying(false)
       setPending(null)
       showSnack(p.kind === 'move' ? '일정을 이동·저장했습니다.' : '기간을 변경·저장했습니다.', 'success')
-      dispatch(loadEqData())
+      await dispatch(loadEqData()).unwrap().catch(() => {})
     } catch (err) {
       setApplying(false)
       setPending(null)
       showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
-      dispatch(loadEqData()) // 저장 실패 → 시트 기준으로 재동기화(낙관적 변경 되돌림)
+      await dispatch(loadEqData()).unwrap().catch(() => {}) // 저장 실패 → 시트 기준으로 재동기화(낙관적 변경 되돌림)
     }
   }
 
@@ -354,6 +378,87 @@ export default function Equipment() {
     setResizePrev(null)
   }
 
+  // ── STEP18C: Undo/Redo ── 히스토리(절대값)로 복원 + 기존 updateSchedule 저장 + 재fetch (확인창 없음)
+  const histBusyRef = useRef(false) // 동기 재진입 락 (state는 렌더 타이밍 의존 → ref로 즉시 잠금)
+  const applyHistory = async (entry: HistEntry, dir: 'undo' | 'redo'): Promise<boolean> => {
+    if (histBusyRef.current) return false
+    if (!user || !authKey) { showSnack('관리자 로그인이 필요합니다.', 'error'); return false }
+    const it = schedule.find(s => s.code === entry.code)
+    if (!it) { showSnack('대상 장비를 찾을 수 없습니다.', 'error'); return false }
+    histBusyRef.current = true
+    setHistBusy(true)
+    const target = dir === 'undo' ? entry.before : entry.after
+    let newStart = it.start
+    let newStages = it.stages
+    if (entry.kind === 'move' && target.start != null) {
+      newStart = target.start
+      dispatch(setScheduleStart({ code: entry.code, start: newStart }))
+    } else if (entry.kind === 'resize' && entry.stage && target.stageMonths != null) {
+      newStages = { ...it.stages, [entry.stage]: target.stageMonths }
+      dispatch(setScheduleStage({ code: entry.code, stage: entry.stage, value: target.stageMonths }))
+    }
+    try {
+      await updateSchedule({
+        origCode: it.code, code: it.code, author: user, key: authKey,
+        name: it.name, mgr: it.mgr, status: it.status, start: newStart,
+        stages: newStages, cat: it.cat, method: it.method, price: it.price,
+      })
+      await dispatch(loadEqData()).unwrap().catch(() => {}) // 재fetch 완료까지 락 유지
+      return true
+    } catch (err) {
+      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+      await dispatch(loadEqData()).unwrap().catch(() => {}) // 실패 → 시트 기준 재동기화
+      return false
+    } finally {
+      histBusyRef.current = false
+      setHistBusy(false)
+    }
+  }
+
+  const undo = async () => {
+    if (!undoStack.length || histBusy) return
+    const entry = undoStack[undoStack.length - 1]
+    if (await applyHistory(entry, 'undo')) {
+      setUndoStack(s => s.slice(0, -1))
+      setRedoStack(s => [...s, entry])
+      showSnack('실행취소했습니다.', 'success')
+    }
+  }
+
+  const redo = async () => {
+    if (!redoStack.length || histBusy) return
+    const entry = redoStack[redoStack.length - 1]
+    if (await applyHistory(entry, 'redo')) {
+      setRedoStack(s => s.slice(0, -1))
+      setUndoStack(s => [...s, entry])
+      showSnack('다시실행했습니다.', 'success')
+    }
+  }
+
+  // 단축키: Ctrl/Cmd+Z = Undo, Ctrl/Cmd+Shift+Z = Redo. 입력 포커스·모달 중엔 무시. (refs로 최신 클로저)
+  const undoRef = useRef<() => void>(() => {})
+  const redoRef = useRef<() => void>(() => {})
+  const blockKeyRef = useRef(false)
+  undoRef.current = undo
+  redoRef.current = redo
+  // 진행 중 드래그/리사이즈·undo/redo·모달 중엔 단축키 무시
+  blockKeyRef.current = !!(pending || writeOpen || editTarget || deleteTarget || dragging || resizing || histBusy)
+  useEffect(() => {
+    if (!isAdmin) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat) return // 키 리피트 폭주 차단
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return
+      const t = document.activeElement as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (blockKeyRef.current) return
+      e.preventDefault()
+      if (e.shiftKey) redoRef.current()
+      else undoRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isAdmin])
+
   return (
     <PageContainer>
       <PageHeader
@@ -363,6 +468,16 @@ export default function Equipment() {
         updatedAt={error ? '연결 실패' : updatedAt || undefined}
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {isAdmin && (
+              <>
+                <IconButton aria-label="실행취소" title="실행취소 (Ctrl+Z)" onClick={undo} disabled={!undoStack.length || histBusy} size="small" sx={{ color: 'text.secondary' }}>
+                  <UndoIcon sx={{ fontSize: 20 }} />
+                </IconButton>
+                <IconButton aria-label="다시실행" title="다시실행 (Ctrl+Shift+Z)" onClick={redo} disabled={!redoStack.length || histBusy} size="small" sx={{ color: 'text.secondary' }}>
+                  <RedoIcon sx={{ fontSize: 20 }} />
+                </IconButton>
+              </>
+            )}
             {isAdmin && (
               <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => { setEditTarget(null); setWriteOpen(true) }}>
                 장비 추가

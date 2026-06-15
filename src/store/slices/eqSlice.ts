@@ -217,6 +217,14 @@ const initialState: EqState = {
   updatedAt: null,
 }
 
+// 이동/리사이즈/Undo·Redo 공통 — schedule 변경 후 months 축과 schedule·raw timeline 재파생
+function recomputeEq(state: EqState) {
+  const { months, byCode } = buildTimelines(state.schedule)
+  state.months = months
+  state.schedule.forEach(s => { s.timeline = byCode[s.code] ?? [] })
+  state.raw.forEach(r => { r.timeline = byCode[r.code] ?? [] })
+}
+
 const eqSlice = createSlice({
   name: 'eq',
   initialState,
@@ -229,10 +237,7 @@ const eqSlice = createSlice({
       const item = state.schedule.find(s => s.code === code)
       if (!item) return
       item.start = shiftStart(item.start, deltaHalves)
-      const { months, byCode } = buildTimelines(state.schedule)
-      state.months = months
-      state.schedule.forEach(s => { s.timeline = byCode[s.code] ?? [] })
-      state.raw.forEach(r => { r.timeline = byCode[r.code] ?? [] })
+      recomputeEq(state)
     },
     // STEP16 — 단계 길이 리사이즈: 특정 단계(stage 라벨)의 개월을 deltaHalves(반월)만큼 변경.
     // 최소 0.5개월(1반월), 음수 불가. 타임라인은 buildTimelines로 재파생(이동과 동일 경로).
@@ -245,10 +250,20 @@ const eqSlice = createSlice({
       const nextHalf = Math.max(1, curHalf + deltaHalves) // 최소 0.5개월
       if (nextHalf === curHalf) return
       item.stages = { ...item.stages, [stage]: String(nextHalf / 2) }
-      const { months, byCode } = buildTimelines(state.schedule)
-      state.months = months
-      state.schedule.forEach(s => { s.timeline = byCode[s.code] ?? [] })
-      state.raw.forEach(r => { r.timeline = byCode[r.code] ?? [] })
+      recomputeEq(state)
+    },
+    // STEP18C — 절대값 설정(Undo/Redo용): start/stage를 지정값으로 직접 설정 후 재파생.
+    setScheduleStart(state, action: PayloadAction<{ code: string; start: string }>) {
+      const item = state.schedule.find(s => s.code === action.payload.code)
+      if (!item) return
+      item.start = action.payload.start
+      recomputeEq(state)
+    },
+    setScheduleStage(state, action: PayloadAction<{ code: string; stage: string; value: string }>) {
+      const item = state.schedule.find(s => s.code === action.payload.code)
+      if (!item) return
+      item.stages = { ...item.stages, [action.payload.stage]: action.payload.value }
+      recomputeEq(state)
     },
   },
   extraReducers: builder => {
@@ -278,5 +293,5 @@ const eqSlice = createSlice({
   },
 })
 
-export const { shiftScheduleStart, resizeScheduleStage } = eqSlice.actions
+export const { shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } = eqSlice.actions
 export default eqSlice.reducer
