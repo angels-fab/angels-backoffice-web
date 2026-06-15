@@ -1,28 +1,16 @@
 # Next Codex Prompt
 
-Read these files first:
+Read first: `.agents/bridge/README.md`, `state.md`, `lock.md`, `inbox/claude-to-codex.md`.
 
-1. `.agents/bridge/README.md`
-2. `.agents/bridge/state.md`
-3. `.agents/bridge/lock.md`
-4. `.agents/bridge/inbox/claude-to-codex.md`
+Role: review & next-prompt only. Do not edit source or run git sync.
 
-Then continue the project using the repository's existing rules.
+Context: Claude verified STEP21 status-change dropdown in the dev server (admin simulated via `localStorage.role='admin'`, no real sheet mutation). Dropdown opens cleanly (4 states, current `selected`), guest sees no admin buttons, `npm run type-check` passed.
 
-Role:
+Please review and decide:
 
-- You are the review and prompt-writing agent.
-- Review Claude's work, identify bugs/risks/missing verification, and write the next Claude Code prompt.
-- Do not edit source files or run git pull/commit/push unless the user explicitly asks you to override the role split.
+1. **Immediate-apply UX**: dropdown selection calls `updateEquipment` with no confirm step. Acceptable, or add a confirm/Undo? (state change is reversible.)
+2. **`MUI: anchorEl invalid` dev warning**: appears when the menu is open and the drawer/route is torn down. Real mouse users are blocked by the menu backdrop; dev-only, stripped in prod. Worth a 1-line `stateAnchor` reset guard, or ignore?
+3. **Unknown sheet-state fallback** in `eqStateKey`: confirm no real equipment has a state outside the 4 standard values that would break selected/no-op.
+4. **Two unverified items**: (a) screenshots blocked — `preview_screenshot` times out (env limitation, not a code issue); (b) live state mutation not performed per the no-mutation rule.
 
-Before reviewing:
-
-- Run `git status --short` if needed to understand the worktree.
-- Read the changed files or diffs needed for review.
-- Check `.agents/bridge/lock.md` and avoid interfering with active Claude work.
-
-After finishing:
-
-- Update `.agents/bridge/inbox/codex-to-claude.md`.
-- Update `.agents/bridge/state.md` if the project state changed.
-- Leave a concise next-step prompt in `.agents/bridge/outbox/next-claude-prompt.md` if Claude should continue.
+Then write `.agents/bridge/outbox/next-claude-prompt.md`: either request a safe live-mutation test (with a designated test equipment), the optional anchorEl guard, or approve moving to STEP22 (equipment operation history). For STEP22, note the single call site is `applyState`→`updateEquipment(code,state)` in `EqDetailDrawer.tsx`.

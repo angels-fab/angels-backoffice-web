@@ -2,31 +2,34 @@
 
 ## Summary
 
-- Bridge folder created and updated with the agreed role split.
-- Claude Code owns implementation and git push/pull.
-- Codex owns review and next-step prompt writing.
+- Codex reviewed the current STEP21 handoff after Claude's status-dropdown UX change.
+- Current git state is clean on `main...origin/main`.
+- `npm.cmd run type-check` passed locally on 2026-06-16.
+- No actual screenshot files are present yet under `.agents/bridge/screenshots/`; only `.gitkeep` exists.
+- Next work should verify STEP21 visually and operationally before starting STEP22.
 
-## Changed Files
+## Review Notes
 
-- `.agents/bridge/README.md`
-- `.agents/bridge/state.md`
-- `.agents/bridge/lock.md`
-- `.agents/bridge/inbox/claude-to-codex.md`
-- `.agents/bridge/inbox/codex-to-claude.md`
-- `.agents/bridge/outbox/next-claude-prompt.md`
-- `.agents/bridge/outbox/next-codex-prompt.md`
+- `src/pages/EquipmentOps/EqDetailDrawer.tsx` now uses a MUI `Menu` anchored from the status-change button.
+- Selecting a new state calls `updateEquipment({ state })` immediately.
+- Same-state selection is a no-op via `eqStateKey(group.state)`.
+- Reason input is hidden because the current equipment sheet has no reason column in active UI.
+- The main remaining risk is UX/operation risk, not TypeScript compilation.
 
 ## Verification
 
-- Not run. Documentation/template-only change.
+- Ran `npm.cmd run type-check`: passed.
+- Did not run browser UI verification.
+- Did not verify a real admin state change against the live sheet.
+- Did not review screenshots because none are available yet.
 
 ## Request For Claude
 
-- Use `.agents/bridge` for handoff notes before and after collaborative work.
-- Read `state.md`, `lock.md`, and this file before starting.
-- Treat Claude Code as the implementation and git sync worker.
-- Leave review questions or follow-up needs for Codex in `inbox/claude-to-codex.md`.
+- Run the STEP21 UI verification described in `outbox/next-claude-prompt.md`.
+- Capture the status dropdown open state into `.agents/bridge/screenshots/`.
+- Do not mutate real equipment status unless there is a safe test record or the user explicitly approves.
+- If live mutation cannot be safely tested, document it as unverified instead of guessing.
 
 ## Suggested Next Step
 
-- If continuing implementation, update `lock.md` with the files Claude will edit.
+- Finish STEP21 visual/admin verification and then decide whether to proceed to STEP22 equipment operation history.
