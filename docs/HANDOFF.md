@@ -1,10 +1,10 @@
 # 인계 노트 (집 ↔ 사무실 이어가기)
 
-> 갱신: 2026-06-15 (사무실 PC) · 다음 작업: STEP17
+> 갱신: 2026-06-15 (사무실 PC) · 다음 작업: 미정 (운영관리 고도화 / 근무현황 / 바로가기 이관 등에서 택1)
 > 이 파일은 머신 간 동기화되지 않는 Claude 로컬 메모리를 대신해, 다른 PC에서 맥락을 빠르게 잡기 위한 요약입니다.
 
 ## 현재 상태
-- **STEP 1~16 완료**. 모든 코드·문서 `main`에 push 완료(작업 시작 전 `/출근`으로 pull).
+- **STEP 1~17 완료**. 모든 코드·문서 `main`에 push 완료(작업 시작 전 `/출근`으로 pull).
 - 배포: 프런트는 `main` push → GitHub Actions 자동배포(angels-fab.github.io). 백엔드(Apps Script) **@39** (clasp, URL 불변 · STEP15는 백엔드 변경 없음).
 - 빌드 상태: `npm run type-check`·`npm run build` 통과.
 - **운영 규칙: 작업 완료 시 자동으로 커밋·푸시(자동배포)하고, 작업 내역을 `docs/`에 MD로 기록한다.**
@@ -17,6 +17,7 @@
 - **STEP 15 장비도입관리 타임라인 전체 이동(드래그) — `docs/step15-timeline-move.md`**
 - **STEP 16 타임라인 단계 리사이즈(오른쪽 핸들) — `docs/step16-timeline-resize.md`**
 - **STEP 16.5 타임라인 그리드 너비 정규화(고정 px 단일 상수 MONTH_WIDTH/HALF_MONTH_WIDTH) — `docs/step16.5-grid-normalize.md`**
+- **STEP 17 자동 재계산(총소요기간·도입예정월·KPI·파이프라인) — 기존 timeline 반응형 파생으로 충족(신규 코드 없음), `docs/step17-auto-recalc.md`**
 - 아키텍처: `docs/ARCHITECTURE.md`, `docs/equipment-page-architecture.md`
 
 ## 핵심 규칙 (작업 시 유지)
@@ -30,8 +31,7 @@
 - [x] 시트 onEdit 트리거 설치 — 완료(집에서 1회 설치, 클라우드에 보존 · PC 무관).
 - [x] 인앱 CRUD 확인 — 완료.
 
-## 다음 작업 (예정)
-- **STEP17 자동 재계산** — 총소요기간·도입예정월·KPI·파이프라인 실시간 반영(이동/리사이즈 후 stages·`buildTimelines` 결과로 파생, 단일 진입점 유지).
-- (이후) 장비운영관리 고도화 · 근무현황(Google Calendar 기반 조회 전용) · 권한관리 · NAS 연동 · UI 스프린트.
+## 다음 작업 (예정 — 택1)
+- 장비운영관리 고도화 · 근무현황(Google Calendar 기반 조회 전용) · 권한관리 · NAS 연동 · UI 스프린트.
 - (보류) 바로가기(/links) 디자인 시스템 이관.
 - (확정) **일정(캘린더) CRUD는 구현하지 않음** — Google Calendar를 원본으로 유지, 포털은 조회 전용.
