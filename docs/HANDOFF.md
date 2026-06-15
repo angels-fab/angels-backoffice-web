@@ -1,11 +1,11 @@
 # 인계 노트 (집 ↔ 사무실 이어가기)
 
-> 갱신: 2026-06-15 (사무실 PC) · 다음 작업: 미정 (운영관리 고도화 / 근무현황 / 바로가기 이관 등에서 택1)
+> 갱신: 2026-06-16 (사무실 PC) · 다음 작업: STEP22 라이브 검증(안전 테스트 장비로 상태변경→이력 기록 확인) / STEP22 phase2 / 근무현황 등
 > 이 파일은 머신 간 동기화되지 않는 Claude 로컬 메모리를 대신해, 다른 PC에서 맥락을 빠르게 잡기 위한 요약입니다.
 
 ## 현재 상태
-- **STEP 1~21 완료** (18A~C 드래그 UX·19 상세 Drawer·20 수정·21 상태 변경). 모든 코드·문서 `main`에 push 완료(작업 시작 전 `/출근`으로 pull).
-- 배포: 프런트는 `main` push → GitHub Actions 자동배포(angels-fab.github.io). 백엔드(Apps Script) **@41** (clasp, URL 불변 · STEP21에서 updateEquipment에 상태/사유 추가).
+- **STEP 1~22 완료** (18A~C 드래그 UX·19 상세 Drawer·20 수정·21 상태 변경·22 운영이력). 모든 코드·문서 `main`에 push 완료(작업 시작 전 `/출근`으로 pull).
+- 배포: 프런트는 `main` push → GitHub Actions 자동배포(angels-fab.github.io). 백엔드(Apps Script) **@42** (clasp, URL 불변 · STEP22에서 운영이력 append + getEqHistory 조회 추가). **STEP22 프런트·백엔드 모두 라이브 반영 완료**.
 - 빌드 상태: `npm run type-check`·`npm run build` 통과.
 - **운영 규칙: 작업 완료 시 자동으로 커밋·푸시(자동배포)하고, 작업 내역을 `docs/`에 MD로 기록한다.**
 
@@ -24,6 +24,7 @@
 - **STEP 19 장비운영관리 상세 Drawer 고도화(5섹션·빈값 미등록·폭520, 조회 전용) — `docs/step19-eqops-drawer.md`**
 - **STEP 20 장비운영관리 수정(Update만, 관리자·확인모달·updateEquipment, 백엔드@40) — `docs/step20-eqops-update.md`**
 - **STEP 21 장비운영관리 상태 변경(관리자·칩 클릭 → 드롭다운 선택 즉시 변경·사유 숨김(시트 열 부재)·updateEquipment 재사용, 백엔드@41) — `docs/step21-eqops-state.md`**
+- **STEP 22 장비 운영이력 phase1(별도 append-only `장비운영이력` 시트·상태 변경 시 자동 1건 기록·드로어 읽기전용 "운영 이력" 섹션·`getEqHistory` 조회, 백엔드@42, 라이브 반영) — `docs/step22-eqops-history-plan.md`**
 - 아키텍처: `docs/ARCHITECTURE.md`, `docs/equipment-page-architecture.md`(도입관리), `docs/equipment-ops-architecture.md`(운영관리)
 
 ## 핵심 규칙 (작업 시 유지)

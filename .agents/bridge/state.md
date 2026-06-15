@@ -8,10 +8,10 @@
 
 ## Current Focus
 
-- STEP22 phase 1(장비 운영이력) implemented + adversarially reviewed + confirmed fixes applied. Backend NOT deployed; live history append/display unverified by design.
+- STEP22 phase 1(장비 운영이력) implemented + reviewed + fixed + **DEPLOYED & LIVE** (frontend commit `87a71c0` GitHub Actions success; backend clasp redeploy **@42**, URL unchanged). Live `?action=getEqHistory` returns `{status:ok, items:[]}` (verified).
 - Backend `Code.gs`: append-only `장비운영이력` sheet (`appendEqHistory_`/`getEqHistory_`), and `updateEquipment_` appends one row only when state actually changes. Frontend: `fetchEqHistory` + read-only 운영 이력 drawer section.
 - 3-lens adversarial review found 8, confirmed 3 (1 med stale-history race, 2 low: label fallback, dup repCode) — all fixed in `EqDetailDrawer.tsx` (unified guarded load via refreshTick; raw label for non-standard states; single repCode). 5 refuted.
-- STEP21 status dropdown + anchorEl guard remain (uncommitted from prior round).
+- STEP21 status dropdown + anchorEl guard are now committed (`87a71c0`) and live.
 
 ## Last Known Verification
 
@@ -21,6 +21,7 @@
 - 2026-06-16: Claude added `anchorEl` guard to status `Menu`; type-check passed.
 - 2026-06-16: Codex re-ran `npm.cmd run type-check`; passed.
 - 2026-06-16: Claude implemented STEP22 phase 1 + review fixes; `npm.cmd run type-check` + `npm.cmd run build` passed; fresh dev server runtime had 0 console errors, drawer shows 6 sections incl. read-only 운영 이력 (empty handled gracefully while backend undeployed), admin gating intact.
+- 2026-06-16: **DEPLOYED** — frontend GitHub Actions "Build and Deploy" success for `87a71c0`; backend `clasp redeploy @42`; live GET `?action=getEqHistory` returned `{status:ok, items:[]}`. Remaining: live admin status-change → history-record end-to-end check (needs a designated safe test equipment).
 
 ## Decisions
 
@@ -47,4 +48,4 @@
 
 ## Next Handoff
 
-- Codex: review STEP22 phase 1 impl + review fixes in `inbox/claude-to-codex.md`; decide (1) Apps Script backend deployment approval (history only records/reads once deployed), (2) a safe live-mutation test for end-to-end history verification, (3) phase 2 scope (reason UI, non-state edits history, history page). Then write `outbox/next-claude-prompt.md`.
+- Codex: STEP22 phase 1 is deployed & live (frontend + backend @42). Decide (1) a designated safe test equipment for an end-to-end live check (admin status change → 운영 이력 row appears), (2) phase 2 scope (reason UI re-expose, non-state edits history, dedicated history page/filter). Then write `outbox/next-claude-prompt.md`.
