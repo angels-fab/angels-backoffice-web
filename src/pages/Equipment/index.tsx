@@ -35,7 +35,7 @@ import { useRole } from '@/auth/role'
 import type { ScheduleItem } from '@/types'
 import { STAGE, STAGE_ORDER, groupStage, phaseChip, todayHalfIndex, type StageCode } from './stageMeta'
 import { GanttHeader, GanttBar } from './gantt'
-import { calcHalfDelta, itemTimelineForMonths } from './timeline'
+import { calcHalfDelta, itemTimelineForMonths, MONTH_WIDTH, HALF_MONTH_WIDTH } from './timeline'
 import EqProjectDrawer from './EqProjectDrawer'
 import ScheduleWrite from './ScheduleWrite'
 
@@ -143,7 +143,6 @@ export default function Equipment() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // ── STEP15: 타임라인 전체 이동 (드래그) ── 단계 길이는 불변, start만 반월 단위로 이동
-  const barAreaRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ code: string; startX: number; halfPx: number } | null>(null)
   const lastDeltaRef = useRef(0)
   const draggedRef = useRef(false)
@@ -154,9 +153,7 @@ export default function Equipment() {
 
   const startDrag = (e: ReactMouseEvent, code: string) => {
     if (!isAdmin || !code) return
-    const w = barAreaRef.current?.offsetWidth || 0
-    const halfPx = w / Math.max(1, months.length * 2) // 반월 한 칸 픽셀폭(가변 월폭 평균)
-    if (!halfPx) return
+    const halfPx = HALF_MONTH_WIDTH // 고정 반월 너비 — 헤더/바/리사이즈와 동일 기준
     dragRef.current = { code, startX: e.clientX, halfPx }
     lastDeltaRef.current = 0
     draggedRef.current = false
@@ -219,9 +216,7 @@ export default function Equipment() {
     if (!isAdmin || !code) return
     const label = STAGE[stageCode as StageCode]?.label
     if (!label) return
-    const w = barAreaRef.current?.offsetWidth || 0
-    const halfPx = w / Math.max(1, months.length * 2)
-    if (!halfPx) return
+    const halfPx = HALF_MONTH_WIDTH // 고정 반월 너비 — 이동/헤더/바와 동일 기준
     const it = schedule.find(s => s.code === code)
     const baseHalves = Math.max(1, Math.round(Number(it?.stages?.[label] || 0) * 2))
     resizeRef.current = { code, stage: label, startX: e.clientX, halfPx, baseHalves }
@@ -394,11 +389,11 @@ export default function Equipment() {
         )}
         <AppCard padding={12}>
           <Box ref={scrollRef} sx={{ overflowX: 'auto' }}>
-            <Box sx={{ minWidth: GANTT_NAME_W + Math.max(months.length, 8) * 38 }}>
+            <Box sx={{ minWidth: GANTT_NAME_W + Math.max(months.length, 8) * MONTH_WIDTH }}>
               {/* 헤더 */}
               <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1, mb: 0.5 }}>
                 <Box sx={{ width: GANTT_NAME_W, flexShrink: 0 }} />
-                <Box ref={barAreaRef} sx={{ flex: 1, minWidth: 0 }}>
+                <Box sx={{ width: months.length * MONTH_WIDTH, flexShrink: 0 }}>
                   <GanttHeader months={months} />
                 </Box>
               </Box>
@@ -423,7 +418,7 @@ export default function Equipment() {
                         <StatusChip status={chip.status} label={chip.label} />
                       </Box>
                       <Box
-                        sx={{ flex: 1, minWidth: 0, cursor: isAdmin ? 'grab' : undefined, userSelect: 'none' }}
+                        sx={{ width: months.length * MONTH_WIDTH, flexShrink: 0, cursor: isAdmin ? 'grab' : undefined, userSelect: 'none' }}
                         onMouseDown={isAdmin ? (e) => startDrag(e, it.code) : undefined}
                       >
                         <GanttBar

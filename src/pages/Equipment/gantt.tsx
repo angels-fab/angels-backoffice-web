@@ -2,6 +2,7 @@
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { TlMonth } from '@/types'
 import { STAGE, STAGE_ORDER } from './stageMeta'
+import { MONTH_WIDTH } from './timeline'
 
 export const TL_VISIBLE_MONTHS = 36 // 표시 최대 월 수 — 실제 구간은 시트에 일정이 있는 범위를 따라감 (eqSlice에서 앞뒤 빈 달 제거)
 
@@ -9,17 +10,10 @@ export const TL_VISIBLE_MONTHS = 36 // 표시 최대 월 수 — 실제 구간�
 export const TL_STAGE_COLOR: Record<string, string> = Object.fromEntries(STAGE_ORDER.map((c) => [c, STAGE[c].color]))
 export const TL_STAGE_NAME: Record<string, string> = Object.fromEntries(STAGE_ORDER.map((c) => [c, STAGE[c].label]))
 
-// 월별 너비 비율: 한 자리 월=2, 두 자리 월=3 (숫자 하나만큼 더 넓게)
-function monthWidthUnits(monthStr: string): number {
-  const n = (monthStr || '').replace('월', '').trim()
-  return n.length >= 2 ? 3 : 2
-}
-
+// 모든 월을 동일한 고정 px(MONTH_WIDTH)로 — 축 전체 균일. 단일 상수(timeline.ts) 참조.
 function ganttGridTemplate(months: TlMonth[]): string {
-  return months
-    .slice(0, TL_VISIBLE_MONTHS)
-    .map(m => monthWidthUnits(m.month) + 'fr')
-    .join(' ')
+  const n = Math.min(months.length, TL_VISIBLE_MONTHS)
+  return `repeat(${n}, ${MONTH_WIDTH}px)`
 }
 
 // 월 헤더 바 (연도행 + 월행 2단 구조)
@@ -27,23 +21,19 @@ export function GanttHeader({ months: allMonths }: { months: TlMonth[] }) {
   const months = allMonths.slice(0, TL_VISIBLE_MONTHS)
   if (!months.length) return null
 
-  // 연도별 그룹핑 (연속된 같은 연도 묶음)
-  const yearGroups: { year: string; units: number; count: number }[] = []
+  // 연도별 그룹핑 (연속된 같은 연도 묶음) — 너비는 월 수 × 고정 MONTH_WIDTH
+  const yearGroups: { year: string; count: number }[] = []
   months.forEach(m => {
     const last = yearGroups[yearGroups.length - 1]
-    if (last && last.year === m.year) {
-      last.units += monthWidthUnits(m.month)
-      last.count++
-    } else {
-      yearGroups.push({ year: m.year, units: monthWidthUnits(m.month), count: 1 })
-    }
+    if (last && last.year === m.year) last.count++
+    else yearGroups.push({ year: m.year, count: 1 })
   })
 
   return (
     <div className="gantt-head-wrap">
       <div
         className="gantt-yearrow"
-        style={{ gridTemplateColumns: yearGroups.map(g => g.units + 'fr').join(' ') }}
+        style={{ gridTemplateColumns: yearGroups.map(g => g.count * MONTH_WIDTH + 'px').join(' ') }}
       >
         {yearGroups.map((g, i) => (
           <div key={i} className="gantt-ycell">

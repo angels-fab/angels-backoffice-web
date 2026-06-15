@@ -4,6 +4,13 @@ import type { ScheduleItem, TlMonth } from '@/types'
 /** 간트 타임라인 기준 연도 (eqSlice 로더와 동일) */
 export const TL_BASE_YEAR = 2026
 
+/**
+ * 간트 그리드 단일 너비 상수 — 헤더·바·격자선·드래그·리사이즈가 **모두 이 값**을 기준으로 한다.
+ * (월/반월 너비를 여기 한 곳에서만 정의 — CSS·계산 로직에 너비 값 중복 금지)
+ */
+export const MONTH_WIDTH = 56 // 한 달 px (모든 월 동일·고정)
+export const HALF_MONTH_WIDTH = MONTH_WIDTH / 2 // 반월(0.5개월) px = 드래그/리사이즈 스냅 단위
+
 const PHASE_CODES = STAGE_ORDER // ['사','공','평','협','제','설']
 const PHASE_LABELS = STAGE_ORDER.map((c) => STAGE[c].label) // ['사전규격', …, '장비설치']
 
