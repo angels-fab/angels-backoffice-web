@@ -105,6 +105,18 @@ function doPost(e) {
         lock.releaseLock();
       }
     }
+    // 장비운영관리 수정(Update만 — 추가/삭제 없음) — 잠금 하에 처리
+    if (req.action === 'updateEquipment') {
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(10000)) {
+        return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
+      }
+      try {
+        return updateEquipment_(req);
+      } finally {
+        lock.releaseLock();
+      }
+    }
     // 관리자 모드(내부 UI 게이트) — '담당자' 시트 사번+비밀번호 검증. 비밀번호는 노출하지 않음.
     // 성공 시 담당자 이름을 함께 반환(공지 작성 게시자명 자동 사용).
     if (req.action === 'verifyAdmin') {
@@ -691,6 +703,61 @@ function deleteSchedule_(req) {
   if (rowIdx < 0) return json_({ status: 'error', message: '대상 장비를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
   ctx.sh.deleteRow(rowIdx + 1);
   return json_({ status: 'ok' });
+}
+
+// ── 장비운영관리 수정(Update) ── 2단 헤더(그룹행+세부행) 대응, 헤더명 기반. 관리번호로 행 식별.
+// 수정 가능: 담당자/제조사/모델명/자산번호/NFEC번호/설치장소/설치일자/업체명/엔지니어/연락처/비고
+const EQ_EDIT_FIELDS = [
+  ['mgr', '담당자'], ['maker', '제조사'], ['model', '모델명'], ['assetNo', '자산번호'], ['nfec', 'NFEC번호'],
+  ['installLoc', '설치장소'], ['installDate', '설치일자'], ['vendor', '업체명'], ['mgr2', '엔지니어'],
+  ['contact', '연락처'], ['note', '비고'],
+];
+
+function equipmentCtx_() {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName('장비운영관리');
+  if (!sh) return { error: "'장비운영관리' 시트가 없습니다" };
+  const values = sh.getDataRange().getValues();
+  let hIdx = -1;
+  for (let i = 0; i < Math.min(values.length, 6); i++) {
+    if (normSched_(values[i][0]) === '연번') { hIdx = i; break; }
+  }
+  if (hIdx < 0) return { error: '헤더(연번)를 찾지 못함' };
+  const topH = values[hIdx].map(normSched_);
+  const hasSub = values[hIdx + 1] != null && normSched_(values[hIdx + 1][0]) === '';
+  const subH = hasSub ? values[hIdx + 1].map(normSched_) : [];
+  const head = [];
+  for (let c = 0; c < Math.max(topH.length, subH.length); c++) head.push(subH[c] || topH[c]);
+  const col = function (name) { return head.indexOf(name); };
+  const dataStart = hIdx + (hasSub ? 2 : 1);
+  return { sh: sh, values: values, dataStart: dataStart, col: col };
+}
+
+function updateEquipment_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const target = String(req.code || '').trim();
+  if (!target) return json_({ status: 'error', message: '대상 관리번호가 없습니다' });
+
+  const ctx = equipmentCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, dataStart = ctx.dataStart, col = ctx.col;
+  const cCode = col('관리번호');
+  if (cCode < 0) return json_({ status: 'error', message: '관리번호 열을 찾지 못함' });
+
+  let rowIdx = -1;
+  for (let i = dataStart; i < values.length; i++) {
+    if (String(values[i][cCode] || '').trim() === target) { rowIdx = i; break; }
+  }
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상 장비를 찾지 못했습니다' });
+
+  const sheetRow = rowIdx + 1;
+  for (let f = 0; f < EQ_EDIT_FIELDS.length; f++) {
+    const key = EQ_EDIT_FIELDS[f][0], hdr = EQ_EDIT_FIELDS[f][1];
+    if (req[key] === undefined) continue; // 전달되지 않은 필드는 건드리지 않음
+    const ci = col(hdr);
+    if (ci >= 0) sh.getRange(sheetRow, ci + 1).setValue(String(req[key] == null ? '' : req[key]));
+  }
+  return json_({ status: 'ok', code: target });
 }
 
 // ── 캘린더: 공유 캘린더의 일정을 JSON으로 (제목/시작/끝/종일/장소만 — 설명은 내보내지 않음) ──

@@ -5,6 +5,8 @@ import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import MonitorIcon from '@mui/icons-material/Monitor'
 import RefreshIcon from '@mui/icons-material/Refresh'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
 import {
   PageContainer,
   PageHeader,
@@ -20,6 +22,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
+import { useRole } from '@/auth/role'
 import type { EqGroup, EqStateKey } from '@/types'
 import { EQ_STATE, eqStateKey } from './eqMeta'
 import EqDetailDrawer from './EqDetailDrawer'
@@ -68,6 +71,17 @@ export default function EquipmentOps() {
   const [cat, setCat] = useState('전체')
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<EqGroup | null>(null)
+  const { isAdmin, user, authKey } = useRole()
+  const [snack, setSnack] = useState<{ open: boolean; msg: string; severity: 'success' | 'error' }>({ open: false, msg: '', severity: 'success' })
+  const showSnack = (msg: string, severity: 'success' | 'error' = 'success') => setSnack({ open: true, msg, severity })
+
+  // STEP20 저장 성공 → 재fetch 후 picked를 새 그룹으로 갱신(Drawer 즉시 반영)
+  const handleSaved = async (name: string) => {
+    const payload = await dispatch(loadEqData()).unwrap().catch(() => null)
+    if (payload && Array.isArray(payload.groups)) {
+      setPicked(payload.groups.find((g) => g.name === name) ?? null)
+    }
+  }
 
   // 통합검색 딥링크(/equipment-ops?focus=<장비명>) → 해당 장비 상세 Drawer 자동 오픈
   useEffect(() => {
@@ -252,7 +266,26 @@ export default function EquipmentOps() {
         )}
       </ContentSection>
 
-      <EqDetailDrawer group={picked} onClose={() => setPicked(null)} />
+      <EqDetailDrawer
+        group={picked}
+        onClose={() => setPicked(null)}
+        isAdmin={isAdmin}
+        user={user}
+        authKey={authKey}
+        onSaved={handleSaved}
+        showSnack={showSnack}
+      />
+
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={3000}
+        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>
+          {snack.msg}
+        </Alert>
+      </Snackbar>
     </PageContainer>
   )
 }

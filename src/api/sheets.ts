@@ -285,6 +285,38 @@ export async function deleteSchedule(p: { code: string; author: string; key: str
   if (json.status !== 'ok') throw new Error(json.message || '삭제 실패')
 }
 
+// ── 장비운영관리 수정 (Update만, 헤더명 기준 · 관리번호로 행 식별) ──
+export interface EquipmentUpdateInput {
+  author: string
+  key: string
+  /** 관리번호 — 행 식별 키(대표 1대) */
+  code: string
+  mgr?: string
+  maker?: string
+  model?: string
+  assetNo?: string
+  nfec?: string
+  installLoc?: string
+  installDate?: string
+  vendor?: string
+  mgr2?: string
+  contact?: string
+  note?: string
+}
+
+/** 장비운영관리 행 수정 (관리번호 기준). 추가/삭제는 미지원. CORS 주의는 addNotice와 동일. */
+export async function updateEquipment(p: EquipmentUpdateInput): Promise<void> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateEquipment', ...p }) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 장비 수정을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '수정 실패')
+}
+
 // ── 캘린더 일정 추가/수정/삭제 (Apps Script doPost) ──
 /** 수정/삭제 적용 범위 — 반복 일정에서 그 회차만(single) vs 전체 시리즈(series) */
 export type CalScope = 'single' | 'series'
