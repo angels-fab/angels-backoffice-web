@@ -80,6 +80,11 @@ export interface EqGroup {
   vendor: string
   contact: string
   note: string
+  /** 아래 4개는 대표(첫 개체) 기준 — 같은 그룹의 개체별로 다를 수 있음 */
+  assetNo: string
+  nfec: string
+  installDate: string
+  mgr2: string
   codes: string[]
   prices: number[]
   price: number

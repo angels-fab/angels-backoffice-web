@@ -174,6 +174,7 @@ export const loadEqData = createAsyncThunk('eq/load', async (): Promise<EqPayloa
         bid: eq.bid, fund: eq.fund, maker: eq.maker, model: eq.model,
         state: eq.state,
         installLoc: eq.installLoc, vendor: eq.vendor, contact: eq.contact, note: eq.note,
+        assetNo: eq.assetNo, nfec: eq.nfec, installDate: eq.installDate, mgr2: eq.mgr2,
         codes: [], prices: [], price: 0, count: 0, variants: [], hasVariant: false,
         timeline: eq.timeline,
       }
