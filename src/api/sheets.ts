@@ -302,6 +302,10 @@ export interface EquipmentUpdateInput {
   mgr2?: string
   contact?: string
   note?: string
+  /** 상태 변경(STEP21) — '도입예정'|'도입중'|'가동중'|'비가동' */
+  state?: string
+  /** 상태 변경 사유(선택) — '변경사유' 등 열이 있을 때만 저장 */
+  reason?: string
 }
 
 /** 장비운영관리 행 수정 (관리번호 기준). 추가/삭제는 미지원. CORS 주의는 addNotice와 동일. */

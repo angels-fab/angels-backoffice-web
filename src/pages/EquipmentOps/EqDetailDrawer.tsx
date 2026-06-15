@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
+import MenuItem from '@mui/material/MenuItem'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -24,6 +25,10 @@ const LABELS: Record<FieldKey, string> = {
 }
 const blankForm = (): Record<FieldKey, string> =>
   ({ mgr: '', maker: '', model: '', assetNo: '', nfec: '', installLoc: '', installDate: '', vendor: '', mgr2: '', contact: '', note: '' })
+
+// STEP21 상태 변경
+const STATE_ORDER = ['도입예정', '도입중', '가동중', '비가동'] as const
+const STATE_REASONS = ['설치 완료', '운영 시작', '고장 발생', '정기 점검', '사용 중단', '기타']
 
 function MetaRow({ label, value }: { label: string; value?: string }) {
   const v = (value ?? '').trim()
@@ -70,12 +75,17 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
   const [form, setForm] = useState<Record<FieldKey, string>>(blankForm)
   const [saving, setSaving] = useState(false)
   const [confirm, setConfirm] = useState<{ key: FieldKey; label: string; before: string; after: string }[] | null>(null)
+  const [stateOpen, setStateOpen] = useState(false) // STEP21 상태 변경 다이얼로그
+  const [newState, setNewState] = useState<string>('가동중')
+  const [reason, setReason] = useState('')
+  const [savingState, setSavingState] = useState(false)
 
   // 다른 장비 열거나 닫으면 수정 상태 초기화
   useEffect(() => {
     setEditing(false)
     setConfirm(null)
     setSaving(false)
+    setStateOpen(false)
   }, [group])
 
   const meta = group ? EQ_STATE[eqStateKey(group.state)] : null
@@ -124,6 +134,30 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
     }
   }
 
+  // STEP21 — 상태 변경(updateEquipment 재사용: 상태 + 선택 사유만 전송)
+  const openStateDialog = () => {
+    if (!group) return
+    setNewState(eqStateKey(group.state))
+    setReason('')
+    setStateOpen(true)
+  }
+  const applyStateChange = async () => {
+    if (!group || savingState) return
+    if (!repCode) { showSnack?.('관리번호가 없어 변경할 수 없습니다.', 'error'); return }
+    if (!user || !authKey) { showSnack?.('관리자 로그인이 필요합니다.', 'error'); return }
+    setSavingState(true)
+    try {
+      await updateEquipment({ author: user, key: authKey, code: repCode, state: newState, reason: reason.trim() || undefined })
+      setSavingState(false)
+      setStateOpen(false)
+      showSnack?.('장비 상태를 변경했습니다.', 'success')
+      onSaved?.(group.name)
+    } catch (err) {
+      setSavingState(false)
+      showSnack?.(err instanceof Error ? err.message : '상태 변경 실패', 'error')
+    }
+  }
+
   const fieldRow = (g: EqGroup, key: FieldKey) =>
     editing
       ? <EditRow key={key} label={LABELS[key]} value={form[key]} onChange={set(key)} multiline={key === 'note'} />
@@ -158,6 +192,9 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
               <StatusChip status={meta.status} label={meta.label} />
               {group.cat && <StatusChip status="neutral" label={group.cat} />}
+              {isAdmin && !editing && (
+                <Button size="small" variant="outlined" onClick={openStateDialog} sx={{ py: 0.1, minWidth: 0, fontSize: 12, lineHeight: 1.6 }}>상태 변경</Button>
+              )}
               <Typography variant="caption" sx={{ ml: 'auto', color: 'text.disabled', fontFamily: 'monospace', wordBreak: 'break-all' }}>{codes || '관리번호 미등록'}</Typography>
             </Box>
 
@@ -213,6 +250,37 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setConfirm(null)} disabled={saving} sx={{ color: 'text.secondary' }}>취소</Button>
           <Button variant="contained" onClick={applySave} disabled={saving}>{saving ? '적용 중…' : '적용'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* STEP21: 상태 변경 다이얼로그(선택+확인 일체) */}
+      <Dialog open={stateOpen} onClose={() => !savingState && setStateOpen(false)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 380 } } } }}>
+        <DialogTitle>장비 상태를 변경하시겠습니까?</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: 0.5 }}>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Typography variant="body2" sx={{ width: 76, flexShrink: 0, color: 'text.disabled' }}>장비명</Typography>
+              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, wordBreak: 'break-word' }}>{group?.name}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+              <Typography variant="body2" sx={{ width: 76, flexShrink: 0, color: 'text.disabled' }}>현재 상태</Typography>
+              <StatusChip status={meta?.status ?? 'neutral'} label={meta?.label ?? '-'} />
+            </Box>
+            <TextField select label="변경 상태" size="small" value={newState} onChange={(e) => setNewState(e.target.value)} fullWidth>
+              {STATE_ORDER.map((s) => <MenuItem key={s} value={s}>{EQ_STATE[s].label}</MenuItem>)}
+            </TextField>
+            <TextField select label="사유 (선택)" size="small" value={reason} onChange={(e) => setReason(e.target.value)} fullWidth>
+              <MenuItem value="">(선택 안 함)</MenuItem>
+              {STATE_REASONS.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+            </TextField>
+            {group && group.count > 1 && (
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>※ 대표 1대(관리번호 {repCode}) 기준으로 변경됩니다.</Typography>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setStateOpen(false)} disabled={savingState} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button variant="contained" onClick={applyStateChange} disabled={savingState}>{savingState ? '적용 중…' : '적용'}</Button>
         </DialogActions>
       </Dialog>
     </>

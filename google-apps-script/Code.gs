@@ -710,7 +710,7 @@ function deleteSchedule_(req) {
 const EQ_EDIT_FIELDS = [
   ['mgr', '담당자'], ['maker', '제조사'], ['model', '모델명'], ['assetNo', '자산번호'], ['nfec', 'NFEC번호'],
   ['installLoc', '설치장소'], ['installDate', '설치일자'], ['vendor', '업체명'], ['mgr2', '엔지니어'],
-  ['contact', '연락처'], ['note', '비고'],
+  ['contact', '연락처'], ['note', '비고'], ['state', '상태'],
 ];
 
 function equipmentCtx_() {
@@ -756,6 +756,13 @@ function updateEquipment_(req) {
     if (req[key] === undefined) continue; // 전달되지 않은 필드는 건드리지 않음
     const ci = col(hdr);
     if (ci >= 0) sh.getRange(sheetRow, ci + 1).setValue(String(req[key] == null ? '' : req[key]));
+  }
+  // STEP21 상태 변경 사유(선택) — '변경사유/상태사유/사유' 열이 있으면 저장, 없으면 무시. 이력은 STEP22.
+  if (req.reason !== undefined) {
+    const REASON_HDRS = ['변경사유', '상태사유', '사유'];
+    let rc = -1;
+    for (let r = 0; r < REASON_HDRS.length; r++) { const ri = col(REASON_HDRS[r]); if (ri >= 0) { rc = ri; break; } }
+    if (rc >= 0) sh.getRange(sheetRow, rc + 1).setValue(String(req.reason || ''));
   }
   return json_({ status: 'ok', code: target });
 }
