@@ -139,6 +139,9 @@ export default function Equipment() {
     }
   }
 
+  // 간트 가로 스크롤 컨테이너 — 마우스 휠을 가로 스크롤로 변환(마우스 사용자도 좌우 이동 가능)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
   // ── STEP15: 타임라인 전체 이동 (드래그) ── 단계 길이는 불변, start만 반월 단위로 이동
   const barAreaRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{ code: string; startX: number; halfPx: number } | null>(null)
@@ -192,6 +195,19 @@ export default function Equipment() {
       window.removeEventListener('mouseup', onUp)
     }
   }, [dragging, dispatch])
+
+  // 마우스 휠 → 가로 스크롤 (가로 overflow가 있을 때만; 없으면 페이지 세로 스크롤 그대로)
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth || !e.deltaY) return
+      el.scrollLeft += e.deltaY
+      e.preventDefault()
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
 
   // 이동분 저장 — 기존 updateSchedule(시작년월 기록) 재사용
   const saveMoves = async () => {
@@ -319,7 +335,7 @@ export default function Equipment() {
           </Box>
         )}
         <AppCard padding={12}>
-          <Box sx={{ overflowX: 'auto' }}>
+          <Box ref={scrollRef} sx={{ overflowX: 'auto' }}>
             <Box sx={{ minWidth: GANTT_NAME_W + Math.max(months.length, 8) * 38 }}>
               {/* 헤더 */}
               <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 1, mb: 0.5 }}>

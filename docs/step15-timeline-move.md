@@ -35,3 +35,6 @@ mousedown(막대, 관리자) → halfPx = 막대폭 / (months×2)
 ## 검증
 - `npm run type-check` · `npm run build` 통과. 페이지 렌더·기존 CRUD 정상, 콘솔 에러 0.
 - 관리자 드래그·저장 라운드트립: 사용자 정상 확인.
+
+## 후속 수정 (2026-06-15)
+- **마우스 휠 → 간트 가로 스크롤 변환**: 마우스 사용자가 휠로 타임라인을 좌우 이동 못 하던 문제(마우스 휠은 기본적으로 가로 overflow를 스크롤 안 함). `scrollRef` + 비수동(`{passive:false}`) wheel 리스너로 `deltaY → scrollLeft` 변환. **가로 overflow가 있을 때만** 작동(없으면 페이지 세로 스크롤 유지). 드래그(이동)·트랙패드 스와이프와 무관.
