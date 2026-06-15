@@ -16,7 +16,8 @@ import { EQ_STATE, eqStateKey } from './eqMeta'
 
 // 수정 가능 필드(11) — 읽기 전용: 관리번호/장비명/장비종류/도입금액/재원
 type FieldKey = 'mgr' | 'maker' | 'model' | 'assetNo' | 'nfec' | 'installLoc' | 'installDate' | 'vendor' | 'mgr2' | 'contact' | 'note'
-const EDIT_KEYS: FieldKey[] = ['mgr', 'maker', 'model', 'assetNo', 'nfec', 'installLoc', 'installDate', 'vendor', 'mgr2', 'contact', 'note']
+// 비고는 시트에 열이 없어 저장 불가 → 읽기 전용으로 둠(편집 목록에서 제외)
+const EDIT_KEYS: FieldKey[] = ['mgr', 'maker', 'model', 'assetNo', 'nfec', 'installLoc', 'installDate', 'vendor', 'mgr2', 'contact']
 const LABELS: Record<FieldKey, string> = {
   mgr: '담당자', maker: '제조사', model: '모델명', assetNo: '자산번호', nfec: 'NFEC번호',
   installLoc: '설치장소', installDate: '설치일자', vendor: '업체명', mgr2: '엔지니어', contact: '연락처', note: '비고',
@@ -110,7 +111,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
         author: user, key: authKey, code: repCode,
         mgr: form.mgr, maker: form.maker, model: form.model, assetNo: form.assetNo, nfec: form.nfec,
         installLoc: form.installLoc, installDate: form.installDate, vendor: form.vendor, mgr2: form.mgr2,
-        contact: form.contact, note: form.note,
+        contact: form.contact,
       })
       setSaving(false)
       setConfirm(null)
@@ -182,7 +183,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
               <MetaRow label="재원" value={group.fund} />
             </Section>
             <Section title="기타">
-              {fieldRow(group, 'note')}
+              <MetaRow label="비고" value={group.note} />
             </Section>
 
             {editing && group.count > 1 && (
