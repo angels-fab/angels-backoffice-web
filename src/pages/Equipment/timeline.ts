@@ -34,6 +34,13 @@ export function halfToStart(half: number): string {
   return `${y}-${String(mo).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
+/** 표시용: 'yyyy-MM-dd' → "2027.10" (전반) / "2027.10.5" (후반·15일 이상). 드래그 툴팁 안내용 */
+export function fmtStartMonth(start: string): string {
+  const m = (start || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!m) return start
+  return `${+m[1]}.${+m[2]}${+m[3] >= 15 ? '.5' : ''}`
+}
+
 /** 시작년월을 deltaHalves 반월만큼 이동한 새 'yyyy-MM-dd' (단계 길이는 불변) */
 export function shiftStart(start: string, deltaHalves: number): string {
   const h = startToHalf(start)

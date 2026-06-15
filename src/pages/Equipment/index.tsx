@@ -35,7 +35,9 @@ import { useRole } from '@/auth/role'
 import type { ScheduleItem } from '@/types'
 import { STAGE, STAGE_ORDER, groupStage, phaseChip, todayHalfIndex, type StageCode } from './stageMeta'
 import { GanttHeader, GanttBar } from './gantt'
-import { calcHalfDelta, itemTimelineForMonths, MONTH_WIDTH, HALF_MONTH_WIDTH } from './timeline'
+import { calcHalfDelta, itemTimelineForMonths, shiftStart, fmtStartMonth, MONTH_WIDTH, HALF_MONTH_WIDTH } from './timeline'
+import DragTip from './DragTip'
+import type { DragTipData } from './DragTip'
 import EqProjectDrawer from './EqProjectDrawer'
 import ScheduleWrite from './ScheduleWrite'
 
@@ -148,6 +150,7 @@ export default function Equipment() {
   const draggedRef = useRef(false)
   const [preview, setPreview] = useState<{ code: string; px: number } | null>(null)
   const [dragging, setDragging] = useState(false)
+  const [tip, setTip] = useState<DragTipData | null>(null) // STEP18A: 드래그 프리뷰 툴팁(표시 전용)
   const [movedCodes, setMovedCodes] = useState<Set<string>>(new Set())
   const [savingMoves, setSavingMoves] = useState(false)
 
@@ -172,6 +175,14 @@ export default function Equipment() {
       const dh = calcHalfDelta(px, d.halfPx)
       lastDeltaRef.current = dh
       setPreview({ code: d.code, px: dh * d.halfPx }) // 반월 스냅된 위치로만 미리보기
+      const it = schedule.find(s => s.code === d.code)
+      if (it) {
+        setTip({
+          x: e.clientX,
+          y: e.clientY,
+          lines: [`${dh > 0 ? '+' : ''}${dh / 2}개월`, `${fmtStartMonth(it.start)} → ${fmtStartMonth(shiftStart(it.start, dh))}`],
+        })
+      }
     }
     const onUp = () => {
       const d = dragRef.current
@@ -184,6 +195,7 @@ export default function Equipment() {
       lastDeltaRef.current = 0
       setPreview(null)
       setDragging(false)
+      setTip(null)
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
@@ -241,6 +253,12 @@ export default function Equipment() {
         const stagesPrev = { ...it.stages, [d.stage]: String(nextHalves / 2) }
         setResizePrev({ code: d.code, tl: itemTimelineForMonths(it.start, stagesPrev, months) })
       }
+      const deltaH = nextHalves - d.baseHalves
+      setTip({
+        x: e.clientX,
+        y: e.clientY,
+        lines: [d.stage, `${d.baseHalves / 2}개월 → ${nextHalves / 2}개월`, `(${deltaH > 0 ? '+' : ''}${deltaH / 2}개월)`],
+      })
     }
     const onUp = () => {
       const d = resizeRef.current
@@ -253,6 +271,7 @@ export default function Equipment() {
       lastResizeHalvesRef.current = 0
       setResizePrev(null)
       setResizing(false)
+      setTip(null)
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
@@ -483,6 +502,9 @@ export default function Equipment() {
           {snack.msg}
         </Alert>
       </Snackbar>
+
+      {/* STEP18A: 드래그 중 실시간 프리뷰 툴팁 (표시 전용) */}
+      <DragTip tip={tip} />
     </PageContainer>
   )
 }

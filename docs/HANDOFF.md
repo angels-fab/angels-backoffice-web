@@ -4,7 +4,7 @@
 > 이 파일은 머신 간 동기화되지 않는 Claude 로컬 메모리를 대신해, 다른 PC에서 맥락을 빠르게 잡기 위한 요약입니다.
 
 ## 현재 상태
-- **STEP 1~17 완료**. 모든 코드·문서 `main`에 push 완료(작업 시작 전 `/출근`으로 pull).
+- **STEP 1~17 (+18A 드래그 툴팁) 완료**. 모든 코드·문서 `main`에 push 완료(작업 시작 전 `/출근`으로 pull).
 - 배포: 프런트는 `main` push → GitHub Actions 자동배포(angels-fab.github.io). 백엔드(Apps Script) **@39** (clasp, URL 불변 · STEP15는 백엔드 변경 없음).
 - 빌드 상태: `npm run type-check`·`npm run build` 통과.
 - **운영 규칙: 작업 완료 시 자동으로 커밋·푸시(자동배포)하고, 작업 내역을 `docs/`에 MD로 기록한다.**
@@ -18,6 +18,7 @@
 - **STEP 16 타임라인 단계 리사이즈(오른쪽 핸들) — `docs/step16-timeline-resize.md`**
 - **STEP 16.5 타임라인 그리드 너비 정규화(고정 px 단일 상수 MONTH_WIDTH/HALF_MONTH_WIDTH) — `docs/step16.5-grid-normalize.md`**
 - **STEP 17 자동 재계산(총소요기간·도입예정월·KPI·파이프라인) — 기존 timeline 반응형 파생으로 충족(신규 코드 없음), `docs/step17-auto-recalc.md`**
+- **STEP 18A 드래그 중 실시간 프리뷰 툴팁(이동/리사이즈, 표시 전용) — `docs/step18a-drag-tooltip.md`**
 - 아키텍처: `docs/ARCHITECTURE.md`, `docs/equipment-page-architecture.md`
 
 ## 핵심 규칙 (작업 시 유지)
