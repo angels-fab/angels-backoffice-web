@@ -41,8 +41,35 @@ export function calcHalfDelta(px: number, halfPx: number): number {
 }
 
 /**
+ * 한 일정(start + stages) → TL_BASE_YEAR 기준 절대 반월 칸 배열.
+ * 앞쪽 빈칸(startHalf개) + 단계 순서대로 코드 채움. 단계가 전혀 없으면 null.
+ * buildTimelines·itemTimelineForMonths의 공통 셀 생성 로직(중복 계산 금지).
+ */
+function itemCells(
+  start: string,
+  stages: Record<string, string> | undefined,
+): { cells: string[]; startHalf: number } | null {
+  const sh = startToHalf(start)
+  if (sh == null || sh < 0) return null
+  const cells: string[] = new Array(sh).fill('')
+  PHASE_LABELS.forEach((label, i) => {
+    const len = Math.max(0, Math.round(Number(stages?.[label] || 0) * 2))
+    for (let j = 0; j < len; j++) cells.push(PHASE_CODES[i])
+  })
+  return cells.length > sh ? { cells, startHalf: sh } : null
+}
+
+/** months 축의 시작 월이 TL_BASE_YEAR 기준 몇 번째 반월인지 */
+function monthsOffsetHalf(months: TlMonth[]): number {
+  if (!months.length) return 0
+  const y = parseInt(months[0].year, 10)
+  const mo = parseInt(months[0].month, 10)
+  return ((y - TL_BASE_YEAR) * 12 + (mo - 1)) * 2
+}
+
+/**
  * 도입 일정(start + stages) → 공유 months 축 + 코드별 timeline(반월 칸 배열).
- * eqSlice 로더와 동일 규칙 — 드래그(이동)·STEP16(리사이즈) 후 타임라인 재파생의 단일 창구.
+ * eqSlice 로더와 동일 규칙 — 이동(STEP15)·리사이즈(STEP16) 후 타임라인 재파생의 단일 창구.
  */
 export function buildTimelines(
   items: Pick<ScheduleItem, 'code' | 'start' | 'stages'>[],
@@ -51,18 +78,12 @@ export function buildTimelines(
   let firstHalf = Infinity
   let lastHalf = -1
   for (const it of items) {
-    const sh = startToHalf(it.start)
-    if (!it.code || sh == null || sh < 0) continue
-    const cells: string[] = new Array(sh).fill('')
-    PHASE_LABELS.forEach((label, i) => {
-      const len = Math.max(0, Math.round(Number(it.stages?.[label] || 0) * 2))
-      for (let j = 0; j < len; j++) cells.push(PHASE_CODES[i])
-    })
-    if (cells.length > sh) {
-      rawMap[it.code] = cells
-      if (sh < firstHalf) firstHalf = sh
-      if (cells.length - 1 > lastHalf) lastHalf = cells.length - 1
-    }
+    if (!it.code) continue
+    const r = itemCells(it.start, it.stages)
+    if (!r) continue
+    rawMap[it.code] = r.cells
+    if (r.startHalf < firstHalf) firstHalf = r.startHalf
+    if (r.cells.length - 1 > lastHalf) lastHalf = r.cells.length - 1
   }
   const months: TlMonth[] = []
   const byCode: Record<string, string[]> = {}
@@ -79,4 +100,21 @@ export function buildTimelines(
     }
   }
   return { months, byCode }
+}
+
+/**
+ * 단일 일정의 timeline을 **현재 months 축에 정렬**해 반환(축 재계산 없음).
+ * 리사이즈 드래그 중 실시간 미리보기용 — 축이 흔들리지 않게 현재 창에 맞춰 자른다.
+ */
+export function itemTimelineForMonths(
+  start: string,
+  stages: Record<string, string> | undefined,
+  months: TlMonth[],
+): string[] {
+  const width = months.length * 2
+  const r = itemCells(start, stages)
+  if (!r) return new Array(width).fill('')
+  const off = monthsOffsetHalf(months)
+  const padded = r.cells.concat(new Array(Math.max(0, off + width - r.cells.length)).fill(''))
+  return padded.slice(off, off + width)
 }

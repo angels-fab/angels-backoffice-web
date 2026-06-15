@@ -1,4 +1,5 @@
 // 도입 타임라인 간트차트 — 월 단위 그리드, 각 월 안에 반달(전반/후반) 2칸
+import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { TlMonth } from '@/types'
 import { STAGE, STAGE_ORDER } from './stageMeta'
 
@@ -69,8 +70,19 @@ export function GanttHeader({ months: allMonths }: { months: TlMonth[] }) {
 }
 
 // 각 장비 간트 막대
-// previewPx: 드래그 중 실시간 미리보기용 가로 이동량(px). 색 막대 레이어만 이동(격자선 고정).
-export function GanttBar({ tl, months: allMonths, previewPx = 0 }: { tl: string[]; months: TlMonth[]; previewPx?: number }) {
+// previewPx: 드래그(이동) 중 실시간 미리보기용 가로 이동량(px). 색 막대 레이어만 이동(격자선 고정).
+// onResizeStart: 단계 오른쪽 끝 핸들 mousedown(STEP16 리사이즈). 있으면 각 단계 끝에 핸들 표시.
+export function GanttBar({
+  tl,
+  months: allMonths,
+  previewPx = 0,
+  onResizeStart,
+}: {
+  tl: string[]
+  months: TlMonth[]
+  previewPx?: number
+  onResizeStart?: (e: ReactMouseEvent, stageCode: string) => void
+}) {
   const months = allMonths.slice(0, TL_VISIBLE_MONTHS)
   const template = ganttGridTemplate(months)
   const cols = []
@@ -81,6 +93,27 @@ export function GanttBar({ tl, months: allMonths, previewPx = 0 }: { tl: string[
     const s1 = (tl[mi * 2] || '').trim()
     const s2 = (tl[mi * 2 + 1] || '').trim()
     cols.push({ mi, m, isYearStart, isYearEnd, s1, s2 })
+  }
+
+  // 반월 칸 1개 렌더. 단계의 오른쪽 경계 칸(다음 칸이 다른 코드/빈칸)이면 리사이즈 핸들을 셀 안쪽 우측에 붙인다.
+  const renderHalf = (hi: number, m: TlMonth, half: string) => {
+    const code = (tl[hi] || '').trim()
+    const isEnd = !!code && (tl[hi + 1] || '').trim() !== code
+    return (
+      <div
+        className="gantt-cell"
+        style={code ? { background: TL_STAGE_COLOR[code] || undefined } : undefined}
+        title={code ? `${m.year || ''} ${m.month || ''} ${half}: ${TL_STAGE_NAME[code] || code}` : undefined}
+      >
+        {isEnd && onResizeStart && (
+          <span
+            className="gantt-resize-h"
+            title={`${TL_STAGE_NAME[code] || code} 기간 조절 (드래그)`}
+            onMouseDown={(e) => { e.stopPropagation(); onResizeStart(e, code) }}
+          />
+        )}
+      </div>
+    )
   }
 
   return (
@@ -104,16 +137,8 @@ export function GanttBar({ tl, months: allMonths, previewPx = 0 }: { tl: string[
       >
         {cols.map(c => (
           <div key={c.mi} className="gantt-month">
-            <div
-              className="gantt-cell"
-              style={c.s1 ? { background: TL_STAGE_COLOR[c.s1] || undefined } : undefined}
-              title={c.s1 ? `${c.m.year || ''} ${c.m.month || ''} 전반: ${TL_STAGE_NAME[c.s1] || c.s1}` : undefined}
-            />
-            <div
-              className="gantt-cell"
-              style={c.s2 ? { background: TL_STAGE_COLOR[c.s2] || undefined } : undefined}
-              title={c.s2 ? `${c.m.year || ''} ${c.m.month || ''} 후반: ${TL_STAGE_NAME[c.s2] || c.s2}` : undefined}
-            />
+            {renderHalf(c.mi * 2, c.m, '전반')}
+            {renderHalf(c.mi * 2 + 1, c.m, '후반')}
           </div>
         ))}
       </div>

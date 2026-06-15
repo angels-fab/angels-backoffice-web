@@ -29,13 +29,13 @@ import {
   EmptyState,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { loadEqData, shiftScheduleStart } from '@/store/slices/eqSlice'
+import { loadEqData, shiftScheduleStart, resizeScheduleStage } from '@/store/slices/eqSlice'
 import { deleteSchedule, updateSchedule } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import type { ScheduleItem } from '@/types'
 import { STAGE, STAGE_ORDER, groupStage, phaseChip, todayHalfIndex, type StageCode } from './stageMeta'
 import { GanttHeader, GanttBar } from './gantt'
-import { calcHalfDelta } from './timeline'
+import { calcHalfDelta, itemTimelineForMonths } from './timeline'
 import EqProjectDrawer from './EqProjectDrawer'
 import ScheduleWrite from './ScheduleWrite'
 
@@ -209,6 +209,64 @@ export default function Equipment() {
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
 
+  // ── STEP16: 단계 길이 리사이즈 (오른쪽 핸들) ── stages만 변경, buildTimelines로 재파생
+  const resizeRef = useRef<{ code: string; stage: string; startX: number; halfPx: number; baseHalves: number } | null>(null)
+  const lastResizeHalvesRef = useRef(0)
+  const [resizing, setResizing] = useState(false)
+  const [resizePrev, setResizePrev] = useState<{ code: string; tl: string[] } | null>(null)
+
+  const startResize = (e: ReactMouseEvent, code: string, stageCode: string) => {
+    if (!isAdmin || !code) return
+    const label = STAGE[stageCode as StageCode]?.label
+    if (!label) return
+    const w = barAreaRef.current?.offsetWidth || 0
+    const halfPx = w / Math.max(1, months.length * 2)
+    if (!halfPx) return
+    const it = schedule.find(s => s.code === code)
+    const baseHalves = Math.max(1, Math.round(Number(it?.stages?.[label] || 0) * 2))
+    resizeRef.current = { code, stage: label, startX: e.clientX, halfPx, baseHalves }
+    lastResizeHalvesRef.current = baseHalves
+    draggedRef.current = false
+    setResizePrev({ code, tl: it ? itemTimelineForMonths(it.start, it.stages, months) : [] })
+    setResizing(true)
+    e.preventDefault()
+  }
+
+  useEffect(() => {
+    if (!resizing) return
+    const onMove = (e: MouseEvent) => {
+      const d = resizeRef.current
+      if (!d) return
+      const px = e.clientX - d.startX
+      if (Math.abs(px) > 3) draggedRef.current = true
+      const nextHalves = Math.max(1, d.baseHalves + calcHalfDelta(px, d.halfPx)) // 최소 0.5개월
+      lastResizeHalvesRef.current = nextHalves
+      const it = schedule.find(s => s.code === d.code)
+      if (it) {
+        const stagesPrev = { ...it.stages, [d.stage]: String(nextHalves / 2) }
+        setResizePrev({ code: d.code, tl: itemTimelineForMonths(it.start, stagesPrev, months) })
+      }
+    }
+    const onUp = () => {
+      const d = resizeRef.current
+      const nextHalves = lastResizeHalvesRef.current
+      if (d && nextHalves && nextHalves !== d.baseHalves) {
+        dispatch(resizeScheduleStage({ code: d.code, stage: d.stage, deltaHalves: nextHalves - d.baseHalves }))
+        setMovedCodes(prev => new Set(prev).add(d.code))
+      }
+      resizeRef.current = null
+      lastResizeHalvesRef.current = 0
+      setResizePrev(null)
+      setResizing(false)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [resizing, dispatch, schedule, months])
+
   // 이동분 저장 — 기존 updateSchedule(시작년월 기록) 재사용
   const saveMoves = async () => {
     if (savingMoves || movedCodes.size === 0) return
@@ -324,11 +382,11 @@ export default function Equipment() {
       </ContentSection>
 
       {/* ④ 도입 타임라인 (간트) */}
-      <ContentSection title="도입 타임라인" description={isAdmin ? '구매 절차 단계 간트 — 막대를 드래그해 전체 일정 이동 (가로 스크롤)' : '구매 절차 단계 간트 (가로 스크롤)'} last>
+      <ContentSection title="도입 타임라인" description={isAdmin ? '구매 절차 단계 간트 — 막대 드래그로 전체 이동, 단계 끝 핸들로 기간 조절 (가로 스크롤)' : '구매 절차 단계 간트 (가로 스크롤)'} last>
         {isAdmin && movedCodes.size > 0 && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, px: 1.5, py: 1, borderRadius: 1, bgcolor: 'background.elevated', border: 1, borderColor: 'divider' }}>
             <Typography variant="body2" sx={{ flex: 1, color: 'text.secondary' }}>
-              타임라인 {movedCodes.size}건 이동됨 — 저장하면 시트에 반영됩니다.
+              타임라인 {movedCodes.size}건 변경됨 — 저장하면 시트에 반영됩니다.
             </Typography>
             <Button size="small" onClick={revertMoves} disabled={savingMoves} sx={{ color: 'text.secondary' }}>되돌리기</Button>
             <Button size="small" variant="contained" onClick={saveMoves} disabled={savingMoves}>{savingMoves ? '저장 중…' : '저장'}</Button>
@@ -368,7 +426,12 @@ export default function Equipment() {
                         sx={{ flex: 1, minWidth: 0, cursor: isAdmin ? 'grab' : undefined, userSelect: 'none' }}
                         onMouseDown={isAdmin ? (e) => startDrag(e, it.code) : undefined}
                       >
-                        <GanttBar tl={it.timeline} months={months} previewPx={preview?.code === it.code ? preview.px : 0} />
+                        <GanttBar
+                          tl={resizePrev?.code === it.code ? resizePrev.tl : it.timeline}
+                          months={months}
+                          previewPx={preview?.code === it.code ? preview.px : 0}
+                          onResizeStart={isAdmin ? (e, stageCode) => startResize(e, it.code, stageCode) : undefined}
+                        />
                       </Box>
                     </Box>
                   )

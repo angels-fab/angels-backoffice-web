@@ -1,10 +1,10 @@
 # 인계 노트 (집 ↔ 사무실 이어가기)
 
-> 갱신: 2026-06-15 (사무실 PC) · 다음 작업: STEP16
+> 갱신: 2026-06-15 (사무실 PC) · 다음 작업: STEP17
 > 이 파일은 머신 간 동기화되지 않는 Claude 로컬 메모리를 대신해, 다른 PC에서 맥락을 빠르게 잡기 위한 요약입니다.
 
 ## 현재 상태
-- **STEP 1~15 완료**. 모든 코드·문서 `main`에 push 완료(작업 시작 전 `/출근`으로 pull).
+- **STEP 1~16 완료**. 모든 코드·문서 `main`에 push 완료(작업 시작 전 `/출근`으로 pull).
 - 배포: 프런트는 `main` push → GitHub Actions 자동배포(angels-fab.github.io). 백엔드(Apps Script) **@39** (clasp, URL 불변 · STEP15는 백엔드 변경 없음).
 - 빌드 상태: `npm run type-check`·`npm run build` 통과.
 - **운영 규칙: 작업 완료 시 자동으로 커밋·푸시(자동배포)하고, 작업 내역을 `docs/`에 MD로 기록한다.**
@@ -15,6 +15,7 @@
 - STEP 13 센터 업무현황 CRUD + 시트 스키마(상태/발의일자/예정일/검토필요) + onEdit 트리거 — `docs/step13-work-crud.md`
 - STEP 14 장비도입관리 CRUD(도입관리 시트 1:1) — `docs/step14-schedule-crud.md`
 - **STEP 15 장비도입관리 타임라인 전체 이동(드래그) — `docs/step15-timeline-move.md`**
+- **STEP 16 타임라인 단계 리사이즈(오른쪽 핸들) — `docs/step16-timeline-resize.md`**
 - 아키텍처: `docs/ARCHITECTURE.md`, `docs/equipment-page-architecture.md`
 
 ## 핵심 규칙 (작업 시 유지)
@@ -29,8 +30,7 @@
 - [x] 인앱 CRUD 확인 — 완료.
 
 ## 다음 작업 (예정)
-- **STEP16 타임라인 단계 리사이즈** — 단계 경계 드래그로 길이(개월) 조절 → `buildTimelines` 재파생.
-- **STEP17 자동 재계산** — 총소요기간·도입예정월·KPI·파이프라인 실시간 반영.
+- **STEP17 자동 재계산** — 총소요기간·도입예정월·KPI·파이프라인 실시간 반영(이동/리사이즈 후 stages·`buildTimelines` 결과로 파생, 단일 진입점 유지).
 - (이후) 장비운영관리 고도화 · 근무현황(Google Calendar 기반 조회 전용) · 권한관리 · NAS 연동 · UI 스프린트.
 - (보류) 바로가기(/links) 디자인 시스템 이관.
 - (확정) **일정(캘린더) CRUD는 구현하지 않음** — Google Calendar를 원본으로 유지, 포털은 조회 전용.

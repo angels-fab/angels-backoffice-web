@@ -234,6 +234,22 @@ const eqSlice = createSlice({
       state.schedule.forEach(s => { s.timeline = byCode[s.code] ?? [] })
       state.raw.forEach(r => { r.timeline = byCode[r.code] ?? [] })
     },
+    // STEP16 — 단계 길이 리사이즈: 특정 단계(stage 라벨)의 개월을 deltaHalves(반월)만큼 변경.
+    // 최소 0.5개월(1반월), 음수 불가. 타임라인은 buildTimelines로 재파생(이동과 동일 경로).
+    resizeScheduleStage(state, action: PayloadAction<{ code: string; stage: string; deltaHalves: number }>) {
+      const { code, stage, deltaHalves } = action.payload
+      if (!code || !stage || !deltaHalves) return
+      const item = state.schedule.find(s => s.code === code)
+      if (!item) return
+      const curHalf = Math.max(0, Math.round(Number(item.stages?.[stage] || 0) * 2))
+      const nextHalf = Math.max(1, curHalf + deltaHalves) // 최소 0.5개월
+      if (nextHalf === curHalf) return
+      item.stages = { ...item.stages, [stage]: String(nextHalf / 2) }
+      const { months, byCode } = buildTimelines(state.schedule)
+      state.months = months
+      state.schedule.forEach(s => { s.timeline = byCode[s.code] ?? [] })
+      state.raw.forEach(r => { r.timeline = byCode[r.code] ?? [] })
+    },
   },
   extraReducers: builder => {
     builder
@@ -262,5 +278,5 @@ const eqSlice = createSlice({
   },
 })
 
-export const { shiftScheduleStart } = eqSlice.actions
+export const { shiftScheduleStart, resizeScheduleStage } = eqSlice.actions
 export default eqSlice.reducer
