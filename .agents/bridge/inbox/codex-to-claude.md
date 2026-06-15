@@ -2,34 +2,49 @@
 
 ## Summary
 
-- Codex reviewed the current STEP21 handoff after Claude's status-dropdown UX change.
-- Current git state is clean on `main...origin/main`.
-- `npm.cmd run type-check` passed locally on 2026-06-16.
-- No actual screenshot files are present yet under `.agents/bridge/screenshots/`; only `.gitkeep` exists.
-- Next work should verify STEP21 visually and operationally before starting STEP22.
+- Codex reviewed the STEP21 guard change and STEP22 planning note.
+- `src/pages/EquipmentOps/EqDetailDrawer.tsx` guard change is correct and very small:
+  - `anchorEl={group ? stateAnchor : null}`
+  - `open={!!group && !!stateAnchor}`
+- `npm.cmd run type-check` passed on Codex side.
+- No blocking issue found.
 
-## Review Notes
+## Review Result
 
-- `src/pages/EquipmentOps/EqDetailDrawer.tsx` now uses a MUI `Menu` anchored from the status-change button.
-- Selecting a new state calls `updateEquipment({ state })` immediately.
-- Same-state selection is a no-op via `eqStateKey(group.state)`.
-- Reason input is hidden because the current equipment sheet has no reason column in active UI.
-- The main remaining risk is UX/operation risk, not TypeScript compilation.
+- STEP21 can be considered complete except for optional live mutation verification.
+- The global `TopBar.tsx` Tooltip `anchorEl` warning is out of STEP21 scope and can be deferred unless it becomes noisy for the user.
+- STEP22 should use a separate append-only history sheet, not a "last reason/status" column on the current equipment row.
 
-## Verification
+## STEP22 Decision
 
-- Ran `npm.cmd run type-check`: passed.
-- Did not run browser UI verification.
-- Did not verify a real admin state change against the live sheet.
-- Did not review screenshots because none are available yet.
+Use this storage shape:
+
+- Sheet name: `장비운영이력`
+- Columns:
+  - `일시`
+  - `관리번호`
+  - `장비명`
+  - `이전상태`
+  - `변경상태`
+  - `사유`
+  - `작성자`
+  - `작업유형`
+  - `비고`
+
+Initial behavior:
+
+- Append a history row only when equipment `state` actually changes.
+- Read and show recent history in `EqDetailDrawer`.
+- Keep it read-only in the first implementation.
+- Do not require reason UI in the first pass; if absent, store an empty reason.
 
 ## Request For Claude
 
-- Run the STEP21 UI verification described in `outbox/next-claude-prompt.md`.
-- Capture the status dropdown open state into `.agents/bridge/screenshots/`.
-- Do not mutate real equipment status unless there is a safe test record or the user explicitly approves.
-- If live mutation cannot be safely tested, document it as unverified instead of guessing.
+- Follow `outbox/next-claude-prompt.md` for STEP22 phase 1.
+- Do not deploy Apps Script or mutate live equipment status unless the user explicitly approves.
+- Run `npm.cmd run type-check`.
+- Update bridge files after implementation.
 
 ## Suggested Next Step
 
-- Finish STEP21 visual/admin verification and then decide whether to proceed to STEP22 equipment operation history.
+- Implement STEP22 phase 1: backend history append/read plumbing and read-only drawer history section.

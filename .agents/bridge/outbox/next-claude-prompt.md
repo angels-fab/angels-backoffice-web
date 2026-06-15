@@ -12,48 +12,91 @@ Then continue the project using the repository's existing rules.
 Role:
 
 - You are the implementation and git sync agent.
-- You may edit source files for the requested task.
-- You are responsible for local verification and, when asked to finish/sync, git pull/commit/push.
-- Codex will review your result and prepare follow-up prompts.
+- Codex reviewed the STEP21 guard change and found no blocker.
+- Do not touch `TopBar.tsx` for the Tooltip warning in this task; it is a separate dev-only issue.
 
 Current task:
 
-Verify STEP21 equipment-ops status-change UX after the dialog-to-dropdown change. Do not start STEP22 yet unless STEP21 is verified or the user explicitly redirects.
+Start STEP22 phase 1: equipment operation history.
 
-Before starting:
+Goal:
 
-- Run `git status --short`.
-- Check `.agents/bridge/lock.md`.
-- If you edit source files, update `.agents/bridge/lock.md` with your worker name, task, and files to avoid.
-- Do not overwrite uncommitted work from another agent.
+- Track equipment state changes in a separate append-only history sheet.
+- Show recent operation history in `EquipmentOps` detail drawer.
+- Keep first pass read-only. No history editing/deleting.
 
-Verification steps:
+Storage decision:
 
-1. Start or use the local dev server.
-2. Open the equipment operations page.
-3. Log in as admin if needed.
-4. Open an equipment detail drawer.
-5. Click the status-change button and confirm the MUI dropdown opens cleanly.
-6. Capture the dropdown OPEN state.
-7. Save screenshots under `.agents/bridge/screenshots/`.
-   - Example: `.agents/bridge/screenshots/2026-06-16-step21-eqops-status-dropdown-desktop.png`
-   - Add a mobile screenshot only if responsive layout is affected or easy to capture.
-8. Do not change a real equipment state unless there is a safe test record or the user explicitly approves.
-9. If live mutation cannot be safely tested, write that clearly as unverified.
-10. Run `npm.cmd run type-check`.
+- Sheet name: `장비운영이력`
+- Columns:
+  - `일시`
+  - `관리번호`
+  - `장비명`
+  - `이전상태`
+  - `변경상태`
+  - `사유`
+  - `작성자`
+  - `작업유형`
+  - `비고`
 
-Review points to report:
+Backend guidance (`google-apps-script/Code.gs`):
 
-- Is immediate status apply from a dropdown acceptable UX, or should it require a confirmation step?
-- Does the selected/current state display clearly enough?
-- Does the dropdown align well with the button and fit the drawer layout?
-- Are there any console errors or failed network requests during the check?
-- Does unknown sheet state falling back to the unavailable state look acceptable?
+1. Add a history sheet helper.
+   - If the history sheet does not exist, append should create it with the header row.
+   - Read should return an empty list if the sheet does not exist.
+
+2. Add read support.
+   - Suggested doGet route: `?action=getEqHistory&code=<관리번호>`.
+   - Return JSON `{ status: 'ok', items: [...] }`.
+   - Filter by `관리번호` when `code` is provided.
+   - Sort newest first if practical.
+
+3. Append history on successful state change.
+   - In `updateEquipment_(req)`, capture previous state before writing.
+   - After successful write, if `req.state !== undefined` and previous state differs from new state, append one history row.
+   - Use current KST timestamp.
+   - Use `req.author` as `작성자`.
+   - Use `req.reason || ''`.
+   - Use `작업유형 = '상태변경'`.
+   - Leave `비고` empty for now.
+   - Keep existing update behavior unchanged for non-state edits.
+
+Frontend guidance:
+
+1. In `src/api/sheets.ts`, add:
+   - `EqHistoryItem` type
+   - `fetchEqHistory(code: string): Promise<EqHistoryItem[]>`
+
+2. In `src/pages/EquipmentOps/EqDetailDrawer.tsx`:
+   - Load recent history when a drawer opens and `repCode` exists.
+   - Add a read-only `운영 이력` section.
+   - Show newest entries compactly: date/time, previous state → new state, author, optional reason.
+   - Empty state text is fine when no history exists.
+   - After a successful state change, refresh history along with existing `onSaved`.
+   - Keep guest read access unless existing product logic suggests otherwise.
+
+3. Keep UI restrained and consistent with the existing Drawer.
+   - Use MUI icons only if adding icons.
+   - Do not add emoji.
+   - Do not add colored left borders.
+   - Do not make broad layout/style refactors.
+
+Safety:
+
+- Do not deploy Apps Script unless the user explicitly asks.
+- Do not perform live equipment state mutation unless the user explicitly names a safe test equipment record or approves the test.
+- If live mutation cannot be tested, document it as unverified.
+
+Verification:
+
+- Run `npm.cmd run type-check`.
+- If you change backend code, note that backend deployment is still pending.
+- If possible, run a frontend-only check that the drawer handles empty history gracefully.
 
 After finishing:
 
 - Update `.agents/bridge/inbox/claude-to-codex.md`.
-- Update `.agents/bridge/state.md` if the project state changed.
-- Include screenshot paths under a `## Screenshots` section.
-- Leave a concise next-step prompt in `.agents/bridge/outbox/next-codex-prompt.md` if Codex should continue.
-- Clear `.agents/bridge/lock.md` back to `status: free`.
+- Update `.agents/bridge/state.md`.
+- Leave `.agents/bridge/lock.md` as `status: free`.
+- Update or extend `docs/step22-eqops-history-plan.md` with the implemented decisions.
+- Commit/push only when the user says `퇴근` or explicitly asks to sync.

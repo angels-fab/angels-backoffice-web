@@ -8,16 +8,19 @@
 
 ## Current Focus
 
-- STEP21 status-change dropdown verified in dev (admin simulated via `localStorage.role='admin'`, no live sheet mutation): dropdown opens cleanly with 4 states (current `selected`), same-state is no-op; guest shows 5 sections and NO admin buttons.
-- Two items remain unverified: screenshots (preview_screenshot times out — env limitation, documented) and a real live state mutation (intentionally not performed per the no-mutation rule).
-- Console: only dev-only warnings (Redux serializable-middleware; MUI `anchorEl invalid` when menu open as drawer/route tears down — not reachable by normal mouse use, stripped in prod).
-- Next: Codex decides among (a) safe live-mutation test, (b) optional 1-line anchorEl guard, (c) start STEP22 equipment operation history.
+- STEP22 phase 1(장비 운영이력) implemented + adversarially reviewed + confirmed fixes applied. Backend NOT deployed; live history append/display unverified by design.
+- Backend `Code.gs`: append-only `장비운영이력` sheet (`appendEqHistory_`/`getEqHistory_`), and `updateEquipment_` appends one row only when state actually changes. Frontend: `fetchEqHistory` + read-only 운영 이력 drawer section.
+- 3-lens adversarial review found 8, confirmed 3 (1 med stale-history race, 2 low: label fallback, dup repCode) — all fixed in `EqDetailDrawer.tsx` (unified guarded load via refreshTick; raw label for non-standard states; single repCode). 5 refuted.
+- STEP21 status dropdown + anchorEl guard remain (uncommitted from prior round).
 
 ## Last Known Verification
 
 - 2026-06-15: Claude reported `npm run type-check` and `npm run build` passed for STEP21.
 - 2026-06-16: Codex ran `npm.cmd run type-check`; passed.
-- 2026-06-16: Claude ran browser/admin verification in dev (dropdown + guest gating OK) and `npm run type-check`; passed. Screenshots could not be saved (preview_screenshot timeout). Live state mutation left unverified by design.
+- 2026-06-16: Claude ran browser/admin verification in dev; dropdown and guest gating OK.
+- 2026-06-16: Claude added `anchorEl` guard to status `Menu`; type-check passed.
+- 2026-06-16: Codex re-ran `npm.cmd run type-check`; passed.
+- 2026-06-16: Claude implemented STEP22 phase 1 + review fixes; `npm.cmd run type-check` + `npm.cmd run build` passed; fresh dev server runtime had 0 console errors, drawer shows 6 sections incl. read-only 운영 이력 (empty handled gracefully while backend undeployed), admin gating intact.
 
 ## Decisions
 
@@ -28,6 +31,10 @@
 - Claude Code is responsible for development implementation and git push/pull.
 - Codex is responsible for reviewing Claude's output, identifying risks, and preparing the next Claude Code prompt.
 - Codex should avoid source edits and git sync unless the user explicitly overrides the role split.
+- Immediate status apply is acceptable for now; do not add a confirm modal unless user feedback says it feels risky.
+- Unknown non-empty equipment states may continue falling back to `비가동`, matching the existing count logic.
+- STEP22 phase 1 uses a separate append-only sheet named `장비운영이력`.
+- STEP22 phase 1 history columns: `일시`, `관리번호`, `장비명`, `이전상태`, `변경상태`, `사유`, `작성자`, `작업유형`, `비고`.
 
 ## Warnings
 
@@ -36,7 +43,8 @@
 - Do not store credentials in bridge files.
 - Do not have Codex and Claude Code implement changes concurrently.
 - Do not mutate live equipment status unless there is a safe test record or explicit user approval.
+- Do not deploy Apps Script until the user explicitly approves backend deployment.
 
 ## Next Handoff
 
-- Codex: review STEP21 verification in `inbox/claude-to-codex.md` (immediate-apply UX, anchorEl dev warning, eqStateKey fallback), then write `outbox/next-claude-prompt.md` choosing a safe live-mutation test, the optional anchorEl guard, or STEP22.
+- Codex: review STEP22 phase 1 impl + review fixes in `inbox/claude-to-codex.md`; decide (1) Apps Script backend deployment approval (history only records/reads once deployed), (2) a safe live-mutation test for end-to-end history verification, (3) phase 2 scope (reason UI, non-state edits history, history page). Then write `outbox/next-claude-prompt.md`.

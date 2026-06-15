@@ -35,6 +35,8 @@ function doGet(e) {
     }
     // 센터 업무 현황 읽기 — 헤더명 기준으로 행을 객체로 변환
     if (String(p.action || '') === 'getWorks') return getWorks_();
+    // STEP22 — 장비 운영이력 조회(관리번호 필터, 최신 먼저). 시트 없으면 빈 목록.
+    if (String(p.action || '') === 'getEqHistory') return getEqHistory_(p);
   } catch (err) {
     return json_({ status: 'error', message: String(err) });
   }
@@ -751,6 +753,10 @@ function updateEquipment_(req) {
   if (rowIdx < 0) return json_({ status: 'error', message: '대상 장비를 찾지 못했습니다' });
 
   const sheetRow = rowIdx + 1;
+  // STEP22 — 상태 변경 이력용: 쓰기 전에 이전 상태/장비명 캡처
+  const cState = col('상태'), cName = col('장비명');
+  const prevState = cState >= 0 ? String(values[rowIdx][cState] || '').trim() : '';
+  const eqName = cName >= 0 ? String(values[rowIdx][cName] || '').trim() : '';
   for (let f = 0; f < EQ_EDIT_FIELDS.length; f++) {
     const key = EQ_EDIT_FIELDS[f][0], hdr = EQ_EDIT_FIELDS[f][1];
     if (req[key] === undefined) continue; // 전달되지 않은 필드는 건드리지 않음
@@ -764,7 +770,76 @@ function updateEquipment_(req) {
     for (let r = 0; r < REASON_HDRS.length; r++) { const ri = col(REASON_HDRS[r]); if (ri >= 0) { rc = ri; break; } }
     if (rc >= 0) sh.getRange(sheetRow, rc + 1).setValue(String(req.reason || ''));
   }
+  // STEP22 — 상태가 실제로 바뀐 경우에만 운영이력 1건 append(호출부 lock 보유).
+  // 이력 기록 실패는 상태 변경 자체를 실패시키지 않음(이력은 보조).
+  if (req.state !== undefined) {
+    const newState = String(req.state == null ? '' : req.state).trim();
+    if (newState && newState !== prevState) {
+      try {
+        appendEqHistory_({
+          when: Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm'),
+          code: target, name: eqName, prev: prevState, next: newState,
+          reason: String(req.reason || ''), author: String(req.author || '').trim(),
+          type: '상태변경', note: '',
+        });
+      } catch (e) { /* 이력은 보조 — 무시 */ }
+    }
+  }
   return json_({ status: 'ok', code: target });
+}
+
+// ── STEP22 장비 운영이력(append-only) ── 별도 '장비운영이력' 시트. 없으면 생성. 조회는 인증 불필요.
+const EQ_HISTORY_SHEET = '장비운영이력';
+const EQ_HISTORY_HEADERS = ['일시', '관리번호', '장비명', '이전상태', '변경상태', '사유', '작성자', '작업유형', '비고'];
+
+// 이력 1건 append. rec 키: when/code/name/prev/next/reason/author/type/note. (호출부에서 lock 보유 가정)
+function appendEqHistory_(rec) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sh = ss.getSheetByName(EQ_HISTORY_SHEET);
+  if (!sh) sh = ss.insertSheet(EQ_HISTORY_SHEET);
+  if (sh.getLastRow() === 0) sh.appendRow(EQ_HISTORY_HEADERS); // 헤더 없으면 먼저 기록
+  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(function (h) { return String(h || '').trim(); });
+  const map = {
+    '일시': rec.when, '관리번호': rec.code, '장비명': rec.name, '이전상태': rec.prev, '변경상태': rec.next,
+    '사유': rec.reason, '작성자': rec.author, '작업유형': rec.type, '비고': rec.note,
+  };
+  const row = [];
+  for (let i = 0; i < headers.length; i++) row.push(map[headers[i]] !== undefined ? map[headers[i]] : '');
+  sh.appendRow(row);
+}
+
+// 운영이력 조회 — ?action=getEqHistory&code=<관리번호>. code 있으면 필터, 최신 먼저(최대 100건).
+function getEqHistory_(p) {
+  const code = String((p && p.code) || '').trim();
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(EQ_HISTORY_SHEET);
+  if (!sh) return json_({ status: 'ok', items: [] });
+  const values = sh.getDataRange().getValues();
+  if (values.length < 2) return json_({ status: 'ok', items: [] });
+  const headers = values[0].map(function (h) { return String(h || '').trim(); });
+  const idx = function (name) { return headers.indexOf(name); };
+  const ci = {
+    when: idx('일시'), code: idx('관리번호'), name: idx('장비명'), prev: idx('이전상태'), next: idx('변경상태'),
+    reason: idx('사유'), author: idx('작성자'), type: idx('작업유형'), note: idx('비고'),
+  };
+  const get = function (row, i) {
+    if (i < 0) return '';
+    const v = row[i];
+    if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
+    return String(v == null ? '' : v).trim();
+  };
+  const items = [];
+  for (let r = 1; r < values.length; r++) {
+    const row = values[r];
+    const rowCode = get(row, ci.code);
+    if (code && rowCode !== code) continue;
+    items.push({
+      when: get(row, ci.when), code: rowCode, name: get(row, ci.name), prev: get(row, ci.prev),
+      next: get(row, ci.next), reason: get(row, ci.reason), author: get(row, ci.author),
+      type: get(row, ci.type), note: get(row, ci.note),
+    });
+  }
+  items.reverse(); // append 순서(시간순)의 역순 = 최신 먼저
+  return json_({ status: 'ok', items: items.slice(0, 100) });
 }
 
 // ── 캘린더: 공유 캘린더의 일정을 JSON으로 (제목/시작/끝/종일/장소만 — 설명은 내보내지 않음) ──

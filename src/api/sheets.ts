@@ -321,6 +321,37 @@ export async function updateEquipment(p: EquipmentUpdateInput): Promise<void> {
   if (json.status !== 'ok') throw new Error(json.message || '수정 실패')
 }
 
+// ── STEP22 장비 운영이력 (읽기 전용, append-only '장비운영이력' 시트) ──
+export interface EqHistoryItem {
+  /** 기록 일시 'yyyy-MM-dd HH:mm' (KST) */
+  when: string
+  /** 관리번호 */
+  code: string
+  /** 장비명 */
+  name: string
+  /** 이전 상태 */
+  prev: string
+  /** 변경 상태 */
+  next: string
+  /** 사유(없으면 빈 문자열) */
+  reason: string
+  /** 작성자(변경 수행 관리자) */
+  author: string
+  /** 작업유형 — 현재는 '상태변경' */
+  type: string
+  /** 비고 */
+  note: string
+}
+
+/** 장비 운영이력 조회 — 관리번호로 필터(최신 먼저). 이력 시트가 없으면 빈 배열. 인증 불필요(조회 전용). */
+export async function fetchEqHistory(code: string): Promise<EqHistoryItem[]> {
+  const res = await fetch(`${SCRIPT_URL}?action=getEqHistory&code=${encodeURIComponent(code)}`)
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  const json = (await res.json()) as { status: string; items?: EqHistoryItem[]; message?: string }
+  if (json.status !== 'ok') throw new Error(json.message || '오류')
+  return json.items || []
+}
+
 // ── 캘린더 일정 추가/수정/삭제 (Apps Script doPost) ──
 /** 수정/삭제 적용 범위 — 반복 일정에서 그 회차만(single) vs 전체 시리즈(series) */
 export type CalScope = 'single' | 'series'

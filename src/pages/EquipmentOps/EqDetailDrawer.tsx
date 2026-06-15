@@ -13,8 +13,8 @@ import DialogActions from '@mui/material/DialogActions'
 import EditIcon from '@mui/icons-material/Edit'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import { AppDrawer, StatusChip } from '@/components/ds'
-import { updateEquipment } from '@/api/sheets'
-import type { EqGroup } from '@/types'
+import { updateEquipment, fetchEqHistory, type EqHistoryItem } from '@/api/sheets'
+import type { EqGroup, EqStateKey } from '@/types'
 import { EQ_STATE, eqStateKey } from './eqMeta'
 
 // 수정 가능 필드(11) — 읽기 전용: 관리번호/장비명/장비종류/도입금액/재원
@@ -57,6 +57,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 const k = (v: number) => Math.round(v / 1000).toLocaleString()
+// STEP22 — 이력 상태 문자열 표시: 빈값은 '-', 표준 4키만 라벨(설치중/운영중 등), 비표준값은 원문 그대로.
+const stateLabel = (s: string) => { const t = (s || '').trim(); if (!t) return '-'; return t in EQ_STATE ? EQ_STATE[t as EqStateKey].label : t }
 
 export interface EqDetailDrawerProps {
   group: EqGroup | null
@@ -78,6 +80,10 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
   const [confirm, setConfirm] = useState<{ key: FieldKey; label: string; before: string; after: string }[] | null>(null)
   const [stateAnchor, setStateAnchor] = useState<HTMLElement | null>(null) // STEP21 상태 변경 드롭다운
   const [savingState, setSavingState] = useState(false)
+  const [history, setHistory] = useState<EqHistoryItem[]>([]) // STEP22 운영이력(읽기 전용)
+  const [histLoading, setHistLoading] = useState(false)
+  const [refreshTick, setRefreshTick] = useState(0) // STEP22 이력 재조회 트리거
+  const repCode = group ? group.codes.filter(Boolean)[0] || '' : ''
 
   // 다른 장비 열거나 닫으면 수정 상태 초기화
   useEffect(() => {
@@ -87,9 +93,20 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
     setStateAnchor(null)
   }, [group])
 
+  // STEP22 — 드로어 열림/장비 변경/상태변경 시 대표 관리번호 기준 운영이력 로드(조회 전용, 단일 가드 경로). 닫히면 비움.
+  useEffect(() => {
+    if (!group || !repCode) { setHistory([]); return }
+    let alive = true
+    setHistLoading(true)
+    fetchEqHistory(repCode)
+      .then((items) => { if (alive) setHistory(items) })
+      .catch(() => { if (alive) setHistory([]) })
+      .finally(() => { if (alive) setHistLoading(false) })
+    return () => { alive = false }
+  }, [group, repCode, refreshTick])
+
   const meta = group ? EQ_STATE[eqStateKey(group.state)] : null
   const codes = group ? group.codes.filter(Boolean).join(', ') : ''
-  const repCode = group ? group.codes.filter(Boolean)[0] || '' : ''
   const set = (key: FieldKey) => (v: string) => setForm((f) => ({ ...f, [key]: v }))
 
   const startEdit = () => {
@@ -146,6 +163,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
       setSavingState(false)
       showSnack?.(`장비 상태를 '${EQ_STATE[s as keyof typeof EQ_STATE]?.label ?? s}'(으)로 변경했습니다.`, 'success')
       onSaved?.(group.name)
+      setRefreshTick((t) => t + 1) // STEP22 — 이력 즉시 재조회(단일 가드 effect 경유, stale 방지)
     } catch (err) {
       setSavingState(false)
       showSnack?.(err instanceof Error ? err.message : '상태 변경 실패', 'error')
@@ -216,6 +234,32 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
             <Section title="기타">
               <MetaRow label="비고" value={group.note} />
             </Section>
+            {/* STEP22 — 운영 이력(읽기 전용, 최신 먼저) */}
+            <Section title="운영 이력">
+              {histLoading ? (
+                <Typography variant="body2" sx={{ color: 'text.disabled' }}>불러오는 중…</Typography>
+              ) : history.length === 0 ? (
+                <Typography variant="body2" sx={{ color: 'text.disabled' }}>운영 이력이 없습니다</Typography>
+              ) : (
+                history.slice(0, 20).map((h, i) => (
+                  <Box key={i} sx={{ display: 'flex', gap: 1.5 }}>
+                    <Typography variant="caption" sx={{ width: 96, flexShrink: 0, color: 'text.disabled', fontFamily: 'monospace', pt: 0.25 }}>{h.when || '-'}</Typography>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                        <Box component="span" sx={{ color: 'text.disabled' }}>{stateLabel(h.prev)}</Box>
+                        {' → '}
+                        <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{stateLabel(h.next)}</Box>
+                      </Typography>
+                      {(h.author || h.reason) && (
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                          {h.author || '-'}{h.reason ? ` · ${h.reason}` : ''}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                ))
+              )}
+            </Section>
 
             {editing && group.count > 1 && (
               <Typography variant="caption" sx={{ color: 'text.disabled' }}>※ 대표 1대(관리번호 {repCode}) 기준으로 저장됩니다.</Typography>
@@ -249,8 +293,8 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
 
       {/* STEP21: 상태 변경 드롭다운(선택 즉시 적용). 사유는 시트 열이 없어 숨김. */}
       <Menu
-        anchorEl={stateAnchor}
-        open={!!stateAnchor}
+        anchorEl={group ? stateAnchor : null}
+        open={!!group && !!stateAnchor}
         onClose={() => setStateAnchor(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
