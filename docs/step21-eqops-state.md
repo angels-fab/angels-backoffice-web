@@ -6,15 +6,20 @@
 관리자가 장비 상태(**도입예정/도입중/가동중/비가동**)를 Drawer에서 변경. 사유 선택 입력(optional). **상태 변경만** — 운영이력 CRUD는 STEP22.
 
 ## 흐름
-카드 → Drawer → (관리자) **[상태 변경]** 버튼 → 다이얼로그(현재 상태 표시 + 변경 상태 Select + 사유 Select) → **[적용]** → `updateEquipment({code, state, reason})` → `loadEqData` 재fetch → picked 갱신 → 칩·KPI·카테고리·담당자 현황 자동 반영.
+카드 → Drawer → (관리자) **[상태 변경 ▾]** 버튼 → **드롭다운(MUI Menu)** 에서 상태 선택 → **선택 즉시** `updateEquipment({code, state})` → `loadEqData` 재fetch → picked 갱신 → 칩·KPI·카테고리·담당자 현황 자동 반영.
 
 ## UI
-- 상단 상태 칩 옆 "상태 변경" 버튼(관리자·조회 모드만). 게스트 미표시.
-- 다이얼로그가 선택+확인 일체(현재 상태 → 변경 상태 보이며 적용). 다중 대수는 대표 1대 기준 주석.
+- 상단 상태 칩 옆 "상태 변경 ▾" 버튼(관리자·조회 모드만). 게스트 미표시.
+- 클릭 시 **드롭다운 메뉴**가 열리고 4개 상태 표시(현재 상태 `selected`). 다른 상태 선택 → 즉시 적용(별도 확인창 없음). 현재 상태 재선택은 no-op.
+- **사유(reason)는 숨김** — 운영관리 시트에 사유 열이 없어 저장·표시가 안 되므로 입력 UI 제거(혼동 방지). 백엔드 `updateEquipment_`의 사유 처리 코드는 보존(추후 시트에 열 추가 시 재노출).
+
+## UX 변경 이력
+- 최초(2026-06-15): "장비 상태를 변경하시겠습니까?" 다이얼로그 + 변경 상태 Select + 사유 Select + 적용 버튼.
+- 수정(2026-06-15): 사용자 피드백 — **칩 클릭 → 드롭다운 선택 즉시 변경**으로 단순화, **사유 입력 숨김**(시트 열 부재). `STATE_REASONS`/`newState`/`reason`/`stateOpen` 상태 제거, 다이얼로그 → `Menu` 대체.
 
 ## 재사용 / 신규
-- 백엔드 `updateEquipment_`에 **'상태' 쓰기** 추가(EQ_EDIT_FIELDS) + **사유 열**('변경사유'/'상태사유'/'사유' 존재 시) 저장. @41 배포. 없으면 무시.
-- 프론트 `EquipmentUpdateInput`에 `state?`/`reason?`. `EqDetailDrawer` 상태 변경 버튼+다이얼로그. **새 저장구조 없음**(updateEquipment 재사용, 부분 업데이트).
+- 백엔드 `updateEquipment_`에 **'상태' 쓰기** 추가(EQ_EDIT_FIELDS) + **사유 열**('변경사유'/'상태사유'/'사유' 존재 시) 저장. @41 배포. 없으면 무시(현재 시트엔 열 없음).
+- 프론트 `EquipmentUpdateInput`에 `state?`/`reason?`(reason은 현재 프론트에서 미전송). `EqDetailDrawer` 상태 변경 버튼+**드롭다운 메뉴**. **새 저장구조 없음**(updateEquipment 재사용, 부분 업데이트).
 - 대표 1대(codes[0]) 기준.
 
 ## STEP22 연계
