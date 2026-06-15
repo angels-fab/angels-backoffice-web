@@ -51,6 +51,18 @@ function ProgressBar({ value }: { value: number }) {
 
 const GANTT_NAME_W = 168
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
+// STEP18B: 드래그 종료 후 확인 모달용 변경 기술자 (적용 전까지 Redux/시트 미반영)
+type PendingChange = {
+  kind: 'move' | 'resize'
+  code: string
+  stage?: string
+  deltaHalves: number
+  title: string
+  stageName?: string
+  before: string
+  after: string
+  delta: string
+}
 
 export default function Equipment() {
   const dispatch = useAppDispatch()
@@ -151,11 +163,11 @@ export default function Equipment() {
   const [preview, setPreview] = useState<{ code: string; px: number } | null>(null)
   const [dragging, setDragging] = useState(false)
   const [tip, setTip] = useState<DragTipData | null>(null) // STEP18A: 드래그 프리뷰 툴팁(표시 전용)
-  const [movedCodes, setMovedCodes] = useState<Set<string>>(new Set())
-  const [savingMoves, setSavingMoves] = useState(false)
+  const [pending, setPending] = useState<PendingChange | null>(null) // STEP18B: 드래그 후 확인 모달
+  const [applying, setApplying] = useState(false)
 
   const startDrag = (e: ReactMouseEvent, code: string) => {
-    if (!isAdmin || !code) return
+    if (!isAdmin || !code || pending) return // 모달 열려 있으면 추가 드래그 금지
     const halfPx = HALF_MONTH_WIDTH // 고정 반월 너비 — 헤더/바/리사이즈와 동일 기준
     dragRef.current = { code, startX: e.clientX, halfPx }
     lastDeltaRef.current = 0
@@ -187,15 +199,22 @@ export default function Equipment() {
     const onUp = () => {
       const d = dragRef.current
       const dh = lastDeltaRef.current
-      if (d && dh) {
-        dispatch(shiftScheduleStart({ code: d.code, deltaHalves: dh }))
-        setMovedCodes(prev => new Set(prev).add(d.code))
-      }
       dragRef.current = null
       lastDeltaRef.current = 0
-      setPreview(null)
       setDragging(false)
       setTip(null)
+      const it = d ? schedule.find(s => s.code === d.code) : undefined
+      if (d && dh && it) {
+        // 프리뷰(translateX)는 유지한 채 확인 모달 — 적용 전까지 Redux/시트 미변경
+        setPending({
+          kind: 'move', code: d.code, deltaHalves: dh,
+          title: '일정을 이동하시겠습니까?',
+          before: fmtStartMonth(it.start), after: fmtStartMonth(shiftStart(it.start, dh)),
+          delta: `${dh > 0 ? '+' : ''}${dh / 2}개월`,
+        })
+      } else {
+        setPreview(null) // 변경 없음 → 프리뷰 정리
+      }
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
@@ -203,7 +222,7 @@ export default function Equipment() {
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
-  }, [dragging, dispatch])
+  }, [dragging, dispatch, schedule])
 
   // 마우스 휠 → 가로 스크롤 (가로 overflow가 있을 때만; 없으면 페이지 세로 스크롤 그대로)
   useEffect(() => {
@@ -225,7 +244,7 @@ export default function Equipment() {
   const [resizePrev, setResizePrev] = useState<{ code: string; tl: string[] } | null>(null)
 
   const startResize = (e: ReactMouseEvent, code: string, stageCode: string) => {
-    if (!isAdmin || !code) return
+    if (!isAdmin || !code || pending) return // 모달 열려 있으면 추가 드래그 금지
     const label = STAGE[stageCode as StageCode]?.label
     if (!label) return
     const halfPx = HALF_MONTH_WIDTH // 고정 반월 너비 — 이동/헤더/바와 동일 기준
@@ -263,15 +282,22 @@ export default function Equipment() {
     const onUp = () => {
       const d = resizeRef.current
       const nextHalves = lastResizeHalvesRef.current
-      if (d && nextHalves && nextHalves !== d.baseHalves) {
-        dispatch(resizeScheduleStage({ code: d.code, stage: d.stage, deltaHalves: nextHalves - d.baseHalves }))
-        setMovedCodes(prev => new Set(prev).add(d.code))
-      }
       resizeRef.current = null
       lastResizeHalvesRef.current = 0
-      setResizePrev(null)
       setResizing(false)
       setTip(null)
+      if (d && nextHalves && nextHalves !== d.baseHalves) {
+        // 프리뷰(tl 오버라이드) 유지한 채 확인 모달 — 적용 전까지 Redux/시트 미변경
+        const deltaH = nextHalves - d.baseHalves
+        setPending({
+          kind: 'resize', code: d.code, stage: d.stage, deltaHalves: deltaH,
+          title: '기간을 변경하시겠습니까?', stageName: d.stage,
+          before: `${d.baseHalves / 2}개월`, after: `${nextHalves / 2}개월`,
+          delta: `${deltaH > 0 ? '+' : ''}${deltaH / 2}개월`,
+        })
+      } else {
+        setResizePrev(null) // 변경 없음 → 프리뷰 정리
+      }
     }
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
@@ -281,34 +307,51 @@ export default function Equipment() {
     }
   }, [resizing, dispatch, schedule, months])
 
-  // 이동분 저장 — 기존 updateSchedule(시작년월 기록) 재사용
-  const saveMoves = async () => {
-    if (savingMoves || movedCodes.size === 0) return
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
-    setSavingMoves(true)
+  // STEP18B 적용 — 기존 reducer로 낙관적 반영 + 기존 updateSchedule 저장 + 재fetch (새 저장 로직 없음)
+  const applyPending = async () => {
+    if (!pending || applying) return
+    if (!user || !authKey) { showSnack('관리자 로그인이 필요합니다.', 'error'); return }
+    const p = pending
+    const it = schedule.find(s => s.code === p.code)
+    if (!it) { setPending(null); setPreview(null); setResizePrev(null); return }
+    setApplying(true)
+    let newStart = it.start
+    let newStages = it.stages
+    if (p.kind === 'move') {
+      newStart = shiftStart(it.start, p.deltaHalves)
+      dispatch(shiftScheduleStart({ code: p.code, deltaHalves: p.deltaHalves }))
+    } else if (p.stage) {
+      const base = Math.max(1, Math.round(Number(it.stages?.[p.stage] || 0) * 2))
+      const next = Math.max(1, base + p.deltaHalves)
+      newStages = { ...it.stages, [p.stage]: String(next / 2) }
+      dispatch(resizeScheduleStage({ code: p.code, stage: p.stage, deltaHalves: p.deltaHalves }))
+    }
+    setPreview(null)
+    setResizePrev(null)
     try {
-      for (const code of movedCodes) {
-        const it = schedule.find(s => s.code === code)
-        if (!it) continue
-        await updateSchedule({
-          origCode: it.code, code: it.code, author: user, key: authKey,
-          name: it.name, mgr: it.mgr, status: it.status, start: it.start,
-          stages: it.stages, cat: it.cat, method: it.method, price: it.price,
-        })
-      }
-      setMovedCodes(new Set())
-      setSavingMoves(false)
-      showSnack('이동한 타임라인을 저장했습니다.', 'success')
+      await updateSchedule({
+        origCode: it.code, code: it.code, author: user, key: authKey,
+        name: it.name, mgr: it.mgr, status: it.status, start: newStart,
+        stages: newStages, cat: it.cat, method: it.method, price: it.price,
+      })
+      setApplying(false)
+      setPending(null)
+      showSnack(p.kind === 'move' ? '일정을 이동·저장했습니다.' : '기간을 변경·저장했습니다.', 'success')
       dispatch(loadEqData())
     } catch (err) {
-      setSavingMoves(false)
+      setApplying(false)
+      setPending(null)
       showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+      dispatch(loadEqData()) // 저장 실패 → 시트 기준으로 재동기화(낙관적 변경 되돌림)
     }
   }
 
-  const revertMoves = () => {
-    setMovedCodes(new Set())
-    dispatch(loadEqData())
+  // 취소 — 프리뷰만 폐기(드래그 이전 상태로 즉시 복원, Redux/시트 무변경)
+  const cancelPending = () => {
+    if (applying) return
+    setPending(null)
+    setPreview(null)
+    setResizePrev(null)
   }
 
   return (
@@ -396,16 +439,7 @@ export default function Equipment() {
       </ContentSection>
 
       {/* ④ 도입 타임라인 (간트) */}
-      <ContentSection title="도입 타임라인" description={isAdmin ? '구매 절차 단계 간트 — 막대 드래그로 전체 이동, 단계 끝 핸들로 기간 조절 (가로 스크롤)' : '구매 절차 단계 간트 (가로 스크롤)'} last>
-        {isAdmin && movedCodes.size > 0 && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, px: 1.5, py: 1, borderRadius: 1, bgcolor: 'background.elevated', border: 1, borderColor: 'divider' }}>
-            <Typography variant="body2" sx={{ flex: 1, color: 'text.secondary' }}>
-              타임라인 {movedCodes.size}건 변경됨 — 저장하면 시트에 반영됩니다.
-            </Typography>
-            <Button size="small" onClick={revertMoves} disabled={savingMoves} sx={{ color: 'text.secondary' }}>되돌리기</Button>
-            <Button size="small" variant="contained" onClick={saveMoves} disabled={savingMoves}>{savingMoves ? '저장 중…' : '저장'}</Button>
-          </Box>
-        )}
+      <ContentSection title="도입 타임라인" description={isAdmin ? '구매 절차 단계 간트 — 막대 드래그로 전체 이동, 단계 끝 핸들로 기간 조절 (드래그 후 확인 시 저장 · 가로 스크롤)' : '구매 절차 단계 간트 (가로 스크롤)'} last>
         <AppCard padding={12}>
           <Box ref={scrollRef} sx={{ overflowX: 'auto' }}>
             <Box sx={{ minWidth: GANTT_NAME_W + Math.max(months.length, 8) * MONTH_WIDTH }}>
@@ -488,6 +522,37 @@ export default function Equipment() {
           <Button color="error" variant="contained" onClick={confirmDelete} disabled={deleting}>
             {deleting ? '삭제 중…' : '삭제'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* STEP18B: 드래그 변경 확인 모달 — 적용 시 저장, 취소 시 원복 */}
+      <Dialog open={!!pending} onClose={cancelPending} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
+        <DialogTitle>{pending?.title}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 0.5 }}>
+            {pending?.stageName && (
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
+                <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.secondary' }}>단계</Typography>
+                <Typography variant="body2">{pending.stageName}</Typography>
+              </Box>
+            )}
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.secondary' }}>변경 전</Typography>
+              <Typography variant="body2">{pending?.before}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.secondary' }}>변경 후</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>{pending?.after}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.secondary' }}>변경량</Typography>
+              <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>{pending?.delta}</Typography>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={cancelPending} disabled={applying} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button variant="contained" onClick={applyPending} disabled={applying}>{applying ? '적용 중…' : '적용'}</Button>
         </DialogActions>
       </Dialog>
 
