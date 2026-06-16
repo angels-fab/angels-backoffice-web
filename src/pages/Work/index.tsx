@@ -34,17 +34,13 @@ import { useRole } from '@/auth/role'
 import { dateSortValue, fmtDate } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { W_STATUS, W_STATUS_TABS, classify, taskLink, taskTitle, type WStatus } from './workMeta'
+import { W_STATUS, classify, taskLink, taskTitle, type WStatus } from './workMeta'
 import TaskCard from './TaskCard'
 import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import WorkWrite from './WorkWrite'
 
 type StatusTab = 'all' | WStatus
-const STATUS_CHIPS: { key: StatusTab; label: string }[] = [
-  { key: 'all', label: '전체' },
-  ...W_STATUS_TABS.map((k) => ({ key: k as StatusTab, label: W_STATUS[k].label })),
-]
 // STEP24 — 담당자 현황 섹션 임시 숨김(구조 보존, 추후 재노출 시 true)
 const SHOW_MANAGER_STATUS = false
 
@@ -98,8 +94,6 @@ export default function Work() {
     }
     return { inProgress, done, hold, cancelled, etc, chief, remind, total: items.length }
   }, [items])
-  const statusCount = (k: StatusTab) => (k === 'all' ? counts.total : counts[k])
-
   // Remind 업무 = Remind 체크 (상태와 별개) — 최근 발의순
   const urgent = useMemo(
     () => items.filter((t) => t.remind).sort((a, b) => dateSortValue(b.start) - dateSortValue(a.start)),
@@ -248,9 +242,10 @@ export default function Work() {
 
       {/* ① KPI — 상태별 건수(클릭 시 해당 상태로 필터) */}
       <ContentSection>
-        <CardGrid columns={4}>
+        <CardGrid columns={5}>
           <StatTile value={counts.inProgress} unit="건" label="진행중" status="success" selected={tab === 'inProgress'} onClick={() => pickStatus('inProgress')} />
           <StatTile value={counts.done} unit="건" label="완료" status="neutral" selected={tab === 'done'} onClick={() => pickStatus('done')} />
+          <StatTile value={counts.total} unit="건" label="전체" status="info" selected={tab === 'all'} onClick={() => pickStatus('all')} />
           <StatTile value={counts.chief} unit="건" label="Check" status="purple" selected={chiefOnly} onClick={() => setChiefOnly((v) => !v)} />
           <StatTile value={counts.remind} unit="건" label="Remind" status="warning" selected={remindOpen} onClick={() => setRemindOpen((v) => !v)} />
         </CardGrid>
@@ -273,12 +268,6 @@ export default function Work() {
 
       {/* ② 업무 목록 — KPI(또는 Remind 펼침) 바로 아래. 기본 진행중, 진행중은 아코디언(모두 펼침) */}
       <ContentSection title="업무 목록" count={listed.length} last={!SHOW_MANAGER_STATUS}>
-        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5, alignItems: 'center' }}>
-          {STATUS_CHIPS.map((tb) => (
-            <StatusChip key={tb.key} status="neutral" label={`${tb.label} ${statusCount(tb.key)}`} selected={tab === tb.key} onClick={() => pickStatus(tb.key)} />
-          ))}
-          <StatusChip status="purple" label={`Check ${counts.chief}`} selected={chiefOnly} onClick={() => setChiefOnly((v) => !v)} />
-        </Box>
         <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무명·담당자·부서·구분·장소 검색" />}>
           {presentCats.map((c) => (
             <StatusChip key={c} status="neutral" label={c} selected={cat === c} onClick={() => setCat(c)} />
@@ -294,15 +283,15 @@ export default function Work() {
 
         {listed.length === 0 ? (
           <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
-        ) : tab === 'inProgress' ? (
-          // 진행중 — 아코디언(기본 모두 펼침, 개별 접기 가능): 회의 때 내용을 바로 본다
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+        ) : (chiefOnly || tab === 'inProgress' || tab === 'done') ? (
+          // 진행중·완료·Check — 2열 아코디언 그리드(진행중=기본 펼침, 완료/Check=접힘). 좁아지면 1열.
+          <CardGrid columns={2}>
             {listed.map((t) => (
-              <TaskAccordion key={t.id} t={t} onPick={setPicked} />
+              <TaskAccordion key={t.id} t={t} onPick={setPicked} defaultExpanded={tab === 'inProgress'} />
             ))}
-          </Box>
+          </CardGrid>
         ) : (
-          // 그 외 상태 — 컴팩트 행 목록
+          // 전체 — 컴팩트 행 목록
           <AppCard padding={0}>
             <Box>{listed.map(compactRow)}</Box>
           </AppCard>

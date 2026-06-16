@@ -25,8 +25,8 @@ export default function TaskCard({ t, onPick }: TaskCardProps) {
           <PushPinIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
           <StatusChip status={st.status} label={st.label} />
           {t.cat && <StatusChip status="neutral" label={t.cat} />}
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t.mgr || '미지정'}</Typography>
-          <Typography variant="caption" sx={{ ml: 'auto', color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>
+          <Typography variant="caption" sx={{ ml: 'auto', color: 'text.secondary' }}>{t.mgr || '미지정'}</Typography>
+          <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>
         </Box>
         <Typography
           variant="subtitle1"

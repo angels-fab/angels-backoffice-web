@@ -12,19 +12,22 @@ import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
 import { W_STATUS, classify, taskSubs, taskTitle, taskLink } from './workMeta'
+import SubLine from './SubLine'
 
 export interface TaskAccordionProps {
   t: WorkItem
   /** 상세 Drawer 열기(전체 보기·수정·삭제) */
   onPick: (t: WorkItem) => void
+  /** 초기 펼침 여부 — 진행중=true(회의 뷰), 완료/Check=false */
+  defaultExpanded?: boolean
 }
 
 /**
  * 진행중 업무 아코디언 — 회의 뷰용. 기본 펼침(개별 접기 가능).
  * 펼치면 메타(부서/예정/장소/완료) + 업무 내용을 한눈에 보여준다.
  */
-export default function TaskAccordion({ t, onPick }: TaskAccordionProps) {
-  const [expanded, setExpanded] = useState(true) // 초기 모두 펼침(회의 뷰)
+export default function TaskAccordion({ t, onPick, defaultExpanded = true }: TaskAccordionProps) {
+  const [expanded, setExpanded] = useState(defaultExpanded)
   const st = W_STATUS[classify(t)]
   const subs = taskSubs(t)
   const link = taskLink(t)
@@ -72,9 +75,9 @@ export default function TaskAccordion({ t, onPick }: TaskAccordionProps) {
             </Box>
           )}
           {subs.length > 0 ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               {subs.map((l, i) => (
-                <Typography key={i} variant="body2" sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{l}</Typography>
+                <SubLine key={i} line={l} />
               ))}
             </Box>
           ) : (

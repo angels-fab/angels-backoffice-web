@@ -8,26 +8,7 @@ import { AppDrawer, StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
 import { W_STATUS, classify, taskSubs, taskTitle, taskLink } from './workMeta'
-
-/** 내용 한 줄 → 기호/본문 분리(들여쓰기 보존) */
-function SubLine({ line }: { line: string }) {
-  const lead = line.match(/^[ \t]*/)?.[0] || ''
-  const indentPx = lead.replace(/\t/g, '    ').length * 4
-  const body = line.slice(lead.length)
-  const m = body.match(/^([-–—•*▪◦·●○]|[①-⑳]|\d+[.)]|[가-힣][.)])\s*([\s\S]*)$/)
-  return (
-    <Box sx={{ display: 'flex', gap: 0.75, ml: `${indentPx}px`, py: 0.25 }}>
-      {m ? (
-        <>
-          <Typography variant="body2" component="span" sx={{ flexShrink: 0, color: 'text.disabled' }}>{m[1]}</Typography>
-          <Typography variant="body2" component="span">{m[2]}</Typography>
-        </>
-      ) : (
-        <Typography variant="body2" component="span">{body}</Typography>
-      )}
-    </Box>
-  )
-}
+import SubLine from './SubLine'
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (

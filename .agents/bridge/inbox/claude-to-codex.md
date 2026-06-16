@@ -2,27 +2,28 @@
 
 ## Summary
 
-- **STEP25 — 업무현황(/work) KPI 정리 + Remind 토글/카드 재구성** 구현 완료(프런트 전용). 커밋·**자동배포 완료**(운영 규칙: 작업 완료 시 자동 커밋·푸시).
-- KPI에서 보류·취소 타일 제거(진행중/완료/Check/Remind 4타일), '검토'→'Check', Remind는 KPI 타일 토글로 KPI 아래 펼침, Remind 카드 압정아이콘+상태/구분/담당자/날짜(YYYY-MM-DD)·'발의' 삭제.
+- **STEP26 — 업무현황(/work) KPI '전체' 타일 + 목록 2열 + Remind 카드/들여쓰기** 구현 완료(프런트 전용). 커밋·**자동배포 완료**.
 
 ## Changed Files
 
-- `src/pages/Work/index.tsx` — KPI 4타일(보류/취소 제거·Check·Remind), `remindOpen` 토글, Remind 섹션을 KPI↔업무목록 사이 조건부 렌더로 이동(하단 상시섹션 제거), 'Check' 라벨, 미사용 `MD`/`parseStartDate` 정리.
-- `src/pages/Work/TaskCard.tsx` — Remind 카드 재구성: 압정(PushPinIcon) 최상단 + 상태/구분/담당자/날짜(fmtDate=YYYY-MM-DD). Remind/검토 칩·right('발의') 제거.
-- `src/pages/Work/TaskAccordion.tsx`·`TaskDetailDrawer.tsx` — chief 칩 '검토'→'Check' 통일.
-- `docs/step25-work-kpi-remind.md`(신규), `docs/HANDOFF.md` 갱신.
+- `src/pages/Work/index.tsx` — KPI 5타일(완료·Check 사이에 '전체' 추가, `counts.total`), 업무목록 상태칩 행 삭제(+`STATUS_CHIPS`/`statusCount`/`W_STATUS_TABS` import 제거), 목록을 `(chiefOnly || 진행중 || 완료)`일 때 `CardGrid columns={2}` 아코디언 그리드(진행중만 `defaultExpanded`)·전체는 컴팩트 행.
+- `src/pages/Work/TaskCard.tsx` — Remind 카드 담당자에 `ml: auto` → 담당자+날짜 우측 그룹화.
+- `src/pages/Work/TaskAccordion.tsx` — `defaultExpanded` prop(진행중 true/완료·Check false), 본문을 공용 `SubLine`으로 렌더.
+- `src/pages/Work/SubLine.tsx` (신규) — 글머리기호(-, •, 번호) 행잉 인덴트 공용 컴포넌트.
+- `src/pages/Work/TaskDetailDrawer.tsx` — 로컬 SubLine 제거 → 공용 import(동작 동일).
+- `docs/step26-work-2col-remind-card.md`(신규), `docs/HANDOFF.md` 갱신.
 
 ## 실행한 검증
 
 - `npm.cmd run type-check` + `npm.cmd run build` 통과.
-- 라이브 dev(/work, 서버 재기동 후): KPI 4타일(보류/취소 없음, 값 진행중8·완료116·Check1·Remind13) / Remind 타일 클릭→KPI 아래 펼침·재클릭 접힘 / Remind 카드 압정 13개·상태·구분·담당자·YYYY-MM-DD·'발의' 없음·Remind칩 없음 / '검토'→'Check'(chief 칩 전부) / 콘솔 에러 0.
-- 편집 중 `<Work>` HMR 중간상태 에러 로그가 떴으나, **서버 재기동 후 깨끗한 로드에서 콘솔 0 + 정상 렌더(아코디언 8)** 확인 → 코드 결함 아님(HMR 잔여).
+- 라이브 dev(/work, 서버 재기동 후): KPI 5타일(진행중8·완료116·전체124·Check1·Remind13, '전체'가 완료/Check 사이) / 상태칩행 없음 / 진행중 2열 펼침(1280px=496×2)·완료 2열 접힘(116, expanded 0) / 좁힌 폭 1열(반응형) / Remind 토글→압정 카드(담당자+날짜 우측, marginLeft auto, YYYY-MM-DD) / 글머리기호 마커+본문 분리(`-` 라인 확인) / 콘솔 에러 0.
+- (편집 중 HMR 중간상태 에러는 서버 재기동 후 0으로 확인 — 코드 결함 아님.)
 
 ## 검토 포인트
 
-1. KPI에서 보류·취소를 뺐지만 **목록 필터칩에는 유지** — 일관성 의도(요약은 핵심 4개, 필터는 전체) 적절한지.
-2. WorkWrite 등록폼의 '검토 필요' 라벨은 설명형이라 'Check'로 안 바꿈 — 통일할지.
-3. Remind 토글 펼침 애니메이션(Collapse) 필요성.
+1. 보류·취소를 필터에서 완전히 뺌(KPI '전체'로만 전체 접근) — 추후 보류/취소 재노출 경로 필요할지.
+2. 완료·Check 아코디언 기본 접힘 + 2열(116건) 적정성 / '모두 펼치기' 토글 필요성.
+3. SubLine 공용화로 Drawer 본문도 동일 컴포넌트 — Drawer 회귀 없는지(로직 동일).
 
 ## Screenshots
 

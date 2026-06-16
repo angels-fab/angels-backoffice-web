@@ -4,7 +4,7 @@
 > 이 파일은 머신 간 동기화되지 않는 Claude 로컬 메모리를 대신해, 다른 PC에서 맥락을 빠르게 잡기 위한 요약입니다.
 
 ## 현재 상태
-- **STEP 1~25 완료** (…23 상태변경 사유·24 업무현황 회의뷰·25 업무 KPI/Remind 토글·카드 재구성). **모두 `main` 커밋·자동배포 완료.** (운영 규칙: 작업 완료 시 자동 커밋·푸시 = 자동배포)
+- **STEP 1~26 완료** (…24 업무현황 회의뷰·25 KPI/Remind 토글·카드·26 KPI 전체타일·목록 2열·글머리기호 들여쓰기). **모두 `main` 커밋·자동배포 완료.** (운영 규칙: 작업 완료 시 자동 커밋·푸시 = 자동배포)
 - **⚠ 시트 마이그레이션 잔여**: 상태 어휘 개편으로 시트의 기존 '가동중' 등은 '운영중' 등 4값으로 정리해야 '미분류' 표시가 사라짐(드롭다운 권장). 백엔드 무변경(@42).
 - **상태 어휘 개편(미커밋)**: 표시 라벨 매핑 폐지 → 시트값 그대로. 정식 4값 `도입예정/도입중/운영중/비가동`(가동중→운영중·설치중→도입중), 그 외는 칩에 '미분류'. **⚠ 시트 기존 '가동중' 등은 새 값으로 마이그레이션 필요**(드롭다운 권장).
 - 배포: 프런트는 `main` push → GitHub Actions 자동배포(angels-fab.github.io). 백엔드(Apps Script) **@42** (clasp, URL 불변 · STEP22에서 운영이력 append + getEqHistory 조회 추가). **STEP22 프런트·백엔드 모두 라이브 반영 완료 · CL-001로 라이브 E2E(상태변경→이력 기록) 검증됨**.
@@ -30,6 +30,7 @@
 - **STEP 23 상태 변경 사유 입력(즉시저장 → 확인 Dialog: 장비명·관리번호·전/후·사유 optional·trim → updateEquipment(state,reason), 운영이력에 사유 기록, 같은상태 no-op, 표시 '작성자 · 사유'). 프런트 전용, 백엔드 변경/배포 없음 — `docs/step23-eqops-state-reason.md`**
 - **STEP 24 업무현황(/work) 회의 뷰(업무목록을 KPI 바로 아래로·기본 진행중·진행중 아코디언 모두 펼침/개별 접기·RatioBar 제거·'긴급 업무'→'Remind'·담당자현황 숨김(SHOW_MANAGER_STATUS)·검토필요→'검토'). 신규 `Work/TaskAccordion.tsx`, 프런트 전용 — `docs/step24-work-meeting-view.md`**
 - **STEP 25 업무 KPI/Remind 정리(KPI 보류·취소 타일 제거→진행중/완료/Check/Remind 4타일·'검토'→'Check'·Remind는 KPI 타일 토글로 KPI 아래 펼침·Remind 카드 압정아이콘+상태/구분/담당자/날짜(YYYY-MM-DD)·'발의' 삭제). 프런트 전용 — `docs/step25-work-kpi-remind.md`**
+- **STEP 26 업무 KPI 전체타일(완료/Check 사이)·상태칩행 제거·목록 진행중/완료/Check 2열 아코디언(진행중 펼침/완료·Check 접힘)·Remind 카드 담당자 우측(날짜와 그룹)·글머리기호 행잉 인덴트(공용 `Work/SubLine.tsx`). 프런트 전용 — `docs/step26-work-2col-remind-card.md`**
 - 아키텍처: `docs/ARCHITECTURE.md`, `docs/equipment-page-architecture.md`(도입관리), `docs/equipment-ops-architecture.md`(운영관리)
 
 ## 핵심 규칙 (작업 시 유지)
