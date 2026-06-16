@@ -5,7 +5,7 @@
 
 ## 현재 상태
 - **STEP 1~22 완료** (18A~C 드래그 UX·19 상세 Drawer·20 수정·21 상태 변경·22 운영이력). 모든 코드·문서 `main`에 push 완료(작업 시작 전 `/출근`으로 pull).
-- 배포: 프런트는 `main` push → GitHub Actions 자동배포(angels-fab.github.io). 백엔드(Apps Script) **@42** (clasp, URL 불변 · STEP22에서 운영이력 append + getEqHistory 조회 추가). **STEP22 프런트·백엔드 모두 라이브 반영 완료**.
+- 배포: 프런트는 `main` push → GitHub Actions 자동배포(angels-fab.github.io). 백엔드(Apps Script) **@42** (clasp, URL 불변 · STEP22에서 운영이력 append + getEqHistory 조회 추가). **STEP22 프런트·백엔드 모두 라이브 반영 완료 · CL-001로 라이브 E2E(상태변경→이력 기록) 검증됨**.
 - 빌드 상태: `npm run type-check`·`npm run build` 통과.
 - **운영 규칙: 작업 완료 시 자동으로 커밋·푸시(자동배포)하고, 작업 내역을 `docs/`에 MD로 기록한다.**
 

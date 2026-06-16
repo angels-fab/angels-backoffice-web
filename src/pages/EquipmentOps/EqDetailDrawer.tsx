@@ -82,6 +82,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
   const [savingState, setSavingState] = useState(false)
   const [history, setHistory] = useState<EqHistoryItem[]>([]) // STEP22 운영이력(읽기 전용)
   const [histLoading, setHistLoading] = useState(false)
+  const [histError, setHistError] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0) // STEP22 이력 재조회 트리거
   const repCode = group ? group.codes.filter(Boolean)[0] || '' : ''
 
@@ -95,18 +96,20 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
 
   // STEP22 — 드로어 열림/장비 변경/상태변경 시 대표 관리번호 기준 운영이력 로드(조회 전용, 단일 가드 경로). 닫히면 비움.
   useEffect(() => {
-    if (!group || !repCode) { setHistory([]); return }
+    if (!group || !repCode) { setHistory([]); setHistError(false); setHistLoading(false); return }
     let alive = true
     setHistLoading(true)
+    setHistError(false)
     fetchEqHistory(repCode)
-      .then((items) => { if (alive) setHistory(items) })
-      .catch(() => { if (alive) setHistory([]) })
+      .then((items) => { if (alive) { setHistory(items); setHistError(false) } })
+      .catch(() => { if (alive) { setHistory([]); setHistError(true) } })
       .finally(() => { if (alive) setHistLoading(false) })
     return () => { alive = false }
   }, [group, repCode, refreshTick])
 
   const meta = group ? EQ_STATE[eqStateKey(group.state)] : null
   const codes = group ? group.codes.filter(Boolean).join(', ') : ''
+  const rawState = (group?.state ?? '').trim() // STEP22 리뷰 — 메뉴 no-op/selected는 raw 상태값으로 비교(eqStateKey '비가동' 폴백 회피)
   const set = (key: FieldKey) => (v: string) => setForm((f) => ({ ...f, [key]: v }))
 
   const startEdit = () => {
@@ -154,7 +157,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
   const applyState = async (s: string) => {
     setStateAnchor(null)
     if (!group || savingState) return
-    if (s === eqStateKey(group.state)) return // 동일 상태 → 변경 없음
+    if (s === rawState) return // 동일 상태(raw 비교) → 변경 없음. 비표준 상태면 어떤 키도 일치 안 해 정규화 가능
     if (!repCode) { showSnack?.('관리번호가 없어 변경할 수 없습니다.', 'error'); return }
     if (!user || !authKey) { showSnack?.('관리자 로그인이 필요합니다.', 'error'); return }
     setSavingState(true)
@@ -238,6 +241,8 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
             <Section title="운영 이력">
               {histLoading ? (
                 <Typography variant="body2" sx={{ color: 'text.disabled' }}>불러오는 중…</Typography>
+              ) : histError ? (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>운영 이력을 불러오지 못했습니다</Typography>
               ) : history.length === 0 ? (
                 <Typography variant="body2" sx={{ color: 'text.disabled' }}>운영 이력이 없습니다</Typography>
               ) : (
@@ -301,7 +306,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
         slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: 140 } } }}
       >
         {STATE_ORDER.map((s) => (
-          <MenuItem key={s} selected={!!group && s === eqStateKey(group.state)} onClick={() => applyState(s)} sx={{ fontSize: 14 }}>
+          <MenuItem key={s} selected={!!group && s === rawState} onClick={() => applyState(s)} sx={{ fontSize: 14 }}>
             {EQ_STATE[s].label}
           </MenuItem>
         ))}

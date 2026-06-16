@@ -2,101 +2,74 @@
 
 Read these files first:
 
-1. `.agents/bridge/README.md`
-2. `.agents/bridge/state.md`
-3. `.agents/bridge/lock.md`
-4. `.agents/bridge/inbox/codex-to-claude.md`
-
-Then continue the project using the repository's existing rules.
+1. `AGENTS.md`
+2. `.agents/bridge/README.md`
+3. `.agents/bridge/state.md`
+4. `.agents/bridge/lock.md`
+5. `.agents/bridge/inbox/codex-to-claude.md`
+6. `.agents/bridge/inbox/claude-to-codex.md`
+7. `docs/step22-eqops-history-plan.md`
 
 Role:
 
 - You are the implementation and git sync agent.
-- Codex reviewed the STEP21 guard change and found no blocker.
-- Do not touch `TopBar.tsx` for the Tooltip warning in this task; it is a separate dev-only issue.
+- Codex reviewed STEP22 phase 1 and found no blocking backend issue.
+- This task is a small review-fix pass plus bridge/documentation reconciliation.
 
-Current task:
+Before editing:
 
-Start STEP22 phase 1: equipment operation history.
+1. Run `git status --short`.
+2. Preserve the existing uncommitted change in `.agents/bridge/outbox/next-codex-prompt.md`; do not overwrite it blindly.
+3. If you edit source files, set `.agents/bridge/lock.md` to locked for the files you touch, then clear it back to free at the end.
 
-Goal:
+Task 1 — Fix non-standard state menu behavior:
 
-- Track equipment state changes in a separate append-only history sheet.
-- Show recent operation history in `EquipmentOps` detail drawer.
-- Keep first pass read-only. No history editing/deleting.
+- File: `src/pages/EquipmentOps/EqDetailDrawer.tsx`
+- Problem: `eqStateKey(group.state)` is used for both status display and menu no-op/selected checks. Unknown raw states collapse to `비가동`, so `비가동` can appear selected even when the sheet value is actually `유지보수`, `고장`, etc.
+- Keep `eqStateKey()` for existing chip/count display.
+- For the state-change menu, compare against the raw trimmed state string instead:
+  - no-op should be `if (s === rawState) return`
+  - selected should be true only when `s === rawState`
+  - if raw state is not one of `도입예정`, `도입중`, `가동중`, `비가동`, no menu item should be selected.
 
-Storage decision:
+Task 2 — Make history loading/error state explicit:
 
-- Sheet name: `장비운영이력`
-- Columns:
-  - `일시`
-  - `관리번호`
-  - `장비명`
-  - `이전상태`
-  - `변경상태`
-  - `사유`
-  - `작성자`
-  - `작업유형`
-  - `비고`
+- File: `src/pages/EquipmentOps/EqDetailDrawer.tsx`
+- Add a small `histError` state.
+- In the history-loading effect:
+  - when `!group || !repCode`, clear history, clear error, and set `histLoading(false)`.
+  - before fetch, set loading true and error false.
+  - on fetch failure, clear history and set error true.
+  - finally, set loading false only while the effect is still alive.
+- In the `운영 이력` section:
+  - show `불러오는 중...` while loading.
+  - show a short failure message when `histError` is true.
+  - show `운영 이력이 없습니다` only when loading is false, error is false, and the list is empty.
+- Keep the UI restrained and consistent with the current Drawer. Do not add emoji, colored left borders, or broad layout/style changes.
 
-Backend guidance (`google-apps-script/Code.gs`):
+Task 3 — Reconcile bridge/docs live-verification state:
 
-1. Add a history sheet helper.
-   - If the history sheet does not exist, append should create it with the header row.
-   - Read should return an empty list if the sheet does not exist.
-
-2. Add read support.
-   - Suggested doGet route: `?action=getEqHistory&code=<관리번호>`.
-   - Return JSON `{ status: 'ok', items: [...] }`.
-   - Filter by `관리번호` when `code` is provided.
-   - Sort newest first if practical.
-
-3. Append history on successful state change.
-   - In `updateEquipment_(req)`, capture previous state before writing.
-   - After successful write, if `req.state !== undefined` and previous state differs from new state, append one history row.
-   - Use current KST timestamp.
-   - Use `req.author` as `작성자`.
-   - Use `req.reason || ''`.
-   - Use `작업유형 = '상태변경'`.
-   - Leave `비고` empty for now.
-   - Keep existing update behavior unchanged for non-state edits.
-
-Frontend guidance:
-
-1. In `src/api/sheets.ts`, add:
-   - `EqHistoryItem` type
-   - `fetchEqHistory(code: string): Promise<EqHistoryItem[]>`
-
-2. In `src/pages/EquipmentOps/EqDetailDrawer.tsx`:
-   - Load recent history when a drawer opens and `repCode` exists.
-   - Add a read-only `운영 이력` section.
-   - Show newest entries compactly: date/time, previous state → new state, author, optional reason.
-   - Empty state text is fine when no history exists.
-   - After a successful state change, refresh history along with existing `onSaved`.
-   - Keep guest read access unless existing product logic suggests otherwise.
-
-3. Keep UI restrained and consistent with the existing Drawer.
-   - Use MUI icons only if adding icons.
-   - Do not add emoji.
-   - Do not add colored left borders.
-   - Do not make broad layout/style refactors.
-
-Safety:
-
-- Do not deploy Apps Script unless the user explicitly asks.
-- Do not perform live equipment state mutation unless the user explicitly names a safe test equipment record or approves the test.
-- If live mutation cannot be tested, document it as unverified.
+- Current inconsistency:
+  - `.agents/bridge/outbox/next-codex-prompt.md` says CL-001 live E2E verification is complete.
+  - `.agents/bridge/state.md` and `docs/step22-eqops-history-plan.md` still say live status-change/history verification is pending or backend is undeployed.
+- Check the actual evidence you have.
+- If CL-001 live E2E was truly completed, update all relevant docs/bridge files consistently with date, equipment code/name, old/new states, and how it was verified.
+- If it was not truly completed, remove or correct the E2E-complete claim in `next-codex-prompt.md` and leave the live verification as pending.
+- Do not perform a new live equipment mutation unless the user explicitly approves the exact test record and target state.
 
 Verification:
 
 - Run `npm.cmd run type-check`.
-- If you change backend code, note that backend deployment is still pending.
-- If possible, run a frontend-only check that the drawer handles empty history gracefully.
+- If you changed UI behavior, capture at least one desktop screenshot of the drawer/status menu/history area into `.agents/bridge/screenshots/`.
+- If screenshot capture fails, record the reason in `.agents/bridge/inbox/claude-to-codex.md`.
 
 After finishing:
 
-- Update `.agents/bridge/inbox/claude-to-codex.md`.
-- Update `.agents/bridge/state.md`.
+- Update `.agents/bridge/inbox/claude-to-codex.md` with:
+  - files changed
+  - what was verified
+  - screenshot paths or failure reason
+  - whether live E2E is confirmed or still pending
+- Update `.agents/bridge/state.md` if the source of truth changed.
 - Leave `.agents/bridge/lock.md` as `status: free`.
-- Update or extend `docs/step22-eqops-history-plan.md` with the implemented decisions.
 - Commit/push only when the user says `퇴근` or explicitly asks to sync.
