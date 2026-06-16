@@ -1,27 +1,32 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import PushPinIcon from '@mui/icons-material/PushPin'
 import { AppCard, StatusChip } from '@/components/ds'
+import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
 import { W_STATUS, classify, taskTitle } from './workMeta'
 
 export interface TaskCardProps {
   t: WorkItem
-  /** 우측 하단 보조 텍스트(예: 발의 06/10, 마감 06/20) */
-  right?: string
   onPick: (t: WorkItem) => void
 }
 
-/** 업무 카드 — 긴급/이번주 마감 섹션용. 클릭 시 상세 Drawer. */
-export default function TaskCard({ t, right, onPick }: TaskCardProps) {
+/**
+ * Remind 카드 — 최상단 행: 압정(고정 표시) · 업무상태 · 업무구분 · 담당자 · 날짜(년-월-일).
+ * 클릭 시 상세 Drawer.
+ */
+export default function TaskCard({ t, onPick }: TaskCardProps) {
   const st = W_STATUS[classify(t)]
   return (
     <AppCard interactive onClick={() => onPick(t)} padding={16}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+        {/* 최상단: 압정 · 업무상태 · 업무구분 · 담당자 · 날짜 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+          <PushPinIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
           <StatusChip status={st.status} label={st.label} />
-          {t.chief && <StatusChip status="purple" label="검토" />}
-          {t.remind && <StatusChip status="warning" label="Remind" />}
           {t.cat && <StatusChip status="neutral" label={t.cat} />}
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t.mgr || '미지정'}</Typography>
+          <Typography variant="caption" sx={{ ml: 'auto', color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>
         </Box>
         <Typography
           variant="subtitle1"
@@ -29,10 +34,6 @@ export default function TaskCard({ t, right, onPick }: TaskCardProps) {
         >
           {taskTitle(t)}
         </Typography>
-        <Box sx={{ mt: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, pt: 0.5 }}>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t.mgr || '미지정'}</Typography>
-          {right && <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{right}</Typography>}
-        </Box>
       </Box>
     </AppCard>
   )

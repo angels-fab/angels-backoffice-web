@@ -55,7 +55,7 @@ export default function TaskAccordion({ t, onPick }: TaskAccordionProps) {
       >
         <StatusChip status={st.status} label={st.label} />
         {t.cat && <StatusChip status="neutral" label={t.cat} />}
-        {t.chief && <StatusChip status="purple" label="검토" />}
+        {t.chief && <StatusChip status="purple" label="Check" />}
         <Typography variant="body1" sx={{ flex: 1, minWidth: 120, fontWeight: 600, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t.mgr || '미지정'}</Typography>
         <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>

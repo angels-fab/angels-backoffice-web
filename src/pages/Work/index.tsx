@@ -31,7 +31,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData } from '@/store/slices/workSlice'
 import { deleteWork } from '@/api/sheets'
 import { useRole } from '@/auth/role'
-import { dateSortValue, fmtDate, parseStartDate } from '@/utils/date'
+import { dateSortValue, fmtDate } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
 import { W_STATUS, W_STATUS_TABS, classify, taskLink, taskTitle, type WStatus } from './workMeta'
@@ -48,10 +48,6 @@ const STATUS_CHIPS: { key: StatusTab; label: string }[] = [
 // STEP24 — 담당자 현황 섹션 임시 숨김(구조 보존, 추후 재노출 시 true)
 const SHOW_MANAGER_STATUS = false
 
-const MD = (s: string) => {
-  const d = parseStartDate(s)
-  return d ? `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}` : ''
-}
 // 발의일자 최신순 (최근 업무가 위)
 const cmp = (a: WorkItem, b: WorkItem) => dateSortValue(b.start) - dateSortValue(a.start)
 
@@ -64,6 +60,7 @@ export default function Work() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab] = useState<StatusTab>('inProgress') // STEP24 — 회의 뷰: 기본 진행중
   const [chiefOnly, setChiefOnly] = useState(false)
+  const [remindOpen, setRemindOpen] = useState(false) // STEP25 — Remind 토글(KPI Remind 타일 클릭 시 KPI 아래 펼침)
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
   const [query, setQuery] = useState('')
@@ -214,7 +211,7 @@ export default function Work() {
       >
         <StatusChip status={st.status} label={st.label} />
         {t.cat && <StatusChip status="neutral" label={t.cat} />}
-        {t.chief && <StatusChip status="purple" label="검토" />}
+        {t.chief && <StatusChip status="purple" label="Check" />}
         <Typography variant="body1" sx={{ flex: 1, minWidth: 140, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {taskTitle(t)}
         </Typography>
@@ -251,22 +248,36 @@ export default function Work() {
 
       {/* ① KPI — 상태별 건수(클릭 시 해당 상태로 필터) */}
       <ContentSection>
-        <CardGrid columns={5}>
+        <CardGrid columns={4}>
           <StatTile value={counts.inProgress} unit="건" label="진행중" status="success" selected={tab === 'inProgress'} onClick={() => pickStatus('inProgress')} />
           <StatTile value={counts.done} unit="건" label="완료" status="neutral" selected={tab === 'done'} onClick={() => pickStatus('done')} />
-          <StatTile value={counts.hold} unit="건" label="보류" status="warning" selected={tab === 'hold'} onClick={() => pickStatus('hold')} />
-          <StatTile value={counts.cancelled} unit="건" label="취소" status="error" selected={tab === 'cancelled'} onClick={() => pickStatus('cancelled')} />
-          <StatTile value={counts.chief} unit="건" label="검토" status="purple" selected={chiefOnly} onClick={() => setChiefOnly((v) => !v)} />
+          <StatTile value={counts.chief} unit="건" label="Check" status="purple" selected={chiefOnly} onClick={() => setChiefOnly((v) => !v)} />
+          <StatTile value={counts.remind} unit="건" label="Remind" status="warning" selected={remindOpen} onClick={() => setRemindOpen((v) => !v)} />
         </CardGrid>
       </ContentSection>
 
-      {/* ② 업무 목록 — KPI 바로 아래(회의 뷰). 기본 진행중, 진행중은 아코디언(모두 펼침) */}
-      <ContentSection title="업무 목록" count={listed.length}>
+      {/* ①-b Remind — KPI 'Remind' 타일 클릭 시 KPI 바로 아래(업무목록 사이)에 펼침/접힘 */}
+      {remindOpen && (
+        <ContentSection title="Remind" description="Remind 체크 업무" count={urgent.length}>
+          {urgent.length === 0 ? (
+            <AppCard padding={0}><EmptyState size="sm" title="Remind된 업무가 없습니다" /></AppCard>
+          ) : (
+            <CardGrid minColWidth={260}>
+              {urgent.map((t) => (
+                <TaskCard key={t.id} t={t} onPick={setPicked} />
+              ))}
+            </CardGrid>
+          )}
+        </ContentSection>
+      )}
+
+      {/* ② 업무 목록 — KPI(또는 Remind 펼침) 바로 아래. 기본 진행중, 진행중은 아코디언(모두 펼침) */}
+      <ContentSection title="업무 목록" count={listed.length} last={!SHOW_MANAGER_STATUS}>
         <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5, alignItems: 'center' }}>
           {STATUS_CHIPS.map((tb) => (
             <StatusChip key={tb.key} status="neutral" label={`${tb.label} ${statusCount(tb.key)}`} selected={tab === tb.key} onClick={() => pickStatus(tb.key)} />
           ))}
-          <StatusChip status="purple" label={`검토 ${counts.chief}`} selected={chiefOnly} onClick={() => setChiefOnly((v) => !v)} />
+          <StatusChip status="purple" label={`Check ${counts.chief}`} selected={chiefOnly} onClick={() => setChiefOnly((v) => !v)} />
         </Box>
         <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무명·담당자·부서·구분·장소 검색" />}>
           {presentCats.map((c) => (
@@ -298,20 +309,7 @@ export default function Work() {
         )}
       </ContentSection>
 
-      {/* ③ Remind (구 긴급 업무) — 보조 섹션 */}
-      <ContentSection title="Remind" description="Remind 체크 업무" count={urgent.length} last={!SHOW_MANAGER_STATUS}>
-        {urgent.length === 0 ? (
-          <AppCard padding={0}><EmptyState size="sm" title="Remind된 업무가 없습니다" /></AppCard>
-        ) : (
-          <CardGrid minColWidth={260}>
-            {urgent.map((t) => (
-              <TaskCard key={t.id} t={t} right={`발의 ${MD(t.start)}`} onPick={setPicked} />
-            ))}
-          </CardGrid>
-        )}
-      </ContentSection>
-
-      {/* ④ 담당자 현황 — STEP24 임시 숨김(SHOW_MANAGER_STATUS=false). 코드/집계 보존, 추후 재노출. */}
+      {/* 담당자 현황 — STEP24 임시 숨김(SHOW_MANAGER_STATUS=false). 코드/집계 보존, 추후 재노출. */}
       {SHOW_MANAGER_STATUS && (
         <ContentSection title="담당자 현황" last>
           {busiest && busiest.inProgress > 0 && (
@@ -330,7 +328,7 @@ export default function Work() {
                 <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                   <StatusChip status="success" label={`진행중 ${m.inProgress}`} />
                   {m.remind > 0 && <StatusChip status="warning" label={`Remind ${m.remind}`} />}
-                  {m.chief > 0 && <StatusChip status="purple" label={`검토 ${m.chief}`} />}
+                  {m.chief > 0 && <StatusChip status="purple" label={`Check ${m.chief}`} />}
                 </Box>
               </AppCard>
             ))}

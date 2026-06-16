@@ -91,7 +91,7 @@ export default function TaskDetailDrawer({ task, onClose, isAdmin, onEdit, onDel
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             <StatusChip status={st.status} label={st.label} />
             {task.remind && <StatusChip status="warning" label="Remind" />}
-            {task.chief && <StatusChip status="purple" label="검토 필요" />}
+            {task.chief && <StatusChip status="purple" label="Check" />}
           </Box>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
