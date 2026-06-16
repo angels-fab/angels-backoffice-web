@@ -2,46 +2,40 @@
 
 ## Summary
 
-- `next-claude-prompt.md`의 STEP22 리뷰-수정 3개 작업 완료 + 라이브 검증 + 적대적 리뷰까지 마침.
-- 변경은 `EqDetailDrawer.tsx` 한 파일(작은 로직 3건) + 문서 일치화. 백엔드/`sheets.ts` 무변경.
-- 라이브 E2E는 **CONFIRMED**로 정리(증거: `getEqHistory`가 CL-001 2건 반환).
+- **STEP24 — 업무현황(/work) 회의 뷰 개편** 구현 완료(프런트 전용). 적대적 리뷰까지 반영.
+- 업무목록을 KPI 바로 아래로, 기본 진행중 + 진행중 아코디언(모두 펼침), RatioBar 제거, '긴급 업무'→'Remind', 담당자현황 숨김, 검토필요→'검토'.
+- type-check + build 통과, 라이브 dev 검증 완료. **미커밋**(STEP23·상태 어휘 개편과 함께 누적).
 
 ## Changed Files
 
-- `src/pages/EquipmentOps/EqDetailDrawer.tsx`
-  - (Task1) 상태 Menu의 no-op/selected를 `eqStateKey(group.state)` → **raw 상태값** `rawState=(group?.state??'').trim()` 비교로 변경. 비표준 상태('유지보수/고장' 등)면 어떤 메뉴 항목도 selected 안 되고 정규화 가능. chip/meta 표시는 `eqStateKey` 유지.
-  - (Task2) `histError` state 추가 → 이력 섹션 분기 `로딩 → 에러("운영 이력을 불러오지 못했습니다") → 빈("운영 이력이 없습니다") → 목록`. no-group/repCode 시 `histLoading=false` 강제, fetch 전 error reset, 성공 시 error clear.
-- `.agents/bridge/state.md`, `docs/step22-eqops-history-plan.md`, `docs/HANDOFF.md` — (Task3) 라이브 E2E "CONFIRMED(CL-001)"로 일치화.
+- `src/pages/Work/index.tsx` — 전면 재작성: 섹션 재배치(KPI→업무목록→Remind→[담당자현황 숨김]), 기본 tab='inProgress', 진행중=아코디언/그 외=컴팩트 행 분기, RatioBar 제거, 검토 단축, Remind 워딩, `SHOW_MANAGER_STATUS=false`(코드·집계 보존).
+- `src/pages/Work/TaskAccordion.tsx` (신규) — 진행중 아코디언(MUI Accordion·ExpandMoreIcon·다크테마·기본 펼침·개별 접기, 메타+업무내용+상세/링크 아이콘).
+- `src/pages/Work/TaskCard.tsx` — 리뷰 반영: Remind 카드 '검토 필요'→'검토'(같은 화면 라벨 통일).
+- `docs/step24-work-meeting-view.md`(신규), `docs/HANDOFF.md` 갱신.
+
+## 적대적 리뷰 (2렌즈 + 검증): 9건 발견 → 3건 확정
+
+- **(low) 라벨 불일치**: Remind 카드(TaskCard)가 '검토 필요'로 남아 목록의 '검토'와 한 화면에서 불일치 → **수정**(TaskCard '검토').
+- **(low) 장소 중복**: TaskAccordion 메타의 '장소'와 본문 taskSubs 끝줄이 둘 다 장소 표시 → **수정**(메타에서 '장소' 제거, taskSubs 단일 표시). 라이브 재확인: 아코디언 본문 장소 최대 1회.
+- **(low) 변수명 urgent**: UI는 Remind인데 로컬 변수명 urgent → **의도적 미수정**(사용자 지시: 내부 명칭은 무리하게 바꾸지 않음). 동작 무관.
+- 6건 반증.
 
 ## 실행한 검증
 
-- `npm.cmd run type-check` 통과.
-- 라이브 dev(angels-dev) + 실 백엔드(@42)로 검증:
-  - 메뉴 selected: CL-001(현재 '가동중') → 메뉴에서 **'운영중'만 selected**, 나머지 false (raw 비교 정상).
-  - 이력 섹션: CL-001 실제 2건 표시 `설치중 → 운영중`, `도입예정 → 설치중`(최신순, stateLabel 매핑).
-  - 콘솔 에러 0.
-- (비표준 상태→무선택, 이력 fetch 실패→에러표시) 분기는 로직/타입체크로 확인(해당 상태의 실데이터·강제 실패는 라이브에서 재현 안 함).
+- `npm.cmd run type-check` 통과, `npm.cmd run build` 통과(2회: 구현 후·리뷰수정 후).
+- 라이브 dev(`/work`): KPI 바로 아래 업무목록 / 기본 진행중(아코디언 7개 모두 펼침) / 개별 접기(7→6) / 전체 탭→컴팩트 행(아코디언 0) / 진행중 복귀→모두 펼침 / '긴급' 미표시·'Remind' 표시 / 담당자현황 미표시 / '검토 N'(짧게)·'검토 필요' 미표시 / 장소 중복 해소(maxLoc=1) / 콘솔 에러 0.
+- 스크린샷: `preview_screenshot` 환경 타임아웃 → DOM 검증 대체.
 
-## 적대적 리뷰 (2렌즈 + 검증)
+## 검토 포인트
 
-- 4건 발견 → **1건 확정(low), 3건 반증**.
-- 확정(low, **의도적·무해 — 코드 유지**): 상태변경 성공 시 `setRefreshTick`(즉시 재조회)와 `onSaved`→부모 refetch(group 참조 변경→effect 재실행)가 겹쳐 동일 repCode로 `fetchEqHistory`가 1회 더 호출될 수 있음. **alive 가드로 stale/레이스 없음, 데이터 정합성 OK.** 두 트리거는 타이밍이 달라(refreshTick=append 직후 즉시 / group변경=loadEqData 후) refreshTick을 빼면 즉시성 손실 → 1회 추가 GET을 감수하고 현행 유지(리뷰어도 동일 권고).
-
-## 실패하거나 확인 못 한 검증
-
-- **스크린샷 없음**: `preview_screenshot` 30s 타임아웃(환경 한계, 모달 없는 화면에서도 재현) → PNG 저장 불가. 대신 DOM 검증(위)으로 대체.
-- 비표준 상태 실데이터로의 메뉴 무선택, 이력 fetch 실패 에러표시: 해당 조건의 실데이터/강제실패를 라이브에서 만들지 않아 로직 검증으로 갈음.
-
-## Live E2E 상태 (Task3 결론)
-
-- **CONFIRMED.** 사용자가 라이브에서 CL-001(Spin Coater) 상태 변경 → `장비운영이력` 시트 자동 생성 + 2건 기록(도입예정→도입중→가동중, 작성자 조성범, 2026-06-16 01:35) → `getEqHistory` 반환 확인.
-- 부수효과: CL-001 라이브 상태가 '가동중'으로 바뀜(테스트). 의도와 다르면 UI에서 되돌리면 됨.
+1. RatioBar 제거 동의 여부(KPI 타일이 수치 제공 — 대안: KPI 요약 카드).
+2. 아코디언 본문 정보량/‘모두 접기·펼치기’ 토글 필요성.
+3. TaskDetailDrawer는 여전히 '검토 필요' 표기(상세 팝업이라 범위 밖) — 통일할지.
 
 ## Screenshots
 
-- 없음 — `preview_screenshot` 타임아웃(환경 한계). 규칙대로 경로 대신 사유 기록.
+- 없음 — `preview_screenshot` 환경 타임아웃. DOM 검증으로 대체.
 
 ## Suggested Next Step
 
-- STEP22 phase 1 완결(배포·E2E·리뷰까지). Codex가 **phase 2 범위 결정**(사유 입력 UI 재노출+시트 사유 열 / 비-상태 수정 이력화 / 전용 이력 페이지·필터) 후 `next-claude-prompt.md` 작성.
-- (보류) `TopBar.tsx` Tooltip dev 전용 anchorEl 경고 — 별도 처리 여부.
+- 미커밋 누적분(STEP23·24·상태 어휘 개편) 배포 + 시트 상태값 마이그레이션. 이후 담당자현황 재노출 형태 / 발표·인쇄 모드 / STEP22 phase2.

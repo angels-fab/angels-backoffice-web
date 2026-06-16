@@ -152,7 +152,7 @@ export function EqPreview() {
   const cells = [
     { label: '도입예정', val: c.typesBy['도입예정'], labelColor: 'var(--text2)', bg: '#1a1d23', border: 'var(--border)' },
     { label: '도입중', val: c.typesBy['도입중'], labelColor: '#4d9fff', bg: '#0d1f33', border: '#1f4068' },
-    { label: '가동중', val: c.typesBy['가동중'], labelColor: '#34d36b', bg: '#0e2417', border: '#1d4a2e' },
+    { label: '운영중', val: c.typesBy['운영중'], labelColor: '#34d36b', bg: '#0e2417', border: '#1d4a2e' },
     { label: '비가동', val: c.typesBy['비가동'], labelColor: '#f87171', bg: '#2a1314', border: '#5a2526' },
   ]
   return (

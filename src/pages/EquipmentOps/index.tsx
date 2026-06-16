@@ -60,7 +60,7 @@ function EqCard({ g, onPick }: { g: EqGroup; onPick: (g: EqGroup) => void }) {
   )
 }
 
-const STATE_TABS: ('전체' | EqStateKey)[] = ['전체', '가동중', '도입중', '도입예정', '비가동']
+const STATE_TABS: ('전체' | EqStateKey)[] = ['전체', '운영중', '도입중', '도입예정', '비가동']
 
 export default function EquipmentOps() {
   const dispatch = useAppDispatch()
@@ -112,10 +112,11 @@ export default function EquipmentOps() {
       m.total++
       m.budget += e.price || 0
       const key = eqStateKey(e.state)
-      if (key === '가동중') m.op++
+      if (key === '운영중') m.op++
       else if (key === '도입중') m.install++
       else if (key === '도입예정') m.plan++
-      else m.down++
+      else if (key === '비가동') m.down++
+      // '미분류'는 어느 칩에도 합산하지 않음(데이터 오류 → 시트에서 정정)
       map.set(name, m)
     }
     return [...map.values()].sort((a, b) => b.total - a.total)
@@ -129,10 +130,11 @@ export default function EquipmentOps() {
       const m = map.get(name) ?? { mgr: name, total: 0, op: 0, install: 0, plan: 0, down: 0 }
       m.total++
       const key = eqStateKey(e.state)
-      if (key === '가동중') m.op++
+      if (key === '운영중') m.op++
       else if (key === '도입중') m.install++
       else if (key === '도입예정') m.plan++
-      else m.down++
+      else if (key === '비가동') m.down++
+      // '미분류'는 어느 칩에도 합산하지 않음(데이터 오류 → 시트에서 정정)
       map.set(name, m)
     }
     return [...map.values()].sort((a, b) => b.total - a.total)
@@ -168,8 +170,8 @@ export default function EquipmentOps() {
       <ContentSection>
         <CardGrid columns={5}>
           <StatTile value={c.total} unit="대" label="총 장비" status="info" sub={`${c.types}종`} />
-          <StatTile value={c.units['가동중']} unit="대" label="운영중" status="success" sub={`${c.typesBy['가동중']}종`} />
-          <StatTile value={c.units['도입중']} unit="대" label="설치중" status="teal" sub={`${c.typesBy['도입중']}종`} />
+          <StatTile value={c.units['운영중']} unit="대" label="운영중" status="success" sub={`${c.typesBy['운영중']}종`} />
+          <StatTile value={c.units['도입중']} unit="대" label="도입중" status="teal" sub={`${c.typesBy['도입중']}종`} />
           <StatTile value={c.units['도입예정']} unit="대" label="도입예정" status="info" sub={`${c.typesBy['도입예정']}종`} />
           <StatTile value={c.units['비가동']} unit="대" label="비가동" status="error" sub={`${c.typesBy['비가동']}종`} />
         </CardGrid>

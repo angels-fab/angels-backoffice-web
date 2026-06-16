@@ -302,7 +302,7 @@ export interface EquipmentUpdateInput {
   mgr2?: string
   contact?: string
   note?: string
-  /** 상태 변경(STEP21) — '도입예정'|'도입중'|'가동중'|'비가동' */
+  /** 상태 변경 — '도입예정'|'도입중'|'운영중'|'비가동' (시트 값 그대로) */
   state?: string
   /** 상태 변경 사유(선택) — '변경사유' 등 열이 있을 때만 저장 */
   reason?: string

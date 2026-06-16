@@ -28,8 +28,8 @@ const LABELS: Record<FieldKey, string> = {
 const blankForm = (): Record<FieldKey, string> =>
   ({ mgr: '', maker: '', model: '', assetNo: '', nfec: '', installLoc: '', installDate: '', vendor: '', mgr2: '', contact: '', note: '' })
 
-// STEP21 상태 변경 (사유는 시트에 열이 없어 미사용 — 추후 열 추가 시 복구)
-const STATE_ORDER = ['도입예정', '도입중', '가동중', '비가동'] as const
+// 상태 변경 선택지 (STEP23: 선택 → 확인 Dialog에서 사유 입력 후 적용, 사유는 운영이력에 함께 기록)
+const STATE_ORDER = ['도입예정', '도입중', '운영중', '비가동'] as const
 
 function MetaRow({ label, value }: { label: string; value?: string }) {
   const v = (value ?? '').trim()
@@ -57,7 +57,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 const k = (v: number) => Math.round(v / 1000).toLocaleString()
-// STEP22 — 이력 상태 문자열 표시: 빈값은 '-', 표준 4키만 라벨(설치중/운영중 등), 비표준값은 원문 그대로.
+// STEP22 — 이력 상태 문자열 표시: 빈값은 '-', 정식 키는 라벨(시트값과 동일), 그 외(레거시 '가동중' 등)는 원문 그대로.
 const stateLabel = (s: string) => { const t = (s || '').trim(); if (!t) return '-'; return t in EQ_STATE ? EQ_STATE[t as EqStateKey].label : t }
 
 export interface EqDetailDrawerProps {
@@ -80,6 +80,8 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
   const [confirm, setConfirm] = useState<{ key: FieldKey; label: string; before: string; after: string }[] | null>(null)
   const [stateAnchor, setStateAnchor] = useState<HTMLElement | null>(null) // STEP21 상태 변경 드롭다운
   const [savingState, setSavingState] = useState(false)
+  const [pendingState, setPendingState] = useState<string | null>(null) // STEP23 상태 변경 확인 대기(선택된 새 상태)
+  const [reason, setReason] = useState('') // STEP23 변경 사유(선택)
   const [history, setHistory] = useState<EqHistoryItem[]>([]) // STEP22 운영이력(읽기 전용)
   const [histLoading, setHistLoading] = useState(false)
   const [histError, setHistError] = useState(false)
@@ -92,6 +94,8 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
     setConfirm(null)
     setSaving(false)
     setStateAnchor(null)
+    setPendingState(null)
+    setReason('')
   }, [group])
 
   // STEP22 — 드로어 열림/장비 변경/상태변경 시 대표 관리번호 기준 운영이력 로드(조회 전용, 단일 가드 경로). 닫히면 비움.
@@ -153,20 +157,28 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
     }
   }
 
-  // STEP21 — 상태 변경(드롭다운에서 선택 즉시 적용). 사유는 시트 열이 없어 미전송.
-  const applyState = async (s: string) => {
+  // STEP23 — 드롭다운에서 상태 선택: 같은 상태(raw 비교)면 무시, 아니면 확인 Dialog 오픈(즉시 저장 안 함)
+  const pickState = (s: string) => {
     setStateAnchor(null)
-    if (!group || savingState) return
-    if (s === rawState) return // 동일 상태(raw 비교) → 변경 없음. 비표준 상태면 어떤 키도 일치 안 해 정규화 가능
+    if (!group || s === rawState) return // 동일 상태 → 변경 없음(STEP22 raw 비교 유지)
+    setReason('')
+    setPendingState(s)
+  }
+  // STEP23 — 확인 Dialog [적용]: state + reason(trim, optional) 전송. 성공 시 이력 즉시 재조회.
+  const applyStateChange = async () => {
+    if (!group || !pendingState || savingState) return
     if (!repCode) { showSnack?.('관리번호가 없어 변경할 수 없습니다.', 'error'); return }
     if (!user || !authKey) { showSnack?.('관리자 로그인이 필요합니다.', 'error'); return }
+    const next = pendingState
     setSavingState(true)
     try {
-      await updateEquipment({ author: user, key: authKey, code: repCode, state: s })
+      await updateEquipment({ author: user, key: authKey, code: repCode, state: next, reason: reason.trim() || undefined })
       setSavingState(false)
-      showSnack?.(`장비 상태를 '${EQ_STATE[s as keyof typeof EQ_STATE]?.label ?? s}'(으)로 변경했습니다.`, 'success')
+      setPendingState(null)
+      setReason('')
+      showSnack?.(`장비 상태를 '${EQ_STATE[next as keyof typeof EQ_STATE]?.label ?? next}'(으)로 변경했습니다.`, 'success')
       onSaved?.(group.name)
-      setRefreshTick((t) => t + 1) // STEP22 — 이력 즉시 재조회(단일 가드 effect 경유, stale 방지)
+      setRefreshTick((t) => t + 1) // 이력 즉시 재조회(단일 가드 effect 경유, stale 방지)
     } catch (err) {
       setSavingState(false)
       showSnack?.(err instanceof Error ? err.message : '상태 변경 실패', 'error')
@@ -246,23 +258,25 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
               ) : history.length === 0 ? (
                 <Typography variant="body2" sx={{ color: 'text.disabled' }}>운영 이력이 없습니다</Typography>
               ) : (
-                history.slice(0, 20).map((h, i) => (
-                  <Box key={i} sx={{ display: 'flex', gap: 1.5 }}>
-                    <Typography variant="caption" sx={{ width: 96, flexShrink: 0, color: 'text.disabled', fontFamily: 'monospace', pt: 0.25 }}>{h.when || '-'}</Typography>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                        <Box component="span" sx={{ color: 'text.disabled' }}>{stateLabel(h.prev)}</Box>
-                        {' → '}
-                        <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{stateLabel(h.next)}</Box>
-                      </Typography>
-                      {(h.author || h.reason) && (
-                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                          {h.author || '-'}{h.reason ? ` · ${h.reason}` : ''}
+                history.slice(0, 20).map((h, i) => {
+                  // 작성자/사유 — 있는 값만 ' · '로 연결(둘 다 없으면 표시 안 함)
+                  const sub = [h.author, h.reason].map((x) => (x || '').trim()).filter(Boolean).join(' · ')
+                  return (
+                    <Box key={i} sx={{ display: 'flex', gap: 1.5 }}>
+                      <Typography variant="caption" sx={{ width: 96, flexShrink: 0, color: 'text.disabled', fontFamily: 'monospace', pt: 0.25 }}>{h.when || '-'}</Typography>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                          <Box component="span" sx={{ color: 'text.disabled' }}>{stateLabel(h.prev)}</Box>
+                          {' → '}
+                          <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{stateLabel(h.next)}</Box>
                         </Typography>
-                      )}
+                        {sub && (
+                          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>{sub}</Typography>
+                        )}
+                      </Box>
                     </Box>
-                  </Box>
-                ))
+                  )
+                })
               )}
             </Section>
 
@@ -296,7 +310,40 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
         </DialogActions>
       </Dialog>
 
-      {/* STEP21: 상태 변경 드롭다운(선택 즉시 적용). 사유는 시트 열이 없어 숨김. */}
+      {/* STEP23: 상태 변경 확인 + 사유 입력 Dialog (선택 즉시 저장하지 않음) */}
+      <Dialog open={!!pendingState} onClose={() => { if (!savingState) { setPendingState(null); setReason('') } }} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 380 } } } }}>
+        <DialogTitle>장비 상태를 변경하시겠습니까?</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 0.5 }}>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.disabled' }}>장비명</Typography>
+              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, wordBreak: 'break-word' }}>{group?.name || '-'}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.disabled' }}>관리번호</Typography>
+              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontFamily: 'monospace', wordBreak: 'break-all' }}>{codes || '-'}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1.5 }}>
+              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.disabled' }}>상태</Typography>
+              <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>
+                <Box component="span" sx={{ color: 'text.disabled' }}>{rawState || '미지정'}</Box>
+                {' → '}
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{pendingState}</Box>
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', mt: 0.5 }}>
+              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.disabled', pt: 1 }}>사유</Typography>
+              <TextField value={reason} onChange={(e) => setReason(e.target.value)} size="small" fullWidth multiline minRows={2} placeholder="선택 입력" disabled={savingState} sx={{ flex: 1 }} />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => { setPendingState(null); setReason('') }} disabled={savingState} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button variant="contained" onClick={applyStateChange} disabled={savingState}>{savingState ? '적용 중…' : '적용'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* STEP23: 상태 변경 드롭다운 — 선택 시 즉시 저장 없이 확인 Dialog(사유 입력) 오픈 */}
       <Menu
         anchorEl={group ? stateAnchor : null}
         open={!!group && !!stateAnchor}
@@ -306,7 +353,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
         slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: 140 } } }}
       >
         {STATE_ORDER.map((s) => (
-          <MenuItem key={s} selected={!!group && s === rawState} onClick={() => applyState(s)} sx={{ fontSize: 14 }}>
+          <MenuItem key={s} selected={!!group && s === rawState} onClick={() => pickState(s)} sx={{ fontSize: 14 }}>
             {EQ_STATE[s].label}
           </MenuItem>
         ))}

@@ -27,12 +27,12 @@ export default function KpiOverview() {
   const newNotice = notices.filter((n) => n.isNew).length
   const monthIntake = eqRaw.filter((e) => fmtDate(e.installDate).startsWith(thisMonth)).length
   const wc = workStatusCounts(workItems)
-  const opRate = eq.total ? Math.round((eq.units['가동중'] / eq.total) * 100) : 0
+  const opRate = eq.total ? Math.round((eq.units['운영중'] / eq.total) * 100) : 0
 
   return (
     <CardGrid columns={6}>
       <KpiCard value={eq.types} unit="종" label="전체 장비" sub={`${eq.total}대 보유`} icon={<MemoryIcon />} accentColor="blue" />
-      <KpiCard value={eq.units['가동중']} unit="대" label="운영 중" sub={`가동률 ${opRate}%`} icon={<PrecisionManufacturingIcon />} accentColor="green" />
+      <KpiCard value={eq.units['운영중']} unit="대" label="운영 중" sub={`가동률 ${opRate}%`} icon={<PrecisionManufacturingIcon />} accentColor="green" />
       <KpiCard value={wc.inProgress} unit="건" label="진행중 업무" sub={`완료 ${wc.done}건`} icon={<AssignmentIcon />} accentColor="teal" />
       <KpiCard value={todayCnt} unit="건" label="오늘 일정" sub={`7일내 ${weekCnt}건`} icon={<TodayIcon />} accentColor="purple" />
       <KpiCard value={newNotice} unit="건" label="신규 공지" sub={`총 ${notices.length}건`} icon={<CampaignIcon />} accentColor="red" />

@@ -3,7 +3,7 @@ import { GanttBar } from './gantt'
 
 // 장비 상태 색상 매핑
 const EQ_STATE_COLOR: Record<string, string> = {
-  도입예정: '#9CA3AF', 도입중: '#3B82F6', 가동중: '#22C55E',
+  도입예정: '#9CA3AF', 도입중: '#3B82F6', 운영중: '#22C55E', 가동중: '#22C55E',
   비가동: '#EF4444', 유지보수: '#EF4444', 고장: '#EF4444', '고장/이상': '#EF4444', 이상: '#EF4444',
 }
 

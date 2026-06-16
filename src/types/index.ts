@@ -127,7 +127,7 @@ export interface EqCounts {
   units: Record<EqStateKey, number>
   typesBy: Record<EqStateKey, number>
 }
-export type EqStateKey = '도입예정' | '도입중' | '가동중' | '비가동'
+export type EqStateKey = '도입예정' | '도입중' | '운영중' | '비가동' | '미분류'
 
 // ── 캘린더 ──
 export type CalCatId = 'all' | 'meeting' | 'edu' | 'recruit' | 'trip' | 'etc'
