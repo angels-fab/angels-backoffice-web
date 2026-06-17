@@ -47,6 +47,25 @@ const SHOW_MANAGER_STATUS = false
 // 발의일자 최신순 (최근 업무가 위)
 const cmp = (a: WorkItem, b: WorkItem) => dateSortValue(b.start) - dateSortValue(a.start)
 
+// KPI 카드의 라운드 정사각 칩 (진행중=초록·Remind=앰버·완료=회색)
+function SquareChip({ label, tone }: { label: string; tone: 'green' | 'amber' | 'gray' }) {
+  return (
+    <Box
+      sx={(t) => {
+        const c = tone === 'green' ? t.palette.accent.green : tone === 'amber' ? t.palette.accent.amber : t.palette.text.secondary
+        return {
+          width: 64, height: 64, flexShrink: 0, borderRadius: '14px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          bgcolor: alpha(c, 0.15), color: c,
+          fontWeight: 800, fontSize: 15, lineHeight: 1.1, px: 0.5, textAlign: 'center',
+        }
+      }}
+    >
+      {label}
+    </Box>
+  )
+}
+
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
 
 export default function Work() {
@@ -186,7 +205,7 @@ export default function Work() {
       {/* ① KPI — 진행중(내부 Check) / Remind / 완료. 동일 너비(3열) · 단일 선택(선택색=칩 색, 옅은 채움) */}
       <ContentSection>
         <CardGrid columns={3}>
-          {/* 진행중 (메인) — 좌상단: 진행중 정사각 칩 + 건수 / 우하단: Check 건수(보라) + Check 칩 */}
+          {/* 진행중 (메인) — 정사각 칩 + 건수(좌 묶음) / 우하단 Check 건수(보라) + Check 칩 */}
           <AppCard
             interactive
             onClick={() => selectView('inProgress')}
@@ -197,20 +216,8 @@ export default function Work() {
               : undefined}
           >
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 1, minHeight: 116 }}>
-              {/* 좌상단: 진행중 정사각 칩 + 건수 */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Box
-                  sx={(t) => ({
-                    width: 60, height: 60, flexShrink: 0,
-                    borderRadius: '14px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    bgcolor: alpha(t.palette.accent.green, 0.15),
-                    color: t.palette.accent.green,
-                    fontWeight: 800, fontSize: 17,
-                  })}
-                >
-                  진행중
-                </Box>
+                <SquareChip label="진행중" tone="green" />
                 <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
                   <Typography component="span" sx={{ fontSize: 36, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
                   <Typography component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
@@ -226,7 +233,7 @@ export default function Work() {
             </Box>
           </AppCard>
 
-          {/* Remind — 칩(좌) + 건수(우). 선택색 amber */}
+          {/* Remind — 정사각 칩 + 건수(좌 묶음). 선택색 amber */}
           <AppCard
             interactive
             onClick={() => selectView('remind')}
@@ -236,16 +243,16 @@ export default function Work() {
               ? { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.12), '&:hover': { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.18) } }
               : undefined}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, height: '100%', minWidth: 0 }}>
-              <StatusChip status="warning" label="Remind" size="medium" />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%', minHeight: 116 }}>
+              <SquareChip label="Remind" tone="amber" />
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                <Typography component="span" sx={{ fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
-                <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+                <Typography component="span" sx={{ fontSize: 34, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
+                <Typography component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
             </Box>
           </AppCard>
 
-          {/* 완료 — 회색 칩 + 완료/전체 건수. 선택색 gray */}
+          {/* 완료 — 정사각 회색 칩 + 완료/전체 건수(좌 묶음). 선택색 gray */}
           <AppCard
             interactive
             onClick={() => selectView('done')}
@@ -255,12 +262,12 @@ export default function Work() {
               ? { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.1), '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.16) } }
               : undefined}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, height: '100%', minWidth: 0 }}>
-              <StatusChip status="neutral" label="완료" size="medium" />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, height: '100%', minHeight: 116 }}>
+              <SquareChip label="완료" tone="gray" />
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                <Typography component="span" sx={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
+                <Typography component="span" sx={{ fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
                 <Typography component="span" sx={{ fontSize: 18, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
-                <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+                <Typography component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
             </Box>
           </AppCard>
