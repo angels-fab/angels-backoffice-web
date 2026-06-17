@@ -28,7 +28,7 @@ import {
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData } from '@/store/slices/workSlice'
-import { deleteWork, updateWork } from '@/api/sheets'
+import { createWork, deleteWork, updateWork } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
@@ -38,6 +38,8 @@ import TaskCard from './TaskCard'
 import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import WorkWrite from './WorkWrite'
+import NewTaskCard from './NewTaskCard'
+import type { NewTaskForm } from './NewTaskCard'
 
 // 상단 KPI 단일 선택 뷰 (진행중/Remind/완료 중 하나만 선택)
 type KpiView = 'inProgress' | 'remind' | 'done'
@@ -109,6 +111,9 @@ export default function Work() {
   const [deleting, setDeleting] = useState(false)
   const [completeTarget, setCompleteTarget] = useState<WorkItem | null>(null)
   const [completing, setCompleting] = useState(false)
+  const [composing, setComposing] = useState(false) // 새 업무 카드 → 인라인 편집 모드
+  const [composeDirty, setComposeDirty] = useState(false) // 인라인 편집 중 입력값 존재 여부
+  const [savingNew, setSavingNew] = useState(false)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
 
   // 통합검색 딥링크(/work?focus=<id>) → 해당 업무 상세 Drawer 자동 오픈
@@ -175,9 +180,19 @@ export default function Work() {
 
   // 단일 선택 — 같은 카드를 다시 눌러도 해제되지 않음(계속 선택), 다른 카드 선택 시 자동 전환
   const selectView = (v: KpiView) => {
+    // 인라인 작성 중 내용이 있으면 뷰 전환으로 사라지기 전에 확인
+    if (composing && composeDirty && !window.confirm('작성 중인 새 업무가 있습니다. 이동하면 입력한 내용이 사라집니다. 이동할까요?')) return
     setView(v)
     setMgr('전체')
     setSelectedTask(null)
+    setComposing(false)
+  }
+
+  // '새 업무' 카드 클릭 → 진행중 뷰에서 인라인 편집 카드 펼침(별도 창 없음)
+  const startCompose = () => {
+    setView('inProgress')
+    setSelectedTask(null)
+    setComposing(true)
   }
 
   // ── CRUD ──
@@ -190,6 +205,34 @@ export default function Work() {
     const list = await dispatch(loadWorkData()).unwrap().catch(() => null)
     if (isEdit && num && Array.isArray(list)) {
       setPicked(list.find((t) => String(t.num) === String(num)) ?? null)
+    }
+  }
+
+  // 인라인 새 업무 저장 — 제목+내용 → task(첫 줄=제목), 상태=진행중. 성공 시 인라인 카드 닫고 새로고침.
+  const handleSaveNew = async (form: NewTaskForm) => {
+    if (savingNew) return
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    const titleLine = form.title.trim()
+    if (!titleLine) return showSnack('업무 제목을 입력해주세요.', 'error')
+    const bodyText = form.body.replace(/\s+$/, '')
+    const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
+    setSavingNew(true)
+    try {
+      await createWork({
+        author: user, key: authKey,
+        cat: form.cat.trim(), task,
+        dept: form.dept.trim(), start: form.start, plan: form.plan,
+        time: form.time.trim(), loc: form.loc.trim(), mgr: form.mgr.trim(),
+        status: '진행중', link: form.link.trim(),
+        remind: false, chief: form.chief,
+      })
+      setSavingNew(false)
+      setComposing(false)
+      showSnack('업무를 등록했습니다.', 'success')
+      dispatch(loadWorkData())
+    } catch (err) {
+      setSavingNew(false)
+      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
     }
   }
 
@@ -370,18 +413,23 @@ export default function Work() {
             {listed.map((t) => (
               <TaskCard key={t.id} t={t} onPick={setPicked} selected={selectedTask === t.id} onSelect={() => setSelectedTask(t.id)} />
             ))}
-            {isAdmin && <AddCard onClick={() => { setEditTarget(null); setWriteOpen(true) }} />}
+            {isAdmin && <AddCard onClick={startCompose} />}
           </CardGrid>
         ) : view === 'inProgress' ? (
-          // 진행중 — 최상단 행: [업무 목록 제목] [+ 새 업무 카드], 아래 행부터 업무 카드.
+          // 진행중 — 최상단 행: [업무 목록 제목] [+ 새 업무 카드]. 새 업무 클릭 시 인라인 편집 카드(전폭).
           <CardGrid columns={2}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 64 }}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>업무 목록</Typography>
               <Typography variant="body2" sx={{ color: 'text.disabled' }}>{listed.length}</Typography>
             </Box>
-            {isAdmin
-              ? <AddCard key="add" height={64} onClick={() => { setEditTarget(null); setWriteOpen(true) }} />
+            {isAdmin && !composing
+              ? <AddCard key="add" height={64} onClick={startCompose} />
               : <Box key="add-spacer" />}
+            {isAdmin && composing && (
+              <Box key="composer" sx={{ gridColumn: '1 / -1' }}>
+                <NewTaskCard saving={savingNew} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+              </Box>
+            )}
             {listed.map((t) => (
               <TaskAccordion
                 key={t.id}
