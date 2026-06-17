@@ -91,9 +91,11 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, isA
             <IconButton size="small" aria-label="수정" onClick={() => onEdit?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
               <EditOutlinedIcon sx={{ fontSize: 18 }} />
             </IconButton>
-            <IconButton size="small" aria-label="완료로 변경" onClick={() => onComplete?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
-              <CheckCircleOutlineIcon sx={{ fontSize: 18 }} />
-            </IconButton>
+            {(t.status || '').trim() !== '완료' && (
+              <IconButton size="small" aria-label="완료로 변경" onClick={() => onComplete?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
+                <CheckCircleOutlineIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            )}
           </Box>
         )}
       </Box>

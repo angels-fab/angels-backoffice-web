@@ -66,8 +66,8 @@ function SquareChip({ label, tone }: { label: string; tone: 'green' | 'amber' | 
   )
 }
 
-// 목록 끝 'Add 카드' — 미선택 카드 톤(점선) + 호버 시 채움 미리보기. 누르면 새 업무 작성.
-function AddCard({ onClick }: { onClick: () => void }) {
+// 'Add 카드' — 미선택 카드 톤(점선) + 호버 시 채움 미리보기. 누르면 새 업무 작성.
+function AddCard({ onClick, height = 120 }: { onClick: () => void; height?: number }) {
   return (
     <Box
       role="button"
@@ -76,7 +76,7 @@ function AddCard({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
       sx={(th) => ({
-        minHeight: 120,
+        minHeight: height,
         border: '1.5px dashed', borderColor: 'divider', borderRadius: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
         color: 'text.secondary', fontWeight: 600, cursor: 'pointer',
@@ -107,6 +107,8 @@ export default function Work() {
   const [editTarget, setEditTarget] = useState<WorkItem | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<WorkItem | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [completeTarget, setCompleteTarget] = useState<WorkItem | null>(null)
+  const [completing, setCompleting] = useState(false)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
 
   // 통합검색 딥링크(/work?focus=<id>) → 해당 업무 상세 Drawer 자동 오픈
@@ -191,10 +193,12 @@ export default function Work() {
     }
   }
 
-  // 완료 아이콘 — 상태를 '완료'로 변경(시트 반영). 이미 완료면 변화 없음.
-  const handleComplete = async (item: WorkItem) => {
+  // 완료 아이콘 → 확인 Dialog 후 상태를 '완료'로 변경(시트 반영).
+  const confirmComplete = async () => {
+    if (!completeTarget || completing) return
     if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
-    if ((item.status || '').trim() === '완료') return showSnack('이미 완료된 업무입니다.', 'info')
+    const item = completeTarget
+    setCompleting(true)
     try {
       await updateWork({
         num: item.num, author: user, key: authKey,
@@ -203,9 +207,12 @@ export default function Work() {
         time: item.time, loc: item.loc, mgr: item.mgr, link: item.link,
         remind: item.remind, chief: item.chief,
       })
+      setCompleting(false)
+      setCompleteTarget(null)
       showSnack('완료로 변경했습니다.', 'success')
       dispatch(loadWorkData())
     } catch (err) {
+      setCompleting(false)
       showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
     }
   }
@@ -336,7 +343,7 @@ export default function Work() {
       </ContentSection>
 
       {/* ② 업무 목록 — 선택된 KPI(진행중/Remind/완료)에 따라 표시 */}
-      <ContentSection title="업무 목록" count={listed.length} last={!SHOW_MANAGER_STATUS}>
+      <ContentSection title={view === 'inProgress' ? undefined : '업무 목록'} count={view === 'inProgress' ? undefined : `${listed.length}`} last={!SHOW_MANAGER_STATUS}>
         {/* 진행중 뷰는 회의용으로 깔끔하게 — 구분 필터·검색·담당자 필터 숨김 */}
         {view !== 'inProgress' && (
           <>
@@ -355,7 +362,7 @@ export default function Work() {
           </>
         )}
 
-        {listed.length === 0 ? (
+        {listed.length === 0 && view !== 'inProgress' ? (
           <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
         ) : view === 'remind' ? (
           // Remind — 압정 카드 그리드 (앰버 톤, 선택 시 테두리)
@@ -365,32 +372,42 @@ export default function Work() {
             ))}
             {isAdmin && <AddCard onClick={() => { setEditTarget(null); setWriteOpen(true) }} />}
           </CardGrid>
-        ) : (
-          // 진행중(초록)·완료(회색) — 2열 그리드. Add 카드는 최상단 우측열(2번째 칸).
+        ) : view === 'inProgress' ? (
+          // 진행중 — 최상단 행: [업무 목록 제목] [+ 새 업무 카드], 아래 행부터 업무 카드.
           <CardGrid columns={2}>
-            {listed[0] && (
-              <TaskAccordion
-                key={listed[0].id}
-                t={listed[0]}
-                tone={view === 'done' ? 'gray' : 'green'}
-                selected={selectedTask === listed[0].id}
-                onSelect={() => setSelectedTask(listed[0].id)}
-                isAdmin={isAdmin}
-                onEdit={(it) => setEditTarget(it)}
-                onComplete={handleComplete}
-              />
-            )}
-            {isAdmin && <AddCard key="add" onClick={() => { setEditTarget(null); setWriteOpen(true) }} />}
-            {listed.slice(1).map((t) => (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 64 }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>업무 목록</Typography>
+              <Typography variant="body2" sx={{ color: 'text.disabled' }}>{listed.length}</Typography>
+            </Box>
+            {isAdmin
+              ? <AddCard key="add" height={64} onClick={() => { setEditTarget(null); setWriteOpen(true) }} />
+              : <Box key="add-spacer" />}
+            {listed.map((t) => (
               <TaskAccordion
                 key={t.id}
                 t={t}
-                tone={view === 'done' ? 'gray' : 'green'}
+                tone="green"
                 selected={selectedTask === t.id}
                 onSelect={() => setSelectedTask(t.id)}
                 isAdmin={isAdmin}
                 onEdit={(it) => setEditTarget(it)}
-                onComplete={handleComplete}
+                onComplete={(it) => setCompleteTarget(it)}
+              />
+            ))}
+          </CardGrid>
+        ) : (
+          // 완료(회색) — 2열 그리드. 새 업무 카드 없음, 카드의 완료 버튼도 없음(이미 완료).
+          <CardGrid columns={2}>
+            {listed.map((t) => (
+              <TaskAccordion
+                key={t.id}
+                t={t}
+                tone="gray"
+                selected={selectedTask === t.id}
+                onSelect={() => setSelectedTask(t.id)}
+                isAdmin={isAdmin}
+                onEdit={(it) => setEditTarget(it)}
+                onComplete={(it) => setCompleteTarget(it)}
               />
             ))}
           </CardGrid>
@@ -453,6 +470,22 @@ export default function Work() {
           <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ color: 'text.secondary' }}>취소</Button>
           <Button color="error" variant="contained" onClick={confirmDelete} disabled={deleting}>
             {deleting ? '삭제 중…' : '삭제'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 완료 확인 Dialog */}
+      <Dialog open={!!completeTarget} onClose={() => !completing && setCompleteTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
+        <DialogTitle>업무를 완료하시겠습니까?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.secondary' }}>
+            「{completeTarget ? taskTitle(completeTarget) : ''}」 업무를 완료 상태로 변경합니다.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setCompleteTarget(null)} disabled={completing} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button color="success" variant="contained" onClick={confirmComplete} disabled={completing}>
+            {completing ? '변경 중…' : '확인'}
           </Button>
         </DialogActions>
       </Dialog>
