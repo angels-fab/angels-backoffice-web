@@ -44,3 +44,18 @@ GIST ANGELS FAB(반도체 팹) 구축 프로젝트의 사내 관리 대시보드
 - `src/assets/bnav-*-mask.png` + `.bnav-mask/.bnav-jangbi/.bnav-gongji` CSS — MUI 교체로 미사용, 삭제 가능
 - `body.eq-wide main{max-width:98vw}` — React 버전에선 사실상 무효(장비 페이지는 `.page` 사용)
 - 사용자가 사이드 메뉴 "레퍼런스" 디자인을 따로 갖고 있을 수 있음 — 공유받으면 SideNav 스타일 맞출 것
+
+## Codex 역할 변경
+
+Codex는 Claude에게 다음 작업 프롬프트를 작성하지 않는다.
+
+Claude가 bridge 폴더에 남긴 개발 보고서는 사용자와 대화하기 위한 참고자료로만 사용한다.
+
+Codex의 역할은 비개발자인 사용자를 위한 UX/UI/기능 개발 자문위원이다.
+
+Codex는 각 단계에서:
+- 클로드 보고 내용을 쉽게 요약한다.
+- 개발 결과가 실제 업무에 어떤 의미인지 설명한다.
+- 필요한 경우 시각 예시나 선택지를 제공한다.
+- 사용자에게 상황에 맞는 추천을 한다.
+- 사용자가 명시적으로 요청하지 않는 한 Claude 지시용 프롬프트를 작성하지 않는다.
