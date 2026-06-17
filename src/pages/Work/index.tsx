@@ -204,23 +204,26 @@ export default function Work() {
 
       {/* ① KPI — 진행중(내부 Check) / Remind / 완료. 동일 너비(3열) · 단일 선택(선택색=칩 색, 옅은 채움) */}
       <ContentSection>
-        <CardGrid columns={3}>
-          {/* 진행중 (메인) — 정사각 칩 + 건수(좌 묶음) / 우하단 Check 건수(보라) + Check 칩 */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '4fr 3fr 3fr' }, gap: 2 }}>
+          {/* 진행중 (메인, 4) — 정사각 칩 + 건수 + 우측 보라 박스(1건+Check) */}
           <AppCard
             interactive
             onClick={() => selectView('inProgress')}
             ariaLabel="진행중 업무 보기"
             padding={18}
-            sx={view === 'inProgress'
-              ? { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, 0.12), '&:hover': { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, 0.18) } }
-              : undefined}
+            sx={{
+              ...(view === 'inProgress'
+                ? { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, 0.12) }
+                : {}),
+              '&:hover': { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, view === 'inProgress' ? 0.18 : 0.08) },
+            }}
           >
             <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 2, minHeight: 116 }}>
               <SquareChip label="진행중" tone="green" />
               {/* 칩 바로 오른쪽: 건수 */}
-              <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0, alignSelf: 'center' }}>
                 <Typography component="span" sx={{ fontSize: 60, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
-                <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary', alignSelf: 'flex-end', mb: '8px', ml: '4px' }}>건</Typography>
+                <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
               <Box sx={{ flex: 1 }} />
               {/* 우측 보라 박스 — 1건 + Check 한 박스 (표시 전용, 클릭은 진행중 카드로 위임) */}
@@ -246,9 +249,12 @@ export default function Work() {
             onClick={() => selectView('remind')}
             ariaLabel="Remind 업무 보기"
             padding={18}
-            sx={view === 'remind'
-              ? { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.12), '&:hover': { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.18) } }
-              : undefined}
+            sx={{
+              ...(view === 'remind'
+                ? { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.12) }
+                : {}),
+              '&:hover': { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, view === 'remind' ? 0.18 : 0.08) },
+            }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%', minHeight: 116 }}>
               <SquareChip label="Remind" tone="amber" />
@@ -265,9 +271,12 @@ export default function Work() {
             onClick={() => selectView('done')}
             ariaLabel="완료 업무 보기"
             padding={18}
-            sx={view === 'done'
-              ? { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.1), '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.16) } }
-              : undefined}
+            sx={{
+              ...(view === 'done'
+                ? { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.1) }
+                : {}),
+              '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, view === 'done' ? 0.16 : 0.07) },
+            }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%', minHeight: 116 }}>
               <SquareChip label="완료" tone="gray" />
@@ -278,7 +287,7 @@ export default function Work() {
               </Box>
             </Box>
           </AppCard>
-        </CardGrid>
+        </Box>
       </ContentSection>
 
       {/* ② 업무 목록 — 선택된 KPI(진행중/Remind/완료)에 따라 표시 */}
