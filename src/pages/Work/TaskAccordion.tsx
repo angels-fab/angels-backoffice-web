@@ -20,13 +20,15 @@ export interface TaskAccordionProps {
   onPick: (t: WorkItem) => void
   /** 초기 펼침 여부 — 진행중=true(회의 뷰), 완료/Check=false */
   defaultExpanded?: boolean
+  /** Check 강조 — 진행중 뷰에서 Check 업무일 때 보라 테두리 */
+  highlight?: boolean
 }
 
 /**
  * 진행중 업무 아코디언 — 회의 뷰용. 기본 펼침(개별 접기 가능).
  * 펼치면 메타(부서/예정/장소/완료) + 업무 내용을 한눈에 보여준다.
  */
-export default function TaskAccordion({ t, onPick, defaultExpanded = true }: TaskAccordionProps) {
+export default function TaskAccordion({ t, onPick, defaultExpanded = true, highlight = false }: TaskAccordionProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const st = W_STATUS[classify(t)]
   const subs = taskSubs(t)
@@ -43,14 +45,14 @@ export default function TaskAccordion({ t, onPick, defaultExpanded = true }: Tas
       expanded={expanded}
       onChange={(_, v) => setExpanded(v)}
       disableGutters
-      sx={{
+      sx={(theme) => ({
         bgcolor: 'background.elevated',
-        border: 1,
-        borderColor: 'divider',
+        border: highlight ? 2 : 1,
+        borderColor: highlight ? theme.palette.accent.purple : theme.palette.divider,
         borderRadius: 1,
         boxShadow: 'none',
         '&:before': { display: 'none' },
-      }}
+      })}
     >
       <AccordionSummary
         expandIcon={<ExpandMoreIcon />}
