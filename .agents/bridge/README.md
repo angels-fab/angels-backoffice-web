@@ -4,18 +4,20 @@ Claude Code and Codex use this folder to pass concise handoff messages through t
 
 ## Role Split
 
-- Claude Code owns implementation, local development commands, git sync (`pull`, `commit`, `push`), and UI/UX screenshot capture for Codex review.
-- Codex owns review, risk analysis, project-state整理, and writing the next Claude development prompt. Codex does NOT capture screenshots.
-- Codex should not edit source code or run git sync unless the user explicitly asks.
-- If Codex finds a required fix, it should write a precise prompt for Claude instead of taking over implementation by default.
+> 기준 문서: 루트 `AGENTS.md`의 "Codex 역할 변경" 섹션 (Codex = 자문위원).
+
+- Claude Code owns implementation, local development commands, git sync (`pull`, `commit`, `push`), and UI/UX screenshot capture.
+- **Codex = 비개발자(사용자)를 위한 UX/UI/기능 개발 자문위원.** Claude 보고를 쉽게 요약하고, 업무적 의미를 설명하며, 시각 예시·선택지·추천을 제공한다.
+- **Codex는 사용자가 명시적으로 요청하지 않는 한 Claude용 개발 프롬프트를 작성하지 않는다.** 소스 편집·git 동기화·스크린샷 캡처도 하지 않는다(스크린샷은 Claude 전용).
+- Codex가 필요한 수정을 발견하면, 기본적으로 사용자에게 의미·선택지로 설명한다(직접 구현 인수 금지). 사용자가 명시 요청할 때만 Claude용 프롬프트를 작성한다.
 
 ## Folder Map
 
 - `state.md`: shared project state, current focus, decisions, and warnings.
 - `lock.md`: optional work lock. Fill this before one agent edits files that another agent should avoid.
-- `inbox/claude-to-codex.md`: Claude writes here when Codex should review, decide, or create the next prompt.
-- `inbox/codex-to-claude.md`: Codex writes here when Claude should continue implementation.
-- `outbox/next-claude-prompt.md`: prompt to paste into Claude Code.
+- `inbox/claude-to-codex.md`: Claude writes here for Codex to summarize/explain to the user (변경·검증·의미 참고자료). Codex가 사용자에게 설명·추천하는 근거로 읽는다.
+- `inbox/codex-to-claude.md`: Codex writes here when Claude should continue implementation (보통 사용자 지시를 옮길 때).
+- `outbox/next-claude-prompt.md`: Claude용 프롬프트 — **사용자가 명시 요청할 때만** 작성/사용.
 - `outbox/next-codex-prompt.md`: prompt to paste into Codex.
 - `logs/`: dated work notes. Keep long details here instead of bloating `state.md`.
 - `screenshots/`: Claude Code saves UI/UX screenshots here so Codex can review on any machine without re-running the app (Claude only — Codex does not capture).
@@ -26,7 +28,7 @@ Claude Code and Codex use this folder to pass concise handoff messages through t
 2. Run `git status --short` before editing. Do not overwrite the other agent's uncommitted work.
 3. If you are editing source files, claim them in `lock.md`.
 4. Keep bridge messages short and action-oriented.
-5. At the end of work, update one inbox file for the other agent and one outbox prompt if the next step is clear.
+5. At the end of work, update one inbox file for the other agent. (outbox prompt는 사용자가 명시 요청할 때만 작성.)
 6. Do not store secrets, passwords, tokens, or private credentials in this folder.
 7. Prefer Claude Code for commit/push and cross-device sync. This bridge shares context, not runtime state.
 

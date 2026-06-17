@@ -4,7 +4,7 @@
 
 - Keep Claude Code and Codex synchronized through repository files.
 - Use this file as the compact shared memory for the current work stream.
-- Enforce the agreed role split: Claude Code implements and syncs git; Codex reviews and writes the next Claude prompt.
+- Enforce the agreed role split (기준: 루트 `AGENTS.md`): Claude Code implements and syncs git; **Codex = 사용자용 UX/UI/기능 자문위원**(요약·의미설명·선택지·추천). Codex는 사용자가 명시 요청하지 않는 한 Claude용 프롬프트를 작성하지 않음.
 
 ## Current Focus
 
@@ -42,8 +42,8 @@
 - Use `lock.md` before source edits when both agents may be active.
 - For this repository, run type check with `npm.cmd run type-check` on Windows.
 - Claude Code is responsible for development implementation and git push/pull.
-- Codex is responsible for reviewing Claude's output, identifying risks, and preparing the next Claude Code prompt.
-- Codex should avoid source edits and git sync unless the user explicitly overrides the role split.
+- **Codex = 비개발자 사용자를 위한 UX/UI/기능 자문위원**(루트 `AGENTS.md` 기준): Claude 보고 요약·업무적 의미 설명·시각 예시/선택지·추천 제공. **사용자가 명시 요청하지 않는 한 Claude용 개발 프롬프트는 작성하지 않음**(이전 '다음 프롬프트 작성' 규칙은 폐지).
+- Codex should avoid source edits, git sync, and screenshot capture unless the user explicitly overrides the role split.
 - Immediate status apply is acceptable for now; do not add a confirm modal unless user feedback says it feels risky.
 - Unknown non-empty equipment states may continue falling back to `비가동`, matching the existing count logic.
 - STEP22 phase 1 uses a separate append-only sheet named `장비운영이력`.
@@ -60,4 +60,4 @@
 
 ## Next Handoff
 
-- Codex: STEP23·24·25·26 + 상태 어휘 개편 **모두 커밋·자동배포 완료**. 검토 후 다음 프롬프트(STEP22 phase2 / 담당자현황 재노출 / 보류·취소 필터 재노출 여부 / 완료·Check '모두 펼치기' / 발표모드 등) 작성. **운영 규칙**: 작업 완료 시 자동 커밋·푸시(자동배포). **잔여**: 시트 '가동중'→'운영중' 마이그레이션. 백엔드 무변경(@42).
+- Codex(자문위원): STEP23·24·25·26 + 상태 어휘 개편 **모두 커밋·자동배포 완료**. 사용자에게 현황을 쉽게 요약하고, 다음 후보(STEP22 phase2 / 담당자현황 재노출 / 보류·취소 필터 재노출 / 완료·Check '모두 펼치기' / 발표모드 등)를 **선택지·장단점·추천**으로 제시. (Claude용 프롬프트는 사용자가 명시 요청할 때만 작성.) **운영 규칙**: 작업 완료 시 자동 커밋·푸시(자동배포). **잔여(사용자)**: 시트 '가동중'→'운영중' 마이그레이션. 백엔드 무변경(@42).
