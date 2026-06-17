@@ -28,7 +28,7 @@ export default function TaskCard({ t, onPick, selected = false, onSelect }: Task
       onClick={() => { onSelect?.(); onPick(t) }}
       padding={16}
       sx={(th) => ({
-        bgcolor: alpha(th.palette.accent.amber, 0.1),
+        bgcolor: alpha(th.palette.accent.amber, selected ? 0.22 : 0.1),
         borderColor: selected ? th.palette.accent.green : th.palette.divider,
         boxShadow: selected ? `inset 0 0 0 1px ${th.palette.accent.green}` : 'none',
         '&:hover': { borderColor: th.palette.accent.green, bgcolor: alpha(th.palette.accent.amber, 0.14) },

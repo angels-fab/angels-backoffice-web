@@ -18,17 +18,19 @@ export interface TaskAccordionProps {
   t: WorkItem
   /** 카드 채움 색 (선택된 KPI 색) */
   tone: CardTone
-  /** 선택 여부 — 선택된 카드만 초록 테두리 */
+  /** 선택 여부 — 선택된 카드만 초록 테두리 + 진한 채움 */
   selected?: boolean
   /** 클릭 시 이 카드를 선택 */
   onSelect?: () => void
+  /** 내용 속에서 색으로 강조할 담당자 이름 목록 */
+  mgrNames?: string[]
 }
 
 /**
  * 업무 카드 — 아코디언 없이 항상 내용 표시(정적). 클릭하면 선택(초록 테두리).
  * 채움은 tone 색, 제목 줄(③ 띠) + 담당자 색칩 + 날짜칩. Check 업무는 본문 우측 표시.
  */
-export default function TaskAccordion({ t, tone, selected = false, onSelect }: TaskAccordionProps) {
+export default function TaskAccordion({ t, tone, selected = false, onSelect, mgrNames }: TaskAccordionProps) {
   const subs = taskSubs(t)
   const link = taskLink(t)
   const metas: { label: string; value: string }[] = [
@@ -51,7 +53,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
         }
       }}
       sx={(th) => ({
-        bgcolor: alpha(toneOf(th, tone), 0.1),
+        bgcolor: alpha(toneOf(th, tone), selected ? 0.22 : 0.1),
         border: 1,
         borderColor: selected ? th.palette.accent.green : th.palette.divider,
         boxShadow: selected ? `inset 0 0 0 1px ${th.palette.accent.green}` : 'none',
@@ -68,7 +70,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
         sx={(th) => ({
           display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap',
           px: 1.75, py: 1.25,
-          bgcolor: alpha(toneOf(th, tone), 0.18),
+          bgcolor: alpha(toneOf(th, tone), selected ? 0.36 : 0.18),
           borderBottom: 1, borderColor: alpha(toneOf(th, tone), 0.3),
         })}
       >
@@ -97,7 +99,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
           {subs.length > 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               {subs.map((l, i) => (
-                <SubLine key={i} line={l} />
+                <SubLine key={i} line={l} names={mgrNames} />
               ))}
             </Box>
           ) : (
@@ -112,16 +114,10 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
           )}
         </Box>
         {t.chief && (
-          <Box
-            sx={(th) => ({
-              alignSelf: 'stretch', flexShrink: 0,
-              display: 'flex', alignItems: 'center', px: 2,
-              color: th.palette.accent.purple, fontWeight: 700, fontSize: 15,
-              border: 1, borderColor: alpha(th.palette.accent.purple, 0.5), bgcolor: alpha(th.palette.accent.purple, 0.14),
-              borderRadius: '10px',
-            })}
-          >
-            Check
+          <Box sx={{ alignSelf: 'stretch', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 1.5, pl: 0.5 }}>
+            {/* 위아래 여백 있는 세로 구분선 (글자색=보라와 동일) */}
+            <Box sx={(th) => ({ width: '1px', alignSelf: 'stretch', my: 1, bgcolor: alpha(th.palette.accent.purple, 0.7) })} />
+            <Typography sx={(th) => ({ color: th.palette.accent.purple, fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap' })}>Check</Typography>
           </Box>
         )}
       </Box>
