@@ -130,8 +130,6 @@ export default function Work() {
 
   // ── 목록(상태 탭 + 검토필요 + 필터 + 검색) ──
   const presentCats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
-  // 내용 속에서 색으로 강조할 담당자 이름 목록
-  const mgrNames = useMemo(() => [...new Set(items.map((t) => (t.mgr || '').trim()).filter(Boolean))], [items])
 
   const pool = useMemo(
     () => (view === 'remind' ? items.filter((t) => t.remind) : items.filter((t) => classify(t) === view)),
@@ -328,7 +326,6 @@ export default function Work() {
                 tone={view === 'done' ? 'gray' : 'green'}
                 selected={selectedTask === t.id}
                 onSelect={() => setSelectedTask(t.id)}
-                mgrNames={mgrNames}
               />
             ))}
           </CardGrid>

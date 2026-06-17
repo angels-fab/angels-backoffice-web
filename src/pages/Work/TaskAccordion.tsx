@@ -22,15 +22,13 @@ export interface TaskAccordionProps {
   selected?: boolean
   /** 클릭 시 이 카드를 선택 */
   onSelect?: () => void
-  /** 내용 속에서 색으로 강조할 담당자 이름 목록 */
-  mgrNames?: string[]
 }
 
 /**
  * 업무 카드 — 아코디언 없이 항상 내용 표시(정적). 클릭하면 선택(초록 테두리).
  * 채움은 tone 색, 제목 줄(③ 띠) + 담당자 색칩 + 날짜칩. Check 업무는 본문 우측 표시.
  */
-export default function TaskAccordion({ t, tone, selected = false, onSelect, mgrNames }: TaskAccordionProps) {
+export default function TaskAccordion({ t, tone, selected = false, onSelect }: TaskAccordionProps) {
   const subs = taskSubs(t)
   const link = taskLink(t)
   const metas: { label: string; value: string }[] = [
@@ -99,7 +97,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, mgr
           {subs.length > 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               {subs.map((l, i) => (
-                <SubLine key={i} line={l} names={mgrNames} />
+                <SubLine key={i} line={l} />
               ))}
             </Box>
           ) : (
