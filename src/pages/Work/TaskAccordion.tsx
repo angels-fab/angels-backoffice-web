@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
-import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
@@ -24,17 +24,17 @@ export interface TaskAccordionProps {
   selected?: boolean
   /** 클릭 시 이 카드를 선택 */
   onSelect?: () => void
-  /** 관리자 — 수정/보관 아이콘 노출 */
+  /** 관리자 — 수정/완료 아이콘 노출 */
   isAdmin?: boolean
   onEdit?: (t: WorkItem) => void
-  onArchive?: (t: WorkItem) => void
+  onComplete?: (t: WorkItem) => void
 }
 
 /**
  * 업무 카드 — 아코디언 없이 항상 내용 표시(정적). 클릭하면 선택(초록 테두리).
  * 채움은 tone 색, 제목 줄(③ 띠) + 담당자 색칩 + 날짜칩 + (관리자)수정·보관. Check 업무는 본문 우측 정사각 칩.
  */
-export default function TaskAccordion({ t, tone, selected = false, onSelect, isAdmin, onEdit, onArchive }: TaskAccordionProps) {
+export default function TaskAccordion({ t, tone, selected = false, onSelect, isAdmin, onEdit, onComplete }: TaskAccordionProps) {
   const subs = taskSubs(t)
   const link = taskLink(t)
   const metas: { label: string; value: string }[] = [
@@ -91,8 +91,8 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, isA
             <IconButton size="small" aria-label="수정" onClick={() => onEdit?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
               <EditOutlinedIcon sx={{ fontSize: 18 }} />
             </IconButton>
-            <IconButton size="small" aria-label="보관" onClick={() => onArchive?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
-              <ArchiveOutlinedIcon sx={{ fontSize: 18 }} />
+            <IconButton size="small" aria-label="완료로 변경" onClick={() => onComplete?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
+              <CheckCircleOutlineIcon sx={{ fontSize: 18 }} />
             </IconButton>
           </Box>
         )}

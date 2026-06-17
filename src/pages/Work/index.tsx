@@ -28,7 +28,7 @@ import {
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData } from '@/store/slices/workSlice'
-import { deleteWork } from '@/api/sheets'
+import { deleteWork, updateWork } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
@@ -191,9 +191,23 @@ export default function Work() {
     }
   }
 
-  // 보관 — 동작 미정(준비 중). 버튼/알림만 우선 제공.
-  const handleArchive = (item: WorkItem) => {
-    showSnack(`'${taskTitle(item)}' 보관 — 동작은 곧 추가됩니다`, 'info')
+  // 완료 아이콘 — 상태를 '완료'로 변경(시트 반영). 이미 완료면 변화 없음.
+  const handleComplete = async (item: WorkItem) => {
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    if ((item.status || '').trim() === '완료') return showSnack('이미 완료된 업무입니다.', 'info')
+    try {
+      await updateWork({
+        num: item.num, author: user, key: authKey,
+        cat: item.cat, task: item.task, status: '완료',
+        dept: item.dept, mat: item.mat, start: item.start, plan: item.plan,
+        time: item.time, loc: item.loc, mgr: item.mgr, link: item.link,
+        remind: item.remind, chief: item.chief,
+      })
+      showSnack('완료로 변경했습니다.', 'success')
+      dispatch(loadWorkData())
+    } catch (err) {
+      showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
+    }
   }
 
   const confirmDelete = async () => {
@@ -323,17 +337,22 @@ export default function Work() {
 
       {/* ② 업무 목록 — 선택된 KPI(진행중/Remind/완료)에 따라 표시 */}
       <ContentSection title="업무 목록" count={listed.length} last={!SHOW_MANAGER_STATUS}>
-        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무명·담당자·부서·구분·장소 검색" />}>
-          {presentCats.map((c) => (
-            <StatusChip key={c} status="neutral" label={c} selected={cat === c} onClick={() => setCat(c)} />
-          ))}
-        </FilterBar>
-        {presentMgrs.length > 1 && (
-          <FilterBar>
-            {presentMgrs.map((m) => (
-              <StatusChip key={m} status="info" label={m} selected={mgr === m} onClick={() => setMgr(m)} />
-            ))}
-          </FilterBar>
+        {/* 진행중 뷰는 회의용으로 깔끔하게 — 구분 필터·검색·담당자 필터 숨김 */}
+        {view !== 'inProgress' && (
+          <>
+            <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무명·담당자·부서·구분·장소 검색" />}>
+              {presentCats.map((c) => (
+                <StatusChip key={c} status="neutral" label={c} selected={cat === c} onClick={() => setCat(c)} />
+              ))}
+            </FilterBar>
+            {presentMgrs.length > 1 && (
+              <FilterBar>
+                {presentMgrs.map((m) => (
+                  <StatusChip key={m} status="info" label={m} selected={mgr === m} onClick={() => setMgr(m)} />
+                ))}
+              </FilterBar>
+            )}
+          </>
         )}
 
         {listed.length === 0 ? (
@@ -347,9 +366,22 @@ export default function Work() {
             {isAdmin && <AddCard onClick={() => { setEditTarget(null); setWriteOpen(true) }} />}
           </CardGrid>
         ) : (
-          // 진행중(초록)·완료(회색) — 2열 그리드. 채움=항상, 테두리=선택 카드만. 좁아지면 1열.
+          // 진행중(초록)·완료(회색) — 2열 그리드. Add 카드는 최상단 우측열(2번째 칸).
           <CardGrid columns={2}>
-            {listed.map((t) => (
+            {listed[0] && (
+              <TaskAccordion
+                key={listed[0].id}
+                t={listed[0]}
+                tone={view === 'done' ? 'gray' : 'green'}
+                selected={selectedTask === listed[0].id}
+                onSelect={() => setSelectedTask(listed[0].id)}
+                isAdmin={isAdmin}
+                onEdit={(it) => setEditTarget(it)}
+                onComplete={handleComplete}
+              />
+            )}
+            {isAdmin && <AddCard key="add" onClick={() => { setEditTarget(null); setWriteOpen(true) }} />}
+            {listed.slice(1).map((t) => (
               <TaskAccordion
                 key={t.id}
                 t={t}
@@ -358,10 +390,9 @@ export default function Work() {
                 onSelect={() => setSelectedTask(t.id)}
                 isAdmin={isAdmin}
                 onEdit={(it) => setEditTarget(it)}
-                onArchive={handleArchive}
+                onComplete={handleComplete}
               />
             ))}
-            {isAdmin && <AddCard onClick={() => { setEditTarget(null); setWriteOpen(true) }} />}
           </CardGrid>
         )}
       </ContentSection>
