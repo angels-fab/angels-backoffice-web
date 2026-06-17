@@ -13,7 +13,6 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import RefreshIcon from '@mui/icons-material/Refresh'
-import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
 import {
@@ -31,16 +30,17 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData } from '@/store/slices/workSlice'
 import { deleteWork } from '@/api/sheets'
 import { useRole } from '@/auth/role'
-import { dateSortValue, fmtDate } from '@/utils/date'
+import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { W_STATUS, classify, taskLink, taskTitle, type WStatus } from './workMeta'
+import { classify, taskTitle } from './workMeta'
 import TaskCard from './TaskCard'
 import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import WorkWrite from './WorkWrite'
 
-type StatusTab = 'all' | WStatus
+// 상단 KPI 단일 선택 뷰 (진행중/Remind/완료 중 하나만 선택)
+type KpiView = 'inProgress' | 'remind' | 'done'
 // STEP24 — 담당자 현황 섹션 임시 숨김(구조 보존, 추후 재노출 시 true)
 const SHOW_MANAGER_STATUS = false
 
@@ -54,8 +54,7 @@ export default function Work() {
   const { items, loading, error, updatedAt } = useAppSelector((s) => s.work)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [tab, setTab] = useState<StatusTab>('inProgress') // STEP24 — 회의 뷰: 기본 진행중
-  const [remindOpen, setRemindOpen] = useState(false) // STEP25 — Remind 토글(KPI Remind 타일 클릭 시 KPI 아래 펼침)
+  const [view, setView] = useState<KpiView>('inProgress') // 단일 선택: 진행중/Remind/완료
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
   const [query, setQuery] = useState('')
@@ -93,12 +92,6 @@ export default function Work() {
     }
     return { inProgress, done, hold, cancelled, etc, chief, remind, total: items.length }
   }, [items])
-  // Remind 업무 = Remind 체크 (상태와 별개) — 최근 발의순
-  const urgent = useMemo(
-    () => items.filter((t) => t.remind).sort((a, b) => dateSortValue(b.start) - dateSortValue(a.start)),
-    [items],
-  )
-
   // 담당자별 집계 (STEP24: 현재 섹션 숨김 — 집계는 보존)
   const managers = useMemo(() => {
     const map = new Map<string, { mgr: string; inProgress: number; remind: number; chief: number; total: number }>()
@@ -119,8 +112,8 @@ export default function Work() {
   const presentCats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
 
   const pool = useMemo(
-    () => (tab === 'all' ? items : items.filter((t) => classify(t) === tab)),
-    [items, tab],
+    () => (view === 'remind' ? items.filter((t) => t.remind) : items.filter((t) => classify(t) === view)),
+    [items, view],
   )
 
   const presentMgrs = useMemo(() => ['전체', ...[...new Set(pool.map((t) => t.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [pool])
@@ -134,8 +127,9 @@ export default function Work() {
       .sort(cmp)
   }, [pool, cat, mgr, query])
 
-  const pickStatus = (k: StatusTab) => {
-    setTab((prev) => (prev === k ? 'all' : k))
+  // 단일 선택 — 같은 카드를 다시 눌러도 해제되지 않음(계속 선택), 다른 카드 선택 시 자동 전환
+  const selectView = (v: KpiView) => {
+    setView(v)
     setMgr('전체')
   }
 
@@ -169,55 +163,6 @@ export default function Work() {
     }
   }
 
-  // 그 외 상태 탭 — 컴팩트 행 1줄
-  const compactRow = (t: WorkItem) => {
-    const st = W_STATUS[classify(t)]
-    const link = taskLink(t)
-    return (
-      <Box
-        key={t.id}
-        role="button"
-        tabIndex={0}
-        aria-label={`업무: ${taskTitle(t)}`}
-        onClick={() => setPicked(t)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            setPicked(t)
-          }
-        }}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          flexWrap: 'wrap',
-          px: 2,
-          py: 1.25,
-          cursor: 'pointer',
-          borderBottom: 1,
-          borderColor: 'divider',
-          '&:last-of-type': { borderBottom: 0 },
-          '&:hover': { bgcolor: 'background.elevated' },
-          '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },
-        }}
-      >
-        <StatusChip status={st.status} label={st.label} />
-        {t.cat && <StatusChip status="neutral" label={t.cat} />}
-        {t.chief && <StatusChip status="purple" label="Check" />}
-        <Typography variant="body1" sx={{ flex: 1, minWidth: 140, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {taskTitle(t)}
-        </Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>{t.mgr || '미지정'}</Typography>
-        <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>
-        {link && (
-          <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="링크 열기" onClick={(e) => e.stopPropagation()} sx={{ color: 'text.secondary' }}>
-            <OpenInNewIcon sx={{ fontSize: 17 }} />
-          </IconButton>
-        )}
-      </Box>
-    )
-  }
-
   return (
     <PageContainer>
       <PageHeader
@@ -238,58 +183,58 @@ export default function Work() {
         }
       />
 
-      {/* ① KPI — 진행중(내부 Check 임베드) / Remind / 완료. 동일 너비(3열) · 칩(좌,크게) + 건수(우) */}
+      {/* ① KPI — 진행중(내부 Check) / Remind / 완료. 동일 너비(3열) · 단일 선택(선택색=칩 색, 옅은 채움) */}
       <ContentSection>
         <CardGrid columns={3}>
-          {/* 진행중 (메인) — 클릭 시 진행중 목록 + 하단 Check 카드 보라 강조 */}
+          {/* 진행중 (메인) — 좌상단: 진행중 정사각 칩 + 건수 / 우하단: Check 건수(보라) + Check 칩 */}
           <AppCard
             interactive
-            onClick={() => pickStatus('inProgress')}
+            onClick={() => selectView('inProgress')}
             ariaLabel="진행중 업무 보기"
             padding={18}
-            sx={tab === 'inProgress' ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` } : undefined}
+            sx={view === 'inProgress'
+              ? { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, 0.12), '&:hover': { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, 0.18) } }
+              : undefined}
           >
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, height: '100%' }}>
-              {/* 메인 행: 칩(좌) + 건수(우) */}
-              <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}>
-                <StatusChip status="success" label="진행중" size="medium" />
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 1, minHeight: 116 }}>
+              {/* 좌상단: 진행중 정사각 칩 + 건수 */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box
+                  sx={(t) => ({
+                    width: 60, height: 60, flexShrink: 0,
+                    borderRadius: '14px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    bgcolor: alpha(t.palette.accent.green, 0.15),
+                    color: t.palette.accent.green,
+                    fontWeight: 800, fontSize: 17,
+                  })}
+                >
+                  진행중
+                </Box>
                 <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                  <Typography component="span" sx={{ fontSize: 34, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
-                  <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+                  <Typography component="span" sx={{ fontSize: 36, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
+                  <Typography component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
                 </Box>
               </Box>
-              {/* 임베드 Check (표시 전용, 클릭은 진행중 카드로 위임) */}
-              <Box
-                aria-hidden
-                sx={(theme) => ({
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 1,
-                  px: 1.25,
-                  py: 0.75,
-                  borderRadius: 1.5,
-                  border: 1,
-                  borderColor: alpha(theme.palette.accent.purple, 0.4),
-                  bgcolor: alpha(theme.palette.accent.purple, 0.12),
-                })}
-              >
-                <Typography sx={(theme) => ({ color: theme.palette.accent.purple, fontWeight: 700, fontSize: 13 })}>Check</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                  <Typography sx={(theme) => ({ color: theme.palette.accent.purple, fontWeight: 800, fontSize: 20, lineHeight: 1 })}>{counts.chief}</Typography>
-                  <Typography sx={(theme) => ({ color: theme.palette.accent.purple, fontSize: 12, fontWeight: 600 })}>건</Typography>
+              {/* 우하단: Check 건수(보라) 위 + Check 칩 아래 (표시 전용 — 클릭은 진행중 카드로 위임) */}
+              <Box aria-hidden sx={{ mt: 'auto', display: 'flex', justifyContent: 'flex-end' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.4 }}>
+                  <Typography sx={(t) => ({ color: t.palette.accent.purple, fontWeight: 800, fontSize: 18, lineHeight: 1 })}>{counts.chief}</Typography>
+                  <StatusChip status="purple" label="Check" />
                 </Box>
               </Box>
             </Box>
           </AppCard>
 
-          {/* Remind — 클릭 시 KPI 아래 Remind 목록 펼침(유지) */}
+          {/* Remind — 칩(좌) + 건수(우). 선택색 amber */}
           <AppCard
             interactive
-            onClick={() => setRemindOpen((v) => !v)}
-            ariaLabel="Remind 업무 펼치기"
+            onClick={() => selectView('remind')}
+            ariaLabel="Remind 업무 보기"
             padding={18}
-            sx={remindOpen ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` } : undefined}
+            sx={view === 'remind'
+              ? { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.12), '&:hover': { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.18) } }
+              : undefined}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, height: '100%', minWidth: 0 }}>
               <StatusChip status="warning" label="Remind" size="medium" />
@@ -300,18 +245,21 @@ export default function Work() {
             </Box>
           </AppCard>
 
-          {/* 완료 — 회색 칩. 클릭 시 완료 목록 */}
+          {/* 완료 — 회색 칩 + 완료/전체 건수. 선택색 gray */}
           <AppCard
             interactive
-            onClick={() => pickStatus('done')}
+            onClick={() => selectView('done')}
             ariaLabel="완료 업무 보기"
             padding={18}
-            sx={tab === 'done' ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` } : undefined}
+            sx={view === 'done'
+              ? { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.1), '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.16) } }
+              : undefined}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, height: '100%', minWidth: 0 }}>
               <StatusChip status="neutral" label="완료" size="medium" />
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                <Typography component="span" sx={{ fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
+                <Typography component="span" sx={{ fontSize: 30, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
+                <Typography component="span" sx={{ fontSize: 18, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
                 <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
             </Box>
@@ -319,22 +267,7 @@ export default function Work() {
         </CardGrid>
       </ContentSection>
 
-      {/* ①-b Remind — KPI 'Remind' 타일 클릭 시 KPI 바로 아래(업무목록 사이)에 펼침/접힘 */}
-      {remindOpen && (
-        <ContentSection title="Remind" description="Remind 체크 업무" count={urgent.length}>
-          {urgent.length === 0 ? (
-            <AppCard padding={0}><EmptyState size="sm" title="Remind된 업무가 없습니다" /></AppCard>
-          ) : (
-            <CardGrid minColWidth={260}>
-              {urgent.map((t) => (
-                <TaskCard key={t.id} t={t} onPick={setPicked} />
-              ))}
-            </CardGrid>
-          )}
-        </ContentSection>
-      )}
-
-      {/* ② 업무 목록 — KPI(또는 Remind 펼침) 바로 아래. 기본 진행중, 진행중은 아코디언(모두 펼침) */}
+      {/* ② 업무 목록 — 선택된 KPI(진행중/Remind/완료)에 따라 표시 */}
       <ContentSection title="업무 목록" count={listed.length} last={!SHOW_MANAGER_STATUS}>
         <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무명·담당자·부서·구분·장소 검색" />}>
           {presentCats.map((c) => (
@@ -351,19 +284,20 @@ export default function Work() {
 
         {listed.length === 0 ? (
           <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
-        ) : (tab === 'inProgress' || tab === 'done') ? (
-          // 진행중·완료 — 2열 아코디언 그리드(진행중=기본 펼침, 완료=접힘). 좁아지면 1열.
-          // 진행중 뷰에서 Check 업무는 보라 테두리로 강조(임베드 Check와 연동).
-          <CardGrid columns={2}>
+        ) : view === 'remind' ? (
+          // Remind — 압정 카드 그리드
+          <CardGrid minColWidth={260}>
             {listed.map((t) => (
-              <TaskAccordion key={t.id} t={t} onPick={setPicked} defaultExpanded={tab === 'inProgress'} highlight={tab === 'inProgress' && t.chief} />
+              <TaskCard key={t.id} t={t} onPick={setPicked} />
             ))}
           </CardGrid>
         ) : (
-          // 전체 — 컴팩트 행 목록
-          <AppCard padding={0}>
-            <Box>{listed.map(compactRow)}</Box>
-          </AppCard>
+          // 진행중·완료 — 2열 아코디언(진행중=기본 펼침·Check 보라 테두리, 완료=접힘). 좁아지면 1열.
+          <CardGrid columns={2}>
+            {listed.map((t) => (
+              <TaskAccordion key={t.id} t={t} onPick={setPicked} defaultExpanded={view === 'inProgress'} highlight={view === 'inProgress' && t.chief} />
+            ))}
+          </CardGrid>
         )}
       </ContentSection>
 
