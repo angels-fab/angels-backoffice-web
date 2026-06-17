@@ -221,7 +221,7 @@ export default function Work() {
             <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 2, minHeight: 116 }}>
               <SquareChip label="진행중" tone="green" />
               {/* 칩 바로 오른쪽: 건수 */}
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0, alignSelf: 'center' }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0, alignSelf: 'center', ml: '36px' }}>
                 <Typography component="span" sx={{ fontSize: 60, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
                 <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
@@ -258,7 +258,7 @@ export default function Work() {
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%', minHeight: 116 }}>
               <SquareChip label="Remind" tone="amber" />
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: '36px' }}>
                 <Typography component="span" sx={{ fontSize: 60, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
                 <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
@@ -280,7 +280,7 @@ export default function Work() {
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%', minHeight: 116 }}>
               <SquareChip label="완료" tone="gray" />
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: '16px' }}>
                 <Typography component="span" sx={{ fontSize: 48, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
                 <Typography component="span" sx={{ fontSize: 26, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
                 <Typography component="span" sx={{ fontSize: 18, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
