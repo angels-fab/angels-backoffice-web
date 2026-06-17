@@ -66,7 +66,31 @@ function SquareChip({ label, tone }: { label: string; tone: 'green' | 'amber' | 
   )
 }
 
-type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
+// 목록 끝 'Add 카드' — 미선택 카드 톤(점선) + 호버 시 채움 미리보기. 누르면 새 업무 작성.
+function AddCard({ onClick }: { onClick: () => void }) {
+  return (
+    <Box
+      role="button"
+      tabIndex={0}
+      aria-label="새 업무 등록"
+      onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+      sx={(th) => ({
+        minHeight: 120,
+        border: '1.5px dashed', borderColor: 'divider', borderRadius: 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+        color: 'text.secondary', fontWeight: 600, cursor: 'pointer',
+        transition: 'background-color .15s, border-color .15s',
+        '&:hover': { bgcolor: alpha(th.palette.text.secondary, 0.08), borderColor: alpha(th.palette.text.secondary, 0.55) },
+        '&:focus-visible': { outline: 'none', borderColor: th.palette.primary.main },
+      })}
+    >
+      <AddIcon sx={{ fontSize: 22 }} /> 새 업무
+    </Box>
+  )
+}
+
+type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info' }
 
 export default function Work() {
   const dispatch = useAppDispatch()
@@ -155,7 +179,7 @@ export default function Work() {
   }
 
   // ── CRUD ──
-  const showSnack = (msg: string, severity: 'success' | 'error' = 'success') => setSnack({ open: true, msg, severity })
+  const showSnack = (msg: string, severity: 'success' | 'error' | 'info' = 'success') => setSnack({ open: true, msg, severity })
 
   const handleSaved = async (num: number, isEdit: boolean) => {
     setWriteOpen(false)
@@ -165,6 +189,11 @@ export default function Work() {
     if (isEdit && num && Array.isArray(list)) {
       setPicked(list.find((t) => String(t.num) === String(num)) ?? null)
     }
+  }
+
+  // 보관 — 동작 미정(준비 중). 버튼/알림만 우선 제공.
+  const handleArchive = (item: WorkItem) => {
+    showSnack(`'${taskTitle(item)}' 보관 — 동작은 곧 추가됩니다`, 'info')
   }
 
   const confirmDelete = async () => {
@@ -315,9 +344,10 @@ export default function Work() {
             {listed.map((t) => (
               <TaskCard key={t.id} t={t} onPick={setPicked} selected={selectedTask === t.id} onSelect={() => setSelectedTask(t.id)} />
             ))}
+            {isAdmin && <AddCard onClick={() => { setEditTarget(null); setWriteOpen(true) }} />}
           </CardGrid>
         ) : (
-          // 진행중(초록)·완료(회색) — 2열 아코디언. 채움=항상, 테두리=선택 카드만. 좁아지면 1열.
+          // 진행중(초록)·완료(회색) — 2열 그리드. 채움=항상, 테두리=선택 카드만. 좁아지면 1열.
           <CardGrid columns={2}>
             {listed.map((t) => (
               <TaskAccordion
@@ -326,8 +356,12 @@ export default function Work() {
                 tone={view === 'done' ? 'gray' : 'green'}
                 selected={selectedTask === t.id}
                 onSelect={() => setSelectedTask(t.id)}
+                isAdmin={isAdmin}
+                onEdit={(it) => setEditTarget(it)}
+                onArchive={handleArchive}
               />
             ))}
+            {isAdmin && <AddCard onClick={() => { setEditTarget(null); setWriteOpen(true) }} />}
           </CardGrid>
         )}
       </ContentSection>

@@ -2,6 +2,8 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
@@ -22,13 +24,17 @@ export interface TaskAccordionProps {
   selected?: boolean
   /** 클릭 시 이 카드를 선택 */
   onSelect?: () => void
+  /** 관리자 — 수정/보관 아이콘 노출 */
+  isAdmin?: boolean
+  onEdit?: (t: WorkItem) => void
+  onArchive?: (t: WorkItem) => void
 }
 
 /**
  * 업무 카드 — 아코디언 없이 항상 내용 표시(정적). 클릭하면 선택(초록 테두리).
- * 채움은 tone 색, 제목 줄(③ 띠) + 담당자 색칩 + 날짜칩. Check 업무는 본문 우측 표시.
+ * 채움은 tone 색, 제목 줄(③ 띠) + 담당자 색칩 + 날짜칩 + (관리자)수정·보관. Check 업무는 본문 우측 정사각 칩.
  */
-export default function TaskAccordion({ t, tone, selected = false, onSelect }: TaskAccordionProps) {
+export default function TaskAccordion({ t, tone, selected = false, onSelect, isAdmin, onEdit, onArchive }: TaskAccordionProps) {
   const subs = taskSubs(t)
   const link = taskLink(t)
   const metas: { label: string; value: string }[] = [
@@ -80,6 +86,16 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
         <Box component="span" sx={(th) => ({ fontSize: 12, borderRadius: '8px', px: 1, py: 0.4, color: 'text.secondary', bgcolor: alpha(th.palette.text.secondary, 0.14), border: 1, borderColor: alpha(th.palette.text.secondary, 0.3), fontFamily: 'monospace', whiteSpace: 'nowrap' })}>
           {fmtDate(t.start)}
         </Box>
+        {isAdmin && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, ml: 0.25, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+            <IconButton size="small" aria-label="수정" onClick={() => onEdit?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
+              <EditOutlinedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+            <IconButton size="small" aria-label="보관" onClick={() => onArchive?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
+              <ArchiveOutlinedIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+        )}
       </Box>
 
       {/* 본문 */}
@@ -112,10 +128,16 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
           )}
         </Box>
         {t.chief && (
-          <Box sx={{ alignSelf: 'stretch', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 1.5, pl: 0.5 }}>
-            {/* 위아래 여백 있는 세로 구분선 (글자색=보라와 동일) */}
-            <Box sx={(th) => ({ width: '1px', alignSelf: 'stretch', my: 1, bgcolor: alpha(th.palette.accent.purple, 0.7) })} />
-            <Typography sx={(th) => ({ color: th.palette.accent.purple, fontWeight: 700, fontSize: 16, whiteSpace: 'nowrap' })}>Check</Typography>
+          <Box
+            sx={(th) => ({
+              width: 84, height: 84, flexShrink: 0, alignSelf: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: 1, borderColor: alpha(th.palette.accent.purple, 0.55), bgcolor: alpha(th.palette.accent.purple, 0.16),
+              borderRadius: '14px',
+              color: th.palette.accent.purple, fontWeight: 800, fontSize: 15,
+            })}
+          >
+            Check
           </Box>
         )}
       </Box>
