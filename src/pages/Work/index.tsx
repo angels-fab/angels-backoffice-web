@@ -25,7 +25,6 @@ import {
   FilterBar,
   SearchBar,
   StatusChip,
-  StatTile,
   EmptyState,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -239,89 +238,85 @@ export default function Work() {
         }
       />
 
-      {/* ① KPI — 진행중(내부 Check 임베드) / Remind / 완료·전체. 우선순위: 진행중 > Check > Remind > 완료·전체 */}
+      {/* ① KPI — 진행중(내부 Check 임베드) / Remind / 완료. 동일 너비(3열) · 칩(좌,크게) + 건수(우) */}
       <ContentSection>
-        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'stretch' }}>
-          {/* 진행중 (메인) — 클릭 시 진행중 목록 + 하단 Check 카드 보라 강조. 내부 Check는 표시 전용 */}
+        <CardGrid columns={3}>
+          {/* 진행중 (메인) — 클릭 시 진행중 목록 + 하단 Check 카드 보라 강조 */}
           <AppCard
             interactive
             onClick={() => pickStatus('inProgress')}
             ariaLabel="진행중 업무 보기"
             padding={18}
-            sx={{
-              flex: '2 1 340px',
-              ...(tab === 'inProgress'
-                ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` }
-                : {}),
-            }}
+            sx={tab === 'inProgress' ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` } : undefined}
           >
-            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1.5 }}>
-              {/* 좌: 진행중 수치 (메인) */}
-              <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, height: '100%' }}>
+              {/* 메인 행: 칩(좌) + 건수(우) */}
+              <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, minWidth: 0 }}>
+                <StatusChip status="success" label="진행중" size="medium" />
                 <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
                   <Typography component="span" sx={{ fontSize: 34, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
                   <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
                 </Box>
-                <Box sx={{ mt: 1.25 }}>
-                  <StatusChip status="success" label="진행중" />
-                </Box>
               </Box>
-              {/* 우: 임베드 Check (표시 전용 · ~1/3 폭). 클릭은 진행중 카드로 위임 */}
+              {/* 임베드 Check (표시 전용, 클릭은 진행중 카드로 위임) */}
               <Box
                 aria-hidden
                 sx={(theme) => ({
-                  flex: '0 0 33%',
-                  minWidth: 96,
                   display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  gap: 0.25,
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 1,
                   px: 1.25,
-                  py: 1,
+                  py: 0.75,
                   borderRadius: 1.5,
                   border: 1,
                   borderColor: alpha(theme.palette.accent.purple, 0.4),
                   bgcolor: alpha(theme.palette.accent.purple, 0.12),
                 })}
               >
-                <Typography sx={(theme) => ({ color: theme.palette.accent.purple, fontWeight: 700, fontSize: 12 })}>Check</Typography>
+                <Typography sx={(theme) => ({ color: theme.palette.accent.purple, fontWeight: 700, fontSize: 13 })}>Check</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                  <Typography sx={(theme) => ({ color: theme.palette.accent.purple, fontWeight: 800, fontSize: 22, lineHeight: 1 })}>{counts.chief}</Typography>
+                  <Typography sx={(theme) => ({ color: theme.palette.accent.purple, fontWeight: 800, fontSize: 20, lineHeight: 1 })}>{counts.chief}</Typography>
                   <Typography sx={(theme) => ({ color: theme.palette.accent.purple, fontSize: 12, fontWeight: 600 })}>건</Typography>
                 </Box>
-                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: 11, lineHeight: 1.3 }}>센터장 검토 필요</Typography>
               </Box>
             </Box>
           </AppCard>
 
           {/* Remind — 클릭 시 KPI 아래 Remind 목록 펼침(유지) */}
-          <Box sx={{ flex: '1 1 180px', display: 'flex', '& .MuiPaper-root': { width: '100%' } }}>
-            <StatTile value={counts.remind} unit="건" label="Remind" status="warning" selected={remindOpen} onClick={() => setRemindOpen((v) => !v)} />
-          </Box>
-
-          {/* 완료 / 전체 — 요약(정보성). 클릭 시 전체 목록 */}
           <AppCard
             interactive
-            onClick={() => pickStatus('all')}
-            ariaLabel="전체 업무 보기"
+            onClick={() => setRemindOpen((v) => !v)}
+            ariaLabel="Remind 업무 펼치기"
             padding={18}
-            sx={{
-              flex: '1 1 180px',
-              ...(tab === 'all'
-                ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` }
-                : {}),
-            }}
+            sx={remindOpen ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` } : undefined}
           >
-            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-              <Typography component="span" sx={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
-              <Typography component="span" sx={{ fontSize: 18, fontWeight: 700, color: 'text.disabled' }}>/ {counts.total}</Typography>
-            </Box>
-            <Box sx={{ mt: 1.25 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>완료 / 전체</Typography>
-              <Typography variant="caption" sx={{ color: 'text.disabled' }}>완료된 업무 / 전체 업무</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, height: '100%', minWidth: 0 }}>
+              <StatusChip status="warning" label="Remind" size="medium" />
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                <Typography component="span" sx={{ fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
+                <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+              </Box>
             </Box>
           </AppCard>
-        </Box>
+
+          {/* 완료 — 회색 칩. 클릭 시 완료 목록 */}
+          <AppCard
+            interactive
+            onClick={() => pickStatus('done')}
+            ariaLabel="완료 업무 보기"
+            padding={18}
+            sx={tab === 'done' ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` } : undefined}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, height: '100%', minWidth: 0 }}>
+              <StatusChip status="neutral" label="완료" size="medium" />
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                <Typography component="span" sx={{ fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
+                <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+              </Box>
+            </Box>
+          </AppCard>
+        </CardGrid>
       </ContentSection>
 
       {/* ①-b Remind — KPI 'Remind' 타일 클릭 시 KPI 바로 아래(업무목록 사이)에 펼침/접힘 */}
