@@ -323,7 +323,6 @@ export default function Work() {
               <TaskAccordion
                 key={t.id}
                 t={t}
-                defaultExpanded={view === 'inProgress'}
                 tone={view === 'done' ? 'gray' : 'green'}
                 selected={selectedTask === t.id}
                 onSelect={() => setSelectedTask(t.id)}

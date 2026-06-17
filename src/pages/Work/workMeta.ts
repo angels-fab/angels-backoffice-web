@@ -57,11 +57,19 @@ export function taskLink(t: WorkItem): string | null {
   return m ? m[0] : null
 }
 
-// 담당자별 채움 칩 색 — 이름 해시로 팔레트에서 자동 배정(미지정=회색). 담당자가 늘어도 자동.
-const MGR_PALETTE = ['#2f6db8', '#b8557e', '#a8761a', '#1d8f6a', '#6f5fb0', '#c0572f']
+// 담당자별 채움 칩 색 — 지정 담당자는 고정색, 그 외는 해시로 자동 배정(미지정=회색).
+const MGR_FIXED: Record<string, string> = {
+  박주봉: '#2f6db8', // 파랑
+  조성범: '#2f8f4e', // 초록
+  박세리: '#a8761a', // 주황
+  신현진: '#6f5fb0', // 보라
+}
+// 고정색과 겹치지 않는 fallback 팔레트
+const MGR_PALETTE = ['#b8557e', '#1d8f8f', '#c0572f', '#7a8a2a', '#5a6cc0', '#a04ab0']
 export function mgrColor(name: string): string {
   const s = (name || '').trim()
   if (!s) return '#5f6b7e'
+  if (MGR_FIXED[s]) return MGR_FIXED[s]
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
   return MGR_PALETTE[h % MGR_PALETTE.length]

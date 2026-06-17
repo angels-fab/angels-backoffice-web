@@ -29,8 +29,9 @@ export default function TaskCard({ t, onPick, selected = false, onSelect }: Task
       padding={16}
       sx={(th) => ({
         bgcolor: alpha(th.palette.accent.amber, 0.1),
-        borderColor: selected ? th.palette.accent.amber : th.palette.divider,
-        '&:hover': { borderColor: th.palette.accent.amber, bgcolor: alpha(th.palette.accent.amber, selected ? 0.16 : 0.14) },
+        borderColor: selected ? th.palette.accent.green : th.palette.divider,
+        boxShadow: selected ? `inset 0 0 0 1px ${th.palette.accent.green}` : 'none',
+        '&:hover': { borderColor: th.palette.accent.green, bgcolor: alpha(th.palette.accent.amber, 0.14) },
       })}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
