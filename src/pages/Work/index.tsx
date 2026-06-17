@@ -74,6 +74,7 @@ export default function Work() {
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<KpiView>('inProgress') // 단일 선택: 진행중/Remind/완료
+  const [selectedTask, setSelectedTask] = useState<number | null>(null) // 업무카드 단일 선택(테두리)
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
   const [query, setQuery] = useState('')
@@ -150,6 +151,7 @@ export default function Work() {
   const selectView = (v: KpiView) => {
     setView(v)
     setMgr('전체')
+    setSelectedTask(null)
   }
 
   // ── CRUD ──
@@ -308,17 +310,24 @@ export default function Work() {
         {listed.length === 0 ? (
           <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
         ) : view === 'remind' ? (
-          // Remind — 압정 카드 그리드
+          // Remind — 압정 카드 그리드 (앰버 톤, 선택 시 테두리)
           <CardGrid minColWidth={260}>
             {listed.map((t) => (
-              <TaskCard key={t.id} t={t} onPick={setPicked} />
+              <TaskCard key={t.id} t={t} onPick={setPicked} selected={selectedTask === t.id} onSelect={() => setSelectedTask(t.id)} />
             ))}
           </CardGrid>
         ) : (
-          // 진행중·완료 — 2열 아코디언(진행중=기본 펼침·Check 보라 테두리, 완료=접힘). 좁아지면 1열.
+          // 진행중(초록)·완료(회색) — 2열 아코디언. 채움=항상, 테두리=선택 카드만. 좁아지면 1열.
           <CardGrid columns={2}>
             {listed.map((t) => (
-              <TaskAccordion key={t.id} t={t} onPick={setPicked} defaultExpanded={view === 'inProgress'} highlight={view === 'inProgress' && t.chief} />
+              <TaskAccordion
+                key={t.id}
+                t={t}
+                defaultExpanded={view === 'inProgress'}
+                tone={view === 'done' ? 'gray' : 'green'}
+                selected={selectedTask === t.id}
+                onSelect={() => setSelectedTask(t.id)}
+              />
             ))}
           </CardGrid>
         )}

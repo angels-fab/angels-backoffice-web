@@ -56,3 +56,13 @@ export function taskLink(t: WorkItem): string | null {
   const m = String(t.link || '').match(/https?:\/\/[^\s]+/)
   return m ? m[0] : null
 }
+
+// 담당자별 채움 칩 색 — 이름 해시로 팔레트에서 자동 배정(미지정=회색). 담당자가 늘어도 자동.
+const MGR_PALETTE = ['#2f6db8', '#b8557e', '#a8761a', '#1d8f6a', '#6f5fb0', '#c0572f']
+export function mgrColor(name: string): string {
+  const s = (name || '').trim()
+  if (!s) return '#5f6b7e'
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return MGR_PALETTE[h % MGR_PALETTE.length]
+}

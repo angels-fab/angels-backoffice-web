@@ -19,6 +19,13 @@ KPI 5개 → **3카드 동일 너비**(CardGrid 3열). **단일 선택**(`view`:
 - `src/pages/Work/index.tsx` — KPI 3카드 단일 선택(`view`), 진행중 카드 내부 재배치(정사각 칩+건수 / Check 건수+칩), 완료 `done/total 건`, 선택색=칩색+옅은 채움. `tab`/`remindOpen`/`pickStatus`/`compactRow`/`urgent` 제거 → `view`/`selectView`로 통합. Remind는 별도 펼침 패널 → 단일 선택 뷰로 흡수(선택 시 하단에 Remind 목록).
 - `src/pages/Work/TaskAccordion.tsx` — `highlight` prop(보라 테두리).
 
+## 하단 업무카드 개편 (TaskAccordion / TaskCard)
+- **채움 = 항상 선택 KPI 색**(진행중 초록·완료 회색·Remind 앰버), **테두리 = 클릭 선택한 카드 1개에만**(단일 선택, 재클릭 유지, 다른 카드 클릭 시 이동 — `selectedTask`).
+- **제목 줄(③)**: 요약 줄에 tone 띠(alpha .18) + 하단 경계선.
+- **담당자 색칩**: 이름 해시로 색 자동 배정(`mgrColor`, 미지정=회색), 흰 글씨 채움칩. **날짜**는 모노 칩.
+- **Check 업무**: 보라 테두리/요약칩 제거 → **본문 우측에 큰 Check 칩**(세로로 늘인 박스, 건수 없음).
+- **진행중 상태칩 제거**(초록 채움이 대체), **좌하단 상세(drawer) 버튼 제거**(관련자료 링크 버튼은 유지). 상세 Drawer는 통합검색 딥링크로만 진입.
+
 ## 동작/주의
 - type-check·build 통과. 다크 테마·하단 목록 렌더 스타일·레이아웃 유지.
 - 단일 선택이므로 '전체' 뷰 진입 KPI는 없음(완료=완료만, Remind=Remind만, 진행중=진행중만). 필요 시 '전체' 카드 재추가 가능.
