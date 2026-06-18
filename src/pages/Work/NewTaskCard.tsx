@@ -166,7 +166,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
         borderRadius: 1, overflow: 'hidden',
       })}
     >
-      {/* 제목 줄 */}
+      {/* 헤더: 구분 · 관련부서 · 담당자 칩 + 우측 링크/첨부/저장/취소. 제목은 아래 전폭 한 줄. */}
       <Box
         sx={(th) => ({
           display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap',
@@ -176,15 +176,14 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
         })}
       >
         <SelectField value={cat} onChange={setCat} options={options.cats} placeholder="구분" ariaLabel="구분" sx={{ width: 96, flexShrink: 0 }} />
-        <Field value={title} onChange={setTitle} placeholder="업무 제목" ariaLabel="업무 제목" sx={{ width: 210, flexShrink: 1, minWidth: 120 }} />
-        {/* 제목 우측 — 관련링크(팝업) · 첨부(준비중) 아이콘 */}
+        <ComboField value={dept} onChange={setDept} options={options.depts} placeholder="관련부서" ariaLabel="부서" sx={{ width: 124, flexShrink: 0 }} />
+        <ComboField value={mgr} onChange={setMgr} options={options.mgrs} placeholder="담당자" ariaLabel="담당자" sx={{ width: 84, flexShrink: 0 }} />
+        <Box sx={{ flex: 1, minWidth: 4 }} />
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <LinkButton value={link} onChange={setLink} />
           <AttachButton />
         </Box>
-        <ComboField value={mgr} onChange={setMgr} options={options.mgrs} placeholder="담당자" ariaLabel="담당자" sx={{ width: 74, flexShrink: 0 }} />
-        <DateField value={start} onChange={setStart} label="발의일자" ariaLabel="발의일자" sx={{ width: 116, flexShrink: 0 }} />
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, ml: 0.25, flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
           <Tooltip title="저장">
             <span>
               <IconButton size="small" aria-label="저장" onClick={save} disabled={saving} sx={(th) => ({ color: th.palette.accent.green, p: 0.5 })}>
@@ -200,13 +199,15 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
             </span>
           </Tooltip>
         </Box>
+        {/* 제목 — 전폭 한 줄(헤더 안에서 줄바꿈) */}
+        <Field value={title} onChange={setTitle} placeholder="업무 제목" ariaLabel="업무 제목" sx={{ flexBasis: '100%', width: '100%', minWidth: 0 }} />
       </Box>
 
       {/* 본문 */}
       <Box sx={{ px: 1.75, py: 1.5, display: 'flex', alignItems: 'stretch', gap: 1.5 }}>
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-            <ComboField value={dept} onChange={setDept} options={options.depts} placeholder="관련부서" ariaLabel="부서" sx={{ width: 128, flexShrink: 0 }} />
+            <DateField value={start} onChange={setStart} label="발의일자" ariaLabel="발의일자" sx={{ width: 116, flexShrink: 0 }} />
             <DateField value={plan} onChange={setPlan} label="예정일" ariaLabel="예정일" sx={{ width: 116, flexShrink: 0 }} />
             <TimeRangeField value={time} onChange={setTime} sx={{ width: 150, flexShrink: 0 }} />
             <ComboField value={loc} onChange={setLoc} options={options.locs} placeholder="장소" ariaLabel="장소" sx={{ width: 128, flexShrink: 0 }} />

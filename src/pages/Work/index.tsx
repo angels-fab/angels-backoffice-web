@@ -14,6 +14,7 @@ import DialogActions from '@mui/material/DialogActions'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import AssessmentIcon from '@mui/icons-material/Assessment'
+import ChecklistIcon from '@mui/icons-material/Checklist'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
@@ -89,6 +90,7 @@ function SquareChip({ label, tone }: { label: string; tone: 'green' | 'amber' | 
 }
 
 // 'Add 카드' — 미선택 카드 톤(점선) + 호버 시 채움 미리보기. 누르면 새 업무 작성.
+// height는 고정 높이(평균 카드 높이) — alignSelf:start로 그리드 행에 끌려 늘어나지 않음.
 function AddCard({ onClick, height = 120 }: { onClick: () => void; height?: number }) {
   return (
     <Box
@@ -98,7 +100,7 @@ function AddCard({ onClick, height = 120 }: { onClick: () => void; height?: numb
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
       sx={(th) => ({
-        minHeight: height,
+        height, alignSelf: 'start',
         border: '1.5px dashed', borderColor: 'divider', borderRadius: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
         color: 'text.secondary', fontWeight: 600, cursor: 'pointer',
@@ -560,22 +562,32 @@ export default function Work() {
             {isAdmin && <AddCard onClick={startCompose} />}
           </CardGrid>
         ) : view === 'inProgress' ? (
-          // 진행중 — 최상단 행: [업무 목록 제목] [+ 새 업무 카드]. 새 업무 클릭 시 인라인 편집 카드(전폭).
-          <CardGrid columns={2}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 64 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>업무 목록</Typography>
+          // 진행중 — '업무 목록' 헤더(아이콘+큰 제목) 아래 2열 그리드. 새 업무 카드는 그리드 좌상단(고정 높이).
+          <>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+              <Box
+                sx={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  width: 40, height: 40, borderRadius: 2, bgcolor: 'background.elevated', color: 'primary.main',
+                  '& svg': { fontSize: 22 },
+                }}
+              >
+                <ChecklistIcon />
+              </Box>
+              <Typography variant="h2" component="h2">업무 목록</Typography>
               <Typography variant="body2" sx={{ color: 'text.disabled' }}>{listed.length}</Typography>
             </Box>
-            {isAdmin && !composing
-              ? <AddCard key="add" height={64} onClick={startCompose} />
-              : <Box key="add-spacer" />}
-            {isAdmin && composing && (
-              <Box key="composer" sx={{ gridColumn: '1 / -1' }}>
-                <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
-              </Box>
-            )}
-            {listed.map((t) => renderTask(t, 'green'))}
-          </CardGrid>
+            <CardGrid columns={2}>
+              {isAdmin && (composing
+                ? (
+                  <Box key="composer" sx={{ gridColumn: '1 / -1' }}>
+                    <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+                  </Box>
+                )
+                : <AddCard key="add" height={150} onClick={startCompose} />)}
+              {listed.map((t) => renderTask(t, 'green'))}
+            </CardGrid>
+          </>
         ) : (
           // 완료(회색) — 2열 그리드. 새 업무 카드 없음, 카드의 완료 버튼도 없음(이미 완료).
           <CardGrid columns={2}>
