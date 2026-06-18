@@ -5,7 +5,7 @@
 
 ## 현재 상태
 - **STEP 1~27 완료** (…25 KPI/Remind 토글·26 KPI 전체타일·목록 2열·들여쓰기·27 새 업무 인라인폼 개편[드롭다운/자동완성/날짜 한글라벨/시간 wheel/링크·첨부 아이콘] + 완료 다이얼로그 Remind 체크박스). **STEP27까지 `main` 커밋·자동배포 완료.** (운영 규칙: 작업 완료 시 자동 커밋·푸시 = 자동배포)
-- **STEP27 메모**: 신규 `src/pages/Work/inlineFields.tsx`(ComboField·SelectField·DateField·TimeRangeField·LinkButton·AttachButton). 프런트 전용(시트 무변경). **구분=드롭다운 선택만**(`WORK_CAT_OPTIONS` 6개, 시트 '구분' 열 기준), **담당자=입력가능+기본보기 5명**(`WORK_MGR_OPTIONS` 센터·신현진·박주봉·박세리·조성범). 첨부는 UI만(백엔드 미구현). 시간=`"HH:MM ~ HH:MM"`(휠 감도↓·'취소' 버튼). 업무내용 글머리: 화면 '•' / 시트 '-'(입력 '- '→'• ' 실시간, 저장 시 '- ' 복원 — `displayBullet`/`dashToBullet`/`bulletToDash`).
+- **STEP27 메모**: 신규 `src/pages/Work/inlineFields.tsx`(ComboField·SelectField·DateField·TimeRangeField·LinkButton·AttachButton). 프런트 전용(시트 무변경, 백엔드 무변경). **구분=드롭다운 선택만**(`WORK_CAT_OPTIONS` 6개), **담당자=입력가능+담당자 시트 동적 명단**(`fetchAuthors` `?authors=1`, 헤더 자동 인식·새 담당자 자동 반영, 실패 시 `WORK_MGR_OPTIONS` 폴백). 첨부는 UI만(백엔드 미구현). 시간=`"HH:MM ~ HH:MM"`(휠 감도↓·'취소' 버튼). 업무내용 글머리: 화면 '•' / 시트 '-'(입력 '- '→'• ' 실시간 + **Enter 자동 글머리**, 저장 시 '- ' 복원). **업무카드 수정=in-place 인라인 편집(팝업 없음, `NewTaskCard initial` 공용)** — 상세 Drawer 수정만 모달 유지.
 - **운영 메모**: Codex 협업(.agents/bridge) 일시 중단 — 현재 브릿지 파일 갱신 보류(사용자 지시). 작업 완료 시 자동배포 + docs 기록은 유지.
 - **⚠ 시트 마이그레이션 잔여**: 상태 어휘 개편으로 시트의 기존 '가동중' 등은 '운영중' 등 4값으로 정리해야 '미분류' 표시가 사라짐(드롭다운 권장). 백엔드 무변경(@42).
 - **상태 어휘 개편(미커밋)**: 표시 라벨 매핑 폐지 → 시트값 그대로. 정식 4값 `도입예정/도입중/운영중/비가동`(가동중→운영중·설치중→도입중), 그 외는 칩에 '미분류'. **⚠ 시트 기존 '가동중' 등은 새 값으로 마이그레이션 필요**(드롭다운 권장).

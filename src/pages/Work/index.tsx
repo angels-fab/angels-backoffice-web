@@ -30,12 +30,12 @@ import {
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData } from '@/store/slices/workSlice'
-import { createWork, deleteWork, updateWork } from '@/api/sheets'
+import { createWork, deleteWork, updateWork, fetchAuthors } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { classify, taskTitle, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS } from './workMeta'
+import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS } from './workMeta'
 import TaskCard from './TaskCard'
 import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
@@ -50,6 +50,24 @@ const SHOW_MANAGER_STATUS = false
 
 // 발의일자 최신순 (최근 업무가 위)
 const cmp = (a: WorkItem, b: WorkItem) => dateSortValue(b.start) - dateSortValue(a.start)
+
+// 업무 → 인라인 편집 폼 값 (task 첫 줄=제목, 나머지=본문 / 본문 글머리 '- ' → 화면 '• ')
+function toForm(t: WorkItem): NewTaskForm {
+  const lines = String(t.task || '').split(/\r?\n/)
+  return {
+    cat: t.cat || '',
+    title: lines[0] || '',
+    body: dashToBullet(lines.slice(1).join('\n')),
+    mgr: t.mgr || '',
+    start: t.start || '',
+    plan: t.plan || '',
+    dept: t.dept || '',
+    time: t.time || '',
+    loc: t.loc || '',
+    link: t.link || '',
+    chief: !!t.chief,
+  }
+}
 
 // KPI 카드의 라운드 정사각 칩 (진행중=초록·Remind=앰버·완료=회색)
 function SquareChip({ label, tone }: { label: string; tone: 'green' | 'amber' | 'gray' }) {
@@ -117,7 +135,15 @@ export default function Work() {
   const [composing, setComposing] = useState(false) // 새 업무 카드 → 인라인 편집 모드
   const [composeDirty, setComposeDirty] = useState(false) // 인라인 편집 중 입력값 존재 여부
   const [savingNew, setSavingNew] = useState(false)
+  const [editingId, setEditingId] = useState<number | null>(null) // 업무카드 in-place 편집 대상(팝업 대신)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [authors, setAuthors] = useState<string[] | null>(null) // 담당자 시트 이름 명단(자동완성)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
+
+  // 담당자 시트('이름' 열, 헤더 자동 인식)에서 명단 로드 — 새 담당자 추가 시 자동 반영
+  useEffect(() => {
+    fetchAuthors().then(setAuthors).catch(() => setAuthors(null))
+  }, [])
 
   // 통합검색 딥링크(/work?focus=<id>) → 해당 업무 상세 Drawer 자동 오픈
   useEffect(() => {
@@ -165,17 +191,17 @@ export default function Work() {
   // ── 목록(상태 탭 + 검토필요 + 필터 + 검색) ──
   const presentCats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
 
-  // 새 업무 폼 후보 — 구분/담당자는 고정 목록, 부서/장소는 전체 업무 히스토리에서 수집(자동완성)
+  // 새 업무 폼 후보 — 구분은 고정 목록, 담당자는 담당자 시트 명단(실패 시 기본값), 부서/장소는 업무 히스토리
   const fieldOptions = useMemo(() => {
     const uniq = (sel: (t: WorkItem) => string) =>
       [...new Set(items.map((t) => (sel(t) || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))
     return {
       cats: WORK_CAT_OPTIONS,
-      mgrs: WORK_MGR_OPTIONS,
+      mgrs: authors && authors.length ? authors : WORK_MGR_OPTIONS,
       depts: uniq((t) => t.dept),
       locs: uniq((t) => t.loc),
     }
-  }, [items])
+  }, [items, authors])
 
   const pool = useMemo(
     () => (view === 'remind' ? items.filter((t) => t.remind) : items.filter((t) => classify(t) === view)),
@@ -201,13 +227,22 @@ export default function Work() {
     setMgr('전체')
     setSelectedTask(null)
     setComposing(false)
+    setEditingId(null)
   }
 
   // '새 업무' 카드 클릭 → 진행중 뷰에서 인라인 편집 카드 펼침(별도 창 없음)
   const startCompose = () => {
     setView('inProgress')
     setSelectedTask(null)
+    setEditingId(null)
     setComposing(true)
+  }
+
+  // 업무카드 수정 아이콘 → 그 자리에서 in-place 편집(팝업 없음)
+  const startEdit = (t: WorkItem) => {
+    setComposing(false)
+    setSelectedTask(t.id)
+    setEditingId(t.id)
   }
 
   // ── CRUD ──
@@ -249,6 +284,33 @@ export default function Work() {
     } catch (err) {
       setSavingNew(false)
       showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+    }
+  }
+
+  // in-place 수정 저장 — 폼 외 항목(상태·완료일·관련자료·Remind)은 기존 값 유지, task=제목+본문(• → -).
+  const handleSaveEdit = async (item: WorkItem, form: NewTaskForm) => {
+    if (savingEdit) return
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    const titleLine = form.title.trim()
+    if (!titleLine) return showSnack('업무 제목을 입력해주세요.', 'error')
+    const bodyText = bulletToDash(form.body.replace(/\s+$/, ''))
+    const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
+    setSavingEdit(true)
+    try {
+      await updateWork({
+        num: item.num, author: user, key: authKey,
+        cat: form.cat.trim(), task, status: item.status,
+        dept: form.dept.trim(), mat: item.mat, start: form.start, plan: form.plan,
+        time: form.time.trim(), loc: form.loc.trim(), mgr: form.mgr.trim(),
+        link: form.link.trim(), remind: item.remind, chief: form.chief,
+      })
+      setSavingEdit(false)
+      setEditingId(null)
+      showSnack('업무를 수정했습니다.', 'success')
+      dispatch(loadWorkData())
+    } catch (err) {
+      setSavingEdit(false)
+      showSnack(err instanceof Error ? err.message : '수정 실패', 'error')
     }
   }
 
@@ -297,6 +359,35 @@ export default function Work() {
       showSnack(err instanceof Error ? err.message : '삭제 실패', 'error')
     }
   }
+
+  // 수정 폼의 구분 옵션 — 기존 값이 표준 6개에 없으면 그 값도 선택 가능하게 포함(데이터 손실 방지)
+  const editOptionsFor = (t: WorkItem) =>
+    t.cat && !fieldOptions.cats.includes(t.cat) ? { ...fieldOptions, cats: [t.cat, ...fieldOptions.cats] } : fieldOptions
+
+  // 업무 행 — 수정 중이면 그 자리에서 인라인 편집(전폭), 아니면 카드
+  const renderTask = (t: WorkItem, tone: 'green' | 'gray') =>
+    editingId === t.id ? (
+      <Box key={t.id} sx={{ gridColumn: '1 / -1' }}>
+        <NewTaskCard
+          saving={savingEdit}
+          options={editOptionsFor(t)}
+          initial={toForm(t)}
+          onCancel={() => setEditingId(null)}
+          onSave={(form) => handleSaveEdit(t, form)}
+        />
+      </Box>
+    ) : (
+      <TaskAccordion
+        key={t.id}
+        t={t}
+        tone={tone}
+        selected={selectedTask === t.id}
+        onSelect={() => setSelectedTask(t.id)}
+        isAdmin={isAdmin}
+        onEdit={startEdit}
+        onComplete={(it) => setCompleteTarget(it)}
+      />
+    )
 
   return (
     <PageContainer>
@@ -451,34 +542,12 @@ export default function Work() {
                 <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
               </Box>
             )}
-            {listed.map((t) => (
-              <TaskAccordion
-                key={t.id}
-                t={t}
-                tone="green"
-                selected={selectedTask === t.id}
-                onSelect={() => setSelectedTask(t.id)}
-                isAdmin={isAdmin}
-                onEdit={(it) => setEditTarget(it)}
-                onComplete={(it) => setCompleteTarget(it)}
-              />
-            ))}
+            {listed.map((t) => renderTask(t, 'green'))}
           </CardGrid>
         ) : (
           // 완료(회색) — 2열 그리드. 새 업무 카드 없음, 카드의 완료 버튼도 없음(이미 완료).
           <CardGrid columns={2}>
-            {listed.map((t) => (
-              <TaskAccordion
-                key={t.id}
-                t={t}
-                tone="gray"
-                selected={selectedTask === t.id}
-                onSelect={() => setSelectedTask(t.id)}
-                isAdmin={isAdmin}
-                onEdit={(it) => setEditTarget(it)}
-                onComplete={(it) => setCompleteTarget(it)}
-              />
-            ))}
+            {listed.map((t) => renderTask(t, 'gray'))}
           </CardGrid>
         )}
       </ContentSection>

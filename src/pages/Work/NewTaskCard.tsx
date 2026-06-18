@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import InputBase from '@mui/material/InputBase'
@@ -10,7 +11,7 @@ import type { SxProps, Theme } from '@mui/material/styles'
 import { ComboField, SelectField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
 import { dashToBullet } from './workMeta'
 
-/** 인라인 새 업무 작성 폼 값 — 저장 시 index에서 createWork 페이로드로 변환 */
+/** 인라인 새 업무 작성 폼 값 — 저장 시 index에서 createWork/updateWork 페이로드로 변환 */
 export interface NewTaskForm {
   cat: string
   title: string
@@ -25,7 +26,7 @@ export interface NewTaskForm {
   chief: boolean
 }
 
-/** 진행중+완료 전체 업무에서 모은 자동완성/드롭다운 후보 */
+/** 드롭다운/자동완성 후보 */
 export interface FieldOptions {
   cats: string[]
   mgrs: string[]
@@ -36,8 +37,10 @@ export interface FieldOptions {
 export interface NewTaskCardProps {
   /** 저장 진행 중 — 입력/버튼 비활성화 */
   saving: boolean
-  /** 히스토리 기반 드롭다운/자동완성 후보 */
+  /** 드롭다운/자동완성 후보 */
   options: FieldOptions
+  /** 수정 모드 — 기존 값 채움(없으면 새 업무 빈 폼) */
+  initial?: NewTaskForm
   onCancel: () => void
   onSave: (form: NewTaskForm) => void
   /** 입력값 존재 여부 변화 알림 — 뷰 전환 시 작성 중 내용 보호용 */
@@ -46,7 +49,7 @@ export interface NewTaskCardProps {
 
 // 카드 안에서 쓰는 인라인 입력 — 미니멀 보더 + 포커스 시 초록 테두리 (제목/본문 전용)
 function Field({
-  value, onChange, placeholder, multiline, minRows, ariaLabel, sx,
+  value, onChange, placeholder, multiline, minRows, ariaLabel, sx, onKeyDown, inputRef,
 }: {
   value: string
   onChange: (v: string) => void
@@ -55,11 +58,15 @@ function Field({
   minRows?: number
   ariaLabel: string
   sx?: SxProps<Theme>
+  onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => void
+  inputRef?: React.Ref<HTMLTextAreaElement | HTMLInputElement>
 }) {
   return (
     <InputBase
       value={value}
       onChange={(e) => onChange(e.target.value)}
+      onKeyDown={onKeyDown}
+      inputRef={inputRef}
       placeholder={placeholder}
       multiline={multiline}
       minRows={minRows}
@@ -81,22 +88,55 @@ function Field({
 }
 
 /**
- * 인라인 새 업무 카드 — 업무 카드 템플릿 그대로(진행중 초록 톤), 표시될 자리에 빈칸을 두고 직접 입력.
+ * 인라인 업무 작성/수정 카드 — 업무 카드 템플릿 그대로(초록 톤), 표시될 자리에 빈칸을 두고 직접 입력.
  * 제목줄: 구분(드롭다운)·제목·링크/첨부 아이콘·담당자(드롭다운)·발의일자 + 저장(✓)/취소(✕).
- * 본문: 부서(자동완성)/예정일/시간(wheel)/장소(자동완성) · 내용 + 우측 Check 토글.
+ * 본문: 부서(자동완성)/예정일/시간(wheel)/장소(자동완성) · 내용(Enter→글머리) + 우측 Check 토글.
  */
-export default function NewTaskCard({ saving, options, onCancel, onSave, onDirtyChange }: NewTaskCardProps) {
-  const [cat, setCat] = useState('')
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
-  const [mgr, setMgr] = useState('')
-  const [start, setStart] = useState('')
-  const [plan, setPlan] = useState('')
-  const [dept, setDept] = useState('')
-  const [time, setTime] = useState('')
-  const [loc, setLoc] = useState('')
-  const [link, setLink] = useState('')
-  const [chief, setChief] = useState(false)
+export default function NewTaskCard({ saving, options, initial, onCancel, onSave, onDirtyChange }: NewTaskCardProps) {
+  const [cat, setCat] = useState(initial?.cat ?? '')
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [body, setBody] = useState(initial?.body ?? '')
+  const [mgr, setMgr] = useState(initial?.mgr ?? '')
+  const [start, setStart] = useState(initial?.start ?? '')
+  const [plan, setPlan] = useState(initial?.plan ?? '')
+  const [dept, setDept] = useState(initial?.dept ?? '')
+  const [time, setTime] = useState(initial?.time ?? '')
+  const [loc, setLoc] = useState(initial?.loc ?? '')
+  const [link, setLink] = useState(initial?.link ?? '')
+  const [chief, setChief] = useState(initial?.chief ?? false)
+
+  // 본문 textarea 커서 제어(Enter 자동 글머리 후 위치 복원)
+  const bodyRef = useRef<HTMLTextAreaElement | null>(null)
+  const caretRef = useRef<number | null>(null)
+  const applyBody = (v: string) => setBody(dashToBullet(v))
+  useLayoutEffect(() => {
+    if (caretRef.current != null && bodyRef.current) {
+      const pos = caretRef.current
+      bodyRef.current.selectionStart = bodyRef.current.selectionEnd = pos
+      caretRef.current = null
+    }
+  }, [body])
+
+  // Enter → 새 줄 자동 글머리(• ). 빈 글머리 줄에서 Enter는 글머리 제거(리스트 빠져나가기).
+  const onBodyKeyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    if (e.key !== 'Enter' || e.shiftKey || (e.nativeEvent as { isComposing?: boolean }).isComposing) return
+    const ta = e.currentTarget as HTMLTextAreaElement
+    const s = ta.selectionStart ?? body.length
+    const eend = ta.selectionEnd ?? s
+    const lineStart = body.lastIndexOf('\n', s - 1) + 1
+    const curLine = body.slice(lineStart, s)
+    e.preventDefault()
+    if (/^[ \t]*•[ \t]*$/.test(curLine)) {
+      const next = body.slice(0, lineStart) + body.slice(eend)
+      caretRef.current = lineStart
+      applyBody(next)
+      return
+    }
+    const insert = '\n• '
+    const next = body.slice(0, s) + insert + body.slice(eend)
+    caretRef.current = s + insert.length
+    applyBody(next)
+  }
 
   // 입력값 존재 여부를 부모에 보고 — 뷰 전환 시 작성 중 내용 손실 방지(확인 안내)
   const dirty = !!(cat || title || body || mgr || start || plan || dept || time || loc || link || chief)
@@ -164,7 +204,17 @@ export default function NewTaskCard({ saving, options, onCancel, onSave, onDirty
             <TimeRangeField value={time} onChange={setTime} />
             <ComboField value={loc} onChange={setLoc} options={options.locs} placeholder="장소" ariaLabel="장소" />
           </Box>
-          <Field value={body} onChange={(v) => setBody(dashToBullet(v))} placeholder="업무 내용 — 줄 앞에 '- '를 입력하면 글머리(•)로 바뀝니다" ariaLabel="업무 내용" multiline minRows={3} sx={{ alignItems: 'flex-start' }} />
+          <Field
+            value={body}
+            onChange={applyBody}
+            onKeyDown={onBodyKeyDown}
+            inputRef={bodyRef}
+            placeholder="업무 내용 — Enter로 줄을 바꾸면 글머리(•)가 자동 추가됩니다"
+            ariaLabel="업무 내용"
+            multiline
+            minRows={3}
+            sx={{ alignItems: 'flex-start' }}
+          />
         </Box>
         {/* Check 토글 — 보라(활성)/회색(비활성), 업무 카드의 Check 칩과 동일 크기 */}
         <Box

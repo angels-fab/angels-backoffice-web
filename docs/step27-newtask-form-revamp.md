@@ -41,6 +41,12 @@
 - **시간 wheel 감도↓ + 버튼명**: 휠을 시간 쓰로틀(110ms)로 한 번에 1칸씩 이동(네이티브 큰 점프 방지, `{passive:false}` 리스너). picker '지우기' → '취소'(적용 안 하고 닫기).
 - **글머리 dash→bullet**: 표시용 `displayBullet()`로 dash 계열(- – — * ·)을 '•'로 렌더(`SubLine.tsx`·`WorkRow.tsx`). 입력 textarea는 `dashToBullet()`로 줄 시작 '- '를 실시간 '• ' 변환, 저장 시 `bulletToDash()`로 '- '로 되돌려 **시트엔 dash 유지**. 라운드트립 검증 완료(중간/공백없는 dash는 미변환).
 
+## 후속 보완 2 (사용자 피드백)
+
+- **담당자 자동완성 = 담당자 시트 동적 로드**: 하드코딩 5명 → `fetchAuthors()`(`?authors=1`, 백엔드 `findManagerCols_`가 '이름'열 헤더 자동 인식). 새 담당자 추가 시 자동 반영, 열 이동에도 헤더 기준. 로드 실패 시 `WORK_MGR_OPTIONS`로 폴백. **백엔드 변경 없음**(기존 엔드포인트 재사용).
+- **업무카드 수정 = in-place 편집(팝업 없음)**: 카드 '수정' → `editingId` 설정 → 그 자리에서 `NewTaskCard`를 `initial`(기존 값)로 펼침(전폭), 저장 시 `updateWork`(상태·완료일·관련자료·Remind는 기존 값 유지). `NewTaskCard`에 `initial?` prop 추가(작성/수정 공용). 발의일자/예정일은 시트가 `yyyy-MM-dd`라 무손실 round-trip. 구분이 표준 6개 밖이면 그 값도 옵션에 포함(손실 방지). (상세 Drawer의 수정은 기존 모달 유지.)
+- **업무내용 Enter = 자동 글머리**: 본문 textarea에서 Enter → 새 줄에 `• ` 자동 추가(빈 글머리 줄에서 Enter는 글머리 제거=리스트 빠져나가기). 커서 위치 `useLayoutEffect`로 복원. 저장 시 `bulletToDash`로 시트엔 `- ` 저장.
+
 ## 메모 / 후속 후보
 
 - 구분·담당자는 freeSolo로 두어 **드롭다운 선택 + 새 값 타이핑** 모두 가능. 엄격 드롭다운(기존값만)으로 제한할지는 사용자 확인 필요.
