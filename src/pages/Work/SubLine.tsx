@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import { displayBullet } from './workMeta'
 
 /**
  * 업무 내용 한 줄 표시. 글머리기호(-, •, ①, 1. 등)를 분리해, 본문이 줄바꿈되면
@@ -14,7 +15,7 @@ export default function SubLine({ line }: { line: string }) {
     <Box sx={{ display: 'flex', gap: 0.75, ml: `${indentPx}px`, py: 0.25 }}>
       {m ? (
         <>
-          <Typography variant="body2" component="span" sx={{ flexShrink: 0, color: 'text.disabled' }}>{m[1]}</Typography>
+          <Typography variant="body2" component="span" sx={{ flexShrink: 0, color: 'text.disabled' }}>{displayBullet(m[1])}</Typography>
           <Typography variant="body2" component="span" sx={{ flex: 1, minWidth: 0, wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{m[2]}</Typography>
         </>
       ) : (

@@ -34,6 +34,13 @@
 - 링크 입력 후 아이콘 활성(초록).
 - 완료 다이얼로그 "Remind 업무로 설정" 체크박스 토글 동작.
 
+## 후속 보완 (사용자 피드백 반영)
+
+- **구분 = 드롭다운 선택만(입력 불가)**: `ComboField`(freeSolo) → 신규 `SelectField`(Autocomplete non-freeSolo + `readOnly` input). 옵션은 시트 '구분' 열 기준 6개 `WORK_CAT_OPTIONS`(장비·인사·예산·행정·교육세미나·설계적정성). (초기 MUI `Select` 시도는 `notched` 경고로 폐기.)
+- **담당자 = 입력 가능 + 기본 보기 고정**: 옵션을 히스토리 대신 `WORK_MGR_OPTIONS`(센터·신현진·박주봉·박세리·조성범)로. freeSolo 유지(새 이름 직접 입력 가능).
+- **시간 wheel 감도↓ + 버튼명**: 휠을 시간 쓰로틀(110ms)로 한 번에 1칸씩 이동(네이티브 큰 점프 방지, `{passive:false}` 리스너). picker '지우기' → '취소'(적용 안 하고 닫기).
+- **글머리 dash→bullet**: 표시용 `displayBullet()`로 dash 계열(- – — * ·)을 '•'로 렌더(`SubLine.tsx`·`WorkRow.tsx`). 입력 textarea는 `dashToBullet()`로 줄 시작 '- '를 실시간 '• ' 변환, 저장 시 `bulletToDash()`로 '- '로 되돌려 **시트엔 dash 유지**. 라운드트립 검증 완료(중간/공백없는 dash는 미변환).
+
 ## 메모 / 후속 후보
 
 - 구분·담당자는 freeSolo로 두어 **드롭다운 선택 + 새 값 타이핑** 모두 가능. 엄격 드롭다운(기존값만)으로 제한할지는 사용자 확인 필요.

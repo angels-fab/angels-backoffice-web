@@ -7,7 +7,8 @@ import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
-import { ComboField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
+import { ComboField, SelectField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
+import { dashToBullet } from './workMeta'
 
 /** 인라인 새 업무 작성 폼 값 — 저장 시 index에서 createWork 페이로드로 변환 */
 export interface NewTaskForm {
@@ -127,7 +128,7 @@ export default function NewTaskCard({ saving, options, onCancel, onSave, onDirty
           borderBottom: 1, borderColor: alpha(th.palette.accent.green, 0.3),
         })}
       >
-        <ComboField value={cat} onChange={setCat} options={options.cats} placeholder="구분" ariaLabel="구분" sx={{ width: 110, flexShrink: 0 }} />
+        <SelectField value={cat} onChange={setCat} options={options.cats} placeholder="구분" ariaLabel="구분" sx={{ width: 110, flexShrink: 0 }} />
         <Field value={title} onChange={setTitle} placeholder="업무 제목 입력…" ariaLabel="업무 제목" sx={{ flex: 1, minWidth: 140 }} />
         {/* 제목 우측 — 관련링크(팝업) · 첨부(준비중) 아이콘 */}
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
@@ -163,7 +164,7 @@ export default function NewTaskCard({ saving, options, onCancel, onSave, onDirty
             <TimeRangeField value={time} onChange={setTime} />
             <ComboField value={loc} onChange={setLoc} options={options.locs} placeholder="장소" ariaLabel="장소" />
           </Box>
-          <Field value={body} onChange={setBody} placeholder="업무 내용 — 줄바꿈으로 세부 항목 입력" ariaLabel="업무 내용" multiline minRows={3} sx={{ alignItems: 'flex-start' }} />
+          <Field value={body} onChange={(v) => setBody(dashToBullet(v))} placeholder="업무 내용 — 줄 앞에 '- '를 입력하면 글머리(•)로 바뀝니다" ariaLabel="업무 내용" multiline minRows={3} sx={{ alignItems: 'flex-start' }} />
         </Box>
         {/* Check 토글 — 보라(활성)/회색(비활성), 업무 카드의 Check 칩과 동일 크기 */}
         <Box

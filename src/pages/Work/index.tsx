@@ -35,7 +35,7 @@ import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { classify, taskTitle } from './workMeta'
+import { classify, taskTitle, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS } from './workMeta'
 import TaskCard from './TaskCard'
 import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
@@ -165,15 +165,13 @@ export default function Work() {
   // ── 목록(상태 탭 + 검토필요 + 필터 + 검색) ──
   const presentCats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
 
-  // 새 업무 폼 드롭다운/자동완성 후보 — 진행중+완료 등 전체 업무 히스토리에서 수집
+  // 새 업무 폼 후보 — 구분/담당자는 고정 목록, 부서/장소는 전체 업무 히스토리에서 수집(자동완성)
   const fieldOptions = useMemo(() => {
-    const uniq = (sel: (t: WorkItem) => string, sort?: (a: string, b: string) => number) =>
-      [...new Set(items.map((t) => (sel(t) || '').trim()).filter(Boolean))].sort(
-        sort ?? ((a, b) => a.localeCompare(b, 'ko')),
-      )
+    const uniq = (sel: (t: WorkItem) => string) =>
+      [...new Set(items.map((t) => (sel(t) || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))
     return {
-      cats: uniq((t) => t.cat, (a, b) => workCatRank(a) - workCatRank(b)),
-      mgrs: uniq((t) => t.mgr),
+      cats: WORK_CAT_OPTIONS,
+      mgrs: WORK_MGR_OPTIONS,
       depts: uniq((t) => t.dept),
       locs: uniq((t) => t.loc),
     }
@@ -231,7 +229,8 @@ export default function Work() {
     if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
     const titleLine = form.title.trim()
     if (!titleLine) return showSnack('업무 제목을 입력해주세요.', 'error')
-    const bodyText = form.body.replace(/\s+$/, '')
+    // 화면의 글머리 '• '는 시트엔 dash '- '로 저장(관례 유지)
+    const bodyText = bulletToDash(form.body.replace(/\s+$/, ''))
     const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
     setSavingNew(true)
     try {

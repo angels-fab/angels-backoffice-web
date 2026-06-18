@@ -30,6 +30,28 @@ export function classify(t: WorkItem): WStatus {
 /** 등록/수정 폼의 상태 선택지 */
 export const WORK_STATUS_OPTIONS = ['진행중', '완료', '보류', '취소']
 
+/** 업무구분 드롭다운 — 시트 '구분' 열 드롭다운 기준(입력 불가, 선택만) */
+export const WORK_CAT_OPTIONS = ['장비', '인사', '예산', '행정', '교육세미나', '설계적정성']
+
+/** 담당자 기본 자동완성 보기 — 직접 입력도 가능(freeSolo) */
+export const WORK_MGR_OPTIONS = ['센터', '신현진', '박주봉', '박세리', '조성범']
+
+// 업무 내용 글머리기호: 줄 시작 'dash + 공백' ↔ 'bullet + 공백' (시트엔 dash로 저장, 화면엔 bullet 표시)
+const DASH_BULLET_RE = /(^|\n)([ \t]*)-(?=[ \t])/g
+const BULLET_DASH_RE = /(^|\n)([ \t]*)•(?=[ \t])/g
+/** 입력 중 '- ' → '• ' 실시간 변환 (길이 보존 → 커서 위치 유지) */
+export function dashToBullet(text: string): string {
+  return text.replace(DASH_BULLET_RE, '$1$2•')
+}
+/** 저장 시 '• ' → '- ' 되돌림 (시트는 dash 관례 유지) */
+export function bulletToDash(text: string): string {
+  return text.replace(BULLET_DASH_RE, '$1$2-')
+}
+/** 표시용 글머리 정규화 — dash 계열(- – — * ·)은 bullet(•)로, 그 외(번호·기호)는 그대로 */
+export function displayBullet(mark: string): string {
+  return /^[-–—*·]$/.test(mark) ? '•' : mark
+}
+
 /** 업무 내용 첫 줄 = 제목 */
 export function taskTitle(t: WorkItem): string {
   return String(t.task || '').split(/\r?\n/)[0] || '(제목 없음)'

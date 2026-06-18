@@ -2,6 +2,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import type { WorkItem } from '@/types'
 import { fmtDate } from '@/utils/date'
 import { workCatStyle } from '@/utils/workCat'
+import { displayBullet } from './workMeta'
 
 // 내용 한 줄 → 기호/본문 분리 + hanging indent (앞 들여쓰기 보존)
 function SubLine({ line }: { line: string }) {
@@ -13,7 +14,7 @@ function SubLine({ line }: { line: string }) {
   if (m) {
     return (
       <div className="sub-line" style={style}>
-        <span className="sub-mark">{m[1]}</span>
+        <span className="sub-mark">{displayBullet(m[1])}</span>
         <span className="sub-text">{m[2]}</span>
       </div>
     )

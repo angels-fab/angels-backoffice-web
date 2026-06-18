@@ -87,6 +87,52 @@ export function ComboField({
   )
 }
 
+// ───────────────────────────── SelectField (드롭다운 선택만 · 입력 불가) ─────────────────────────────
+
+export function SelectField({
+  value, onChange, options, placeholder, ariaLabel, sx,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: string[]
+  placeholder?: string
+  ariaLabel: string
+  sx?: SxProps<Theme>
+}) {
+  // 입력 불가(readOnly) + 자유값 금지(freeSolo 아님) → 드롭다운에서 선택만
+  return (
+    <Autocomplete
+      openOnFocus
+      autoHighlight
+      options={options}
+      value={value || null}
+      onChange={(_, v) => onChange(v ?? '')}
+      isOptionEqualToValue={(o, v) => o === v}
+      sx={[...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}
+      slotProps={{ paper: { sx: popoverPaperSx } }}
+      renderInput={(params) => (
+        <InputBase
+          ref={params.slotProps.input.ref}
+          endAdornment={params.slotProps.input.endAdornment}
+          inputProps={{ ...params.slotProps.htmlInput, 'aria-label': ariaLabel, readOnly: true }}
+          placeholder={placeholder}
+          sx={(th) => ({
+            ...fieldBase(th),
+            display: 'flex',
+            alignItems: 'center',
+            py: 0.4,
+            width: '100%',
+            cursor: 'pointer',
+            '& input': { cursor: 'pointer' },
+            '&.Mui-focused': { borderColor: th.palette.accent.green },
+            '& input::placeholder': { color: 'text.disabled', opacity: 1 },
+          })}
+        />
+      )}
+    />
+  )
+}
+
 // ───────────────────────────── DateField (라벨 + 아이콘으로 피커 열기) ─────────────────────────────
 
 export function DateField({
@@ -176,12 +222,33 @@ function parseRange(time: string): { start: HM | null; end: HM | null } {
 function Wheel({ items, value, onChange, ariaLabel }: { items: string[]; value: string; onChange: (v: string) => void; ariaLabel: string }) {
   const ref = useRef<HTMLDivElement>(null)
   const timer = useRef<number>()
-  // 마운트 시 현재 값으로 스크롤 위치 정렬
+  const lastWheel = useRef(0)
+  // 마운트 시 현재 값으로 스크롤 위치 정렬(마운트 1회 — 이후 스크롤은 휠/클릭/스냅이 담당)
   useEffect(() => {
     const i = items.indexOf(value)
     if (ref.current && i >= 0) ref.current.scrollTop = i * ITEM_H
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  // 휠 감도 낮춤 — 한 번 굴릴 때 1칸씩(시간 쓰로틀), 네이티브 큰 점프 방지
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const now = Date.now()
+      if (now - lastWheel.current < 110) return
+      lastWheel.current = now
+      const cur = items.indexOf(value)
+      const base = cur < 0 ? 0 : cur
+      const next = Math.max(0, Math.min(items.length - 1, base + (e.deltaY > 0 ? 1 : -1)))
+      if (next === base) return
+      el.scrollTo({ top: next * ITEM_H, behavior: 'smooth' })
+      onChange(items[next])
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [items, value, onChange])
+  // 터치/드래그 스크롤 스냅
   const onScroll = () => {
     if (timer.current) window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => {
@@ -281,7 +348,7 @@ export function TimeRangeField({
     setAnchor(e.currentTarget)
   }
   const apply = () => { onChange(`${start.h}:${start.m} ~ ${end.h}:${end.m}`); setAnchor(null) }
-  const clear = () => { onChange(''); setAnchor(null) }
+  const cancel = () => setAnchor(null) // 적용하지 않고 닫기(휠 변경 폐기)
 
   return (
     <>
@@ -318,7 +385,7 @@ export function TimeRangeField({
             <WheelGroup label="종료시간" hm={end} onHour={(h) => setEnd((s) => ({ ...s, h }))} onMinute={(m) => setEnd((s) => ({ ...s, m }))} />
           </Box>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-            <Button size="small" onClick={clear} sx={{ color: 'text.secondary' }}>지우기</Button>
+            <Button size="small" onClick={cancel} sx={{ color: 'text.secondary' }}>취소</Button>
             <Button size="small" variant="contained" color="success" onClick={apply}>확인</Button>
           </Box>
         </Box>
