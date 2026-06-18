@@ -367,15 +367,14 @@ export default function Work() {
   // 업무 행 — 수정 중이면 그 자리에서 인라인 편집(전폭), 아니면 카드
   const renderTask = (t: WorkItem, tone: 'green' | 'gray') =>
     editingId === t.id ? (
-      <Box key={t.id} sx={{ gridColumn: '1 / -1' }}>
-        <NewTaskCard
-          saving={savingEdit}
-          options={editOptionsFor(t)}
-          initial={toForm(t)}
-          onCancel={() => setEditingId(null)}
-          onSave={(form) => handleSaveEdit(t, form)}
-        />
-      </Box>
+      <NewTaskCard
+        key={t.id}
+        saving={savingEdit}
+        options={editOptionsFor(t)}
+        initial={toForm(t)}
+        onCancel={() => setEditingId(null)}
+        onSave={(form) => handleSaveEdit(t, form)}
+      />
     ) : (
       <TaskAccordion
         key={t.id}

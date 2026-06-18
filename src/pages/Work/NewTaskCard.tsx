@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { ChangeEvent, KeyboardEvent } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import InputBase from '@mui/material/InputBase'
@@ -9,7 +9,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
 import { ComboField, SelectField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
-import { dashToBullet } from './workMeta'
+import { dashToBullet, circledNumber } from './workMeta'
 
 /** 인라인 새 업무 작성 폼 값 — 저장 시 index에서 createWork/updateWork 페이로드로 변환 */
 export interface NewTaskForm {
@@ -49,10 +49,12 @@ export interface NewTaskCardProps {
 
 // 카드 안에서 쓰는 인라인 입력 — 미니멀 보더 + 포커스 시 초록 테두리 (제목/본문 전용)
 function Field({
-  value, onChange, placeholder, multiline, minRows, ariaLabel, sx, onKeyDown, inputRef,
+  value, onChange, onChangeEvent, placeholder, multiline, minRows, ariaLabel, sx, onKeyDown, inputRef,
 }: {
   value: string
-  onChange: (v: string) => void
+  onChange?: (v: string) => void
+  /** 원본 이벤트가 필요할 때(커서 제어 등) — 있으면 onChange 대신 사용 */
+  onChangeEvent?: (e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => void
   placeholder?: string
   multiline?: boolean
   minRows?: number
@@ -64,7 +66,7 @@ function Field({
   return (
     <InputBase
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={onChangeEvent ?? ((e) => onChange?.(e.target.value))}
       onKeyDown={onKeyDown}
       inputRef={inputRef}
       placeholder={placeholder}
@@ -105,10 +107,9 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
   const [link, setLink] = useState(initial?.link ?? '')
   const [chief, setChief] = useState(initial?.chief ?? false)
 
-  // 본문 textarea 커서 제어(Enter 자동 글머리 후 위치 복원)
+  // 본문 textarea 커서 제어(자동 글머리·동그라미 변환 후 위치 복원)
   const bodyRef = useRef<HTMLTextAreaElement | null>(null)
   const caretRef = useRef<number | null>(null)
-  const applyBody = (v: string) => setBody(dashToBullet(v))
   useLayoutEffect(() => {
     if (caretRef.current != null && bodyRef.current) {
       const pos = caretRef.current
@@ -117,25 +118,61 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
     }
   }, [body])
 
-  // Enter → 새 줄 자동 글머리(• ). 빈 글머리 줄에서 Enter는 글머리 제거(리스트 빠져나가기).
+  // 입력 변환 — '- ' → '• '(길이 보존) + 줄 시작 'ㅇN ' → 동그라미 숫자(하위 들여쓰기). 커서도 함께 보정.
+  const onBodyChange = (e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+    const ta = e.target
+    const raw = ta.value
+    const cursor = ta.selectionStart ?? raw.length
+    const text1 = dashToBullet(raw) // 길이 보존 → 커서 영향 없음
+    let cur = cursor
+    let out = text1
+    // 커서가 있는 줄에서 'ㅇ(1~2자리)+공백' → 들여쓴 동그라미 숫자(상위 bullet의 하위 항목)
+    const ls = text1.lastIndexOf('\n', cur - 1) + 1
+    const leRel = text1.indexOf('\n', cur)
+    const le = leRel < 0 ? text1.length : leRel
+    const line = text1.slice(ls, le)
+    const m = line.match(/^([ \t]*)[ㅇᄋ](\d{1,2}) /)
+    if (m) {
+      const ch = circledNumber(parseInt(m[2], 10))
+      if (ch) {
+        const indent = m[1].length >= 2 ? m[1] : '  ' // 하위 글머리: 최소 2칸 들여쓰기
+        const replacement = indent + ch + ' '
+        const newLine = replacement + line.slice(m[0].length)
+        out = text1.slice(0, ls) + newLine + text1.slice(le)
+        const matchAbsEnd = ls + m[0].length
+        cur = cur >= matchAbsEnd ? cur + (replacement.length - m[0].length) : ls + replacement.length
+      }
+    }
+    if (out !== raw) caretRef.current = cur
+    setBody(out)
+  }
+
+  // Enter → 윗줄이 bullet(• )일 때만 새 줄에도 '• ' 자동. 빈 글머리 줄에서 Enter는 글머리 제거.
   const onBodyKeyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     if (e.key !== 'Enter' || e.shiftKey || (e.nativeEvent as { isComposing?: boolean }).isComposing) return
     const ta = e.currentTarget as HTMLTextAreaElement
-    const s = ta.selectionStart ?? body.length
+    const val = ta.value
+    const s = ta.selectionStart ?? val.length
     const eend = ta.selectionEnd ?? s
-    const lineStart = body.lastIndexOf('\n', s - 1) + 1
-    const curLine = body.slice(lineStart, s)
-    e.preventDefault()
+    const lineStart = val.lastIndexOf('\n', s - 1) + 1
+    const curLine = val.slice(lineStart, s)
+    // 빈 글머리 줄 → 글머리 제거(리스트 빠져나가기)
     if (/^[ \t]*•[ \t]*$/.test(curLine)) {
-      const next = body.slice(0, lineStart) + body.slice(eend)
+      e.preventDefault()
       caretRef.current = lineStart
-      applyBody(next)
+      setBody(val.slice(0, lineStart) + val.slice(eend))
       return
     }
-    const insert = '\n• '
-    const next = body.slice(0, s) + insert + body.slice(eend)
-    caretRef.current = s + insert.length
-    applyBody(next)
+    // 내용 있는 bullet 줄 → 같은 들여쓰기로 '• ' 이어쓰기
+    const bm = curLine.match(/^([ \t]*)•[ \t]/)
+    if (bm) {
+      e.preventDefault()
+      const insert = '\n' + bm[1] + '• '
+      caretRef.current = s + insert.length
+      setBody(val.slice(0, s) + insert + val.slice(eend))
+      return
+    }
+    // 그 외(평문·동그라미 줄) → 자동 글머리 없이 일반 줄바꿈(기본 동작)
   }
 
   // 입력값 존재 여부를 부모에 보고 — 뷰 전환 시 작성 중 내용 손실 방지(확인 안내)
@@ -206,10 +243,10 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
           </Box>
           <Field
             value={body}
-            onChange={applyBody}
+            onChangeEvent={onBodyChange}
             onKeyDown={onBodyKeyDown}
             inputRef={bodyRef}
-            placeholder="업무 내용 — Enter로 줄을 바꾸면 글머리(•)가 자동 추가됩니다"
+            placeholder="업무 내용 — '- '는 글머리(•), 'ㅇ1 '는 동그라미 숫자(①). Enter로 글머리 이어쓰기"
             ariaLabel="업무 내용"
             multiline
             minRows={3}

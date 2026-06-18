@@ -52,6 +52,11 @@ export function displayBullet(mark: string): string {
   return /^[-–—*·]$/.test(mark) ? '•' : mark
 }
 
+/** 1~20 → 동그라미 숫자(①~⑳). 범위 밖이면 null */
+export function circledNumber(n: number): string | null {
+  return n >= 1 && n <= 20 ? String.fromCharCode(0x2460 + n - 1) : null
+}
+
 /** 업무 내용 첫 줄 = 제목 */
 export function taskTitle(t: WorkItem): string {
   return String(t.task || '').split(/\r?\n/)[0] || '(제목 없음)'
