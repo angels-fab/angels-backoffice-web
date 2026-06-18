@@ -137,6 +137,7 @@ export default function Work() {
   const [savingNew, setSavingNew] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null) // 업무카드 in-place 편집 대상(팝업 대신)
   const [savingEdit, setSavingEdit] = useState(false)
+  const [pendingEdit, setPendingEdit] = useState<{ item: WorkItem; form: NewTaskForm } | null>(null) // 수정 확인 대기
   const [authors, setAuthors] = useState<string[] | null>(null) // 담당자 시트 이름 명단(자동완성)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
 
@@ -287,12 +288,42 @@ export default function Work() {
     }
   }
 
-  // in-place 수정 저장 — 폼 외 항목(상태·완료일·관련자료·Remind)은 기존 값 유지, task=제목+본문(• → -).
-  const handleSaveEdit = async (item: WorkItem, form: NewTaskForm) => {
-    if (savingEdit) return
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+  // 줄 끝 공백 무시 비교용 정규화 (업무 내용 변경 여부 판정)
+  const normTask = (s: string) =>
+    String(s || '').split(/\r?\n/).map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\s+$/, '')
+
+  // 폼이 원본과 달라졌는지 (변경 없으면 확인 팝업/저장 생략)
+  const isEditDirty = (item: WorkItem, form: NewTaskForm) => {
     const titleLine = form.title.trim()
-    if (!titleLine) return showSnack('업무 제목을 입력해주세요.', 'error')
+    const bodyText = bulletToDash(form.body.replace(/\s+$/, ''))
+    const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
+    return (
+      normTask(task) !== normTask(item.task) ||
+      form.cat.trim() !== (item.cat || '') ||
+      form.dept.trim() !== (item.dept || '') ||
+      form.start !== (item.start || '') ||
+      form.plan !== (item.plan || '') ||
+      form.time.trim() !== (item.time || '') ||
+      form.loc.trim() !== (item.loc || '') ||
+      form.mgr.trim() !== (item.mgr || '') ||
+      form.link.trim() !== (item.link || '') ||
+      form.chief !== !!item.chief
+    )
+  }
+
+  // 인라인 수정 '확인' → 변경 없으면 그냥 닫기, 변경 있으면 확인 팝업
+  const handleSaveEdit = (item: WorkItem, form: NewTaskForm) => {
+    if (!form.title.trim()) return showSnack('업무 제목을 입력해주세요.', 'error')
+    if (!isEditDirty(item, form)) { setEditingId(null); return } // 수정 사항 없음 → 팝업 없이 닫기
+    setPendingEdit({ item, form })
+  }
+
+  // 수정 확인 팝업의 '수정' → 실제 저장(폼 외 항목은 기존 값 유지, task=제목+본문(• → -))
+  const confirmEdit = async () => {
+    if (!pendingEdit || savingEdit) return
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    const { item, form } = pendingEdit
+    const titleLine = form.title.trim()
     const bodyText = bulletToDash(form.body.replace(/\s+$/, ''))
     const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
     setSavingEdit(true)
@@ -305,6 +336,7 @@ export default function Work() {
         link: form.link.trim(), remind: item.remind, chief: form.chief,
       })
       setSavingEdit(false)
+      setPendingEdit(null)
       setEditingId(null)
       showSnack('업무를 수정했습니다.', 'success')
       dispatch(loadWorkData())
@@ -385,6 +417,7 @@ export default function Work() {
         isAdmin={isAdmin}
         onEdit={startEdit}
         onComplete={(it) => setCompleteTarget(it)}
+        onDelete={(it) => setDeleteTarget(it)}
       />
     )
 
@@ -628,6 +661,22 @@ export default function Work() {
           <Button onClick={() => setCompleteTarget(null)} disabled={completing} sx={{ color: 'text.secondary' }}>취소</Button>
           <Button color="success" variant="contained" onClick={confirmComplete} disabled={completing}>
             {completing ? '변경 중…' : '확인'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 수정 확인 Dialog (in-place 편집 → 확인 시 저장) */}
+      <Dialog open={!!pendingEdit} onClose={() => !savingEdit && setPendingEdit(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
+        <DialogTitle>수정하시겠습니까?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.secondary' }}>
+            「{pendingEdit ? (pendingEdit.form.title.trim() || taskTitle(pendingEdit.item)) : ''}」 업무를 수정합니다.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPendingEdit(null)} disabled={savingEdit} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button color="success" variant="contained" onClick={confirmEdit} disabled={savingEdit}>
+            {savingEdit ? '수정 중…' : '수정'}
           </Button>
         </DialogActions>
       </Dialog>

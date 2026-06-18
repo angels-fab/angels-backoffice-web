@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { ChangeEvent, KeyboardEvent } from 'react'
+import type { ChangeEvent } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import InputBase from '@mui/material/InputBase'
@@ -49,7 +49,7 @@ export interface NewTaskCardProps {
 
 // 카드 안에서 쓰는 인라인 입력 — 미니멀 보더 + 포커스 시 초록 테두리 (제목/본문 전용)
 function Field({
-  value, onChange, onChangeEvent, placeholder, multiline, minRows, ariaLabel, sx, onKeyDown, inputRef,
+  value, onChange, onChangeEvent, placeholder, multiline, minRows, ariaLabel, sx, inputRef,
 }: {
   value: string
   onChange?: (v: string) => void
@@ -60,14 +60,12 @@ function Field({
   minRows?: number
   ariaLabel: string
   sx?: SxProps<Theme>
-  onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => void
   inputRef?: React.Ref<HTMLTextAreaElement | HTMLInputElement>
 }) {
   return (
     <InputBase
       value={value}
       onChange={onChangeEvent ?? ((e) => onChange?.(e.target.value))}
-      onKeyDown={onKeyDown}
       inputRef={inputRef}
       placeholder={placeholder}
       multiline={multiline}
@@ -147,34 +145,6 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
     setBody(out)
   }
 
-  // Enter → 윗줄이 bullet(• )일 때만 새 줄에도 '• ' 자동. 빈 글머리 줄에서 Enter는 글머리 제거.
-  const onBodyKeyDown = (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-    if (e.key !== 'Enter' || e.shiftKey || (e.nativeEvent as { isComposing?: boolean }).isComposing) return
-    const ta = e.currentTarget as HTMLTextAreaElement
-    const val = ta.value
-    const s = ta.selectionStart ?? val.length
-    const eend = ta.selectionEnd ?? s
-    const lineStart = val.lastIndexOf('\n', s - 1) + 1
-    const curLine = val.slice(lineStart, s)
-    // 빈 글머리 줄 → 글머리 제거(리스트 빠져나가기)
-    if (/^[ \t]*•[ \t]*$/.test(curLine)) {
-      e.preventDefault()
-      caretRef.current = lineStart
-      setBody(val.slice(0, lineStart) + val.slice(eend))
-      return
-    }
-    // 내용 있는 bullet 줄 → 같은 들여쓰기로 '• ' 이어쓰기
-    const bm = curLine.match(/^([ \t]*)•[ \t]/)
-    if (bm) {
-      e.preventDefault()
-      const insert = '\n' + bm[1] + '• '
-      caretRef.current = s + insert.length
-      setBody(val.slice(0, s) + insert + val.slice(eend))
-      return
-    }
-    // 그 외(평문·동그라미 줄) → 자동 글머리 없이 일반 줄바꿈(기본 동작)
-  }
-
   // 입력값 존재 여부를 부모에 보고 — 뷰 전환 시 작성 중 내용 손실 방지(확인 안내)
   const dirty = !!(cat || title || body || mgr || start || plan || dept || time || loc || link || chief)
   useEffect(() => {
@@ -205,15 +175,15 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
           borderBottom: 1, borderColor: alpha(th.palette.accent.green, 0.3),
         })}
       >
-        <SelectField value={cat} onChange={setCat} options={options.cats} placeholder="구분" ariaLabel="구분" sx={{ width: 110, flexShrink: 0 }} />
-        <Field value={title} onChange={setTitle} placeholder="업무 제목 입력…" ariaLabel="업무 제목" sx={{ flex: 1, minWidth: 140 }} />
+        <SelectField value={cat} onChange={setCat} options={options.cats} placeholder="구분" ariaLabel="구분" sx={{ width: 96, flexShrink: 0 }} />
+        <Field value={title} onChange={setTitle} placeholder="업무 제목" ariaLabel="업무 제목" sx={{ width: 210, flexShrink: 1, minWidth: 120 }} />
         {/* 제목 우측 — 관련링크(팝업) · 첨부(준비중) 아이콘 */}
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <LinkButton value={link} onChange={setLink} />
           <AttachButton />
         </Box>
-        <ComboField value={mgr} onChange={setMgr} options={options.mgrs} placeholder="담당자" ariaLabel="담당자" sx={{ width: 110, flexShrink: 0 }} />
-        <DateField value={start} onChange={setStart} label="발의일자" ariaLabel="발의일자" sx={{ width: 130, flexShrink: 0 }} />
+        <ComboField value={mgr} onChange={setMgr} options={options.mgrs} placeholder="담당자" ariaLabel="담당자" sx={{ width: 74, flexShrink: 0 }} />
+        <DateField value={start} onChange={setStart} label="발의일자" ariaLabel="발의일자" sx={{ width: 116, flexShrink: 0 }} />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, ml: 0.25, flexShrink: 0 }}>
           <Tooltip title="저장">
             <span>
@@ -235,18 +205,17 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
       {/* 본문 */}
       <Box sx={{ px: 1.75, py: 1.5, display: 'flex', alignItems: 'stretch', gap: 1.5 }}>
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 1 }}>
-            <ComboField value={dept} onChange={setDept} options={options.depts} placeholder="부서" ariaLabel="부서" />
-            <DateField value={plan} onChange={setPlan} label="예정일" ariaLabel="예정일" />
-            <TimeRangeField value={time} onChange={setTime} />
-            <ComboField value={loc} onChange={setLoc} options={options.locs} placeholder="장소" ariaLabel="장소" />
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+            <ComboField value={dept} onChange={setDept} options={options.depts} placeholder="관련부서" ariaLabel="부서" sx={{ width: 128, flexShrink: 0 }} />
+            <DateField value={plan} onChange={setPlan} label="예정일" ariaLabel="예정일" sx={{ width: 116, flexShrink: 0 }} />
+            <TimeRangeField value={time} onChange={setTime} sx={{ width: 150, flexShrink: 0 }} />
+            <ComboField value={loc} onChange={setLoc} options={options.locs} placeholder="장소" ariaLabel="장소" sx={{ width: 128, flexShrink: 0 }} />
           </Box>
           <Field
             value={body}
             onChangeEvent={onBodyChange}
-            onKeyDown={onBodyKeyDown}
             inputRef={bodyRef}
-            placeholder="업무 내용 — '- '는 글머리(•), 'ㅇ1 '는 동그라미 숫자(①). Enter로 글머리 이어쓰기"
+            placeholder="업무 내용 — '- '는 글머리(•), 'ㅇ1 '는 동그라미 숫자(①)"
             ariaLabel="업무 내용"
             multiline
             minRows={3}

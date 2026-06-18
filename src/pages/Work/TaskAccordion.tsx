@@ -1,9 +1,16 @@
+import { useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
@@ -24,24 +31,34 @@ export interface TaskAccordionProps {
   selected?: boolean
   /** 클릭 시 이 카드를 선택 */
   onSelect?: () => void
-  /** 관리자 — 수정/완료 아이콘 노출 */
+  /** 관리자 — 더보기 메뉴(완료/수정/삭제) 노출 */
   isAdmin?: boolean
   onEdit?: (t: WorkItem) => void
   onComplete?: (t: WorkItem) => void
+  onDelete?: (t: WorkItem) => void
 }
 
 /**
  * 업무 카드 — 아코디언 없이 항상 내용 표시(정적). 클릭하면 선택(초록 테두리).
- * 채움은 tone 색, 제목 줄(③ 띠) + 담당자 색칩 + 날짜칩 + (관리자)수정·보관. Check 업무는 본문 우측 정사각 칩.
+ * 제목 줄: 구분칩 · 관련부서칩 · 제목 · 담당자칩 · 발의일자칩 · (관리자)더보기 메뉴.
  */
-export default function TaskAccordion({ t, tone, selected = false, onSelect, isAdmin, onEdit, onComplete }: TaskAccordionProps) {
+export default function TaskAccordion({ t, tone, selected = false, onSelect, isAdmin, onEdit, onComplete, onDelete }: TaskAccordionProps) {
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
   const subs = taskSubs(t)
   const link = taskLink(t)
+  const isDone = (t.status || '').trim() === '완료'
+  // 부서는 제목줄 칩으로 이동 — 본문 메타는 예정/완료만
   const metas: { label: string; value: string }[] = [
-    { label: '부서', value: t.dept },
     { label: '예정', value: t.plan ? fmtDate(t.plan) : '' },
     { label: '완료', value: t.end ? fmtDate(t.end) : '' },
   ].filter((m) => (m.value || '').trim())
+
+  const closeMenu = () => setMenuAnchor(null)
+  const runAction = (fn?: (t: WorkItem) => void) => (e: React.MouseEvent) => {
+    e.stopPropagation()
+    closeMenu()
+    fn?.(t)
+  }
 
   return (
     <Box
@@ -79,23 +96,42 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, isA
         })}
       >
         {t.cat && <StatusChip status="neutral" label={t.cat} />}
+        {t.dept && <StatusChip status="info" label={t.dept} />}
         <Typography variant="body1" sx={{ flex: 1, minWidth: 120, fontWeight: 600, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
-        <Box component="span" sx={{ fontSize: 12.5, fontWeight: 700, borderRadius: '8px', px: 1.25, py: 0.4, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: 12.5, fontWeight: 700, borderRadius: '8px', px: 1.25, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>
           {t.mgr || '미지정'}
         </Box>
-        <Box component="span" sx={(th) => ({ fontSize: 12, borderRadius: '8px', px: 1, py: 0.4, color: 'text.secondary', bgcolor: alpha(th.palette.text.secondary, 0.14), border: 1, borderColor: alpha(th.palette.text.secondary, 0.3), fontFamily: 'monospace', whiteSpace: 'nowrap' })}>
+        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: 12, borderRadius: '8px', px: 1, color: 'text.secondary', bgcolor: alpha(th.palette.text.secondary, 0.14), border: 1, borderColor: alpha(th.palette.text.secondary, 0.3), fontFamily: 'monospace', whiteSpace: 'nowrap' })}>
           {fmtDate(t.start)}
         </Box>
         {isAdmin && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, ml: 0.25, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-            <IconButton size="small" aria-label="수정" onClick={() => onEdit?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
-              <EditOutlinedIcon sx={{ fontSize: 18 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', ml: 0.25, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+            <IconButton size="small" aria-label="더보기" onClick={(e) => setMenuAnchor(e.currentTarget)} sx={{ color: 'text.secondary', p: 0.5 }}>
+              <MoreVertIcon sx={{ fontSize: 19 }} />
             </IconButton>
-            {(t.status || '').trim() !== '완료' && (
-              <IconButton size="small" aria-label="완료로 변경" onClick={() => onComplete?.(t)} sx={{ color: 'text.secondary', p: 0.5 }}>
-                <CheckCircleOutlineIcon sx={{ fontSize: 18 }} />
-              </IconButton>
-            )}
+            <Menu
+              anchorEl={menuAnchor}
+              open={!!menuAnchor}
+              onClose={closeMenu}
+              anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+              transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+              slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', minWidth: 140 } } }}
+            >
+              {!isDone && (
+                <MenuItem onClick={runAction(onComplete)}>
+                  <ListItemIcon><CheckCircleOutlineIcon fontSize="small" /></ListItemIcon>
+                  <ListItemText>완료</ListItemText>
+                </MenuItem>
+              )}
+              <MenuItem onClick={runAction(onEdit)}>
+                <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
+                <ListItemText>수정</ListItemText>
+              </MenuItem>
+              <MenuItem onClick={runAction(onDelete)} sx={{ color: 'error.main' }}>
+                <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
+                <ListItemText>삭제</ListItemText>
+              </MenuItem>
+            </Menu>
           </Box>
         )}
       </Box>
