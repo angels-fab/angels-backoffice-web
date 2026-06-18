@@ -11,6 +11,8 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
@@ -111,6 +113,7 @@ export default function Work() {
   const [deleting, setDeleting] = useState(false)
   const [completeTarget, setCompleteTarget] = useState<WorkItem | null>(null)
   const [completing, setCompleting] = useState(false)
+  const [remindOnComplete, setRemindOnComplete] = useState(false) // 완료 시 Remind 업무로 설정 체크박스
   const [composing, setComposing] = useState(false) // 새 업무 카드 → 인라인 편집 모드
   const [composeDirty, setComposeDirty] = useState(false) // 인라인 편집 중 입력값 존재 여부
   const [savingNew, setSavingNew] = useState(false)
@@ -161,6 +164,20 @@ export default function Work() {
 
   // ── 목록(상태 탭 + 검토필요 + 필터 + 검색) ──
   const presentCats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
+
+  // 새 업무 폼 드롭다운/자동완성 후보 — 진행중+완료 등 전체 업무 히스토리에서 수집
+  const fieldOptions = useMemo(() => {
+    const uniq = (sel: (t: WorkItem) => string, sort?: (a: string, b: string) => number) =>
+      [...new Set(items.map((t) => (sel(t) || '').trim()).filter(Boolean))].sort(
+        sort ?? ((a, b) => a.localeCompare(b, 'ko')),
+      )
+    return {
+      cats: uniq((t) => t.cat, (a, b) => workCatRank(a) - workCatRank(b)),
+      mgrs: uniq((t) => t.mgr),
+      depts: uniq((t) => t.dept),
+      locs: uniq((t) => t.loc),
+    }
+  }, [items])
 
   const pool = useMemo(
     () => (view === 'remind' ? items.filter((t) => t.remind) : items.filter((t) => classify(t) === view)),
@@ -236,7 +253,12 @@ export default function Work() {
     }
   }
 
-  // 완료 아이콘 → 확인 Dialog 후 상태를 '완료'로 변경(시트 반영).
+  // 완료 다이얼로그가 열릴 때 Remind 체크박스를 현재 업무의 Remind 상태로 초기화
+  useEffect(() => {
+    setRemindOnComplete(completeTarget?.remind ?? false)
+  }, [completeTarget])
+
+  // 완료 아이콘 → 확인 Dialog 후 상태를 '완료'로 변경(시트 반영). 체크박스 값으로 Remind도 함께 반영.
   const confirmComplete = async () => {
     if (!completeTarget || completing) return
     if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
@@ -248,7 +270,7 @@ export default function Work() {
         cat: item.cat, task: item.task, status: '완료',
         dept: item.dept, mat: item.mat, start: item.start, plan: item.plan,
         time: item.time, loc: item.loc, mgr: item.mgr, link: item.link,
-        remind: item.remind, chief: item.chief,
+        remind: remindOnComplete, chief: item.chief,
       })
       setCompleting(false)
       setCompleteTarget(null)
@@ -427,7 +449,7 @@ export default function Work() {
               : <Box key="add-spacer" />}
             {isAdmin && composing && (
               <Box key="composer" sx={{ gridColumn: '1 / -1' }}>
-                <NewTaskCard saving={savingNew} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+                <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
               </Box>
             )}
             {listed.map((t) => (
@@ -529,6 +551,11 @@ export default function Work() {
           <DialogContentText sx={{ color: 'text.secondary' }}>
             「{completeTarget ? taskTitle(completeTarget) : ''}」 업무를 완료 상태로 변경합니다.
           </DialogContentText>
+          <FormControlLabel
+            sx={{ mt: 1.5 }}
+            control={<Checkbox checked={remindOnComplete} onChange={(e) => setRemindOnComplete(e.target.checked)} disabled={completing} />}
+            label="Remind 업무로 설정"
+          />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setCompleteTarget(null)} disabled={completing} sx={{ color: 'text.secondary' }}>취소</Button>

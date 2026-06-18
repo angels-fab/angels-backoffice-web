@@ -7,6 +7,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
+import { ComboField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
 
 /** 인라인 새 업무 작성 폼 값 — 저장 시 index에서 createWork 페이로드로 변환 */
 export interface NewTaskForm {
@@ -23,23 +24,32 @@ export interface NewTaskForm {
   chief: boolean
 }
 
+/** 진행중+완료 전체 업무에서 모은 자동완성/드롭다운 후보 */
+export interface FieldOptions {
+  cats: string[]
+  mgrs: string[]
+  depts: string[]
+  locs: string[]
+}
+
 export interface NewTaskCardProps {
   /** 저장 진행 중 — 입력/버튼 비활성화 */
   saving: boolean
+  /** 히스토리 기반 드롭다운/자동완성 후보 */
+  options: FieldOptions
   onCancel: () => void
   onSave: (form: NewTaskForm) => void
   /** 입력값 존재 여부 변화 알림 — 뷰 전환 시 작성 중 내용 보호용 */
   onDirtyChange?: (dirty: boolean) => void
 }
 
-// 카드 안에서 쓰는 인라인 입력 — 미니멀 보더 + 포커스 시 초록 테두리
+// 카드 안에서 쓰는 인라인 입력 — 미니멀 보더 + 포커스 시 초록 테두리 (제목/본문 전용)
 function Field({
-  value, onChange, placeholder, type, multiline, minRows, ariaLabel, sx,
+  value, onChange, placeholder, multiline, minRows, ariaLabel, sx,
 }: {
   value: string
   onChange: (v: string) => void
   placeholder?: string
-  type?: string
   multiline?: boolean
   minRows?: number
   ariaLabel: string
@@ -50,7 +60,6 @@ function Field({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      type={type}
       multiline={multiline}
       minRows={minRows}
       inputProps={{ 'aria-label': ariaLabel }}
@@ -59,7 +68,6 @@ function Field({
           bgcolor: alpha(th.palette.text.primary, 0.05),
           border: '1px solid', borderColor: th.palette.divider, borderRadius: '8px',
           px: 1, py: 0.4, fontSize: 13, color: 'text.primary',
-          colorScheme: 'dark', // 네이티브 date 피커를 다크 테마에 맞춤(모달 .minput과 동일)
           transition: 'border-color .12s',
           '&:hover': { borderColor: alpha(th.palette.text.secondary, 0.55) },
           '&.Mui-focused': { borderColor: th.palette.accent.green },
@@ -73,9 +81,10 @@ function Field({
 
 /**
  * 인라인 새 업무 카드 — 업무 카드 템플릿 그대로(진행중 초록 톤), 표시될 자리에 빈칸을 두고 직접 입력.
- * 제목줄: 구분·제목·담당자·발의일자 + 저장(✓)/취소(✕). 본문: 부서/예정일/시간/장소 · 내용 · 링크 + 우측 Check 토글.
+ * 제목줄: 구분(드롭다운)·제목·링크/첨부 아이콘·담당자(드롭다운)·발의일자 + 저장(✓)/취소(✕).
+ * 본문: 부서(자동완성)/예정일/시간(wheel)/장소(자동완성) · 내용 + 우측 Check 토글.
  */
-export default function NewTaskCard({ saving, onCancel, onSave, onDirtyChange }: NewTaskCardProps) {
+export default function NewTaskCard({ saving, options, onCancel, onSave, onDirtyChange }: NewTaskCardProps) {
   const [cat, setCat] = useState('')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
@@ -118,10 +127,15 @@ export default function NewTaskCard({ saving, onCancel, onSave, onDirtyChange }:
           borderBottom: 1, borderColor: alpha(th.palette.accent.green, 0.3),
         })}
       >
-        <Field value={cat} onChange={setCat} placeholder="구분" ariaLabel="구분" sx={{ width: 100, flexShrink: 0 }} />
+        <ComboField value={cat} onChange={setCat} options={options.cats} placeholder="구분" ariaLabel="구분" sx={{ width: 110, flexShrink: 0 }} />
         <Field value={title} onChange={setTitle} placeholder="업무 제목 입력…" ariaLabel="업무 제목" sx={{ flex: 1, minWidth: 140 }} />
-        <Field value={mgr} onChange={setMgr} placeholder="담당자" ariaLabel="담당자" sx={{ width: 96, flexShrink: 0 }} />
-        <Field value={start} onChange={setStart} type="date" ariaLabel="발의일자" sx={{ width: 148, flexShrink: 0 }} />
+        {/* 제목 우측 — 관련링크(팝업) · 첨부(준비중) 아이콘 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          <LinkButton value={link} onChange={setLink} />
+          <AttachButton />
+        </Box>
+        <ComboField value={mgr} onChange={setMgr} options={options.mgrs} placeholder="담당자" ariaLabel="담당자" sx={{ width: 110, flexShrink: 0 }} />
+        <DateField value={start} onChange={setStart} label="발의일자" ariaLabel="발의일자" sx={{ width: 130, flexShrink: 0 }} />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, ml: 0.25, flexShrink: 0 }}>
           <Tooltip title="저장">
             <span>
@@ -144,13 +158,12 @@ export default function NewTaskCard({ saving, onCancel, onSave, onDirtyChange }:
       <Box sx={{ px: 1.75, py: 1.5, display: 'flex', alignItems: 'stretch', gap: 1.5 }}>
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 1 }}>
-            <Field value={dept} onChange={setDept} placeholder="부서" ariaLabel="부서" />
-            <Field value={plan} onChange={setPlan} type="date" ariaLabel="예정일" />
-            <Field value={time} onChange={setTime} placeholder="시간" ariaLabel="시간" />
-            <Field value={loc} onChange={setLoc} placeholder="장소" ariaLabel="장소" />
+            <ComboField value={dept} onChange={setDept} options={options.depts} placeholder="부서" ariaLabel="부서" />
+            <DateField value={plan} onChange={setPlan} label="예정일" ariaLabel="예정일" />
+            <TimeRangeField value={time} onChange={setTime} />
+            <ComboField value={loc} onChange={setLoc} options={options.locs} placeholder="장소" ariaLabel="장소" />
           </Box>
           <Field value={body} onChange={setBody} placeholder="업무 내용 — 줄바꿈으로 세부 항목 입력" ariaLabel="업무 내용" multiline minRows={3} sx={{ alignItems: 'flex-start' }} />
-          <Field value={link} onChange={setLink} placeholder="관련 링크 (https://…)" ariaLabel="관련 링크" />
         </Box>
         {/* Check 토글 — 보라(활성)/회색(비활성), 업무 카드의 Check 칩과 동일 크기 */}
         <Box

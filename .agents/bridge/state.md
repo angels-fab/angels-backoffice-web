@@ -8,6 +8,7 @@
 
 ## Current Focus
 
+- **STEP27(새 업무 인라인폼 개편 + 완료 다이얼로그 Remind 체크박스) 구현·검증 완료**: 진행중 인라인 새업무 카드 입력 보조 개편 + 완료 확인 다이얼로그 Remind 토글. 신규 공용 위젯 `Work/inlineFields.tsx`(ComboField 드롭다운+자동완성 / DateField 한글라벨'발의일자·예정일'+showPicker / TimeRangeField 시작·종료 wheel picker→"HH:MM ~ HH:MM" / LinkButton 제목우측 외부링크 팝업 / AttachButton 준비중 자리만). 구분·담당자·부서·장소 옵션은 전체 업무 히스토리(items)에서 수집(index.tsx `fieldOptions`). 완료시 `updateWork({remind: 체크값})`. **프런트 전용(시트/백엔드 무변경)**, type-check+build 통과, 라이브 dev 검증(콘솔0). 상세: `docs/step27-newtask-form-revamp.md`. ⚠ 구분·담당자는 freeSolo(드롭다운+직접입력) — 엄격 드롭다운 원하면 추후 조정.
 - **STEP26(업무 KPI 전체타일·목록 2열·들여쓰기) 커밋·자동배포 완료**: KPI에 '전체' 타일(완료/Check 사이) + 상태칩행 제거 · 진행중/완료/Check 목록 2열 아코디언(진행중 펼침/완료·Check 접힘, `CardGrid columns={2}` 반응형) · Remind 카드 담당자 우측(날짜와 그룹) · 글머리기호 행잉 인덴트(공용 `Work/SubLine.tsx`). 프런트 전용.
 - **STEP25(업무현황 KPI/Remind 정리) 커밋·자동배포 완료**: KPI 보류·취소 타일 제거→진행중/완료/Check/Remind 4타일 · '검토'→'Check'(chief 칩 전부) · Remind는 KPI 타일 토글로 KPI 아래 펼침(하단 상시섹션 제거) · Remind 카드 압정아이콘+상태/구분/담당자/날짜(YYYY-MM-DD)·'발의' 삭제. 프런트 전용. (이하 STEP23·24·어휘개편도 모두 배포 완료 — 아래 '미커밋' 표기는 과거 스냅샷.)
 - **STEP24(업무현황 회의 뷰)**: /work 개편 — 업무목록을 KPI 바로 아래로, 기본 진행중, 진행중=아코디언(모두 펼침·개별 접기, 신규 `Work/TaskAccordion.tsx`), RatioBar 제거, '긴급 업무'→'Remind', 담당자현황 숨김(`SHOW_MANAGER_STATUS=false`, 코드 보존), 검토필요→'검토'. 프런트 전용. type-check+build 통과, 라이브 검증 + 적대적 리뷰(9건 중 3확정: TaskCard 라벨·아코디언 장소중복 수정, urgent 변수명은 지시대로 미수정).
