@@ -1,8 +1,5 @@
-import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import HomeIcon from '@mui/icons-material/Home'
-import LogoutIcon from '@mui/icons-material/Logout'
-import LockOpenIcon from '@mui/icons-material/LockOpen'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import AssessmentIcon from '@mui/icons-material/Assessment'
@@ -13,8 +10,6 @@ import TimelineIcon from '@mui/icons-material/Timeline'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import { useNavBadges } from './useNavBadges'
-import { useRole } from '@/auth/role'
-import AdminLoginDialog from '@/components/AdminLoginDialog'
 
 interface SideNavItem {
   icon: JSX.Element
@@ -33,8 +28,6 @@ export default function SideNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const badges = useNavBadges()
-  const { isAdmin, user, logout } = useRole()
-  const [loginOpen, setLoginOpen] = useState(false)
 
   const groups: SideNavGroup[] = [
     {
@@ -95,34 +88,6 @@ export default function SideNav() {
           ))}
         </div>
       ))}
-
-      {/* 하단 — 로그인 상태 / 로그인·로그아웃 */}
-      <div className="snav-group" style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: 12, gap: 4 }}>
-        {isAdmin ? (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '4px 10px' }}>
-              <span style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(88,166,255,.16)', color: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                {(user || '관')[0]}
-              </span>
-              <span style={{ minWidth: 0, flex: 1 }}>
-                <span style={{ display: 'block', fontSize: 12.5, color: 'var(--text)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user || '관리자'}</span>
-                <span style={{ fontSize: 10.5, color: 'var(--text3)' }}>관리자</span>
-              </span>
-            </div>
-            <button className="snav-item" onClick={logout}>
-              <LogoutIcon />
-              <span className="snav-text">로그아웃</span>
-            </button>
-          </>
-        ) : (
-          <button className="snav-item" onClick={() => setLoginOpen(true)}>
-            <LockOpenIcon />
-            <span className="snav-text">관리자 로그인</span>
-          </button>
-        )}
-      </div>
-
-      <AdminLoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
     </aside>
   )
 }
