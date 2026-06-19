@@ -32,10 +32,17 @@ export function setForceDesktop(force: boolean): void {
   applyViewport(force)
 }
 
-/** 터치/모바일 기기 여부 — 토글 버튼은 이 기기에서만 노출(PC에선 불필요). */
+/**
+ * 토글 버튼 노출 대상(모바일/태블릿) 여부 — PC에선 불필요해 숨긴다.
+ * 주의: 크롬 '데스크톱 사이트'는 UA를 PC로 위장하므로 UA만으론 판별이 깨진다.
+ * 그래서 실제 화면 물리 크기(screen)도 함께 본다 — 이 값은 데스크톱 사이트 모드로도
+ * 바뀌지 않아, 폰에서 데스크톱 사이트를 켜둔 상태에서도 버튼이 계속 보인다.
+ */
 export function isTouchDevice(): boolean {
   if (typeof window === 'undefined') return false
   const coarse = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
   const ua = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '')
-  return coarse || ua
+  const scr = window.screen
+  const smallScreen = !!scr && Math.min(scr.width || 9999, scr.height || 9999) <= 820
+  return coarse || ua || smallScreen
 }
