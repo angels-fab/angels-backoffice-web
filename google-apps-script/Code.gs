@@ -600,21 +600,27 @@ function setupWorkEditTrigger() {
   Logger.log('설치 완료 — 시트에서 상태=완료 시 검토 필요 자동 해제 (센터 업무 현황)');
 }
 
-// ── 개선제안 CRUD ('개선사항' 시트, 헤더 자동 탐지·열 위치 비의존) ──
-const IMPROVE_SHEET_NAME = '개선사항';
+// ── 포털개선요청 CRUD ('포털개선요청'/'개선사항' 시트, 헤더 자동 탐지·열 위치 비의존) ──
+// 시트 탭 이름이 바뀌어도 동작하도록 여러 후보 이름을 순서대로 탐색(첫 일치 사용).
+const IMPROVE_SHEET_NAMES = ['포털개선요청', '개선사항', '개선제안'];
 const IMPROVE_STATUS_DEFAULT = '접수';
 
 // 시트 + 헤더 위치 컨텍스트. 헤더는 보통 3행이지만 첫 10행에서 '제목'을 기준으로 자동 탐지.
 function improveCtx_() {
-  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(IMPROVE_SHEET_NAME);
-  if (!sh) return { error: "'개선사항' 시트가 없습니다" };
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sh = null;
+  for (let n = 0; n < IMPROVE_SHEET_NAMES.length; n++) {
+    sh = ss.getSheetByName(IMPROVE_SHEET_NAMES[n]);
+    if (sh) break;
+  }
+  if (!sh) return { error: "'" + IMPROVE_SHEET_NAMES.join("'/'") + "' 시트가 없습니다" };
   const values = sh.getDataRange().getValues();
   let hIdx = -1;
   for (let i = 0; i < Math.min(values.length, 10); i++) {
     const r = values[i].map(function (c) { return String(c == null ? '' : c).trim(); });
     if (r.indexOf('제목') >= 0 && (r.indexOf('개선내용') >= 0 || r.indexOf('유형') >= 0 || r.indexOf('상태') >= 0)) { hIdx = i; break; }
   }
-  if (hIdx < 0) return { error: "'개선사항' 시트 헤더(제목 등)를 찾지 못함" };
+  if (hIdx < 0) return { error: "'" + sh.getName() + "' 시트 헤더(제목 등)를 찾지 못함" };
   const head = values[hIdx].map(function (c) { return String(c == null ? '' : c).trim(); });
   const col = function (names) {
     for (let k = 0; k < names.length; k++) { const i = head.indexOf(names[k]); if (i >= 0) return i; }

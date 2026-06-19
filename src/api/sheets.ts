@@ -441,7 +441,8 @@ export interface ImprovementsData {
 /** 개선제안 목록 + 위치/유형 드롭다운 목록 조회 (인증 불필요, 네트워크 재시도) */
 export async function fetchImprovements(): Promise<ImprovementsData> {
   return withRetry(async () => {
-    const res = await fetch(`${SCRIPT_URL}?action=getImprovements`)
+    // Apps Script GET 응답이 캐시되어 옛 데이터/에러가 남는 것을 막기 위한 캐시 우회 파라미터
+    const res = await fetch(`${SCRIPT_URL}?action=getImprovements&_=${Date.now()}`)
     if (!res.ok) throw new Error('HTTP ' + res.status)
     const json = (await res.json()) as { status: string; items?: ImprovementRow[]; locOptions?: string[]; typeOptions?: string[]; message?: string }
     if (json.status !== 'ok') throw new Error(json.message || '불러오기 실패')

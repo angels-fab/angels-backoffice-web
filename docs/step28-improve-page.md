@@ -118,3 +118,4 @@
 - 색 규칙 준수: 신규 색은 모두 `tokens.ts`/`accent.*`·`kindColor`·`darken`/`alpha`로 파생(하드코딩 없음).
 - 검증: `npm run type-check` 통과. **로컬 dev는 Apps Script 백엔드 네트워크 차단으로 '불러오기 실패'** → 사이드 메뉴/제목/빈 상태 문구·콘솔0만 확인(데이터 행 틴트·흐림·정렬·작성/수정/삭제 시각은 라이브 검증 필요). 스크린샷 도구는 본 환경에서 타임아웃(스냅샷은 정상).
 - 변경 파일: `src/pages/Improve/index.tsx`, `src/pages/Improve/improveMeta.ts`, `src/layouts/SideNav.tsx`, `src/layouts/useNavBadges.ts`.
+- **시트 탭 리네임 대응 (백엔드 @54)**: 배포 직후 사용자가 구글시트 탭을 `개선사항 → 포털개선요청`으로 변경 → 백엔드가 `개선사항`만 찾아 `'개선사항' 시트가 없습니다` 실패(불러오기 실패). `improveCtx_`를 **여러 후보 이름(`포털개선요청`·`개선사항`·`개선제안`) 순차 탐색**으로 보강(`IMPROVE_SHEET_NAMES`, 헤더 미탐지 에러도 `sh.getName()`로). clasp `redeploy @54`(URL 불변). 추가로 프런트 `fetchImprovements`에 **캐시 우회 파라미터(`&_=Date.now()`)** — Apps Script GET 응답 캐시로 옛 에러/데이터가 남는 것 방지. 라이브 dev 검증: 보드 정상 로딩(접수2·보류2·완료2·불가1, 상태→최신순, 배지 '포털개선요청 2', 콘솔0).
