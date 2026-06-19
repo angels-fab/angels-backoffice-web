@@ -619,6 +619,14 @@ function improveCtx_() {
     for (let k = 0; k < names.length; k++) { const i = head.indexOf(names[k]); if (i >= 0) return i; }
     return -1;
   };
+  // '사유'는 시트에서 '사유 (보류/불가)'처럼 부가설명이 붙는 경우가 많아, 정확매칭 실패 시
+  // 헤더에 '사유'가 포함된 첫 열로 폴백(완료일자 등 무관 열과 충돌 안 하도록 '사유' 포함만).
+  const reasonCol = function () {
+    const exact = col(['사유', '불가사유', '보류사유', '반려사유', '반영불가사유', '사유 (보류/불가)']);
+    if (exact >= 0) return exact;
+    for (let j = 0; j < head.length; j++) { if (head[j].indexOf('사유') >= 0) return j; }
+    return -1;
+  };
   const C = {
     num: col(['번호', '연번', 'No', 'no']),
     urgent: col(['긴급', '긴급여부']),
@@ -632,7 +640,7 @@ function improveCtx_() {
     link: col(['관련자료', '자료', '링크', 'link']),
     status: col(['상태', '진행상태']),
     end: col(['완료일자', '완료일']),
-    reason: col(['사유', '불가사유', '보류사유', '반려사유', '반영불가사유']),
+    reason: reasonCol(),
   };
   return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
 }

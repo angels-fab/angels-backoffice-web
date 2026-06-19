@@ -75,3 +75,12 @@
 - **시트 드롭다운 미반영 원인 규명·복구**: 임시 진단 엔드포인트(`debugImproveDV`)로 실제 데이터 확인 상태를 점검. 결과 — `copyTo(PASTE_DATA_VALIDATION)`는 **정상 동작**(복사 시 VALUE_IN_LIST 적용 확인), @48 이후 생성된 행(예: row 9)은 드롭다운이 잘 붙음. 다만 **@48 이전 생성된 옛 행(row 8)은 데이터 확인이 없는 평문** 상태로 남아 있었음 → 이게 "아직 안 됨"의 원인.
   - 일괄 복구 엔드포인트(`backfillImproveDV`)를 추가·1회 실행 → 데이터 확인이 없던 기존 행 전부에 템플릿 행의 데이터 확인 복사(개선위치/유형/담당자/상태 모두 VALUE_IN_LIST로). 진단으로 row 4~9 전부 적용 확인.
   - 복구 완료 후 **임시 진단/복구 엔드포인트는 제거**(보안·정리). 영구 수정(`copyRowValidation_` 호출 in create/update)은 유지. 백엔드 @51.
+
+## 보완 8 (피드백, 백엔드 @52)
+- **보류·불가 사유 저장/표시 버그 수정(원인=헤더명 불일치)**: 시트의 사유 열 헤더는 `사유 (보류/불가)`인데 백엔드 `improveCtx_`의 `reason` 매칭이 정확문자열(`사유`·`불가사유`…)만 봐서 `C.reason=-1`로 잡혔다 → 사유가 **시트에 저장되지 않고**(set은 i<0이면 no-op), 읽기도 항상 빈 문자열이라 비고칸이 무조건 '사유 입력'으로 보였다. `improveCtx_`에 **'사유' 포함 헤더 폴백**(`reasonCol()`: 정확매칭 실패 시 헤더에 '사유'가 들어간 첫 열) 추가. 백엔드 @52(URL 불변). (라이브 API 확인: 헤더 `…,상태,완료일자,"사유 (보류/불가)"`, 기존 보류·불가 행 reason 전부 "" 였음 → 수정 후 신규 저장부터 반영.)
+- **정렬 = 번호 내림차순**: `listed` 정렬을 제안일자 우선 → **번호(높은→낮은) 우선**(동률 시 제안일자 최신)으로 변경.
+- **0건 상태 탭 숨김**: 필터 탭을 `visibleStatuses`(건수>0 또는 현재 선택된 상태만)로 렌더. 선택 중이던 탭이 0건이 돼도 토글 가능하도록 유지. (예: 검토중 0건 → 탭 미표시)
+- **Shift 다중선택 안내문**: 탭 우측에 `Shift+클릭으로 여러 상태 선택`(text.disabled, 11.5px). 탭이 2개 이상일 때만 노출.
+- **새 제안 = 표 바깥 우상단 버튼 + 좌측 펼침 애니메이션**: 표 안 인라인 작성행/점선행 제거. 표 위 헤더 아래에 `text-align:right` 블록 → 평소엔 **「새 제안」 버튼(폭 240px ≈ 표 1/4, outlined·success)**, 클릭 시 같은 우측 앵커에서 **inline-block 클립의 width 0→380px CSS transition**으로 좌측 펼침. 클립 `direction:rtl`(패널은 `direction:ltr`)로 내용이 오른쪽에 고정된 채 오른쪽→왼쪽으로 드러난다. 패널은 항상 마운트(내용 안정 → transition 신뢰성↑) + 닫힘 시 `visibility:hidden`(가로 접힘 후, 탭 포커스 제외) + `prefers-reduced-motion`이면 transition 없음.
+  - ⚠ 구현 함정 기록: ① MUI `Collapse orientation="horizontal"`은 이 레이아웃(flex 자식/inline-block 래퍼)에서 entered 폭이 0으로 잡혀 미사용. ② **flex 항목 + overflow:hidden 조합은 폭이 0으로 붕괴**(`max-width:380 !important`도 무시됨) → flex 대신 text-align 우측정렬 사용. ③ sx `maxWidth` 시스템프롭이 이 노드에서 0px로 잘못 계산돼 width/maxWidth는 **inline `style`**로 지정. ④ **프리뷰(headless)는 CSS transition을 진행시키지 못함**(opacity·width 모두 시작값 고정) → 애니메이션 중간 프레임은 dev 프리뷰로 검증 불가, 최종 상태(transition 끄고 점프)·실측으로 검증. 실제 브라우저(폰/PC)에선 정상 동작.
+- 검증: type-check·build 통과. 라이브 dev에서 관리자 모드로 ①정렬(번호 7→1) ②검토중 탭 숨김 ③Shift 안내문 ④버튼 240px 우측정렬·클릭 시 패널 380px 우측앵커·필드(긴급/제목/위치/유형/내용/관련자료/취소·저장) 정상·제목 입력·취소 시 버튼 복귀 모두 확인.
