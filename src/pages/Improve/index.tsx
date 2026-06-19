@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Button from '@mui/material/Button'
@@ -25,21 +25,19 @@ import PriorityHighIcon from '@mui/icons-material/PriorityHigh'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
-import { updateImprovement, createImprovement, fetchAuthors } from '@/api/sheets'
+import { updateImprovement, createImprovement } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { dateSortValue, fmtDate, todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus } from './improveMeta'
 import type { ImpStatus } from './improveMeta'
-
-const MGR_FALLBACK = ['센터', '신현진', '박주봉', '박세리', '조성범']
-const TITLE_W = 320 // 새 제안 제목·개선내용 공통 너비
 
 const kindColor = (t: Theme, kind: StatusKind) =>
   kind === 'success' ? t.palette.accent.green
@@ -98,14 +96,8 @@ export default function Improve() {
   const [cTitle, setCTitle] = useState('')
   const [cLoc, setCLoc] = useState('')
   const [cType, setCType] = useState('')
-  const [cMgr, setCMgr] = useState('')
   const [cLink, setCLink] = useState('')
   const [cContent, setCContent] = useState('')
-  const [authors, setAuthors] = useState<string[] | null>(null)
-
-  useEffect(() => {
-    fetchAuthors().then(setAuthors).catch(() => setAuthors(null))
-  }, [])
 
   const showSnack = (msg: string, severity: Snack['severity'] = 'success') => setSnack({ open: true, msg, severity })
 
@@ -122,7 +114,6 @@ export default function Improve() {
 
   const typeOptions = useMemo(() => [...new Set([...IMP_TYPE_OPTIONS, ...items.map((t) => t.type).filter(Boolean)])], [items])
   const locOptions = useMemo(() => [...new Set(items.map((t) => t.loc).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')), [items])
-  const mgrOptions = authors && authors.length ? authors : MGR_FALLBACK
 
   const onTab = (s: ImpStatus, shift: boolean) => {
     setSelected((prev) => {
@@ -163,7 +154,7 @@ export default function Improve() {
   }
 
   const startCompose = () => {
-    setCUrgent(false); setCTitle(''); setCLoc(''); setCType(''); setCMgr(user || ''); setCLink(''); setCContent('')
+    setCUrgent(false); setCTitle(''); setCLoc(''); setCType(''); setCLink(''); setCContent('')
     setComposing(true)
   }
 
@@ -171,10 +162,9 @@ export default function Improve() {
     if (savingNew) return
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
     if (!cTitle.trim()) return showSnack('제목을 입력해주세요.', 'error')
-    if (!cMgr.trim()) return showSnack('담당자를 선택해주세요.', 'error')
     setSavingNew(true)
     try {
-      await createImprovement({ author: user, key: authKey, urgent: cUrgent, type: cType.trim(), loc: cLoc.trim(), title: cTitle.trim(), content: cContent.trim(), mgr: cMgr.trim(), link: cLink.trim() })
+      await createImprovement({ author: user, key: authKey, urgent: cUrgent, type: cType.trim(), loc: cLoc.trim(), title: cTitle.trim(), content: cContent.trim(), mgr: user, link: cLink.trim() })
       setSavingNew(false)
       setComposing(false)
       showSnack('개선제안을 등록했습니다.', 'success')
@@ -257,7 +247,7 @@ export default function Improve() {
                     key={`${t.id}-r`}
                     hover
                     onClick={() => setExpanded((prev) => { const n = new Set(prev); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })}
-                    sx={{ cursor: 'pointer', '& td': { textAlign: 'center', fontSize: 12.5 } }}
+                    sx={(th) => ({ cursor: 'pointer', '& td': { textAlign: 'center', fontSize: 12.5, ...(open ? { bgcolor: alpha(th.palette.accent.blue, 0.1), borderBottomColor: 'transparent' } : {}) } })}
                   >
                     <TableCell sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>{t.num}</TableCell>
                     <TableCell sx={{ textAlign: 'left !important', whiteSpace: 'normal' }}>
@@ -310,65 +300,68 @@ export default function Improve() {
                     </TableCell>
                   </TableRow>,
                   open ? (
-                    <TableRow key={`${t.id}-a`} sx={{ '& td': { borderTop: 0 } }}>
+                    <TableRow key={`${t.id}-a`} sx={(th) => ({ '& td': { borderTop: 0, bgcolor: alpha(th.palette.accent.blue, 0.1) } })}>
                       <TableCell />
-                      <TableCell sx={{ bgcolor: (th) => alpha(th.palette.text.primary, 0.04), textAlign: 'left', whiteSpace: 'normal' }}>
-                        <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.secondary', lineHeight: 1.7, py: 0.5 }}>{t.content || '내용 없음'}</Box>
+                      <TableCell colSpan={7} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
+                        <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5 }}>{t.content || '내용 없음'}</Box>
                       </TableCell>
-                      <TableCell colSpan={6} />
                     </TableRow>
                   ) : null,
                 ]
               })}
 
-              {/* 새 제안 인라인 작성 — 게시글 열 위치·너비에 맞춰 입력 (긴급은 제목 앞) */}
+              {/* 새 제안 인라인 작성 — 긴급은 제목 입력칸 내부 체크박스, 개선내용은 유형 셀까지 */}
               {isAdmin && composing && (
                 <>
-                  <TableRow sx={{ '& td': { verticalAlign: 'top', bgcolor: (th) => alpha(th.palette.accent.green, 0.06), py: 1 } }}>
+                  <TableRow sx={{ '& td': { verticalAlign: 'middle', bgcolor: (th) => alpha(th.palette.accent.green, 0.06), py: 1 } }}>
                     <TableCell />
                     <TableCell sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Tooltip title={cUrgent ? '긴급 해제' : '긴급'}>
-                          <IconButton
-                            aria-label="긴급"
-                            onClick={() => setCUrgent((v) => !v)}
-                            sx={(th) => ({
-                              width: 28, height: 28, borderRadius: '6px', border: '1px solid', flexShrink: 0,
-                              ...(cUrgent
-                                ? { borderColor: th.palette.accent.red, bgcolor: alpha(th.palette.accent.red, 0.16), color: th.palette.accent.red }
-                                : { borderColor: th.palette.divider, color: 'text.disabled' }),
-                            })}
-                          >
-                            <PriorityHighIcon sx={{ fontSize: 17 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <InputBase value={cTitle} onChange={(e) => setCTitle(e.target.value)} placeholder="제목" inputProps={{ 'aria-label': '제목' }} sx={(th) => ({ ...inputSx(th), flex: 1, minWidth: 0 })} />
-                        <LinkField value={cLink} onChange={setCLink} />
-                      </Box>
+                      <InputBase
+                        value={cTitle}
+                        onChange={(e) => setCTitle(e.target.value)}
+                        placeholder="제목"
+                        inputProps={{ 'aria-label': '제목' }}
+                        startAdornment={
+                          <Tooltip title={cUrgent ? '긴급 해제' : '긴급'}>
+                            <Box
+                              role="checkbox"
+                              aria-checked={cUrgent}
+                              aria-label="긴급"
+                              tabIndex={0}
+                              onClick={() => setCUrgent((v) => !v)}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCUrgent((v) => !v) } }}
+                              sx={(th) => ({
+                                width: 18, height: 18, mr: 0.75, borderRadius: '4px', flexShrink: 0, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, lineHeight: 1,
+                                border: '1px solid',
+                                ...(cUrgent
+                                  ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: '#fff' }
+                                  : { borderColor: th.palette.divider, color: 'text.disabled', bgcolor: 'transparent' }),
+                              })}
+                            >!</Box>
+                          </Tooltip>
+                        }
+                        endAdornment={<LinkField value={cLink} onChange={setCLink} />}
+                        sx={(th) => ({ ...inputSx(th), width: '100%' })}
+                      />
                     </TableCell>
-                    <TableCell><InputBase value={cLoc} onChange={(e) => setCLoc(e.target.value)} placeholder="위치" inputProps={{ 'aria-label': '개선위치', list: 'imp-locs' }} sx={(th) => ({ ...inputSx(th), width: '100%' })} /></TableCell>
-                    <TableCell><InputBase value={cType} onChange={(e) => setCType(e.target.value)} placeholder="유형" inputProps={{ 'aria-label': '유형', list: 'imp-types' }} sx={(th) => ({ ...inputSx(th), width: '100%' })} /></TableCell>
+                    <TableCell><InputBase value={cLoc} onChange={(e) => setCLoc(e.target.value)} placeholder="위치" inputProps={{ 'aria-label': '개선위치', list: 'imp-locs' }} endAdornment={<ExpandMoreIcon sx={{ fontSize: 15, color: 'text.disabled', flexShrink: 0 }} />} sx={(th) => ({ ...inputSx(th), width: 66 })} /></TableCell>
+                    <TableCell><InputBase value={cType} onChange={(e) => setCType(e.target.value)} placeholder="유형" inputProps={{ 'aria-label': '유형', list: 'imp-types' }} endAdornment={<ExpandMoreIcon sx={{ fontSize: 15, color: 'text.disabled', flexShrink: 0 }} />} sx={(th) => ({ ...inputSx(th), width: 66 })} /></TableCell>
                     <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{user || '-'}</TableCell>
                     <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{fmtDate(todaySeoul())}</TableCell>
                     <TableCell sx={{ textAlign: 'center' }}><StatusChip status="neutral" label="접수" /></TableCell>
-                    <TableCell sx={{ textAlign: 'center' }}>
-                      <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
-                        <Button size="small" color="error" onClick={() => setComposing(false)} disabled={savingNew}>취소</Button>
-                        <Button size="small" variant="contained" color="success" onClick={handleSaveNew} disabled={savingNew}>{savingNew ? '…' : '저장'}</Button>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                  <TableRow sx={{ '& td': { borderTop: 0, bgcolor: (th) => alpha(th.palette.accent.green, 0.06), pt: 0 } }}>
                     <TableCell />
-                    <TableCell colSpan={7} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <Box component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>담당자</Box>
-                        <Box component="select" value={cMgr} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setCMgr(e.target.value)} aria-label="담당자" sx={(th) => ({ ...inputSx(th), width: 140, height: 30, cursor: 'pointer' })}>
-                          <option value="">선택</option>
-                          {mgrOptions.map((m) => <option key={m} value={m}>{m}</option>)}
-                        </Box>
+                  </TableRow>
+                  <TableRow sx={{ '& td': { borderTop: 0, bgcolor: (th) => alpha(th.palette.accent.green, 0.06), pt: 0, pb: 1.25 } }}>
+                    <TableCell />
+                    <TableCell colSpan={3} sx={{ textAlign: 'left' }}>
+                      <InputBase value={cContent} onChange={(e) => setCContent(e.target.value)} placeholder="개선내용" inputProps={{ 'aria-label': '개선내용' }} sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })} />
+                    </TableCell>
+                    <TableCell colSpan={4} sx={{ textAlign: 'left' }}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <Button size="small" color="error" onClick={() => setComposing(false)} disabled={savingNew}>취소</Button>
+                        <Button size="small" variant="contained" color="success" onClick={handleSaveNew} disabled={savingNew}>{savingNew ? '저장 중…' : '저장'}</Button>
                       </Box>
-                      <InputBase value={cContent} onChange={(e) => setCContent(e.target.value)} placeholder="개선내용" inputProps={{ 'aria-label': '개선내용' }} multiline minRows={2} sx={(th) => ({ ...inputSx(th), width: TITLE_W, maxWidth: '100%', alignItems: 'flex-start' })} />
                     </TableCell>
                   </TableRow>
                 </>
