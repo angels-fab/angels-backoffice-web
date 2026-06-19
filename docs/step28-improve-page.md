@@ -95,3 +95,11 @@
 - **백엔드 @53**: `updateImprovement_`를 내용 필드(title/content/type/loc/link/urgent) 수정 지원으로 확장(**status 미전달 시 완료일자·사유 보존** — 상태 로직은 `req.status!==undefined`일 때만), `deleteImprovement_` 신규(담당자 검증 후 행 삭제) + `doPost` 라우팅. API `updateImprovement` 페이로드 확장 + `deleteImprovement` 추가.
 - 권한: 수정/삭제 모두 **담당자(행 mgr==author)만**(프런트 `canManage` 게이팅 + 백엔드 검증). 신규 등록 시 mgr=작성자라 작성자 본인이 관리.
 - 검증: type-check·build 통과. 라이브 dev(관리자)에서 ①dashed 박스가 헤더-표 사이 위치 ②클릭→작성카드, 제목줄 배경 클릭→접힘(입력 클릭은 유지) ③글 펼침→우측 수정/삭제, 수정→프리필 in-place 카드(저장버튼 '수정'), 삭제→확인 팝업(「제목」) 모두 확인. (실제 저장/삭제는 담당자 로그인 필요 — 사용자 확인 권장)
+
+## 보완 10 (피드백 — 보완 9 위치/구조 정정, 프런트 전용)
+- **새 제안 위치 정정**: "헤더와 목록 사이"를 표 바깥(필터탭 아래)으로 해석했던 걸, 사용자 의도대로 **표 내부 최상단(컬럼 헤더 바로 아래·최신글 위)** 행으로 이동. `+ 새 제안`은 표 첫 tbody 행이며 **텍스트에 dashed 박스**(inline-flex, `1.5px dashed`, hover 초록).
+- **작성 입력 구조 원복**: 보완 9에서 만든 stacked 카드(`ComposeCard`)를 폐기하고, **이전 버전과 동일한 열 정렬 인라인 2행 구조**로 복구 — 1행: 번호(빈/번호)·제목 InputBase(긴급 체크박스 startAdornment + 관련자료 LinkField endAdornment, width 100%)·개선위치 DropField(96)·유형 DropField(84)·작성자·제안일자·상태칩, 2행: 개선내용 InputBase(colSpan3, height 32) + 취소/저장(colSpan3 가운데). 
+- **신규/수정 공용 `renderCompose(mode, t?)`**: 새 제안은 표 최상단, **수정은 해당 글 자리 in-place**(같은 열 정렬, 번호·작성자·제안일자·현재 상태칩 표시, 저장 버튼 '수정'). 상태/완료일자/사유는 수정에서 건드리지 않음.
+- **제목줄 접기 유지**: 1행 `TableRow onClick=접기`, 입력이 든 제목/위치/유형 셀만 `stopPropagation` → 배경(번호·작성자·제안일자·상태 셀) 클릭 시 접힘. (취소 버튼도 가능)
+- 수정/삭제 버튼·삭제 확인 팝업·백엔드(@53)는 보완 9 그대로. `ComposeCard`·`ExpandLess` import 제거, c* 입력 상태 복구.
+- 검증: type-check·build 통과. 라이브 dev에서 ①`+ 새 제안`이 표 첫 행(헤더 아래) ②클릭→열 정렬 작성행(긴급 in 제목·DropField in 위치/유형·작성자/오늘/접수칩) ③제목 클릭은 유지·작성자칸 클릭은 접힘 ④수정→in-place 프리필(번호 7·제목/내용 복원·저장'수정') ⑤삭제→「제목」 확인 팝업 모두 확인.

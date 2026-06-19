@@ -25,7 +25,6 @@ import PriorityHighIcon from '@mui/icons-material/PriorityHigh'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { alpha } from '@mui/material/styles'
@@ -36,7 +35,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { updateImprovement, createImprovement, deleteImprovement } from '@/api/sheets'
 import { useRole } from '@/auth/role'
-import { dateSortValue, fmtDate } from '@/utils/date'
+import { dateSortValue, fmtDate, todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus } from './improveMeta'
 import type { ImpStatus } from './improveMeta'
@@ -102,67 +101,6 @@ function DropField({ value, onChange, options, placeholder, width }: { value: st
   )
 }
 
-type ComposeData = { urgent: boolean; title: string; loc: string; type: string; link: string; content: string }
-
-// 새 제안/수정 공용 작성 카드 — 자체 상태 보유. 제목줄 배경(또는 ▲) 클릭 시 접힘(onCancel).
-function ComposeCard({ initial, locOptions, typeOptions, saving, editing, onCancel, onSave }: {
-  initial?: ComposeData
-  locOptions: string[]
-  typeOptions: string[]
-  saving: boolean
-  editing?: boolean
-  onCancel: () => void
-  onSave: (d: ComposeData) => void
-}) {
-  const [urgent, setUrgent] = useState(initial?.urgent ?? false)
-  const [title, setTitle] = useState(initial?.title ?? '')
-  const [loc, setLoc] = useState(initial?.loc ?? '')
-  const [type, setType] = useState(initial?.type ?? '')
-  const [link, setLink] = useState(initial?.link ?? '')
-  const [content, setContent] = useState(initial?.content ?? '')
-  const stop = (e: React.MouseEvent) => e.stopPropagation()
-  return (
-    <Box sx={(th) => ({ bgcolor: alpha(th.palette.accent.green, 0.06), border: '1px solid', borderColor: th.palette.divider, borderRadius: '10px', p: 1.5 })}>
-      {/* 제목줄 — 배경/▲ 클릭 시 접힘. 입력 요소는 stopPropagation */}
-      <Box onClick={onCancel} sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1, cursor: 'pointer' }}>
-        <Tooltip title={urgent ? '긴급 해제' : '긴급'}>
-          <Box
-            role="checkbox" aria-checked={urgent} aria-label="긴급" tabIndex={0}
-            onClick={(e) => { stop(e); setUrgent((v) => !v) }}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setUrgent((v) => !v) } }}
-            sx={(th) => ({
-              width: 18, height: 18, borderRadius: '4px', flexShrink: 0, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, lineHeight: 1,
-              border: '1px solid',
-              ...(urgent
-                ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: '#fff' }
-                : { borderColor: th.palette.divider, color: 'text.disabled', bgcolor: 'transparent' }),
-            })}
-          >!</Box>
-        </Tooltip>
-        <InputBase value={title} onClick={stop} onChange={(e) => setTitle(e.target.value)} placeholder="제목" inputProps={{ 'aria-label': '제목' }} sx={(th) => ({ ...inputSx(th), flex: 1 })} />
-        <Tooltip title="접기">
-          <IconButton size="small" aria-label="접기" onClick={(e) => { stop(e); onCancel() }} sx={{ color: 'text.secondary', flexShrink: 0 }}>
-            <ExpandLessIcon sx={{ fontSize: 20 }} />
-          </IconButton>
-        </Tooltip>
-      </Box>
-      <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}><DropField value={loc} onChange={setLoc} options={locOptions} placeholder="개선위치" width={140} /></Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}><DropField value={type} onChange={setType} options={typeOptions} placeholder="유형" width={140} /></Box>
-      </Box>
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 1.25 }}>
-        <InputBase value={content} onChange={(e) => setContent(e.target.value)} placeholder="개선내용" inputProps={{ 'aria-label': '개선내용' }} multiline minRows={2} maxRows={6} sx={(th) => ({ ...inputSx(th), flex: 1 })} />
-        <LinkField value={link} onChange={setLink} />
-      </Box>
-      <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'flex-end' }}>
-        <Button size="small" color="error" onClick={onCancel} disabled={saving}>취소</Button>
-        <Button size="small" variant="contained" color="success" onClick={() => onSave({ urgent, title, loc, type, link, content })} disabled={saving}>{saving ? '저장 중…' : (editing ? '수정' : '저장')}</Button>
-      </Box>
-    </Box>
-  )
-}
-
 export default function Improve() {
   const dispatch = useAppDispatch()
   const { items, loading, error, updatedAt, locOptions: sheetLoc, typeOptions: sheetType } = useAppSelector((s) => s.improve)
@@ -174,11 +112,17 @@ export default function Improve() {
   const [savingId, setSavingId] = useState<number | null>(null)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
 
-  // 새 제안(상단 카드) / 수정(아코디언 in-place) / 삭제 확인
+  // 새 제안(표 상단) / 수정(목록 내 in-place) / 삭제 확인 — 작성 입력은 c* 상태 공용
   const [composing, setComposing] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleteDlg, setDeleteDlg] = useState<ImprovementItem | null>(null)
+  const [cUrgent, setCUrgent] = useState(false)
+  const [cTitle, setCTitle] = useState('')
+  const [cLoc, setCLoc] = useState('')
+  const [cType, setCType] = useState('')
+  const [cLink, setCLink] = useState('')
+  const [cContent, setCContent] = useState('')
 
   const showSnack = (msg: string, severity: Snack['severity'] = 'success') => setSnack({ open: true, msg, severity })
 
@@ -242,20 +186,25 @@ export default function Improve() {
     void saveStatus(reasonDlg.row, reasonDlg.status, reasonDlg.value.trim())
   }
 
-  const openNew = () => { setEditingId(null); setComposing(true) }
+  const resetCompose = (t?: ImprovementItem) => {
+    setCUrgent(t?.urgent ?? false); setCTitle(t?.title ?? ''); setCLoc(t?.loc ?? '')
+    setCType(t?.type ?? ''); setCLink(t?.link ?? ''); setCContent(t?.content ?? '')
+  }
+  const openNew = () => { resetCompose(); setEditingId(null); setComposing(true) }
   const openEdit = (t: ImprovementItem) => {
+    resetCompose(t)
     setComposing(false)
     setEditingId(t.id)
     setExpanded((prev) => { const n = new Set(prev); n.add(t.id); return n }) // 펼쳐진 상태로 편집
   }
 
-  const handleCreate = async (d: ComposeData) => {
+  const handleCreate = async () => {
     if (saving) return
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
-    if (!d.title.trim()) return showSnack('제목을 입력해주세요.', 'error')
+    if (!cTitle.trim()) return showSnack('제목을 입력해주세요.', 'error')
     setSaving(true)
     try {
-      await createImprovement({ author: user, key: authKey, urgent: d.urgent, type: d.type.trim(), loc: d.loc.trim(), title: d.title.trim(), content: d.content.trim(), mgr: user, link: d.link.trim() })
+      await createImprovement({ author: user, key: authKey, urgent: cUrgent, type: cType.trim(), loc: cLoc.trim(), title: cTitle.trim(), content: cContent.trim(), mgr: user, link: cLink.trim() })
       setSaving(false); setComposing(false)
       showSnack('개선제안을 등록했습니다.', 'success')
       dispatch(loadImproveData())
@@ -265,14 +214,14 @@ export default function Improve() {
     }
   }
 
-  const handleEdit = async (t: ImprovementItem, d: ComposeData) => {
+  const handleEdit = async (t: ImprovementItem) => {
     if (saving) return
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
-    if (!d.title.trim()) return showSnack('제목을 입력해주세요.', 'error')
+    if (!cTitle.trim()) return showSnack('제목을 입력해주세요.', 'error')
     setSaving(true)
     try {
       // 상태는 건드리지 않고 내용 필드만 수정(완료일자·사유 보존)
-      await updateImprovement({ author: user, key: authKey, num: t.num, urgent: d.urgent, type: d.type.trim(), loc: d.loc.trim(), title: d.title.trim(), content: d.content.trim(), link: d.link.trim() })
+      await updateImprovement({ author: user, key: authKey, num: t.num, urgent: cUrgent, type: cType.trim(), loc: cLoc.trim(), title: cTitle.trim(), content: cContent.trim(), link: cLink.trim() })
       setSaving(false); setEditingId(null)
       showSnack('수정했습니다.', 'success')
       dispatch(loadImproveData())
@@ -298,6 +247,70 @@ export default function Improve() {
   }
 
   const stop = (e: React.MouseEvent) => e.stopPropagation()
+
+  // 작성/수정 공용 인라인 행(이전 버전과 동일한 열 정렬 구조). 제목줄 배경 클릭 시 접힘(입력 셀은 stopPropagation).
+  const renderCompose = (mode: 'new' | 'edit', t?: ImprovementItem) => {
+    const onCancel = mode === 'new' ? () => setComposing(false) : () => setEditingId(null)
+    const onSave = mode === 'new' ? handleCreate : () => { if (t) void handleEdit(t) }
+    const numCell = mode === 'new' ? '' : (t?.num ?? '')
+    const author = mode === 'new' ? (user || '-') : (t?.author || '-')
+    const dateStr = mode === 'new' ? fmtDate(todaySeoul()) : fmtDate(t?.date || '')
+    const stLabel = mode === 'new' ? '접수' : normStatus(t?.status || '')
+    const stKind: StatusKind = mode === 'new' ? 'neutral' : impKind(stLabel)
+    const kb = mode === 'new' ? 'new' : `edit-${t!.id}`
+    const greenBg = (th: Theme) => alpha(th.palette.accent.green, 0.06)
+    return [
+      <TableRow key={`${kb}-1`} onClick={onCancel} sx={{ cursor: 'pointer', '& td': { verticalAlign: 'middle', bgcolor: greenBg, py: 1 } }}>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>{numCell}</TableCell>
+        <TableCell onClick={stop} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
+          <InputBase
+            value={cTitle}
+            onChange={(e) => setCTitle(e.target.value)}
+            placeholder="제목"
+            inputProps={{ 'aria-label': '제목' }}
+            startAdornment={
+              <Tooltip title={cUrgent ? '긴급 해제' : '긴급'}>
+                <Box
+                  role="checkbox" aria-checked={cUrgent} aria-label="긴급" tabIndex={0}
+                  onClick={() => setCUrgent((v) => !v)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCUrgent((v) => !v) } }}
+                  sx={(th) => ({
+                    width: 18, height: 18, mr: 0.75, borderRadius: '4px', flexShrink: 0, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, lineHeight: 1,
+                    border: '1px solid',
+                    ...(cUrgent
+                      ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: '#fff' }
+                      : { borderColor: th.palette.divider, color: 'text.disabled', bgcolor: 'transparent' }),
+                  })}
+                >!</Box>
+              </Tooltip>
+            }
+            endAdornment={<LinkField value={cLink} onChange={setCLink} />}
+            sx={(th) => ({ ...inputSx(th), width: '100%' })}
+          />
+        </TableCell>
+        <TableCell onClick={stop}><DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="위치" width={96} /></TableCell>
+        <TableCell onClick={stop}><DropField value={cType} onChange={setCType} options={typeOptions} placeholder="유형" width={84} /></TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{author}</TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
+        <TableCell sx={{ textAlign: 'center' }}><StatusChip status={stKind} label={stLabel} /></TableCell>
+        <TableCell />
+      </TableRow>,
+      <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, pt: 0, pb: 1.25 } }}>
+        <TableCell />
+        <TableCell colSpan={3} sx={{ textAlign: 'left' }}>
+          <InputBase value={cContent} onChange={(e) => setCContent(e.target.value)} placeholder="개선내용" inputProps={{ 'aria-label': '개선내용' }} sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })} />
+        </TableCell>
+        <TableCell colSpan={3}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center' }}>
+            <Button size="small" color="error" onClick={onCancel} disabled={saving}>취소</Button>
+            <Button size="small" variant="contained" color="success" onClick={onSave} disabled={saving}>{saving ? '저장 중…' : (mode === 'edit' ? '수정' : '저장')}</Button>
+          </Box>
+        </TableCell>
+        <TableCell />
+      </TableRow>,
+    ]
+  }
 
   return (
     <PageContainer>
@@ -346,31 +359,6 @@ export default function Improve() {
           )}
         </Box>
 
-        {/* 새 제안: 헤더와 목록 사이 — 평소엔 dashed 박스, 클릭 시 작성 카드 펼침 (수정 중엔 숨김) */}
-        {isAdmin && editingId === null && (
-          <Box sx={{ mb: 2 }}>
-            {composing ? (
-              <ComposeCard key="new" locOptions={locOptions} typeOptions={typeOptions} saving={saving} onCancel={() => setComposing(false)} onSave={handleCreate} />
-            ) : (
-              <Box
-                role="button"
-                tabIndex={0}
-                aria-label="새 제안 작성"
-                onClick={openNew}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNew() } }}
-                sx={(th) => ({
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-                  border: `1.5px dashed ${th.palette.divider}`, borderRadius: '10px',
-                  py: 1.25, cursor: 'pointer', color: 'text.secondary', fontWeight: 500, fontSize: 13,
-                  '&:hover': { borderColor: th.palette.accent.green, color: th.palette.accent.green, bgcolor: alpha(th.palette.accent.green, 0.04) },
-                })}
-              >
-                <AddIcon sx={{ fontSize: 18 }} /> 새 제안
-              </Box>
-            )}
-          </Box>
-        )}
-
         <AppCard padding={0} sx={{ overflowX: 'auto' }}>
           <Table size="small" sx={{ '& td, & th': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
             <TableHead>
@@ -386,12 +374,27 @@ export default function Improve() {
               </TableRow>
             </TableHead>
             <TableBody>
+              {/* 새 제안: 표 내부 최상단(헤더 바로 아래, 최신글 위). 평소엔 dashed 박스 → 클릭 시 작성 행. 수정 중엔 숨김 */}
+              {isAdmin && editingId === null && (composing ? renderCompose('new') : (
+                <TableRow key="np-row">
+                  <TableCell
+                    colSpan={8}
+                    onClick={openNew}
+                    sx={(th) => ({ textAlign: 'center', cursor: 'pointer', py: 1.25, '&:hover .np-box': { borderColor: th.palette.accent.green, color: th.palette.accent.green, bgcolor: alpha(th.palette.accent.green, 0.06) } })}
+                  >
+                    <Box className="np-box" component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: 0.5, border: `1.5px dashed ${th.palette.divider}`, borderRadius: '8px', px: 1.75, py: 0.6, color: 'text.secondary', fontWeight: 500, fontSize: 13, transition: 'border-color .12s, color .12s, background .12s' })}>
+                      <AddIcon sx={{ fontSize: 18 }} /> 새 제안
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
               {listed.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>해당 개선제안이 없습니다</TableCell>
                 </TableRow>
               )}
               {listed.map((t) => {
+                if (editingId === t.id) return renderCompose('edit', t) // 수정: 그 자리에서 인라인 편집(열 정렬 동일)
                 const open = expanded.has(t.id)
                 const rm = remarkOf(t)
                 const st = normStatus(t.status)
@@ -457,28 +460,15 @@ export default function Improve() {
                     <TableRow key={`${t.id}-a`} sx={(th) => ({ '& td': { borderTop: 0, bgcolor: alpha(th.palette.accent.blue, 0.1) } })}>
                       <TableCell />
                       <TableCell colSpan={7} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
-                        {editingId === t.id ? (
-                          <ComposeCard
-                            key={`edit-${t.id}`}
-                            editing
-                            initial={{ urgent: t.urgent, title: t.title, loc: t.loc, type: t.type, link: t.link, content: t.content }}
-                            locOptions={locOptions}
-                            typeOptions={typeOptions}
-                            saving={saving}
-                            onCancel={() => setEditingId(null)}
-                            onSave={(d) => handleEdit(t, d)}
-                          />
-                        ) : (
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-                            <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>{t.content || '내용 없음'}</Box>
-                            {manage && (
-                              <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0, pt: 0.25 }} onClick={stop}>
-                                <Button size="small" startIcon={<EditIcon sx={{ fontSize: 16 }} />} onClick={() => openEdit(t)} sx={{ color: 'text.secondary', minWidth: 0 }}>수정</Button>
-                                <Button size="small" color="error" startIcon={<DeleteOutlineIcon sx={{ fontSize: 16 }} />} onClick={() => setDeleteDlg(t)} sx={{ minWidth: 0 }}>삭제</Button>
-                              </Box>
-                            )}
-                          </Box>
-                        )}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+                          <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>{t.content || '내용 없음'}</Box>
+                          {manage && (
+                            <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0, pt: 0.25 }} onClick={stop}>
+                              <Button size="small" startIcon={<EditIcon sx={{ fontSize: 16 }} />} onClick={() => openEdit(t)} sx={{ color: 'text.secondary', minWidth: 0 }}>수정</Button>
+                              <Button size="small" color="error" startIcon={<DeleteOutlineIcon sx={{ fontSize: 16 }} />} onClick={() => setDeleteDlg(t)} sx={{ minWidth: 0 }}>삭제</Button>
+                            </Box>
+                          )}
+                        </Box>
                       </TableCell>
                     </TableRow>
                   ) : null,
