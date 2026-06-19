@@ -379,12 +379,13 @@ export default function Improve() {
                     <TableCell colSpan={3} sx={{ textAlign: 'left' }}>
                       <InputBase value={cContent} onChange={(e) => setCContent(e.target.value)} placeholder="개선내용" inputProps={{ 'aria-label': '개선내용' }} sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })} />
                     </TableCell>
-                    <TableCell colSpan={4}>
+                    <TableCell colSpan={3} sx={{ pr: 0 }}>
                       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
                         <Button size="small" color="error" onClick={() => setComposing(false)} disabled={savingNew}>취소</Button>
                         <Button size="small" variant="contained" color="success" onClick={handleSaveNew} disabled={savingNew}>{savingNew ? '저장 중…' : '저장'}</Button>
                       </Box>
                     </TableCell>
+                    <TableCell />
                   </TableRow>
                 </>
               )}

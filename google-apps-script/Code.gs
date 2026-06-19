@@ -692,6 +692,31 @@ function dvOptions_(sh, hIdx, col) {
   return [];
 }
 
+// 기존 데이터 행(드롭다운/체크박스가 설정된 행)의 데이터 확인을 대상 행에 복사
+// → 웹에서 추가/수정한 행도 시트에서 드롭다운(칩)으로 보이게 함.
+// probeCol: 검증이 살아있는 템플릿 행을 찾을 때 확인할 열(상태 권장). 첫 데이터행이
+// 검증 없는(웹 작성) 행일 수 있어, 실제 검증이 있는 행을 우선 템플릿으로 쓴다.
+function copyRowValidation_(sh, hIdx, targetRow, probeCol) {
+  try {
+    const maxScan = Math.min(targetRow - 1, hIdx + 12);
+    let templateRow = -1;
+    if (probeCol >= 0) {
+      for (let r = hIdx + 2; r <= maxScan; r++) {
+        if (r === targetRow) continue;
+        if (sh.getRange(r, probeCol + 1).getDataValidation()) { templateRow = r; break; }
+      }
+    }
+    if (templateRow < 0) templateRow = hIdx + 2; // 폴백: 첫 데이터 행
+    if (templateRow < hIdx + 2 || templateRow >= targetRow) return;
+    const lastCol = sh.getLastColumn();
+    sh.getRange(templateRow, 1, 1, lastCol).copyTo(
+      sh.getRange(targetRow, 1, 1, lastCol),
+      SpreadsheetApp.CopyPasteType.PASTE_DATA_VALIDATION,
+      false
+    );
+  } catch (e) { /* 검증 복사 실패는 무시(값은 이미 저장됨) */ }
+}
+
 // 등록: 로그인 사용자(담당자 시트 인증)만. 상태=접수, 제안일자=오늘(미지정 시), 작성자=로그인 이름.
 function createImprovement_(req) {
   const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
@@ -726,6 +751,7 @@ function createImprovement_(req) {
   set(C.reason, '');
   sh.appendRow(row);
   const last = sh.getLastRow();
+  copyRowValidation_(sh, hIdx, last, C.status); // 상태·담당자·유형·개선위치 등 드롭다운(칩) 복사
   if (C.urgent >= 0) sh.getRange(last, C.urgent + 1).insertCheckboxes().setValue(req.urgent === true);
   return json_({ status: 'ok', num: newNum });
 }
@@ -771,6 +797,7 @@ function updateImprovement_(req) {
     if (status === '불가' || status === '보류') set(C.reason, String(req.reason || ''));
     else set(C.reason, '');
   }
+  copyRowValidation_(sh, hIdx, sheetRow, C.status); // 드롭다운 없던 웹 작성 행도 상태 변경 시 드롭다운(칩) 적용
   return json_({ status: 'ok', num: Number(num) || num });
 }
 
