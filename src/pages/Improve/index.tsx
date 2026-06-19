@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
-import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Table from '@mui/material/Table'
 import TableHead from '@mui/material/TableHead'
@@ -19,9 +18,11 @@ import PriorityHighIcon from '@mui/icons-material/PriorityHigh'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
+import CheckIcon from '@mui/icons-material/Check'
+import CloseIcon from '@mui/icons-material/Close'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, StatusChip } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
@@ -48,8 +49,8 @@ export default function Improve() {
   const { items, loading, error, updatedAt } = useAppSelector((s) => s.improve)
   const { isAdmin, user, authKey } = useRole()
 
-  const [selected, setSelected] = useState<Set<ImpStatus>>(new Set(['접수중'])) // 필터(비었으면 전체)
-  const [expanded, setExpanded] = useState<number | null>(null) // 아코디언
+  const [selected, setSelected] = useState<Set<ImpStatus>>(new Set()) // 필터(비었으면 전체) — 기본 전체
+  const [expanded, setExpanded] = useState<Set<number>>(new Set()) // 아코디언(다중 펼침)
   const [writeOpen, setWriteOpen] = useState(false)
   const [reasonEdit, setReasonEdit] = useState<ReasonEdit | null>(null)
   const [savingId, setSavingId] = useState<number | null>(null)
@@ -123,14 +124,9 @@ export default function Improve() {
         title="개선제안"
         updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
         actions={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {isAdmin && (
-              <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => setWriteOpen(true)}>제안 등록</Button>
-            )}
-            <IconButton aria-label="새로고침" onClick={() => dispatch(loadImproveData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-              <RefreshIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Box>
+          <IconButton aria-label="새로고침" onClick={() => dispatch(loadImproveData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
+            <RefreshIcon sx={{ fontSize: 20 }} />
+          </IconButton>
         }
       />
 
@@ -161,117 +157,142 @@ export default function Improve() {
           })}
         </Box>
 
-        {listed.length === 0 ? (
-          <AppCard padding={0}><EmptyState size="sm" title="해당 개선제안이 없습니다" /></AppCard>
-        ) : (
-          <AppCard padding={0} sx={{ overflowX: 'auto' }}>
-            <Table size="small" sx={{ '& td, & th': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
-              <TableHead>
-                <TableRow sx={{ '& th': { textAlign: 'center', color: 'text.secondary', fontWeight: 600, fontSize: 12.5 } }}>
-                  <TableCell>번호</TableCell>
-                  <TableCell>유형</TableCell>
-                  <TableCell>개선위치</TableCell>
-                  <TableCell sx={{ textAlign: 'left !important' }}>제목</TableCell>
-                  <TableCell>작성자</TableCell>
-                  <TableCell>제안일자</TableCell>
-                  <TableCell>담당자</TableCell>
-                  <TableCell>상태</TableCell>
-                  <TableCell sx={{ textAlign: 'left !important' }}>비고</TableCell>
+        <AppCard padding={0} sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ '& td, & th': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
+            <TableHead>
+              <TableRow sx={{ '& th': { textAlign: 'center', color: 'text.secondary', fontWeight: 600, fontSize: 12.5 } }}>
+                <TableCell>번호</TableCell>
+                <TableCell>제목</TableCell>
+                <TableCell>유형</TableCell>
+                <TableCell>개선위치</TableCell>
+                <TableCell>작성자</TableCell>
+                <TableCell>제안일자</TableCell>
+                <TableCell>담당자</TableCell>
+                <TableCell>상태</TableCell>
+                <TableCell>비고</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {listed.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={9} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>해당 개선제안이 없습니다</TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {listed.map((t) => {
-                  const open = expanded === t.id
-                  const rm = remarkOf(t)
-                  const editing = reasonEdit?.row.id === t.id
-                  const stUI = editing ? reasonEdit!.status : (t.status || '').trim()
-                  const manage = canManage(t)
-                  return [
-                    <TableRow
-                      key={`${t.id}-r`}
-                      hover
-                      onClick={() => setExpanded(open ? null : t.id)}
-                      sx={{ cursor: 'pointer', '& td': { textAlign: 'center', fontSize: 12.5 } }}
-                    >
-                      <TableCell sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>{t.num}</TableCell>
-                      <TableCell>{t.type || '-'}</TableCell>
-                      <TableCell>{t.loc || '-'}</TableCell>
-                      <TableCell sx={{ textAlign: 'left !important' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, whiteSpace: 'normal' }}>
-                          {t.urgent && (
-                            <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: 18, color: 'error.main', flexShrink: 0 }} /></Tooltip>
-                          )}
-                          <Box component="span" sx={{ fontWeight: 500, color: 'text.primary' }}>{t.title}</Box>
-                          {t.link && (
-                            <IconButton component="a" href={t.link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련자료" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
-                              <OpenInNewIcon sx={{ fontSize: 15 }} />
-                            </IconButton>
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell>{t.author || '-'}</TableCell>
-                      <TableCell sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>{fmtDate(t.date)}</TableCell>
-                      <TableCell>{t.mgr || '-'}</TableCell>
-                      <TableCell onClick={stop} sx={{ cursor: 'default' }}>
-                        {manage ? (
-                          <Select
-                            value={stUI}
-                            onChange={(e) => onStatusChange(t, e.target.value)}
-                            disabled={savingId === t.id}
-                            variant="standard"
-                            disableUnderline
-                            renderValue={(v) => <StatusChip status={impKind(v)} label={v} />}
-                            sx={{ '& .MuiSelect-select': { p: 0, pr: '18px !important' } }}
-                          >
-                            {IMP_STATUSES.map((s) => (
-                              <MenuItem key={s} value={s} sx={{ fontSize: 13 }}>{s}</MenuItem>
-                            ))}
-                          </Select>
-                        ) : (
-                          <StatusChip status={impKind(stUI)} label={stUI || '-'} />
+              )}
+              {listed.map((t) => {
+                const open = expanded.has(t.id)
+                const rm = remarkOf(t)
+                const editing = reasonEdit?.row.id === t.id
+                const stUI = editing ? reasonEdit!.status : (t.status || '').trim()
+                const manage = canManage(t)
+                return [
+                  <TableRow
+                    key={`${t.id}-r`}
+                    hover
+                    onClick={() => setExpanded((prev) => { const n = new Set(prev); if (n.has(t.id)) n.delete(t.id); else n.add(t.id); return n })}
+                    sx={{ cursor: 'pointer', '& td': { textAlign: 'center', fontSize: 12.5 } }}
+                  >
+                    <TableCell sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>{t.num}</TableCell>
+                    <TableCell sx={{ textAlign: 'left !important' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, whiteSpace: 'normal' }}>
+                        {t.urgent && (
+                          <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: 18, color: 'error.main', flexShrink: 0 }} /></Tooltip>
                         )}
-                      </TableCell>
-                      <TableCell onClick={editing ? stop : undefined} sx={{ textAlign: 'left !important' }}>
-                        {editing ? (
+                        <Box component="span" sx={{ fontWeight: 500, color: 'text.primary' }}>{t.title}</Box>
+                        {t.link && (
+                          <IconButton component="a" href={t.link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련자료" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
+                            <OpenInNewIcon sx={{ fontSize: 15 }} />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>{t.type || '-'}</TableCell>
+                    <TableCell>{t.loc || '-'}</TableCell>
+                    <TableCell>{t.author || '-'}</TableCell>
+                    <TableCell sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>{fmtDate(t.date)}</TableCell>
+                    <TableCell>{t.mgr || '-'}</TableCell>
+                    <TableCell onClick={stop} sx={{ cursor: 'default' }}>
+                      {manage ? (
+                        <Select
+                          value={stUI}
+                          onChange={(e) => onStatusChange(t, e.target.value)}
+                          disabled={savingId === t.id}
+                          variant="standard"
+                          disableUnderline
+                          IconComponent={() => null}
+                          renderValue={(v) => <StatusChip status={impKind(v)} label={v} />}
+                          sx={{ '& .MuiSelect-select': { p: 0, pr: '0 !important' } }}
+                        >
+                          {IMP_STATUSES.map((s) => (
+                            <MenuItem key={s} value={s} sx={{ fontSize: 13 }}>{s}</MenuItem>
+                          ))}
+                        </Select>
+                      ) : (
+                        <StatusChip status={impKind(stUI)} label={stUI || '-'} />
+                      )}
+                    </TableCell>
+                    <TableCell onClick={editing ? stop : undefined} sx={{ textAlign: 'left !important' }}>
+                      {editing ? (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <InputBase
                             autoFocus
                             value={reasonEdit!.value}
                             onChange={(e) => setReasonEdit({ ...reasonEdit!, value: e.target.value })}
                             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); commitReason() } else if (e.key === 'Escape') setReasonEdit(null) }}
-                            placeholder={`${reasonEdit!.status} 사유 입력 후 Enter`}
+                            placeholder={`${reasonEdit!.status} 사유`}
                             disabled={savingId === t.id}
-                            sx={(th) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: '1px solid', borderColor: th.palette.divider, borderRadius: '6px', px: 1, py: 0.25, fontSize: 12.5, minWidth: 180 })}
+                            sx={(th) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: '1px solid', borderColor: th.palette.divider, borderRadius: '6px', px: 1, py: 0.25, fontSize: 12.5, minWidth: 160 })}
                           />
-                        ) : rm.kind === 'date' ? (
-                          <Box component="span" sx={{ color: 'info.main', fontVariantNumeric: 'tabular-nums' }}>완료 {fmtDate(rm.text)}</Box>
-                        ) : rm.kind === 'reason' ? (
-                          <Box
-                            component="span"
-                            onClick={manage ? (e) => { stop(e); setReasonEdit({ row: t, status: (t.status || '').trim(), value: t.reason || '' }) } : undefined}
-                            sx={{ color: 'text.secondary', whiteSpace: 'normal', cursor: manage ? 'text' : 'default' }}
-                          >
-                            {rm.text || (manage ? '사유 입력' : '-')}
-                          </Box>
-                        ) : (
-                          <Box component="span" sx={{ color: 'text.disabled' }}>—</Box>
-                        )}
+                          <Tooltip title="저장">
+                            <span>
+                              <IconButton size="small" aria-label="사유 저장" onClick={commitReason} disabled={savingId === t.id} sx={{ color: 'success.main', p: 0.25 }}>
+                                <CheckIcon sx={{ fontSize: 17 }} />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <IconButton size="small" aria-label="취소" onClick={() => setReasonEdit(null)} disabled={savingId === t.id} sx={{ color: 'text.secondary', p: 0.25 }}>
+                            <CloseIcon sx={{ fontSize: 17 }} />
+                          </IconButton>
+                        </Box>
+                      ) : rm.kind === 'date' ? (
+                        <Box component="span" sx={{ color: 'info.main', fontVariantNumeric: 'tabular-nums' }}>완료 {fmtDate(rm.text)}</Box>
+                      ) : rm.kind === 'reason' ? (
+                        <Box
+                          component="span"
+                          onClick={manage ? (e) => { stop(e); setReasonEdit({ row: t, status: (t.status || '').trim(), value: t.reason || '' }) } : undefined}
+                          sx={{ color: 'text.secondary', whiteSpace: 'normal', cursor: manage ? 'text' : 'default' }}
+                        >
+                          {rm.text || (manage ? '사유 입력' : '-')}
+                        </Box>
+                      ) : (
+                        <Box component="span" sx={{ color: 'text.disabled' }}>—</Box>
+                      )}
+                    </TableCell>
+                  </TableRow>,
+                  open ? (
+                    <TableRow key={`${t.id}-a`} sx={{ '& td': { borderTop: 0 } }}>
+                      <TableCell colSpan={9} sx={{ bgcolor: (th) => alpha(th.palette.text.primary, 0.03) }}>
+                        <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.secondary', lineHeight: 1.7, py: 0.5, px: 1 }}>
+                          {t.content || '내용 없음'}
+                        </Box>
                       </TableCell>
-                    </TableRow>,
-                    open ? (
-                      <TableRow key={`${t.id}-a`} sx={{ '& td': { borderTop: 0 } }}>
-                        <TableCell colSpan={9} sx={{ bgcolor: (th) => alpha(th.palette.text.primary, 0.03) }}>
-                          <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.secondary', lineHeight: 1.7, py: 0.5, px: 1 }}>
-                            {t.content || '내용 없음'}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ) : null,
-                  ]
-                })}
-              </TableBody>
-            </Table>
-          </AppCard>
-        )}
+                    </TableRow>
+                  ) : null,
+                ]
+              })}
+              {isAdmin && (
+                <TableRow>
+                  <TableCell
+                    colSpan={9}
+                    onClick={() => setWriteOpen(true)}
+                    sx={(th) => ({ textAlign: 'center', cursor: 'pointer', color: 'text.secondary', fontWeight: 500, py: 1.5, borderTop: `1px dashed ${th.palette.divider}`, '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.04), color: 'text.primary' } })}
+                  >
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}><AddIcon sx={{ fontSize: 18 }} /> 새 제안</Box>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </AppCard>
       </ContentSection>
 
       {isAdmin && (

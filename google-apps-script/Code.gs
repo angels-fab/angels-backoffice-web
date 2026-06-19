@@ -731,18 +731,18 @@ function updateImprovement_(req) {
   const status = String(req.status || '').trim();
   const set = function (i, v) { if (i >= 0) sh.getRange(sheetRow, i + 1).setValue(v); };
   if (status) set(C.status, status);
-  // 완료일자: 개선완료면 자동(주어진 값 우선, 없으면 기존/오늘), 그 외 상태면 비움
+  // 완료일자: '완료'면 자동(주어진 값 우선, 없으면 기존/오늘), 그 외 상태면 비움
   if (C.end >= 0) {
-    if (status === '개선완료') {
+    if (status === '완료') {
       const cur = wDate_(values[rowIdx][C.end]);
       set(C.end, req.end ? String(req.end) : (cur || today));
     } else {
       set(C.end, '');
     }
   }
-  // 사유: 반려/보류면 입력값 저장(불가·보류 공용 열), 그 외 상태면 비움
+  // 사유: 불가/보류면 입력값 저장(공용 '사유' 열), 그 외 상태면 비움
   if (C.reason >= 0) {
-    if (status === '반려' || status === '보류') set(C.reason, String(req.reason || ''));
+    if (status === '불가' || status === '보류') set(C.reason, String(req.reason || ''));
     else set(C.reason, '');
   }
   return json_({ status: 'ok', num: Number(num) || num });

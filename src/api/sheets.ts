@@ -416,13 +416,29 @@ export interface ImprovementRow {
   reason: string
 }
 
-/** 개선제안 목록 조회 (인증 불필요) */
+// 일시적 네트워크 오류('Failed to fetch') 대비 재시도 — 멱등 요청(조회·상태변경)에만 사용
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 600): Promise<T> {
+  let lastErr: unknown
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fn()
+    } catch (e) {
+      lastErr = e
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs))
+    }
+  }
+  throw lastErr
+}
+
+/** 개선제안 목록 조회 (인증 불필요, 네트워크 재시도) */
 export async function fetchImprovements(): Promise<ImprovementRow[]> {
-  const res = await fetch(`${SCRIPT_URL}?action=getImprovements`)
-  if (!res.ok) throw new Error('HTTP ' + res.status)
-  const json = (await res.json()) as { status: string; items?: ImprovementRow[]; message?: string }
-  if (json.status !== 'ok') throw new Error(json.message || '불러오기 실패')
-  return json.items || []
+  return withRetry(async () => {
+    const res = await fetch(`${SCRIPT_URL}?action=getImprovements`)
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+    const json = (await res.json()) as { status: string; items?: ImprovementRow[]; message?: string }
+    if (json.status !== 'ok') throw new Error(json.message || '불러오기 실패')
+    return json.items || []
+  })
 }
 
 async function postImprove(payload: Record<string, unknown>): Promise<{ num?: number }> {
@@ -466,5 +482,6 @@ export async function updateImprovement(p: {
   reason?: string
   end?: string
 }): Promise<void> {
-  await postImprove({ action: 'updateImprovement', ...p })
+  // 상태 변경은 멱등(같은 값 재설정 무해)이라 네트워크 오류 시 재시도
+  await withRetry(() => postImprove({ action: 'updateImprovement', ...p }))
 }
