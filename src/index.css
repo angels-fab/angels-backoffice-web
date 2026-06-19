@@ -999,9 +999,10 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .page-body{background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:32px;flex:1;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px;line-height:2;text-align:center}
 
 /* 반응형 레이아웃: PC(기본) / 모바일(<=768px) */
-.home-greeting,.eq-summary,.stat-board,.menu-stack,.topbar-title,.topbar-bell,.bottom-nav{display:none}
+.home-greeting,.eq-summary,.stat-board,.menu-stack,.topbar-title,.topbar-bell,.bottom-nav,.topbar-auth{display:none}
 @media(max-width:768px){
   .d-only{display:none !important}
+  .topbar-auth{display:flex}
   .topbar{position:fixed;left:0;right:0;top:0}
   body{padding-top:53px}
   .topbar-inner{justify-content:flex-start}

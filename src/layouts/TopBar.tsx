@@ -44,18 +44,21 @@ export default function TopBar() {
               <SearchIcon sx={{ fontSize: 20 }} />
             </IconButton>
           </Tooltip>
-          {isAdmin ? (
-            <>
-              <StatusChip status="success" label={user ? `관리자 · ${user}` : '관리자'} />
-              <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: 16 }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
-                로그아웃
+          {/* 로그인 영역은 PC에선 사이드바 하단에 있으므로 여기선 모바일에서만 노출 */}
+          <Box className="topbar-auth" sx={{ alignItems: 'center', gap: 1 }}>
+            {isAdmin ? (
+              <>
+                <StatusChip status="success" label={user ? `관리자 · ${user}` : '관리자'} />
+                <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: 16 }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
+                  로그아웃
+                </Button>
+              </>
+            ) : (
+              <Button size="small" variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: 16 }} />} onClick={() => setLoginOpen(true)}>
+                관리자 모드
               </Button>
-            </>
-          ) : (
-            <Button size="small" variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: 16 }} />} onClick={() => setLoginOpen(true)}>
-              관리자 모드
-            </Button>
-          )}
+            )}
+          </Box>
         </Box>
       </div>
 

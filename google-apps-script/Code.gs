@@ -601,7 +601,7 @@ function setupWorkEditTrigger() {
 
 // ── 개선제안 CRUD ('개선사항' 시트, 헤더 자동 탐지·열 위치 비의존) ──
 const IMPROVE_SHEET_NAME = '개선사항';
-const IMPROVE_STATUS_DEFAULT = '접수중';
+const IMPROVE_STATUS_DEFAULT = '접수';
 
 // 시트 + 헤더 위치 컨텍스트. 헤더는 보통 3행이지만 첫 10행에서 '제목'을 기준으로 자동 탐지.
 function improveCtx_() {
