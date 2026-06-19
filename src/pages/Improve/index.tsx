@@ -33,7 +33,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { updateImprovement, createImprovement } from '@/api/sheets'
 import { useRole } from '@/auth/role'
-import { dateSortValue, fmtDate } from '@/utils/date'
+import { dateSortValue, fmtDate, todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus } from './improveMeta'
 import type { ImpStatus } from './improveMeta'
@@ -121,12 +121,6 @@ export default function Improve() {
   const [cContent, setCContent] = useState('')
 
   const showSnack = (msg: string, severity: Snack['severity'] = 'success') => setSnack({ open: true, msg, severity })
-
-  // 펼침 애니메이션은 사용자가 모션 감소를 켰으면 즉시 전환(접근성)
-  const reduceMotion = useMemo(
-    () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    [],
-  )
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -226,8 +220,8 @@ export default function Improve() {
       />
 
       <ContentSection last>
-        {/* 헤더 줄: 좌측 상태 필터 탭(0건 숨김 · 재클릭=전체 · Shift=중복) / 우측 안내 + 새 제안 버튼 */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
+        {/* 상태 필터 탭 (0건 상태 숨김 · 재클릭=전체 · Shift=중복) + 우측 Shift 안내 */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             {visibleStatuses.map((s) => {
               const on = selected.has(s)
@@ -253,92 +247,11 @@ export default function Improve() {
             })}
           </Box>
           {visibleStatuses.length > 1 && (
-            <Box component="span" sx={{ fontSize: 11.5, color: 'text.disabled', whiteSpace: 'nowrap', ml: 'auto', alignSelf: 'center' }}>
+            <Box component="span" sx={{ fontSize: 11.5, color: 'text.disabled', whiteSpace: 'nowrap', ml: 'auto' }}>
               Shift+클릭으로 여러 상태 선택
             </Box>
           )}
         </Box>
-
-        {/* 새 제안: 우상단 버튼(표 1/4 폭) ↔ 클릭 시 우측 앵커에서 좌측으로 가로 펼침.
-            text-align:right 블록 안의 inline-block 클립 width를 0↔380으로 전환(CSS transition).
-            (flex 항목+overflow:hidden은 폭이 0으로 붕괴하는 버그가 있어 flex 미사용.)
-            direction:rtl로 안쪽 패널을 우측에 고정 → 폭이 늘 때 오른쪽에서 왼쪽으로 드러난다. */}
-        {isAdmin && (
-          <Box sx={{ textAlign: 'right', mb: composing ? 2 : 1.5 }}>
-            {!composing && (
-              <Button
-                variant="outlined"
-                color="success"
-                startIcon={<AddIcon />}
-                onClick={startCompose}
-                aria-expanded={composing}
-                sx={{ width: { xs: 160, sm: 240 } }}
-              >
-                새 제안
-              </Button>
-            )}
-            <Box
-              sx={{ display: 'inline-block', verticalAlign: 'top', overflow: 'hidden', maxWidth: '90vw', direction: 'rtl' }}
-              style={{
-                width: composing ? 380 : 0,
-                transition: reduceMotion ? 'none' : 'width 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-            >
-              <Box
-                role="region"
-                aria-label="새 제안 작성"
-                aria-hidden={!composing || undefined}
-                sx={(th) => ({
-                  direction: 'ltr',
-                  // 닫힘 시 visibility:hidden로 탭 포커스/스크린리더에서 제외(가로 접힘 끝난 뒤 적용).
-                  visibility: composing ? 'visible' : 'hidden',
-                  transition: reduceMotion ? 'none' : `visibility 0s ${composing ? '0s' : '300ms'}`,
-                  bgcolor: alpha(th.palette.accent.green, 0.06),
-                  border: '1px solid', borderColor: th.palette.divider, borderRadius: '8px',
-                  p: 1.5, boxSizing: 'border-box', width: { xs: 'min(90vw, 380px)', sm: 380 },
-                })}
-              >
-                {/* 1행: 긴급 토글 + 제목 */}
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-                  <Tooltip title={cUrgent ? '긴급 해제' : '긴급'}>
-                    <Box
-                      role="checkbox"
-                      aria-checked={cUrgent}
-                      aria-label="긴급"
-                      tabIndex={0}
-                      onClick={() => setCUrgent((v) => !v)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCUrgent((v) => !v) } }}
-                      sx={(th) => ({
-                        width: 18, height: 18, borderRadius: '4px', flexShrink: 0, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, lineHeight: 1,
-                        border: '1px solid',
-                        ...(cUrgent
-                          ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: '#fff' }
-                          : { borderColor: th.palette.divider, color: 'text.disabled', bgcolor: 'transparent' }),
-                      })}
-                    >!</Box>
-                  </Tooltip>
-                  <InputBase value={cTitle} onChange={(e) => setCTitle(e.target.value)} placeholder="제목" inputProps={{ 'aria-label': '제목' }} sx={(th) => ({ ...inputSx(th), flex: 1 })} />
-                </Box>
-                {/* 2행: 개선위치 + 유형 (균등 폭) */}
-                <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                  <Box sx={{ flex: 1, minWidth: 0 }}><DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="개선위치" width={120} /></Box>
-                  <Box sx={{ flex: 1, minWidth: 0 }}><DropField value={cType} onChange={setCType} options={typeOptions} placeholder="유형" width={120} /></Box>
-                </Box>
-                {/* 3행: 개선내용 + 관련자료 */}
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 1.25 }}>
-                  <InputBase value={cContent} onChange={(e) => setCContent(e.target.value)} placeholder="개선내용" inputProps={{ 'aria-label': '개선내용' }} multiline minRows={2} maxRows={4} sx={(th) => ({ ...inputSx(th), flex: 1 })} />
-                  <LinkField value={cLink} onChange={setCLink} />
-                </Box>
-                {/* 4행: 취소 / 저장 */}
-                <Box sx={{ display: 'flex', gap: 0.75, justifyContent: 'flex-end' }}>
-                  <Button size="small" color="error" onClick={() => setComposing(false)} disabled={savingNew}>취소</Button>
-                  <Button size="small" variant="contained" color="success" onClick={handleSaveNew} disabled={savingNew}>{savingNew ? '저장 중…' : '저장'}</Button>
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        )}
 
         <AppCard padding={0} sx={{ overflowX: 'auto' }}>
           <Table size="small" sx={{ '& td, & th': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
@@ -432,6 +345,77 @@ export default function Improve() {
                   ) : null,
                 ]
               })}
+
+              {/* 새 제안 인라인 작성 — 긴급은 제목 입력칸 내부 체크박스, 개선내용은 유형 셀까지 */}
+              {isAdmin && composing && (
+                <>
+                  <TableRow sx={{ '& td': { verticalAlign: 'middle', bgcolor: (th) => alpha(th.palette.accent.green, 0.06), py: 1 } }}>
+                    <TableCell />
+                    <TableCell sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
+                      <InputBase
+                        value={cTitle}
+                        onChange={(e) => setCTitle(e.target.value)}
+                        placeholder="제목"
+                        inputProps={{ 'aria-label': '제목' }}
+                        startAdornment={
+                          <Tooltip title={cUrgent ? '긴급 해제' : '긴급'}>
+                            <Box
+                              role="checkbox"
+                              aria-checked={cUrgent}
+                              aria-label="긴급"
+                              tabIndex={0}
+                              onClick={() => setCUrgent((v) => !v)}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCUrgent((v) => !v) } }}
+                              sx={(th) => ({
+                                width: 18, height: 18, mr: 0.75, borderRadius: '4px', flexShrink: 0, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, lineHeight: 1,
+                                border: '1px solid',
+                                ...(cUrgent
+                                  ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: '#fff' }
+                                  : { borderColor: th.palette.divider, color: 'text.disabled', bgcolor: 'transparent' }),
+                              })}
+                            >!</Box>
+                          </Tooltip>
+                        }
+                        endAdornment={<LinkField value={cLink} onChange={setCLink} />}
+                        sx={(th) => ({ ...inputSx(th), width: '100%' })}
+                      />
+                    </TableCell>
+                    <TableCell><DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="위치" width={96} /></TableCell>
+                    <TableCell><DropField value={cType} onChange={setCType} options={typeOptions} placeholder="유형" width={84} /></TableCell>
+                    <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{user || '-'}</TableCell>
+                    <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{fmtDate(todaySeoul())}</TableCell>
+                    <TableCell sx={{ textAlign: 'center' }}><StatusChip status="neutral" label="접수" /></TableCell>
+                    <TableCell />
+                  </TableRow>
+                  <TableRow sx={{ '& td': { borderTop: 0, bgcolor: (th) => alpha(th.palette.accent.green, 0.06), pt: 0, pb: 1.25 } }}>
+                    <TableCell />
+                    <TableCell colSpan={3} sx={{ textAlign: 'left' }}>
+                      <InputBase value={cContent} onChange={(e) => setCContent(e.target.value)} placeholder="개선내용" inputProps={{ 'aria-label': '개선내용' }} sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })} />
+                    </TableCell>
+                    <TableCell colSpan={3}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center' }}>
+                        <Button size="small" color="error" onClick={() => setComposing(false)} disabled={savingNew}>취소</Button>
+                        <Button size="small" variant="contained" color="success" onClick={handleSaveNew} disabled={savingNew}>{savingNew ? '저장 중…' : '저장'}</Button>
+                      </Box>
+                    </TableCell>
+                    <TableCell />
+                  </TableRow>
+                </>
+              )}
+
+              {/* + 새 제안 (인라인 작성 토글) */}
+              {isAdmin && !composing && (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    onClick={startCompose}
+                    sx={(th) => ({ textAlign: 'center', cursor: 'pointer', color: 'text.secondary', fontWeight: 500, py: 1.5, borderTop: `1px dashed ${th.palette.divider}`, '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.04), color: 'text.primary' } })}
+                  >
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}><AddIcon sx={{ fontSize: 18 }} /> 새 제안</Box>
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </AppCard>
