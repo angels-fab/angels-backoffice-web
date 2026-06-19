@@ -24,8 +24,11 @@ export function useNavBadges() {
     return d <= 0 && d >= -7 // 공지: 최근 7일 내 등록
   }).length
   const work = workReady ? currentWork.length : 0
-  // 개선제안 배지 = 접수중(미처리) 건수
-  const improve = improveItems.filter(i => (i.status || '').trim() === '접수중').length
+  // 포털개선요청 배지 = 접수(미처리) 건수. 옛 '접수중' 표기도 함께 집계.
+  const improve = improveItems.filter(i => {
+    const s = (i.status || '').trim()
+    return s === '접수' || s === '접수중'
+  }).length
 
   return { cal, notice, work, improve }
 }

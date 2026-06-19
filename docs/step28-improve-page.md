@@ -103,3 +103,18 @@
 - **제목줄 접기 유지**: 1행 `TableRow onClick=접기`, 입력이 든 제목/위치/유형 셀만 `stopPropagation` → 배경(번호·작성자·제안일자·상태 셀) 클릭 시 접힘. (취소 버튼도 가능)
 - 수정/삭제 버튼·삭제 확인 팝업·백엔드(@53)는 보완 9 그대로. `ComposeCard`·`ExpandLess` import 제거, c* 입력 상태 복구.
 - 검증: type-check·build 통과. 라이브 dev에서 ①`+ 새 제안`이 표 첫 행(헤더 아래) ②클릭→열 정렬 작성행(긴급 in 제목·DropField in 위치/유형·작성자/오늘/접수칩) ③제목 클릭은 유지·작성자칸 클릭은 접힘 ④수정→in-place 프리필(번호 7·제목/내용 복원·저장'수정') ⑤삭제→「제목」 확인 팝업 모두 확인.
+
+## 보완 11 (피드백 — 시안 확정 후 구현, 프런트 전용 / 시각 시안 다회 반복 후 "시안 A" 채택)
+- **리네이밍**: 페이지 제목·사이드 메뉴 라벨 `개선제안 → 포털개선요청`, 새 글 버튼 `새 제안 → 새 요청`, 등록 스낵바·삭제 다이얼로그·빈 상태 문구도 "요청"으로 통일. 라우트 `/improve`·시트/백엔드 무변경(@53).
+- **정렬 변경**: 1순위 상태(접수→검토중→보류→완료→불가, `IMP_STATUSES` 순서 + `statusRank`), 2순위 제안일자 최신순, 동률 시 번호 내림차순. 필터 탭·상태 드롭다운 순서도 동일. (이전: 번호 내림차순) — `improveMeta.ts`에 `IMP_SETTLED`·`isSettled`·`statusRank` 추가.
+- **새 요청 버튼 이동**: 표 안 dashed 행을 들어내고 **헤더 우상단 버튼**(MUI `Button` outlined)으로. 기본=초록(accent.green) 글씨 윤곽, 호버=`darken(accent.green, .22)` 채움+흰 글씨. 클릭 시 작성 행은 표 최상단(헤더 아래·최신글 위)에 그대로 열림(`composing && renderCompose('new')`).
+- **작성/수정 행 개편**: 긴급(!) 체크박스를 제목칸 밖 **번호열**로 이동(startAdornment 제거), 제목칸은 관련자료 링크 아이콘만, **개선내용 멀티라인**(`multiline`·Enter/Shift+Enter 줄바꿈·세로 자동확장)을 **제목~상태열(colSpan6)** 한 박스로, 취소/저장을 **저장(Check)·취소(Close) 아이콘 8px 간격**으로 비고열에 배치(텍스트 버튼 폐지).
+- **목록 행 상태 시각화**:
+  - 전 행 배경 = 상태색 옅은 틴트 `alpha(kindColor(th,kind), 0.07)`.
+  - **완료·보류·불가(종결)** = 상태칩 제외 모든 글자(번호 포함) **60% 흐림 + 상태색**(시안 A). 접힌 상태에서만 상태색 적용, 펼치면 가독성 위해 색은 빼고 흐림만 유지(`txtColor = settled && !open ? kindColor : normal`).
+  - 펼친 글: 제목줄 진한 파랑 `alpha(blue,0.22)` / 내용줄 옅은 파랑 `alpha(blue,0.09)`, **내용줄 배경 클릭도 접힘**(content row `onClick=toggle`).
+  - 수정·삭제 = 텍스트 제거, **아이콘 전용 IconButton**(Edit·DeleteOutlined, Tooltip).
+- **배지 보정**: `useNavBadges.improve`가 옛 `접수중`만 세던 것을 `접수`(+레거시 `접수중`) 집계로 수정.
+- 색 규칙 준수: 신규 색은 모두 `tokens.ts`/`accent.*`·`kindColor`·`darken`/`alpha`로 파생(하드코딩 없음).
+- 검증: `npm run type-check` 통과. **로컬 dev는 Apps Script 백엔드 네트워크 차단으로 '불러오기 실패'** → 사이드 메뉴/제목/빈 상태 문구·콘솔0만 확인(데이터 행 틴트·흐림·정렬·작성/수정/삭제 시각은 라이브 검증 필요). 스크린샷 도구는 본 환경에서 타임아웃(스냅샷은 정상).
+- 변경 파일: `src/pages/Improve/index.tsx`, `src/pages/Improve/improveMeta.ts`, `src/layouts/SideNav.tsx`, `src/layouts/useNavBadges.ts`.

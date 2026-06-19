@@ -51,7 +51,7 @@ export default function SideNav() {
     {
       label: '소통',
       items: [
-        { icon: <LightbulbOutlinedIcon />, label: '개선제안', path: '/improve', badge: badges.improve },
+        { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve },
       ],
     },
     {

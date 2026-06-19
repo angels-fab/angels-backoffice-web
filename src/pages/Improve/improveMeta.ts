@@ -4,8 +4,11 @@ import type { ImprovementItem } from '@/types'
 /** 개선제안 상태 — 시트 '상태' 열 */
 export type ImpStatus = '접수' | '검토중' | '완료' | '보류' | '불가'
 
-/** 필터 탭/드롭다운 노출 순서 (전체 탭 없음) */
-export const IMP_STATUSES: ImpStatus[] = ['접수', '검토중', '완료', '보류', '불가']
+/** 필터 탭/드롭다운/정렬 노출 순서 (전체 탭 없음) */
+export const IMP_STATUSES: ImpStatus[] = ['접수', '검토중', '보류', '완료', '불가']
+
+/** 종결 상태(완료·보류·불가) — 목록에서 글자 흐림(60%) + 상태색 처리 대상 */
+export const IMP_SETTLED: ImpStatus[] = ['보류', '완료', '불가']
 
 /** 신규 등록 시 기본 상태 */
 export const IMP_STATUS_DEFAULT: ImpStatus = '접수'
@@ -17,6 +20,17 @@ export const IMP_TYPE_OPTIONS = ['UI', 'UX', '기능', '콘텐츠', '오탈자']
 export function normStatus(status: string): string {
   const s = (status || '').trim()
   return s === '접수중' ? '접수' : s
+}
+
+/** 종결 상태 여부(완료·보류·불가) — 목록 글자 흐림/상태색 적용 기준 */
+export function isSettled(status: string): boolean {
+  return (IMP_SETTLED as string[]).includes(normStatus(status))
+}
+
+/** 정렬 우선순위 — IMP_STATUSES 순서(접수→검토중→보류→완료→불가). 미분류는 맨 뒤. */
+export function statusRank(status: string): number {
+  const i = (IMP_STATUSES as string[]).indexOf(normStatus(status))
+  return i < 0 ? IMP_STATUSES.length : i
 }
 
 /** 상태 → 색(StatusChip kind). 접수=회색·검토중=초록·완료=파랑·보류=주황·불가=빨강 */
