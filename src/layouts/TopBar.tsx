@@ -7,10 +7,13 @@ import Tooltip from '@mui/material/Tooltip'
 import SearchIcon from '@mui/icons-material/Search'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import LogoutIcon from '@mui/icons-material/Logout'
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows'
+import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone'
 import { StatusChip } from '@/components/ds'
 import { useRole } from '@/auth/role'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
+import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
 import topbarLogo from '@/assets/topbar-logo.jpg'
 
 export default function TopBar() {
@@ -18,6 +21,14 @@ export default function TopBar() {
   const { isAdmin, user, logout } = useRole()
   const [loginOpen, setLoginOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  // 모바일에서 데스크톱(PC) 레이아웃 보기 토글 (터치 기기에서만 노출)
+  const [touch] = useState(isTouchDevice)
+  const [desktopView, setDesktopView] = useState(isForceDesktop)
+  const toggleDesktopView = () => {
+    const next = !desktopView
+    setForceDesktop(next)
+    setDesktopView(next)
+  }
 
   // Ctrl/⌘+K 로 통합검색 열기
   useEffect(() => {
@@ -39,6 +50,18 @@ export default function TopBar() {
         </div>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {touch && (
+            <Tooltip title={desktopView ? '모바일 보기로' : '데스크톱(PC) 보기로'}>
+              <IconButton
+                aria-label={desktopView ? '모바일 보기로 전환' : '데스크톱 보기로 전환'}
+                onClick={toggleDesktopView}
+                size="small"
+                sx={{ color: desktopView ? 'primary.main' : 'text.secondary' }}
+              >
+                {desktopView ? <PhoneIphoneIcon sx={{ fontSize: 20 }} /> : <DesktopWindowsIcon sx={{ fontSize: 20 }} />}
+              </IconButton>
+            </Tooltip>
+          )}
           <Tooltip title="통합검색 (Ctrl+K)">
             <IconButton aria-label="통합검색" onClick={() => setSearchOpen(true)} size="small" sx={{ color: 'text.secondary' }}>
               <SearchIcon sx={{ fontSize: 20 }} />
