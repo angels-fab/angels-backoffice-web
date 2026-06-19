@@ -481,15 +481,30 @@ export async function createImprovement(p: ImprovementInput): Promise<number> {
   return num || 0
 }
 
-/** 개선제안 상태 변경 (담당자만) — 개선완료=완료일자 자동, 반려/보류=사유 */
+/**
+ * 개선제안 변경 (담당자만).
+ * - 상태 변경: status(+reason) 전달 → 완료=완료일자 자동, 불가/보류=사유
+ * - 내용 수정: title/content/type/loc/link/urgent 전달 → 해당 필드만 갱신(status 미전달 시 완료일자·사유 보존)
+ */
 export async function updateImprovement(p: {
   author: string
   key: string
   num: string | number
-  status: string
+  status?: string
   reason?: string
   end?: string
+  urgent?: boolean
+  type?: string
+  loc?: string
+  title?: string
+  content?: string
+  link?: string
 }): Promise<void> {
-  // 상태 변경은 멱등(같은 값 재설정 무해)이라 네트워크 오류 시 재시도
+  // 변경은 멱등(같은 값 재설정 무해)이라 네트워크 오류 시 재시도
   await withRetry(() => postImprove({ action: 'updateImprovement', ...p }))
+}
+
+/** 개선제안 삭제 (담당자만) — 번호 기준. 중복 삭제 방지 위해 단일 시도. */
+export async function deleteImprovement(p: { author: string; key: string; num: string | number }): Promise<void> {
+  await postImprove({ action: 'deleteImprovement', ...p })
 }

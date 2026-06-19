@@ -84,3 +84,14 @@
 - **새 제안 = (원복) 표 안 인라인 작성행 유지**: 사용자의 6번 항목은 "구현 가능한지?"라는 **질문**이었는데 구현까지 진행해 되돌림(원복 커밋). 표 바깥 우상단 버튼 + 좌측 펼침 애니메이션 시도는 제거하고, 기존 방식(표 맨 아래 점선 `+ 새 제안` 행 → 클릭 시 표 안 인라인 작성 2행)을 그대로 유지. `index.tsx`는 직전 커밋(72d2400) 버전으로 복원 후 위 ①정렬·②0건탭·③Shift안내만 재적용.
   - 참고(가능성 검토 결과): 좌측 펼침 애니메이션은 **구현 가능**. 다만 이 레이아웃에선 함정이 있다 — ① MUI `Collapse orientation="horizontal"`은 entered 폭이 0으로 잡혀 부적합, ② **flex 항목+overflow:hidden은 폭 0 붕괴**(text-align 우측정렬+inline-block로 회피), ③ sx `maxWidth`가 0px로 오계산돼 inline `style` 사용, ④ **headless dev 프리뷰는 CSS transition 중간 프레임을 못 그림** → 최종상태로만 검증 가능. (추후 사용자가 요청하면 재적용.)
 - 검증: type-check·build 통과. 라이브 dev에서 ①정렬(번호 7→1) ②검토중(0건) 탭 숨김 ③Shift 안내문 ④표 안 인라인 작성행 정상 동작(점선행 클릭→제목/저장 노출) 확인.
+
+## 보완 9 (피드백, 백엔드 @53)
+- **새 제안 버튼 위치 이동 + dashed 박스**: 표 안 점선행/인라인 작성행을 들어내고, **필터 헤더와 목록(표) 사이**에 독립 영역 배치. 평소엔 **`+ 새 제안` dashed 박스 버튼**(`1.5px dashed` 테두리·라운드·hover 시 초록), 클릭하면 같은 자리에 작성 카드(`ComposeCard`)가 펼쳐진다.
+- **작성 카드 접기**: `ComposeCard`의 **제목줄 배경 클릭 시 접힘**(`onCancel`) + 제목줄 우측 `ExpandLess(▲)` 접기 버튼. 입력 요소(긴급 체크박스·제목 InputBase)는 `stopPropagation`이라 클릭해도 안 접힘. (이전엔 취소 버튼으로만 닫혔음)
+- **글마다 수정/삭제 버튼**: 아코디언을 펼치면 **내용 줄 우측(비고열 쪽)**에 `수정`(EditIcon)·`삭제`(DeleteOutlined) 버튼 노출(담당자=`canManage`만). 
+  - **수정** = 아코디언 자리 **in-place 편집**(`ComposeCard editing`, 기존 값 프리필) → 저장 시 `updateImprovement`로 제목/내용/유형/위치/관련자료/긴급 갱신(상태·완료일자·사유는 보존). 
+  - **삭제** = 확인 팝업(「제목」 삭제할까요?) → `deleteImprovement`.
+- 공용 컴포넌트 `ComposeCard`(자체 상태) 신설 — 새 제안(상단)·수정(아코디언 in-place) 양쪽 재사용.
+- **백엔드 @53**: `updateImprovement_`를 내용 필드(title/content/type/loc/link/urgent) 수정 지원으로 확장(**status 미전달 시 완료일자·사유 보존** — 상태 로직은 `req.status!==undefined`일 때만), `deleteImprovement_` 신규(담당자 검증 후 행 삭제) + `doPost` 라우팅. API `updateImprovement` 페이로드 확장 + `deleteImprovement` 추가.
+- 권한: 수정/삭제 모두 **담당자(행 mgr==author)만**(프런트 `canManage` 게이팅 + 백엔드 검증). 신규 등록 시 mgr=작성자라 작성자 본인이 관리.
+- 검증: type-check·build 통과. 라이브 dev(관리자)에서 ①dashed 박스가 헤더-표 사이 위치 ②클릭→작성카드, 제목줄 배경 클릭→접힘(입력 클릭은 유지) ③글 펼침→우측 수정/삭제, 수정→프리필 in-place 카드(저장버튼 '수정'), 삭제→확인 팝업(「제목」) 모두 확인. (실제 저장/삭제는 담당자 로그인 필요 — 사용자 확인 권장)

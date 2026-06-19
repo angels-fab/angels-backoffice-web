@@ -121,15 +121,16 @@ function doPost(e) {
         lock.releaseLock();
       }
     }
-    // 개선제안 쓰기(등록/상태변경) — 잠금 하에 처리
-    if (req.action === 'createImprovement' || req.action === 'updateImprovement') {
+    // 개선제안 쓰기(등록/상태변경·수정/삭제) — 잠금 하에 처리
+    if (req.action === 'createImprovement' || req.action === 'updateImprovement' || req.action === 'deleteImprovement') {
       const lock = LockService.getScriptLock();
       if (!lock.tryLock(10000)) {
         return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
       }
       try {
         if (req.action === 'createImprovement') return createImprovement_(req);
-        return updateImprovement_(req);
+        if (req.action === 'updateImprovement') return updateImprovement_(req);
+        return deleteImprovement_(req);
       } finally {
         lock.releaseLock();
       }
@@ -764,7 +765,9 @@ function createImprovement_(req) {
   return json_({ status: 'ok', num: newNum });
 }
 
-// 상태변경: 담당자만 가능. 개선완료→완료일자 자동(상태변경 시 비움), 반려/보류→사유 저장(그 외 비움).
+// 상태변경/내용수정: 담당자만 가능.
+//  - status가 전달되면: 완료→완료일자 자동(그 외 상태면 비움), 불가/보류→사유 저장(그 외 비움)
+//  - title/content/type/loc/link/urgent가 전달되면(수정): 해당 필드만 갱신 (상태 미전달 시 완료일자·사유 보존)
 function updateImprovement_(req) {
   const author = String(req.author || '').trim();
   const authErr = authError_(author, String(req.key || '').trim());
@@ -782,30 +785,67 @@ function updateImprovement_(req) {
   }
   if (rowIdx < 0) return json_({ status: 'error', message: '대상을 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
 
-  // 담당자만 상태 변경 (담당자가 지정돼 있을 때)
+  // 담당자만 변경 (담당자가 지정돼 있을 때)
   const rowMgr = C.mgr >= 0 ? String(values[rowIdx][C.mgr] || '').trim() : '';
-  if (rowMgr && rowMgr !== author) return json_({ status: 'error', message: '담당자(' + rowMgr + ')만 상태를 변경할 수 있습니다' });
+  if (rowMgr && rowMgr !== author) return json_({ status: 'error', message: '담당자(' + rowMgr + ')만 변경할 수 있습니다' });
 
   const sheetRow = rowIdx + 1;
   const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
-  const status = String(req.status || '').trim();
   const set = function (i, v) { if (i >= 0) sh.getRange(sheetRow, i + 1).setValue(v); };
-  if (status) set(C.status, status);
-  // 완료일자: '완료'면 자동(주어진 값 우선, 없으면 기존/오늘), 그 외 상태면 비움
-  if (C.end >= 0) {
-    if (status === '완료') {
-      const cur = wDate_(values[rowIdx][C.end]);
-      set(C.end, req.end ? String(req.end) : (cur || today));
-    } else {
-      set(C.end, '');
+
+  // 상태 변경(상태가 전달된 경우에만) — 완료일자/사유 규칙 적용
+  if (req.status !== undefined) {
+    const status = String(req.status || '').trim();
+    if (status) set(C.status, status);
+    if (C.end >= 0) {
+      if (status === '완료') {
+        const cur = wDate_(values[rowIdx][C.end]);
+        set(C.end, req.end ? String(req.end) : (cur || today));
+      } else {
+        set(C.end, '');
+      }
+    }
+    if (C.reason >= 0) {
+      if (status === '불가' || status === '보류') set(C.reason, String(req.reason || ''));
+      else set(C.reason, '');
     }
   }
-  // 사유: 불가/보류면 입력값 저장(공용 '사유' 열), 그 외 상태면 비움
-  if (C.reason >= 0) {
-    if (status === '불가' || status === '보류') set(C.reason, String(req.reason || ''));
-    else set(C.reason, '');
+
+  // 내용 수정(전달된 필드만 갱신)
+  if (req.title !== undefined) set(C.title, String(req.title).trim());
+  if (req.content !== undefined) set(C.content, String(req.content));
+  if (req.type !== undefined) set(C.type, String(req.type));
+  if (req.loc !== undefined) set(C.loc, String(req.loc));
+  if (req.link !== undefined) set(C.link, String(req.link));
+
+  copyRowValidation_(sh, hIdx, sheetRow, C.status); // 드롭다운 없던 웹 작성 행도 변경 시 드롭다운(칩) 적용
+  // 긴급 체크박스는 검증 복사 후 마지막에 적용(값 보존)
+  if (req.urgent !== undefined && C.urgent >= 0) {
+    sh.getRange(sheetRow, C.urgent + 1).insertCheckboxes().setValue(req.urgent === true);
   }
-  copyRowValidation_(sh, hIdx, sheetRow, C.status); // 드롭다운 없던 웹 작성 행도 상태 변경 시 드롭다운(칩) 적용
+  return json_({ status: 'ok', num: Number(num) || num });
+}
+
+// 삭제: 담당자만 가능. 번호로 행을 찾아 시트에서 행 자체 삭제.
+function deleteImprovement_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const num = String(req.num || '').trim();
+  if (!num) return json_({ status: 'error', message: '대상 번호가 없습니다' });
+
+  const ctx = improveCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  if (C.num < 0) return json_({ status: 'error', message: '번호 열을 찾지 못함' });
+  let rowIdx = -1;
+  for (let i = hIdx + 1; i < values.length; i++) {
+    if (String(values[i][C.num] || '').trim() === num) { rowIdx = i; break; }
+  }
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상을 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
+  const rowMgr = C.mgr >= 0 ? String(values[rowIdx][C.mgr] || '').trim() : '';
+  if (rowMgr && rowMgr !== author) return json_({ status: 'error', message: '담당자(' + rowMgr + ')만 삭제할 수 있습니다' });
+  sh.deleteRow(rowIdx + 1);
   return json_({ status: 'ok', num: Number(num) || num });
 }
 
