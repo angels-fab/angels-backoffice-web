@@ -29,6 +29,34 @@ export interface WorkItem {
   chief: boolean
 }
 
+/** 개선제안 ('개선사항' 시트) */
+export interface ImprovementItem {
+  id: number
+  num: string
+  /** 긴급 여부 */
+  urgent: boolean
+  /** 유형(분류) */
+  type: string
+  /** 개선위치 */
+  loc: string
+  title: string
+  /** 개선내용(본문) */
+  content: string
+  author: string
+  /** 담당자 — 상태 변경 권한자 */
+  mgr: string
+  /** 제안일자 */
+  date: string
+  /** 관련자료 링크(URL) */
+  link: string
+  /** 상태 — 접수중/검토중/개선완료/반려/보류 */
+  status: string
+  /** 완료일자 (개선완료 시) */
+  end: string
+  /** 사유 — 반려·보류 공용 */
+  reason: string
+}
+
 // ── 장비현황 ──
 export interface TlMonth {
   year: string

@@ -8,6 +8,7 @@ import { loadEqData } from '@/store/slices/eqSlice'
 import { loadWorkData } from '@/store/slices/workSlice'
 import { loadNoticeData } from '@/store/slices/noticeSlice'
 import { loadCalEvents } from '@/store/slices/calSlice'
+import { loadImproveData } from '@/store/slices/improveSlice'
 
 export default function MainLayout() {
   const { pathname } = useLocation()
@@ -16,13 +17,15 @@ export default function MainLayout() {
   const workReady = useAppSelector(s => s.work.ready)
   const noticeReady = useAppSelector(s => s.notice.ready)
   const calReady = useAppSelector(s => s.cal.ready)
+  const improveReady = useAppSelector(s => s.improve.ready)
 
-  // 앱 진입 시 장비/업무/공지/일정 데이터 미리 로드 (홈 미리보기 표시용)
+  // 앱 진입 시 장비/업무/공지/일정/개선제안 데이터 미리 로드 (배지·미리보기용)
   useEffect(() => {
     if (!eqReady) dispatch(loadEqData())
     if (!workReady) dispatch(loadWorkData())
     if (!noticeReady) dispatch(loadNoticeData())
     if (!calReady) dispatch(loadCalEvents())
+    if (!improveReady) dispatch(loadImproveData())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

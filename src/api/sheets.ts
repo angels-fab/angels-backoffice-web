@@ -398,3 +398,73 @@ export function updateCalEvent(p: CalEventInput & { id: string; scope: CalScope 
 export function deleteCalEvent(p: { id: string; scope: CalScope; author: string; key: string }): Promise<{ note?: string }> {
   return postCal({ action: 'deleteCalEvent', ...p })
 }
+
+// ── 개선제안 ('개선사항' 시트) ──
+export interface ImprovementRow {
+  num: string
+  urgent: boolean
+  type: string
+  loc: string
+  title: string
+  content: string
+  author: string
+  mgr: string
+  date: string
+  link: string
+  status: string
+  end: string
+  reason: string
+}
+
+/** 개선제안 목록 조회 (인증 불필요) */
+export async function fetchImprovements(): Promise<ImprovementRow[]> {
+  const res = await fetch(`${SCRIPT_URL}?action=getImprovements`)
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  const json = (await res.json()) as { status: string; items?: ImprovementRow[]; message?: string }
+  if (json.status !== 'ok') throw new Error(json.message || '불러오기 실패')
+  return json.items || []
+}
+
+async function postImprove(payload: Record<string, unknown>): Promise<{ num?: number }> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string; num?: number }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 개선제안을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '처리 실패')
+  return { num: json.num }
+}
+
+export interface ImprovementInput {
+  author: string
+  key: string
+  urgent?: boolean
+  type?: string
+  loc?: string
+  title: string
+  content?: string
+  mgr?: string
+  date?: string
+  link?: string
+}
+
+/** 개선제안 등록 (로그인 사용자) → 새 번호 */
+export async function createImprovement(p: ImprovementInput): Promise<number> {
+  const { num } = await postImprove({ action: 'createImprovement', ...p })
+  return num || 0
+}
+
+/** 개선제안 상태 변경 (담당자만) — 개선완료=완료일자 자동, 반려/보류=사유 */
+export async function updateImprovement(p: {
+  author: string
+  key: string
+  num: string | number
+  status: string
+  reason?: string
+  end?: string
+}): Promise<void> {
+  await postImprove({ action: 'updateImprovement', ...p })
+}

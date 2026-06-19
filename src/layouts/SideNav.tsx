@@ -8,6 +8,7 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import LinkIcon from '@mui/icons-material/Link'
 import TimelineIcon from '@mui/icons-material/Timeline'
 import SettingsIcon from '@mui/icons-material/Settings'
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import { useNavBadges } from './useNavBadges'
 
 interface SideNavItem {
@@ -45,6 +46,12 @@ export default function SideNav() {
       items: [
         { icon: <MonitorIcon />, label: '장비운영관리', path: '/equipment-ops' },
         { icon: <LocalShippingIcon />, label: '장비도입관리', path: '/equipment' },
+      ],
+    },
+    {
+      label: '소통',
+      items: [
+        { icon: <LightbulbOutlinedIcon />, label: '개선제안', path: '/improve', badge: badges.improve },
       ],
     },
     {

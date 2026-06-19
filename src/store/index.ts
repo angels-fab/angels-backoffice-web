@@ -3,6 +3,7 @@ import workReducer from './slices/workSlice'
 import eqReducer from './slices/eqSlice'
 import noticeReducer from './slices/noticeSlice'
 import calReducer from './slices/calSlice'
+import improveReducer from './slices/improveSlice'
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     eq: eqReducer,
     notice: noticeReducer,
     cal: calReducer,
+    improve: improveReducer,
   },
 })
 

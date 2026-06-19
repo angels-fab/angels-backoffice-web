@@ -37,6 +37,8 @@ function doGet(e) {
     if (String(p.action || '') === 'getWorks') return getWorks_();
     // STEP22 — 장비 운영이력 조회(관리번호 필터, 최신 먼저). 시트 없으면 빈 목록.
     if (String(p.action || '') === 'getEqHistory') return getEqHistory_(p);
+    // 개선제안 읽기 — '개선사항' 시트(헤더 자동 탐지) → 객체 배열
+    if (String(p.action || '') === 'getImprovements') return getImprovements_();
   } catch (err) {
     return json_({ status: 'error', message: String(err) });
   }
@@ -115,6 +117,19 @@ function doPost(e) {
       }
       try {
         return updateEquipment_(req);
+      } finally {
+        lock.releaseLock();
+      }
+    }
+    // 개선제안 쓰기(등록/상태변경) — 잠금 하에 처리
+    if (req.action === 'createImprovement' || req.action === 'updateImprovement') {
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(10000)) {
+        return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
+      }
+      try {
+        if (req.action === 'createImprovement') return createImprovement_(req);
+        return updateImprovement_(req);
       } finally {
         lock.releaseLock();
       }
@@ -582,6 +597,155 @@ function setupWorkEditTrigger() {
   }
   ScriptApp.newTrigger('onWorkStatusEdit').forSpreadsheet(SHEET_ID).onEdit().create();
   Logger.log('설치 완료 — 시트에서 상태=완료 시 검토 필요 자동 해제 (센터 업무 현황)');
+}
+
+// ── 개선제안 CRUD ('개선사항' 시트, 헤더 자동 탐지·열 위치 비의존) ──
+const IMPROVE_SHEET_NAME = '개선사항';
+const IMPROVE_STATUS_DEFAULT = '접수중';
+
+// 시트 + 헤더 위치 컨텍스트. 헤더는 보통 3행이지만 첫 10행에서 '제목'을 기준으로 자동 탐지.
+function improveCtx_() {
+  const sh = SpreadsheetApp.openById(SHEET_ID).getSheetByName(IMPROVE_SHEET_NAME);
+  if (!sh) return { error: "'개선사항' 시트가 없습니다" };
+  const values = sh.getDataRange().getValues();
+  let hIdx = -1;
+  for (let i = 0; i < Math.min(values.length, 10); i++) {
+    const r = values[i].map(function (c) { return String(c == null ? '' : c).trim(); });
+    if (r.indexOf('제목') >= 0 && (r.indexOf('개선내용') >= 0 || r.indexOf('유형') >= 0 || r.indexOf('상태') >= 0)) { hIdx = i; break; }
+  }
+  if (hIdx < 0) return { error: "'개선사항' 시트 헤더(제목 등)를 찾지 못함" };
+  const head = values[hIdx].map(function (c) { return String(c == null ? '' : c).trim(); });
+  const col = function (names) {
+    for (let k = 0; k < names.length; k++) { const i = head.indexOf(names[k]); if (i >= 0) return i; }
+    return -1;
+  };
+  const C = {
+    num: col(['번호', '연번', 'No', 'no']),
+    urgent: col(['긴급', '긴급여부']),
+    type: col(['유형', '분류', '구분']),
+    loc: col(['개선위치', '위치', '장소']),
+    title: col(['제목']),
+    content: col(['개선내용', '내용', '상세']),
+    author: col(['작성자', '제안자', '등록자']),
+    mgr: col(['담당자', '담당']),
+    date: col(['제안일자', '작성일자', '등록일자', '작성일']),
+    link: col(['관련자료', '자료', '링크', 'link']),
+    status: col(['상태', '진행상태']),
+    end: col(['완료일자', '완료일']),
+    reason: col(['사유', '불가사유', '보류사유', '반려사유', '반영불가사유']),
+  };
+  return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
+}
+
+// 읽기: 헤더명 기준으로 각 행을 객체로 변환 (최신순 정렬은 프런트에서)
+function getImprovements_() {
+  const ctx = improveCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const values = ctx.values, C = ctx.C, hIdx = ctx.hIdx;
+  const t = function (r, i) { return i < 0 ? '' : (r[i] == null ? '' : String(r[i]).trim()); };
+  const items = [];
+  for (let i = hIdx + 1; i < values.length; i++) {
+    const r = values[i];
+    if (t(r, C.title) === '' && t(r, C.content) === '') continue;
+    items.push({
+      num: t(r, C.num),
+      urgent: wIsChk_(r[C.urgent]),
+      type: t(r, C.type),
+      loc: t(r, C.loc),
+      title: t(r, C.title),
+      content: t(r, C.content),
+      author: t(r, C.author),
+      mgr: t(r, C.mgr),
+      date: wDate_(r[C.date]),
+      link: t(r, C.link),
+      status: t(r, C.status),
+      end: wDate_(r[C.end]),
+      reason: t(r, C.reason),
+    });
+  }
+  return json_({ status: 'ok', items: items, headers: ctx.head });
+}
+
+// 등록: 로그인 사용자(담당자 시트 인증)만. 상태=접수중, 제안일자=오늘(미지정 시), 작성자=로그인 이름.
+function createImprovement_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  if (!String(req.title || '').trim()) return json_({ status: 'error', message: '제목이 비었습니다' });
+
+  const ctx = improveCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, head = ctx.head, C = ctx.C;
+
+  let maxNum = 0;
+  if (C.num >= 0) for (let i = hIdx + 1; i < values.length; i++) {
+    const v = Number(values[i][C.num]); if (!isNaN(v) && v > maxNum) maxNum = v;
+  }
+  const newNum = maxNum + 1;
+  const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+
+  const row = new Array(head.length).fill('');
+  const set = function (i, v) { if (i >= 0) row[i] = v; };
+  set(C.num, newNum);
+  set(C.urgent, req.urgent === true);
+  set(C.type, String(req.type || ''));
+  set(C.loc, String(req.loc || ''));
+  set(C.title, String(req.title).trim());
+  set(C.content, String(req.content || ''));
+  set(C.author, String(req.author || ''));
+  set(C.mgr, String(req.mgr || ''));
+  set(C.date, req.date ? String(req.date) : today);
+  set(C.link, String(req.link || ''));
+  set(C.status, IMPROVE_STATUS_DEFAULT);
+  set(C.end, '');
+  set(C.reason, '');
+  sh.appendRow(row);
+  const last = sh.getLastRow();
+  if (C.urgent >= 0) sh.getRange(last, C.urgent + 1).insertCheckboxes().setValue(req.urgent === true);
+  return json_({ status: 'ok', num: newNum });
+}
+
+// 상태변경: 담당자만 가능. 개선완료→완료일자 자동(상태변경 시 비움), 반려/보류→사유 저장(그 외 비움).
+function updateImprovement_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const num = String(req.num || '').trim();
+  if (!num) return json_({ status: 'error', message: '대상 번호가 없습니다' });
+
+  const ctx = improveCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  if (C.num < 0) return json_({ status: 'error', message: '번호 열을 찾지 못함' });
+  let rowIdx = -1;
+  for (let i = hIdx + 1; i < values.length; i++) {
+    if (String(values[i][C.num] || '').trim() === num) { rowIdx = i; break; }
+  }
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상을 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
+
+  // 담당자만 상태 변경 (담당자가 지정돼 있을 때)
+  const rowMgr = C.mgr >= 0 ? String(values[rowIdx][C.mgr] || '').trim() : '';
+  if (rowMgr && rowMgr !== author) return json_({ status: 'error', message: '담당자(' + rowMgr + ')만 상태를 변경할 수 있습니다' });
+
+  const sheetRow = rowIdx + 1;
+  const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  const status = String(req.status || '').trim();
+  const set = function (i, v) { if (i >= 0) sh.getRange(sheetRow, i + 1).setValue(v); };
+  if (status) set(C.status, status);
+  // 완료일자: 개선완료면 자동(주어진 값 우선, 없으면 기존/오늘), 그 외 상태면 비움
+  if (C.end >= 0) {
+    if (status === '개선완료') {
+      const cur = wDate_(values[rowIdx][C.end]);
+      set(C.end, req.end ? String(req.end) : (cur || today));
+    } else {
+      set(C.end, '');
+    }
+  }
+  // 사유: 반려/보류면 입력값 저장(불가·보류 공용 열), 그 외 상태면 비움
+  if (C.reason >= 0) {
+    if (status === '반려' || status === '보류') set(C.reason, String(req.reason || ''));
+    else set(C.reason, '');
+  }
+  return json_({ status: 'ok', num: Number(num) || num });
 }
 
 // ── 장비도입관리 CRUD (헤더명 기반, 열 위치 비의존) ──

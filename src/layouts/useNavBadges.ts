@@ -12,6 +12,7 @@ export function useNavBadges() {
   const currentWork = useAppSelector(selectCurrentWork)
   const noticeItems = useAppSelector(s => s.notice.items)
   const calEvents = useAppSelector(s => s.cal.events)
+  const improveItems = useAppSelector(s => s.improve.items)
 
   const todayMid = new Date(todaySeoul() + 'T00:00:00')
   const cal = calEvents.filter(e => {
@@ -23,6 +24,8 @@ export function useNavBadges() {
     return d <= 0 && d >= -7 // 공지: 최근 7일 내 등록
   }).length
   const work = workReady ? currentWork.length : 0
+  // 개선제안 배지 = 접수중(미처리) 건수
+  const improve = improveItems.filter(i => (i.status || '').trim() === '접수중').length
 
-  return { cal, notice, work }
+  return { cal, notice, work, improve }
 }

@@ -4,6 +4,7 @@
 > 이 파일은 머신 간 동기화되지 않는 Claude 로컬 메모리를 대신해, 다른 PC에서 맥락을 빠르게 잡기 위한 요약입니다.
 
 ## 현재 상태
+- **STEP 28 개선제안 페이지 신설(소통 그룹) 완료** — '개선사항' 시트 연동(헤더 3행 자동탐지), 목록형 표(번호·유형·개선위치·제목·작성자·제안일자·담당자·상태·비고)·상태 필터탭(접수중 기본·Shift 중복·재클릭 전체)·개선내용 아코디언·담당자 상태 드롭다운·비고 인라인 사유 편집·긴급 PriorityHigh 아이콘·관련자료 링크아이콘. 작성=로그인, 상태변경=담당자. **백엔드 clasp @43(URL 불변), 프런트 main 자동배포.** 상세 `docs/step28-improve-page.md`.
 - **STEP 1~27 완료** (…25 KPI/Remind 토글·26 KPI 전체타일·목록 2열·들여쓰기·27 새 업무 인라인폼 개편[드롭다운/자동완성/날짜 한글라벨/시간 wheel/링크·첨부 아이콘] + 완료 다이얼로그 Remind 체크박스). **STEP27까지 `main` 커밋·자동배포 완료.** (운영 규칙: 작업 완료 시 자동 커밋·푸시 = 자동배포)
 - **STEP27 메모**: 신규 `src/pages/Work/inlineFields.tsx`(ComboField·SelectField·DateField·TimeRangeField·LinkButton·AttachButton). 프런트 전용(시트 무변경, 백엔드 무변경). **구분=드롭다운 선택만**(`WORK_CAT_OPTIONS` 6개), **담당자=입력가능+담당자 시트 동적 명단**(`fetchAuthors` `?authors=1`, 헤더 자동 인식·새 담당자 자동 반영, 실패 시 `WORK_MGR_OPTIONS` 폴백). 첨부는 UI만(백엔드 미구현). 시간=`"HH:MM ~ HH:MM"`(휠 감도↓·'취소' 버튼). 업무내용 글머리: 화면 '•' / 시트 '-'(입력 '- '→'• ' 실시간 + **Enter 자동 글머리**, 저장 시 '- ' 복원). **업무카드 수정=in-place 인라인 편집(팝업 없음, `NewTaskCard initial` 공용)** — 상세 Drawer 수정만 모달 유지.
 - **운영 메모**: Codex 협업(.agents/bridge) 일시 중단 — 현재 브릿지 파일 갱신 보류(사용자 지시). 작업 완료 시 자동배포 + docs 기록은 유지.
