@@ -430,14 +430,22 @@ async function withRetry<T>(fn: () => Promise<T>, attempts = 3, delayMs = 600): 
   throw lastErr
 }
 
-/** 개선제안 목록 조회 (인증 불필요, 네트워크 재시도) */
-export async function fetchImprovements(): Promise<ImprovementRow[]> {
+export interface ImprovementsData {
+  items: ImprovementRow[]
+  /** 구글시트 '개선위치' 열 데이터 확인(드롭다운) 목록 */
+  locOptions: string[]
+  /** 구글시트 '유형' 열 데이터 확인(드롭다운) 목록 */
+  typeOptions: string[]
+}
+
+/** 개선제안 목록 + 위치/유형 드롭다운 목록 조회 (인증 불필요, 네트워크 재시도) */
+export async function fetchImprovements(): Promise<ImprovementsData> {
   return withRetry(async () => {
     const res = await fetch(`${SCRIPT_URL}?action=getImprovements`)
     if (!res.ok) throw new Error('HTTP ' + res.status)
-    const json = (await res.json()) as { status: string; items?: ImprovementRow[]; message?: string }
+    const json = (await res.json()) as { status: string; items?: ImprovementRow[]; locOptions?: string[]; typeOptions?: string[]; message?: string }
     if (json.status !== 'ok') throw new Error(json.message || '불러오기 실패')
-    return json.items || []
+    return { items: json.items || [], locOptions: json.locOptions || [], typeOptions: json.typeOptions || [] }
   })
 }
 

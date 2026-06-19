@@ -663,10 +663,36 @@ function getImprovements_() {
       reason: t(r, C.reason),
     });
   }
-  return json_({ status: 'ok', items: items, headers: ctx.head });
+  // 개선위치/유형 열의 데이터 확인(드롭다운) 목록 — 새 제안 작성 드롭다운 보기로 사용
+  const locOptions = dvOptions_(ctx.sh, hIdx, C.loc);
+  const typeOptions = dvOptions_(ctx.sh, hIdx, C.type);
+  return json_({ status: 'ok', items: items, headers: ctx.head, locOptions: locOptions, typeOptions: typeOptions });
 }
 
-// 등록: 로그인 사용자(담당자 시트 인증)만. 상태=접수중, 제안일자=오늘(미지정 시), 작성자=로그인 이름.
+// 한 열의 데이터 확인 목록(드롭다운) 추출 — 헤더 다음 데이터 행들에서 첫 검증을 찾음.
+// VALUE_IN_LIST(직접 목록)·VALUE_IN_RANGE(범위 참조) 모두 지원.
+function dvOptions_(sh, hIdx, col) {
+  if (col < 0) return [];
+  try {
+    const last = sh.getLastRow();
+    const end = Math.min(hIdx + 12, last);
+    for (let r = hIdx + 2; r <= end; r++) {
+      const dv = sh.getRange(r, col + 1).getDataValidation();
+      if (!dv) continue;
+      const type = dv.getCriteriaType();
+      const vals = dv.getCriteriaValues();
+      if (type === SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST) {
+        return (vals[0] || []).map(function (v) { return String(v).trim(); }).filter(function (v) { return v; });
+      }
+      if (type === SpreadsheetApp.DataValidationCriteria.VALUE_IN_RANGE && vals[0] && vals[0].getValues) {
+        return vals[0].getValues().map(function (row) { return String(row[0] == null ? '' : row[0]).trim(); }).filter(function (v) { return v; });
+      }
+    }
+  } catch (e) { /* 검증 없음/접근 불가 → 빈 목록 */ }
+  return [];
+}
+
+// 등록: 로그인 사용자(담당자 시트 인증)만. 상태=접수, 제안일자=오늘(미지정 시), 작성자=로그인 이름.
 function createImprovement_(req) {
   const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
   if (authErr) return json_({ status: 'error', message: authErr });

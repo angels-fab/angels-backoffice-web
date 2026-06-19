@@ -25,7 +25,6 @@ import PriorityHighIcon from '@mui/icons-material/PriorityHigh'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '@/components/ds'
@@ -78,9 +77,31 @@ function LinkField({ value, onChange }: { value: string; onChange: (v: string) =
   )
 }
 
+// 위치/유형 드롭다운 — 화살표 버튼, 클릭 시 시트 목록 표시 (선택만)
+function DropField({ value, onChange, options, placeholder, width }: { value: string; onChange: (v: string) => void; options: string[]; placeholder: string; width: number }) {
+  return (
+    <Select
+      value={options.includes(value) ? value : ''}
+      onChange={(e) => onChange(e.target.value)}
+      displayEmpty
+      variant="standard"
+      disableUnderline
+      MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}
+      renderValue={(v) => (v ? <span>{v}</span> : <Box component="span" sx={{ color: 'text.disabled' }}>{placeholder}</Box>)}
+      sx={(th) => ({
+        ...inputSx(th), width, maxWidth: '100%',
+        '& .MuiSelect-select': { p: 0, pr: '20px !important', minHeight: '0 !important', display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+        '& .MuiSelect-icon': { right: 2, color: 'text.secondary' },
+      })}
+    >
+      {options.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: 13 }}>{o}</MenuItem>)}
+    </Select>
+  )
+}
+
 export default function Improve() {
   const dispatch = useAppDispatch()
-  const { items, loading, error, updatedAt } = useAppSelector((s) => s.improve)
+  const { items, loading, error, updatedAt, locOptions: sheetLoc, typeOptions: sheetType } = useAppSelector((s) => s.improve)
   const { isAdmin, user, authKey } = useRole()
 
   const [selected, setSelected] = useState<Set<ImpStatus>>(new Set()) // 비었으면 전체
@@ -112,8 +133,9 @@ export default function Improve() {
     return [...base].sort((a, b) => dateSortValue(b.date) - dateSortValue(a.date) || (Number(b.num) || 0) - (Number(a.num) || 0))
   }, [items, selected])
 
-  const typeOptions = useMemo(() => [...new Set([...IMP_TYPE_OPTIONS, ...items.map((t) => t.type).filter(Boolean)])], [items])
-  const locOptions = useMemo(() => [...new Set(items.map((t) => t.loc).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')), [items])
+  // 위치/유형 드롭다운 — 시트 데이터 확인 목록 우선, 없으면 기존 데이터에서 추출
+  const typeOptions = useMemo(() => (sheetType.length ? sheetType : [...new Set([...IMP_TYPE_OPTIONS, ...items.map((t) => t.type).filter(Boolean)])]), [items, sheetType])
+  const locOptions = useMemo(() => (sheetLoc.length ? sheetLoc : [...new Set(items.map((t) => t.loc).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))), [items, sheetLoc])
 
   const onTab = (s: ImpStatus, shift: boolean) => {
     setSelected((prev) => {
@@ -345,8 +367,8 @@ export default function Improve() {
                         sx={(th) => ({ ...inputSx(th), width: '100%' })}
                       />
                     </TableCell>
-                    <TableCell><InputBase value={cLoc} onChange={(e) => setCLoc(e.target.value)} placeholder="위치" inputProps={{ 'aria-label': '개선위치', list: 'imp-locs' }} endAdornment={<ExpandMoreIcon sx={{ fontSize: 15, color: 'text.disabled', flexShrink: 0 }} />} sx={(th) => ({ ...inputSx(th), width: 66 })} /></TableCell>
-                    <TableCell><InputBase value={cType} onChange={(e) => setCType(e.target.value)} placeholder="유형" inputProps={{ 'aria-label': '유형', list: 'imp-types' }} endAdornment={<ExpandMoreIcon sx={{ fontSize: 15, color: 'text.disabled', flexShrink: 0 }} />} sx={(th) => ({ ...inputSx(th), width: 66 })} /></TableCell>
+                    <TableCell><DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="위치" width={96} /></TableCell>
+                    <TableCell><DropField value={cType} onChange={setCType} options={typeOptions} placeholder="유형" width={84} /></TableCell>
                     <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{user || '-'}</TableCell>
                     <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{fmtDate(todaySeoul())}</TableCell>
                     <TableCell sx={{ textAlign: 'center' }}><StatusChip status="neutral" label="접수" /></TableCell>
@@ -357,8 +379,8 @@ export default function Improve() {
                     <TableCell colSpan={3} sx={{ textAlign: 'left' }}>
                       <InputBase value={cContent} onChange={(e) => setCContent(e.target.value)} placeholder="개선내용" inputProps={{ 'aria-label': '개선내용' }} sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })} />
                     </TableCell>
-                    <TableCell colSpan={4} sx={{ textAlign: 'left' }}>
-                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <TableCell colSpan={4}>
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'flex-end' }}>
                         <Button size="small" color="error" onClick={() => setComposing(false)} disabled={savingNew}>취소</Button>
                         <Button size="small" variant="contained" color="success" onClick={handleSaveNew} disabled={savingNew}>{savingNew ? '저장 중…' : '저장'}</Button>
                       </Box>
@@ -382,8 +404,6 @@ export default function Improve() {
             </TableBody>
           </Table>
         </AppCard>
-        <datalist id="imp-types">{typeOptions.map((o) => <option key={o} value={o} />)}</datalist>
-        <datalist id="imp-locs">{locOptions.map((o) => <option key={o} value={o} />)}</datalist>
       </ContentSection>
 
       {/* 보류·불가 사유 입력 팝업 */}
