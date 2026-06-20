@@ -360,7 +360,8 @@ export default function Improve() {
                       bgcolor: on ? c : alpha(c, 0.12),
                       borderColor: on ? c : alpha(c, 0.32),
                       cursor: 'pointer',
-                      '&:hover': { bgcolor: c, color: t.palette.common.white, borderColor: c },
+                      // &&로 우선순위를 높여 MUI Chip 기본 hover(배경 옅어짐)를 덮어씀 → 선택/호버 모두 채운 상태 유지
+                      '&&:hover': { bgcolor: c, color: t.palette.common.white, borderColor: c },
                     }
                   }}
                 />
