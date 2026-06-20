@@ -29,7 +29,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { alpha, darken } from '@mui/material/styles'
+import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
@@ -37,9 +37,9 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { updateImprovement, createImprovement, deleteImprovement } from '@/api/sheets'
 import { useRole } from '@/auth/role'
-import { dateSortValue, fmtDate, todaySeoul } from '@/utils/date'
+import { fmtDate, todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
-import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus, isSettled, statusRank } from './improveMeta'
+import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus, statusRank } from './improveMeta'
 import type { ImpStatus } from './improveMeta'
 
 const kindColor = (t: Theme, kind: StatusKind) =>
@@ -142,11 +142,10 @@ export default function Improve() {
 
   const listed = useMemo(() => {
     const base = selected.size === 0 ? items : items.filter((t) => selected.has(normStatus(t.status) as ImpStatus))
-    // 1순위 상태(접수→검토중→보류→완료→불가), 2순위 제안일자 최신순, 동률 시 번호 내림차순.
+    // 1순위 번호 내림차순(높은 번호=최신 위), 2순위 상태(접수→검토중→보류→완료→불가).
     return [...base].sort((a, b) =>
-      statusRank(a.status) - statusRank(b.status) ||
-      dateSortValue(b.date) - dateSortValue(a.date) ||
-      (Number(b.num) || 0) - (Number(a.num) || 0))
+      (Number(b.num) || 0) - (Number(a.num) || 0) ||
+      statusRank(a.status) - statusRank(b.status))
   }, [items, selected])
 
   // 위치/유형 드롭다운 — 시트 데이터 확인 목록 우선, 없으면 기존 데이터에서 추출
@@ -378,13 +377,18 @@ export default function Improve() {
               startIcon={<AddIcon />}
               variant="outlined"
               size="small"
-              sx={(th) => ({
-                color: th.palette.accent.green,
-                borderColor: th.palette.accent.green,
-                fontWeight: 500,
-                whiteSpace: 'nowrap',
-                '&:hover': { bgcolor: darken(th.palette.accent.green, 0.22), borderColor: darken(th.palette.accent.green, 0.22), color: th.palette.common.white },
-              })}
+              sx={(th) => {
+                const c = th.palette.accent.green
+                return {
+                  fontWeight: 500,
+                  whiteSpace: 'nowrap',
+                  color: c,
+                  bgcolor: alpha(c, 0.12),
+                  borderColor: alpha(c, 0.32),
+                  '&:hover': { bgcolor: alpha(c, 0.2), borderColor: alpha(c, 0.32) },
+                  '&:active': { bgcolor: c, borderColor: c, color: th.palette.common.white },
+                }
+              }}
             >
               새 요청
             </Button>
@@ -418,13 +422,9 @@ export default function Improve() {
                 const open = expanded.has(t.id)
                 const rm = remarkOf(t)
                 const st = normStatus(t.status)
-                const kind = impKind(st)
-                const settled = isSettled(st) // 완료·보류·불가
+                const kind = impKind(st) // 행 배경 상태색 틴트용
                 const manage = canManage(t)
                 const toggle = () => setExpanded((prev) => { const n = new Set(prev); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })
-                // 종결 글은 글자 60% 흐림. 접힌 상태에선 상태색까지(펼치면 가독성 위해 색 제외, 흐림만 유지).
-                const fade = settled ? 0.6 : 1
-                const txtColor = (th: Theme, normal: string) => (settled && !open ? kindColor(th, kind) : normal)
                 return [
                   <TableRow
                     key={`${t.id}-r`}
@@ -440,11 +440,11 @@ export default function Improve() {
                       },
                     })}
                   >
-                    <TableCell sx={(th) => ({ color: txtColor(th, th.palette.text.secondary), opacity: fade, fontVariantNumeric: 'tabular-nums' })}>{t.num}</TableCell>
-                    <TableCell sx={{ textAlign: 'left !important', whiteSpace: 'normal', opacity: fade }}>
+                    <TableCell sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>{t.num}</TableCell>
+                    <TableCell sx={{ textAlign: 'left !important', whiteSpace: 'normal' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: 18, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
-                        <Box component="span" sx={(th) => ({ fontWeight: 500, color: txtColor(th, th.palette.text.primary) })}>{t.title}</Box>
+                        <Box component="span" sx={{ fontWeight: 500, color: 'text.primary' }}>{t.title}</Box>
                         {t.link && (
                           <IconButton component="a" href={t.link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련자료" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
                             <OpenInNewIcon sx={{ fontSize: 15 }} />
@@ -452,10 +452,10 @@ export default function Improve() {
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell sx={(th) => ({ color: txtColor(th, th.palette.text.primary), opacity: fade })}>{t.loc || '-'}</TableCell>
-                    <TableCell sx={(th) => ({ color: txtColor(th, th.palette.text.primary), opacity: fade })}>{t.type || '-'}</TableCell>
-                    <TableCell sx={(th) => ({ color: txtColor(th, th.palette.text.primary), opacity: fade })}>{t.author || '-'}</TableCell>
-                    <TableCell sx={(th) => ({ fontVariantNumeric: 'tabular-nums', color: txtColor(th, th.palette.text.secondary), opacity: fade })}>{fmtDate(t.date)}</TableCell>
+                    <TableCell>{t.loc || '-'}</TableCell>
+                    <TableCell>{t.type || '-'}</TableCell>
+                    <TableCell>{t.author || '-'}</TableCell>
+                    <TableCell sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>{fmtDate(t.date)}</TableCell>
                     <TableCell onClick={stop} sx={{ cursor: manage ? 'default' : 'not-allowed' }}>
                       {manage ? (
                         <Select
@@ -476,12 +476,12 @@ export default function Improve() {
                     </TableCell>
                     <TableCell sx={{ textAlign: 'left !important' }}>
                       {rm.kind === 'date' ? (
-                        <Box component="span" sx={(th) => ({ color: txtColor(th, th.palette.accent.blue), opacity: fade, fontVariantNumeric: 'tabular-nums' })}>{fmtDate(rm.text)}</Box>
+                        <Box component="span" sx={{ color: 'info.main', fontVariantNumeric: 'tabular-nums' }}>{fmtDate(rm.text)}</Box>
                       ) : rm.kind === 'reason' ? (
                         <Box
                           component="span"
                           onClick={manage ? (e) => { stop(e); setReasonDlg({ row: t, status: st, value: t.reason || '' }) } : undefined}
-                          sx={(th) => ({ color: txtColor(th, th.palette.text.secondary), opacity: fade, whiteSpace: 'normal', cursor: manage ? 'pointer' : 'default' })}
+                          sx={{ color: 'text.secondary', whiteSpace: 'normal', cursor: manage ? 'pointer' : 'default' }}
                         >
                           {rm.text || (manage ? '사유 입력' : '-')}
                         </Box>
@@ -495,7 +495,7 @@ export default function Improve() {
                       <TableCell />
                       <TableCell colSpan={7} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-                          <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1, opacity: fade }}>{t.content || '내용 없음'}</Box>
+                          <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>{t.content || '내용 없음'}</Box>
                           {manage && (
                             <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0, pt: 0.25 }} onClick={stop}>
                               <Tooltip title="수정"><IconButton size="small" aria-label="수정" onClick={() => openEdit(t)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
