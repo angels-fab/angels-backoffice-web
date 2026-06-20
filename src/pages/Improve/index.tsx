@@ -93,7 +93,7 @@ function DropField({ value, onChange, options, placeholder, width }: { value: st
       MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}
       renderValue={(v) => (v ? <span>{v}</span> : <Box component="span" sx={{ color: 'text.disabled' }}>{placeholder}</Box>)}
       sx={(th) => ({
-        ...inputSx(th), width, maxWidth: '100%',
+        ...inputSx(th), width, maxWidth: '100%', height: 32,
         '& .MuiSelect-select': { p: 0, pr: '20px !important', minHeight: '0 !important', display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
         '& .MuiSelect-icon': { right: 2, color: 'text.secondary' },
       })}
@@ -269,8 +269,8 @@ export default function Improve() {
           onClick={() => setCUrgent((v) => !v)}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCUrgent((v) => !v) } }}
           sx={(th) => ({
-            width: 18, height: 18, mx: 'auto', borderRadius: '4px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, lineHeight: 1,
+            width: 24, height: 24, mx: 'auto', borderRadius: '5px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, lineHeight: 1,
             border: '1px solid',
             ...(cUrgent
               ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: '#fff' }
@@ -289,7 +289,7 @@ export default function Improve() {
             placeholder="제목"
             inputProps={{ 'aria-label': '제목' }}
             endAdornment={<LinkField value={cLink} onChange={setCLink} />}
-            sx={(th) => ({ ...inputSx(th), width: '100%' })}
+            sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
         <TableCell onClick={stop}><DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="위치" width={96} /></TableCell>
@@ -299,7 +299,7 @@ export default function Improve() {
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status={stKind} label={stLabel} /></TableCell>
         <TableCell />
       </TableRow>,
-      <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, pt: 0, pb: 1.25, verticalAlign: 'top' } }}>
+      <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, pt: 0, pb: 1.25, verticalAlign: 'middle' } }}>
         <TableCell />
         <TableCell colSpan={6} onClick={stop} sx={{ textAlign: 'left' }}>
           <InputBase
@@ -309,7 +309,7 @@ export default function Improve() {
             multiline
             minRows={1}
             inputProps={{ 'aria-label': '개선내용' }}
-            sx={(th) => ({ ...inputSx(th), width: '100%', alignItems: 'flex-start' })}
+            sx={(th) => ({ ...inputSx(th), width: '100%', minHeight: 32, alignItems: 'center' })}
           />
         </TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'center' }}>
@@ -379,14 +379,15 @@ export default function Improve() {
               size="small"
               sx={(th) => {
                 const c = th.palette.accent.green
+                const on = composing // 클릭해 작성칸이 열리면 초록 채움+흰 글자로 스르륵 전환
                 return {
                   fontWeight: 500,
                   whiteSpace: 'nowrap',
-                  color: c,
-                  bgcolor: alpha(c, 0.12),
-                  borderColor: alpha(c, 0.32),
-                  '&:hover': { bgcolor: alpha(c, 0.2), borderColor: alpha(c, 0.32) },
-                  '&:active': { bgcolor: c, borderColor: c, color: th.palette.common.white },
+                  transition: 'background-color .2s ease, color .2s ease, border-color .2s ease',
+                  color: on ? th.palette.common.white : c,
+                  bgcolor: on ? c : alpha(c, 0.12),
+                  borderColor: on ? c : alpha(c, 0.32),
+                  '&:hover': { bgcolor: on ? c : alpha(c, 0.2), borderColor: on ? c : alpha(c, 0.32) },
                 }
               }}
             >
