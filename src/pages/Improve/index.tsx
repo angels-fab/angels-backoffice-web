@@ -94,7 +94,7 @@ function DropField({ value, onChange, options, placeholder, width }: { value: st
       renderValue={(v) => (v ? <span>{v}</span> : <Box component="span" sx={{ color: 'text.disabled' }}>{placeholder}</Box>)}
       sx={(th) => ({
         ...inputSx(th), width, maxWidth: '100%', height: 32,
-        '& .MuiSelect-select': { p: 0, pr: '20px !important', minHeight: '0 !important', display: 'flex', alignItems: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+        '& .MuiSelect-select': { p: 0, pl: '20px !important', pr: '20px !important', minHeight: '0 !important', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
         '& .MuiSelect-icon': { right: 2, color: 'text.secondary' },
       })}
     >
@@ -309,7 +309,7 @@ export default function Improve() {
             multiline
             minRows={1}
             inputProps={{ 'aria-label': '개선내용' }}
-            sx={(th) => ({ ...inputSx(th), width: '100%', minHeight: 32, alignItems: 'center' })}
+            sx={(th) => ({ ...inputSx(th), width: '100%', py: '7px' })}
           />
         </TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'center' }}>
@@ -355,11 +355,12 @@ export default function Improve() {
                     const c = kindColor(t, impKind(s))
                     return {
                       fontWeight: 500,
+                      transition: 'background-color .2s ease, color .2s ease, border-color .2s ease',
                       color: on ? t.palette.common.white : c,
                       bgcolor: on ? c : alpha(c, 0.12),
                       borderColor: on ? c : alpha(c, 0.32),
                       cursor: 'pointer',
-                      '&:hover': { bgcolor: on ? c : alpha(c, 0.2) },
+                      '&:hover': { bgcolor: c, color: t.palette.common.white, borderColor: c },
                     }
                   }}
                 />
@@ -373,7 +374,7 @@ export default function Improve() {
           </Box>
           {isAdmin && (
             <Button
-              onClick={openNew}
+              onClick={() => { if (composing) setComposing(false); else openNew() }}
               startIcon={<AddIcon />}
               variant="outlined"
               size="small"
