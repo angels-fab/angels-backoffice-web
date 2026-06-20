@@ -94,7 +94,7 @@ function DropField({ value, onChange, options, placeholder, width }: { value: st
       renderValue={(v) => (v ? <span>{v}</span> : <Box component="span" sx={{ color: 'text.disabled' }}>{placeholder}</Box>)}
       sx={(th) => ({
         ...inputSx(th), width, maxWidth: '100%', height: 32,
-        '& .MuiSelect-select': { p: 0, pl: '20px !important', pr: '20px !important', minHeight: '0 !important', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+        '& .MuiSelect-select': { p: 0, pl: '20px !important', pr: '20px !important', minHeight: '0 !important', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translateX(-4px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
         '& .MuiSelect-icon': { right: 2, color: 'text.secondary' },
       })}
     >
@@ -299,7 +299,7 @@ export default function Improve() {
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status={stKind} label={stLabel} /></TableCell>
         <TableCell />
       </TableRow>,
-      <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, pt: 0, pb: 1.25, verticalAlign: 'middle' } }}>
+      <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, py: 0.75, verticalAlign: 'middle' } }}>
         <TableCell />
         <TableCell colSpan={6} onClick={stop} sx={{ textAlign: 'left' }}>
           <InputBase
@@ -309,7 +309,7 @@ export default function Improve() {
             multiline
             minRows={1}
             inputProps={{ 'aria-label': '개선내용' }}
-            sx={(th) => ({ ...inputSx(th), width: '100%', py: '7px' })}
+            sx={(th) => ({ ...inputSx(th), width: '100%', minHeight: 32, py: '6px' })}
           />
         </TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'center' }}>
