@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>포털개선요청 — 디자인 시안 (편집용)</title>
+<!--
+  ▸ 이 파일은 ANGELS FAB 대시보드 "포털개선요청" 페이지의 디자인 시안입니다.
+  ▸ 색/크기/여백을 자유롭게 고친 뒤 돌려주시면 실제 React 코드(MUI)에 반영합니다.
+  ▸ 자주 바꾸는 값은 아래 :root 변수에 모아뒀습니다 (색 팔레트 / 입력칸 높이 / 체크박스 크기 등).
+  ▸ 표는 8열: 번호 · 제목 · 개선위치 · 유형 · 작성자 · 제안일자 · 상태 · 비고
+  ▸ 섹션: ① 헤더  ② 필터 탭 + 새 요청 버튼  ③ 새 요청 작성 행  ④ 목록 행(+펼친 글)
+-->
+<style>
+:root {
+  /* ── 팔레트 (다크 테마) ── */
+  --bg-page:   #0F1117;   /* 페이지 배경 */
+  --bg-card:   #161B22;   /* 카드/표 배경 */
+  --border:    #293244;   /* 테두리 */
+  --divider:   #232C3A;   /* 행 구분선 */
+  --text:      #E8ECF3;   /* 본문 글자 */
+  --text2:     #AAB4C3;   /* 보조 글자(번호·제안일자) */
+  --text3:     #727D8D;   /* 흐린 글자(— 등) */
+  /* ── 강조색(상태색) ── */
+  --green: #4DA167;       /* 검토중 / 새 요청 버튼 */
+  --blue:  #5491DA;       /* 완료 / 펼친 글 */
+  --amber: #D6A23E;       /* 보류 */
+  --red:   #E05B54;       /* 불가 / 긴급 */
+  --gray:  #AAB4C3;       /* 접수 */
+  /* ── 치수 ── */
+  --input-h: 32px;        /* 제목·개선위치·유형·개선내용 입력칸 높이 */
+  --checkbox: 24px;       /* 긴급 체크박스 크기 */
+  --radius: 6px;          /* 입력칸 모서리 */
+  --font: 12.5px;         /* 표 본문 글자 크기 */
+  --row-tint: 0.07;       /* 행 배경 상태색 농도 */
+  --chip-bg: 0.13;        /* 상태칩/탭 배경 농도 */
+  --chip-bd: 0.32;        /* 상태칩/탭 테두리 농도 */
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 28px;
+  background: var(--bg-page);
+  color: var(--text);
+  font-family: "Pretendard", system-ui, "Malgun Gothic", sans-serif;
+  font-size: var(--font);
+}
+.page { max-width: 1100px; margin: 0 auto; }
+
+/* ① 헤더 */
+.page-head { display: flex; align-items: center; gap: 9px; margin-bottom: 18px; font-size: 19px; font-weight: 600; }
+.page-head .ic { width: 22px; height: 22px; fill: var(--text2); }
+.page-head .updated { margin-left: 8px; font-size: 12px; font-weight: 400; color: var(--text3); }
+
+/* ② 필터 탭 + 새 요청 버튼 */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.tabs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tab {
+  font-weight: 500; font-size: 13px; padding: 5px 12px; border-radius: 16px;
+  border: 1px solid; cursor: pointer; user-select: none;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+/* 기본(미선택) = 옅은 틴트 + 상태색 글자 / hover·선택 = 상태색 채움 + 흰 글자 */
+.tab:hover, .tab.on { color: #fff !important; }
+.hint { font-size: 11.5px; color: var(--text3); white-space: nowrap; margin-left: 2px; }
+
+.new-btn {
+  display: inline-flex; align-items: center; gap: 5px; font-weight: 500; font-size: 13px;
+  padding: 6px 14px; border-radius: 8px; border: 1px solid; cursor: pointer; white-space: nowrap;
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  border-color: color-mix(in srgb, var(--green) 32%, transparent);
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+.new-btn .ic { width: 18px; height: 18px; fill: currentColor; }
+.new-btn:hover, .new-btn.on { background: var(--green); border-color: var(--green); color: #fff; }
+
+/* 표 */
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th, td { padding: 8px 8px; border-bottom: 1px solid var(--divider); text-align: center; font-size: var(--font);
+         overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+th { color: var(--text2); font-weight: 500; font-size: 11.5px; }
+td.l { text-align: left; }
+.num   { color: var(--text2); font-variant-numeric: tabular-nums; }
+.date  { color: var(--text2); font-variant-numeric: tabular-nums; }
+.muted { color: var(--text3); }
+.title { font-weight: 500; color: var(--text); }
+.ic-link { width: 15px; height: 15px; fill: var(--blue); vertical-align: -2px; margin-left: 4px; }
+.ic-urgent { color: var(--red); font-weight: 700; margin-right: 3px; }
+
+/* 상태칩 */
+.chip { display: inline-block; padding: 2px 10px; border-radius: 11px; font-size: 11.5px; border: 1px solid; }
+
+/* 상태별 색 — 칩/탭/행배경 공용 (data-status로 지정) */
+[data-status="접수"]   { --c: var(--gray); }
+[data-status="검토중"] { --c: var(--green); }
+[data-status="완료"]   { --c: var(--blue); }
+[data-status="보류"]   { --c: var(--amber); }
+[data-status="불가"]   { --c: var(--red); }
+.chip[data-status], .tab[data-status] {
+  color: var(--c);
+  background: color-mix(in srgb, var(--c) calc(var(--chip-bg) * 100%), transparent);
+  border-color: color-mix(in srgb, var(--c) calc(var(--chip-bd) * 100%), transparent);
+}
+.tab[data-status]:hover, .tab.on[data-status] { background: var(--c); border-color: var(--c); }
+/* 행 배경 = 상태색 옅은 틴트 */
+tr[data-status] td { background: color-mix(in srgb, var(--c) calc(var(--row-tint) * 100%), transparent); }
+
+/* ④ 펼친 글 — 제목줄 진한 파랑 / 내용줄 옅은 파랑 (상태 틴트보다 우선) */
+tr.open-head td { background: color-mix(in srgb, var(--blue) 22%, transparent) !important; border-bottom-color: transparent; }
+tr.open-body td { background: color-mix(in srgb, var(--blue) 9%, transparent) !important; border-top: 0; text-align: left; }
+.content-text { white-space: pre-wrap; font-size: 13px; line-height: 1.7; padding: 4px 0; }
+.row-actions { display: inline-flex; gap: 6px; }
+.icon-btn { width: 28px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 6px; border: 1px solid var(--border); background: transparent; cursor: pointer; }
+.icon-btn .ic { width: 17px; height: 17px; fill: var(--text2); }
+.icon-btn.danger .ic { fill: var(--red); }
+
+/* ③ 새 요청 작성 행 — 연한 초록 배경 */
+tr.compose td { background: color-mix(in srgb, var(--green) 6%, transparent); }
+.field {
+  display: flex; align-items: center; gap: 6px; width: 100%; height: var(--input-h);
+  background: rgba(232,236,243,0.05); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 0 8px; color: var(--text3); font-size: var(--font);
+}
+.field.title-field { color: var(--text); justify-content: space-between; }
+.field.drop { justify-content: center; }      /* 위치/유형 = 글자 가운데 정렬 */
+.field .ic { width: 15px; height: 15px; fill: var(--text3); flex: none; }
+/* 개선내용 = 세로 가운데, 줄 늘면 아래로 확장 */
+.field.content { height: auto; min-height: var(--input-h); padding: 7px 8px; align-items: center; }
+.urgent-box {
+  width: var(--checkbox); height: var(--checkbox); margin: 0 auto; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700;
+  border: 1px solid var(--red); background: var(--red); color: #fff;   /* 체크 상태 */
+}
+.compose-actions { display: inline-flex; gap: 8px; }
+.icon-btn.save .ic { fill: var(--green); }
+.icon-btn.cancel .ic { fill: var(--red); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ① 헤더 -->
+  <div class="page-head">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/></svg>
+    포털개선요청 <span class="updated">오전 10:13 업데이트</span>
+  </div>
+
+  <!-- ② 필터 탭 + 새 요청 버튼 -->
+  <div class="toolbar">
+    <div class="tabs">
+      <span class="tab" data-status="접수">접수 2</span>
+      <span class="tab" data-status="검토중">검토중 2</span>
+      <span class="tab" data-status="완료">완료 2</span>
+      <span class="tab" data-status="보류">보류 1</span>
+      <span class="tab" data-status="불가">불가 1</span>
+      <span class="hint">Shift로 다중선택</span>
+    </div>
+    <!-- 클릭(작성칸 열림) 시 .on → 초록 채움. 다시 누르면 닫힘(.on 제거) -->
+    <span class="new-btn on">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg> 새 요청
+    </span>
+  </div>
+
+  <!-- 표 -->
+  <div class="card">
+    <table>
+      <colgroup>
+        <col style="width:36px"><col><col style="width:80px"><col style="width:52px">
+        <col style="width:58px"><col style="width:84px"><col style="width:68px"><col style="width:96px">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>번호</th><th>제목</th><th>개선위치</th><th>유형</th>
+          <th>작성자</th><th>제안일자</th><th>상태</th><th>비고</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- ③ 새 요청 작성 행 (새 요청 버튼 클릭 시 표 최상단에 펼쳐짐) -->
+        <tr class="compose">
+          <td><div class="urgent-box">!</div></td>
+          <td class="l">
+            <div class="field title-field">
+              제목
+              <svg class="ic" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+            </div>
+          </td>
+          <td><div class="field drop">위치 <svg class="ic" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></div></td>
+          <td><div class="field drop">유형 <svg class="ic" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg></div></td>
+          <td class="muted" style="color:var(--text2)">조성범</td>
+          <td class="date">2026-06-20</td>
+          <td><span class="chip" data-status="접수">접수</span></td>
+          <td></td>
+        </tr>
+        <tr class="compose">
+          <td></td>
+          <td class="l" colspan="6"><div class="field content">개선내용</div></td>
+          <td>
+            <div class="compose-actions">
+              <button class="icon-btn save" title="저장"><svg class="ic" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></button>
+              <button class="icon-btn cancel" title="취소"><svg class="ic" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+            </div>
+          </td>
+        </tr>
+
+        <!-- ④ 목록 행 (번호 내림차순) -->
+        <tr data-status="완료">
+          <td class="num">7</td>
+          <td class="l"><span class="title">검색창 자동완성</span></td>
+          <td>홈</td><td>기능</td><td>김민수</td><td class="date">2026-06-19</td>
+          <td><span class="chip" data-status="완료">완료</span></td>
+          <td class="l" style="color:var(--blue)">2026-06-19</td>
+        </tr>
+
+        <tr data-status="접수">
+          <td class="num">6</td>
+          <td class="l"><span class="title">로드맵 단계 색 구분</span></td>
+          <td>홈</td><td>UI</td><td>최유나</td><td class="date">2026-06-18</td>
+          <td><span class="chip" data-status="접수">접수</span></td>
+          <td class="muted">—</td>
+        </tr>
+
+        <!-- 펼친 글 예시 (검토중, 번호 5) -->
+        <tr class="open-head" data-status="검토중">
+          <td class="num">5</td>
+          <td class="l"><span class="ic-urgent">!</span><span class="title">장비 카드 정렬 어긋남</span>
+            <svg class="ic-link" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+          </td>
+          <td>장비운영</td><td>UI</td><td>이수진</td><td class="date">2026-06-17</td>
+          <td><span class="chip" data-status="검토중">검토중</span></td>
+          <td class="muted">—</td>
+        </tr>
+        <tr class="open-body">
+          <td></td>
+          <td colspan="7" class="l">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+              <div class="content-text">장비현황 카드가 화면 폭에 따라 정렬이 어긋납니다. 정렬 기준을 고정해 주세요.</div>
+              <div class="row-actions">
+                <button class="icon-btn" title="수정"><svg class="ic" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a.996.996 0 000-1.41l-2.34-2.34a.996.996 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                <button class="icon-btn danger" title="삭제"><svg class="ic" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <tr data-status="보류">
+          <td class="num">4</td>
+          <td class="l"><span class="title">공지 상단 배너 추가</span></td>
+          <td>공지</td><td>기능</td><td>박지훈</td><td class="date">2026-06-16</td>
+          <td><span class="chip" data-status="보류">보류</span></td>
+          <td class="l" style="color:var(--text2)">디자인 확정 후</td>
+        </tr>
+
+        <tr data-status="완료">
+          <td class="num">3</td>
+          <td class="l"><span class="title">모바일 표 잘림</span></td>
+          <td>공지</td><td>모바일</td><td>이수진</td><td class="date">2026-06-14</td>
+          <td><span class="chip" data-status="완료">완료</span></td>
+          <td class="l" style="color:var(--blue)">2026-06-15</td>
+        </tr>
+
+        <tr data-status="불가">
+          <td class="num">2</td>
+          <td class="l"><span class="title">다크모드 수동 토글</span></td>
+          <td>설정</td><td>기능</td><td>김민수</td><td class="date">2026-06-12</td>
+          <td><span class="chip" data-status="불가">불가</span></td>
+          <td class="l" style="color:var(--text2)">현재 범위 밖</td>
+        </tr>
+
+        <tr data-status="검토중">
+          <td class="num">1</td>
+          <td class="l"><span class="title">센터 소개 페이지 개선</span></td>
+          <td>홈</td><td>UI</td><td>박세리</td><td class="date">2026-06-10</td>
+          <td><span class="chip" data-status="검토중">검토중</span></td>
+          <td class="muted">—</td>
+        </tr>
+
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>
