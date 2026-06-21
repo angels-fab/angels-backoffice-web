@@ -13,7 +13,6 @@ import DialogActions from '@mui/material/DialogActions'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import Collapse from '@mui/material/Collapse'
-import Drawer from '@mui/material/Drawer'
 import Accordion from '@mui/material/Accordion'
 import AccordionSummary from '@mui/material/AccordionSummary'
 import AccordionDetails from '@mui/material/AccordionDetails'
@@ -21,8 +20,6 @@ import AssessmentIcon from '@mui/icons-material/Assessment'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import AddIcon from '@mui/icons-material/Add'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { alpha } from '@mui/material/styles'
 import {
   PageContainer,
@@ -139,7 +136,8 @@ export default function Work() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<KpiView>('inProgress') // 메인 목록은 항상 진행중
   const [remindOpen, setRemindOpen] = useState(false) // Remind: KPI 아래 인라인 펼침(토글·모션)
-  const [doneOpen, setDoneOpen] = useState(false) // 완료: 우측 Drawer(제목+아코디언)
+  const [doneOpen, setDoneOpen] = useState(false) // 완료: 하단 인라인 슬라이드(검색+아코디언)
+  const [doneQuery, setDoneQuery] = useState('') // 완료 패널 검색어
   const [selectedTask, setSelectedTask] = useState<number | null>(null) // 업무카드 단일 선택(테두리)
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
@@ -243,6 +241,11 @@ export default function Work() {
   // Remind/완료 — 메인 목록과 독립 파생(Remind=인라인 펼침, 완료=Drawer)
   const remindList = useMemo(() => items.filter((t) => t.remind).sort(cmpRemind), [items])
   const doneList = useMemo(() => items.filter((t) => classify(t) === 'done').sort(cmp), [items])
+  const doneFiltered = useMemo(() => {
+    const q = doneQuery.trim().toLowerCase()
+    if (!q) return doneList
+    return doneList.filter((t) => `${t.task} ${t.mgr} ${t.cat} ${t.dept}`.toLowerCase().includes(q))
+  }, [doneList, doneQuery])
 
   // 단일 선택 — 같은 카드를 다시 눌러도 해제되지 않음(계속 선택), 다른 카드 선택 시 자동 전환
   const selectView = (v: KpiView) => {
@@ -544,9 +547,9 @@ export default function Work() {
                 <Typography component="span" sx={{ fontSize: 18, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
             </Box>
-            {/* 하단 풀폭 바 — 드로어라 좌우 화살표(열기 ◀ / 닫기 ▶) */}
+            {/* 하단 풀폭 펼침바(인라인 슬라이드) */}
             <Box sx={(t) => ({ mx: '-18px', mb: '-18px', mt: '14px', height: 36, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, fontSize: 12.5, fontWeight: 600, color: doneOpen ? t.palette.text.primary : 'text.secondary', bgcolor: doneOpen ? alpha(t.palette.text.secondary, 0.12) : 'transparent' })}>
-              {doneOpen ? <ChevronRightIcon sx={{ fontSize: 20 }} /> : <ChevronLeftIcon sx={{ fontSize: 20 }} />}{doneOpen ? '닫기' : '열기'}
+              <ExpandMoreIcon sx={{ fontSize: 20, transition: 'transform .2s', transform: doneOpen ? 'rotate(180deg)' : 'none' }} />{doneOpen ? '접기' : '펼치기'}
             </Box>
           </AppCard>
         </Box>
@@ -566,6 +569,38 @@ export default function Work() {
               </CardGrid>
             </Box>
           )}
+        </ContentSection>
+      </Collapse>
+
+      {/* 완료 — 하단 인라인 슬라이드: 검색 + 제목 아코디언(내용) + 높이 제한 스크롤(123건 대응) */}
+      <Collapse in={doneOpen} unmountOnExit>
+        <ContentSection>
+          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '12px', overflow: 'hidden' }}>
+            <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+              <SearchBar value={doneQuery} onChange={setDoneQuery} placeholder="완료 업무 검색 (제목·담당자·내용)" />
+            </Box>
+            <Box sx={{ maxHeight: 360, overflowY: 'auto', px: 1.5 }}>
+              {doneFiltered.length === 0 ? (
+                <Typography variant="body2" sx={{ color: 'text.disabled', py: 3, textAlign: 'center' }}>
+                  {doneQuery ? '검색 결과가 없습니다' : '완료된 업무가 없습니다'}
+                </Typography>
+              ) : (
+                doneFiltered.map((t) => {
+                  const body = (t.task || '').split('\n').slice(1).join('\n').trim()
+                  return (
+                    <Accordion key={t.id} disableGutters square elevation={0} sx={{ bgcolor: 'transparent', borderBottom: 1, borderColor: 'divider', '&:before': { display: 'none' }, '&:last-of-type': { borderBottom: 0 } }}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0, minHeight: 44, '& .MuiAccordionSummary-content': { my: 0.75 } }}>
+                        <Typography variant="body2" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{taskTitle(t)}</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails sx={{ px: 0, pt: 0, pb: 1.5 }}>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary', lineHeight: 1.7 }}>{body || '내용 없음'}</Typography>
+                      </AccordionDetails>
+                    </Accordion>
+                  )
+                })
+              )}
+            </Box>
+          </Box>
         </ContentSection>
       </Collapse>
 
@@ -659,38 +694,6 @@ export default function Work() {
           </CardGrid>
         </ContentSection>
       )}
-
-      {/* 완료 — 우측 Drawer: 제목 목록 + 아코디언(내용) */}
-      <Drawer
-        anchor="right"
-        open={doneOpen}
-        onClose={() => setDoneOpen(false)}
-        slotProps={{ paper: { sx: { width: { xs: '100%', sm: 440 }, bgcolor: 'background.paper', p: 2.5 } } }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 1.5 }}>
-          <Typography variant="h3" sx={{ fontWeight: 800 }}>
-            완료 <Box component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'text.secondary' }}>{counts.done}건</Box>
-          </Typography>
-          <Button size="small" onClick={() => setDoneOpen(false)} sx={{ color: 'text.secondary' }}>닫기</Button>
-        </Box>
-        {doneList.length === 0 ? (
-          <Typography variant="body2" sx={{ color: 'text.disabled', py: 2 }}>완료된 업무가 없습니다</Typography>
-        ) : (
-          doneList.map((t) => {
-            const body = (t.task || '').split('\n').slice(1).join('\n').trim()
-            return (
-              <Accordion key={t.id} disableGutters square elevation={0} sx={{ bgcolor: 'transparent', borderBottom: 1, borderColor: 'divider', '&:before': { display: 'none' } }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0, minHeight: 44, '& .MuiAccordionSummary-content': { my: 0.75 } }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{taskTitle(t)}</Typography>
-                </AccordionSummary>
-                <AccordionDetails sx={{ px: 0, pt: 0, pb: 1.5 }}>
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary', lineHeight: 1.7 }}>{body || '내용 없음'}</Typography>
-                </AccordionDetails>
-              </Accordion>
-            )
-          })
-        )}
-      </Drawer>
 
       <TaskDetailDrawer
         task={picked}
