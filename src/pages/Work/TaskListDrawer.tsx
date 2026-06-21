@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Drawer from '@mui/material/Drawer'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -10,16 +10,22 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { alpha, useTheme } from '@mui/material/styles'
-import { StatusChip } from '@/components/ds'
+import { SearchBar, StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
 import { taskSubs, taskTitle, taskLink, mgrColor } from './workMeta'
 import SubLine from './SubLine'
 
-export interface RemindDrawerProps {
+export type DrawerTone = 'amber' | 'gray'
+
+export interface TaskListDrawerProps {
   open: boolean
   onClose: () => void
+  title: string
   items: WorkItem[]
+  tone?: DrawerTone
+  searchable?: boolean
+  searchPlaceholder?: string
   isAdmin?: boolean
   onEdit?: (t: WorkItem) => void
   onComplete?: (t: WorkItem) => void
@@ -27,42 +33,55 @@ export interface RemindDrawerProps {
 }
 
 /**
- * RemindDrawer — Remind 업무를 우측 드로어로 표시.
- * 상단: 1열 목록(스크롤) / 하단: 선택 업무 내용(스크롤).
+ * TaskListDrawer — 업무를 우측 드로어로 표시.
+ * 상단: (선택)검색 + 1열 목록(스크롤) / 하단: 선택 업무 내용(스크롤).
+ * Remind(amber)·완료(gray) 등에 공용.
  */
-export default function RemindDrawer({ open, onClose, items, isAdmin, onEdit, onComplete, onDelete }: RemindDrawerProps) {
+export default function TaskListDrawer({
+  open, onClose, title, items, tone = 'amber', searchable, searchPlaceholder,
+  isAdmin, onEdit, onComplete, onDelete,
+}: TaskListDrawerProps) {
   const theme = useTheme()
-  const amber = theme.palette.accent.amber
+  const accent = tone === 'amber' ? theme.palette.accent.amber : theme.palette.text.secondary
   const [sel, setSel] = useState<number | null>(null)
-  const selTask = items.find((t) => t.id === sel) ?? null
+  const [query, setQuery] = useState('')
 
-  const close = () => { setSel(null); onClose() }
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!searchable || !q) return items
+    return items.filter((t) => `${t.task} ${t.mgr} ${t.cat} ${t.dept}`.toLowerCase().includes(q))
+  }, [items, query, searchable])
+
+  const selTask = items.find((t) => t.id === sel) ?? null
+  const close = () => { setSel(null); setQuery(''); onClose() }
 
   return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={close}
-      slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}
-    >
-      <Box sx={{ width: { xs: '100vw', sm: 440 }, maxWidth: '100vw', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Drawer anchor="right" open={open} onClose={close} slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
+      <Box sx={{ width: { xs: '100vw', sm: 460 }, maxWidth: '100vw', height: '100%', display: 'flex', flexDirection: 'column' }}>
         {/* 헤더 */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, p: 2, bgcolor: 'background.elevated', borderBottom: 1, borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-            <Typography variant="h3">Remind 업무</Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>{items.length}건</Typography>
+            <Typography variant="h3">{title}</Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>{searchable && query ? `${filtered.length}/${items.length}` : items.length}건</Typography>
           </Box>
           <IconButton onClick={close} size="small" aria-label="닫기" sx={{ color: 'text.secondary' }}>
             <CloseIcon />
           </IconButton>
         </Box>
 
+        {/* 검색 */}
+        {searchable && (
+          <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+            <SearchBar value={query} onChange={setQuery} placeholder={searchPlaceholder ?? '검색'} />
+          </Box>
+        )}
+
         {/* 목록(상단, 스크롤) */}
         <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 1.25, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-          {items.length === 0 ? (
-            <Typography variant="body2" sx={{ color: 'text.disabled', py: 3, textAlign: 'center' }}>Remind 업무가 없습니다</Typography>
+          {filtered.length === 0 ? (
+            <Typography variant="body2" sx={{ color: 'text.disabled', py: 3, textAlign: 'center' }}>{query ? '검색 결과가 없습니다' : '업무가 없습니다'}</Typography>
           ) : (
-            items.map((t) => {
+            filtered.map((t) => {
               const on = sel === t.id
               return (
                 <Box
@@ -74,15 +93,15 @@ export default function RemindDrawer({ open, onClose, items, isAdmin, onEdit, on
                   onClick={() => setSel((s) => (s === t.id ? null : t.id))}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSel((s) => (s === t.id ? null : t.id)) } }}
                   sx={{
-                    bgcolor: alpha(amber, on ? 0.2 : 0.08),
+                    bgcolor: alpha(accent, on ? 0.2 : 0.08),
                     border: 1,
-                    borderColor: on ? amber : 'divider',
+                    borderColor: on ? accent : 'divider',
                     borderRadius: 1,
                     px: 1.25, py: 0.9,
                     cursor: 'pointer',
                     transition: 'border-color .15s, background-color .15s',
-                    '&:hover': { borderColor: amber },
-                    '&:focus-visible': { outline: 'none', borderColor: amber },
+                    '&:hover': { borderColor: accent },
+                    '&:focus-visible': { outline: 'none', borderColor: accent },
                   }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
@@ -100,7 +119,7 @@ export default function RemindDrawer({ open, onClose, items, isAdmin, onEdit, on
 
         {/* 내용(하단, 스크롤) */}
         {selTask && (
-          <Box sx={{ flexShrink: 0, maxHeight: '50%', overflowY: 'auto', borderTop: 2, borderColor: alpha(amber, 0.4), bgcolor: alpha(amber, 0.06), p: 2 }}>
+          <Box sx={{ flexShrink: 0, maxHeight: '50%', overflowY: 'auto', borderTop: 2, borderColor: alpha(accent, 0.4), bgcolor: alpha(accent, 0.06), p: 2 }}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1, flexWrap: 'wrap' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, wordBreak: 'break-word' }}>{taskTitle(selTask)}</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
@@ -138,11 +157,11 @@ export default function RemindDrawer({ open, onClose, items, isAdmin, onEdit, on
             })()}
             {isAdmin && (
               <Box sx={{ display: 'flex', gap: 1, mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
-                {(selTask.status || '').trim() !== '완료' && (
-                  <Button size="small" variant="outlined" color="success" startIcon={<CheckCircleOutlineIcon sx={{ fontSize: 18 }} />} onClick={() => onComplete?.(selTask)}>완료</Button>
+                {(selTask.status || '').trim() !== '완료' && onComplete && (
+                  <Button size="small" variant="outlined" color="success" startIcon={<CheckCircleOutlineIcon sx={{ fontSize: 18 }} />} onClick={() => onComplete(selTask)}>완료</Button>
                 )}
-                <Button size="small" variant="outlined" startIcon={<EditOutlinedIcon sx={{ fontSize: 18 }} />} onClick={() => { onEdit?.(selTask); close() }}>수정</Button>
-                <Button size="small" variant="text" color="error" startIcon={<DeleteOutlineIcon sx={{ fontSize: 18 }} />} onClick={() => onDelete?.(selTask)}>삭제</Button>
+                {onEdit && <Button size="small" variant="outlined" startIcon={<EditOutlinedIcon sx={{ fontSize: 18 }} />} onClick={() => { onEdit(selTask); close() }}>수정</Button>}
+                {onDelete && <Button size="small" variant="text" color="error" startIcon={<DeleteOutlineIcon sx={{ fontSize: 18 }} />} onClick={() => onDelete(selTask)}>삭제</Button>}
               </Box>
             )}
           </Box>

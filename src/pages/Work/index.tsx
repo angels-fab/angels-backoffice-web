@@ -44,11 +44,12 @@ import WorkWrite from './WorkWrite'
 import NewTaskCard from './NewTaskCard'
 import type { NewTaskForm } from './NewTaskCard'
 import TaskGridAccordion from './TaskGridAccordion'
-import RemindDrawer from './RemindDrawer'
+import TaskListDrawer from './TaskListDrawer'
 
-// Remind 표시 방식 비교용 플래그 — 'drawer'(우측 드로어, 상단 목록+하단 내용) / 'inline'(KPI 아래 마스터-디테일)
-// 최종 선택 후 미사용 분기 삭제 예정.
+// Remind 표시 방식 — 'inline'(KPI 아래 마스터-디테일) / 'drawer'(우측 드로어)
 const REMIND_VARIANT: 'drawer' | 'inline' = 'inline'
+// 완료 표시 방식 — 'drawer'(우측 드로어, 검색+목록+하단 내용) / 'inline'(KPI 아래 슬라이드)
+const DONE_VARIANT: 'drawer' | 'inline' = 'drawer'
 
 // 상단 KPI 단일 선택 뷰 (진행중/Remind/완료 중 하나만 선택)
 type KpiView = 'inProgress' | 'remind' | 'done'
@@ -140,6 +141,7 @@ export default function Work() {
   const [view, setView] = useState<KpiView>('inProgress') // 메인 목록은 항상 진행중
   const [remindOpen, setRemindOpen] = useState(false) // Remind: KPI 아래 인라인 펼침(토글·모션)
   const [remindDrawerOpen, setRemindDrawerOpen] = useState(false) // Remind: 우측 드로어 변형
+  const [doneDrawerOpen, setDoneDrawerOpen] = useState(false) // 완료: 우측 드로어 변형
   const [doneOpen, setDoneOpen] = useState(false) // 완료: 하단 인라인 슬라이드(검색+아코디언)
   const [doneQuery, setDoneQuery] = useState('') // 완료 패널 검색어
   const [selectedTask, setSelectedTask] = useState<number | null>(null) // 업무카드 단일 선택(테두리)
@@ -532,7 +534,7 @@ export default function Work() {
           {/* 완료 — 정사각 회색 칩 + 완료/전체 건수(좌 묶음). 선택색 gray */}
           <AppCard
             interactive
-            onClick={() => setDoneOpen((o) => !o)}
+            onClick={() => (DONE_VARIANT === 'drawer' ? setDoneDrawerOpen(true) : setDoneOpen((o) => !o))}
             ariaLabel="완료 업무 보기(우측 패널)"
             padding={18}
             sx={{
@@ -553,7 +555,7 @@ export default function Work() {
             </Box>
             {/* 하단 풀폭 펼침바(인라인 슬라이드) */}
             <Box sx={(t) => ({ mx: '-18px', mb: '-18px', mt: '14px', height: 36, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, fontSize: 12.5, fontWeight: 600, color: doneOpen ? t.palette.text.primary : 'text.secondary', bgcolor: doneOpen ? alpha(t.palette.text.secondary, 0.12) : 'transparent' })}>
-              <ExpandMoreIcon sx={{ fontSize: 20, transition: 'transform .2s', transform: doneOpen ? 'rotate(180deg)' : 'none' }} />{doneOpen ? '접기' : '펼치기'}
+              <ExpandMoreIcon sx={{ fontSize: 20, transition: 'transform .2s', transform: doneOpen ? 'rotate(180deg)' : 'none' }} />{DONE_VARIANT === 'drawer' ? '목록 열기' : doneOpen ? '접기' : '펼치기'}
             </Box>
           </AppCard>
         </Box>
@@ -561,13 +563,31 @@ export default function Work() {
 
       {/* Remind 드로어 변형 — 우측 드로어, 상단 1열 목록 + 하단 내용 */}
       {REMIND_VARIANT === 'drawer' && (
-        <RemindDrawer
+        <TaskListDrawer
           open={remindDrawerOpen}
           onClose={() => setRemindDrawerOpen(false)}
+          title="Remind 업무"
+          tone="amber"
           items={remindList}
           isAdmin={isAdmin}
           onEdit={startEdit}
           onComplete={(it) => setCompleteTarget(it)}
+          onDelete={(it) => setDeleteTarget(it)}
+        />
+      )}
+
+      {/* 완료 드로어 변형 — 우측 드로어, 검색 + 1열 목록 + 하단 내용 */}
+      {DONE_VARIANT === 'drawer' && (
+        <TaskListDrawer
+          open={doneDrawerOpen}
+          onClose={() => setDoneDrawerOpen(false)}
+          title="완료 업무"
+          tone="gray"
+          searchable
+          searchPlaceholder="완료 업무 검색 (제목·담당자·내용)"
+          items={doneList}
+          isAdmin={isAdmin}
+          onEdit={startEdit}
           onDelete={(it) => setDeleteTarget(it)}
         />
       )}
@@ -586,6 +606,7 @@ export default function Work() {
       )}
 
       {/* 완료 — 하단 인라인 슬라이드: 검색 + 제목 아코디언(내용) + 높이 제한 스크롤(123건 대응) */}
+      {DONE_VARIANT === 'inline' && (
       <Collapse in={doneOpen} unmountOnExit>
         <ContentSection>
           <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '12px', overflow: 'hidden' }}>
@@ -604,6 +625,7 @@ export default function Work() {
           </Box>
         </ContentSection>
       </Collapse>
+      )}
 
       {/* ② 업무 목록 — 항상 진행중(메인) */}
       <ContentSection title={view === 'inProgress' ? undefined : '업무 목록'} count={view === 'inProgress' ? undefined : `${listed.length}`} last={!SHOW_MANAGER_STATUS}>
