@@ -579,13 +579,14 @@ export default function Work() {
               <Typography variant="body2" sx={{ color: 'text.disabled' }}>{listed.length}</Typography>
             </Box>
             <CardGrid columns={2}>
-              {isAdmin && (composing
-                ? (
-                  <Box key="composer" sx={{ gridColumn: '1 / -1' }}>
-                    <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
-                  </Box>
-                )
-                : <AddCard key="add" height={150} onClick={startCompose} />)}
+              {/* 새 업무: 2x2 그리드 흐름 밖, 2열 상단(col2·row1)에 고정. 클릭 시 같은 칸에서 작성폼(전체폭 확장 X). */}
+              {isAdmin && (
+                <Box key="new" sx={{ gridColumn: { sm: 2 }, gridRow: { sm: 1 } }}>
+                  {composing
+                    ? <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+                    : <AddCard height={150} onClick={startCompose} />}
+                </Box>
+              )}
               {listed.map((t) => renderTask(t, 'green'))}
             </CardGrid>
           </>
