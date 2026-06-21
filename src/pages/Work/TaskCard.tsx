@@ -14,14 +14,36 @@ export interface TaskCardProps {
   selected?: boolean
   /** 클릭 시 이 카드를 선택 */
   onSelect?: () => void
+  /** 컴팩트(한 줄): 압정+제목+담당자만. Remind 인라인 펼침용(상태칩·구분칩·날짜 생략). */
+  compact?: boolean
 }
 
 /**
  * Remind 카드 — 채움은 앰버 톤(항상), 테두리는 선택 시에만 앰버.
  * 압정 · 상태 · 구분 · 담당자 색칩 · 날짜. 클릭 시 선택 + 상세 Drawer.
  */
-export default function TaskCard({ t, onPick, selected = false, onSelect }: TaskCardProps) {
+export default function TaskCard({ t, onPick, selected = false, onSelect, compact = false }: TaskCardProps) {
   const st = W_STATUS[classify(t)]
+  if (compact) {
+    return (
+      <AppCard
+        interactive
+        onClick={() => onPick(t)}
+        padding={12}
+        sx={(th) => ({
+          bgcolor: alpha(th.palette.accent.amber, 0.1),
+          borderColor: th.palette.divider,
+          '&:hover': { borderColor: th.palette.accent.amber, bgcolor: alpha(th.palette.accent.amber, 0.16) },
+        })}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+          <PushPinIcon sx={{ fontSize: 15, color: 'warning.main', flexShrink: 0 }} />
+          <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{taskTitle(t)}</Typography>
+          <Box component="span" sx={{ flexShrink: 0, fontSize: 11.5, fontWeight: 700, borderRadius: '7px', px: 0.9, py: 0.2, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>{t.mgr || '미지정'}</Box>
+        </Box>
+      </AppCard>
+    )
+  }
   return (
     <AppCard
       interactive

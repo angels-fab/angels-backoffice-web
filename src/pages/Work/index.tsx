@@ -12,9 +12,15 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
+import Collapse from '@mui/material/Collapse'
+import Drawer from '@mui/material/Drawer'
+import Accordion from '@mui/material/Accordion'
+import AccordionSummary from '@mui/material/AccordionSummary'
+import AccordionDetails from '@mui/material/AccordionDetails'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import AddIcon from '@mui/icons-material/Add'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { alpha } from '@mui/material/styles'
 import {
   PageContainer,
@@ -119,7 +125,9 @@ export default function Work() {
   const { items, error, updatedAt } = useAppSelector((s) => s.work)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [view, setView] = useState<KpiView>('inProgress') // 단일 선택: 진행중/Remind/완료
+  const [view, setView] = useState<KpiView>('inProgress') // 메인 목록은 항상 진행중
+  const [remindOpen, setRemindOpen] = useState(false) // Remind: KPI 아래 인라인 펼침(토글·모션)
+  const [doneOpen, setDoneOpen] = useState(false) // 완료: 우측 Drawer(제목+아코디언)
   const [selectedTask, setSelectedTask] = useState<number | null>(null) // 업무카드 단일 선택(테두리)
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
@@ -219,6 +227,10 @@ export default function Work() {
       .filter((t) => !q || `${t.task} ${t.mgr} ${t.dept} ${t.cat} ${t.loc}`.toLowerCase().includes(q))
       .sort(cmp)
   }, [pool, cat, mgr, query])
+
+  // Remind/완료 — 메인 목록과 독립 파생(Remind=인라인 펼침, 완료=Drawer)
+  const remindList = useMemo(() => items.filter((t) => t.remind).sort(cmp), [items])
+  const doneList = useMemo(() => items.filter((t) => classify(t) === 'done').sort(cmp), [items])
 
   // 단일 선택 — 같은 카드를 다시 눌러도 해제되지 않음(계속 선택), 다른 카드 선택 시 자동 전환
   const selectView = (v: KpiView) => {
@@ -474,14 +486,14 @@ export default function Work() {
           {/* Remind — 정사각 칩 + 건수(좌 묶음). 선택색 amber */}
           <AppCard
             interactive
-            onClick={() => selectView('remind')}
-            ariaLabel="Remind 업무 보기"
+            onClick={() => setRemindOpen((o) => !o)}
+            ariaLabel="Remind 업무 펼치기"
             padding={18}
             sx={{
-              ...(view === 'remind'
+              ...(remindOpen
                 ? { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.12) }
                 : {}),
-              '&:hover': { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, view === 'remind' ? 0.18 : 0.08) },
+              '&:hover': { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, remindOpen ? 0.18 : 0.08) },
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%', minHeight: 116 }}>
@@ -496,14 +508,14 @@ export default function Work() {
           {/* 완료 — 정사각 회색 칩 + 완료/전체 건수(좌 묶음). 선택색 gray */}
           <AppCard
             interactive
-            onClick={() => selectView('done')}
-            ariaLabel="완료 업무 보기"
+            onClick={() => setDoneOpen((o) => !o)}
+            ariaLabel="완료 업무 보기(우측 패널)"
             padding={18}
             sx={{
-              ...(view === 'done'
+              ...(doneOpen
                 ? { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.1) }
                 : {}),
-              '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, view === 'done' ? 0.16 : 0.07) },
+              '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, doneOpen ? 0.16 : 0.07) },
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%', minHeight: 116 }}>
@@ -518,7 +530,22 @@ export default function Work() {
         </Box>
       </ContentSection>
 
-      {/* ② 업무 목록 — 선택된 KPI(진행중/Remind/완료)에 따라 표시 */}
+      {/* Remind — KPI 아래 인라인 펼침(3열·압정+제목+담당자 컴팩트). 토글 시 모션, 진행중 목록을 아래로 밀어냄. */}
+      <Collapse in={remindOpen} unmountOnExit>
+        <ContentSection>
+          {remindList.length === 0 ? (
+            <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
+          ) : (
+            <CardGrid columns={3}>
+              {remindList.map((t) => (
+                <TaskCard key={t.id} t={t} compact onPick={setPicked} />
+              ))}
+            </CardGrid>
+          )}
+        </ContentSection>
+      </Collapse>
+
+      {/* ② 업무 목록 — 항상 진행중(메인) */}
       <ContentSection title={view === 'inProgress' ? undefined : '업무 목록'} count={view === 'inProgress' ? undefined : `${listed.length}`} last={!SHOW_MANAGER_STATUS}>
         {/* 진행중 뷰는 회의용으로 깔끔하게 — 구분 필터·검색·담당자 필터 숨김 */}
         {view !== 'inProgress' && (
@@ -608,6 +635,38 @@ export default function Work() {
           </CardGrid>
         </ContentSection>
       )}
+
+      {/* 완료 — 우측 Drawer: 제목 목록 + 아코디언(내용) */}
+      <Drawer
+        anchor="right"
+        open={doneOpen}
+        onClose={() => setDoneOpen(false)}
+        slotProps={{ paper: { sx: { width: { xs: '100%', sm: 440 }, bgcolor: 'background.paper', p: 2.5 } } }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 1.5 }}>
+          <Typography variant="h3" sx={{ fontWeight: 800 }}>
+            완료 <Box component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'text.secondary' }}>{counts.done}건</Box>
+          </Typography>
+          <Button size="small" onClick={() => setDoneOpen(false)} sx={{ color: 'text.secondary' }}>닫기</Button>
+        </Box>
+        {doneList.length === 0 ? (
+          <Typography variant="body2" sx={{ color: 'text.disabled', py: 2 }}>완료된 업무가 없습니다</Typography>
+        ) : (
+          doneList.map((t) => {
+            const body = (t.task || '').split('\n').slice(1).join('\n').trim()
+            return (
+              <Accordion key={t.id} disableGutters square elevation={0} sx={{ bgcolor: 'transparent', borderBottom: 1, borderColor: 'divider', '&:before': { display: 'none' } }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0, minHeight: 44, '& .MuiAccordionSummary-content': { my: 0.75 } }}>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{taskTitle(t)}</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ px: 0, pt: 0, pb: 1.5 }}>
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary', lineHeight: 1.7 }}>{body || '내용 없음'}</Typography>
+                </AccordionDetails>
+              </Accordion>
+            )
+          })
+        )}
+      </Drawer>
 
       <TaskDetailDrawer
         task={picked}
