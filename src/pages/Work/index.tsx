@@ -88,10 +88,10 @@ function SquareChip({ label, tone }: { label: string; tone: 'green' | 'amber' | 
       sx={(t) => {
         const c = tone === 'green' ? t.palette.accent.green : tone === 'amber' ? t.palette.accent.amber : t.palette.text.secondary
         return {
-          width: 116, height: 116, flexShrink: 0, borderRadius: '18px',
+          width: { xs: 88, sm: 104, lg: 116 }, height: { xs: 88, sm: 104, lg: 116 }, flexShrink: 0, borderRadius: '18px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           bgcolor: alpha(c, 0.15), color: c,
-          fontWeight: 800, fontSize: 23, lineHeight: 1.1, px: 0.5, textAlign: 'center',
+          fontWeight: 800, fontSize: { xs: 18, sm: 21, lg: 23 }, lineHeight: 1.1, px: 0.5, textAlign: 'center',
         }
       }}
     >
@@ -474,8 +474,8 @@ export default function Work() {
             <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 2, minHeight: 116 }}>
               <SquareChip label="진행중" tone="green" />
               {/* 칩 바로 오른쪽: 건수 */}
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0, alignSelf: 'center', ml: '36px' }}>
-                <Typography component="span" sx={{ fontSize: 60, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0, alignSelf: 'center', ml: { xs: '12px', sm: '24px', lg: '36px' } }}>
+                <Typography component="span" sx={{ fontSize: { xs: 40, sm: 50, lg: 60 }, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
                 <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
               <Box sx={{ flex: 1 }} />
@@ -483,15 +483,15 @@ export default function Work() {
               <Box
                 aria-hidden
                 sx={(t) => ({
-                  flexShrink: 0, width: 104,
+                  flexShrink: 0, width: { xs: 76, sm: 92, lg: 104 },
                   border: 1, borderColor: alpha(t.palette.accent.purple, 0.55), bgcolor: alpha(t.palette.accent.purple, 0.14),
                   borderRadius: '16px',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75,
                   color: t.palette.accent.purple,
                 })}
               >
-                <Typography sx={{ fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{counts.chief}건</Typography>
-                <Typography sx={{ fontSize: 22, fontWeight: 700, lineHeight: 1 }}>Check</Typography>
+                <Typography sx={{ fontSize: { xs: 18, lg: 24 }, fontWeight: 800, lineHeight: 1 }}>{counts.chief}건</Typography>
+                <Typography sx={{ fontSize: { xs: 16, lg: 22 }, fontWeight: 700, lineHeight: 1 }}>Check</Typography>
               </Box>
             </Box>
           </AppCard>
@@ -512,8 +512,8 @@ export default function Work() {
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minHeight: 90 }}>
               <SquareChip label="Remind" tone="amber" />
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: '36px' }}>
-                <Typography component="span" sx={{ fontSize: 60, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: { xs: '12px', sm: '24px', lg: '36px' } }}>
+                <Typography component="span" sx={{ fontSize: { xs: 40, sm: 50, lg: 60 }, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
                 <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
             </Box>
@@ -539,9 +539,9 @@ export default function Work() {
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minHeight: 90 }}>
               <SquareChip label="완료" tone="gray" />
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: '16px' }}>
-                <Typography component="span" sx={{ fontSize: 48, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
-                <Typography component="span" sx={{ fontSize: 26, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: { xs: '8px', sm: '12px', lg: '16px' } }}>
+                <Typography component="span" sx={{ fontSize: { xs: 32, sm: 40, lg: 48 }, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
+                <Typography component="span" sx={{ fontSize: { xs: 18, sm: 22, lg: 26 }, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
                 <Typography component="span" sx={{ fontSize: 18, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
             </Box>
