@@ -559,7 +559,7 @@ export default function Work() {
           {remindList.length === 0 ? (
             <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
           ) : (
-            <TaskGridAccordion items={remindList} tone="amber" isAdmin={isAdmin} onEdit={startEdit} onComplete={(it) => setCompleteTarget(it)} onDelete={(it) => setDeleteTarget(it)} />
+            <TaskGridAccordion items={remindList} tone="amber" masterDetail isAdmin={isAdmin} onEdit={startEdit} onComplete={(it) => setCompleteTarget(it)} onDelete={(it) => setDeleteTarget(it)} />
           )}
         </ContentSection>
       </Collapse>
