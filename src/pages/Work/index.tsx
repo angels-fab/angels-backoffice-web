@@ -13,9 +13,6 @@ import DialogActions from '@mui/material/DialogActions'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import Collapse from '@mui/material/Collapse'
-import Accordion from '@mui/material/Accordion'
-import AccordionSummary from '@mui/material/AccordionSummary'
-import AccordionDetails from '@mui/material/AccordionDetails'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import AddIcon from '@mui/icons-material/Add'
@@ -46,6 +43,7 @@ import TaskDetailDrawer from './TaskDetailDrawer'
 import WorkWrite from './WorkWrite'
 import NewTaskCard from './NewTaskCard'
 import type { NewTaskForm } from './NewTaskCard'
+import TaskGridAccordion from './TaskGridAccordion'
 
 // 상단 KPI 단일 선택 뷰 (진행중/Remind/완료 중 하나만 선택)
 type KpiView = 'inProgress' | 'remind' | 'done'
@@ -561,13 +559,7 @@ export default function Work() {
           {remindList.length === 0 ? (
             <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
           ) : (
-            <Box sx={(th) => ({ border: 1, borderColor: th.palette.accent.amber, borderRadius: '12px', p: 1 })}>
-              <CardGrid gap={8} sx={{ gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, '& > *': { minWidth: 0 } }}>
-                {remindList.map((t) => (
-                  <TaskCard key={t.id} t={t} compact onPick={(it) => setPicked((p) => (p && p.id === it.id ? null : it))} />
-                ))}
-              </CardGrid>
-            </Box>
+            <TaskGridAccordion items={remindList} tone="amber" isAdmin={isAdmin} onEdit={startEdit} onComplete={(it) => setCompleteTarget(it)} onDelete={(it) => setDeleteTarget(it)} />
           )}
         </ContentSection>
       </Collapse>
@@ -579,25 +571,13 @@ export default function Work() {
             <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
               <SearchBar value={doneQuery} onChange={setDoneQuery} placeholder="완료 업무 검색 (제목·담당자·내용)" />
             </Box>
-            <Box sx={{ maxHeight: 360, overflowY: 'auto', px: 1.5 }}>
+            <Box sx={{ maxHeight: 420, overflowY: 'auto', p: 1.5 }}>
               {doneFiltered.length === 0 ? (
                 <Typography variant="body2" sx={{ color: 'text.disabled', py: 3, textAlign: 'center' }}>
                   {doneQuery ? '검색 결과가 없습니다' : '완료된 업무가 없습니다'}
                 </Typography>
               ) : (
-                doneFiltered.map((t) => {
-                  const body = (t.task || '').split('\n').slice(1).join('\n').trim()
-                  return (
-                    <Accordion key={t.id} disableGutters square elevation={0} sx={{ bgcolor: 'transparent', borderBottom: 1, borderColor: 'divider', '&:before': { display: 'none' }, '&:last-of-type': { borderBottom: 0 } }}>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ px: 0, minHeight: 44, '& .MuiAccordionSummary-content': { my: 0.75 } }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{taskTitle(t)}</Typography>
-                      </AccordionSummary>
-                      <AccordionDetails sx={{ px: 0, pt: 0, pb: 1.5 }}>
-                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: 'text.secondary', lineHeight: 1.7 }}>{body || '내용 없음'}</Typography>
-                      </AccordionDetails>
-                    </Accordion>
-                  )
-                })
+                <TaskGridAccordion items={doneFiltered} tone="gray" isAdmin={isAdmin} onEdit={startEdit} onDelete={(it) => setDeleteTarget(it)} />
               )}
             </Box>
           </Box>
