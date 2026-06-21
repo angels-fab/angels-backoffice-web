@@ -48,7 +48,7 @@ import RemindDrawer from './RemindDrawer'
 
 // Remind 표시 방식 비교용 플래그 — 'drawer'(우측 드로어, 상단 목록+하단 내용) / 'inline'(KPI 아래 마스터-디테일)
 // 최종 선택 후 미사용 분기 삭제 예정.
-const REMIND_VARIANT: 'drawer' | 'inline' = 'drawer'
+const REMIND_VARIANT: 'drawer' | 'inline' = 'inline'
 
 // 상단 KPI 단일 선택 뷰 (진행중/Remind/완료 중 하나만 선택)
 type KpiView = 'inProgress' | 'remind' | 'done'
