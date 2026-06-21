@@ -37,6 +37,7 @@ export default function SideNav() {
     {
       label: '업무',
       items: [
+        { icon: <CampaignIcon />, label: '공지사항', path: '/notice', badge: badges.notice },
         { icon: <CalendarMonthIcon />, label: '업무일정', path: '/calendar', badge: badges.cal },
         { icon: <AssessmentIcon />, label: '업무현황', path: '/work', badge: badges.work },
       ],
@@ -57,7 +58,6 @@ export default function SideNav() {
     {
       label: '정보',
       items: [
-        { icon: <CampaignIcon />, label: '공지사항', path: '/notice', badge: badges.notice },
         { icon: <TimelineIcon />, label: '구축 로드맵', path: '/roadmap' },
         { icon: <LinkIcon />, label: '바로가기', path: '/links' },
         { icon: <SettingsIcon />, label: '설정', path: '/settings' },
