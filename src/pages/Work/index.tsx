@@ -454,8 +454,18 @@ export default function Work() {
       />
     )
 
+  // 드로어가 열리면 콘텐츠를 왼쪽 정렬 + 드로어 폭만큼 좁혀(가려지지 않게) 시프트
+  const anyDrawerOpen = remindDrawerOpen || doneDrawerOpen
+
   return (
-    <PageContainer>
+    <PageContainer
+      sx={{
+        transition: 'margin .3s ease, width .3s ease',
+        ...(anyDrawerOpen
+          ? { width: { xs: '100%', sm: 'auto' }, ml: { sm: 0 }, mr: { sm: '480px' } }
+          : {}),
+      }}
+    >
       <PageHeader
         icon={<AssessmentIcon />}
         title="업무현황"

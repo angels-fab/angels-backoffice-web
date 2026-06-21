@@ -227,11 +227,34 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
       // 모바일 — 디테일 전체폭(목록 숨김, 목록으로 버튼으로 복귀)
       inner = <Box sx={motionSx}>{detailEl}</Box>
     } else {
-      // 마스터-디테일 — 좌측 1열 리스트(진행중 KPI 너비 = 4fr/10) + 우측 내용(고정)
+      // 마스터-디테일 — 좌측 1열 라인 리스트(진행중 KPI 너비 = 4fr/10) + 우측 내용(고정)
       inner = (
         <Box sx={{ ...motionSx, display: 'grid', gridTemplateColumns: { sm: '4fr 6fr' }, gap: '8px', alignItems: 'start' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
-            {items.map((t) => cardEl(t, false))}
+          <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+            {items.map((t, i) => {
+              const on = sel === t.id
+              return (
+                <Box
+                  key={t.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={on}
+                  aria-label={`업무: ${taskTitle(t)}`}
+                  onClick={() => toggle(t.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(t.id) } }}
+                  sx={(th) => ({
+                    px: 1.25, py: 0.75, cursor: 'pointer',
+                    borderTop: i === 0 ? 0 : 1, borderColor: 'divider',
+                    bgcolor: on ? alpha(toneColor(th, tone), 0.16) : 'transparent',
+                    transition: 'background-color .15s',
+                    '&:hover': { bgcolor: alpha(toneColor(th, tone), on ? 0.16 : 0.06) },
+                    '&:focus-visible': { outline: 'none', bgcolor: alpha(toneColor(th, tone), 0.16) },
+                  })}
+                >
+                  {cardBody(t, on, false)}
+                </Box>
+              )
+            })}
           </Box>
           <Box sx={{ minWidth: 0, position: 'sticky', top: 8 }}>{detailEl}</Box>
         </Box>
