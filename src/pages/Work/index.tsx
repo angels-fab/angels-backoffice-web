@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
@@ -15,7 +14,6 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import ChecklistIcon from '@mui/icons-material/Checklist'
-import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
 import {
@@ -118,7 +116,7 @@ type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info
 
 export default function Work() {
   const dispatch = useAppDispatch()
-  const { items, loading, error, updatedAt } = useAppSelector((s) => s.work)
+  const { items, error, updatedAt } = useAppSelector((s) => s.work)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<KpiView>('inProgress') // 단일 선택: 진행중/Remind/완료
@@ -429,18 +427,6 @@ export default function Work() {
         icon={<AssessmentIcon />}
         title="업무현황"
         updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
-        actions={
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {isAdmin && (
-              <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => { setEditTarget(null); setWriteOpen(true) }}>
-                업무 등록
-              </Button>
-            )}
-            <IconButton aria-label="새로고침" onClick={() => dispatch(loadWorkData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-              <RefreshIcon sx={{ fontSize: 20 }} />
-            </IconButton>
-          </Box>
-        }
       />
 
       {/* ① KPI — 진행중(내부 Check) / Remind / 완료. 동일 너비(3열) · 단일 선택(선택색=칩 색, 옅은 채움) */}
@@ -563,9 +549,9 @@ export default function Work() {
             {isAdmin && <AddCard onClick={startCompose} />}
           </CardGrid>
         ) : view === 'inProgress' ? (
-          // 진행중 — '업무 목록' 헤더(아이콘+큰 제목) 아래 2열 그리드. 새 업무 카드는 그리드 좌상단(고정 높이).
-          <>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          // 진행중 — 1행: '업무 목록' 헤더(좌) + 새 업무 카드(우). 그 아래: 진행중 초록 카드 2x2.
+          <CardGrid columns={2}>
+            <Box sx={{ gridColumn: { sm: '1' }, gridRow: { sm: '1' }, display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Box
                 sx={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -578,18 +564,16 @@ export default function Work() {
               <Typography variant="h2" component="h2">업무 목록</Typography>
               <Typography variant="body2" sx={{ color: 'text.disabled' }}>{listed.length}</Typography>
             </Box>
-            <CardGrid columns={2}>
-              {/* 새 업무: 2x2 그리드 흐름 밖, 2열 상단(col2·row1)에 고정. 클릭 시 같은 칸에서 작성폼(전체폭 확장 X). */}
-              {isAdmin && (
-                <Box key="new" sx={{ gridColumn: { sm: 2 }, gridRow: { sm: 1 } }}>
-                  {composing
-                    ? <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
-                    : <AddCard height={150} onClick={startCompose} />}
-                </Box>
-              )}
-              {listed.map((t) => renderTask(t, 'green'))}
-            </CardGrid>
-          </>
+            {/* 새 업무: 헤더와 같은 행(2열). 클릭 시 같은 칸에서 작성폼(전체폭 확장 X). */}
+            {isAdmin && (
+              <Box key="new" sx={{ gridColumn: { sm: '2' }, gridRow: { sm: '1' } }}>
+                {composing
+                  ? <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+                  : <AddCard height={64} onClick={startCompose} />}
+              </Box>
+            )}
+            {listed.map((t) => renderTask(t, 'green'))}
+          </CardGrid>
         ) : (
           // 완료(회색) — 2열 그리드. 새 업무 카드 없음, 카드의 완료 버튼도 없음(이미 완료).
           <CardGrid columns={2}>
