@@ -21,6 +21,8 @@ import AssessmentIcon from '@mui/icons-material/Assessment'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import AddIcon from '@mui/icons-material/Add'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { alpha } from '@mui/material/styles'
 import {
   PageContainer,
@@ -500,19 +502,23 @@ export default function Work() {
             ariaLabel="Remind 업무 펼치기"
             padding={18}
             sx={{
+              overflow: 'hidden',
               ...(remindOpen
                 ? { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.12) }
                 : {}),
               '&:hover': { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, remindOpen ? 0.18 : 0.08) },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%', minHeight: 116 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minHeight: 90 }}>
               <SquareChip label="Remind" tone="amber" />
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: '36px' }}>
                 <Typography component="span" sx={{ fontSize: 60, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
                 <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
-              <ExpandMoreIcon sx={(t) => ({ ml: 'auto', alignSelf: 'center', color: t.palette.accent.amber, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' })} />
+            </Box>
+            {/* 하단 풀폭 펼침바(표준 더보기/접기 패턴) */}
+            <Box sx={(t) => ({ mx: '-18px', mb: '-18px', mt: '14px', height: 36, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, fontSize: 12.5, fontWeight: 600, color: remindOpen ? t.palette.accent.amber : 'text.secondary', bgcolor: remindOpen ? alpha(t.palette.accent.amber, 0.1) : 'transparent' })}>
+              <ExpandMoreIcon sx={{ fontSize: 20, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' }} />{remindOpen ? '접기' : '펼치기'}
             </Box>
           </AppCard>
 
@@ -523,20 +529,24 @@ export default function Work() {
             ariaLabel="완료 업무 보기(우측 패널)"
             padding={18}
             sx={{
+              overflow: 'hidden',
               ...(doneOpen
                 ? { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.1) }
                 : {}),
               '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, doneOpen ? 0.16 : 0.07) },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, height: '100%', minHeight: 116 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minHeight: 90 }}>
               <SquareChip label="완료" tone="gray" />
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: '16px' }}>
                 <Typography component="span" sx={{ fontSize: 48, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
                 <Typography component="span" sx={{ fontSize: 26, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
                 <Typography component="span" sx={{ fontSize: 18, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
-              <ExpandMoreIcon sx={(t) => ({ ml: 'auto', alignSelf: 'center', color: t.palette.text.secondary, transition: 'transform .2s', transform: doneOpen ? 'rotate(180deg)' : 'none' })} />
+            </Box>
+            {/* 하단 풀폭 바 — 드로어라 좌우 화살표(열기 ◀ / 닫기 ▶) */}
+            <Box sx={(t) => ({ mx: '-18px', mb: '-18px', mt: '14px', height: 36, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, fontSize: 12.5, fontWeight: 600, color: doneOpen ? t.palette.text.primary : 'text.secondary', bgcolor: doneOpen ? alpha(t.palette.text.secondary, 0.12) : 'transparent' })}>
+              {doneOpen ? <ChevronRightIcon sx={{ fontSize: 20 }} /> : <ChevronLeftIcon sx={{ fontSize: 20 }} />}{doneOpen ? '닫기' : '열기'}
             </Box>
           </AppCard>
         </Box>
