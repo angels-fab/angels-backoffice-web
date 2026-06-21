@@ -454,7 +454,7 @@ export default function Work() {
       />
 
       {/* ① KPI — 진행중(내부 Check) / Remind / 완료. 동일 너비(3열) · 단일 선택(선택색=칩 색, 옅은 채움) */}
-      <ContentSection>
+      <ContentSection sx={{ mb: '14px' }}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '4fr 3fr 3fr' }, gap: 2, '& > *': { minWidth: 0 } }}>
           {/* 진행중 (메인, 4) — 정사각 칩 + 건수 + 우측 보라 박스(1건+Check) */}
           <AppCard
@@ -559,7 +559,7 @@ export default function Work() {
             <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
           ) : (
             <Box sx={(th) => ({ border: 1, borderColor: th.palette.accent.amber, borderRadius: '12px', p: 1 })}>
-              <CardGrid columns={3} gap={8} sx={{ '& > *': { minWidth: 0 } }}>
+              <CardGrid gap={8} sx={{ gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, '& > *': { minWidth: 0 } }}>
                 {remindList.map((t) => (
                   <TaskCard key={t.id} t={t} compact onPick={(it) => setPicked((p) => (p && p.id === it.id ? null : it))} />
                 ))}
