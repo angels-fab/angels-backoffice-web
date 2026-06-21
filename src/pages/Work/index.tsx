@@ -548,10 +548,10 @@ export default function Work() {
           {remindList.length === 0 ? (
             <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
           ) : (
-            <Box sx={(th) => ({ border: 2, borderColor: th.palette.accent.amber, borderRadius: 3, p: 1 })}>
-              <CardGrid columns={3} gap={8}>
+            <Box sx={(th) => ({ border: 1, borderColor: th.palette.accent.amber, borderRadius: '12px', p: 1 })}>
+              <CardGrid columns={3} gap={8} sx={{ '& > *': { minWidth: 0 } }}>
                 {remindList.map((t) => (
-                  <TaskCard key={t.id} t={t} compact onPick={setPicked} />
+                  <TaskCard key={t.id} t={t} compact onPick={(it) => setPicked((p) => (p && p.id === it.id ? null : it))} />
                 ))}
               </CardGrid>
             </Box>
