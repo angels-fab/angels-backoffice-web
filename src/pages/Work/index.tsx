@@ -115,12 +115,12 @@ function AddCard({ onClick, height = 120 }: { onClick: () => void; height?: numb
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
       sx={(th) => ({
         height, alignSelf: 'start',
-        border: '1.5px dashed', borderColor: 'divider', borderRadius: 1,
+        border: '1.5px dashed', borderColor: alpha(th.palette.accent.green, 0.45), borderRadius: 1,
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
-        color: 'text.secondary', fontWeight: 600, cursor: 'pointer',
+        color: th.palette.accent.green, fontWeight: 600, cursor: 'pointer',
         transition: 'background-color .15s, border-color .15s',
-        '&:hover': { bgcolor: alpha(th.palette.text.secondary, 0.08), borderColor: alpha(th.palette.text.secondary, 0.55) },
-        '&:focus-visible': { outline: 'none', borderColor: th.palette.primary.main },
+        '&:hover': { bgcolor: alpha(th.palette.accent.green, 0.08), borderColor: alpha(th.palette.accent.green, 0.6) },
+        '&:focus-visible': { outline: 'none', borderColor: th.palette.accent.green },
       })}
     >
       <AddIcon sx={{ fontSize: 22 }} /> 새 업무
@@ -512,6 +512,7 @@ export default function Work() {
                 <Typography component="span" sx={{ fontSize: 60, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
                 <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
+              <ExpandMoreIcon sx={(t) => ({ ml: 'auto', alignSelf: 'center', color: t.palette.accent.amber, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' })} />
             </Box>
           </AppCard>
 
@@ -535,6 +536,7 @@ export default function Work() {
                 <Typography component="span" sx={{ fontSize: 26, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
                 <Typography component="span" sx={{ fontSize: 18, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
+              <ExpandMoreIcon sx={(t) => ({ ml: 'auto', alignSelf: 'center', color: t.palette.text.secondary, transition: 'transform .2s', transform: doneOpen ? 'rotate(180deg)' : 'none' })} />
             </Box>
           </AppCard>
         </Box>
@@ -546,11 +548,13 @@ export default function Work() {
           {remindList.length === 0 ? (
             <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
           ) : (
-            <CardGrid columns={3} gap={8}>
-              {remindList.map((t) => (
-                <TaskCard key={t.id} t={t} compact onPick={setPicked} />
-              ))}
-            </CardGrid>
+            <Box sx={(th) => ({ border: 2, borderColor: th.palette.accent.amber, borderRadius: 3, p: 1 })}>
+              <CardGrid columns={3} gap={8}>
+                {remindList.map((t) => (
+                  <TaskCard key={t.id} t={t} compact onPick={setPicked} />
+                ))}
+              </CardGrid>
+            </Box>
           )}
         </ContentSection>
       </Collapse>
@@ -680,6 +684,7 @@ export default function Work() {
 
       <TaskDetailDrawer
         task={picked}
+        nonModal
         onClose={() => setPicked(null)}
         isAdmin={isAdmin}
         onEdit={(t) => setEditTarget(t)}

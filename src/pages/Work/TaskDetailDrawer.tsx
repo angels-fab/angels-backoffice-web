@@ -26,10 +26,12 @@ export interface TaskDetailDrawerProps {
   isAdmin?: boolean
   onEdit?: (task: WorkItem) => void
   onDelete?: (task: WorkItem) => void
+  /** 비모달 — 드로어가 떠 있어도 뒤 목록 카드를 바로 클릭 가능 */
+  nonModal?: boolean
 }
 
 /** 업무 상세 Drawer — 전체 항목 표시. 관리자면 수정/삭제. */
-export default function TaskDetailDrawer({ task, onClose, isAdmin, onEdit, onDelete }: TaskDetailDrawerProps) {
+export default function TaskDetailDrawer({ task, onClose, isAdmin, onEdit, onDelete, nonModal }: TaskDetailDrawerProps) {
   const st = task ? W_STATUS[classify(task)] : null
   const subs = task ? taskSubs(task) : []
   const link = task ? taskLink(task) : null
@@ -41,6 +43,7 @@ export default function TaskDetailDrawer({ task, onClose, isAdmin, onEdit, onDel
       title={task ? taskTitle(task) : ''}
       subtitle={task ? `${task.cat || '업무'}${task.num ? ' · No.' + task.num : ''}` : ''}
       width={480}
+      nonModal={nonModal}
       footer={
         task && (link || isAdmin) ? (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>

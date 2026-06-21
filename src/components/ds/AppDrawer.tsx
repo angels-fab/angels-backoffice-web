@@ -19,6 +19,8 @@ export interface AppDrawerProps {
   footer?: ReactNode
   /** 폭(px). 480~600 권장. 기본 520. */
   width?: number
+  /** 비모달 — 배경 딤/클릭 차단 없이 본문과 동시 조작 가능(목록 카드 연속 클릭용). */
+  nonModal?: boolean
 }
 
 /**
@@ -40,6 +42,7 @@ export default function AppDrawer({
   children,
   footer,
   width = drawerSpec.defaultWidth,
+  nonModal = false,
 }: AppDrawerProps) {
   const w = Math.min(Math.max(width, drawerSpec.minWidth), drawerSpec.maxWidth)
   return (
@@ -47,7 +50,10 @@ export default function AppDrawer({
       anchor="right"
       open={open}
       onClose={onClose}
-      slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}
+      hideBackdrop={nonModal}
+      ModalProps={nonModal ? { disableEnforceFocus: true, disableScrollLock: true } : undefined}
+      sx={nonModal ? { pointerEvents: 'none' } : undefined}
+      slotProps={{ paper: { sx: { bgcolor: 'background.paper', ...(nonModal ? { pointerEvents: 'auto' } : {}) } } }}
     >
       <Box
         sx={{

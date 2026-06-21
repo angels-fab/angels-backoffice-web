@@ -3,9 +3,26 @@ import Typography from '@mui/material/Typography'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import { alpha } from '@mui/material/styles'
 import { AppCard, StatusChip } from '@/components/ds'
+import type { StatusKind } from '@/components/ds'
+import { normCat } from '@/utils/workCat'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
 import { W_STATUS, classify, taskTitle, mgrColor } from './workMeta'
+
+// 업무구분 → 칩 색(캡처 기준): 설계적정성=초록·예산=빨강·인사=노랑·행정=파랑·장비=회색·교육세미나=보라
+const CAT_KIND: { key: string; kind: StatusKind }[] = [
+  { key: '설계적정성', kind: 'success' },
+  { key: '예산', kind: 'error' },
+  { key: '인사', kind: 'warning' },
+  { key: '행정', kind: 'info' },
+  { key: '장비', kind: 'neutral' },
+  { key: '교육세미나', kind: 'purple' },
+]
+function catKind(cat?: string): StatusKind {
+  const n = normCat(cat || '')
+  const m = CAT_KIND.find((c) => n.startsWith(normCat(c.key)))
+  return m ? m.kind : 'neutral'
+}
 
 export interface TaskCardProps {
   t: WorkItem
@@ -29,17 +46,17 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
       <AppCard
         interactive
         onClick={() => onPick(t)}
-        padding={12}
+        padding={6}
         sx={(th) => ({
-          bgcolor: alpha(th.palette.accent.amber, 0.1),
-          borderColor: th.palette.accent.amber,
-          '&:hover': { borderColor: th.palette.accent.amber, bgcolor: alpha(th.palette.accent.amber, 0.16) },
+          bgcolor: 'transparent',
+          borderColor: 'transparent',
+          '&:hover': { bgcolor: alpha(th.palette.accent.amber, 0.12) },
         })}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
           <PushPinIcon sx={{ fontSize: 15, color: 'warning.main', flexShrink: 0 }} />
           <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{taskTitle(t)}</Typography>
-          <Box sx={{ flexShrink: 0 }}><StatusChip status="neutral" label={t.cat || '미분류'} /></Box>
+          <Box sx={{ flexShrink: 0 }}><StatusChip status={catKind(t.cat)} label={t.cat || '미분류'} /></Box>
         </Box>
       </AppCard>
     )
