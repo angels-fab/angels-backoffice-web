@@ -55,6 +55,16 @@ const SHOW_MANAGER_STATUS = false
 
 // 발의일자 최신순 (최근 업무가 위)
 const cmp = (a: WorkItem, b: WorkItem) => dateSortValue(b.start) - dateSortValue(a.start)
+// 진행중: Check(chief) 선택 카드 우선, 그다음 최신순
+const cmpChief = (a: WorkItem, b: WorkItem) => (b.chief ? 1 : 0) - (a.chief ? 1 : 0) || cmp(a, b)
+// Remind: 업무구분 순(설계적정성→장비→예산→인사→행정→교육세미나), 같은 구분은 최신순
+const REMIND_CAT_ORDER = ['설계적정성', '장비', '예산', '인사', '행정', '교육세미나']
+const remindCatRank = (cat: string) => {
+  const n = normCat(cat)
+  const i = REMIND_CAT_ORDER.findIndex((o) => n.startsWith(normCat(o)))
+  return i < 0 ? 999 : i
+}
+const cmpRemind = (a: WorkItem, b: WorkItem) => remindCatRank(a.cat) - remindCatRank(b.cat) || cmp(a, b)
 
 // 업무 → 인라인 편집 폼 값 (task 첫 줄=제목, 나머지=본문 / 본문 글머리 '- ' → 화면 '• ')
 function toForm(t: WorkItem): NewTaskForm {
@@ -225,11 +235,11 @@ export default function Work() {
       .filter((t) => cat === '전체' || normCat(t.cat) === normCat(cat))
       .filter((t) => mgr === '전체' || (t.mgr || '') === mgr)
       .filter((t) => !q || `${t.task} ${t.mgr} ${t.dept} ${t.cat} ${t.loc}`.toLowerCase().includes(q))
-      .sort(cmp)
+      .sort(cmpChief)
   }, [pool, cat, mgr, query])
 
   // Remind/완료 — 메인 목록과 독립 파생(Remind=인라인 펼침, 완료=Drawer)
-  const remindList = useMemo(() => items.filter((t) => t.remind).sort(cmp), [items])
+  const remindList = useMemo(() => items.filter((t) => t.remind).sort(cmpRemind), [items])
   const doneList = useMemo(() => items.filter((t) => classify(t) === 'done').sort(cmp), [items])
 
   // 단일 선택 — 같은 카드를 다시 눌러도 해제되지 않음(계속 선택), 다른 카드 선택 시 자동 전환
@@ -536,7 +546,7 @@ export default function Work() {
           {remindList.length === 0 ? (
             <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
           ) : (
-            <CardGrid columns={3}>
+            <CardGrid columns={3} gap={8}>
               {remindList.map((t) => (
                 <TaskCard key={t.id} t={t} compact onPick={setPicked} />
               ))}

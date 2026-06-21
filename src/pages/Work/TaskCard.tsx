@@ -32,14 +32,14 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
         padding={12}
         sx={(th) => ({
           bgcolor: alpha(th.palette.accent.amber, 0.1),
-          borderColor: th.palette.divider,
+          borderColor: th.palette.accent.amber,
           '&:hover': { borderColor: th.palette.accent.amber, bgcolor: alpha(th.palette.accent.amber, 0.16) },
         })}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
           <PushPinIcon sx={{ fontSize: 15, color: 'warning.main', flexShrink: 0 }} />
           <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{taskTitle(t)}</Typography>
-          <Box component="span" sx={{ flexShrink: 0, fontSize: 11.5, fontWeight: 700, borderRadius: '7px', px: 0.9, py: 0.2, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>{t.mgr || '미지정'}</Box>
+          <Box sx={{ flexShrink: 0 }}><StatusChip status="neutral" label={t.cat || '미분류'} /></Box>
         </Box>
       </AppCard>
     )
