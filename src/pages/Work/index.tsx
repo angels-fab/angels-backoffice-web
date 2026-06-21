@@ -44,6 +44,11 @@ import WorkWrite from './WorkWrite'
 import NewTaskCard from './NewTaskCard'
 import type { NewTaskForm } from './NewTaskCard'
 import TaskGridAccordion from './TaskGridAccordion'
+import RemindDrawer from './RemindDrawer'
+
+// Remind 표시 방식 비교용 플래그 — 'drawer'(우측 드로어, 상단 목록+하단 내용) / 'inline'(KPI 아래 마스터-디테일)
+// 최종 선택 후 미사용 분기 삭제 예정.
+const REMIND_VARIANT: 'drawer' | 'inline' = 'drawer'
 
 // 상단 KPI 단일 선택 뷰 (진행중/Remind/완료 중 하나만 선택)
 type KpiView = 'inProgress' | 'remind' | 'done'
@@ -134,6 +139,7 @@ export default function Work() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<KpiView>('inProgress') // 메인 목록은 항상 진행중
   const [remindOpen, setRemindOpen] = useState(false) // Remind: KPI 아래 인라인 펼침(토글·모션)
+  const [remindDrawerOpen, setRemindDrawerOpen] = useState(false) // Remind: 우측 드로어 변형
   const [doneOpen, setDoneOpen] = useState(false) // 완료: 하단 인라인 슬라이드(검색+아코디언)
   const [doneQuery, setDoneQuery] = useState('') // 완료 패널 검색어
   const [selectedTask, setSelectedTask] = useState<number | null>(null) // 업무카드 단일 선택(테두리)
@@ -499,7 +505,7 @@ export default function Work() {
           {/* Remind — 정사각 칩 + 건수(좌 묶음). 선택색 amber */}
           <AppCard
             interactive
-            onClick={() => setRemindOpen((o) => !o)}
+            onClick={() => (REMIND_VARIANT === 'drawer' ? setRemindDrawerOpen(true) : setRemindOpen((o) => !o))}
             ariaLabel="Remind 업무 펼치기"
             padding={18}
             sx={{
@@ -519,7 +525,7 @@ export default function Work() {
             </Box>
             {/* 하단 풀폭 펼침바(표준 더보기/접기 패턴) */}
             <Box sx={(t) => ({ mx: '-18px', mb: '-18px', mt: '14px', height: 36, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, fontSize: 12.5, fontWeight: 600, color: remindOpen ? t.palette.accent.amber : 'text.secondary', bgcolor: remindOpen ? alpha(t.palette.accent.amber, 0.1) : 'transparent' })}>
-              <ExpandMoreIcon sx={{ fontSize: 20, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' }} />{remindOpen ? '접기' : '펼치기'}
+              <ExpandMoreIcon sx={{ fontSize: 20, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' }} />{REMIND_VARIANT === 'drawer' ? '목록 열기' : remindOpen ? '접기' : '펼치기'}
             </Box>
           </AppCard>
 
@@ -553,7 +559,21 @@ export default function Work() {
         </Box>
       </ContentSection>
 
+      {/* Remind 드로어 변형 — 우측 드로어, 상단 1열 목록 + 하단 내용 */}
+      {REMIND_VARIANT === 'drawer' && (
+        <RemindDrawer
+          open={remindDrawerOpen}
+          onClose={() => setRemindDrawerOpen(false)}
+          items={remindList}
+          isAdmin={isAdmin}
+          onEdit={startEdit}
+          onComplete={(it) => setCompleteTarget(it)}
+          onDelete={(it) => setDeleteTarget(it)}
+        />
+      )}
+
       {/* Remind — KPI 아래 인라인 펼침(3열·압정+제목+담당자 컴팩트). 토글 시 모션, 진행중 목록을 아래로 밀어냄. */}
+      {REMIND_VARIANT === 'inline' && (
       <Collapse in={remindOpen} unmountOnExit>
         <ContentSection>
           {remindList.length === 0 ? (
@@ -563,6 +583,7 @@ export default function Work() {
           )}
         </ContentSection>
       </Collapse>
+      )}
 
       {/* 완료 — 하단 인라인 슬라이드: 검색 + 제목 아코디언(내용) + 높이 제한 스크롤(123건 대응) */}
       <Collapse in={doneOpen} unmountOnExit>
