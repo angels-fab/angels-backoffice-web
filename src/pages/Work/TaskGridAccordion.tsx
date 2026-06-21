@@ -21,7 +21,7 @@ import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { taskSubs, taskTitle, taskLink, mgrColor } from './workMeta'
+import { taskSubs, taskTitle, taskLink, mgrColor, catKind } from './workMeta'
 import SubLine from './SubLine'
 
 export type GridTone = 'amber' | 'gray'
@@ -72,7 +72,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
   // ── 공유: 카드 본문(칩·제목·메뉴·셰브론) ──
   const cardBody = (t: WorkItem, on: boolean, showChevron: boolean) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-      {t.cat && <StatusChip status="neutral" label={t.cat} />}
+      {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
       {t.dept && <StatusChip status="info" label={t.dept} />}
       <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {taskTitle(t)}

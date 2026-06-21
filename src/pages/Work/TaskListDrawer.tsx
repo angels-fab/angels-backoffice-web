@@ -13,7 +13,7 @@ import { alpha, useTheme } from '@mui/material/styles'
 import { SearchBar, StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { taskSubs, taskTitle, taskLink, mgrColor } from './workMeta'
+import { taskSubs, taskTitle, taskLink, mgrColor, catKind } from './workMeta'
 import SubLine from './SubLine'
 
 export type DrawerTone = 'amber' | 'gray'
@@ -106,7 +106,7 @@ export default function TaskListDrawer({
                       '&:hover': { bgcolor: on ? alpha(accent, 0.16) : alpha(accent, 0.06) },
                     }}
                   >
-                    {t.cat && <StatusChip status="neutral" label={t.cat} />}
+                    {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
                     {t.dept && <StatusChip status="info" label={t.dept} />}
                     <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {taskTitle(t)}
@@ -130,7 +130,7 @@ export default function TaskListDrawer({
                 </Box>
               </Box>
               <Box sx={{ display: 'flex', gap: 0.75, mb: 1, flexWrap: 'wrap' }}>
-                {selTask.cat && <StatusChip status="neutral" label={selTask.cat} />}
+                {selTask.cat && <StatusChip status={catKind(selTask.cat)} label={selTask.cat} />}
                 {selTask.dept && <StatusChip status="info" label={selTask.dept} />}
               </Box>
               {(() => {

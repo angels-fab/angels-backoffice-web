@@ -1,5 +1,22 @@
 import type { StatusKind } from '@/components/ds'
 import type { WorkItem } from '@/types'
+import { normCat } from '@/utils/workCat'
+
+// 업무구분 → 칩 색(캡처 기준): 설계적정성=초록·예산=빨강·인사=노랑·행정=파랑·장비=회색·교육세미나=보라
+const CAT_KIND: { key: string; kind: StatusKind }[] = [
+  { key: '설계적정성', kind: 'success' },
+  { key: '예산', kind: 'error' },
+  { key: '인사', kind: 'warning' },
+  { key: '행정', kind: 'info' },
+  { key: '장비', kind: 'neutral' },
+  { key: '교육세미나', kind: 'purple' },
+]
+/** 업무구분 라벨 → StatusChip 색(kind). 매칭 없으면 neutral. */
+export function catKind(cat?: string): StatusKind {
+  const n = normCat(cat || '')
+  const m = CAT_KIND.find((c) => n.startsWith(normCat(c.key)))
+  return m ? m.kind : 'neutral'
+}
 
 /**
  * 업무 상태 — 시트 '상태' 열 기준(진행중/완료/보류/취소). 빈값/기타는 '미정'.
