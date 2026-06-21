@@ -445,7 +445,7 @@ export default function Work() {
 
       {/* ① KPI — 진행중(내부 Check) / Remind / 완료. 동일 너비(3열) · 단일 선택(선택색=칩 색, 옅은 채움) */}
       <ContentSection>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '4fr 3fr 3fr' }, gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '4fr 3fr 3fr' }, gap: 2, '& > *': { minWidth: 0 } }}>
           {/* 진행중 (메인, 4) — 정사각 칩 + 건수 + 우측 보라 박스(1건+Check) */}
           <AppCard
             interactive
@@ -453,6 +453,7 @@ export default function Work() {
             ariaLabel="진행중 업무 보기"
             padding={18}
             sx={{
+              gridColumn: { md: '1 / -1', lg: 'auto' },
               ...(view === 'inProgress'
                 ? { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, 0.12) }
                 : {}),
