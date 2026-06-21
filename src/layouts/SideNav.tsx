@@ -50,15 +50,10 @@ export default function SideNav() {
       ],
     },
     {
-      label: '소통',
-      items: [
-        { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve },
-      ],
-    },
-    {
       label: '정보',
       items: [
         { icon: <TimelineIcon />, label: '구축 로드맵', path: '/roadmap' },
+        { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve },
         { icon: <LinkIcon />, label: '바로가기', path: '/links' },
         { icon: <SettingsIcon />, label: '설정', path: '/settings' },
       ],
