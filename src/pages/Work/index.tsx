@@ -552,22 +552,25 @@ export default function Work() {
             padding={18}
             sx={{
               overflow: 'hidden',
+              display: 'flex', flexDirection: 'column',
               ...(remindOpen
                 ? { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.12) }
                 : {}),
               '&:hover': { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, remindOpen ? 0.18 : 0.08) },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minHeight: 90 }}>
-              <SquareChip label="Remind" tone="amber" />
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: { xs: '12px', sm: '24px', lg: '36px' } }}>
-                <Typography component="span" sx={{ fontSize: { xs: 40, sm: 50, lg: 60 }, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
-                <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1, minHeight: 116, flex: 1 }}>
+              <SquareChip label="Remind" tone="amber" fill />
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, alignSelf: 'center', ml: { xs: '6px', sm: '10px', lg: '14px' } }}>
+                <Typography component="span" sx={{ fontSize: { xs: 32, sm: 40, lg: 46 }, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
+                <Typography component="span" sx={{ fontSize: 17, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
-            </Box>
-            {/* 하단 풀폭 펼침바 — 높이 최소화(컴팩트) */}
-            <Box sx={(t) => ({ mx: '-18px', mb: '-18px', mt: '10px', height: 20, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.25, fontSize: 11, fontWeight: 600, color: remindOpen ? t.palette.accent.amber : 'text.secondary', bgcolor: remindOpen ? alpha(t.palette.accent.amber, 0.1) : 'transparent' })}>
-              <ExpandMoreIcon sx={{ fontSize: 15, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' }} />{REMIND_VARIANT === 'drawer' ? '목록 열기' : remindOpen ? '접기' : '펼치기'}
+              <Box sx={{ flex: 1 }} />
+              {/* 우측 세로 펼침 컨트롤 — 완료 KPI처럼 우측 배치(문구는 펼치기/접기 그대로) */}
+              <Box sx={(t) => ({ flexShrink: 0, alignSelf: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.25, color: remindOpen ? t.palette.accent.amber : 'text.secondary' })}>
+                <ExpandMoreIcon sx={{ fontSize: 26, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' }} />
+                <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1 }}>{REMIND_VARIANT === 'drawer' ? '목록 열기' : remindOpen ? '접기' : '펼치기'}</Typography>
+              </Box>
             </Box>
           </AppCard>
 
