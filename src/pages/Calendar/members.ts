@@ -1,5 +1,5 @@
 import { accent } from '@/theme/tokens'
-import avatarSeongbeom from '@/assets/avatar-seongbeom.png'
+import avatarSeongbeom from '@/assets/avatar-seongbeom.jpg'
 
 /**
  * 팀원(담당자) — 캘린더 데이터에는 사람 필드가 없어 일정 제목에서 추출한다.
