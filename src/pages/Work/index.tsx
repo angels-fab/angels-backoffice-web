@@ -17,6 +17,8 @@ import AssessmentIcon from '@mui/icons-material/Assessment'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import AddIcon from '@mui/icons-material/Add'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { alpha } from '@mui/material/styles'
 import {
   PageContainer,
@@ -479,7 +481,7 @@ export default function Work() {
 
       {/* ① KPI — 진행중(내부 Check) / Remind / 완료. 동일 너비(3열) · 단일 선택(선택색=칩 색, 옅은 채움) */}
       <ContentSection sx={{ mb: '14px' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '4fr 3fr 3fr' }, gap: 2, '& > *': { minWidth: 0 } }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '4fr 3fr 4fr' }, gap: 2, '& > *': { minWidth: 0 } }}>
           {/* 진행중 (메인, 4) — 정사각 칩 + 건수 + 우측 보라 박스(1건+Check) */}
           <AppCard
             interactive
@@ -555,23 +557,24 @@ export default function Work() {
             padding={18}
             sx={{
               overflow: 'hidden',
+              display: 'flex', flexDirection: 'column',
               ...(doneDrawerOpen || doneOpen
                 ? { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.1) }
                 : {}),
               '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, (doneDrawerOpen || doneOpen) ? 0.16 : 0.07) },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 90 }}>
-              <SquareChip label="완료" tone="gray" compact />
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.25, ml: { xs: '4px', sm: '6px', lg: '8px' } }}>
-                <Typography component="span" sx={{ fontSize: { xs: 22, sm: 26, lg: 28 }, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
-                <Typography component="span" sx={{ fontSize: { xs: 14, sm: 15, lg: 16 }, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
-                <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1.5, minHeight: 116, flex: 1 }}>
+              <SquareChip label="완료" tone="gray" fill />
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.25, alignSelf: 'center', ml: { xs: '4px', sm: '6px', lg: '8px' } }}>
+                <Typography component="span" sx={{ fontSize: { xs: 26, sm: 32, lg: 38 }, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
+                <Typography component="span" sx={{ fontSize: { xs: 15, sm: 17, lg: 20 }, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
+                <Typography component="span" sx={{ fontSize: 15, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
               <Box sx={{ flex: 1, minWidth: 4 }} />
-              {/* 우측 세로 컨트롤 — 쉐브론 + 열기/닫기 (하단 바 대체) */}
-              <Box sx={(t) => ({ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.25, color: doneDrawerOpen ? t.palette.text.primary : 'text.secondary' })}>
-                <ExpandMoreIcon sx={{ fontSize: 26, transition: 'transform .2s', transform: doneDrawerOpen ? 'rotate(180deg)' : 'none' }} />
+              {/* 우측 세로 컨트롤 — 쉐브론(좌=열기·우=닫기) + 라벨 */}
+              <Box sx={(t) => ({ flexShrink: 0, alignSelf: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.25, color: doneDrawerOpen ? t.palette.text.primary : 'text.secondary' })}>
+                {doneDrawerOpen ? <ChevronRightIcon sx={{ fontSize: 26 }} /> : <ChevronLeftIcon sx={{ fontSize: 26 }} />}
                 <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1 }}>{doneDrawerOpen ? '닫기' : '열기'}</Typography>
               </Box>
             </Box>
@@ -602,6 +605,8 @@ export default function Work() {
           title="완료 업무"
           tone="gray"
           searchable
+          filterable
+          nonModal
           searchPlaceholder="완료 업무 검색 (제목·담당자·내용)"
           items={doneList}
           isAdmin={isAdmin}

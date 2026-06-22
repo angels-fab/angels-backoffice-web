@@ -12,14 +12,15 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { alpha, useTheme } from '@mui/material/styles'
 import { SearchBar, StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
+import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
 import { taskSubs, taskTitle, taskLink, mgrColor, catKind } from './workMeta'
 import SubLine from './SubLine'
 
 export type DrawerTone = 'amber' | 'gray'
 
-// 목록 높이 — 약 10행(라인 리스트 한 행 ≈ 34px)만 보이고 나머지는 스크롤
-const LIST_MAX_HEIGHT = 344
+// 목록 높이 — 약 12행(라인 리스트 한 행 ≈ 38px)만 보이고 나머지는 스크롤
+const LIST_MAX_HEIGHT = 456
 
 export interface TaskListDrawerProps {
   open: boolean
@@ -29,6 +30,10 @@ export interface TaskListDrawerProps {
   tone?: DrawerTone
   searchable?: boolean
   searchPlaceholder?: string
+  /** 업무구분·관련부서 필터 칩 노출 */
+  filterable?: boolean
+  /** 비모달 — 배경 딤/클릭 차단 없이 메인 화면도 조작 가능(클릭 수 절감) */
+  nonModal?: boolean
   isAdmin?: boolean
   onEdit?: (t: WorkItem) => void
   onComplete?: (t: WorkItem) => void
@@ -41,26 +46,42 @@ export interface TaskListDrawerProps {
  * Remind(amber)·완료(gray) 등에 공용.
  */
 export default function TaskListDrawer({
-  open, onClose, title, items, tone = 'amber', searchable, searchPlaceholder,
+  open, onClose, title, items, tone = 'amber', searchable, searchPlaceholder, filterable, nonModal,
   isAdmin, onEdit, onComplete, onDelete,
 }: TaskListDrawerProps) {
   const theme = useTheme()
   const accent = tone === 'amber' ? theme.palette.accent.amber : theme.palette.text.secondary
   const [sel, setSel] = useState<number | null>(null)
   const [query, setQuery] = useState('')
+  const [catSel, setCatSel] = useState('전체')
+  const [deptSel, setDeptSel] = useState('전체')
+
+  // 업무구분·관련부서 필터 후보
+  const cats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
+  const depts = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [items])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!searchable || !q) return items
-    return items.filter((t) => `${t.task} ${t.mgr} ${t.cat} ${t.dept}`.toLowerCase().includes(q))
-  }, [items, query, searchable])
+    return items
+      .filter((t) => catSel === '전체' || normCat(t.cat) === normCat(catSel))
+      .filter((t) => deptSel === '전체' || (t.dept || '') === deptSel)
+      .filter((t) => !(searchable && q) || `${t.task} ${t.mgr} ${t.cat} ${t.dept}`.toLowerCase().includes(q))
+  }, [items, query, searchable, catSel, deptSel])
 
   const selTask = items.find((t) => t.id === sel) ?? null
-  const close = () => { setSel(null); setQuery(''); onClose() }
+  const close = () => { setSel(null); setQuery(''); setCatSel('전체'); setDeptSel('전체'); onClose() }
   const toggle = (id: number) => setSel((s) => (s === id ? null : id))
 
   return (
-    <Drawer anchor="right" open={open} onClose={close} slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
+    <Drawer
+      anchor="right"
+      open={open}
+      onClose={close}
+      hideBackdrop={nonModal}
+      ModalProps={nonModal ? { disableEnforceFocus: true, disableScrollLock: true } : undefined}
+      sx={nonModal ? { pointerEvents: 'none' } : undefined}
+      slotProps={{ paper: { sx: { bgcolor: 'background.paper', ...(nonModal ? { pointerEvents: 'auto' } : {}) } } }}
+    >
       <Box sx={{ width: { xs: '100vw', sm: 460 }, maxWidth: '100vw', height: '100%', display: 'flex', flexDirection: 'column' }}>
         {/* 헤더 */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, p: 2, bgcolor: 'background.elevated', borderBottom: 1, borderColor: 'divider' }}>
@@ -73,10 +94,20 @@ export default function TaskListDrawer({
           </IconButton>
         </Box>
 
-        {/* 검색 */}
-        {searchable && (
-          <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-            <SearchBar value={query} onChange={setQuery} placeholder={searchPlaceholder ?? '검색'} />
+        {/* 검색 + 업무구분·관련부서 필터 */}
+        {(searchable || filterable) && (
+          <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {searchable && <SearchBar value={query} onChange={setQuery} placeholder={searchPlaceholder ?? '검색'} />}
+            {filterable && cats.length > 1 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {cats.map((c) => <StatusChip key={c} status="neutral" label={c} selected={catSel === c} onClick={() => setCatSel(c)} />)}
+              </Box>
+            )}
+            {filterable && depts.length > 1 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {depts.map((d) => <StatusChip key={d} status="info" label={d} selected={deptSel === d} onClick={() => setDeptSel(d)} />)}
+              </Box>
+            )}
           </Box>
         )}
 
