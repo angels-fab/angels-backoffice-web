@@ -19,7 +19,7 @@ GIST ANGELS FAB(반도체 팹) 구축·운영 관리 대시보드. 내부용 SPA
 | 캘린더 | FullCalendar 6 (daygrid/timegrid/list) |
 | 데이터 | Google Apps Script 웹앱(구글시트) + 구글캘린더 |
 | 살균 | DOMPurify (공지 본문) |
-| 폰트 | IBM Plex Sans KR |
+| 폰트 | Pretendard (본문/UI) · monospace (숫자·관리번호) |
 
 경로 별칭: **`@/` → `src/`**.
 명령: `npm run dev`(3600) · `npm run type-check`(tsc) · `npm run build`(tsc -b && vite build) · `npm run deploy:backend`(clasp).

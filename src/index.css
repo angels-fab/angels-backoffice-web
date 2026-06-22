@@ -1,5 +1,5 @@
 /* ANGELS FAB 구축 관리 — 원본 index.html <style> 블록 포팅 (클래스명 원본 유지) */
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap");
+/* 본문 글꼴 Pretendard는 index.html <link>(jsdelivr dynamic-subset)에서 로드. 여기서 중복 @import 하지 않음 */
 
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -9,7 +9,7 @@
   --border:#293244;--border2:#232C3A;--text:#FFFFFF;--text2:#AAB4C3;--text3:#7D8899;
   --amber:#D6A23E;--blue:#5491DA;--green:#4DA167;--purple:#A98AE0;--teal:#46B7BE;--red:#E05B54;
 }
-body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
 header{background:rgba(19,23,34,.85);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);display:flex;flex-direction:row;align-items:center;padding:0 24px;height:48px;gap:10px;position:sticky;top:0;z-index:10}
 .header-logo{height:21px;width:auto;object-fit:contain}

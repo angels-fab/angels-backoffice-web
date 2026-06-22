@@ -72,18 +72,21 @@ function buildTheme(mode: Mode): Theme {
       borderRadius: radius.card,
     },
     typography: {
-      fontFamily: "'IBM Plex Sans KR', system-ui, sans-serif",
-      // SaaS Admin 위계: 제목은 또렷하게, 본문은 차분하게. 페이지에서 font-size 하드코딩 금지.
-      h1: { fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.01em', lineHeight: 1.25 },
-      h2: { fontSize: '1.375rem', fontWeight: 700, letterSpacing: '-0.01em', lineHeight: 1.3 },
-      h3: { fontSize: '1.125rem', fontWeight: 600, lineHeight: 1.35 },
-      h4: { fontSize: '1rem', fontWeight: 600, lineHeight: 1.4 },
+      // 본문 글꼴 Pretendard(jsdelivr dynamic-subset, index.html 로드). 숫자/관리번호는 각 컴포넌트에서 monospace 유지.
+      fontFamily:
+        "'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif",
+      // Pretendard 굵기 위계 — 제목 ExtraBold(800)/Bold(700), 섹션 Bold/SemiBold(600),
+      //   강조본문 SemiBold/Medium(500), 본문 Regular(400). 페이지에서 font-size 하드코딩 금지.
+      h1: { fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.25 },
+      h2: { fontSize: '1.375rem', fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.3 },
+      h3: { fontSize: '1.125rem', fontWeight: 700, letterSpacing: '-0.01em', lineHeight: 1.35 },
+      h4: { fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.4 },
       subtitle1: { fontSize: '0.875rem', fontWeight: 600 },
       subtitle2: { fontSize: '0.8125rem', fontWeight: 500, color: p.textSecondary },
-      body1: { fontSize: '0.875rem', lineHeight: 1.55 },
-      body2: { fontSize: '0.8125rem', lineHeight: 1.55, color: p.textSecondary },
+      body1: { fontSize: '0.875rem', fontWeight: 400, lineHeight: 1.55 },
+      body2: { fontSize: '0.8125rem', fontWeight: 400, lineHeight: 1.55, color: p.textSecondary },
       button: { textTransform: 'none', fontWeight: 600 },
-      caption: { fontSize: '0.6875rem', color: p.textSecondary },
+      caption: { fontSize: '0.6875rem', fontWeight: 500, color: p.textSecondary },
     },
     components: {
       MuiPaper: {
