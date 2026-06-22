@@ -500,6 +500,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .rm-step-icon.done::after{content:'✓';position:absolute;top:-1px;right:-1px;width:23px;height:23px;background:var(--green);border-radius:50%;font-size:13px;font-weight:700;color:#000;display:flex;align-items:center;justify-content:center;line-height:23px;text-align:center}
 .rm-step-icon.current{background:var(--blue);border-color:var(--blue);box-shadow:0 0 0 4px rgba(88,166,255,.2);animation:pulse-blue 2s infinite}
 @keyframes pulse-blue{0%,100%{box-shadow:0 0 0 4px rgba(88,166,255,.2)}50%{box-shadow:0 0 0 8px rgba(88,166,255,.05)}}
+/* FAB 로드맵 시안(RoadmapCard) — 현재 단계 펄스 링 */
+@keyframes ringPulse{0%{transform:scale(.82);opacity:.55}70%{transform:scale(1.55);opacity:0}100%{opacity:0}}
 .rm-step-label{font-size:15px;font-weight:700;color:var(--text);text-align:center}
 .rm-step:not(.done):not(.current) .rm-step-label{color:var(--amber)}
 .rm-step.done .rm-step-label{color:var(--text)}
