@@ -7,3 +7,4 @@ vite.config.d.ts
 .DS_Store
 *.local
 .claude/settings.local.json
+.design-import/
