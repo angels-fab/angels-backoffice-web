@@ -16,7 +16,7 @@ import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { taskSubs, taskTitle, taskLink, mgrColor, catKind } from './workMeta'
+import { taskSubs, taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
 import SubLine from './SubLine'
 
 export type CardTone = 'green' | 'amber' | 'gray'
@@ -96,7 +96,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, isA
         })}
       >
         {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-        {t.dept && <StatusChip status="info" label={t.dept} />}
+        {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}
         <Typography variant="body1" sx={{ flex: 1, minWidth: 120, fontWeight: 600, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: 12.5, fontWeight: 700, borderRadius: '8px', px: 1.25, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>
           {t.mgr || '미지정'}

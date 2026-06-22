@@ -18,6 +18,16 @@ export function catKind(cat?: string): StatusKind {
   return m ? m.kind : 'neutral'
 }
 
+// 관련부서 → 칩 색: 부서명 해시로 팔레트에서 고정 배정(같은 부서는 항상 같은 색, 부서마다 다른 색).
+const DEPT_KINDS: StatusKind[] = ['teal', 'info', 'purple', 'warning', 'success', 'error']
+export function deptKind(dept?: string): StatusKind {
+  const s = (dept || '').trim()
+  if (!s) return 'neutral'
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return DEPT_KINDS[h % DEPT_KINDS.length]
+}
+
 /**
  * 업무 상태 — 시트 '상태' 열 기준(진행중/완료/보류/취소). 빈값/기타는 '미정'.
  * Remind·검토 필요는 직교 플래그(상태와 겹칠 수 있음).

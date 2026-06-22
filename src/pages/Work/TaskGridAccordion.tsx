@@ -22,7 +22,7 @@ import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { taskSubs, taskTitle, taskLink, mgrColor, catKind } from './workMeta'
+import { taskSubs, taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
 import SubLine from './SubLine'
 
 export type GridTone = 'amber' | 'gray'
@@ -43,6 +43,10 @@ export interface TaskGridAccordionProps {
   onDelete?: (t: WorkItem) => void
   /** 진행중으로 되돌리기(상태→진행중) */
   onRevert?: (t: WorkItem) => void
+  /** in-place 편집 대상 id — selTask와 같으면 상세 패널에 편집 폼 렌더 */
+  editingId?: number | null
+  /** 편집 폼 렌더(상세 패널 in-place 편집용) */
+  renderEdit?: (t: WorkItem) => ReactNode
   /** 좌측 1열 리스트 + 우측 내용(마스터-디테일)을 처음부터 표시 */
   masterDetail?: boolean
 }
@@ -52,7 +56,7 @@ export interface TaskGridAccordionProps {
  * - 기본: 카드 클릭 시 같은 행 아래 풀폭으로 내용 펼침(인라인 아코디언).
  * - masterDetail: 카드 선택 시 그리드 → 좌측 1열 리스트 + 우측 내용 패널로 모드 전환(CSS 페이드).
  */
-export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComplete, onDelete, onRevert, masterDetail }: TaskGridAccordionProps) {
+export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComplete, onDelete, onRevert, editingId, renderEdit, masterDetail }: TaskGridAccordionProps) {
   const theme = useTheme()
   const isLg = useMediaQuery(theme.breakpoints.up('lg'))
   const isSm = useMediaQuery(theme.breakpoints.up('sm'))
@@ -76,7 +80,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
   const cardBody = (t: WorkItem, on: boolean, showChevron: boolean, hideMenu?: boolean) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
       {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-      {t.dept && <StatusChip status="info" label={t.dept} />}
+      {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}
       <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {taskTitle(t)}
       </Typography>
@@ -156,12 +160,20 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
           </Box>
         )}
         {showActions && isAdmin && (onRevert || onEdit || onDelete) && (
-          <Box sx={{ display: 'flex', gap: 1, mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
-            {onRevert && (
-              <Button size="small" variant="outlined" color="success" startIcon={<ReplayIcon sx={{ fontSize: 18 }} />} onClick={(e) => { e.stopPropagation(); onRevert(st) }}>진행중</Button>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
+            {onEdit && (
+              <IconButton size="small" aria-label="수정" onClick={(e) => { e.stopPropagation(); onEdit(st) }} sx={{ color: 'text.secondary' }}>
+                <EditOutlinedIcon sx={{ fontSize: 20 }} />
+              </IconButton>
             )}
-            {onEdit && <Button size="small" variant="outlined" startIcon={<EditOutlinedIcon sx={{ fontSize: 18 }} />} onClick={(e) => { e.stopPropagation(); onEdit(st) }}>수정</Button>}
-            {onDelete && <Button size="small" variant="text" color="error" startIcon={<DeleteOutlineIcon sx={{ fontSize: 18 }} />} onClick={(e) => { e.stopPropagation(); onDelete(st) }}>삭제</Button>}
+            {onDelete && (
+              <IconButton size="small" aria-label="삭제" onClick={(e) => { e.stopPropagation(); onDelete(st) }} sx={{ color: 'error.main' }}>
+                <DeleteOutlineIcon sx={{ fontSize: 20 }} />
+              </IconButton>
+            )}
+            {onRevert && (
+              <Button size="small" variant="outlined" color="success" startIcon={<ReplayIcon sx={{ fontSize: 18 }} />} onClick={(e) => { e.stopPropagation(); onRevert(st) }} sx={{ ml: 0.5 }}>진행중</Button>
+            )}
           </Box>
         )}
       </>
@@ -209,12 +221,18 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
           border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: 1, p: 1.75,
         })}
       >
-        {!isSm && (
-          <Box sx={{ mb: 1 }}>
-            <Button size="small" startIcon={<ArrowBackIcon sx={{ fontSize: 18 }} />} onClick={() => setSel(null)} sx={{ color: 'text.secondary', minWidth: 0, px: 0.75 }}>목록으로</Button>
-          </Box>
+        {editingId === selTask.id && renderEdit ? (
+          renderEdit(selTask)
+        ) : (
+          <>
+            {!isSm && (
+              <Box sx={{ mb: 1 }}>
+                <Button size="small" startIcon={<ArrowBackIcon sx={{ fontSize: 18 }} />} onClick={() => setSel(null)} sx={{ color: 'text.secondary', minWidth: 0, px: 0.75 }}>목록으로</Button>
+              </Box>
+            )}
+            {detailBody(selTask, true)}
+          </>
         )}
-        {detailBody(selTask, true)}
       </Box>
     ) : (
       <Box sx={(th) => ({ border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: 1, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120 })}>
@@ -260,9 +278,9 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
     } else if (!isSm) {
       inner = <Box sx={motionSx}>{listEl}</Box> // 모바일 미선택 → 리스트만
     } else {
-      // sm+ — 좌측 1열 리스트 + 우측 상세(항상 표시)
+      // sm+ — 좌측 1열 리스트(진행중 KPI 너비 = 4fr/11) + 우측 상세(항상 표시)
       inner = (
-        <Box sx={{ ...motionSx, display: 'grid', gridTemplateColumns: { sm: '4fr 6fr' }, gap: '8px', alignItems: 'start' }}>
+        <Box sx={{ ...motionSx, display: 'grid', gridTemplateColumns: { sm: '4fr 7fr' }, gap: '8px', alignItems: 'start' }}>
           {listEl}
           <Box sx={{ minWidth: 0, position: 'sticky', top: 8 }}>{detailEl}</Box>
         </Box>

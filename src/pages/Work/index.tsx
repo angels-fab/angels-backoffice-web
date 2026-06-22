@@ -415,7 +415,7 @@ export default function Work() {
     }
   }
 
-  // 진행중으로 되돌리기 — 상태만 '진행중'으로(나머지 필드 보존). 확인 없이 즉시(클릭 절감).
+  // 진행중으로 되돌리기 — 상태 '진행중' + Remind 해제(진행중 목록으로 편입). 확인 없이 즉시(클릭 절감).
   const handleRevert = async (item: WorkItem) => {
     if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
     try {
@@ -424,9 +424,9 @@ export default function Work() {
         cat: item.cat, task: item.task, status: '진행중',
         dept: item.dept, mat: item.mat, start: item.start, plan: item.plan,
         time: item.time, loc: item.loc, mgr: item.mgr, link: item.link,
-        remind: item.remind, chief: item.chief,
+        remind: false, chief: item.chief,
       })
-      showSnack('진행중으로 되돌렸습니다.', 'success')
+      showSnack('진행중 업무로 되돌렸습니다.', 'success')
       dispatch(loadWorkData())
     } catch (err) {
       showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
@@ -479,18 +479,8 @@ export default function Work() {
       />
     )
 
-  // 드로어가 열리면 콘텐츠를 왼쪽 정렬 + 드로어 폭만큼 좁혀(가려지지 않게) 시프트
-  const anyDrawerOpen = remindDrawerOpen || doneDrawerOpen
-
   return (
-    <PageContainer
-      sx={{
-        transition: 'margin .3s ease, width .3s ease',
-        ...(anyDrawerOpen
-          ? { width: { xs: '100%', sm: 'auto' }, ml: { sm: 0 }, mr: { sm: '480px' } }
-          : {}),
-      }}
-    >
+    <PageContainer>
       <PageHeader
         icon={<AssessmentIcon />}
         title="업무현황"
@@ -640,7 +630,26 @@ export default function Work() {
           {remindList.length === 0 ? (
             <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
           ) : (
-            <TaskGridAccordion items={remindList} tone="amber" masterDetail isAdmin={isAdmin} onEdit={startEdit} onComplete={(it) => setCompleteTarget(it)} onDelete={(it) => setDeleteTarget(it)} onRevert={handleRevert} />
+            <TaskGridAccordion
+              items={remindList}
+              tone="amber"
+              masterDetail
+              isAdmin={isAdmin}
+              onEdit={startEdit}
+              onComplete={(it) => setCompleteTarget(it)}
+              onDelete={(it) => setDeleteTarget(it)}
+              onRevert={handleRevert}
+              editingId={editingId}
+              renderEdit={(t) => (
+                <NewTaskCard
+                  saving={savingEdit}
+                  options={editOptionsFor(t)}
+                  initial={toForm(t)}
+                  onCancel={() => setEditingId(null)}
+                  onSave={(form) => handleSaveEdit(t, form)}
+                />
+              )}
+            />
           )}
         </ContentSection>
       </Collapse>

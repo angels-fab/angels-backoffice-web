@@ -14,7 +14,7 @@ import { SearchBar, StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { taskSubs, taskTitle, taskLink, mgrColor, catKind } from './workMeta'
+import { taskSubs, taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
 import SubLine from './SubLine'
 
 export type DrawerTone = 'amber' | 'gray'
@@ -53,23 +53,20 @@ export default function TaskListDrawer({
   const accent = tone === 'amber' ? theme.palette.accent.amber : theme.palette.text.secondary
   const [sel, setSel] = useState<number | null>(null)
   const [query, setQuery] = useState('')
-  const [catSel, setCatSel] = useState('전체')
-  const [deptSel, setDeptSel] = useState('전체')
+  const [catSel, setCatSel] = useState('') // '' = 전체(미선택)
 
-  // 업무구분·관련부서 필터 후보
-  const cats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
-  const depts = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.dept).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [items])
+  // 업무구분 필터 후보 ('전체' 칩 없음 — 재선택 시 해제로 전체 표시)
+  const cats = useMemo(() => [...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b)), [items])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     return items
-      .filter((t) => catSel === '전체' || normCat(t.cat) === normCat(catSel))
-      .filter((t) => deptSel === '전체' || (t.dept || '') === deptSel)
+      .filter((t) => !catSel || normCat(t.cat) === normCat(catSel))
       .filter((t) => !(searchable && q) || `${t.task} ${t.mgr} ${t.cat} ${t.dept}`.toLowerCase().includes(q))
-  }, [items, query, searchable, catSel, deptSel])
+  }, [items, query, searchable, catSel])
 
   const selTask = items.find((t) => t.id === sel) ?? null
-  const close = () => { setSel(null); setQuery(''); setCatSel('전체'); setDeptSel('전체'); onClose() }
+  const close = () => { setSel(null); setQuery(''); setCatSel(''); onClose() }
   const toggle = (id: number) => setSel((s) => (s === id ? null : id))
 
   return (
@@ -100,12 +97,7 @@ export default function TaskListDrawer({
             {searchable && <SearchBar value={query} onChange={setQuery} placeholder={searchPlaceholder ?? '검색'} />}
             {filterable && cats.length > 1 && (
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {cats.map((c) => <StatusChip key={c} status="neutral" label={c} selected={catSel === c} onClick={() => setCatSel(c)} />)}
-              </Box>
-            )}
-            {filterable && depts.length > 1 && (
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {depts.map((d) => <StatusChip key={d} status="info" label={d} selected={deptSel === d} onClick={() => setDeptSel(d)} />)}
+                {cats.map((c) => <StatusChip key={c} status={catKind(c)} label={c} selected={catSel === c} onClick={() => setCatSel((s) => (s === c ? '' : c))} />)}
               </Box>
             )}
           </Box>
@@ -138,7 +130,7 @@ export default function TaskListDrawer({
                     }}
                   >
                     {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-                    {t.dept && <StatusChip status="info" label={t.dept} />}
+                    {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}
                     <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {taskTitle(t)}
                     </Typography>
@@ -162,7 +154,7 @@ export default function TaskListDrawer({
               </Box>
               <Box sx={{ display: 'flex', gap: 0.75, mb: 1, flexWrap: 'wrap' }}>
                 {selTask.cat && <StatusChip status={catKind(selTask.cat)} label={selTask.cat} />}
-                {selTask.dept && <StatusChip status="info" label={selTask.dept} />}
+                {selTask.dept && <StatusChip status={deptKind(selTask.dept)} label={selTask.dept} />}
               </Box>
               {(() => {
                 const subs = taskSubs(selTask)
