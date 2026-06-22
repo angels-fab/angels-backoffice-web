@@ -16,7 +16,7 @@ import RepeatIcon from '@mui/icons-material/Repeat'
 import { PageContainer, PageHeader, ContentSection, FilterBar, StatusChip, AppDrawer } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadCalEvents } from '@/store/slices/calSlice'
-import type { CalCatId, CalEvent } from '@/types'
+import type { CalEvent } from '@/types'
 import SummaryPanel from './SummaryPanel'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
 
@@ -37,19 +37,14 @@ interface Detail {
 export default function Calendar() {
   const dispatch = useAppDispatch()
   const { events: allEvents, loading, updatedAt } = useAppSelector((s) => s.cal)
-  const [activeCats, setActiveCats] = useState<CalCatId[]>(['all'])
+  const [activeCats, setActiveCats] = useState<RealCat[]>([]) // 빈 배열 = 전체
   const [view, setView] = useState<ViewKey>('dayGridMonth')
   const [detail, setDetail] = useState<Detail | null>(null)
   const calRef = useRef<FullCalendar>(null)
 
-  const toggleCat = (id: CalCatId) => {
-    if (id === 'all') {
-      setActiveCats(['all'])
-      return
-    }
-    let next = activeCats.filter((c) => c !== 'all')
-    next = next.includes(id) ? next.filter((c) => c !== id) : [...next, id]
-    setActiveCats(next.length === 0 ? ['all'] : next)
+  // 다른 페이지 규칙: 칩 클릭=선택, 재클릭=해제. 모두 해제(빈 배열)면 전체 표시('전체' 버튼 없음)
+  const toggleCat = (id: RealCat) => {
+    setActiveCats((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
   }
 
   const changeView = (v: ViewKey) => {
@@ -62,7 +57,7 @@ export default function Calendar() {
     const byId = new Map<string, CalEvent>()
     for (const e of allEvents) if (e.id && !byId.has(e.id)) byId.set(e.id, e)
     return [...byId.values()]
-      .filter((e) => activeCats.includes('all') || activeCats.includes(e.cat))
+      .filter((e) => activeCats.length === 0 || activeCats.includes(e.cat))
       .map((e) => {
         const color = CAT_META[e.cat].color
         return {
@@ -108,6 +103,11 @@ export default function Calendar() {
         }
       />
 
+      {/* 상단 요약 KPI — 오늘 / 이번주 / 다가오는 (카드 선택 시 목록 표시) */}
+      <ContentSection sx={{ mb: '14px' }}>
+        <SummaryPanel events={allEvents} onPick={(e) => openDetail(e)} />
+      </ContentSection>
+
       {/* 카테고리 필터(통일 색 범례 겸용) + 뷰 전환(월간/주간/목록) */}
       <ContentSection>
         <FilterBar
@@ -119,17 +119,15 @@ export default function Calendar() {
             </Box>
           }
         >
-          <StatusChip status="neutral" label="전체" selected={activeCats.includes('all')} onClick={() => toggleCat('all')} />
           {CAT_ORDER.map((id: RealCat) => (
             <StatusChip key={id} status={CAT_META[id].status} label={CAT_META[id].label} selected={activeCats.includes(id)} onClick={() => toggleCat(id)} />
           ))}
         </FilterBar>
       </ContentSection>
 
-      {/* 캘린더 + 요약 패널 */}
+      {/* 캘린더 (전폭) */}
       <ContentSection last>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 320px' }, gap: 2, alignItems: 'start' }}>
-          <Box className="fc-theme-angels">
+        <Box className="fc-theme-angels">
             <FullCalendar
               ref={calRef}
               plugins={[dayGridPlugin, timeGridPlugin, listPlugin]}
@@ -142,12 +140,11 @@ export default function Calendar() {
               height="auto"
               eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
               slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+              slotMinTime="09:00:00"
+              slotMaxTime="18:00:00"
               firstDay={0}
               dayCellContent={(arg) => String(arg.date.getDate())}
             />
-          </Box>
-
-          <SummaryPanel events={allEvents} onPick={(e) => openDetail(e)} />
         </Box>
       </ContentSection>
 
