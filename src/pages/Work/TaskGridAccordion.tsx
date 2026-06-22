@@ -278,9 +278,9 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
     } else if (!isSm) {
       inner = <Box sx={motionSx}>{listEl}</Box> // 모바일 미선택 → 리스트만
     } else {
-      // sm+ — 좌측 1열 리스트(진행중 KPI 너비 = 4fr/11) + 우측 상세(항상 표시)
+      // sm+ — 좌측 1열 리스트(진행중 KPI 너비 = 1/3) + 우측 상세(항상 표시)
       inner = (
-        <Box sx={{ ...motionSx, display: 'grid', gridTemplateColumns: { sm: '4fr 7fr' }, gap: '8px', alignItems: 'start' }}>
+        <Box sx={{ ...motionSx, display: 'grid', gridTemplateColumns: { sm: '1fr 2fr' }, gap: '8px', alignItems: 'start' }}>
           {listEl}
           <Box sx={{ minWidth: 0, position: 'sticky', top: 8 }}>{detailEl}</Box>
         </Box>

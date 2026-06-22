@@ -92,7 +92,7 @@ function toForm(t: WorkItem): NewTaskForm {
 // KPI 카드의 라운드 정사각 칩 (진행중=초록·Remind=앰버·완료=회색)
 // fill=true면 고정 정사각 대신 행 높이에 맞춰 세로로 늘어남(진행중 카드 하단까지 채우기용).
 function SquareChip({ label, tone, fill, compact }: { label: string; tone: 'green' | 'amber' | 'gray'; fill?: boolean; compact?: boolean }) {
-  const W = compact ? { xs: 70, sm: 76, lg: 82 } : { xs: 88, sm: 104, lg: 116 }
+  const W = compact ? { xs: 70, sm: 76, lg: 82 } : { xs: 78, sm: 88, lg: 98 }
   return (
     <Box
       sx={(t) => {
@@ -503,7 +503,7 @@ export default function Work() {
 
       {/* ① KPI — 진행중(내부 Check) / Remind / 완료. 동일 너비(3열) · 단일 선택(선택색=칩 색, 옅은 채움) */}
       <ContentSection sx={{ mb: '14px' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '4fr 3fr 4fr' }, gap: 2, '& > *': { minWidth: 0 } }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2, '& > *': { minWidth: 0 } }}>
           {/* 진행중 (메인, 4) — 정사각 칩 + 건수 + 우측 보라 박스(1건+Check) */}
           <AppCard
             interactive
@@ -519,19 +519,19 @@ export default function Work() {
               '&:hover': { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, view === 'inProgress' ? 0.18 : 0.08) },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 2, minHeight: 116, flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1, minHeight: 116, flex: 1 }}>
               <SquareChip label="진행중" tone="green" fill />
               {/* 칩 바로 오른쪽: 건수 */}
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0, alignSelf: 'center', ml: { xs: '12px', sm: '24px', lg: '36px' } }}>
-                <Typography component="span" sx={{ fontSize: { xs: 40, sm: 50, lg: 60 }, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
-                <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0, alignSelf: 'center', ml: { xs: '6px', sm: '10px', lg: '14px' } }}>
+                <Typography component="span" sx={{ fontSize: { xs: 32, sm: 40, lg: 46 }, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
+                <Typography component="span" sx={{ fontSize: 17, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
               <Box sx={{ flex: 1 }} />
               {/* 우측 보라 박스 — 1건 + Check 한 박스 (표시 전용, 클릭은 진행중 카드로 위임) */}
               <Box
                 aria-hidden
                 sx={(t) => ({
-                  flexShrink: 0, width: { xs: 76, sm: 92, lg: 104 },
+                  flexShrink: 0, width: { xs: 66, sm: 78, lg: 88 },
                   border: 1, borderColor: alpha(t.palette.accent.purple, 0.55), bgcolor: alpha(t.palette.accent.purple, 0.14),
                   borderRadius: '16px',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75,
@@ -586,12 +586,12 @@ export default function Work() {
               '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, (doneDrawerOpen || doneOpen) ? 0.16 : 0.07) },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1.5, minHeight: 116, flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1, minHeight: 116, flex: 1 }}>
               <SquareChip label="완료" tone="gray" fill />
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.25, alignSelf: 'center', ml: { xs: '4px', sm: '6px', lg: '8px' } }}>
-                <Typography component="span" sx={{ fontSize: { xs: 26, sm: 32, lg: 38 }, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
-                <Typography component="span" sx={{ fontSize: { xs: 15, sm: 17, lg: 20 }, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
-                <Typography component="span" sx={{ fontSize: 15, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+                <Typography component="span" sx={{ fontSize: { xs: 22, sm: 26, lg: 30 }, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
+                <Typography component="span" sx={{ fontSize: { xs: 13, sm: 15, lg: 16 }, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
+                <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
               <Box sx={{ flex: 1, minWidth: 4 }} />
               {/* 우측 세로 컨트롤 — 쉐브론(좌=열기·우=닫기) + 라벨 */}
@@ -628,7 +628,6 @@ export default function Work() {
           tone="gray"
           searchable
           filterable
-          nonModal
           searchPlaceholder="완료 업무 검색 (제목·담당자·내용)"
           items={doneList}
           isAdmin={isAdmin}
