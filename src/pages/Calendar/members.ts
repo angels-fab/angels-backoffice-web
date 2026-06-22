@@ -26,19 +26,16 @@ export const MEMBERS: TeamMember[] = [
   { id: '조성범', name: '조성범', color: accent.green, photo: avatarSeongbeom },
 ]
 
-/** 데모: 조성범은 현재 일정이 없어, 달력 일정 칩 헤더 아바타를 임시로 박주봉 일정에 표시. */
-export const EVENT_AVATAR_TEST = { memberId: '박주봉', photo: avatarSeongbeom }
-
 /**
- * 일정 칩 헤더에 표시할 멤버 사진 URL.
- * 우선 담당자 중 사진 보유 멤버(조성범), 없으면 데모 매핑(박주봉 일정 → 조성범 사진).
+ * 일정 칩 헤더에 표시할 멤버 사진 URL — 담당자 중 사진(photo) 보유 멤버가 있으면 그 사진.
+ * (지금은 사진 보유자(조성범)에게 일정이 없어 칩에는 아바타가 안 뜸.
+ *  나중에 박주봉 등 MEMBERS에 photo만 넣으면 그 사람 일정 칩에 자동 표시.)
  */
 export function eventAvatar(memberIds: string[]): string | undefined {
   for (const id of memberIds) {
     const p = memberById(id).photo
     if (p) return p
   }
-  if (memberIds.includes(EVENT_AVATAR_TEST.memberId)) return EVENT_AVATAR_TEST.photo
   return undefined
 }
 
