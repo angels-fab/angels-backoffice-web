@@ -132,8 +132,8 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
         )}
       </Box>
 
-      {/* 타임라인 */}
-      <Box sx={{ overflowX: 'auto', p: '4px 2px 8px' }}>
+      {/* 타임라인 (overflow-x:auto는 overflow-y도 auto로 계산되므로, 펄스 링이 위로 안 잘리게 위쪽 패딩 확보) */}
+      <Box sx={{ overflowX: 'auto', p: '16px 4px 12px' }}>
         <Box sx={{ position: 'relative', minWidth: 780 }}>
           {/* 진행 커넥터 */}
           <Box
@@ -169,21 +169,26 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
                 >
                   {/* 노드 */}
                   <Box sx={{ position: 'relative', width: 48, height: 48 }}>
-                    {isCurrent && pulse && (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: 48,
-                          height: 48,
-                          borderRadius: '50%',
-                          border: '2px solid #4f8bff',
-                          animation: 'ringPulse 2.2s ease-out infinite',
-                          pointerEvents: 'none',
-                        }}
-                      />
-                    )}
+                    {/* 펄스 링 — 속도(2.2s)는 유지, 반주기 어긋난 링을 하나 더 둬 빈도 2배(1.1s마다) */}
+                    {isCurrent &&
+                      pulse &&
+                      [0, -1.1].map((delay) => (
+                        <Box
+                          key={delay}
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: 48,
+                            height: 48,
+                            borderRadius: '50%',
+                            border: '2px solid #4f8bff',
+                            animation: 'ringPulse 2.2s ease-out infinite',
+                            animationDelay: `${delay}s`,
+                            pointerEvents: 'none',
+                          }}
+                        />
+                      ))}
                     <Box
                       sx={{
                         position: 'relative',
