@@ -1,4 +1,5 @@
 import { accent } from '@/theme/tokens'
+import avatarSeongbeom from '@/assets/avatar-seongbeom.png'
 
 /**
  * 팀원(담당자) — 캘린더 데이터에는 사람 필드가 없어 일정 제목에서 추출한다.
@@ -13,6 +14,8 @@ export interface TeamMember {
   role?: string
   /** 아바타·칩 색 */
   color: string
+  /** 사진 아바타(있으면 글자 동그라미 대신 사진 사용) */
+  photo?: string
 }
 
 export const MEMBERS: TeamMember[] = [
@@ -20,8 +23,24 @@ export const MEMBERS: TeamMember[] = [
   { id: '신현진', name: '신현진', color: accent.blue },
   { id: '박주봉', name: '박주봉', color: accent.purple },
   { id: '박세리', name: '박세리', color: accent.amber },
-  { id: '조성범', name: '조성범', color: accent.green },
+  { id: '조성범', name: '조성범', color: accent.green, photo: avatarSeongbeom },
 ]
+
+/** 데모: 조성범은 현재 일정이 없어, 달력 일정 칩 헤더 아바타를 임시로 박주봉 일정에 표시. */
+export const EVENT_AVATAR_TEST = { memberId: '박주봉', photo: avatarSeongbeom }
+
+/**
+ * 일정 칩 헤더에 표시할 멤버 사진 URL.
+ * 우선 담당자 중 사진 보유 멤버(조성범), 없으면 데모 매핑(박주봉 일정 → 조성범 사진).
+ */
+export function eventAvatar(memberIds: string[]): string | undefined {
+  for (const id of memberIds) {
+    const p = memberById(id).photo
+    if (p) return p
+  }
+  if (memberIds.includes(EVENT_AVATAR_TEST.memberId)) return EVENT_AVATAR_TEST.photo
+  return undefined
+}
 
 export const MEMBER_NAMES: string[] = MEMBERS.map((m) => m.name)
 /** '센터'를 제외한 실제 이름들(센터는 fallback 전용) */

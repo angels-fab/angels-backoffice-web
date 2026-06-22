@@ -27,7 +27,26 @@ export interface CalSidebarProps {
   onToggleCat: (id: RealCat) => void
 }
 
-function Avatar({ m, size = 28, fs = 12 }: { m: TeamMember; size?: number; fs?: number }) {
+function Avatar({ m, on = true, size = 28, fs = 12 }: { m: TeamMember; on?: boolean; size?: number; fs?: number }) {
+  if (m.photo) {
+    // 사진 아바타 — 선택 시 컬러, 해제 시 흑백
+    return (
+      <Box
+        component="img"
+        src={m.photo}
+        alt={m.name}
+        sx={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          flex: 'none',
+          filter: on ? 'none' : 'grayscale(100%)',
+          transition: 'filter .15s',
+        }}
+      />
+    )
+  }
   return (
     <Box
       sx={{
@@ -132,7 +151,8 @@ export default function CalSidebar({
               p: '7px 8px',
               borderRadius: '9px',
               cursor: 'pointer',
-              opacity: on ? 1 : 0.45,
+              // 사진 아바타 멤버는 흑백 처리로 off를 표현(행은 흐리게 하지 않음)
+              opacity: on || member.photo ? 1 : 0.45,
               transition: 'background .12s, opacity .12s',
               '&:hover': { bgcolor: 'background.elevated' },
             }}
@@ -153,7 +173,7 @@ export default function CalSidebar({
             >
               {on && <CheckIcon sx={{ fontSize: 12, color: '#fff' }} />}
             </Box>
-            <Avatar m={member} />
+            <Avatar m={member} on={on} />
             <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
               <Box component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>
                 {member.name}

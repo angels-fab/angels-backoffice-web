@@ -19,7 +19,7 @@ import { loadCalEvents } from '@/store/slices/calSlice'
 import type { CalEvent } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { MEMBERS, memberById, membersForEvent, given, cleanTitle } from './members'
+import { MEMBERS, memberById, membersForEvent, given, cleanTitle, eventAvatar } from './members'
 import CalSidebar from './CalSidebar'
 import WeekBoard from './WeekBoard'
 
@@ -45,10 +45,22 @@ function rgba(hex: string, a: number) {
 type ViewKey = 'month' | 'week'
 
 function renderEventContent(arg: EventContentArg) {
-  const { chipText, dotColor } = arg.event.extendedProps as { chipText: string; dotColor: string }
+  const { chipText, dotColor, avatar } = arg.event.extendedProps as {
+    chipText: string
+    dotColor: string
+    avatar?: string
+  }
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flex: 'none' }} />
+      {avatar ? (
+        <img
+          src={avatar}
+          alt=""
+          style={{ width: 15, height: 15, borderRadius: '50%', objectFit: 'cover', flex: 'none' }}
+        />
+      ) : (
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flex: 'none' }} />
+      )}
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chipText}</span>
     </div>
   )
@@ -130,7 +142,7 @@ export default function Calendar() {
         allDay: ev.allDay,
         backgroundColor: rgba(color, 0.18),
         borderColor: 'transparent',
-        extendedProps: { chipText: `${memberLabel} · ${body}`, dotColor: color },
+        extendedProps: { chipText: `${memberLabel} · ${body}`, dotColor: color, avatar: eventAvatar(mems) },
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

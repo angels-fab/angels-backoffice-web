@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import type { CalEvent } from '@/types'
 import { CAT_META } from './catMeta'
-import { cleanTitle, given, membersForEvent, type TeamMember } from './members'
+import { cleanTitle, eventAvatar, given, membersForEvent, type TeamMember } from './members'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -31,6 +31,7 @@ function Chip({ ev, onSelect }: { ev: CalEvent; onSelect: (e: CalEvent) => void 
   const color = CAT_META[ev.cat].color
   const startTime = ev.allDay ? '' : ev.start.slice(11, 16)
   const text = (startTime ? startTime + ' ' : '') + cleanTitle(ev.title)
+  const avatar = eventAvatar(membersForEvent(ev.title))
   return (
     <Box
       role="button"
@@ -59,7 +60,16 @@ function Chip({ ev, onSelect }: { ev: CalEvent; onSelect: (e: CalEvent) => void 
         '&:hover': { filter: 'brightness(1.12)' },
       }}
     >
-      <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: color, flex: 'none' }} />
+      {avatar ? (
+        <Box
+          component="img"
+          src={avatar}
+          alt=""
+          sx={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover', flex: 'none' }}
+        />
+      ) : (
+        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: color, flex: 'none' }} />
+      )}
       <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {text}
       </Box>
