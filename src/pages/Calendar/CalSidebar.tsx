@@ -2,7 +2,6 @@ import type { ChangeEvent } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import SearchIcon from '@mui/icons-material/Search'
-import CheckIcon from '@mui/icons-material/Check'
 import { given, type TeamMember } from './members'
 import type { RealCat } from './catMeta'
 
@@ -157,22 +156,6 @@ export default function CalSidebar({
               '&:hover': { bgcolor: 'background.elevated' },
             }}
           >
-            <Box
-              sx={{
-                width: 17,
-                height: 17,
-                borderRadius: '5px',
-                flex: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                bgcolor: on ? member.color : 'transparent',
-                border: on ? `1px solid ${member.color}` : '1.5px solid',
-                borderColor: on ? member.color : 'text.disabled',
-              }}
-            >
-              {on && <CheckIcon sx={{ fontSize: 12, color: '#fff' }} />}
-            </Box>
             <Avatar m={member} on={on} />
             <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
               <Box component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>

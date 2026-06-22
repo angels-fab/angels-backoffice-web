@@ -134,6 +134,7 @@ export default function Calendar() {
       const name0 = memberById(mems[0]).name
       const memberLabel = mems.length > 1 ? `${name0} 외${mems.length - 1}` : name0
       const body = cleanTitle(ev.title) || catShort(ev.cat)
+      const avatar = eventAvatar(mems)
       return {
         id: ev.id,
         title: ev.title,
@@ -142,7 +143,8 @@ export default function Calendar() {
         allDay: ev.allDay,
         backgroundColor: rgba(color, 0.18),
         borderColor: 'transparent',
-        extendedProps: { chipText: `${memberLabel} · ${body}`, dotColor: color, avatar: eventAvatar(mems) },
+        // 아바타가 들어가는 칩은 이름 생략(아바타가 담당자를 나타냄)
+        extendedProps: { chipText: avatar ? body : `${memberLabel} · ${body}`, dotColor: color, avatar },
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
