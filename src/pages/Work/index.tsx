@@ -163,6 +163,9 @@ export default function Work() {
   const [completeTarget, setCompleteTarget] = useState<WorkItem | null>(null)
   const [completing, setCompleting] = useState(false)
   const [remindOnComplete, setRemindOnComplete] = useState(false) // 완료 시 Remind 업무로 설정 체크박스
+  const [revertTarget, setRevertTarget] = useState<WorkItem | null>(null) // 진행중 되돌리기 확인 대상
+  const [reverting, setReverting] = useState(false)
+  const [revertChief, setRevertChief] = useState(false) // 되돌릴 때 Check 여부
   const [composing, setComposing] = useState(false) // 새 업무 카드 → 인라인 편집 모드
   const [composeDirty, setComposeDirty] = useState(false) // 인라인 편집 중 입력값 존재 여부
   const [savingNew, setSavingNew] = useState(false)
@@ -415,20 +418,31 @@ export default function Work() {
     }
   }
 
-  // 진행중으로 되돌리기 — 상태 '진행중' + Remind 해제(진행중 목록으로 편입). 확인 없이 즉시(클릭 절감).
-  const handleRevert = async (item: WorkItem) => {
+  // 되돌리기 확인 다이얼로그가 열릴 때 Check 체크박스를 현재 업무의 Check 상태로 초기화
+  useEffect(() => {
+    setRevertChief(revertTarget?.chief ?? false)
+  }, [revertTarget])
+
+  // 진행중으로 되돌리기(확인 후) — 상태 '진행중' + Remind 해제(진행중 목록 편입) + Check는 체크박스 값.
+  const confirmRevert = async () => {
+    if (!revertTarget || reverting) return
     if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    const item = revertTarget
+    setReverting(true)
     try {
       await updateWork({
         num: item.num, author: user, key: authKey,
         cat: item.cat, task: item.task, status: '진행중',
         dept: item.dept, mat: item.mat, start: item.start, plan: item.plan,
         time: item.time, loc: item.loc, mgr: item.mgr, link: item.link,
-        remind: false, chief: item.chief,
+        remind: false, chief: revertChief,
       })
+      setReverting(false)
+      setRevertTarget(null)
       showSnack('진행중 업무로 되돌렸습니다.', 'success')
       dispatch(loadWorkData())
     } catch (err) {
+      setReverting(false)
       showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
     }
   }
@@ -620,6 +634,16 @@ export default function Work() {
           isAdmin={isAdmin}
           onEdit={startEdit}
           onDelete={(it) => setDeleteTarget(it)}
+          editingId={editingId}
+          renderEdit={(t) => (
+            <NewTaskCard
+              saving={savingEdit}
+              options={editOptionsFor(t)}
+              initial={toForm(t)}
+              onCancel={() => setEditingId(null)}
+              onSave={(form) => handleSaveEdit(t, form)}
+            />
+          )}
         />
       )}
 
@@ -638,7 +662,7 @@ export default function Work() {
               onEdit={startEdit}
               onComplete={(it) => setCompleteTarget(it)}
               onDelete={(it) => setDeleteTarget(it)}
-              onRevert={handleRevert}
+              onRevert={(it) => setRevertTarget(it)}
               editingId={editingId}
               renderEdit={(t) => (
                 <NewTaskCard
@@ -820,6 +844,27 @@ export default function Work() {
           <Button onClick={() => setCompleteTarget(null)} disabled={completing} sx={{ color: 'text.secondary' }}>취소</Button>
           <Button color="success" variant="contained" onClick={confirmComplete} disabled={completing}>
             {completing ? '변경 중…' : '확인'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 진행중 되돌리기 확인 Dialog (Check 여부 선택) */}
+      <Dialog open={!!revertTarget} onClose={() => !reverting && setRevertTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
+        <DialogTitle>진행중 업무로 되돌리시겠습니까?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ color: 'text.secondary' }}>
+            「{revertTarget ? taskTitle(revertTarget) : ''}」 업무를 진행중 상태로 되돌립니다. (Remind 해제)
+          </DialogContentText>
+          <FormControlLabel
+            sx={{ mt: 1.5 }}
+            control={<Checkbox checked={revertChief} onChange={(e) => setRevertChief(e.target.checked)} disabled={reverting} />}
+            label="Check 표시"
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setRevertTarget(null)} disabled={reverting} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button color="success" variant="contained" onClick={confirmRevert} disabled={reverting}>
+            {reverting ? '되돌리는 중…' : '되돌리기'}
           </Button>
         </DialogActions>
       </Dialog>

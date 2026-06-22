@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import Drawer from '@mui/material/Drawer'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -19,8 +19,8 @@ import SubLine from './SubLine'
 
 export type DrawerTone = 'amber' | 'gray'
 
-// 목록 높이 — 약 12행(라인 리스트 한 행 ≈ 38px)만 보이고 나머지는 스크롤
-const LIST_MAX_HEIGHT = 456
+// 목록 높이 — 약 10행(라인 리스트 한 행 ≈ 34px)만 보이고 나머지는 스크롤
+const LIST_MAX_HEIGHT = 344
 
 export interface TaskListDrawerProps {
   open: boolean
@@ -38,6 +38,10 @@ export interface TaskListDrawerProps {
   onEdit?: (t: WorkItem) => void
   onComplete?: (t: WorkItem) => void
   onDelete?: (t: WorkItem) => void
+  /** in-place 편집 대상 id — selTask와 같으면 상세에 편집 폼 렌더 */
+  editingId?: number | null
+  /** 편집 폼 렌더(상세 in-place 편집용) */
+  renderEdit?: (t: WorkItem) => ReactNode
 }
 
 /**
@@ -47,7 +51,7 @@ export interface TaskListDrawerProps {
  */
 export default function TaskListDrawer({
   open, onClose, title, items, tone = 'amber', searchable, searchPlaceholder, filterable, nonModal,
-  isAdmin, onEdit, onComplete, onDelete,
+  isAdmin, onEdit, onComplete, onDelete, editingId, renderEdit,
 }: TaskListDrawerProps) {
   const theme = useTheme()
   const accent = tone === 'amber' ? theme.palette.accent.amber : theme.palette.text.secondary
@@ -144,6 +148,9 @@ export default function TaskListDrawer({
         {/* 내용(하단) — 선택 시 상세, 아니면 안내 */}
         <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', p: 2, ...(selTask ? { borderTop: 2, borderColor: alpha(accent, 0.4), bgcolor: alpha(accent, 0.06) } : {}) }}>
           {selTask ? (
+            editingId === selTask.id && renderEdit ? (
+              renderEdit(selTask)
+            ) : (
             <>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1, flexWrap: 'wrap' }}>
                 <Typography variant="subtitle1" sx={{ fontWeight: 700, wordBreak: 'break-word' }}>{taskTitle(selTask)}</Typography>
@@ -152,9 +159,18 @@ export default function TaskListDrawer({
                   <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(selTask.start)}</Typography>
                 </Box>
               </Box>
-              <Box sx={{ display: 'flex', gap: 0.75, mb: 1, flexWrap: 'wrap' }}>
-                {selTask.cat && <StatusChip status={catKind(selTask.cat)} label={selTask.cat} />}
-                {selTask.dept && <StatusChip status={deptKind(selTask.dept)} label={selTask.dept} />}
+              {/* 구분·부서 칩 줄 — 우측에 수정/삭제 아이콘(날짜 아래, 같은 행 우측) */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
+                  {selTask.cat && <StatusChip status={catKind(selTask.cat)} label={selTask.cat} />}
+                  {selTask.dept && <StatusChip status={deptKind(selTask.dept)} label={selTask.dept} />}
+                </Box>
+                {isAdmin && (onEdit || onDelete) && (
+                  <Box sx={{ display: 'flex', gap: 0.25, flexShrink: 0 }}>
+                    {onEdit && <IconButton size="small" aria-label="수정" onClick={() => onEdit(selTask)} sx={{ color: 'text.secondary' }}><EditOutlinedIcon sx={{ fontSize: 19 }} /></IconButton>}
+                    {onDelete && <IconButton size="small" aria-label="삭제" onClick={() => onDelete(selTask)} sx={{ color: 'error.main' }}><DeleteOutlineIcon sx={{ fontSize: 19 }} /></IconButton>}
+                  </Box>
+                )}
               </Box>
               {(() => {
                 const subs = taskSubs(selTask)
@@ -180,16 +196,13 @@ export default function TaskListDrawer({
                   </>
                 )
               })()}
-              {isAdmin && (
+              {isAdmin && (selTask.status || '').trim() !== '완료' && onComplete && (
                 <Box sx={{ display: 'flex', gap: 1, mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
-                  {(selTask.status || '').trim() !== '완료' && onComplete && (
-                    <Button size="small" variant="outlined" color="success" startIcon={<CheckCircleOutlineIcon sx={{ fontSize: 18 }} />} onClick={() => onComplete(selTask)}>완료</Button>
-                  )}
-                  {onEdit && <Button size="small" variant="outlined" startIcon={<EditOutlinedIcon sx={{ fontSize: 18 }} />} onClick={() => { onEdit(selTask); close() }}>수정</Button>}
-                  {onDelete && <Button size="small" variant="text" color="error" startIcon={<DeleteOutlineIcon sx={{ fontSize: 18 }} />} onClick={() => onDelete(selTask)}>삭제</Button>}
+                  <Button size="small" variant="outlined" color="success" startIcon={<CheckCircleOutlineIcon sx={{ fontSize: 18 }} />} onClick={() => onComplete(selTask)}>완료</Button>
                 </Box>
               )}
             </>
+            )
           ) : (
             <Typography variant="body2" sx={{ color: 'text.disabled', textAlign: 'center', mt: 1 }}>목록에서 업무를 선택하면 내용이 표시됩니다</Typography>
           )}
