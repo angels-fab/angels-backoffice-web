@@ -88,16 +88,21 @@ function toForm(t: WorkItem): NewTaskForm {
 }
 
 // KPI 카드의 라운드 정사각 칩 (진행중=초록·Remind=앰버·완료=회색)
-function SquareChip({ label, tone }: { label: string; tone: 'green' | 'amber' | 'gray' }) {
+// fill=true면 고정 정사각 대신 행 높이에 맞춰 세로로 늘어남(진행중 카드 하단까지 채우기용).
+function SquareChip({ label, tone, fill, compact }: { label: string; tone: 'green' | 'amber' | 'gray'; fill?: boolean; compact?: boolean }) {
+  const W = compact ? { xs: 70, sm: 76, lg: 82 } : { xs: 88, sm: 104, lg: 116 }
   return (
     <Box
       sx={(t) => {
         const c = tone === 'green' ? t.palette.accent.green : tone === 'amber' ? t.palette.accent.amber : t.palette.text.secondary
         return {
-          width: { xs: 88, sm: 104, lg: 116 }, height: { xs: 88, sm: 104, lg: 116 }, flexShrink: 0, borderRadius: '18px',
+          width: W, flexShrink: 0, borderRadius: '18px',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           bgcolor: alpha(c, 0.15), color: c,
           fontWeight: 800, fontSize: { xs: 18, sm: 21, lg: 23 }, lineHeight: 1.1, px: 0.5, textAlign: 'center',
+          ...(fill
+            ? { alignSelf: 'stretch', minHeight: W }
+            : { height: W }),
         }
       }}
     >
@@ -483,14 +488,15 @@ export default function Work() {
             padding={18}
             sx={{
               gridColumn: { md: '1 / -1', lg: 'auto' },
+              display: 'flex', flexDirection: 'column',
               ...(view === 'inProgress'
                 ? { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, 0.12) }
                 : {}),
               '&:hover': { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, view === 'inProgress' ? 0.18 : 0.08) },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 2, minHeight: 116 }}>
-              <SquareChip label="진행중" tone="green" />
+            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 2, minHeight: 116, flex: 1 }}>
+              <SquareChip label="진행중" tone="green" fill />
               {/* 칩 바로 오른쪽: 건수 */}
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0, alignSelf: 'center', ml: { xs: '12px', sm: '24px', lg: '36px' } }}>
                 <Typography component="span" sx={{ fontSize: { xs: 40, sm: 50, lg: 60 }, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
@@ -535,37 +541,39 @@ export default function Work() {
                 <Typography component="span" sx={{ fontSize: 20, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
             </Box>
-            {/* 하단 풀폭 펼침바(표준 더보기/접기 패턴) */}
-            <Box sx={(t) => ({ mx: '-18px', mb: '-18px', mt: '14px', height: 36, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, fontSize: 12.5, fontWeight: 600, color: remindOpen ? t.palette.accent.amber : 'text.secondary', bgcolor: remindOpen ? alpha(t.palette.accent.amber, 0.1) : 'transparent' })}>
-              <ExpandMoreIcon sx={{ fontSize: 20, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' }} />{REMIND_VARIANT === 'drawer' ? '목록 열기' : remindOpen ? '접기' : '펼치기'}
+            {/* 하단 풀폭 펼침바 — 높이 최소화(컴팩트) */}
+            <Box sx={(t) => ({ mx: '-18px', mb: '-18px', mt: '10px', height: 20, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.25, fontSize: 11, fontWeight: 600, color: remindOpen ? t.palette.accent.amber : 'text.secondary', bgcolor: remindOpen ? alpha(t.palette.accent.amber, 0.1) : 'transparent' })}>
+              <ExpandMoreIcon sx={{ fontSize: 15, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' }} />{REMIND_VARIANT === 'drawer' ? '목록 열기' : remindOpen ? '접기' : '펼치기'}
             </Box>
           </AppCard>
 
           {/* 완료 — 정사각 회색 칩 + 완료/전체 건수(좌 묶음). 선택색 gray */}
           <AppCard
             interactive
-            onClick={() => (DONE_VARIANT === 'drawer' ? setDoneDrawerOpen(true) : setDoneOpen((o) => !o))}
-            ariaLabel="완료 업무 보기(우측 패널)"
+            onClick={() => (DONE_VARIANT === 'drawer' ? setDoneDrawerOpen((o) => !o) : setDoneOpen((o) => !o))}
+            ariaLabel="완료 업무 목록 열기/닫기"
             padding={18}
             sx={{
               overflow: 'hidden',
-              ...(doneOpen
+              ...(doneDrawerOpen || doneOpen
                 ? { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.1) }
                 : {}),
-              '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, doneOpen ? 0.16 : 0.07) },
+              '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, (doneDrawerOpen || doneOpen) ? 0.16 : 0.07) },
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minHeight: 90 }}>
-              <SquareChip label="완료" tone="gray" />
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, ml: { xs: '8px', sm: '12px', lg: '16px' } }}>
-                <Typography component="span" sx={{ fontSize: { xs: 32, sm: 40, lg: 48 }, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
-                <Typography component="span" sx={{ fontSize: { xs: 18, sm: 22, lg: 26 }, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
-                <Typography component="span" sx={{ fontSize: 18, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minHeight: 90 }}>
+              <SquareChip label="완료" tone="gray" compact />
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.25, ml: { xs: '4px', sm: '6px', lg: '8px' } }}>
+                <Typography component="span" sx={{ fontSize: { xs: 22, sm: 26, lg: 28 }, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
+                <Typography component="span" sx={{ fontSize: { xs: 14, sm: 15, lg: 16 }, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
+                <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
               </Box>
-            </Box>
-            {/* 하단 풀폭 펼침바(인라인 슬라이드) */}
-            <Box sx={(t) => ({ mx: '-18px', mb: '-18px', mt: '14px', height: 36, borderTop: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5, fontSize: 12.5, fontWeight: 600, color: doneOpen ? t.palette.text.primary : 'text.secondary', bgcolor: doneOpen ? alpha(t.palette.text.secondary, 0.12) : 'transparent' })}>
-              <ExpandMoreIcon sx={{ fontSize: 20, transition: 'transform .2s', transform: doneOpen ? 'rotate(180deg)' : 'none' }} />{DONE_VARIANT === 'drawer' ? '목록 열기' : doneOpen ? '접기' : '펼치기'}
+              <Box sx={{ flex: 1, minWidth: 4 }} />
+              {/* 우측 세로 컨트롤 — 쉐브론 + 열기/닫기 (하단 바 대체) */}
+              <Box sx={(t) => ({ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.25, color: doneDrawerOpen ? t.palette.text.primary : 'text.secondary' })}>
+                <ExpandMoreIcon sx={{ fontSize: 26, transition: 'transform .2s', transform: doneDrawerOpen ? 'rotate(180deg)' : 'none' }} />
+                <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1 }}>{doneDrawerOpen ? '닫기' : '열기'}</Typography>
+              </Box>
             </Box>
           </AppCard>
         </Box>
@@ -686,9 +694,10 @@ export default function Work() {
             {/* 새 업무: 헤더와 같은 행(2열). 클릭 시 같은 칸에서 작성폼(전체폭 확장 X). */}
             {isAdmin && (
               <Box key="new" sx={{ gridColumn: { sm: '2' }, gridRow: { sm: '1' } }}>
-                {composing
-                  ? <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
-                  : <AddCard height={64} onClick={startCompose} />}
+                {!composing && <AddCard height={64} onClick={startCompose} />}
+                <Collapse in={composing} unmountOnExit>
+                  <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+                </Collapse>
               </Box>
             )}
             {listed.map((t) => renderTask(t, 'green'))}

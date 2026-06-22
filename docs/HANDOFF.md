@@ -4,6 +4,7 @@
 > 이 파일은 머신 간 동기화되지 않는 Claude 로컬 메모리를 대신해, 다른 PC에서 맥락을 빠르게 잡기 위한 요약입니다.
 
 ## 현재 상태
+- **업무현황(/work) KPI 4건 손질(프런트 전용)**: ① 새 업무 펼침 모션(NewTaskCard를 vertical `Collapse`로 감쌈). ② 완료 KPI "목록 열기"를 하단 바 → **카드 우측 세로(쉐브론+열기/닫기)**, 카드 클릭=드로어 토글. 좁은 완료 카드에 맞춰 칩 `compact`+건수 폰트 축소(컨트롤 잘림 방지). ③ Remind 하단 펼치기/접기 바 높이 36→**20px**. ④ 진행중 KPI를 flex column으로 만들어 **진행중 칩·Check 박스를 카드 하단까지 채움**(`SquareChip fill`, 116→128px). type-check·build 통과, 1280 라이브 검증(카드 3개 166px 균형·완료 컨트롤 19px 여백·콘솔0). 스크린샷 대신 snapshot/eval로 검증.
 - **포털개선요청 — 보완 15(프런트 전용)**: 작성행 개선내용 입력칸이 구분선에 붙던 것 수정(2행 td `pt:0,pb:1.25 → py:0.75` 대칭 → 세로 가운데·구분선에서 띄움), 개선내용 높이 제목칸(32)과 맞춤(`minHeight:32, py:6px`), 저장·취소 아이콘 세로 가운데, 위치/유형 드롭다운 글자 `translateX(-4px)`(4px 왼쪽). type-check 통과. 상세 `docs/step28-improve-page.md` 보완15.
 - **포털개선요청 — 보완 14(프런트 전용)**: 위치/유형 드롭다운 **글자 가운데 정렬**(justifyContent center+대칭 패딩), 개선내용칸 **세로 가운데**(`py:7px`로 중앙, 제목칸 32px와 맞춤), **새 요청 버튼 토글**(다시 누르면 작성칸 닫힘), **필터 탭 hover 시 상태색 채움+흰 글자**(transition .2s). type-check·목록 콘솔0. 상세 `docs/step28-improve-page.md` 보완14.
 - **포털개선요청 — 보완 13(프런트 전용)**: 작성행 제목칸=개선위치/유형 드롭다운 **높이 32px 통일**, 개선내용칸 **세로 가운데 정렬**(td middle + alignItems center + minHeight 32), 긴급 체크박스 **24×24px**(! 15px), **새 요청 버튼 클릭 시 초록 채움·흰 글자로 transition(.2s) 스르륵 전환**(composing 연동). type-check·목록 콘솔0(작성행은 관리자 전용 실측 권장). 상세 `docs/step28-improve-page.md` 보완13.
