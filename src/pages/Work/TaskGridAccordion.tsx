@@ -15,6 +15,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
+import ReplayIcon from '@mui/icons-material/Replay'
 import { alpha, useTheme } from '@mui/material/styles'
 import { keyframes } from '@mui/system'
 import type { Theme } from '@mui/material/styles'
@@ -40,7 +41,9 @@ export interface TaskGridAccordionProps {
   onEdit?: (t: WorkItem) => void
   onComplete?: (t: WorkItem) => void
   onDelete?: (t: WorkItem) => void
-  /** 선택 시 3열 그리드 → 좌측 1열 리스트 + 우측 내용(마스터-디테일)로 전환 */
+  /** 진행중으로 되돌리기(상태→진행중) */
+  onRevert?: (t: WorkItem) => void
+  /** 좌측 1열 리스트 + 우측 내용(마스터-디테일)을 처음부터 표시 */
   masterDetail?: boolean
 }
 
@@ -49,7 +52,7 @@ export interface TaskGridAccordionProps {
  * - 기본: 카드 클릭 시 같은 행 아래 풀폭으로 내용 펼침(인라인 아코디언).
  * - masterDetail: 카드 선택 시 그리드 → 좌측 1열 리스트 + 우측 내용 패널로 모드 전환(CSS 페이드).
  */
-export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComplete, onDelete, masterDetail }: TaskGridAccordionProps) {
+export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComplete, onDelete, onRevert, masterDetail }: TaskGridAccordionProps) {
   const theme = useTheme()
   const isLg = useMediaQuery(theme.breakpoints.up('lg'))
   const isSm = useMediaQuery(theme.breakpoints.up('sm'))
@@ -70,14 +73,14 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
   const toggle = (id: number) => setSel((s) => (s === id ? null : id))
 
   // ── 공유: 카드 본문(칩·제목·메뉴·셰브론) ──
-  const cardBody = (t: WorkItem, on: boolean, showChevron: boolean) => (
+  const cardBody = (t: WorkItem, on: boolean, showChevron: boolean, hideMenu?: boolean) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
       {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
       {t.dept && <StatusChip status="info" label={t.dept} />}
       <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {taskTitle(t)}
       </Typography>
-      {isAdmin && (
+      {isAdmin && !hideMenu && (
         <IconButton
           size="small"
           aria-label="더보기"
@@ -124,7 +127,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
   }
 
   // ── 공유: 디테일 본문(제목·담당자·내용·예정/완료/링크) ──
-  const detailBody = (st: WorkItem) => {
+  const detailBody = (st: WorkItem, showActions?: boolean) => {
     const subs = taskSubs(st)
     const link = taskLink(st)
     return (
@@ -150,6 +153,15 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
                 <OpenInNewIcon sx={{ fontSize: 18 }} />
               </IconButton>
             )}
+          </Box>
+        )}
+        {showActions && isAdmin && (onRevert || onEdit || onDelete) && (
+          <Box sx={{ display: 'flex', gap: 1, mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
+            {onRevert && (
+              <Button size="small" variant="outlined" color="success" startIcon={<ReplayIcon sx={{ fontSize: 18 }} />} onClick={(e) => { e.stopPropagation(); onRevert(st) }}>진행중</Button>
+            )}
+            {onEdit && <Button size="small" variant="outlined" startIcon={<EditOutlinedIcon sx={{ fontSize: 18 }} />} onClick={(e) => { e.stopPropagation(); onEdit(st) }}>수정</Button>}
+            {onDelete && <Button size="small" variant="text" color="error" startIcon={<DeleteOutlineIcon sx={{ fontSize: 18 }} />} onClick={(e) => { e.stopPropagation(); onDelete(st) }}>삭제</Button>}
           </Box>
         )}
       </>
@@ -183,79 +195,75 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
     </Menu>
   ) : null
 
-  // ============ 마스터-디테일(모드 스왑 + CSS 페이드) ============
+  // ============ 마스터-디테일 — 처음부터 좌측 1열 리스트 + 우측 상세 ============
   if (masterDetail) {
     const mobileDetail = !!selTask && !isSm // xs(작은 화면) + 선택 → 디테일 전체폭(목록 숨김)
 
+    // 우측 상세 — 선택 시 내용+액션(수정/삭제/진행중 되돌리기), 미선택 시 안내
     const detailEl = selTask ? (
       <Box
         key={`detail-${selTask.id}`}
         sx={(th) => ({
           animation: reduce ? 'none' : `${slideIn} .2s ease both`,
           bgcolor: alpha(toneColor(th, tone), 0.06),
-          border: 1,
-          borderColor: alpha(toneColor(th, tone), 0.3),
-          borderRadius: 1,
-          p: 1.75,
+          border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: 1, p: 1.75,
         })}
       >
-        <Box sx={{ mb: 1 }}>
-          <Button
-            size="small"
-            startIcon={<ArrowBackIcon sx={{ fontSize: 18 }} />}
-            onClick={() => setSel(null)}
-            sx={{ color: 'text.secondary', minWidth: 0, px: 0.75 }}
-          >
-            목록으로
-          </Button>
-        </Box>
-        {detailBody(selTask)}
+        {!isSm && (
+          <Box sx={{ mb: 1 }}>
+            <Button size="small" startIcon={<ArrowBackIcon sx={{ fontSize: 18 }} />} onClick={() => setSel(null)} sx={{ color: 'text.secondary', minWidth: 0, px: 0.75 }}>목록으로</Button>
+          </Box>
+        )}
+        {detailBody(selTask, true)}
       </Box>
-    ) : null
+    ) : (
+      <Box sx={(th) => ({ border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: 1, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120 })}>
+        <Typography variant="body2" sx={{ color: 'text.disabled', textAlign: 'center' }}>목록에서 업무를 선택하면 내용이 표시됩니다</Typography>
+      </Box>
+    )
+
+    // 좌측 1열 라인 리스트(간격 축소·메뉴 없음 — 액션은 상세에서)
+    const listEl = (
+      <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+        {items.map((t, i) => {
+          const on = sel === t.id
+          return (
+            <Box
+              key={t.id}
+              role="button"
+              tabIndex={0}
+              aria-pressed={on}
+              aria-label={`업무: ${taskTitle(t)}`}
+              onClick={() => toggle(t.id)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(t.id) } }}
+              sx={(th) => ({
+                px: 1, py: 0.35, cursor: 'pointer',
+                borderTop: i === 0 ? 0 : 1, borderColor: 'divider',
+                bgcolor: on ? alpha(toneColor(th, tone), 0.16) : 'transparent',
+                transition: 'background-color .15s',
+                '&:hover': { bgcolor: alpha(toneColor(th, tone), on ? 0.16 : 0.06) },
+                '&:focus-visible': { outline: 'none', bgcolor: alpha(toneColor(th, tone), 0.16) },
+              })}
+            >
+              {cardBody(t, on, false, true)}
+            </Box>
+          )
+        })}
+      </Box>
+    )
 
     const motionSx = reduce ? {} : { animation: `${fadeUp} .18s ease both` }
 
     let inner: ReactNode
-    if (sel === null) {
-      // 그리드 모드 — 3/2/1열
-      inner = (
-        <Box sx={{ ...motionSx, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, gap: '8px', '& > *': { minWidth: 0 } }}>
-          {items.map((t) => cardEl(t, true))}
-        </Box>
-      )
-    } else if (mobileDetail) {
-      // 모바일 — 디테일 전체폭(목록 숨김, 목록으로 버튼으로 복귀)
-      inner = <Box sx={motionSx}>{detailEl}</Box>
+    if (mobileDetail) {
+      inner = <Box sx={motionSx}>{detailEl}</Box> // 모바일 선택 → 디테일 전체폭
+    } else if (!isSm) {
+      inner = <Box sx={motionSx}>{listEl}</Box> // 모바일 미선택 → 리스트만
     } else {
-      // 마스터-디테일 — 좌측 1열 라인 리스트(진행중 KPI 너비 = 4fr/10) + 우측 내용(고정)
+      // sm+ — 좌측 1열 리스트 + 우측 상세(항상 표시)
       inner = (
         <Box sx={{ ...motionSx, display: 'grid', gridTemplateColumns: { sm: '4fr 6fr' }, gap: '8px', alignItems: 'start' }}>
-          <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
-            {items.map((t, i) => {
-              const on = sel === t.id
-              return (
-                <Box
-                  key={t.id}
-                  role="button"
-                  tabIndex={0}
-                  aria-pressed={on}
-                  aria-label={`업무: ${taskTitle(t)}`}
-                  onClick={() => toggle(t.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(t.id) } }}
-                  sx={(th) => ({
-                    px: 1.25, py: 0.75, cursor: 'pointer',
-                    borderTop: i === 0 ? 0 : 1, borderColor: 'divider',
-                    bgcolor: on ? alpha(toneColor(th, tone), 0.16) : 'transparent',
-                    transition: 'background-color .15s',
-                    '&:hover': { bgcolor: alpha(toneColor(th, tone), on ? 0.16 : 0.06) },
-                    '&:focus-visible': { outline: 'none', bgcolor: alpha(toneColor(th, tone), 0.16) },
-                  })}
-                >
-                  {cardBody(t, on, false)}
-                </Box>
-              )
-            })}
-          </Box>
+          {listEl}
           <Box sx={{ minWidth: 0, position: 'sticky', top: 8 }}>{detailEl}</Box>
         </Box>
       )

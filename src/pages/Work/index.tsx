@@ -415,6 +415,24 @@ export default function Work() {
     }
   }
 
+  // 진행중으로 되돌리기 — 상태만 '진행중'으로(나머지 필드 보존). 확인 없이 즉시(클릭 절감).
+  const handleRevert = async (item: WorkItem) => {
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    try {
+      await updateWork({
+        num: item.num, author: user, key: authKey,
+        cat: item.cat, task: item.task, status: '진행중',
+        dept: item.dept, mat: item.mat, start: item.start, plan: item.plan,
+        time: item.time, loc: item.loc, mgr: item.mgr, link: item.link,
+        remind: item.remind, chief: item.chief,
+      })
+      showSnack('진행중으로 되돌렸습니다.', 'success')
+      dispatch(loadWorkData())
+    } catch (err) {
+      showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
+    }
+  }
+
   const confirmDelete = async () => {
     if (!deleteTarget || deleting) return
     if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
@@ -622,7 +640,7 @@ export default function Work() {
           {remindList.length === 0 ? (
             <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
           ) : (
-            <TaskGridAccordion items={remindList} tone="amber" masterDetail isAdmin={isAdmin} onEdit={startEdit} onComplete={(it) => setCompleteTarget(it)} onDelete={(it) => setDeleteTarget(it)} />
+            <TaskGridAccordion items={remindList} tone="amber" masterDetail isAdmin={isAdmin} onEdit={startEdit} onComplete={(it) => setCompleteTarget(it)} onDelete={(it) => setDeleteTarget(it)} onRevert={handleRevert} />
           )}
         </ContentSection>
       </Collapse>
