@@ -11,11 +11,12 @@ export type RealCat = Exclude<CalCatId, 'all'>
  */
 export const CAT_META: Record<RealCat, { label: string; status: StatusKind; color: string }> = {
   meeting: { label: '회의/미팅', status: 'info', color: accent.blue },
+  work: { label: '업무', status: 'teal', color: accent.teal },
   edu: { label: '교육/세미나', status: 'success', color: accent.green },
   recruit: { label: '채용', status: 'purple', color: accent.purple },
   trip_dom: { label: '국내출장', status: 'warning', color: accent.amber },
   trip_intl: { label: '국외출장', status: 'warning', color: accent.amber },
-  etc: { label: '기타', status: 'teal', color: accent.teal },
+  etc: { label: '기타', status: 'neutral', color: '#7D8899' },
 }
 
-export const CAT_ORDER: RealCat[] = ['meeting', 'edu', 'recruit', 'trip_dom', 'trip_intl', 'etc']
+export const CAT_ORDER: RealCat[] = ['meeting', 'work', 'edu', 'recruit', 'trip_dom', 'trip_intl', 'etc']

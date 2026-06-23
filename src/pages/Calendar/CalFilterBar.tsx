@@ -3,6 +3,7 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import SearchIcon from '@mui/icons-material/Search'
 import GroupsIcon from '@mui/icons-material/Groups'
+import WorkIcon from '@mui/icons-material/Work'
 import SchoolIcon from '@mui/icons-material/School'
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1'
 import FlightIcon from '@mui/icons-material/Flight'
@@ -35,6 +36,7 @@ export interface CalFilterBarProps {
 
 const CAT_ICON: Record<RealCat, SvgIconComponent> = {
   meeting: GroupsIcon,
+  work: WorkIcon,
   edu: SchoolIcon,
   recruit: PersonAddAlt1Icon,
   trip_dom: DirectionsCarIcon,

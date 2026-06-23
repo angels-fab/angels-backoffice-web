@@ -6,11 +6,12 @@ import { accent } from '@/theme/tokens'
 export const CAL_CATS: CalCat[] = [
   { id: 'all', label: '전체', cls: 'f-all', color: '#4b5563' },
   { id: 'meeting', label: '회의/미팅', cls: 'f-meeting', color: accent.blue },
+  { id: 'work', label: '업무', cls: 'f-etc', color: accent.teal },
   { id: 'edu', label: '교육/세미나', cls: 'f-edu', color: accent.green },
   { id: 'recruit', label: '채용', cls: 'f-recruit', color: accent.purple },
   { id: 'trip_dom', label: '국내출장', cls: 'f-trip', color: accent.amber },
   { id: 'trip_intl', label: '국외출장', cls: 'f-trip', color: accent.amber },
-  { id: 'etc', label: '기타', cls: 'f-etc', color: accent.teal },
+  { id: 'etc', label: '기타', cls: 'f-etc', color: '#7D8899' },
 ]
 
 export const CAL_CAT_MAP: Record<string, CalCat> = Object.fromEntries(

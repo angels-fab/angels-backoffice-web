@@ -18,6 +18,7 @@ function classify(title: string): CalEvent['cat'] {
   if (!m) return evCat(title)
   const tag = m[1]
   if (/회의|미팅|보고|위원회/.test(tag)) return 'meeting'
+  if (/업무/.test(tag)) return 'work'
   if (/교육|세미나|워크숍|강의/.test(tag)) return 'edu'
   if (/채용|면접|공고/.test(tag)) return 'recruit'
   if (/출장|실사|방문/.test(tag)) return /국외|해외/.test(title) ? 'trip_intl' : 'trip_dom'
