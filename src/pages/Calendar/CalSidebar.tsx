@@ -88,7 +88,7 @@ export default function CalSidebar({
   return (
     <Box
       sx={(t) => ({
-        width: 248,
+        width: 160,
         flex: 'none',
         alignSelf: 'flex-start',
         bgcolor: 'background.paper',
