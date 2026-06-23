@@ -75,7 +75,8 @@ export function given(name: string): string {
  * 원본 제목이 통째로 이름뿐이면 원본을 그대로 둔다.
  */
 export function cleanTitle(title: string): string {
-  let t = title || ''
+  // 앞쪽 업무구분 브래킷([행정]/[출장] 등) 제거 — 구분은 칩 아이콘으로 표시하므로 중복
+  let t = (title || '').replace(/^\s*(?:\[[^\]]*\]\s*)+/, '')
   for (const n of MEMBER_NAMES) {
     t = t.replace(new RegExp('[@/\\-·,]?\\s*' + n, 'g'), ' ')
   }

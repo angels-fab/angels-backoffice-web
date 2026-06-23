@@ -50,13 +50,13 @@ export default function ChipContent({
   const showAvatar = variant === 'A1' || variant === 'D1'
   const showTime = (variant === 'D' || variant === 'D1') && !!time
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
       {showAvatar ? (
         <Box
           component="img"
           src={avatarUrl}
           alt=""
-          sx={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover', flex: 'none' }}
+          sx={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover', flex: 'none', mt: '0.5px' }}
         />
       ) : (
         <Box
@@ -73,18 +73,31 @@ export default function ChipContent({
             fontWeight: 700,
             letterSpacing: '-0.5px',
             flex: 'none',
+            mt: '0.5px',
           }}
         >
           {initials}
         </Box>
       )}
-      <Icon sx={{ fontSize: 13, color: catColor, flex: 'none' }} />
+      <Icon sx={{ fontSize: 13, color: catColor, flex: 'none', mt: '1px' }} />
       {showTime && (
-        <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', flex: 'none', fontVariantNumeric: 'tabular-nums' }}>
+        <Box component="span" sx={{ fontSize: 11, color: 'text.secondary', flex: 'none', fontVariantNumeric: 'tabular-nums', mt: '1.5px' }}>
           {time}
         </Box>
       )}
-      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <Box
+        component="span"
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          lineHeight: 1.3,
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+          wordBreak: 'break-word',
+        }}
+      >
         {title}
       </Box>
     </Box>
