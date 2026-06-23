@@ -56,8 +56,8 @@ export default function Calendar() {
   const [view, setView] = useState<ViewKey>('month')
   const [anchor, setAnchor] = useState<Date>(() => parseKey(todaySeoul()))
   const [search, setSearch] = useState('')
-  const [disabledMembers, setDisabledMembers] = useState<string[]>([])
-  const [disabledCats, setDisabledCats] = useState<RealCat[]>([])
+  const [selMembers, setSelMembers] = useState<string[]>([]) // 빈 배열 = 전체 선택
+  const [selCats, setSelCats] = useState<RealCat[]>([]) // 빈 배열 = 전체 선택
   const [detail, setDetail] = useState<CalEvent | null>(null)
   const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
   const calRef = useRef<FullCalendar>(null)
@@ -70,17 +70,27 @@ export default function Calendar() {
     if (view === 'month') calRef.current?.getApi().gotoDate(keyOf(anchor))
   }, [anchor, view])
 
-  // ── 필터 술어 ──
-  const catActive = (cat: RealCat) => !disabledCats.includes(cat)
-  const memberActive = (id: string) =>
-    !disabledMembers.includes(id) && (searchTrim === '' || memberById(id).name.includes(searchTrim))
+  // ── 필터 술어 (빈 선택 = 전체) ──
+  const catSelected = (cat: RealCat) => selCats.length === 0 || selCats.includes(cat)
+  const memberSelected = (id: string) => selMembers.length === 0 || selMembers.includes(id)
+  const sLow = searchTrim.toLowerCase()
+  const searchMatch = (ev: CalEvent) => {
+    if (!sLow) return true
+    if (ev.title.toLowerCase().includes(sLow)) return true // 내용(제목)
+    if (CAT_META[ev.cat].label.toLowerCase().includes(sLow)) return true // 일정 구분
+    return membersForEvent(ev.title).some((id) => memberById(id).name.toLowerCase().includes(sLow)) // 팀원
+  }
   const eventActive = (ev: CalEvent) =>
-    catActive(ev.cat) && membersForEvent(ev.title).some(memberActive)
+    catSelected(ev.cat) && membersForEvent(ev.title).some(memberSelected) && searchMatch(ev)
 
-  const toggleMember = (id: string) =>
-    setDisabledMembers((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
-  const toggleCat = (id: RealCat) =>
-    setDisabledCats((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  // 전체선택 상태에서 한 탭 클릭 = 그것만 선택 / 선택된 탭 재클릭 = 해제(마지막 해제 시 전체로 복귀)
+  const isolateToggle = <T,>(prev: T[], id: T): T[] => {
+    if (prev.length === 0) return [id]
+    if (prev.includes(id)) return prev.filter((x) => x !== id)
+    return [...prev, id]
+  }
+  const toggleMember = (id: string) => setSelMembers((prev) => isolateToggle(prev, id))
+  const toggleCat = (id: RealCat) => setSelCats((prev) => isolateToggle(prev, id))
 
   // ── 사이드바 데이터 ──
   const catCounts = useMemo(() => {
@@ -93,19 +103,16 @@ export default function Calendar() {
   }, [allEvents])
 
   const sidebarMembers = useMemo(
-    () =>
-      MEMBERS.filter((m) => searchTrim === '' || m.name.includes(searchTrim)).map((m) => ({
-        member: m,
-        on: !disabledMembers.includes(m.id),
-      })),
-    [searchTrim, disabledMembers],
+    () => MEMBERS.map((m) => ({ member: m, on: memberSelected(m.id) })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selMembers],
   )
   const sidebarCats = CAT_ORDER.map((id) => ({
     id,
     label: CAT_META[id].label,
     color: CAT_META[id].color,
     count: catCounts[id] || 0,
-    on: catActive(id),
+    on: catSelected(id),
   }))
 
   // ── 월 뷰(FullCalendar) 이벤트 ──
@@ -136,21 +143,21 @@ export default function Calendar() {
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allEvents, disabledCats, disabledMembers, searchTrim])
+  }, [allEvents, selCats, selMembers, searchTrim])
 
   // ── 주 뷰(보드) 데이터 ──
   const weekStart = useMemo(() => startOfWeek(anchor), [anchor])
   const visibleMembers = useMemo(
-    () => MEMBERS.filter((m) => memberActive(m.id)),
+    () => MEMBERS.filter((m) => memberSelected(m.id)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [disabledMembers, searchTrim],
+    [selMembers],
   )
   const weekEvents = useMemo(() => {
     const lo = keyOf(weekStart)
     const hi = keyOf(addDays(weekStart, 6))
-    return allEvents.filter((ev) => catActive(ev.cat) && ev.date >= lo && ev.date <= hi)
+    return allEvents.filter((ev) => catSelected(ev.cat) && searchMatch(ev) && ev.date >= lo && ev.date <= hi)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allEvents, weekStart, disabledCats])
+  }, [allEvents, weekStart, selCats, searchTrim])
 
   // ── 네비게이션 ──
   const shift = (dir: number) => {

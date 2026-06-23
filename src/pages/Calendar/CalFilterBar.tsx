@@ -161,7 +161,7 @@ export default function CalFilterBar({ search, onSearch, members, onToggleMember
           component="input"
           value={search}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onSearch(e.target.value)}
-          placeholder="팀원 검색"
+          placeholder="검색 (팀원·구분·내용)"
           sx={(t) => ({
             width: 150,
             height: 32,
