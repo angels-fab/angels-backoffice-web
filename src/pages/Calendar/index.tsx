@@ -39,7 +39,7 @@ function rgba(hex: string, a: number) {
   return `rgba(${r},${g},${b},${a})`
 }
 
-type ViewKey = 'month' | 'week' | 'timeweek'
+type ViewKey = 'month' | 'timeweek'
 
 function renderEventContent(arg: EventContentArg) {
   return <ChipContent {...(arg.event.extendedProps as unknown as ChipContentProps)} />
@@ -60,10 +60,10 @@ export default function Calendar() {
   const todayKey = todaySeoul()
   const searchTrim = search.trim()
 
-  // 뷰/기준일 변경 시 FullCalendar 동기화 (월=dayGridMonth / 주=dayGridWeek).
+  // 뷰/기준일 변경 시 FullCalendar 동기화 (월=dayGridMonth / 주(시간표)=timeGridWeek).
   // changeView는 flushSync를 유발하므로 렌더 단계 밖(setTimeout)에서 호출.
   useEffect(() => {
-    const fcView = view === 'month' ? 'dayGridMonth' : view === 'timeweek' ? 'timeGridWeek' : 'dayGridWeek'
+    const fcView = view === 'month' ? 'dayGridMonth' : 'timeGridWeek'
     const id = setTimeout(() => {
       calRef.current?.getApi().changeView(fcView, keyOf(anchor))
     }, 0)
@@ -186,7 +186,7 @@ export default function Calendar() {
       {/* 툴바 — 뷰 토글 / 오늘 / 이전·다음 / 기간 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
         <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: '9px' }}>
-          {([{ k: 'month', l: '월' }, { k: 'week', l: '주' }, { k: 'timeweek', l: '주(시간표)' }] as const).map((t) => (
+          {([{ k: 'month', l: '월' }, { k: 'timeweek', l: '주(시간표)' }] as const).map((t) => (
             <Box
               key={t.k}
               component="button"
