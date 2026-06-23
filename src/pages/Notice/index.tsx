@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -16,9 +16,11 @@ import TableHead from '@mui/material/TableHead'
 import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
+import Collapse from '@mui/material/Collapse'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import {
   PageContainer,
   PageHeader,
@@ -38,11 +40,10 @@ import { useRole } from '@/auth/role'
 import { todaySeoul } from '@/utils/date'
 import type { Notice as NoticeItem } from '@/types'
 import { noticeCatStatus } from './noticeMeta'
-import NoticeDrawer from './NoticeDrawer'
+import NoticeDetail from './NoticeDetail'
 import NoticeWrite from './NoticeWrite'
 
 const CAT_BASE_ORDER = ['긴급', '공지', '일반', '회의', '교육', '행사', '점검']
-const IMPORTANT_MAX = 5
 
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
 
@@ -63,10 +64,10 @@ export default function Notice() {
   const today = todaySeoul()
   const thisMonth = today.slice(0, 7)
 
-  // 딥링크(/notice/:num) → 상세 드로어 대상
+  // 딥링크(/notice/:num) → 펼친 행(아코디언) 대상
   const selected = useMemo(() => (num ? items.find((n) => String(n.num) === String(num)) ?? null : null), [items, num])
 
-  // 드로어 열릴 때 1회: 조회수 증가
+  // 행이 펼쳐질 때 1회: 조회수 증가
   useEffect(() => {
     if (ready && selected) dispatch(bumpNoticeViews(selected.id))
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -75,17 +76,10 @@ export default function Notice() {
   const kpi = useMemo(
     () => ({
       total: items.length,
-      pinned: items.filter((n) => n.pinned || n.cat === '긴급').length,
       month: items.filter((n) => (n.date || '').startsWith(thisMonth)).length,
       recent: items.filter((n) => n.isNew).length,
     }),
     [items, thisMonth],
-  )
-
-  // 중요공지 = 상단고정(pinned) 또는 '긴급' 분류 — 최신 우선(items는 이미 고정·연번 정렬됨)
-  const important = useMemo(
-    () => items.filter((n) => n.pinned || n.cat === '긴급').slice(0, IMPORTANT_MAX),
-    [items],
   )
 
   const cats = useMemo(() => {
@@ -166,42 +160,14 @@ export default function Notice() {
 
       {/* ① KPI */}
       <ContentSection>
-        <CardGrid columns={4}>
+        <CardGrid columns={3}>
           <StatTile value={kpi.total} unit="건" label="전체 공지" status="info" />
-          <StatTile value={kpi.pinned} unit="건" label="중요 공지" status="warning" />
           <StatTile value={kpi.month} unit="건" label="이번달 공지" status="success" />
           <StatTile value={kpi.recent} unit="건" label="최근 7일" status="error" />
         </CardGrid>
       </ContentSection>
 
-      {/* ② 중요 공지 — 고정 표시 (중요/긴급) */}
-      <ContentSection title="중요 공지" description="상단 고정 · 긴급 공지" count={important.length}>
-        {!ready ? (
-          <AppCard padding={18}><Typography variant="body2">불러오는 중…</Typography></AppCard>
-        ) : important.length === 0 ? (
-          <AppCard padding={0}><EmptyState size="sm" title="중요 공지가 없습니다" /></AppCard>
-        ) : (
-          <CardGrid minColWidth={280}>
-            {important.map((n) => (
-              <AppCard key={n.id} interactive onClick={() => navigate(`/notice/${n.num}`)} ariaLabel={`공지: ${n.title}`} padding={16} sx={isExpired(n) ? { opacity: 0.6 } : undefined}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} />
-                    {n.pinned && <StatusChip status="warning" label="중요" />}
-                    {n.isNew && <StatusChip status="error" label="NEW" />}
-                  </Box>
-                  <Typography variant="subtitle1" sx={{ lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    {n.dept ? `[${n.dept}] ` : ''}{n.title}
-                  </Typography>
-                  <Typography variant="caption" sx={{ mt: 'auto', pt: 0.5, color: 'text.disabled', fontFamily: 'monospace' }}>{n.date}</Typography>
-                </Box>
-              </AppCard>
-            ))}
-          </CardGrid>
-        )}
-      </ContentSection>
-
-      {/* ③ 공지 목록 — 테이블 (분류·제목·작성자·작성일) */}
+      {/* ② 공지 목록 — 테이블 (분류·제목·작성자·작성일). 행 클릭 시 아코디언 펼침 */}
       <ContentSection title="공지 목록" count={`${filtered.length}건`} last>
         <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" />}>
           {cats.map((c) => (
@@ -226,48 +192,60 @@ export default function Notice() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filtered.map((n) => (
-                    <TableRow
-                      key={n.id}
-                      hover
-                      tabIndex={0}
-                      aria-label={`공지: ${n.title}`}
-                      onClick={() => navigate(`/notice/${n.num}`)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/notice/${n.num}`) } }}
-                      sx={{
-                        cursor: 'pointer',
-                        opacity: isExpired(n) ? 0.55 : 1,
-                        '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },
-                      }}
-                    >
-                      <TableCell><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
-                      <TableCell sx={{ color: 'text.primary' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                          {n.pinned && <StatusChip status="warning" label="중요" />}
-                          {n.isNew && <StatusChip status="error" label="NEW" />}
-                          <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {n.dept ? `[${n.dept}] ` : ''}{n.title}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{n.author || '-'}</TableCell>
-                      <TableCell sx={{ color: 'text.disabled', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>{n.date}</TableCell>
-                    </TableRow>
-                  ))}
+                  {filtered.map((n) => {
+                    const open = String(n.num) === String(num)
+                    const toggle = () => (open ? navigate('/notice', { replace: true }) : navigate(`/notice/${n.num}`))
+                    return (
+                      <Fragment key={n.id}>
+                        <TableRow
+                          hover
+                          tabIndex={0}
+                          aria-label={`공지: ${n.title}`}
+                          aria-expanded={open}
+                          onClick={toggle}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
+                          sx={{
+                            cursor: 'pointer',
+                            opacity: isExpired(n) ? 0.55 : 1,
+                            bgcolor: open ? 'action.hover' : undefined,
+                            '& > td': open ? { borderBottom: 0 } : undefined,
+                            '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },
+                          }}
+                        >
+                          <TableCell><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
+                          <TableCell sx={{ color: 'text.primary' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                              {n.pinned && <StatusChip status="warning" label="중요" />}
+                              {n.isNew && <StatusChip status="error" label="NEW" />}
+                              <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {n.dept ? `[${n.dept}] ` : ''}{n.title}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{n.author || '-'}</TableCell>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                              <Box component="span" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{n.date}</Box>
+                              <ExpandMoreIcon sx={{ fontSize: 18, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={4} sx={{ p: 0, border: 0 }}>
+                            <Collapse in={open} timeout="auto" unmountOnExit>
+                              <NoticeDetail notice={n} isAdmin={isAdmin} onEdit={setEditTarget} onDelete={setDeleteTarget} />
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </Fragment>
+                    )
+                  })}
                 </TableBody>
               </Table>
             </Box>
           </AppCard>
         )}
       </ContentSection>
-
-      <NoticeDrawer
-        notice={selected}
-        onClose={() => navigate('/notice', { replace: true })}
-        isAdmin={isAdmin}
-        onEdit={(n) => setEditTarget(n)}
-        onDelete={(n) => setDeleteTarget(n)}
-      />
 
       {isAdmin && (
         <NoticeWrite
