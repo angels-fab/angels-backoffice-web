@@ -20,7 +20,7 @@ import type { CalEvent } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
 import { MEMBERS, memberById, membersForEvent, given, cleanTitle, DEMO_AVATAR } from './members'
-import CalSidebar from './CalSidebar'
+import CalFilterBar from './CalFilterBar'
 import WeekBoard from './WeekBoard'
 import ChipContent, { type ChipVariant, type ChipContentProps } from './ChipContent'
 
@@ -309,18 +309,18 @@ export default function Calendar() {
         </Box>
       </Box>
 
-      {/* 본문 — 사이드바 + 메인 */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-        <CalSidebar
-          search={search}
-          onSearch={setSearch}
-          members={sidebarMembers}
-          onToggleMember={toggleMember}
-          cats={sidebarCats}
-          onToggleCat={toggleCat}
-        />
+      {/* 상단 필터 바 (좌측 사이드바 대체) — 달력 풀폭 확보 */}
+      <CalFilterBar
+        search={search}
+        onSearch={setSearch}
+        members={sidebarMembers}
+        onToggleMember={toggleMember}
+        cats={sidebarCats}
+        onToggleCat={toggleCat}
+      />
 
-        <Box sx={{ flex: 1, minWidth: 0 }}>
+      {/* 달력 (풀폭) */}
+      <Box sx={{ minWidth: 0 }}>
           {view === 'month' ? (
             <Box className="fc-theme-angels fc-team">
               <FullCalendar
@@ -353,7 +353,6 @@ export default function Calendar() {
             />
           )}
         </Box>
-      </Box>
 
       {/* 일정 상세 — 보기 전용 Drawer */}
       <AppDrawer
