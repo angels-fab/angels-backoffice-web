@@ -39,9 +39,6 @@ export function eventAvatar(memberIds: string[]): string | undefined {
   return undefined
 }
 
-/** 시안(임시) 데모용 공용 아바타 — 사진 없는 팀원도 아바타 안(A-1/D-1)을 비교해보기 위함 */
-export const DEMO_AVATAR = avatarSeongbeom
-
 export const MEMBER_NAMES: string[] = MEMBERS.map((m) => m.name)
 /** '센터'를 제외한 실제 이름들(센터는 fallback 전용) */
 const NAMED: string[] = MEMBERS.filter((m) => m.id !== '센터').map((m) => m.name)
