@@ -475,6 +475,10 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-team .fc-daygrid-event .fc-event-main{color:var(--text);padding:0}
 .fc-team .fc-daygrid-event:hover{filter:brightness(1.12)}
 .fc-team .fc-daygrid-more-link{font-size:11px;font-weight:500;color:var(--text3);padding:1px 6px}
+/* 시간표형 주간(timeGridWeek) — 1시간 슬롯 높이를 칩 높이만큼(약 40px), 칩 좌측 라인 유지 */
+.fc-team .fc-timegrid-slot{height:40px}
+.fc-team .fc-timegrid-event{border-radius:6px;border-width:0 0 0 3px;border-style:solid;padding:1px 4px}
+.fc-team .fc-timegrid-event .fc-event-main{padding:0;color:var(--text)}
 
 .gcal-detail{position:relative;background:var(--ink2);border:1px solid var(--border);border-radius:12px;width:min(92vw,380px);padding:20px 22px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
 .gcal-detail-x{position:absolute;top:10px;right:10px}

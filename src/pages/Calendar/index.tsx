@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
 import koLocale from '@fullcalendar/core/locales/ko'
 import type { EventContentArg } from '@fullcalendar/core'
 import Box from '@mui/material/Box'
@@ -38,7 +39,7 @@ function rgba(hex: string, a: number) {
   return `rgba(${r},${g},${b},${a})`
 }
 
-type ViewKey = 'month' | 'week'
+type ViewKey = 'month' | 'week' | 'timeweek'
 
 function renderEventContent(arg: EventContentArg) {
   return <ChipContent {...(arg.event.extendedProps as unknown as ChipContentProps)} />
@@ -62,8 +63,9 @@ export default function Calendar() {
   // 뷰/기준일 변경 시 FullCalendar 동기화 (월=dayGridMonth / 주=dayGridWeek).
   // changeView는 flushSync를 유발하므로 렌더 단계 밖(setTimeout)에서 호출.
   useEffect(() => {
+    const fcView = view === 'month' ? 'dayGridMonth' : view === 'timeweek' ? 'timeGridWeek' : 'dayGridWeek'
     const id = setTimeout(() => {
-      calRef.current?.getApi().changeView(view === 'month' ? 'dayGridMonth' : 'dayGridWeek', keyOf(anchor))
+      calRef.current?.getApi().changeView(fcView, keyOf(anchor))
     }, 0)
     return () => clearTimeout(id)
   }, [anchor, view])
@@ -184,7 +186,7 @@ export default function Calendar() {
       {/* 툴바 — 뷰 토글 / 오늘 / 이전·다음 / 기간 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
         <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: '9px' }}>
-          {([{ k: 'month', l: '월' }, { k: 'week', l: '주' }] as const).map((t) => (
+          {([{ k: 'month', l: '월' }, { k: 'week', l: '주' }, { k: 'timeweek', l: '주(시간표)' }] as const).map((t) => (
             <Box
               key={t.k}
               component="button"
@@ -284,7 +286,7 @@ export default function Calendar() {
         <Box className="fc-theme-angels fc-team">
           <FullCalendar
             ref={calRef}
-            plugins={[dayGridPlugin]}
+            plugins={[dayGridPlugin, timeGridPlugin]}
             initialView="dayGridMonth"
             initialDate={keyOf(anchor)}
             locale={koLocale}
@@ -292,6 +294,12 @@ export default function Calendar() {
             firstDay={0}
             weekends={showWeekends}
             fixedWeekCount={false}
+            slotMinTime="09:00:00"
+            slotMaxTime="18:00:00"
+            slotDuration="01:00:00"
+            slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+            eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+            allDaySlot
             events={fcEvents}
             eventDisplay="block"
             eventContent={renderEventContent}
