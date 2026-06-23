@@ -1,5 +1,4 @@
 import { accent } from '@/theme/tokens'
-import avatarSeongbeom from '@/assets/avatar-seongbeom.jpg'
 
 /**
  * 팀원(담당자) — 캘린더 데이터에는 사람 필드가 없어 일정 제목에서 추출한다.
@@ -23,7 +22,7 @@ export const MEMBERS: TeamMember[] = [
   { id: '신현진', name: '신현진', color: accent.blue },
   { id: '박주봉', name: '박주봉', color: accent.purple },
   { id: '박세리', name: '박세리', color: accent.amber },
-  { id: '조성범', name: '조성범', color: accent.green, photo: avatarSeongbeom },
+  { id: '조성범', name: '조성범', color: accent.green },
 ]
 
 /**
