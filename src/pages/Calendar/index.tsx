@@ -19,9 +19,10 @@ import { loadCalEvents } from '@/store/slices/calSlice'
 import type { CalEvent } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { MEMBERS, memberById, membersForEvent, given, cleanTitle, eventAvatar } from './members'
+import { MEMBERS, memberById, membersForEvent, given, cleanTitle, DEMO_AVATAR } from './members'
 import CalSidebar from './CalSidebar'
 import WeekBoard from './WeekBoard'
+import ChipContent, { type ChipVariant, type ChipContentProps } from './ChipContent'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -45,25 +46,7 @@ function rgba(hex: string, a: number) {
 type ViewKey = 'month' | 'week'
 
 function renderEventContent(arg: EventContentArg) {
-  const { chipText, dotColor, avatar } = arg.event.extendedProps as {
-    chipText: string
-    dotColor: string
-    avatar?: string
-  }
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
-      {avatar ? (
-        <img
-          src={avatar}
-          alt=""
-          style={{ width: 15, height: 15, borderRadius: '50%', objectFit: 'cover', flex: 'none' }}
-        />
-      ) : (
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flex: 'none' }} />
-      )}
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chipText}</span>
-    </div>
-  )
+  return <ChipContent {...(arg.event.extendedProps as unknown as ChipContentProps)} />
 }
 
 export default function Calendar() {
@@ -76,6 +59,7 @@ export default function Calendar() {
   const [disabledMembers, setDisabledMembers] = useState<string[]>([])
   const [disabledCats, setDisabledCats] = useState<RealCat[]>([])
   const [detail, setDetail] = useState<CalEvent | null>(null)
+  const [chipVariant, setChipVariant] = useState<ChipVariant>('A') // 시안(임시) 비교용
   const calRef = useRef<FullCalendar>(null)
 
   const todayKey = todaySeoul()
@@ -129,26 +113,32 @@ export default function Calendar() {
     const byId = new Map<string, CalEvent>()
     for (const ev of allEvents) if (!byId.has(ev.id)) byId.set(ev.id, ev)
     return [...byId.values()].filter(eventActive).map((ev) => {
-      const color = CAT_META[ev.cat].color
-      const mems = membersForEvent(ev.title)
-      const name0 = memberById(mems[0]).name
-      const memberLabel = mems.length > 1 ? `${name0} 외${mems.length - 1}` : name0
-      const body = cleanTitle(ev.title) || catShort(ev.cat)
-      const avatar = eventAvatar(mems)
+      const cat = ev.cat
+      const catColor = CAT_META[cat].color
+      const m0 = memberById(membersForEvent(ev.title)[0])
+      const props: ChipContentProps = {
+        variant: chipVariant,
+        memberColor: m0.color,
+        initials: given(m0.name),
+        avatarUrl: m0.photo || DEMO_AVATAR,
+        catKey: cat,
+        catColor,
+        time: ev.allDay ? '' : ev.start.slice(11, 16),
+        title: cleanTitle(ev.title) || catShort(cat),
+      }
       return {
         id: ev.id,
         title: ev.title,
         start: ev.allDay ? ev.start.slice(0, 10) : ev.start,
         end: ev.allDay ? ev.end.slice(0, 10) : ev.end,
         allDay: ev.allDay,
-        backgroundColor: rgba(color, 0.18),
+        backgroundColor: rgba(catColor, 0.18),
         borderColor: 'transparent',
-        // 아바타가 들어가는 칩은 이름 생략(아바타가 담당자를 나타냄)
-        extendedProps: { chipText: avatar ? body : `${memberLabel} · ${body}`, dotColor: color, avatar },
+        extendedProps: props,
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allEvents, disabledCats, disabledMembers, searchTrim])
+  }, [allEvents, disabledCats, disabledMembers, searchTrim, chipVariant])
 
   // ── 주 뷰(보드) 데이터 ──
   const weekStart = useMemo(() => startOfWeek(anchor), [anchor])
@@ -287,6 +277,36 @@ export default function Calendar() {
         <Typography component="span" sx={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>
           {periodLabel}
         </Typography>
+
+        {/* 시안(임시) — 칩 스타일 A/A-1/D/D-1 비교 토글. 결정 후 제거 예정 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, ml: { md: 'auto' } }}>
+          <Box component="span" sx={{ fontSize: 12, color: 'text.disabled' }}>시안(임시)</Box>
+          <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: '9px' }}>
+            {(['A', 'A1', 'D', 'D1'] as ChipVariant[]).map((v) => (
+              <Box
+                key={v}
+                component="button"
+                onClick={() => setChipVariant(v)}
+                sx={{
+                  px: '11px',
+                  py: '5px',
+                  borderRadius: '7px',
+                  fontSize: 12,
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  border: 'none',
+                  fontWeight: chipVariant === v ? 700 : 600,
+                  color: chipVariant === v ? 'primary.main' : 'text.secondary',
+                  bgcolor: chipVariant === v ? 'background.paper' : 'transparent',
+                  boxShadow: chipVariant === v ? '0 1px 2px rgba(0,0,0,.35)' : 'none',
+                  transition: 'all .12s',
+                }}
+              >
+                {v.replace('1', '-1')}
+              </Box>
+            ))}
+          </Box>
+        </Box>
       </Box>
 
       {/* 본문 — 사이드바 + 메인 */}
@@ -328,6 +348,7 @@ export default function Calendar() {
               members={visibleMembers}
               events={weekEvents}
               todayKey={todayKey}
+              variant={chipVariant}
               onSelect={setDetail}
             />
           )}

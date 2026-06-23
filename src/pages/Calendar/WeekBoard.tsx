@@ -3,7 +3,8 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import type { CalEvent } from '@/types'
 import { CAT_META } from './catMeta'
-import { cleanTitle, eventAvatar, given, membersForEvent, type TeamMember } from './members'
+import { cleanTitle, given, memberById, membersForEvent, DEMO_AVATAR, type TeamMember } from './members'
+import ChipContent, { type ChipVariant } from './ChipContent'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -20,6 +21,7 @@ export interface WeekBoardProps {
   /** 카테고리 활성 필터를 이미 통과한 '일자별' 일정 목록 */
   events: CalEvent[]
   todayKey: string
+  variant: ChipVariant
   onSelect: (ev: CalEvent) => void
 }
 
@@ -27,11 +29,9 @@ function dowColor(dow: number): string {
   return dow === 0 ? '#E0726B' : dow === 6 ? '#6AA0E8' : 'inherit'
 }
 
-function Chip({ ev, onSelect }: { ev: CalEvent; onSelect: (e: CalEvent) => void }) {
+function Chip({ ev, variant, onSelect }: { ev: CalEvent; variant: ChipVariant; onSelect: (e: CalEvent) => void }) {
   const color = CAT_META[ev.cat].color
-  const startTime = ev.allDay ? '' : ev.start.slice(11, 16)
-  const text = (startTime ? startTime + ' ' : '') + cleanTitle(ev.title)
-  const avatar = eventAvatar(membersForEvent(ev.title))
+  const m0 = memberById(membersForEvent(ev.title)[0])
   return (
     <Box
       role="button"
@@ -45,9 +45,6 @@ function Chip({ ev, onSelect }: { ev: CalEvent; onSelect: (e: CalEvent) => void 
       }}
       title={ev.title}
       sx={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
         p: '2px 7px',
         borderRadius: '6px',
         bgcolor: alpha(color, 0.18),
@@ -60,19 +57,16 @@ function Chip({ ev, onSelect }: { ev: CalEvent; onSelect: (e: CalEvent) => void 
         '&:hover': { filter: 'brightness(1.12)' },
       }}
     >
-      {avatar ? (
-        <Box
-          component="img"
-          src={avatar}
-          alt=""
-          sx={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover', flex: 'none' }}
-        />
-      ) : (
-        <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: color, flex: 'none' }} />
-      )}
-      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {text}
-      </Box>
+      <ChipContent
+        variant={variant}
+        memberColor={m0.color}
+        initials={given(m0.name)}
+        avatarUrl={m0.photo || DEMO_AVATAR}
+        catKey={ev.cat}
+        catColor={color}
+        time={ev.allDay ? '' : ev.start.slice(11, 16)}
+        title={cleanTitle(ev.title)}
+      />
     </Box>
   )
 }
@@ -84,7 +78,7 @@ const CELL = {
 } as const
 
 /** 주간 — 팀원(행) × 요일(열) 스위밍레인 보드. FullCalendar로는 표현 불가해 직접 구현. */
-export default function WeekBoard({ weekStart, members, events, todayKey, onSelect }: WeekBoardProps) {
+export default function WeekBoard({ weekStart, members, events, todayKey, variant, onSelect }: WeekBoardProps) {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
 
   // (memberId|dateKey) → events
@@ -243,7 +237,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, onSele
                   }}
                 >
                   {cellEvents.map((ev) => (
-                    <Chip key={ev.id + ev.date} ev={ev} onSelect={onSelect} />
+                    <Chip key={ev.id + ev.date} ev={ev} variant={variant} onSelect={onSelect} />
                   ))}
                 </Box>
               )
