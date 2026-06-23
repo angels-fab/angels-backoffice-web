@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import koLocale from '@fullcalendar/core/locales/ko'
-import type { EventClickArg, EventContentArg } from '@fullcalendar/core'
+import type { EventContentArg } from '@fullcalendar/core'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
@@ -10,21 +10,17 @@ import EventNoteIcon from '@mui/icons-material/EventNote'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import AccessTimeIcon from '@mui/icons-material/AccessTime'
-import PlaceIcon from '@mui/icons-material/Place'
-import RepeatIcon from '@mui/icons-material/Repeat'
-import { PageContainer, PageHeader, AppDrawer, StatusChip } from '@/components/ds'
+import { PageContainer, PageHeader } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadCalEvents } from '@/store/slices/calSlice'
 import type { CalEvent } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { MEMBERS, memberById, membersForEvent, given, cleanTitle } from './members'
+import { MEMBERS, memberById, membersForEvent, given, eventContent, eventParticipants } from './members'
 import CalFilterBar from './CalFilterBar'
 import WeekBoard from './WeekBoard'
 import ChipContent, { type ChipContentProps } from './ChipContent'
 
-const DOW = ['일', '월', '화', '수', '목', '금', '토']
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const keyOf = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
@@ -58,7 +54,6 @@ export default function Calendar() {
   const [search, setSearch] = useState('')
   const [selMembers, setSelMembers] = useState<string[]>([]) // 빈 배열 = 전체 선택
   const [selCats, setSelCats] = useState<RealCat[]>([]) // 빈 배열 = 전체 선택
-  const [detail, setDetail] = useState<CalEvent | null>(null)
   const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
   const calRef = useRef<FullCalendar>(null)
 
@@ -123,14 +118,12 @@ export default function Calendar() {
     return [...byId.values()].filter(eventActive).map((ev) => {
       const cat = ev.cat
       const catColor = CAT_META[cat].color
-      const m0 = memberById(membersForEvent(ev.title)[0])
       const props: ChipContentProps = {
-        memberColor: m0.color,
-        initials: given(m0.name),
+        participants: eventParticipants(ev.title).map((n) => ({ initials: given(n), color: memberById(n).color })),
         catKey: cat,
         catColor,
         time: ev.allDay ? '' : ev.start.slice(11, 16),
-        title: cleanTitle(ev.title) || catShort(cat),
+        title: eventContent(ev.title, cat) || catShort(cat),
       }
       return {
         id: ev.id,
@@ -176,29 +169,6 @@ export default function Calendar() {
       ? `${ws.getFullYear()}년 ${ws.getMonth() + 1}월 ${ws.getDate()}일 – ${we.getDate()}일`
       : `${ws.getFullYear()}년 ${ws.getMonth() + 1}월 ${ws.getDate()}일 – ${we.getMonth() + 1}월 ${we.getDate()}일`
   }, [view, anchor, weekStart])
-
-  const onEventClick = (info: EventClickArg) => {
-    info.jsEvent.preventDefault()
-    const orig = allEvents.find((e) => e.id === info.event.id)
-    if (orig) setDetail(orig)
-  }
-
-  // ── 상세 드로어 라벨 ──
-  const d = detail
-  const meta = d ? CAT_META[d.cat] : null
-  const detailMembers = d ? membersForEvent(d.title).map(memberById) : []
-  const fmtDay = (s: string) => {
-    const dt = parseKey(s.slice(0, 10))
-    return `${dt.getMonth() + 1}월 ${dt.getDate()}일 (${DOW[dt.getDay()]})`
-  }
-  let dateRange = ''
-  if (d) {
-    const startKey = d.start.slice(0, 10)
-    const lastKey = d.allDay ? keyOf(addDays(new Date(d.end), -1)) : d.end.slice(0, 10)
-    dateRange = startKey === lastKey ? fmtDay(startKey) : `${fmtDay(startKey)} – ${fmtDay(lastKey)}`
-  }
-  const timeText = d ? (d.allDay ? '종일' : `${d.start.slice(11, 16)} – ${d.end.slice(11, 16)}`) : ''
-  const loc = d && d.loc && d.loc !== '-' ? d.loc : ''
 
   return (
     <PageContainer>
@@ -332,7 +302,6 @@ export default function Calendar() {
                 weekends={showWeekends}
                 fixedWeekCount={false}
                 events={fcEvents}
-                eventClick={onEventClick}
                 eventDisplay="block"
                 eventContent={renderEventContent}
                 dayMaxEvents={3}
@@ -348,116 +317,10 @@ export default function Calendar() {
               events={weekEvents}
               todayKey={todayKey}
               showWeekends={showWeekends}
-              onSelect={setDetail}
             />
           )}
         </Box>
 
-      {/* 일정 상세 — 보기 전용 Drawer */}
-      <AppDrawer
-        open={!!detail}
-        onClose={() => setDetail(null)}
-        title={detail?.title ?? ''}
-        subtitle={meta?.label}
-        width={460}
-      >
-        {detail && meta && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            <Box>
-              <StatusChip status={meta.status} label={meta.label} />
-            </Box>
-
-            {/* 담당 팀원 */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.25,
-                flexWrap: 'wrap',
-                p: 1.5,
-                bgcolor: 'background.elevated',
-                borderRadius: '10px',
-              }}
-            >
-              {detailMembers.map((m) => (
-                <Box key={m.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box
-                    sx={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      bgcolor: m.color,
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 13,
-                      fontWeight: 700,
-                      flex: 'none',
-                      letterSpacing: '-0.02em',
-                    }}
-                  >
-                    {given(m.name)}
-                  </Box>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25 }}>
-                    <Box component="span" sx={{ fontSize: 13.5, fontWeight: 700, color: 'text.primary' }}>
-                      {m.name}
-                    </Box>
-                    {m.role && (
-                      <Box component="span" sx={{ fontSize: 11.5, color: 'text.disabled' }}>
-                        {m.role}
-                      </Box>
-                    )}
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-
-            {/* 정보 행 */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', gap: 1.5 }}>
-                <Box component="span" sx={{ width: 48, flex: 'none', fontSize: 13, color: 'text.disabled', fontWeight: 500 }}>
-                  날짜
-                </Box>
-                <Box component="span" sx={{ fontSize: 13.5, color: 'text.primary', fontWeight: 500 }}>
-                  {dateRange}
-                </Box>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                <Box component="span" sx={{ width: 48, flex: 'none', fontSize: 13, color: 'text.disabled', fontWeight: 500 }}>
-                  시간
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'text.primary' }}>
-                  <AccessTimeIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                  <Box component="span" sx={{ fontSize: 13.5, fontWeight: 500 }}>{timeText}</Box>
-                </Box>
-              </Box>
-              {loc && (
-                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                  <Box component="span" sx={{ width: 48, flex: 'none', fontSize: 13, color: 'text.disabled', fontWeight: 500 }}>
-                    장소
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'text.primary' }}>
-                    <PlaceIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                    <Box component="span" sx={{ fontSize: 13.5, fontWeight: 500 }}>{loc}</Box>
-                  </Box>
-                </Box>
-              )}
-              {detail.recurring && (
-                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                  <Box component="span" sx={{ width: 48, flex: 'none', fontSize: 13, color: 'text.disabled', fontWeight: 500 }}>
-                    반복
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, color: 'text.primary' }}>
-                    <RepeatIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-                    <Box component="span" sx={{ fontSize: 13.5, fontWeight: 500 }}>반복 일정</Box>
-                  </Box>
-                </Box>
-              )}
-            </Box>
-          </Box>
-        )}
-      </AppDrawer>
     </PageContainer>
   )
 }

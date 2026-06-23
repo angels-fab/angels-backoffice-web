@@ -12,6 +12,18 @@ function evCat(title: string): CalEvent['cat'] {
   return 'etc'
 }
 
+// 개정 규칙: [업무구분]이 제목 맨 앞. 대괄호 태그 우선 분류, 없으면 위 키워드 폴백.
+function classify(title: string): CalEvent['cat'] {
+  const m = (title || '').match(/^\s*\[([^\]]+)\]/)
+  if (!m) return evCat(title)
+  const tag = m[1]
+  if (/회의|미팅|보고|위원회/.test(tag)) return 'meeting'
+  if (/교육|세미나|워크숍|강의/.test(tag)) return 'edu'
+  if (/채용|면접|공고/.test(tag)) return 'recruit'
+  if (/출장|실사|방문/.test(tag)) return /국외|해외/.test(title) ? 'trip_intl' : 'trip_dom'
+  return 'etc'
+}
+
 const DAY = 24 * 3600 * 1000
 const dstr = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -27,7 +39,7 @@ export const loadCalEvents = createAsyncThunk('cal/load', async (): Promise<CalE
     const sTime = ev.start.slice(11)
     const eTime = ev.end.slice(11)
     const time = ev.allDay ? '종일' : sTime + (eTime !== sTime ? '-' + eTime : '')
-    const cat = evCat(ev.title)
+    const cat = classify(ev.title)
     // 여러 날짜에 걸친 일정은 날짜마다 한 칸씩 (최대 60일 안전장치).
     // 수정/삭제는 원본 이벤트 기준이라 id·start·end·allDay·recurring을 모든 칸에 그대로 싣는다.
     let t = new Date(s.getFullYear(), s.getMonth(), s.getDate())

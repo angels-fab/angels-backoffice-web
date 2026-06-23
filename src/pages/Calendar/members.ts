@@ -66,20 +66,30 @@ export function given(name: string): string {
 }
 
 /**
- * 칩/요약 표시용 제목 정리 — 팀원 이름·구분기호(@,-,/,·,쉼표) 제거.
- * (담당 팀원은 별도 라벨/행으로 표시하므로 칩 본문에서 중복 제거)
- * 원본 제목이 통째로 이름뿐이면 원본을 그대로 둔다.
+ * 일정 내용(제목) — 앞 [업무구분] 제거 + '@참석자' 이후 제거.
+ * 출장은 국내/국외(아이콘으로 표시)를 떼고 (출장지)의 괄호를 벗겨 표기.
+ *  예) "[회의] 주간 업무 협의 @신현진" → "주간 업무 협의"
+ *      "[출장] 국외(하와이)-MRS 2026 학회@신현진" → "하와이-MRS 2026 학회"
  */
-export function cleanTitle(title: string): string {
-  // 앞쪽 업무구분 브래킷([행정]/[출장] 등) 제거 — 구분은 칩 아이콘으로 표시하므로 중복
-  let t = (title || '').replace(/^\s*(?:\[[^\]]*\]\s*)+/, '')
-  for (const n of MEMBER_NAMES) {
-    t = t.replace(new RegExp('[@/\\-·,]?\\s*' + n, 'g'), ' ')
+export function eventContent(title: string, cat: string): string {
+  let t = (title || '').replace(/^\s*\[[^\]]*\]\s*/, '') // [구분] 제거
+  const at = t.indexOf('@')
+  if (at >= 0) t = t.slice(0, at) // @참석자 이후 제거
+  t = t.trim()
+  if (cat === 'trip_dom' || cat === 'trip_intl') {
+    t = t.replace(/^\s*(국내|국외|해외)\s*/, '') // 국내/국외는 아이콘으로 표시
+    t = t.replace(/\(([^)]*)\)/g, '$1').trim() // (출장지) 괄호 벗김
   }
-  t = t
-    .replace(/[@/]+/g, ' ')
-    .replace(/\s{2,}/g, ' ')
-    .replace(/^[\s\-·,]+|[\s\-·,]+$/g, '')
-    .trim()
   return t || (title || '').trim()
+}
+
+/** 참석자 목록 — 제목의 '@' 뒤 쉼표 구분(예 "@신현진, 박주봉" → ['신현진','박주봉']). */
+export function eventParticipants(title: string): string[] {
+  const at = (title || '').indexOf('@')
+  if (at < 0) return []
+  return title
+    .slice(at + 1)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 }

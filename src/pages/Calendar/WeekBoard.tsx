@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import type { CalEvent } from '@/types'
 import { CAT_META } from './catMeta'
-import { cleanTitle, given, memberById, membersForEvent, type TeamMember } from './members'
+import { given, memberById, membersForEvent, eventContent, eventParticipants, type TeamMember } from './members'
 import ChipContent from './ChipContent'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
@@ -22,27 +22,16 @@ export interface WeekBoardProps {
   events: CalEvent[]
   todayKey: string
   showWeekends: boolean
-  onSelect: (ev: CalEvent) => void
 }
 
 function dowColor(dow: number): string {
   return dow === 0 ? '#E0726B' : dow === 6 ? '#6AA0E8' : 'inherit'
 }
 
-function Chip({ ev, onSelect }: { ev: CalEvent; onSelect: (e: CalEvent) => void }) {
+function Chip({ ev }: { ev: CalEvent }) {
   const color = CAT_META[ev.cat].color
-  const m0 = memberById(membersForEvent(ev.title)[0])
   return (
     <Box
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelect(ev)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect(ev)
-        }
-      }}
       title={ev.title}
       sx={{
         p: '2px 7px',
@@ -50,20 +39,16 @@ function Chip({ ev, onSelect }: { ev: CalEvent; onSelect: (e: CalEvent) => void 
         bgcolor: alpha(color, 0.18),
         fontSize: 12,
         color: 'text.primary',
-        cursor: 'pointer',
         lineHeight: 1.5,
         minWidth: 0,
-        transition: 'filter .12s',
-        '&:hover': { filter: 'brightness(1.12)' },
       }}
     >
       <ChipContent
-        memberColor={m0.color}
-        initials={given(m0.name)}
+        participants={eventParticipants(ev.title).map((n) => ({ initials: given(n), color: memberById(n).color }))}
         catKey={ev.cat}
         catColor={color}
         time={ev.allDay ? '' : ev.start.slice(11, 16)}
-        title={cleanTitle(ev.title)}
+        title={eventContent(ev.title, ev.cat) || ev.title}
       />
     </Box>
   )
@@ -76,7 +61,7 @@ const CELL = {
 } as const
 
 /** 주간 — 팀원(행) × 요일(열) 스위밍레인 보드. FullCalendar로는 표현 불가해 직접 구현. */
-export default function WeekBoard({ weekStart, members, events, todayKey, showWeekends, onSelect }: WeekBoardProps) {
+export default function WeekBoard({ weekStart, members, events, todayKey, showWeekends }: WeekBoardProps) {
   const days = useMemo(() => {
     const all = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
     return showWeekends ? all : all.filter((d) => d.getDay() !== 0 && d.getDay() !== 6)
@@ -238,7 +223,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                   }}
                 >
                   {cellEvents.map((ev) => (
-                    <Chip key={ev.id + ev.date} ev={ev} onSelect={onSelect} />
+                    <Chip key={ev.id + ev.date} ev={ev} />
                   ))}
                 </Box>
               )
