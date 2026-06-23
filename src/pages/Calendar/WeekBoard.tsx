@@ -21,6 +21,7 @@ export interface WeekBoardProps {
   /** 카테고리 활성 필터를 이미 통과한 '일자별' 일정 목록 */
   events: CalEvent[]
   todayKey: string
+  showWeekends: boolean
   onSelect: (ev: CalEvent) => void
 }
 
@@ -75,8 +76,11 @@ const CELL = {
 } as const
 
 /** 주간 — 팀원(행) × 요일(열) 스위밍레인 보드. FullCalendar로는 표현 불가해 직접 구현. */
-export default function WeekBoard({ weekStart, members, events, todayKey, onSelect }: WeekBoardProps) {
-  const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
+export default function WeekBoard({ weekStart, members, events, todayKey, showWeekends, onSelect }: WeekBoardProps) {
+  const days = useMemo(() => {
+    const all = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+    return showWeekends ? all : all.filter((d) => d.getDay() !== 0 && d.getDay() !== 6)
+  }, [weekStart, showWeekends])
 
   // (memberId|dateKey) → events
   const byCell = useMemo(() => {
@@ -110,7 +114,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, onSele
         overflow: 'hidden',
       }}
     >
-      <Box sx={{ display: 'grid', gridTemplateColumns: '158px repeat(7, minmax(0, 1fr))' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: `158px repeat(${days.length}, minmax(0, 1fr))` }}>
         {/* 헤더 행 */}
         <Box
           sx={{

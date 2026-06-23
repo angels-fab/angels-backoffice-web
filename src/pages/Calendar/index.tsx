@@ -59,6 +59,7 @@ export default function Calendar() {
   const [disabledMembers, setDisabledMembers] = useState<string[]>([])
   const [disabledCats, setDisabledCats] = useState<RealCat[]>([])
   const [detail, setDetail] = useState<CalEvent | null>(null)
+  const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
   const calRef = useRef<FullCalendar>(null)
 
   const todayKey = todaySeoul()
@@ -274,6 +275,28 @@ export default function Calendar() {
         <Typography component="span" sx={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>
           {periodLabel}
         </Typography>
+
+        <Box
+          component="button"
+          onClick={() => setShowWeekends((s) => !s)}
+          sx={{
+            ml: { md: 'auto' },
+            height: 34,
+            px: '14px',
+            borderRadius: '9px',
+            border: '1px solid',
+            borderColor: showWeekends ? 'primary.main' : 'divider',
+            color: showWeekends ? 'primary.main' : 'text.secondary',
+            bgcolor: showWeekends ? 'background.elevated' : 'background.paper',
+            fontSize: 13,
+            fontWeight: 600,
+            fontFamily: 'inherit',
+            cursor: 'pointer',
+            transition: 'all .12s',
+          }}
+        >
+          {showWeekends ? '주말 숨기기' : '주말 보기'}
+        </Box>
       </Box>
 
       {/* 상단 필터 바 (좌측 사이드바 대체) — 달력 풀폭 확보 */}
@@ -298,6 +321,7 @@ export default function Calendar() {
                 locale={koLocale}
                 headerToolbar={false}
                 firstDay={0}
+                weekends={showWeekends}
                 fixedWeekCount={false}
                 events={fcEvents}
                 eventClick={onEventClick}
@@ -315,6 +339,7 @@ export default function Calendar() {
               members={visibleMembers}
               events={weekEvents}
               todayKey={todayKey}
+              showWeekends={showWeekends}
               onSelect={setDetail}
             />
           )}
