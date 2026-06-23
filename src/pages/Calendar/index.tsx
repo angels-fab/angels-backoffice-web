@@ -132,7 +132,7 @@ export default function Calendar() {
         end: ev.allDay ? ev.end.slice(0, 10) : ev.end,
         allDay: ev.allDay,
         backgroundColor: rgba(catColor, 0.18),
-        borderColor: 'transparent',
+        borderColor: catColor,
         extendedProps: props,
       }
     })

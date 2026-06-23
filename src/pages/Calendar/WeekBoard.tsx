@@ -34,8 +34,9 @@ function Chip({ ev }: { ev: CalEvent }) {
     <Box
       title={ev.title}
       sx={{
-        p: '2px 7px',
+        p: '2px 7px 2px 8px',
         borderRadius: '6px',
+        borderLeft: `3px solid ${color}`,
         bgcolor: alpha(color, 0.18),
         fontSize: 12,
         color: 'text.primary',
