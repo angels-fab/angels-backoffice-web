@@ -18,7 +18,6 @@ import { todaySeoul } from '@/utils/date'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
 import { MEMBERS, memberById, membersForEvent, given, eventContent, eventParticipants } from './members'
 import CalFilterBar from './CalFilterBar'
-import WeekBoard from './WeekBoard'
 import ChipContent, { type ChipContentProps } from './ChipContent'
 
 
@@ -60,9 +59,13 @@ export default function Calendar() {
   const todayKey = todaySeoul()
   const searchTrim = search.trim()
 
-  // 월 뷰: anchor 변경 시 FullCalendar 이동
+  // 뷰/기준일 변경 시 FullCalendar 동기화 (월=dayGridMonth / 주=dayGridWeek).
+  // changeView는 flushSync를 유발하므로 렌더 단계 밖(setTimeout)에서 호출.
   useEffect(() => {
-    if (view === 'month') calRef.current?.getApi().gotoDate(keyOf(anchor))
+    const id = setTimeout(() => {
+      calRef.current?.getApi().changeView(view === 'month' ? 'dayGridMonth' : 'dayGridWeek', keyOf(anchor))
+    }, 0)
+    return () => clearTimeout(id)
   }, [anchor, view])
 
   // ── 필터 술어 (빈 선택 = 전체) ──
@@ -139,19 +142,8 @@ export default function Calendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allEvents, selCats, selMembers, searchTrim])
 
-  // ── 주 뷰(보드) 데이터 ──
+  // 주간 기간 라벨용
   const weekStart = useMemo(() => startOfWeek(anchor), [anchor])
-  const visibleMembers = useMemo(
-    () => MEMBERS.filter((m) => memberSelected(m.id)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selMembers],
-  )
-  const weekEvents = useMemo(() => {
-    const lo = keyOf(weekStart)
-    const hi = keyOf(addDays(weekStart, 6))
-    return allEvents.filter((ev) => catSelected(ev.cat) && searchMatch(ev) && ev.date >= lo && ev.date <= hi)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allEvents, weekStart, selCats, searchTrim])
 
   // ── 네비게이션 ──
   const shift = (dir: number) => {
@@ -289,37 +281,27 @@ export default function Calendar() {
 
       {/* 달력 (풀폭) */}
       <Box sx={{ minWidth: 0 }}>
-          {view === 'month' ? (
-            <Box className="fc-theme-angels fc-team">
-              <FullCalendar
-                ref={calRef}
-                plugins={[dayGridPlugin]}
-                initialView="dayGridMonth"
-                initialDate={keyOf(anchor)}
-                locale={koLocale}
-                headerToolbar={false}
-                firstDay={0}
-                weekends={showWeekends}
-                fixedWeekCount={false}
-                events={fcEvents}
-                eventDisplay="block"
-                eventContent={renderEventContent}
-                dayMaxEvents={3}
-                moreLinkContent={(arg) => `+${arg.num}건`}
-                height="auto"
-                dayCellContent={(arg) => String(arg.date.getDate())}
-              />
-            </Box>
-          ) : (
-            <WeekBoard
-              weekStart={weekStart}
-              members={visibleMembers}
-              events={weekEvents}
-              todayKey={todayKey}
-              showWeekends={showWeekends}
-            />
-          )}
+        <Box className="fc-theme-angels fc-team">
+          <FullCalendar
+            ref={calRef}
+            plugins={[dayGridPlugin]}
+            initialView="dayGridMonth"
+            initialDate={keyOf(anchor)}
+            locale={koLocale}
+            headerToolbar={false}
+            firstDay={0}
+            weekends={showWeekends}
+            fixedWeekCount={false}
+            events={fcEvents}
+            eventDisplay="block"
+            eventContent={renderEventContent}
+            dayMaxEvents={view === 'month' ? 3 : false}
+            moreLinkContent={(arg) => `+${arg.num}건`}
+            height="auto"
+            dayCellContent={(arg) => String(arg.date.getDate())}
+          />
         </Box>
+      </Box>
 
     </PageContainer>
   )
