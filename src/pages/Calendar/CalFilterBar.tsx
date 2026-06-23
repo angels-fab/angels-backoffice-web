@@ -6,6 +6,7 @@ import GroupsIcon from '@mui/icons-material/Groups'
 import SchoolIcon from '@mui/icons-material/School'
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1'
 import FlightIcon from '@mui/icons-material/Flight'
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { given, type TeamMember } from './members'
@@ -36,7 +37,8 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
   meeting: GroupsIcon,
   edu: SchoolIcon,
   recruit: PersonAddAlt1Icon,
-  trip: FlightIcon,
+  trip_dom: DirectionsCarIcon,
+  trip_intl: FlightIcon,
   etc: MoreHorizIcon,
 }
 
@@ -146,7 +148,7 @@ export default function CalFilterBar({ search, onSearch, members, onToggleMember
                 transition: 'opacity .15s, background .15s',
               }}
             >
-              <Icon sx={{ fontSize: 13, color: c.color }} />
+              <Icon sx={{ fontSize: 13, color: c.color, ...(c.id === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}) }} />
               <Box component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>{c.label.split('/')[0]}</Box>
               <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>{c.count}</Box>
             </Box>

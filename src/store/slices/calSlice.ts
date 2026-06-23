@@ -8,7 +8,7 @@ function evCat(title: string): CalEvent['cat'] {
   if (/회의|미팅|보고|위원회/.test(title)) return 'meeting'
   if (/교육|세미나|워크숍|강의/.test(title)) return 'edu'
   if (/채용|면접|공고/.test(title)) return 'recruit'
-  if (/출장|실사|방문/.test(title)) return 'trip'
+  if (/출장|실사|방문/.test(title)) return /국외|해외/.test(title) ? 'trip_intl' : 'trip_dom'
   return 'etc'
 }
 

@@ -13,8 +13,9 @@ export const CAT_META: Record<RealCat, { label: string; status: StatusKind; colo
   meeting: { label: '회의/미팅', status: 'info', color: accent.blue },
   edu: { label: '교육/세미나', status: 'success', color: accent.green },
   recruit: { label: '채용', status: 'purple', color: accent.purple },
-  trip: { label: '출장', status: 'warning', color: accent.amber },
+  trip_dom: { label: '국내출장', status: 'warning', color: accent.amber },
+  trip_intl: { label: '국외출장', status: 'warning', color: accent.amber },
   etc: { label: '기타', status: 'teal', color: accent.teal },
 }
 
-export const CAT_ORDER: RealCat[] = ['meeting', 'edu', 'recruit', 'trip', 'etc']
+export const CAT_ORDER: RealCat[] = ['meeting', 'edu', 'recruit', 'trip_dom', 'trip_intl', 'etc']
