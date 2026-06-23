@@ -84,13 +84,14 @@ export default function Calendar() {
     catSelected(ev.cat) && membersForEvent(ev.title).some(memberSelected) && searchMatch(ev)
 
   // 전체선택 상태에서 한 탭 클릭 = 그것만 선택 / 선택된 탭 재클릭 = 해제(마지막 해제 시 전체로 복귀)
-  const isolateToggle = <T,>(prev: T[], id: T): T[] => {
-    if (prev.length === 0) return [id]
-    if (prev.includes(id)) return prev.filter((x) => x !== id)
-    return [...prev, id]
+  const isolateToggle = <T,>(prev: T[], id: T, total: number): T[] => {
+    if (prev.length === 0 || prev.length >= total) return [id] // 전체선택(빈 배열 또는 모두 포함) → 그것만
+    if (prev.includes(id)) return prev.filter((x) => x !== id) // 선택 해제(마지막이면 [] = 전체)
+    const next = [...prev, id]
+    return next.length >= total ? [] : next // 모두 선택되면 전체(빈 배열)로 정규화
   }
-  const toggleMember = (id: string) => setSelMembers((prev) => isolateToggle(prev, id))
-  const toggleCat = (id: RealCat) => setSelCats((prev) => isolateToggle(prev, id))
+  const toggleMember = (id: string) => setSelMembers((prev) => isolateToggle(prev, id, MEMBERS.length))
+  const toggleCat = (id: RealCat) => setSelCats((prev) => isolateToggle(prev, id, CAT_ORDER.length))
 
   // ── 사이드바 데이터 ──
   const catCounts = useMemo(() => {

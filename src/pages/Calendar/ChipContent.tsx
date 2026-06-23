@@ -35,26 +35,26 @@ export default function ChipContent({ memberColor, initials, catKey, catColor, t
   const Icon = CAT_ICON[catKey]
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1px', minWidth: 0, width: '100%', overflow: 'hidden' }}>
-      {/* 1줄 — 구분 · 시간 · 담당자 */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
-        <Icon sx={{ fontSize: 13, color: catColor, flex: 'none', ...(catKey === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}) }} />
+      {/* 1줄 — 구분 · 시간 · 담당자 (정보 크기 키움) */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+        <Icon sx={{ fontSize: 17, color: catColor, flex: 'none', ...(catKey === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}) }} />
         {time && (
-          <Box component="span" sx={{ fontSize: 10.5, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', flex: 'none' }}>
+          <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', flex: 'none' }}>
             {time}
           </Box>
         )}
         <Box
           sx={{
             ml: 'auto',
-            width: 16,
-            height: 16,
+            width: 20,
+            height: 20,
             borderRadius: '50%',
             bgcolor: memberColor,
             color: '#fff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 9,
+            fontSize: 11,
             fontWeight: 700,
             letterSpacing: '-0.5px',
             flex: 'none',
