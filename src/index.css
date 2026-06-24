@@ -467,7 +467,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* 팀 일정 시안용 월 그리드 — 셀 키움·날짜 우상단·칩 톤 (업무일정 페이지) */
 .fc-team .fc{min-height:0;box-shadow:none}
 .fc-team .fc-daygrid-day-frame{min-height:114px}
-.fc-team .fc-daygrid-day-top{flex-direction:row;justify-content:flex-end}
+.fc-team .fc-daygrid-day-top{flex-direction:row;justify-content:flex-end;min-height:26px;align-items:center}
 .fc-team .fc-daygrid-day-number{font-size:13px;font-weight:600;padding:6px 8px 2px}
 .fc-team .fc-day-today .fc-daygrid-day-number{color:#fff;background:var(--blue);min-width:22px;height:22px;padding:0 5px;margin:4px 4px 0 0;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
 .fc-team .fc-daygrid-event-harness{margin-top:3px}

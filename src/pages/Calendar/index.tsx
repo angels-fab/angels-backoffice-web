@@ -118,11 +118,12 @@ export default function Calendar() {
     on: catSelected(id),
   }))
 
-  // ── 월 뷰(FullCalendar) 이벤트 ──
+  // ── FullCalendar 이벤트 ──
+  // 여러 날 일정도 '날짜별 하루 블록'으로 렌더(스팬 X). 멀티데이 가로바가 lane을 차지해
+  // 다른 칸 일정과 어긋나/빈칸이 생기던 문제 제거 → 모든 칸이 위에서부터 촘촘히 정렬, 겹침 없음.
+  // (allEvents는 calSlice에서 이미 날짜별로 펼쳐져 있음 — dedupe 없이 그대로 사용)
   const fcEvents = useMemo(() => {
-    const byId = new Map<string, CalEvent>()
-    for (const ev of allEvents) if (!byId.has(ev.id)) byId.set(ev.id, ev)
-    return [...byId.values()].filter(eventActive).map((ev) => {
+    return allEvents.filter(eventActive).map((ev) => {
       const cat = ev.cat
       const catColor = CAT_META[cat].color
       const props: ChipContentProps = {
@@ -132,16 +133,18 @@ export default function Calendar() {
         time: ev.allDay ? '' : ev.start.slice(11, 16),
         title: eventContent(ev.title, cat) || catShort(cat),
       }
-      return {
-        id: ev.id,
+      const base = {
+        id: `${ev.id}__${ev.date}`,
         title: ev.title,
-        start: ev.allDay ? ev.start.slice(0, 10) : ev.start,
-        end: ev.allDay ? ev.end.slice(0, 10) : ev.end,
         allDay: ev.allDay,
         backgroundColor: rgba(catColor, 0.18),
         borderColor: catColor,
         extendedProps: props,
       }
+      if (ev.allDay) return { ...base, start: ev.date } // 종일: 그 날짜 하루 블록
+      const t0 = ev.start.slice(11)
+      const t1 = ev.end.slice(11)
+      return { ...base, start: `${ev.date}T${t0}`, end: t1 && t1 !== t0 ? `${ev.date}T${t1}` : undefined }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allEvents, selCats, selMembers, searchTrim])
