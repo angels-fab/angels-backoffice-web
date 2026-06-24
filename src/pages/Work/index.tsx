@@ -749,15 +749,17 @@ export default function Work() {
               <Typography variant="h2" component="h2">업무 목록</Typography>
               <Typography variant="body2" sx={{ color: 'text.disabled' }}>{listed.length}</Typography>
             </Box>
-            {/* 새 업무: 헤더와 같은 행(2열). 클릭 시 같은 칸에서 작성폼(전체폭 확장 X). */}
-            {isAdmin && (
-              <Box key="new" sx={{ gridColumn: { sm: '2' }, gridRow: { sm: '1' } }}>
-                {!composing && <AddCard height={64} onClick={startCompose} />}
-                <Collapse in={composing} unmountOnExit>
-                  <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
-                </Collapse>
-              </Box>
-            )}
+            {/* 새 업무 칸: 헤더와 같은 행(2열)을 항상 차지(로그인/로그아웃 무관 배열 고정). 버튼만 관리자에게 노출. */}
+            <Box key="new" sx={{ gridColumn: { sm: '2' }, gridRow: { sm: '1' } }}>
+              {isAdmin && (
+                <>
+                  {!composing && <AddCard height={64} onClick={startCompose} />}
+                  <Collapse in={composing} unmountOnExit>
+                    <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+                  </Collapse>
+                </>
+              )}
+            </Box>
             {listed.map((t) => renderTask(t, 'green'))}
           </CardGrid>
         ) : (

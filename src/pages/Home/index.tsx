@@ -4,6 +4,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SpaceDashboardIcon from '@mui/icons-material/SpaceDashboard'
 import { PageContainer, PageHeader, ContentSection } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
+import Greeting from './Greeting'
 import KpiOverview from './dash/KpiOverview'
 import ScheduleSection from './dash/ScheduleSection'
 import WorkStatusSection from './dash/WorkStatusSection'
@@ -31,6 +32,9 @@ export default function Home() {
 
   return (
     <PageContainer>
+      {/* 최상단 인사말 — 로그인 주체별 랜덤 인사말 + 로고(웹/모바일 공통) */}
+      <Greeting />
+
       <PageHeader icon={<SpaceDashboardIcon />} title="운영 대시보드" updatedAt={updatedAt || undefined} />
 
       {/* ① KPI Overview */}

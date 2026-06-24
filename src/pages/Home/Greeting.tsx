@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import WavingHandIcon from '@mui/icons-material/WavingHand'
+import { useRole } from '@/auth/role'
 import { todaySeoul } from '@/utils/date'
 import greetIllust from '@/assets/greet-illust.png'
 
@@ -11,6 +12,9 @@ const GREET_SETS = [
 ]
 
 export default function Greeting() {
+  const { isAdmin, user } = useRole()
+  // 로그인 주체별 인사말 — 관리자는 이름, 게스트는 팀 인사말
+  const sub = isAdmin && user ? `${user}님, 안녕하세요` : '안녕하세요, FAB 구축팀입니다'
   const { main, date } = useMemo(() => {
     const now = new Date()
     let h = parseInt(
@@ -30,7 +34,7 @@ export default function Greeting() {
     <div className="home-greeting">
       <div className="greet-text">
         <div className="greet-sub">
-          안녕하세요, FAB 구축팀입니다{' '}
+          {sub}{' '}
           <WavingHandIcon htmlColor="#f0b429" sx={{ fontSize: 15, verticalAlign: 'text-bottom' }} />
         </div>
         <div className="greet-main">{main}</div>

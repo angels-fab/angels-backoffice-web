@@ -246,25 +246,6 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
                   <Box sx={{ fontSize: 12, color: '#8195a9', mt: '5px', fontVariantNumeric: 'tabular-nums' }}>
                     {step.period}
                   </Box>
-
-                  {/* 현재 단계 마커 */}
-                  {isCurrent && (
-                    <Box
-                      sx={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: '#7eb0ff',
-                        mt: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Box component="span" sx={{ width: 5, height: 5, borderRadius: '50%', background: '#7eb0ff' }} />
-                      현재 단계
-                    </Box>
-                  )}
                 </Box>
               )
             })}

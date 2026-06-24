@@ -897,12 +897,12 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .load-spin-sm{width:11px;height:11px;border-width:2px}
 
 /* ── 홈: 인사말 ── */
-.home-greeting{width:100%;max-width:960px;display:flex;align-items:flex-end;justify-content:flex-start;gap:12px;margin-bottom:20px}
+.home-greeting{width:100%;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
 .greet-text{flex:0 0 auto;min-width:0}
 .greet-sub{font-size:14px;color:var(--text2);margin-bottom:7px;white-space:nowrap}
 .greet-main{font-size:30px;font-weight:700;color:var(--text);line-height:1.15;margin-bottom:0;letter-spacing:-.5px;white-space:nowrap}
 .greet-date{display:none}
-.greet-illust{flex:1 1 0;min-width:0;height:auto;max-height:58px;object-fit:contain;object-position:left bottom;align-self:flex-end}
+.greet-illust{flex:1 1 0;min-width:0;height:auto;max-height:58px;object-fit:contain;object-position:right bottom;align-self:flex-end}
 @media(max-width:480px){.greet-main{font-size:23px}.greet-sub{font-size:13px}.greet-illust{max-height:50px}}
 
 /* ── 홈: 장비 현황 요약 카드 ── */
@@ -1024,7 +1024,8 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .page-body{background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:32px;flex:1;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px;line-height:2;text-align:center}
 
 /* 반응형 레이아웃: PC(기본) / 모바일(<=768px) */
-.home-greeting,.eq-summary,.stat-board,.menu-stack,.topbar-title,.topbar-bell,.bottom-nav{display:none}
+/* .home-greeting은 웹/모바일 모두 노출 (아래 그룹에서 제외) */
+.eq-summary,.stat-board,.menu-stack,.topbar-title,.topbar-bell,.bottom-nav{display:none}
 @media(max-width:768px){
   .d-only{display:none !important}
   .topbar{position:fixed;left:0;right:0;top:0}
