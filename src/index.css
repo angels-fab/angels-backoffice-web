@@ -479,6 +479,11 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-team .fc-timegrid-slot{height:40px}
 .fc-team .fc-timegrid-event{border-radius:6px;border-width:0 0 0 3px;border-style:solid;padding:1px 4px}
 .fc-team .fc-timegrid-event .fc-event-main{padding:0;color:var(--text)}
+/* 주간 all-day 셀: 월간용 최소높이(114px) 제거 → 종일 일정 수만큼만 / 날짜번호는 헤더에만(중복 제거) */
+.fc-team .fc-timegrid .fc-daygrid-day-frame{min-height:0}
+.fc-team .fc-timegrid .fc-daygrid-day-top{display:none}
+.fc-team .fc-timegrid .fc-daygrid-body .fc-daygrid-day-events{margin-top:0}
+.fc-team .fc-timegrid .fc-daygrid-day-bottom{margin:0}
 
 .gcal-detail{position:relative;background:var(--ink2);border:1px solid var(--border);border-radius:12px;width:min(92vw,380px);padding:20px 22px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
 .gcal-detail-x{position:absolute;top:10px;right:10px}
