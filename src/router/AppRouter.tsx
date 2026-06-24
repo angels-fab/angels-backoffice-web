@@ -10,6 +10,7 @@ import Links from '@/pages/Links'
 import Roadmap from '@/pages/Roadmap'
 import Settings from '@/pages/Settings'
 import Improve from '@/pages/Improve'
+import RequireAdmin from '@/auth/RequireAdmin'
 import DesignSystemShowcase from '@/pages/_DesignSystem'
 import LayoutSystemShowcase from '@/pages/_LayoutSystem'
 
@@ -31,7 +32,8 @@ export function AppRouter() {
         <Route path="/links" element={<Links />} />
         <Route path="/improve" element={<Improve />} />
         <Route path="/roadmap" element={<Roadmap />} />
-        <Route path="/settings" element={<Settings />} />
+        {/* 설정 — 로그인(관리자) 전용. 게스트는 홈으로 (로그인은 상단바 '관리자 모드' 버튼) */}
+        <Route path="/settings" element={<RequireAdmin><Settings /></RequireAdmin>} />
         {/* 원본 한글 페이지명 별칭 ('회의'는 캘린더로 — goPage alias 대응) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

@@ -9,6 +9,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import TimelineIcon from '@mui/icons-material/Timeline'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
+import { useRole } from '@/auth/role'
 import { useNavBadges } from './useNavBadges'
 
 interface SideNavItem {
@@ -28,6 +29,7 @@ export default function SideNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const badges = useNavBadges()
+  const { isAdmin } = useRole()
 
   const groups: SideNavGroup[] = [
     {
@@ -55,7 +57,8 @@ export default function SideNav() {
         { icon: <TimelineIcon />, label: '구축 로드맵', path: '/roadmap' },
         { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve },
         { icon: <LinkIcon />, label: '바로가기', path: '/links' },
-        { icon: <SettingsIcon />, label: '설정', path: '/settings' },
+        // 설정은 로그인(관리자) 전용 — 게스트에겐 숨김(라우트도 RequireAdmin로 보호)
+        ...(isAdmin ? [{ icon: <SettingsIcon />, label: '설정', path: '/settings' }] : []),
       ],
     },
   ]
