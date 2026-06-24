@@ -492,6 +492,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-team .fc-timegrid .fc-timegrid-axis,
 .fc-team .fc-timegrid .fc-daygrid-day{border-top:0}
 .fc-team .fc-timegrid .fc-col-header-cell.fc-day-today{border:1px solid var(--border)}
+/* 오늘 컬럼의 파란 box-shadow 가로선(헤더·종일·시간그리드 위 3줄) 제거 — 오늘 강조는 컬럼 배경 + 헤더 테두리로 */
+.fc-team .fc-timegrid .fc-day-today{box-shadow:none}
 /* 주 시간표 본문 컬럼 상단의 날짜 숫자(.fc-timegrid-col-misc) 제거 — 날짜는 헤더에만 */
 .fc-team .fc-timegrid .fc-timegrid-col-misc{display:none}
 
