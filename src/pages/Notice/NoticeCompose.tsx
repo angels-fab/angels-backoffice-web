@@ -153,17 +153,16 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
         <TableCell />
         <TableCell colSpan={3} onClick={stop}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            {/* 부서(≈6음절) / 부서담당자(≈4음절) — 히스토리 기반 자동완성 */}
-            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+            {/* 부서(≈6음절) / 부서담당자(≈4음절) 자동완성 + 해당자(부서담당자 옆) */}
+            <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
               <Box sx={{ width: 104, maxWidth: '100%' }}>
                 <ComboField value={dept} onChange={setDept} options={deptOptions} placeholder="부서" ariaLabel="부서" />
               </Box>
               <Box sx={{ width: 80, maxWidth: '100%' }}>
                 <ComboField value={deptMgr} onChange={setDeptMgr} options={deptMgrOptions} placeholder="담당자" ariaLabel="부서담당자" />
               </Box>
-            </Box>
-            {/* 해당자 — 팀원 동그라미 칩(업무일정 상단 팀원처럼 크게, 선택 시 컬러·해제 시 흐림) */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+              <Box component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', ml: 0.5 }}>해당자</Box>
+              {/* 팀원 동그라미 칩 — 선택=컬러, 해제=흑백(동그라미는 잘 보임) */}
               {TARGET_MEMBERS.map((m) => {
                 const on = targets.includes(m.name)
                 return (
@@ -173,11 +172,10 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                     title={m.name}
                     onClick={() => toggleTarget(m.name)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTarget(m.name) } }}
-                    style={{ backgroundColor: on ? m.color : 'transparent', color: on ? '#fff' : undefined, opacity: on ? 1 : 0.5, filter: on ? 'none' : 'grayscale(1)' }}
+                    style={{ backgroundColor: m.color, color: '#fff', filter: on ? 'none' : 'grayscale(1)', opacity: on ? 1 : 0.6 }}
                     sx={{
                       width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 12.5, fontWeight: 700, letterSpacing: '-0.5px', cursor: 'pointer', flex: 'none',
-                      border: on ? 'none' : '1px solid', borderColor: 'divider', color: 'text.disabled',
                       transition: 'opacity .15s, filter .15s',
                     }}
                   >

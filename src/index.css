@@ -470,7 +470,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-team .fc-daygrid-day-top{flex-direction:row;justify-content:flex-end;min-height:26px;align-items:center}
 .fc-team .fc-daygrid-day-number{font-size:13px;font-weight:600;padding:6px 8px 2px}
 .fc-team .fc-day-today .fc-daygrid-day-number{color:#fff;background:var(--blue);min-width:22px;height:22px;padding:0 5px;margin:4px 4px 0 0;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
-.fc-team .fc-daygrid-event-harness{margin-top:3px}
+/* 일정 간 세로 간격(겹침 방지) — margin-bottom만 FullCalendar daygrid에서 유효 */
+.fc-team .fc-daygrid-event-harness{margin-bottom:7px}
 .fc-team .fc-daygrid-event{font-size:11.5px;color:var(--text);font-weight:500;padding:2px 7px 2px 8px;border-radius:6px;line-height:1.4;white-space:normal;border-width:0 0 0 3px;border-style:solid}
 .fc-team .fc-daygrid-event .fc-event-main{color:var(--text);padding:0}
 .fc-team .fc-daygrid-event:hover{filter:brightness(1.12)}

@@ -247,7 +247,9 @@ export default function Notice() {
               <Typography variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
               </Typography>
-              {n.isNew && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="error" label="N" /></Box>}
+              {n.isNew && (
+                <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: '4px', bgcolor: 'error.main', color: '#fff', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+              )}
               {link && (
                 <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
                   <OpenInNewIcon sx={{ fontSize: 15 }} />
