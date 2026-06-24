@@ -3,6 +3,7 @@ import Button from '@mui/material/Button'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SpaceDashboardIcon from '@mui/icons-material/SpaceDashboard'
 import { PageContainer, PageHeader, ContentSection } from '@/components/ds'
+import { useRole } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
 import Greeting from './Greeting'
 import KpiOverview from './dash/KpiOverview'
@@ -20,6 +21,7 @@ import NoticeSection from './dash/NoticeSection'
  */
 export default function Home() {
   const navigate = useNavigate()
+  const { isAdmin } = useRole()
   const updatedAt = useAppSelector(
     (s) => s.cal.updatedAt || s.work.updatedAt || s.notice.updatedAt || s.eq.updatedAt || '',
   )
@@ -37,30 +39,37 @@ export default function Home() {
 
       <PageHeader icon={<SpaceDashboardIcon />} title="운영 대시보드" updatedAt={updatedAt || undefined} />
 
-      {/* ① KPI Overview */}
-      <ContentSection>
-        <KpiOverview />
-      </ContentSection>
+      {/* 로그인(관리자) 전용 섹션 — 게스트에겐 공개 정보(장비 현황)만 노출 */}
+      {isAdmin && (
+        <>
+          {/* ① KPI Overview */}
+          <ContentSection>
+            <KpiOverview />
+          </ContentSection>
 
-      {/* ② 오늘 일정 + 다가오는 일정 */}
-      <ContentSection>
-        <ScheduleSection />
-      </ContentSection>
+          {/* ② 오늘 일정 + 다가오는 일정 */}
+          <ContentSection>
+            <ScheduleSection />
+          </ContentSection>
 
-      {/* ③ 업무 현황 */}
-      <ContentSection title="업무 현황" action={moreBtn('/work')}>
-        <WorkStatusSection />
-      </ContentSection>
+          {/* ③ 업무 현황 */}
+          <ContentSection title="업무 현황" action={moreBtn('/work')}>
+            <WorkStatusSection />
+          </ContentSection>
+        </>
+      )}
 
-      {/* ④ 장비 현황 */}
-      <ContentSection title="장비 현황" action={moreBtn('/equipment')}>
+      {/* ④ 장비 현황 — 공개(게스트도 표시) */}
+      <ContentSection title="장비 현황" action={moreBtn('/equipment')} last={!isAdmin}>
         <EquipmentSection />
       </ContentSection>
 
-      {/* ⑤ 공지사항 */}
-      <ContentSection title="공지사항" action={moreBtn('/notice')} last>
-        <NoticeSection />
-      </ContentSection>
+      {/* ⑤ 공지사항 — 로그인 전용 */}
+      {isAdmin && (
+        <ContentSection title="공지사항" action={moreBtn('/notice')} last>
+          <NoticeSection />
+        </ContentSection>
+      )}
     </PageContainer>
   )
 }

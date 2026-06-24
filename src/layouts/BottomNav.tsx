@@ -4,6 +4,7 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import { useRole } from '@/auth/role'
 import { useNavBadges } from './useNavBadges'
 
 function Badge({ n }: { n: number }) {
@@ -14,6 +15,7 @@ function Badge({ n }: { n: number }) {
 export default function BottomNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const { isAdmin } = useRole()
   const { cal: calCnt, notice: noticeCnt, work: workCnt } = useNavBadges()
 
   const item = (path: string, label: string, icon: JSX.Element, badge?: number) => (
@@ -33,9 +35,10 @@ export default function BottomNav() {
     <nav className="bottom-nav" id="bottom-nav">
       {item('/', '홈', <HomeIcon />)}
       {item('/equipment', '장비', <MonitorIcon />)}
-      {item('/notice', '공지', <CampaignIcon />, noticeCnt)}
-      {item('/work', '업무', <TaskAltIcon />, workCnt)}
-      {item('/calendar', '일정', <CalendarMonthIcon />, calCnt)}
+      {/* 공지·업무·일정은 로그인(관리자) 시에만 */}
+      {isAdmin && item('/notice', '공지', <CampaignIcon />, noticeCnt)}
+      {isAdmin && item('/work', '업무', <TaskAltIcon />, workCnt)}
+      {isAdmin && item('/calendar', '일정', <CalendarMonthIcon />, calCnt)}
     </nav>
   )
 }

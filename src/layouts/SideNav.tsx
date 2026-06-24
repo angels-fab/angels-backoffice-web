@@ -66,9 +66,15 @@ export default function SideNav() {
   const isActive = (path: string) =>
     path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(path + '/')
 
+  // 게스트(로그아웃)는 공개 메뉴만: 홈 · 장비도입관리 · 구축 로드맵 · 바로가기. 로그인 시 전체.
+  const GUEST_PATHS = new Set(['/', '/equipment', '/roadmap', '/links'])
+  const visibleGroups = groups
+    .map((g) => ({ ...g, items: isAdmin ? g.items : g.items.filter((it) => GUEST_PATHS.has(it.path)) }))
+    .filter((g) => g.items.length > 0)
+
   return (
     <aside className="sidenav d-only">
-      {groups.map((g, i) => (
+      {visibleGroups.map((g, i) => (
         <div className="snav-group" key={g.label ?? i}>
           {g.label && <div className="snav-label">{g.label}</div>}
           {g.items.map(item => (
