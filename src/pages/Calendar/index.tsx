@@ -186,7 +186,7 @@ export default function Calendar() {
       {/* 툴바 — 뷰 토글 / 오늘 / 이전·다음 / 기간 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
         <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: '9px' }}>
-          {([{ k: 'month', l: '월' }, { k: 'timeweek', l: '주(시간표)' }] as const).map((t) => (
+          {([{ k: 'month', l: '월' }, { k: 'timeweek', l: '주' }] as const).map((t) => (
             <Box
               key={t.k}
               component="button"
