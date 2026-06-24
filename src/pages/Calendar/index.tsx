@@ -42,7 +42,9 @@ function rgba(hex: string, a: number) {
 type ViewKey = 'month' | 'timeweek'
 
 function renderEventContent(arg: EventContentArg) {
-  return <ChipContent {...(arg.event.extendedProps as unknown as ChipContentProps)} />
+  // 주 시간표(timeGridWeek)의 종일 칸만 1줄 컴팩트. 월간·시간일정은 2줄로 높이 통일(겹침 방지).
+  const dense = arg.event.allDay && arg.view.type === 'timeGridWeek'
+  return <ChipContent {...(arg.event.extendedProps as unknown as ChipContentProps)} dense={dense} />
 }
 
 export default function Calendar() {

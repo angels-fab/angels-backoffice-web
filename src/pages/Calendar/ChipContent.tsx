@@ -38,6 +38,8 @@ export interface ChipContentProps {
   catColor: string
   time?: string
   title: string
+  /** 한 줄 컴팩트 표시(주 시간표의 종일 칸 전용). 미지정 시 2줄(월간·시간일정과 높이 통일) */
+  dense?: boolean
 }
 
 function Circle({ text, color }: { text: string; color: string }) {
@@ -63,7 +65,7 @@ function Circle({ text, color }: { text: string; color: string }) {
   )
 }
 
-export default function ChipContent({ participants, catKey, catColor, time, title }: ChipContentProps) {
+export default function ChipContent({ participants, catKey, catColor, time, title, dense }: ChipContentProps) {
   const Icon = CAT_ICON[catKey]
   const shown = participants.slice(0, MAX_PARTICIPANTS)
   const rest = participants.length - shown.length
@@ -71,20 +73,22 @@ export default function ChipContent({ participants, catKey, catColor, time, titl
   const titleSx = { fontSize: 11.5, lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 } as const
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, width: '100%', overflow: 'hidden' }}>
-      {/* 좌: 시간 있으면 [구분·시간 / 내용] 2줄, 종일(시간 없음)이면 [구분 내용] 1줄 */}
-      {time ? (
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
-            <Icon sx={iconSx} />
-            <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', flex: 'none' }}>
-              {time}
-            </Box>
-          </Box>
+      {/* dense(주 시간표 종일)면 [구분 내용] 1줄, 아니면 [구분·시간 / 내용] 2줄(월간·시간일정 높이 통일) */}
+      {dense ? (
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Icon sx={iconSx} />
           <Box component="span" sx={titleSx}>{title}</Box>
         </Box>
       ) : (
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <Icon sx={iconSx} />
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1px' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
+            <Icon sx={iconSx} />
+            {time && (
+              <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', flex: 'none' }}>
+                {time}
+              </Box>
+            )}
+          </Box>
           <Box component="span" sx={titleSx}>{title}</Box>
         </Box>
       )}
