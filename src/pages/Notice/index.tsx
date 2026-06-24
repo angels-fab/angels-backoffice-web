@@ -27,6 +27,12 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import SearchIcon from '@mui/icons-material/Search'
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
+import SecurityIcon from '@mui/icons-material/Security'
+import ApartmentIcon from '@mui/icons-material/Apartment'
+import SchoolIcon from '@mui/icons-material/School'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
+import type { SvgIconComponent } from '@mui/icons-material'
 import {
   PageContainer,
   PageHeader,
@@ -47,6 +53,15 @@ import NoticeDetail from './NoticeDetail'
 import NoticeCompose, { NOTICE_CATS, type NoticeFormValues } from './NoticeCompose'
 
 const refUrl = (ref: string) => String(ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
+
+// 분류 필터 아이콘(업무일정 탭처럼) — 안전/보안/시설/교육/일반
+const CAT_ICON: Record<string, SvgIconComponent> = {
+  안전: HealthAndSafetyIcon,
+  보안: SecurityIcon,
+  시설: ApartmentIcon,
+  교육: SchoolIcon,
+  일반: InfoOutlinedIcon,
+}
 
 function kindColor(th: Theme, kind: StatusKind): string {
   switch (kind) {
@@ -228,10 +243,11 @@ export default function Notice() {
           <TableCell><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
           <TableCell sx={{ color: 'text.primary' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-              {n.isNew && <StatusChip status="error" label="NEW" />}
-              <Typography variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {isExpired(n) && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="neutral" label="종료" /></Box>}
+              <Typography variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
               </Typography>
+              {n.isNew && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="error" label="N" /></Box>}
               {link && (
                 <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
                   <OpenInNewIcon sx={{ fontSize: 15 }} />
@@ -285,6 +301,7 @@ export default function Notice() {
             {NOTICE_CATS.map((c) => {
               const on = catSelected(c)
               const color = catColor(theme, c)
+              const Icon = CAT_ICON[c]
               return (
                 <Box
                   key={c}
@@ -295,10 +312,11 @@ export default function Notice() {
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCat(c) } }}
                   style={{ backgroundColor: alpha(color, on ? 0.18 : 0.06), color, opacity: on ? 1 : 0.45 }}
                   sx={{
-                    display: 'inline-flex', alignItems: 'center', gap: '6px', p: '5px 11px', borderRadius: '999px',
+                    display: 'inline-flex', alignItems: 'center', gap: '5px', p: '5px 11px', borderRadius: '999px',
                     cursor: 'pointer', transition: 'opacity .15s, background-color .15s',
                   }}
                 >
+                  {Icon && <Icon sx={{ fontSize: 15, flex: 'none' }} />}
                   <Box component="span" sx={{ fontSize: 12.5, fontWeight: 600 }}>{c}</Box>
                   <Box component="span" sx={{ fontSize: 11, opacity: 0.7 }}>{catCounts[c] || 0}</Box>
                 </Box>
