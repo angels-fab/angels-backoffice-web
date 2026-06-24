@@ -4,6 +4,9 @@ import type { StatusKind } from '@/components/ds'
 /** 공지 분류 → StatusKind (디자인 시스템 색 통일). 미정의 분류는 neutral. */
 const NOTICE_CAT_STATUS: Record<string, StatusKind> = {
   긴급: 'error',
+  안전: 'error',
+  보안: 'purple',
+  시설: 'success',
   공지: 'info',
   일반: 'neutral',
   회의: 'purple',
