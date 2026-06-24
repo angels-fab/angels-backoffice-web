@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import type { MouseEvent } from 'react'
 import Box from '@mui/material/Box'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
@@ -17,9 +16,13 @@ import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import type { Notice } from '@/types'
 import { todaySeoul } from '@/utils/date'
+import { ComboField } from '@/pages/Work/inlineFields'
+import { MEMBERS, given } from '@/pages/Calendar/members'
 
-// 포털개선요청 작성폼과 동일 패턴 — 표 안에서 팝업 없이 in-place 작성/수정.
-const CATS = ['긴급', '공지', '일반', '회의', '교육', '행사', '점검']
+// 분류 항목(드롭다운) — 안전/보안/시설/교육/일반
+export const NOTICE_CATS = ['안전', '보안', '시설', '교육', '일반']
+// 해당자 후보 — 캘린더 팀원(센터 제외): 신현진/박주봉/박세리/조성범
+const TARGET_MEMBERS = MEMBERS.filter((m) => m.id !== '센터')
 
 export interface NoticeFormValues {
   cat: string
@@ -27,6 +30,8 @@ export interface NoticeFormValues {
   body: string
   ref: string
   dept: string
+  deptMgr: string
+  target: string
   pinned: boolean
 }
 
@@ -38,7 +43,6 @@ const inputSx = (th: Theme) => ({
   '& input::placeholder, & textarea::placeholder': { color: 'text.disabled', opacity: 1 },
 })
 
-// 관련자료(첨부) — 박스 없는 아이콘 + 입력 팝업 (값 있으면 파랑)
 function LinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const active = !!value.trim()
@@ -62,10 +66,12 @@ function LinkField({ value, onChange }: { value: string; onChange: (v: string) =
 function CatDrop({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Select
-      value={value}
+      value={NOTICE_CATS.includes(value) ? value : ''}
       onChange={(e) => onChange(e.target.value)}
+      displayEmpty
       variant="standard"
       disableUnderline
+      renderValue={(v) => (v ? <span>{v}</span> : <Box component="span" sx={{ color: 'text.disabled' }}>분류</Box>)}
       MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}
       sx={(th) => ({
         ...inputSx(th), width: 88, maxWidth: '100%', height: 32,
@@ -73,7 +79,7 @@ function CatDrop({ value, onChange }: { value: string; onChange: (v: string) => 
         '& .MuiSelect-icon': { right: 2, color: 'text.secondary' },
       })}
     >
-      {CATS.map((c) => <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>{c}</MenuItem>)}
+      {NOTICE_CATS.map((c) => <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>{c}</MenuItem>)}
     </Select>
   )
 }
@@ -83,27 +89,34 @@ export interface NoticeComposeProps {
   notice?: Notice
   author: string
   saving: boolean
+  deptOptions: string[]
+  deptMgrOptions: string[]
   onSave: (v: NoticeFormValues) => void
   onCancel: () => void
 }
 
 /** 공지 작성/수정 인라인 행 — 표 열(번호·분류·제목·작성자·작성일)에 맞춘 2행 구조. */
-export default function NoticeCompose({ mode, notice, author, saving, onSave, onCancel }: NoticeComposeProps) {
-  const [cat, setCat] = useState(notice?.cat || '공지')
+export default function NoticeCompose({ mode, notice, author, saving, deptOptions, deptMgrOptions, onSave, onCancel }: NoticeComposeProps) {
+  const [cat, setCat] = useState(notice && NOTICE_CATS.includes(notice.cat) ? notice.cat : '일반')
   const [title, setTitle] = useState(notice?.title || '')
   const [body, setBody] = useState(notice?.body || '')
   const [refLink, setRefLink] = useState(notice?.ref || '')
   const [dept, setDept] = useState(notice?.dept || '')
+  const [deptMgr, setDeptMgr] = useState(notice?.deptMgr || '')
   const [pinned, setPinned] = useState(notice?.pinned || false)
+  const [targets, setTargets] = useState<string[]>(
+    (notice?.target || '').split(',').map((s) => s.trim()).filter((t) => TARGET_MEMBERS.some((m) => m.name === t)),
+  )
   const dateStr = mode === 'new' ? todaySeoul() : (notice?.date || '')
   const amber = (th: Theme) => alpha(th.palette.accent.amber, 0.07)
-  const stop = (e: MouseEvent) => e.stopPropagation()
-  const save = () => onSave({ cat, title: title.trim(), body: body.trim(), ref: refLink.trim(), dept: dept.trim(), pinned })
+  const stop = (e: React.MouseEvent) => e.stopPropagation()
+  const toggleTarget = (name: string) => setTargets((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))
+  const save = () => onSave({ cat, title: title.trim(), body: body.trim(), ref: refLink.trim(), dept: dept.trim(), deptMgr: deptMgr.trim(), target: targets.join(', '), pinned })
 
   return (
     <>
       <TableRow sx={{ '& td': { bgcolor: amber, py: 1, verticalAlign: 'middle' } }}>
-        {/* 번호 칸 → 중요(상단강조) 토글 */}
+        {/* 번호 칸 → 중요(상단강조) 압정 토글 */}
         <TableCell sx={{ textAlign: 'center' }} onClick={stop}>
           <Tooltip title={pinned ? '중요(상단강조) 해제' : '중요(상단강조)'}>
             <Box
@@ -140,7 +153,40 @@ export default function NoticeCompose({ mode, notice, author, saving, onSave, on
         <TableCell />
         <TableCell colSpan={3} onClick={stop}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            <InputBase value={dept} onChange={(e) => setDept(e.target.value)} placeholder="부서 (선택)" inputProps={{ 'aria-label': '부서' }} sx={(th) => ({ ...inputSx(th), width: 220, maxWidth: '100%', height: 30 })} />
+            {/* 부서 / 부서담당자 — 히스토리 기반 자동완성 */}
+            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+              <Box sx={{ width: 180, maxWidth: '100%' }}>
+                <ComboField value={dept} onChange={setDept} options={deptOptions} placeholder="부서 (선택)" ariaLabel="부서" />
+              </Box>
+              <Box sx={{ width: 180, maxWidth: '100%' }}>
+                <ComboField value={deptMgr} onChange={setDeptMgr} options={deptMgrOptions} placeholder="부서담당자 (선택)" ariaLabel="부서담당자" />
+              </Box>
+            </Box>
+            {/* 해당자 — 팀원 동그라미 칩(선택 시 컬러, 해제 시 흐림) */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+              <Box component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled' }}>해당자</Box>
+              {TARGET_MEMBERS.map((m) => {
+                const on = targets.includes(m.name)
+                return (
+                  <Box
+                    key={m.id}
+                    role="checkbox" aria-checked={on} aria-label={`해당자 ${m.name}${on ? '' : ' (해제됨)'}`} tabIndex={0}
+                    title={m.name}
+                    onClick={() => toggleTarget(m.name)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTarget(m.name) } }}
+                    style={{ backgroundColor: on ? m.color : 'transparent', color: on ? '#fff' : undefined, opacity: on ? 1 : 0.5, filter: on ? 'none' : 'grayscale(1)' }}
+                    sx={{
+                      width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10.5, fontWeight: 700, letterSpacing: '-0.5px', cursor: 'pointer', flex: 'none',
+                      border: on ? 'none' : '1px solid', borderColor: 'divider', color: 'text.disabled',
+                      transition: 'opacity .15s, filter .15s',
+                    }}
+                  >
+                    {given(m.name)}
+                  </Box>
+                )
+              })}
+            </Box>
             <InputBase value={body} onChange={(e) => setBody(e.target.value)} placeholder="내용" multiline minRows={2} inputProps={{ 'aria-label': '내용' }} sx={(th) => ({ ...inputSx(th), width: '100%', minHeight: 44, py: '6px' })} />
           </Box>
         </TableCell>

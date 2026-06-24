@@ -25,6 +25,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import PushPinIcon from '@mui/icons-material/PushPin'
 import SearchIcon from '@mui/icons-material/Search'
 import {
   PageContainer,
@@ -43,13 +44,10 @@ import { todaySeoul } from '@/utils/date'
 import type { Notice as NoticeItem } from '@/types'
 import { noticeCatStatus } from './noticeMeta'
 import NoticeDetail from './NoticeDetail'
-import NoticeCompose, { type NoticeFormValues } from './NoticeCompose'
-
-const CAT_BASE_ORDER = ['긴급', '안전', '보안', '시설', '공지', '일반', '회의', '교육', '행사', '점검']
+import NoticeCompose, { NOTICE_CATS, type NoticeFormValues } from './NoticeCompose'
 
 const refUrl = (ref: string) => String(ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
 
-// 분류 → 색 (업무일정 필터처럼 부드러운 톤). noticeCatStatus의 StatusKind를 테마 색으로 매핑.
 function kindColor(th: Theme, kind: StatusKind): string {
   switch (kind) {
     case 'error': return th.palette.accent.red
@@ -63,7 +61,6 @@ function kindColor(th: Theme, kind: StatusKind): string {
 }
 const catColor = (th: Theme, cat: string) => kindColor(th, noticeCatStatus(cat))
 
-// 전체선택(빈 배열)에서 하나 클릭=그것만 / 선택된 것 재클릭=해제(마지막이면 전체) — 업무일정과 동일 알고리즘
 function isolateToggle(prev: string[], id: string, total: number): string[] {
   if (prev.length === 0 || prev.length >= total) return [id]
   if (prev.includes(id)) return prev.filter((x) => x !== id)
@@ -88,22 +85,19 @@ export default function Notice() {
   const [deleteTarget, setDeleteTarget] = useState<NoticeItem | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
+  const [openKey, setOpenKey] = useState<string | null>(null) // 펼친 행 키('번호' 또는 'pin-번호')
 
   const today = todaySeoul()
 
-  // 딥링크(/notice/:num) → 펼친 행(아코디언) 대상
+  // 딥링크(/notice/:num) → 원본 행 펼침
   const selected = useMemo(() => (num ? items.find((n) => String(n.num) === String(num)) ?? null : null), [items, num])
-
+  useEffect(() => { setOpenKey(num ? String(num) : null) }, [num])
   useEffect(() => {
     if (ready && selected) dispatch(bumpNoticeViews(selected.id))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, selected?.id])
 
-  // 존재하는 분류 목록(고정 순서 우선) + 건수
-  const catList = useMemo(() => {
-    const present = [...new Set(items.map((n) => n.cat).filter(Boolean))]
-    return [...CAT_BASE_ORDER.filter((c) => present.includes(c)), ...present.filter((c) => !CAT_BASE_ORDER.includes(c))]
-  }, [items])
+  // 분류 필터: 갯수와 무관하게 항상 5개 모두 노출(안전/보안/시설/교육/일반)
   const catCounts = useMemo(() => {
     const m: Record<string, number> = {}
     for (const n of items) m[n.cat] = (m[n.cat] || 0) + 1
@@ -111,7 +105,11 @@ export default function Notice() {
   }, [items])
 
   const catSelected = (c: string) => selCats.length === 0 || selCats.includes(c)
-  const toggleCat = (c: string) => setSelCats((prev) => isolateToggle(prev, c, catList.length))
+  const toggleCat = (c: string) => setSelCats((prev) => isolateToggle(prev, c, NOTICE_CATS.length))
+
+  // 자동완성용 옵션 (부서/부서담당자 히스토리)
+  const deptOptions = useMemo(() => [...new Set(items.map((n) => n.dept).filter(Boolean))], [items])
+  const deptMgrOptions = useMemo(() => [...new Set(items.map((n) => n.deptMgr).filter(Boolean))], [items])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -119,15 +117,13 @@ export default function Notice() {
       .filter((n) => selCats.length === 0 || selCats.includes(n.cat))
       .filter((n) => !q || `${n.title} ${n.author} ${n.cat} ${n.dept} ${n.num}`.toLowerCase().includes(q))
   }, [items, selCats, query])
+  const pinnedCopies = useMemo(() => filtered.filter((n) => n.pinned), [filtered])
 
   const isExpired = (n: NoticeItem) => !!n.end && n.end < today
   const stop = (e: MouseEvent) => e.stopPropagation()
 
   const refresh = () => {
-    setSelCats([])
-    setQuery('')
-    setComposing(false)
-    setEditingId(null)
+    setSelCats([]); setQuery(''); setComposing(false); setEditingId(null)
     if (num) navigate('/notice', { replace: true })
     dispatch(loadNoticeData())
   }
@@ -141,9 +137,8 @@ export default function Notice() {
     if (!v.body) return showSnack('내용을 입력해주세요.', 'error')
     setSaving(true)
     try {
-      const newNum = await addNotice({ key: authKey, author: user, cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, ref: v.ref, date: todaySeoul() })
-      setSaving(false)
-      setComposing(false)
+      const newNum = await addNotice({ key: authKey, author: user, cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref, date: todaySeoul() })
+      setSaving(false); setComposing(false)
       dispatch(loadNoticeData())
       showSnack('공지를 등록했습니다.', 'success')
       if (newNum > 0) navigate(`/notice/${newNum}`, { replace: true })
@@ -162,11 +157,10 @@ export default function Notice() {
     try {
       await updateNotice({
         num: n.num, key: authKey, author: user,
-        cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, ref: v.ref,
-        deptMgr: n.deptMgr, target: n.target, end: n.end, date: n.date,
+        cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref,
+        end: n.end, date: n.date,
       })
-      setSaving(false)
-      setEditingId(null)
+      setSaving(false); setEditingId(null)
       dispatch(loadNoticeData())
       showSnack('공지를 수정했습니다.', 'success')
     } catch (err) {
@@ -177,16 +171,12 @@ export default function Notice() {
 
   const confirmDelete = async () => {
     if (!deleteTarget || deleting) return
-    if (!user || !authKey) {
-      showSnack('관리자 로그인이 필요합니다.', 'error')
-      return
-    }
+    if (!user || !authKey) { showSnack('관리자 로그인이 필요합니다.', 'error'); return }
     setDeleting(true)
     try {
       await deleteNotice({ num: deleteTarget.num, author: user, key: authKey })
       const deletedNum = deleteTarget.num
-      setDeleteTarget(null)
-      setDeleting(false)
+      setDeleteTarget(null); setDeleting(false)
       dispatch(loadNoticeData())
       showSnack('공지를 삭제했습니다.', 'success')
       if (String(num) === String(deletedNum)) navigate('/notice', { replace: true })
@@ -200,6 +190,73 @@ export default function Notice() {
   const startEdit = (n: NoticeItem) => { setComposing(false); setEditingId(n.id) }
 
   const showEmpty = ready && filtered.length === 0 && !composing
+
+  // 공지 한 행(원본/복사본 공용). isCopy=상단 중요 복사본(압정·앰버·볼드), 아니면 일반(번호).
+  const renderRow = (n: NoticeItem, isCopy: boolean) => {
+    const rowKey = isCopy ? `pin-${n.num}` : String(n.num)
+    const open = openKey === rowKey
+    const link = refUrl(n.ref)
+    const toggle = () => {
+      if (isCopy) { setOpenKey(open ? null : rowKey); return }
+      if (open) { setOpenKey(null); navigate('/notice', { replace: true }) }
+      else { navigate(`/notice/${n.num}`) }
+    }
+    return (
+      <Fragment key={rowKey}>
+        <TableRow
+          hover
+          tabIndex={0}
+          aria-label={`공지: ${n.title}`}
+          aria-expanded={open}
+          onClick={toggle}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
+          sx={(th) => ({
+            cursor: 'pointer',
+            opacity: isExpired(n) ? 0.55 : 1,
+            '& > td': {
+              bgcolor: open ? 'action.hover' : isCopy ? alpha(th.palette.accent.amber, 0.1) : undefined,
+              borderBottom: open ? 0 : undefined,
+            },
+            '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },
+          })}
+        >
+          <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+            {isCopy
+              ? <PushPinIcon sx={(th) => ({ fontSize: 16, color: th.palette.accent.amber })} />
+              : <Box component="span" sx={{ color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>{n.num}</Box>}
+          </TableCell>
+          <TableCell><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
+          <TableCell sx={{ color: 'text.primary' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+              {n.isNew && <StatusChip status="error" label="NEW" />}
+              <Typography variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {n.dept ? `[${n.dept}] ` : ''}{n.title}
+              </Typography>
+              {link && (
+                <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
+                  <OpenInNewIcon sx={{ fontSize: 15 }} />
+                </IconButton>
+              )}
+            </Box>
+          </TableCell>
+          <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textAlign: 'center' }}>{n.author || '-'}</TableCell>
+          <TableCell sx={{ whiteSpace: 'nowrap' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Box component="span" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{n.date}</Box>
+              <ExpandMoreIcon sx={{ fontSize: 18, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
+            </Box>
+          </TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
+            <Collapse in={open} timeout="auto" unmountOnExit>
+              <NoticeDetail notice={n} isAdmin={isAdmin} onEdit={startEdit} onDelete={setDeleteTarget} />
+            </Collapse>
+          </TableCell>
+        </TableRow>
+      </Fragment>
+    )
+  }
 
   return (
     <PageContainer>
@@ -216,7 +273,7 @@ export default function Notice() {
       />
 
       <ContentSection title="공지 목록" count={`${filtered.length}건`} last>
-        {/* 상단 필터 바 — 업무일정 방식(부드러운 색 칩 + 전체↔개별 토글). 우측: 검색 + 새 공지 */}
+        {/* 상단 필터 바 — 업무일정 방식(부드러운 색 칩, 전체↔개별 토글). 분류 5개 항상 노출. 우측: 검색 + 새 공지 */}
         <Box
           sx={(t) => ({
             display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25, mb: 2,
@@ -225,10 +282,9 @@ export default function Notice() {
         >
           <Box component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none' }}>분류</Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-            {catList.map((c) => {
+            {NOTICE_CATS.map((c) => {
               const on = catSelected(c)
               const color = catColor(theme, c)
-              // 동적 색/투명도는 inline style로 적용(상태 변경 시 확실히 반영)
               return (
                 <Box
                   key={c}
@@ -292,77 +348,21 @@ export default function Notice() {
                 </TableHead>
                 <TableBody>
                   {isAdmin && composing && (
-                    <NoticeCompose mode="new" author={user || '-'} saving={saving} onSave={handleSaveNew} onCancel={() => setComposing(false)} />
+                    <NoticeCompose mode="new" author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={handleSaveNew} onCancel={() => setComposing(false)} />
                   )}
+                  {/* 중요(상단고정) 복사본 — 원본은 아래 최신순 목록에 그대로 남음 */}
+                  {pinnedCopies.map((n) => renderRow(n, true))}
                   {filtered.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>공지사항이 없습니다</TableCell>
                     </TableRow>
                   )}
-                  {filtered.map((n) => {
-                    if (isAdmin && editingId === n.id) {
-                      return <NoticeCompose key={n.id} mode="edit" notice={n} author={user || '-'} saving={saving} onSave={(v) => handleSaveEdit(n, v)} onCancel={() => setEditingId(null)} />
-                    }
-                    const open = String(n.num) === String(num)
-                    const toggle = () => (open ? navigate('/notice', { replace: true }) : navigate(`/notice/${n.num}`))
-                    const link = refUrl(n.ref)
-                    return (
-                      <Fragment key={n.id}>
-                        <TableRow
-                          hover
-                          tabIndex={0}
-                          aria-label={`공지: ${n.title}`}
-                          aria-expanded={open}
-                          onClick={toggle}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
-                          sx={(th) => ({
-                            cursor: 'pointer',
-                            opacity: isExpired(n) ? 0.55 : 1,
-                            '& > td': {
-                              bgcolor: open ? 'action.hover' : n.pinned ? alpha(th.palette.accent.amber, 0.09) : undefined,
-                              borderBottom: open ? 0 : undefined,
-                            },
-                            '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },
-                          })}
-                        >
-                          {/* 번호 칸: 상단고정(중요)이면 번호 대신 '중요' 배지 (GIST 공지 스타일) */}
-                          <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                            {n.pinned
-                              ? <StatusChip status="warning" label="중요" />
-                              : <Box component="span" sx={{ color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>{n.num}</Box>}
-                          </TableCell>
-                          <TableCell><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
-                          <TableCell sx={{ color: 'text.primary' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                              {n.isNew && <StatusChip status="error" label="NEW" />}
-                              <Typography variant="body2" sx={{ fontWeight: n.pinned ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {n.dept ? `[${n.dept}] ` : ''}{n.title}
-                              </Typography>
-                              {link && (
-                                <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
-                                  <OpenInNewIcon sx={{ fontSize: 15 }} />
-                                </IconButton>
-                              )}
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textAlign: 'center' }}>{n.author || '-'}</TableCell>
-                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                              <Box component="span" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{n.date}</Box>
-                              <ExpandMoreIcon sx={{ fontSize: 18, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
-                            <Collapse in={open} timeout="auto" unmountOnExit>
-                              <NoticeDetail notice={n} isAdmin={isAdmin} onEdit={startEdit} onDelete={setDeleteTarget} />
-                            </Collapse>
-                          </TableCell>
-                        </TableRow>
-                      </Fragment>
-                    )
-                  })}
+                  {/* 전체 최신순(원본) */}
+                  {filtered.map((n) =>
+                    isAdmin && editingId === n.id
+                      ? <NoticeCompose key={n.id} mode="edit" notice={n} author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={(v) => handleSaveEdit(n, v)} onCancel={() => setEditingId(null)} />
+                      : renderRow(n, false),
+                  )}
                 </TableBody>
               </Table>
             </Box>
@@ -370,7 +370,6 @@ export default function Notice() {
         )}
       </ContentSection>
 
-      {/* 삭제 확인 Dialog */}
       <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
         <DialogTitle>공지를 삭제할까요?</DialogTitle>
         <DialogContent>

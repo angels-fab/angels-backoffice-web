@@ -92,9 +92,9 @@ export const loadNoticeData = createAsyncThunk('notice/load', async (): Promise<
       }
     })
 
-  // 상단체크(pinned) 우선 → 그 안에서 연번 최신순(번호 큰 것이 위). 같은 표 내부 상단 고정.
+  // 최신순(연번 큰 것이 위). 중요(pinned)는 컴포넌트에서 '복사본'을 상단에 추가로 노출하고
+  // 원본은 이 최신순 위치에 그대로 둔다(잘라내기 X).
   list.sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
     const na = Number(a.num)
     const nb = Number(b.num)
     if (!isNaN(na) && !isNaN(nb)) return nb - na
