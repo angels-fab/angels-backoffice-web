@@ -82,11 +82,8 @@ function MemberAvatar({ m, on }: { m: TeamMember; on: boolean }) {
 export default function CalFilterBar({ search, onSearch, members, onToggleMember, cats, onToggleCat }: CalFilterBarProps) {
   return (
     <Box
+      className="cal-fb"
       sx={(t) => ({
-        display: 'flex',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: 1.5,
         mb: 2,
         p: '10px 14px',
         bgcolor: 'background.paper',
@@ -95,71 +92,75 @@ export default function CalFilterBar({ search, onSearch, members, onToggleMember
       })}
     >
       {/* 팀원 */}
-      <Box component="span" sx={LABEL}>팀원</Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-        {members.map(({ member, on }) => (
-          <Box
-            key={member.id}
-            role="button"
-            tabIndex={0}
-            aria-label={`${member.name}${on ? '' : ' (해제됨)'}`}
-            title={member.name}
-            onClick={() => onToggleMember(member.id)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                onToggleMember(member.id)
-              }
-            }}
-            sx={{ display: 'inline-flex', cursor: 'pointer' }}
-          >
-            <MemberAvatar m={member} on={on} />
-          </Box>
-        ))}
-      </Box>
-
-      <Box sx={(t) => ({ width: '1px', height: 20, bgcolor: t.palette.divider, flex: 'none' })} />
-
-      {/* 일정 종류 */}
-      <Box component="span" sx={LABEL}>종류</Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-        {cats.map((c) => {
-          const Icon = CAT_ICON[c.id]
-          return (
+      <Box className="cal-fb__team">
+        <Box component="span" sx={LABEL}>팀원</Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          {members.map(({ member, on }) => (
             <Box
-              key={c.id}
+              key={member.id}
               role="button"
               tabIndex={0}
-              aria-label={`${c.label} ${c.count}건${c.on ? '' : ' (해제됨)'}`}
-              onClick={() => onToggleCat(c.id)}
+              aria-label={`${member.name}${on ? '' : ' (해제됨)'}`}
+              title={member.name}
+              onClick={() => onToggleMember(member.id)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
-                  onToggleCat(c.id)
+                  onToggleMember(member.id)
                 }
               }}
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                p: '4px 9px',
-                borderRadius: '999px',
-                bgcolor: alpha(c.color, c.on ? 0.16 : 0.06),
-                cursor: 'pointer',
-                opacity: c.on ? 1 : 0.45,
-                transition: 'opacity .15s, background .15s',
-              }}
+              sx={{ display: 'inline-flex', cursor: 'pointer' }}
             >
-              <Icon sx={{ fontSize: 13, color: c.color, ...(c.id === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}) }} />
-              <Box component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>{c.label.split('/')[0]}</Box>
-              <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>{c.count}</Box>
+              <MemberAvatar m={member} on={on} />
             </Box>
-          )
-        })}
+          ))}
+        </Box>
+        <Box className="cal-fb__sep" sx={(t) => ({ width: '1px', height: 20, bgcolor: t.palette.divider, flex: 'none' })} />
+      </Box>
+
+      {/* 일정 종류 */}
+      <Box className="cal-fb__cats">
+        <Box component="span" className="cal-fb__catlbl" sx={LABEL}>종류</Box>
+        <Box className="cal-fb__chips">
+          {cats.map((c) => {
+            const Icon = CAT_ICON[c.id]
+            return (
+              <Box
+                key={c.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`${c.label} ${c.count}건${c.on ? '' : ' (해제됨)'}`}
+                onClick={() => onToggleCat(c.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onToggleCat(c.id)
+                  }
+                }}
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  p: '4px 9px',
+                  borderRadius: '999px',
+                  bgcolor: alpha(c.color, c.on ? 0.16 : 0.06),
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  opacity: c.on ? 1 : 0.45,
+                  transition: 'opacity .15s, background .15s',
+                }}
+              >
+                <Icon sx={{ fontSize: 13, color: c.color, ...(c.id === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}) }} />
+                <Box component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>{c.label.split('/')[0]}</Box>
+                <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>{c.count}</Box>
+              </Box>
+            )
+          })}
+        </Box>
       </Box>
 
       {/* 검색 */}
-      <Box sx={{ position: 'relative', ml: { sm: 'auto' } }}>
+      <Box className="cal-fb__search" sx={{ position: 'relative' }}>
         <SearchIcon sx={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: 'text.disabled' }} />
         <Box
           component="input"
@@ -167,7 +168,7 @@ export default function CalFilterBar({ search, onSearch, members, onToggleMember
           onChange={(e: ChangeEvent<HTMLInputElement>) => onSearch(e.target.value)}
           placeholder="검색 (팀원·구분·내용)"
           sx={(t) => ({
-            width: 150,
+            width: '100%',
             height: 32,
             border: `1px solid ${t.palette.divider}`,
             borderRadius: '8px',

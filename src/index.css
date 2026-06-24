@@ -1052,3 +1052,23 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
   .kpi-status{display:none}
   main{padding-bottom:84px}
 }
+
+/* === 업무일정 필터바 반응형 (CalFilterBar) — 바 자체 폭 기준(container query) ===
+   단계1: 팀원 · 종류칩 · 검색 한 줄
+   단계2(<=1000px): 종류 그룹이 아랫줄로, 검색은 윗줄 우측 고정 + 팀원에 닿으면 폭 축소(150→84)
+   단계3(<=620px): 종류 칩이 들여쓰기(첫 칩 기준)로 줄바꿈 */
+.cal-fb{container-type:inline-size;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.cal-fb__team{display:flex;align-items:center;gap:8px;flex:0 0 auto;order:0}
+.cal-fb__cats{display:flex;align-items:center;gap:8px;order:1;flex:0 1 auto;min-width:0}
+.cal-fb__chips{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0}
+.cal-fb__search{order:2;flex:0 0 150px;margin-left:auto}
+@container (max-width:1000px){
+  .cal-fb__sep{display:none}
+  .cal-fb__search{order:1;flex:0 1 150px;min-width:84px}
+  .cal-fb__cats{order:2;flex:1 1 100%}
+}
+@container (max-width:620px){
+  .cal-fb__cats{position:relative;padding-left:38px}
+  .cal-fb__cats>.cal-fb__catlbl{position:absolute;left:0;top:5px;margin:0}
+  .cal-fb__chips{flex-wrap:wrap;row-gap:6px}
+}
