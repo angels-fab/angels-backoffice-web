@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import type { MouseEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -17,33 +18,35 @@ import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
 import Collapse from '@mui/material/Collapse'
+import { alpha } from '@mui/material/styles'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import {
   PageContainer,
   PageHeader,
   ContentSection,
   AppCard,
-  CardGrid,
   FilterBar,
   SearchBar,
   StatusChip,
-  StatTile,
   EmptyState,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
-import { deleteNotice } from '@/api/sheets'
+import { addNotice, updateNotice, deleteNotice } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { todaySeoul } from '@/utils/date'
 import type { Notice as NoticeItem } from '@/types'
 import { noticeCatStatus } from './noticeMeta'
 import NoticeDetail from './NoticeDetail'
-import NoticeWrite from './NoticeWrite'
+import NoticeCompose, { type NoticeFormValues } from './NoticeCompose'
 
 const CAT_BASE_ORDER = ['긴급', '공지', '일반', '회의', '교육', '행사', '점검']
+
+const refUrl = (ref: string) => String(ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
 
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
 
@@ -55,14 +58,14 @@ export default function Notice() {
   const { isAdmin, user, authKey } = useRole()
   const [cat, setCat] = useState('전체')
   const [query, setQuery] = useState('')
-  const [writeOpen, setWriteOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<NoticeItem | null>(null)
+  const [composing, setComposing] = useState(false) // 새 공지 인라인 작성 (표 상단)
+  const [editingId, setEditingId] = useState<number | null>(null) // 인라인 수정 대상 id
+  const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<NoticeItem | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
 
   const today = todaySeoul()
-  const thisMonth = today.slice(0, 7)
 
   // 딥링크(/notice/:num) → 펼친 행(아코디언) 대상
   const selected = useMemo(() => (num ? items.find((n) => String(n.num) === String(num)) ?? null : null), [items, num])
@@ -73,14 +76,8 @@ export default function Notice() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, selected?.id])
 
-  const kpi = useMemo(
-    () => ({
-      total: items.length,
-      month: items.filter((n) => (n.date || '').startsWith(thisMonth)).length,
-      recent: items.filter((n) => n.isNew).length,
-    }),
-    [items, thisMonth],
-  )
+  // 상단체크(중요) 공지 — 위로 이동시키지 않고 강조해 '한 번 더' 노출
+  const pinnedNotices = useMemo(() => items.filter((n) => n.pinned), [items])
 
   const cats = useMemo(() => {
     const present = [...new Set(items.map((n) => n.cat).filter(Boolean))]
@@ -95,23 +92,60 @@ export default function Notice() {
   }, [items, cat, query])
 
   const isExpired = (n: NoticeItem) => !!n.end && n.end < today
+  const stop = (e: MouseEvent) => e.stopPropagation()
 
   const refresh = () => {
     setCat('전체')
     setQuery('')
+    setComposing(false)
+    setEditingId(null)
     if (num) navigate('/notice', { replace: true })
     dispatch(loadNoticeData())
   }
 
   const showSnack = (msg: string, severity: 'success' | 'error' = 'success') => setSnack({ open: true, msg, severity })
 
-  // 작성/수정 성공
-  const handleSaved = (savedNum: number, isEdit: boolean) => {
-    setWriteOpen(false)
-    setEditTarget(null)
-    dispatch(loadNoticeData())
-    showSnack(isEdit ? '공지를 수정했습니다.' : '공지를 등록했습니다.', 'success')
-    if (savedNum > 0) navigate(`/notice/${savedNum}`, { replace: true })
+  // 새 공지 등록 (인라인)
+  const handleSaveNew = async (v: NoticeFormValues) => {
+    if (saving) return
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    if (!v.title) return showSnack('제목을 입력해주세요.', 'error')
+    if (!v.body) return showSnack('내용을 입력해주세요.', 'error')
+    setSaving(true)
+    try {
+      const newNum = await addNotice({ key: authKey, author: user, cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, ref: v.ref, date: todaySeoul() })
+      setSaving(false)
+      setComposing(false)
+      dispatch(loadNoticeData())
+      showSnack('공지를 등록했습니다.', 'success')
+      if (newNum > 0) navigate(`/notice/${newNum}`, { replace: true })
+    } catch (err) {
+      setSaving(false)
+      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+    }
+  }
+
+  // 공지 수정 (인라인) — 폼 밖 필드(부서담당자·해당자·종료일·게시일)는 원본 보존
+  const handleSaveEdit = async (n: NoticeItem, v: NoticeFormValues) => {
+    if (saving) return
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    if (!v.title) return showSnack('제목을 입력해주세요.', 'error')
+    if (!v.body) return showSnack('내용을 입력해주세요.', 'error')
+    setSaving(true)
+    try {
+      await updateNotice({
+        num: n.num, key: authKey, author: user,
+        cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, ref: v.ref,
+        deptMgr: n.deptMgr, target: n.target, end: n.end, date: n.date,
+      })
+      setSaving(false)
+      setEditingId(null)
+      dispatch(loadNoticeData())
+      showSnack('공지를 수정했습니다.', 'success')
+    } catch (err) {
+      setSaving(false)
+      showSnack(err instanceof Error ? err.message : '수정 실패', 'error')
+    }
   }
 
   // 삭제 확정
@@ -129,13 +163,17 @@ export default function Notice() {
       setDeleting(false)
       dispatch(loadNoticeData())
       showSnack('공지를 삭제했습니다.', 'success')
-      // 삭제한 공지를 보고 있었다면 드로어 닫기
       if (String(num) === String(deletedNum)) navigate('/notice', { replace: true })
     } catch (err) {
       setDeleting(false)
       showSnack(err instanceof Error ? err.message : '삭제 실패', 'error')
     }
   }
+
+  const startCompose = () => { setEditingId(null); setComposing((c) => !c) }
+  const startEdit = (n: NoticeItem) => { setComposing(false); setEditingId(n.id) }
+
+  const showEmpty = ready && filtered.length === 0 && !composing
 
   return (
     <PageContainer>
@@ -147,7 +185,12 @@ export default function Notice() {
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {isAdmin && (
-              <Button variant="contained" size="small" startIcon={<EditNoteIcon />} onClick={() => { setEditTarget(null); setWriteOpen(true) }}>
+              <Button
+                variant={composing ? 'contained' : 'outlined'}
+                size="small"
+                startIcon={<EditNoteIcon />}
+                onClick={startCompose}
+              >
                 새 공지
               </Button>
             )}
@@ -158,16 +201,40 @@ export default function Notice() {
         }
       />
 
-      {/* ① KPI */}
-      <ContentSection>
-        <CardGrid columns={3}>
-          <StatTile value={kpi.total} unit="건" label="전체 공지" status="info" />
-          <StatTile value={kpi.month} unit="건" label="이번달 공지" status="success" />
-          <StatTile value={kpi.recent} unit="건" label="최근 7일" status="error" />
-        </CardGrid>
-      </ContentSection>
+      {/* 중요 공지 — 상단체크된 공지를 위로 옮기지 않고 강조해 한 번 더 노출(목록에도 그대로 있음) */}
+      {pinnedNotices.length > 0 && (
+        <ContentSection title="중요 공지" description="상단 강조 · 목록에도 그대로 표시됩니다" count={`${pinnedNotices.length}건`}>
+          <AppCard padding={0}>
+            {pinnedNotices.map((n, i) => (
+              <Box
+                key={n.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`중요 공지: ${n.title}`}
+                onClick={() => navigate(`/notice/${n.num}`)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/notice/${n.num}`) } }}
+                sx={(th) => ({
+                  display: 'flex', alignItems: 'center', gap: 1, p: '10px 14px', cursor: 'pointer',
+                  borderTop: i === 0 ? 0 : '1px solid', borderColor: 'divider',
+                  bgcolor: alpha(th.palette.accent.amber, 0.06),
+                  '&:hover': { bgcolor: alpha(th.palette.accent.amber, 0.13) },
+                  opacity: isExpired(n) ? 0.55 : 1,
+                })}
+              >
+                <StatusChip status="warning" label="중요" />
+                <StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} />
+                <Typography variant="body2" sx={{ fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {n.dept ? `[${n.dept}] ` : ''}{n.title}
+                </Typography>
+                {refUrl(n.ref) && <OpenInNewIcon sx={{ fontSize: 15, color: 'info.main', flexShrink: 0 }} />}
+                <Box component="span" sx={{ color: 'text.disabled', fontFamily: 'monospace', fontSize: 12, flexShrink: 0 }}>{n.date}</Box>
+              </Box>
+            ))}
+          </AppCard>
+        </ContentSection>
+      )}
 
-      {/* ② 공지 목록 — 테이블 (분류·제목·작성자·작성일). 행 클릭 시 아코디언 펼침 */}
+      {/* 공지 목록 — 번호·분류·제목(+첨부)·작성자·작성일. 최신순. 행 클릭=아코디언 / 관리자=인라인 작성·수정 */}
       <ContentSection title="공지 목록" count={`${filtered.length}건`} last>
         <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" />}>
           {cats.map((c) => (
@@ -177,24 +244,38 @@ export default function Notice() {
 
         {!ready ? (
           <AppCard padding={18}><Typography variant="body2">불러오는 중…</Typography></AppCard>
-        ) : filtered.length === 0 ? (
+        ) : showEmpty ? (
           <AppCard padding={0}><EmptyState size="sm" title="공지사항이 없습니다" /></AppCard>
         ) : (
           <AppCard padding={0}>
             <Box sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 560, '& td, & th': { borderColor: 'divider' } }}>
+              <Table size="small" sx={{ minWidth: 640, '& td, & th': { borderColor: 'divider' } }}>
                 <TableHead>
                   <TableRow sx={{ '& th': { color: 'text.secondary', fontWeight: 600, whiteSpace: 'nowrap' } }}>
-                    <TableCell sx={{ width: 96 }}>분류</TableCell>
+                    <TableCell sx={{ width: 56, textAlign: 'center' }}>번호</TableCell>
+                    <TableCell sx={{ width: 92 }}>분류</TableCell>
                     <TableCell>제목</TableCell>
-                    <TableCell sx={{ width: 100 }}>작성자</TableCell>
-                    <TableCell sx={{ width: 116 }}>작성일</TableCell>
+                    <TableCell sx={{ width: 100, textAlign: 'center' }}>작성자</TableCell>
+                    <TableCell sx={{ width: 120 }}>작성일</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
+                  {/* 새 공지 작성 행 (헤더 바로 아래, 최신글 위) */}
+                  {isAdmin && composing && (
+                    <NoticeCompose mode="new" author={user || '-'} saving={saving} onSave={handleSaveNew} onCancel={() => setComposing(false)} />
+                  )}
+                  {filtered.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>공지사항이 없습니다</TableCell>
+                    </TableRow>
+                  )}
                   {filtered.map((n) => {
+                    if (isAdmin && editingId === n.id) {
+                      return <NoticeCompose key={n.id} mode="edit" notice={n} author={user || '-'} saving={saving} onSave={(v) => handleSaveEdit(n, v)} onCancel={() => setEditingId(null)} />
+                    }
                     const open = String(n.num) === String(num)
                     const toggle = () => (open ? navigate('/notice', { replace: true }) : navigate(`/notice/${n.num}`))
+                    const link = refUrl(n.ref)
                     return (
                       <Fragment key={n.id}>
                         <TableRow
@@ -204,25 +285,33 @@ export default function Notice() {
                           aria-expanded={open}
                           onClick={toggle}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
-                          sx={{
+                          sx={(th) => ({
                             cursor: 'pointer',
                             opacity: isExpired(n) ? 0.55 : 1,
-                            bgcolor: open ? 'action.hover' : undefined,
-                            '& > td': open ? { borderBottom: 0 } : undefined,
+                            '& > td': {
+                              bgcolor: open ? 'action.hover' : n.pinned ? alpha(th.palette.accent.amber, 0.09) : undefined,
+                              borderBottom: open ? 0 : undefined,
+                            },
                             '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },
-                          }}
+                          })}
                         >
+                          <TableCell sx={{ textAlign: 'center', color: 'text.disabled', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{n.num}</TableCell>
                           <TableCell><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
                           <TableCell sx={{ color: 'text.primary' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                               {n.pinned && <StatusChip status="warning" label="중요" />}
                               {n.isNew && <StatusChip status="error" label="NEW" />}
-                              <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              <Typography variant="body2" sx={{ fontWeight: n.pinned ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
                               </Typography>
+                              {link && (
+                                <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
+                                  <OpenInNewIcon sx={{ fontSize: 15 }} />
+                                </IconButton>
+                              )}
                             </Box>
                           </TableCell>
-                          <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap' }}>{n.author || '-'}</TableCell>
+                          <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textAlign: 'center' }}>{n.author || '-'}</TableCell>
                           <TableCell sx={{ whiteSpace: 'nowrap' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
                               <Box component="span" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{n.date}</Box>
@@ -231,9 +320,9 @@ export default function Notice() {
                           </TableCell>
                         </TableRow>
                         <TableRow>
-                          <TableCell colSpan={4} sx={{ p: 0, border: 0 }}>
+                          <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
                             <Collapse in={open} timeout="auto" unmountOnExit>
-                              <NoticeDetail notice={n} isAdmin={isAdmin} onEdit={setEditTarget} onDelete={setDeleteTarget} />
+                              <NoticeDetail notice={n} isAdmin={isAdmin} onEdit={startEdit} onDelete={setDeleteTarget} />
                             </Collapse>
                           </TableCell>
                         </TableRow>
@@ -246,16 +335,6 @@ export default function Notice() {
           </AppCard>
         )}
       </ContentSection>
-
-      {isAdmin && (
-        <NoticeWrite
-          open={writeOpen || !!editTarget}
-          editing={editTarget}
-          onClose={() => { setWriteOpen(false); setEditTarget(null) }}
-          onSaved={handleSaved}
-          onError={(msg) => showSnack(msg, 'error')}
-        />
-      )}
 
       {/* 삭제 확인 Dialog */}
       <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>

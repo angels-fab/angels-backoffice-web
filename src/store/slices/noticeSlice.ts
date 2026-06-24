@@ -92,9 +92,8 @@ export const loadNoticeData = createAsyncThunk('notice/load', async (): Promise<
       }
     })
 
-  // 상단고정 우선 → 연번 최신순 (번호 큰 것이 위)
+  // 최신순(연번 큰 것이 위). 상단체크(pinned)는 위로 이동시키지 않고 목록에서 강조·재노출만 함.
   list.sort((a, b) => {
-    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
     const na = Number(a.num)
     const nb = Number(b.num)
     if (!isNaN(na) && !isNaN(nb)) return nb - na
