@@ -24,6 +24,14 @@ export const NOTICE_CATS = ['안전', '보안', '시설', '교육', '일반']
 // 해당자 후보 — 캘린더 팀원(센터 제외): 신현진/박주봉/박세리/조성범
 const TARGET_MEMBERS = MEMBERS.filter((m) => m.id !== '센터')
 
+// 업무일정 칩 알고리즘 — 빈 배열(전체)에서 하나=그것만 / 재클릭=해제(마지막이면 전체) / 모두 선택=전체
+function isolateToggle(prev: string[], id: string, total: number): string[] {
+  if (prev.length === 0 || prev.length >= total) return [id]
+  if (prev.includes(id)) return prev.filter((x) => x !== id)
+  const next = [...prev, id]
+  return next.length >= total ? [] : next
+}
+
 export interface NoticeFormValues {
   cat: string
   title: string
@@ -110,8 +118,9 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
   const dateStr = mode === 'new' ? todaySeoul() : (notice?.date || '')
   const amber = (th: Theme) => alpha(th.palette.accent.amber, 0.07)
   const stop = (e: React.MouseEvent) => e.stopPropagation()
-  const toggleTarget = (name: string) => setTargets((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))
-  const save = () => onSave({ cat, title: title.trim(), body: body.trim(), ref: refLink.trim(), dept: dept.trim(), deptMgr: deptMgr.trim(), target: targets.join(', '), pinned })
+  const toggleTarget = (name: string) => setTargets((prev) => isolateToggle(prev, name, TARGET_MEMBERS.length))
+  // 빈 배열 = 전체(모든 팀원 대상)
+  const save = () => onSave({ cat, title: title.trim(), body: body.trim(), ref: refLink.trim(), dept: dept.trim(), deptMgr: deptMgr.trim(), target: targets.length === 0 ? '전체' : targets.join(', '), pinned })
 
   return (
     <>
@@ -164,7 +173,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
               <Box component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', ml: 0.5 }}>해당자</Box>
               {/* 팀원 동그라미 칩 — 선택=컬러, 해제=흑백(동그라미는 잘 보임) */}
               {TARGET_MEMBERS.map((m) => {
-                const on = targets.includes(m.name)
+                const on = targets.length === 0 || targets.includes(m.name) // 빈 배열=전체(모두 on)
                 return (
                   <Box
                     key={m.id}
