@@ -26,6 +26,7 @@ import { useRole } from '@/auth/role'
 import type { EqGroup, EqStateKey } from '@/types'
 import { EQ_STATE, eqStateKey } from './eqMeta'
 import EqDetailDrawer from './EqDetailDrawer'
+import EquipmentTabs from '@/pages/Equipment/EquipmentTabs'
 
 const k = (v: number) => Math.round(v / 1000).toLocaleString()
 
@@ -156,7 +157,7 @@ export default function EquipmentOps() {
     <PageContainer>
       <PageHeader
         icon={<MonitorIcon />}
-        title="장비운영관리"
+        title="장비 관리"
         subtitle="장비 총괄 현황 — 전체 자산·상태·담당"
         updatedAt={error ? '연결 실패' : updatedAt || undefined}
         actions={
@@ -165,6 +166,9 @@ export default function EquipmentOps() {
           </IconButton>
         }
       />
+
+      {/* 장비관리 상단 탭 (장비도입 / 장비운영) */}
+      <EquipmentTabs />
 
       {/* ① KPI — 총 장비 / 상태별 (대수 + 종 보조) */}
       <ContentSection>

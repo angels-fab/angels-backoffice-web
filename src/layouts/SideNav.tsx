@@ -4,7 +4,6 @@ import CampaignIcon from '@mui/icons-material/Campaign'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import MonitorIcon from '@mui/icons-material/Monitor'
-import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import LinkIcon from '@mui/icons-material/Link'
 import TimelineIcon from '@mui/icons-material/Timeline'
 import SettingsIcon from '@mui/icons-material/Settings'
@@ -43,13 +42,8 @@ export default function SideNav() {
         { icon: <CampaignIcon />, label: '공지사항', path: '/notice', badge: badges.notice },
         { icon: <CalendarMonthIcon />, label: '업무일정', path: '/calendar', badge: badges.cal },
         { icon: <AssessmentIcon />, label: '업무현황', path: '/work', badge: badges.work },
-      ],
-    },
-    {
-      label: '장비',
-      items: [
-        { icon: <MonitorIcon />, label: '장비운영관리', path: '/equipment-ops' },
-        { icon: <LocalShippingIcon />, label: '장비도입관리', path: '/equipment' },
+        // 장비운영관리 + 장비도입관리 통합 — 페이지 내 상단탭(장비도입/장비운영)으로 전환
+        { icon: <MonitorIcon />, label: '장비관리', path: '/equipment' },
       ],
     },
     {

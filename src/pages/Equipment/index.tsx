@@ -42,6 +42,7 @@ import DragTip from './DragTip'
 import type { DragTipData } from './DragTip'
 import EqProjectDrawer from './EqProjectDrawer'
 import ScheduleWrite from './ScheduleWrite'
+import EquipmentTabs from './EquipmentTabs'
 
 function ProgressBar({ value }: { value: number }) {
   return (
@@ -463,7 +464,7 @@ export default function Equipment() {
     <PageContainer>
       <PageHeader
         icon={<LocalShippingIcon />}
-        title="장비도입관리"
+        title="장비 관리"
         subtitle="장비 도입 프로젝트 진행 — 단계·타임라인"
         updatedAt={error ? '연결 실패' : updatedAt || undefined}
         actions={
@@ -489,6 +490,9 @@ export default function Equipment() {
           </Box>
         }
       />
+
+      {/* 장비관리 상단 탭 (장비도입 / 장비운영) */}
+      <EquipmentTabs />
 
       {/* ① 도입 개요 (보조 KPI) */}
       <ContentSection>
