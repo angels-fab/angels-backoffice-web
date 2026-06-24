@@ -1063,12 +1063,11 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .cal-fb__chips{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0}
 .cal-fb__search{order:2;flex:0 0 150px;margin-left:auto}
 @container (max-width:1000px){
+  /* 종류 그룹 통째로 아랫줄 + 칩은 기타(마지막)부터 하나씩 들여쓰기 줄바꿈.
+     팀원·검색은 윗줄 고정, 검색은 팀원에 닿으면 폭 150→84px 축소. */
   .cal-fb__sep{display:none}
   .cal-fb__search{order:1;flex:0 1 150px;min-width:84px}
-  .cal-fb__cats{order:2;flex:1 1 100%}
-}
-@container (max-width:620px){
-  .cal-fb__cats{position:relative;padding-left:38px}
+  .cal-fb__cats{order:2;flex:1 1 100%;position:relative;padding-left:38px;align-items:flex-start}
   .cal-fb__cats>.cal-fb__catlbl{position:absolute;left:0;top:5px;margin:0}
   .cal-fb__chips{flex-wrap:wrap;row-gap:6px}
 }
