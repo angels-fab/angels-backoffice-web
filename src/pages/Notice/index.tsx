@@ -26,7 +26,6 @@ import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import PushPinIcon from '@mui/icons-material/PushPin'
-import FolderCopyIcon from '@mui/icons-material/FolderCopy'
 import SearchIcon from '@mui/icons-material/Search'
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -209,21 +208,6 @@ export default function Notice() {
 
   const showEmpty = ready && filtered.length === 0 && !composing
 
-  // 그룹 라벨 행(상단고정 / 전체 공지) — 그룹 배경색과 동일 톤
-  const renderGroupHeader = (label: string, count: number, pinned: boolean) => (
-    <TableRow>
-      <TableCell colSpan={5} sx={(th) => ({ py: 0.6, px: 2, bgcolor: pinned ? th.palette.background.elevated : th.palette.background.default, borderBottom: `1px solid ${th.palette.divider}` })}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          {pinned
-            ? <PushPinIcon sx={(th) => ({ fontSize: 14, color: th.palette.accent.amber })} />
-            : <FolderCopyIcon sx={{ fontSize: 14, color: 'text.disabled' }} />}
-          <Box component="span" sx={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em', color: 'text.secondary' }}>{label}</Box>
-          <Box component="span" sx={{ fontSize: 11, fontWeight: 600, color: 'text.disabled' }}>{count}건</Box>
-        </Box>
-      </TableCell>
-    </TableRow>
-  )
-
   // 상단고정 ↔ 일반 목록 구분선 — 게시판 테두리색 계열 그라데이션
   const renderGroupSep = () => (
     <TableRow>
@@ -399,13 +383,11 @@ export default function Notice() {
                   {isAdmin && composing && (
                     <NoticeCompose mode="new" author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={handleSaveNew} onCancel={() => setComposing(false)} />
                   )}
-                  {/* 상단고정 그룹(종료 공지는 자동 해제) + 구분선 + 전체 목록 라벨. 원본은 아래 최신순 목록에 그대로 남음 */}
+                  {/* 상단고정 그룹(종료 공지는 자동 해제) + 구분선. 원본은 아래 최신순 목록에 그대로 남음 */}
                   {pinnedCopies.length > 0 && (
                     <>
-                      {renderGroupHeader('상단 고정', pinnedCopies.length, true)}
                       {pinnedCopies.map((n) => renderRow(n, true))}
                       {renderGroupSep()}
-                      {renderGroupHeader('전체 공지', filtered.length, false)}
                     </>
                   )}
                   {filtered.length === 0 && (
