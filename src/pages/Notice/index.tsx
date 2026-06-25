@@ -224,8 +224,9 @@ export default function Notice() {
     const link = refUrl(n.ref)
     const toggle = () => {
       if (isCopy) { setOpenKey(open ? null : rowKey); return }
+      // openKey를 직접 설정(URL이 같아 num 효과가 안 도는 경우에도 펼침 보장 — 상단고정 복사본과 원본의 num 충돌)
       if (open) { setOpenKey(null); navigate('/notice', { replace: true }) }
-      else { navigate(`/notice/${n.num}`) }
+      else { setOpenKey(rowKey); navigate(`/notice/${n.num}`) }
     }
     return (
       <Fragment key={rowKey}>
