@@ -252,7 +252,22 @@ export default function Notice() {
           <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
             {isCopy
               ? <PushPinIcon sx={(th) => ({ fontSize: 16, color: th.palette.accent.amber })} />
-              : <Box component="span" sx={{ color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>{n.num}</Box>}
+              : (
+                // 같은 번호의 상단고정 복사본이 펼쳐져 있으면 원본 번호에 동그라미 강조
+                <Box
+                  component="span"
+                  sx={(th) => ({
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 22, height: 22, px: '4px', borderRadius: '50%', fontVariantNumeric: 'tabular-nums',
+                    transition: 'border-color .15s, color .15s',
+                    ...(openKey === `pin-${n.num}`
+                      ? { border: `1.5px solid ${th.palette.accent.amber}`, color: th.palette.accent.amber, fontWeight: 700 }
+                      : { color: th.palette.text.disabled }),
+                  })}
+                >
+                  {n.num}
+                </Box>
+              )}
           </TableCell>
           <TableCell><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
           <TableCell sx={{ color: 'text.primary' }}>
