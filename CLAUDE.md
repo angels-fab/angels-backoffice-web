@@ -32,6 +32,22 @@ GIST ANGELS FAB(반도체 팹) 구축 프로젝트의 사내 관리 대시보드
 3. 미리보기 — 공지사항·업무일정 2열 + 업무현황 풀와이드(gridColumn '1 / -1')
 - 콘텐츠 폭: `.dashboard`/`.grid`/`.menu-label` max-width 1180px
 
+## 학술·교육 행사(Events) 등록 규칙 & 워크플로
+
+페이지: `/events` (`src/pages/Events/index.tsx`). 카드 = 유형3(풀블리드 포스터 3:4 + 그라데이션 오버레이 + 상태 pill + 링크아이콘), 클릭 시 상세 Dialog.
+데이터: `src/constants/events.ts`의 `FAB_EVENTS`(repo 모델, git 저장). 포스터 이미지: `public/events/`, 없으면 `accent` 그라데이션. D-day/상태는 `eventStatus()` 자동.
+
+**워크플로 (옵션 B — 추가비용 0, Claude API 키 불필요)**: 팀원은 Events "새 예정행사 등록" 버튼(`isAdmin`만 노출, `EVENT_REQUEST_FORM_URL` 구글폼)으로 **행사 URL·구분·포스터(선택)** 제출 → 폼 소유자 이메일 알림 → 관리자가 Claude에게 "행사 큐 등록" 요청 → Claude가 URL에서 정보 추출해 `FAB_EVENTS`에 추가·커밋·푸시. 포스터 제공 시 리사이즈(가로 ~600px)해 `public/events/`.
+
+**등록 규칙 (반드시 지킬 것)**
+- **제목은 한글** (영문 정식명은 괄호 보조, 회차 살리기). 예: `제22회 반도체 물리·응용 국제심포지엄 (ISPSA 2026)`
+- **주관기관 = 실제 주최/주관의 한글 정식명.** 약어 단독 금지, 불확실하면 **검증**. 행사목록 사이트(KASPA 등)는 주관 아님 — 오기 주의(ISPSA 주최=한국물리학회(KPS), KASPA는 무관).
+- **요약 bullets 3~5개.** 자동추출은 초안 → 확정 전 날짜·세부 검토.
+- 학회/심포지엄 **필수**: 등록일정(사전등록·초록마감) + Plenary/Keynote 연사.
+- 교육/세미나 **필수**: 신청기간·대상·강사·수강료.
+- 전시회 **필수**: 관람기간·입장방법·규모.
+- 포스터 자동수집은 불안정(컨퍼런스 사이트는 단일 포스터 없는 경우 많음) → 이미지는 사용자가 제공, PDF는 변환 불가(표지 캡처로 받기).
+
 ## 작업 이력 (2026-06-10)
 
 1. 이모지/수제 SVG 아이콘 전부 MUI 아이콘으로 교체. 매핑: 📢Campaign 📅📆CalendarMonth 📊Assessment 🖥️Monitor 🔗Link 🕐Schedule 🗂️FolderCopy 🔔NotificationsActive 🔍Search(검색창 `.search-wrap` 어돈먼트) / 로드맵: Assignment·DesignServices·Construction·LocalShipping·FactCheck·Settings·RocketLaunch / 바로가기: School·AutoAwesome·Public·Memory·Factory·Bolt·TableChart
