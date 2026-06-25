@@ -26,6 +26,7 @@ import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import PushPinIcon from '@mui/icons-material/PushPin'
+import FolderCopyIcon from '@mui/icons-material/FolderCopy'
 import SearchIcon from '@mui/icons-material/Search'
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -132,9 +133,11 @@ export default function Notice() {
       .filter((n) => selCats.length === 0 || selCats.includes(n.cat))
       .filter((n) => !q || `${n.title} ${n.author} ${n.cat} ${n.dept} ${n.num}`.toLowerCase().includes(q))
   }, [items, selCats, query])
-  const pinnedCopies = useMemo(() => filtered.filter((n) => n.pinned), [filtered])
 
   const isExpired = (n: NoticeItem) => !!n.end && n.end < today
+  // 상단고정 복사본 — 종료된 공지는 상단고정 자동 해제(아래 일반 목록엔 그대로 남음)
+  const pinnedCopies = useMemo(() => filtered.filter((n) => n.pinned && !(n.end && n.end < today)), [filtered, today])
+
   const stop = (e: MouseEvent) => e.stopPropagation()
 
   const refresh = () => {
@@ -206,7 +209,31 @@ export default function Notice() {
 
   const showEmpty = ready && filtered.length === 0 && !composing
 
-  // 공지 한 행(원본/복사본 공용). isCopy=상단 중요 복사본(압정·앰버·볼드), 아니면 일반(번호).
+  // 그룹 라벨 행(상단고정 / 전체 공지) — 그룹 배경색과 동일 톤
+  const renderGroupHeader = (label: string, count: number, pinned: boolean) => (
+    <TableRow>
+      <TableCell colSpan={5} sx={(th) => ({ py: 0.6, px: 2, bgcolor: pinned ? th.palette.background.elevated : th.palette.background.default, borderBottom: `1px solid ${th.palette.divider}` })}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+          {pinned
+            ? <PushPinIcon sx={(th) => ({ fontSize: 14, color: th.palette.accent.amber })} />
+            : <FolderCopyIcon sx={{ fontSize: 14, color: 'text.disabled' }} />}
+          <Box component="span" sx={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.03em', color: 'text.secondary' }}>{label}</Box>
+          <Box component="span" sx={{ fontSize: 11, fontWeight: 600, color: 'text.disabled' }}>{count}건</Box>
+        </Box>
+      </TableCell>
+    </TableRow>
+  )
+
+  // 상단고정 ↔ 일반 목록 구분선 — 게시판 테두리색 계열 그라데이션
+  const renderGroupSep = () => (
+    <TableRow>
+      <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
+        <Box sx={(th) => ({ height: 2, background: `linear-gradient(90deg, transparent, ${alpha(th.palette.text.disabled, 0.5)}, transparent)` })} />
+      </TableCell>
+    </TableRow>
+  )
+
+  // 공지 한 행(원본/복사본 공용). isCopy=상단 중요 복사본(압정·볼드·떠오른 표면), 아니면 일반(번호).
   const renderRow = (n: NoticeItem, isCopy: boolean) => {
     const rowKey = isCopy ? `pin-${n.num}` : String(n.num)
     const open = openKey === rowKey
@@ -227,9 +254,11 @@ export default function Notice() {
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
           sx={(th) => ({
             cursor: 'pointer',
-            opacity: isExpired(n) ? 0.55 : 1,
+            // 종료글은 더 흐리게(0.3) · 진행중은 그대로(상대 대비로 더 또렷)
+            opacity: isExpired(n) ? 0.3 : 1,
             '& > td': {
-              bgcolor: open ? 'action.hover' : isCopy ? alpha(th.palette.accent.amber, 0.1) : undefined,
+              // 상단고정 그룹은 떠오른 표면(elevated), 일반 목록은 더 어두운 배경(default)으로 대비
+              bgcolor: open ? 'action.hover' : isCopy ? th.palette.background.elevated : th.palette.background.default,
               borderBottom: open ? 0 : undefined,
             },
             '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },
@@ -370,8 +399,15 @@ export default function Notice() {
                   {isAdmin && composing && (
                     <NoticeCompose mode="new" author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={handleSaveNew} onCancel={() => setComposing(false)} />
                   )}
-                  {/* 중요(상단고정) 복사본 — 원본은 아래 최신순 목록에 그대로 남음 */}
-                  {pinnedCopies.map((n) => renderRow(n, true))}
+                  {/* 상단고정 그룹(종료 공지는 자동 해제) + 구분선 + 전체 목록 라벨. 원본은 아래 최신순 목록에 그대로 남음 */}
+                  {pinnedCopies.length > 0 && (
+                    <>
+                      {renderGroupHeader('상단 고정', pinnedCopies.length, true)}
+                      {pinnedCopies.map((n) => renderRow(n, true))}
+                      {renderGroupSep()}
+                      {renderGroupHeader('전체 공지', filtered.length, false)}
+                    </>
+                  )}
                   {filtered.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>공지사항이 없습니다</TableCell>
