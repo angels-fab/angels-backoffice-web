@@ -33,18 +33,18 @@ export interface FabEvent {
 export const FAB_EVENTS: FabEvent[] = [
   {
     id: 'ispsa2026',
-    title: 'ISPSA 2026 — 22nd International Symposium on the Physics of Semiconductors and Applications',
+    title: '제22회 반도체 물리·응용 국제심포지엄 (ISPSA 2026)',
     kind: '국제학회',
     start: '2026-06-28',
     end: '2026-07-02',
     venue: '제주 해비치 호텔 & 리조트',
-    organizer: '단국대학교 · KASPA',
+    organizer: '한국물리학회(KPS)',
     link: 'https://ispsa.or.kr/',
     accent: 'blue',
     summary: [
-      '반도체 물리·응용 분야 격년 국제 심포지엄(22회) · 전 세계 1,000명 이상 참가',
-      '사전등록 2026.06.05~06.19 · 초록 마감 2026.04.03',
-      'Plenary: Henk Bolink · Jing Kong · John A. Rogers · Feng Wang 등',
+      '사전등록 2026.06.05~06.19 · 초록 마감 2026.04.03 (채택 통보 4.24)',
+      'Plenary: Henk Bolink(발렌시아대) · Jing Kong(MIT) · John A. Rogers(노스웨스턴) · Feng Wang(UC버클리) · Amir Yacoby(하버드) · J. Joshua Yang(USC)',
+      '반도체 물리·응용 격년 국제심포지엄(22회) · 1,000명+ 참가 · 주관 CHIPS(한양대)·성균관대·이화여대·군산대',
     ],
   },
 ]
