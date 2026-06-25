@@ -23,14 +23,37 @@ import { MEMBERS, given } from '@/pages/Calendar/members'
 export const NOTICE_CATS = ['안전', '보안', '시설', '교육', '일반']
 // 해당자 후보 — 캘린더 팀원(센터 제외): 신현진/박주봉/박세리/조성범
 const TARGET_MEMBERS = MEMBERS.filter((m) => m.id !== '센터')
+// 직원(센터장 신현진 제외) — '센터(직원)' 프리셋 대상
+const STAFF_MEMBERS = TARGET_MEMBERS.filter((m) => m.id !== '신현진')
 
-// 업무일정 칩 알고리즘 — 빈 배열(전체)에서 하나=그것만 / 재클릭=해제(마지막이면 전체) / 모두 선택=전체
-function isolateToggle(prev: string[], id: string, total: number): string[] {
-  if (prev.length === 0 || prev.length >= total) return [id]
-  if (prev.includes(id)) return prev.filter((x) => x !== id)
-  const next = [...prev, id]
-  return next.length >= total ? [] : next
+// 선택된 해당자(풀네임 배열) → 표시·저장 라벨
+//  - 모두 → 센터(전체) / 신현진 제외 직원 3명 → 센터(직원) / 일부 → 이름(현진,세리) 나열 / 없음 → '' (미표기)
+function targetLabel(names: string[]): string {
+  const set = new Set(names)
+  if (set.size === 0) return ''
+  if (TARGET_MEMBERS.every((m) => set.has(m.name))) return '센터(전체)'
+  if (set.size === STAFF_MEMBERS.length && STAFF_MEMBERS.every((m) => set.has(m.name))) return '센터(직원)'
+  return TARGET_MEMBERS.filter((m) => set.has(m.name)).map((m) => given(m.name)).join(', ')
 }
+
+// 저장된 라벨/레거시 값 → 선택(풀네임 배열) — 편집 시 칩 상태 복원
+function parseTargets(raw: string): string[] {
+  const s = (raw || '').trim()
+  if (!s) return []
+  if (s === '전체' || s === '센터(전체)') return TARGET_MEMBERS.map((m) => m.name)
+  if (s === '센터(직원)') return STAFF_MEMBERS.map((m) => m.name)
+  const tokens = s.split(',').map((t) => t.trim()).filter(Boolean)
+  return TARGET_MEMBERS.filter((m) => tokens.includes(m.name) || tokens.includes(given(m.name))).map((m) => m.name)
+}
+
+// 해당자 프리셋 버튼 스타일(센터(전체)/센터(직원)) — 활성=파랑 채움
+const presetSx = (active: boolean) => (th: Theme) => ({
+  fontSize: 11.5, fontWeight: 600, px: 1.1, py: '3px', borderRadius: '999px',
+  cursor: 'pointer', border: '1px solid', flex: 'none', whiteSpace: 'nowrap', transition: 'background-color .15s',
+  ...(active
+    ? { bgcolor: th.palette.primary.main, borderColor: th.palette.primary.main, color: '#fff' }
+    : { borderColor: th.palette.divider, color: 'text.secondary' }),
+})
 
 export interface NoticeFormValues {
   cat: string
@@ -112,15 +135,20 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
   const [dept, setDept] = useState(notice?.dept || '')
   const [deptMgr, setDeptMgr] = useState(notice?.deptMgr || '')
   const [pinned, setPinned] = useState(notice?.pinned || false)
+  // 신규: 기본 센터(전체) / 편집: 저장값 복원
   const [targets, setTargets] = useState<string[]>(
-    (notice?.target || '').split(',').map((s) => s.trim()).filter((t) => TARGET_MEMBERS.some((m) => m.name === t)),
+    mode === 'new' ? TARGET_MEMBERS.map((m) => m.name) : parseTargets(notice?.target || ''),
   )
   const dateStr = mode === 'new' ? todaySeoul() : (notice?.date || '')
   const amber = (th: Theme) => alpha(th.palette.accent.amber, 0.07)
   const stop = (e: React.MouseEvent) => e.stopPropagation()
-  const toggleTarget = (name: string) => setTargets((prev) => isolateToggle(prev, name, TARGET_MEMBERS.length))
-  // 빈 배열 = 전체(모든 팀원 대상)
-  const save = () => onSave({ cat, title: title.trim(), body: body.trim(), ref: refLink.trim(), dept: dept.trim(), deptMgr: deptMgr.trim(), target: targets.length === 0 ? '전체' : targets.join(', '), pinned })
+  const toggleTarget = (name: string) => setTargets((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))
+  const setAllTargets = () => setTargets(TARGET_MEMBERS.map((m) => m.name))
+  const setStaffTargets = () => setTargets(STAFF_MEMBERS.map((m) => m.name))
+  const isAllTargets = TARGET_MEMBERS.every((m) => targets.includes(m.name))
+  const isStaffTargets = targets.length === STAFF_MEMBERS.length && STAFF_MEMBERS.every((m) => targets.includes(m.name))
+  // 라벨로 저장(빈 선택 = 빈값 = 해당자 미표기)
+  const save = () => onSave({ cat, title: title.trim(), body: body.trim(), ref: refLink.trim(), dept: dept.trim(), deptMgr: deptMgr.trim(), target: targetLabel(targets), pinned })
 
   return (
     <>
@@ -171,9 +199,12 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                 <ComboField value={deptMgr} onChange={setDeptMgr} options={deptMgrOptions} placeholder="담당자" ariaLabel="부서담당자" />
               </Box>
               <Box component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', ml: 0.5 }}>해당자</Box>
+              {/* 프리셋 — 센터(전체)=4명 자동선택 / 센터(직원)=신현진 제외 3명 */}
+              <Box role="button" tabIndex={0} aria-label="센터(전체) 선택" onClick={setAllTargets} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAllTargets() } }} sx={presetSx(isAllTargets)}>센터(전체)</Box>
+              <Box role="button" tabIndex={0} aria-label="센터(직원) 선택" onClick={setStaffTargets} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStaffTargets() } }} sx={presetSx(isStaffTargets)}>센터(직원)</Box>
               {/* 팀원 동그라미 칩 — 선택=컬러, 해제=흑백(동그라미는 잘 보임) */}
               {TARGET_MEMBERS.map((m) => {
-                const on = targets.length === 0 || targets.includes(m.name) // 빈 배열=전체(모두 on)
+                const on = targets.includes(m.name)
                 return (
                   <Box
                     key={m.id}

@@ -372,8 +372,8 @@ export default function Notice() {
               <Table size="small" sx={{ minWidth: 640, '& td, & th': { borderColor: 'divider' } }}>
                 <TableHead>
                   <TableRow sx={{ '& th': { color: 'text.secondary', fontWeight: 600, whiteSpace: 'nowrap' } }}>
-                    <TableCell sx={{ width: 72, textAlign: 'center' }}>번호</TableCell>
-                    <TableCell sx={{ width: 92 }}>분류</TableCell>
+                    <TableCell sx={{ width: 48, textAlign: 'center' }}>번호</TableCell>
+                    <TableCell sx={{ width: 68 }}>분류</TableCell>
                     <TableCell>제목</TableCell>
                     <TableCell sx={{ width: 100, textAlign: 'center' }}>작성자</TableCell>
                     <TableCell sx={{ width: 120 }}>작성일</TableCell>
