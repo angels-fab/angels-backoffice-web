@@ -5,6 +5,7 @@ import Dialog from '@mui/material/Dialog'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
+import AddIcon from '@mui/icons-material/Add'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import EventIcon from '@mui/icons-material/Event'
 import PlaceIcon from '@mui/icons-material/Place'
@@ -13,7 +14,8 @@ import CloseIcon from '@mui/icons-material/Close'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, StatusChip } from '@/components/ds'
-import { FAB_EVENTS, eventStatus, fmtEventDate, type FabEvent, type EventAccent } from '@/constants/events'
+import { useRole } from '@/auth/role'
+import { FAB_EVENTS, EVENT_REQUEST_FORM_URL, eventStatus, fmtEventDate, type FabEvent, type EventAccent } from '@/constants/events'
 
 const GRAD: Record<EventAccent, string> = {
   blue: 'linear-gradient(150deg,#1e3a6b,#2f5fa6 60%,#3f7bd0)',
@@ -165,11 +167,27 @@ function Meta({ icon, value }: { icon: React.ReactNode; value: string }) {
 
 /** 학술·교육 행사 — 포스터 카드(유형3) + 클릭 시 상세. */
 export default function Events() {
+  const { isAdmin } = useRole()
   const [selected, setSelected] = useState<FabEvent | null>(null)
 
   return (
     <PageContainer>
-      <PageHeader icon={<CoPresentIcon />} title="학술·교육 행사" subtitle="세미나 · 학회 · 교육 행사" />
+      <PageHeader
+        icon={<CoPresentIcon />}
+        title="학술·교육 행사"
+        subtitle="세미나 · 학회 · 교육 행사"
+        actions={
+          isAdmin ? (
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => window.open(EVENT_REQUEST_FORM_URL, '_blank', 'noopener,noreferrer')}
+            >
+              새 예정행사 등록
+            </Button>
+          ) : undefined
+        }
+      />
       <ContentSection last>
         {FAB_EVENTS.length === 0 ? (
           <AppCard padding={0}>

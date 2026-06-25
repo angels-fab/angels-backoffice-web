@@ -2,6 +2,11 @@
 // 새 행사: 이 배열에 한 항목 추가 + (있으면) 포스터를 public/events/ 에 넣고 poster 경로 지정.
 // 포스터가 없으면 accent 그라데이션으로 카드가 채워짐.
 
+// 팀원용 '예정 행사 등록 요청' 구글 폼 — 로그인 직원에게만 버튼 노출.
+// 제출 → (폼 소유자에게 이메일 알림) → 담당자가 URL 보고 카드로 등록.
+export const EVENT_REQUEST_FORM_URL =
+  'https://docs.google.com/forms/d/e/1FAIpQLSd773EgoV0aRMfFuTYHnFXSqHmYgFEZY8qThJu0o7L9XoHVtA/viewform'
+
 export type EventAccent = 'blue' | 'teal' | 'green' | 'purple' | 'amber' | 'red'
 
 export interface FabEvent {
