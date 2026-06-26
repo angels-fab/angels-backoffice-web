@@ -109,6 +109,7 @@ export const FAB_EVENTS: FabEvent[] = [
     venue: '부산 아난티',
     organizer: '반도체공학회',
     link: 'https://event.theise.org/conference/',
+    poster: 'events/ises-summer2026.jpg',
     accent: 'blue',
     summary: [
       { label: '분야', value: '반도체 소재·소자·공정·패키징·AI 반도체 등 연구 성과 발표' },
@@ -136,6 +137,7 @@ export const FAB_EVENTS: FabEvent[] = [
     end: '2026-08-28',
     venue: '수원컨벤션센터',
     link: 'https://www.semipkgshow.com/',
+    poster: 'events/asps2026.jpg',
     accent: 'purple',
     summary: [
       { label: '전시', value: '패키징 공정·테스트 장비, 패키징 소재·부품, 열관리 솔루션' },
@@ -151,6 +153,7 @@ export const FAB_EVENTS: FabEvent[] = [
     venue: '인천 송도컨벤시아',
     organizer: '한국PCB반도체패키징산업협회',
     link: 'https://www.kpcashow.com/kor/aboutus/about.asp',
+    poster: 'events/kpca2026.jpg',
     accent: 'amber',
     summary: [
       { label: '전시', value: '반도체 기판 및 첨단 패키징 최신 기술 동향 등' },
