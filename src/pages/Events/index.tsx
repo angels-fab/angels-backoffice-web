@@ -109,58 +109,80 @@ function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
   )
 }
 
+// 상세 정보 블록 (제목·구분/상태칩·메타·요약·버튼). light=포스터 위 오버레이용(밝은 텍스트).
+function DetailInfo({ e, st, light }: { e: FabEvent; st: ReturnType<typeof eventStatus>; light?: boolean }) {
+  return (
+    <>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.25 }}>
+        <StatusChip status={st.tone === 'green' ? 'success' : st.tone === 'amber' ? 'warning' : 'neutral'} label={st.label} />
+        <StatusChip status="info" label={e.kind} />
+      </Box>
+      {light ? (
+        <Typography sx={{ fontSize: 19, fontWeight: 800, color: '#fff', lineHeight: 1.35, mb: 1.25, textShadow: '0 1px 8px rgba(0,0,0,.6)' }}>{e.title}</Typography>
+      ) : (
+        <Typography variant="h3" sx={{ mb: 1.5, lineHeight: 1.35 }}>{e.title}</Typography>
+      )}
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.7, mb: 1.5 }}>
+        <Meta icon={<EventIcon />} value={fmtEventDate(e.start, e.end)} light={light} />
+        <Meta icon={<PlaceIcon />} value={e.venue} light={light} />
+        {e.organizer && <Meta icon={<BusinessIcon />} value={e.organizer} light={light} />}
+      </Box>
+      {e.summary && e.summary.length > 0 && (
+        <Box component="ul" sx={{ m: 0, mb: 2, pl: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 0.7 }}>
+          {e.summary.map((s, i) => (
+            <Box component="li" key={i} sx={{ position: 'relative', pl: '14px', fontSize: 13.5, lineHeight: 1.6, color: light ? 'rgba(255,255,255,.86)' : 'text.secondary', textShadow: light ? '0 1px 6px rgba(0,0,0,.7)' : 'none', '&::before': { content: '""', position: 'absolute', left: 0, top: '9px', width: 5, height: 5, borderRadius: '50%', bgcolor: 'primary.main' } }}>
+              {s}
+            </Box>
+          ))}
+        </Box>
+      )}
+      <Button variant="contained" fullWidth startIcon={<OpenInNewIcon />} onClick={() => window.open(e.link, '_blank', 'noopener,noreferrer')}>
+        행사 사이트 바로가기
+      </Button>
+    </>
+  )
+}
+
 function EventDetail({ e, onClose }: { e: FabEvent; onClose: () => void }) {
   const st = eventStatus(e.start, e.end)
   const url = posterUrl(e.poster)
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.paper', borderRadius: '16px', overflow: 'hidden' } } }}>
-      {/* 배너 */}
-      <Box sx={{ position: 'relative', aspectRatio: '16 / 7' }}>
-        {url ? (
-          <Box component="img" src={url} alt={e.title} sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-        ) : (
-          <Box sx={{ position: 'absolute', inset: 0, background: GRAD[e.accent ?? 'blue'] }} />
-        )}
-        <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,10,15,.85), rgba(8,10,15,.1) 70%)' }} />
-        <IconButton onClick={onClose} aria-label="닫기" sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', bgcolor: 'rgba(0,0,0,.35)', '&:hover': { bgcolor: 'rgba(0,0,0,.55)' } }}>
-          <CloseIcon sx={{ fontSize: 18 }} />
-        </IconButton>
-        <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '16px 18px', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <StatusChip status={st.tone === 'green' ? 'success' : st.tone === 'amber' ? 'warning' : 'neutral'} label={st.label} />
-          <StatusChip status="info" label={e.kind} />
-        </Box>
-      </Box>
-
-      {/* 본문 */}
-      <Box sx={{ p: '18px 20px 20px' }}>
-        <Typography variant="h3" sx={{ mb: 1.5, lineHeight: 1.35 }}>{e.title}</Typography>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1.75 }}>
-          <Meta icon={<EventIcon />} value={fmtEventDate(e.start, e.end)} />
-          <Meta icon={<PlaceIcon />} value={e.venue} />
-          {e.organizer && <Meta icon={<BusinessIcon />} value={e.organizer} />}
-        </Box>
-        {e.summary && e.summary.length > 0 && (
-          <Box component="ul" sx={{ m: 0, mb: 2, pl: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            {e.summary.map((s, i) => (
-              <Box component="li" key={i} sx={{ position: 'relative', pl: '14px', fontSize: 13.5, lineHeight: 1.6, color: 'text.secondary', '&::before': { content: '""', position: 'absolute', left: 0, top: '9px', width: 5, height: 5, borderRadius: '50%', bgcolor: 'primary.main' } }}>
-                {s}
-              </Box>
-            ))}
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.paper', borderRadius: '16px', overflow: 'auto' } } }}>
+      {url ? (
+        // 포스터 전체(100%)를 그대로 표시 → 하단(정보 없는 영역)만 그라데이션(아래 30%)으로 덮어 그 위에 정보 오버레이
+        <Box sx={{ position: 'relative', bgcolor: '#0b0e14', lineHeight: 0 }}>
+          <Box component="img" src={url} alt={e.title} sx={{ display: 'block', width: '100%', height: 'auto' }} />
+          <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,10,15,.98) 0%, rgba(8,10,15,.88) 10%, rgba(8,10,15,0) 30%)' }} />
+          <IconButton onClick={onClose} aria-label="닫기" sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', '&:hover': { bgcolor: 'rgba(0,0,0,.65)' } }}>
+            <CloseIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+          <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '0 20px 20px', lineHeight: 'normal' }}>
+            <DetailInfo e={e} st={st} light />
           </Box>
-        )}
-        <Button variant="contained" fullWidth startIcon={<OpenInNewIcon />} onClick={() => window.open(e.link, '_blank', 'noopener,noreferrer')}>
-          행사 사이트 바로가기
-        </Button>
-      </Box>
+        </Box>
+      ) : (
+        <>
+          <Box sx={{ position: 'relative', aspectRatio: '16 / 7' }}>
+            <Box sx={{ position: 'absolute', inset: 0, background: GRAD[e.accent ?? 'blue'] }} />
+            <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,10,15,.85), rgba(8,10,15,.1) 70%)' }} />
+            <IconButton onClick={onClose} aria-label="닫기" sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', bgcolor: 'rgba(0,0,0,.35)', '&:hover': { bgcolor: 'rgba(0,0,0,.55)' } }}>
+              <CloseIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+          <Box sx={{ p: '18px 20px 20px' }}>
+            <DetailInfo e={e} st={st} />
+          </Box>
+        </>
+      )}
     </Dialog>
   )
 }
 
-function Meta({ icon, value }: { icon: React.ReactNode; value: string }) {
+function Meta({ icon, value, light }: { icon: React.ReactNode; value: string; light?: boolean }) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
-      <Box sx={{ display: 'flex', color: 'text.disabled', '& .MuiSvgIcon-root': { fontSize: 18 } }}>{icon}</Box>
-      <Typography variant="body2" sx={{ color: 'text.primary' }}>{value}</Typography>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ...(light ? { textShadow: '0 1px 6px rgba(0,0,0,.7)' } : null) }}>
+      <Box sx={{ display: 'flex', color: light ? 'rgba(255,255,255,.78)' : 'text.disabled', '& .MuiSvgIcon-root': { fontSize: 18 } }}>{icon}</Box>
+      <Typography variant="body2" sx={{ color: light ? '#fff' : 'text.primary' }}>{value}</Typography>
     </Box>
   )
 }
