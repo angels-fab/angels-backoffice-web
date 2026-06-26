@@ -49,7 +49,7 @@ export default function SideNav() {
     {
       label: '정보',
       items: [
-        { icon: <CoPresentIcon />, label: '학술·교육 행사', path: '/events' },
+        { icon: <CoPresentIcon />, label: '학술·교육·전시', path: '/events' },
         { icon: <TimelineIcon />, label: '구축 로드맵', path: '/roadmap' },
         { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve },
         { icon: <LinkIcon />, label: '바로가기', path: '/links' },

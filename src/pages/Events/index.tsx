@@ -271,8 +271,8 @@ export default function Events() {
     <PageContainer>
       <PageHeader
         icon={<CoPresentIcon />}
-        title="학술·교육 행사"
-        subtitle="세미나 · 학회 · 교육 행사"
+        title="학술·교육·전시"
+        subtitle="학회 · 교육 · 전시 행사"
         actions={
           isAdmin ? (
             <Button
@@ -280,7 +280,7 @@ export default function Events() {
               startIcon={<AddIcon />}
               onClick={() => window.open(EVENT_REQUEST_FORM_URL, '_blank', 'noopener,noreferrer')}
             >
-              새 예정행사 등록
+              새 행사
             </Button>
           ) : undefined
         }
