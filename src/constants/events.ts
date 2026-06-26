@@ -78,6 +78,7 @@ export const FAB_EVENTS: FabEvent[] = [
     venue: '한국기술교육대학교 제2캠퍼스(서울)',
     organizer: '한국기술교육대학교',
     link: 'https://setec.koreatech.ac.kr/bbs/bbs/board.php?bo_table=gongji&wr_id=410',
+    poster: 'events/ktech-fab-202607.jpg',
     accent: 'green',
     summary: [
       { label: '신청', value: '사전등록 필수' },
@@ -93,6 +94,7 @@ export const FAB_EVENTS: FabEvent[] = [
     venue: '한국기술교육대학교 제2캠퍼스(서울)',
     organizer: '한국기술교육대학교',
     link: 'https://setec.koreatech.ac.kr/bbs/bbs/board.php?bo_table=gongji&wr_id=410',
+    poster: 'events/ktech-fab-202607.jpg',
     accent: 'green',
     summary: [
       { label: '신청', value: '사전등록 필수' },
