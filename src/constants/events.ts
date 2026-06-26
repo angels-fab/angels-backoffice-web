@@ -34,6 +34,8 @@ export interface FabEvent {
   link: string
   /** 포스터 이미지 경로 (public 기준, 예: 'events/ispsa2026.jpg'). 없으면 그라데이션 */
   poster?: string
+  /** 팝업 하단 배경색(포스터 하단 가장자리색) — 가로 긴 포스터의 아래 여백을 매끄럽게 채움 */
+  posterBg?: string
   /** 간략 내용(불릿) — 첫 항목은 개요(회차·규모) */
   summary?: EventSummaryItem[]
   /** 포스터 없을 때 카드 배경 그라데이션 */
@@ -51,6 +53,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국물리학회(KPS)',
     link: 'https://ispsa.or.kr/',
     poster: 'events/ispsa2026.jpg',
+    posterBg: 'rgb(52,58,71)',
     accent: 'blue',
     summary: [
       { label: '사전등록', value: '2026.06.05 ~ 06.19' },
@@ -79,6 +82,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국기술교육대학교',
     link: 'https://setec.koreatech.ac.kr/bbs/bbs/board.php?bo_table=gongji&wr_id=410',
     poster: 'events/ktech-fab-202607.jpg',
+    posterBg: 'rgb(0,56,167)',
     accent: 'green',
     summary: [
       { label: '신청', value: '사전등록 필수' },
@@ -95,6 +99,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국기술교육대학교',
     link: 'https://setec.koreatech.ac.kr/bbs/bbs/board.php?bo_table=gongji&wr_id=410',
     poster: 'events/ktech-fab-202607.jpg',
+    posterBg: 'rgb(0,56,167)',
     accent: 'green',
     summary: [
       { label: '신청', value: '사전등록 필수' },
@@ -112,6 +117,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '반도체공학회',
     link: 'https://event.theise.org/conference/',
     poster: 'events/ises-summer2026.jpg',
+    posterBg: 'rgb(255,255,255)',
     accent: 'blue',
     summary: [
       { label: '분야', value: '반도체 소재·소자·공정·패키징·AI 반도체 등 연구 성과 발표' },
@@ -140,6 +146,7 @@ export const FAB_EVENTS: FabEvent[] = [
     venue: '수원컨벤션센터',
     link: 'https://www.semipkgshow.com/',
     poster: 'events/asps2026.jpg',
+    posterBg: 'rgb(176,80,132)',
     accent: 'purple',
     summary: [
       { label: '전시', value: '패키징 공정·테스트 장비, 패키징 소재·부품, 열관리 솔루션' },
@@ -156,6 +163,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국PCB반도체패키징산업협회',
     link: 'https://www.kpcashow.com/kor/aboutus/about.asp',
     poster: 'events/kpca2026.jpg',
+    posterBg: 'rgb(6,215,230)',
     accent: 'amber',
     summary: [
       { label: '전시', value: '반도체 기판 및 첨단 패키징 최신 기술 동향 등' },

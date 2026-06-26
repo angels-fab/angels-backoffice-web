@@ -11,6 +11,10 @@ import EventIcon from '@mui/icons-material/Event'
 import PlaceIcon from '@mui/icons-material/Place'
 import BusinessIcon from '@mui/icons-material/Business'
 import CloseIcon from '@mui/icons-material/Close'
+import SchoolIcon from '@mui/icons-material/School'
+import GroupsIcon from '@mui/icons-material/Groups'
+import ForumIcon from '@mui/icons-material/Forum'
+import StorefrontIcon from '@mui/icons-material/Storefront'
 import { darken } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, StatusChip } from '@/components/ds'
@@ -34,6 +38,16 @@ const toneColor = (th: Theme, tone: 'green' | 'amber' | 'gray') =>
 
 const posterUrl = (poster?: string) => (poster ? `${import.meta.env.BASE_URL}${poster}` : undefined)
 
+// 분류 → 아이콘 (포스터 없을 때 카드/팝업 가운데에 크게)
+function categoryIcon(kind?: string) {
+  const k = kind ?? ''
+  if (/교육|세미나|실습|강좌/.test(k)) return SchoolIcon
+  if (/전시|박람|산업전|쇼|show/i.test(k)) return StorefrontIcon
+  if (/컨퍼런스|conference|summit|포럼|forum/i.test(k)) return ForumIcon
+  if (/학회|학술|심포지엄|symposium/i.test(k)) return GroupsIcon
+  return CoPresentIcon
+}
+
 /** 포스터 영역(이미지 or 그라데이션) + 하단 그라데이션 오버레이 */
 function PosterBg({ e }: { e: FabEvent }) {
   const url = posterUrl(e.poster)
@@ -42,7 +56,12 @@ function PosterBg({ e }: { e: FabEvent }) {
       {url ? (
         <Box component="img" src={url} alt={e.title} loading="lazy" sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
       ) : (
-        <Box sx={{ position: 'absolute', inset: 0, background: GRAD[e.accent ?? 'blue'] }} />
+        <>
+          <Box sx={{ position: 'absolute', inset: 0, background: GRAD[e.accent ?? 'blue'] }} />
+          <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {(() => { const Ico = categoryIcon(e.kind); return <Ico sx={{ fontSize: 92, color: 'rgba(255,255,255,.5)' }} /> })()}
+          </Box>
+        </>
       )}
       <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,10,15,.92) 0%, rgba(8,10,15,.42) 40%, rgba(8,10,15,0) 66%)' }} />
     </>
@@ -221,34 +240,30 @@ function DetailInfo({ e, st, light }: { e: FabEvent; st: ReturnType<typeof event
 function EventDetail({ e, onClose }: { e: FabEvent; onClose: () => void }) {
   const st = eventStatus(e.start, e.end)
   const url = posterUrl(e.poster)
+  const Ico = categoryIcon(e.kind)
   return (
-    <Dialog open onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.paper', borderRadius: '16px', overflow: 'auto' } } }}>
-      {url ? (
-        // 포스터 전체(100%)를 그대로 표시 → 하단(정보 없는 영역)만 그라데이션(아래 30%)으로 덮어 그 위에 정보 오버레이
-        <Box sx={{ position: 'relative', bgcolor: '#0b0e14', lineHeight: 0 }}>
-          <Box component="img" src={url} alt={e.title} sx={{ display: 'block', width: '100%', height: 'auto' }} />
-          <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,10,15,.98) 0%, rgba(8,10,15,.88) 10%, rgba(8,10,15,0) 30%)' }} />
-          <IconButton onClick={onClose} aria-label="닫기" sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', '&:hover': { bgcolor: 'rgba(0,0,0,.65)' } }}>
-            <CloseIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-          <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '0 20px 20px', lineHeight: 'normal' }}>
-            <DetailInfo e={e} st={st} light />
-          </Box>
-        </Box>
-      ) : (
-        <>
-          <Box sx={{ position: 'relative', aspectRatio: '16 / 7' }}>
+    <Dialog open onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.paper', borderRadius: '16px', overflow: 'hidden' } } }}>
+      {/* 팝업 이미지 영역 — ISPSA(800x1122) 기준 고정. 가로 긴 이미지는 위 정렬 + 하단 배경색 채움, 세로 긴 이미지는 하단 크롭. */}
+      <Box sx={{ position: 'relative', aspectRatio: '800 / 1122', overflow: 'hidden', bgcolor: url ? (e.posterBg ?? '#0b0e14') : undefined }}>
+        {url ? (
+          <Box component="img" src={url} alt={e.title} sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 'auto', display: 'block' }} />
+        ) : (
+          <>
             <Box sx={{ position: 'absolute', inset: 0, background: GRAD[e.accent ?? 'blue'] }} />
-            <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,10,15,.85), rgba(8,10,15,.1) 70%)' }} />
-            <IconButton onClick={onClose} aria-label="닫기" sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', bgcolor: 'rgba(0,0,0,.35)', '&:hover': { bgcolor: 'rgba(0,0,0,.55)' } }}>
-              <CloseIcon sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Box>
-          <Box sx={{ p: '18px 20px 20px' }}>
-            <DetailInfo e={e} st={st} />
-          </Box>
-        </>
-      )}
+            <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Ico sx={{ fontSize: 150, color: 'rgba(255,255,255,.5)' }} />
+            </Box>
+          </>
+        )}
+        {/* 하단 정보 그라데이션 */}
+        <Box sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(to top, rgba(8,10,15,.98) 0%, rgba(8,10,15,.9) 12%, rgba(8,10,15,0) 38%)' }} />
+        <IconButton onClick={onClose} aria-label="닫기" sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', '&:hover': { bgcolor: 'rgba(0,0,0,.65)' } }}>
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </IconButton>
+        <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '0 20px 20px', lineHeight: 'normal' }}>
+          <DetailInfo e={e} st={st} light />
+        </Box>
+      </Box>
     </Dialog>
   )
 }
