@@ -40,6 +40,7 @@ export const FAB_EVENTS: FabEvent[] = [
     venue: '제주 해비치 호텔 & 리조트',
     organizer: '한국물리학회(KPS)',
     link: 'https://ispsa.or.kr/',
+    poster: 'events/ispsa2026.jpg',
     accent: 'blue',
     summary: [
       '사전등록 2026.06.05~06.19 · 초록 마감 2026.04.03 (채택 통보 4.24)',
