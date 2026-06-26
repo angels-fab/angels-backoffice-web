@@ -9,6 +9,16 @@ export const EVENT_REQUEST_FORM_URL =
 
 export type EventAccent = 'blue' | 'teal' | 'green' | 'purple' | 'amber' | 'red'
 
+// 요약 한 줄: 헤더(label) + 내용(value), 또는 연사 목록(speakers).
+export interface EventSummaryItem {
+  /** 헤더명 (예: 사전등록·초록마감·Plenary). 없으면 일반 문장 */
+  label?: string
+  /** 내용 (날짜·설명 등) */
+  value?: string
+  /** 연사 목록 (Plenary/Keynote) — 이름 단위 줄바꿈 방지, 최대 2줄 표시 */
+  speakers?: string[]
+}
+
 export interface FabEvent {
   id: string
   title: string
@@ -24,8 +34,8 @@ export interface FabEvent {
   link: string
   /** 포스터 이미지 경로 (public 기준, 예: 'events/ispsa2026.jpg'). 없으면 그라데이션 */
   poster?: string
-  /** 간략 내용(불릿) */
-  summary?: string[]
+  /** 간략 내용(불릿) — 첫 항목은 개요(회차·규모) */
+  summary?: EventSummaryItem[]
   /** 포스터 없을 때 카드 배경 그라데이션 */
   accent?: EventAccent
 }
@@ -33,7 +43,7 @@ export interface FabEvent {
 export const FAB_EVENTS: FabEvent[] = [
   {
     id: 'ispsa2026',
-    title: '제22회 반도체 물리·응용 국제심포지엄 (ISPSA 2026)',
+    title: 'ISPSA 2026 - 제22회 반도체 물리·응용 국제심포지엄',
     kind: '국제학회',
     start: '2026-06-28',
     end: '2026-07-02',
@@ -43,9 +53,20 @@ export const FAB_EVENTS: FabEvent[] = [
     poster: 'events/ispsa2026.jpg',
     accent: 'blue',
     summary: [
-      '사전등록 2026.06.05~06.19 · 초록 마감 2026.04.03 (채택 통보 4.24)',
-      'Plenary: Henk Bolink(발렌시아대) · Jing Kong(MIT) · John A. Rogers(노스웨스턴) · Feng Wang(UC버클리) · Amir Yacoby(하버드) · J. Joshua Yang(USC)',
-      '반도체 물리·응용 격년 국제심포지엄(22회) · 1,000명+ 참가 · 주관 CHIPS(한양대)·성균관대·이화여대·군산대',
+      { label: '사전등록', value: '2026.06.05 ~ 06.19' },
+      { label: '초록마감', value: '2026.04.03 (채택 통보 4.24)' },
+      {
+        label: 'Plenary',
+        speakers: [
+          'Henk Bolink',
+          'Jing Kong',
+          'John A. Rogers',
+          'Feng Wang',
+          'Amir Yacoby',
+          'J. Joshua Yang',
+        ],
+      },
+      { label: '공동주관', value: 'CHIPS(한양대)·성균관대·이화여대·군산대' },
     ],
   },
 ]
@@ -67,12 +88,13 @@ export function eventStatus(startISO: string, endISO?: string): EventStatus {
   return { label: `D-${days}`, tone: 'amber' }
 }
 
-/** 표시용 날짜 — 2026.06.28 / 2026.06.28–07.02 */
+/** 표시용 날짜 — 같은 연·월이면 끝은 일만, 같은 연 다른 월이면 끝은 월.일, 다른 연이면 전체 */
 export function fmtEventDate(startISO: string, endISO?: string): string {
   const dot = (iso: string) => iso.replace(/-/g, '.')
   if (!endISO || endISO === startISO) return dot(startISO)
   const [sy, sm] = startISO.split('-')
   const [ey, em, ed] = endISO.split('-')
-  if (sy === ey && sm === em) return `${dot(startISO)}–${ed}`
-  return `${dot(startISO)} – ${dot(endISO)}`
+  if (sy === ey && sm === em) return `${dot(startISO)}-${ed}` // 2025.05.05-08
+  if (sy === ey) return `${dot(startISO)} - ${em}.${ed}` // 2025.05.30 - 06.05
+  return `${dot(startISO)} - ${dot(endISO)}`
 }

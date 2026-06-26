@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Dialog from '@mui/material/Dialog'
@@ -11,7 +11,7 @@ import EventIcon from '@mui/icons-material/Event'
 import PlaceIcon from '@mui/icons-material/Place'
 import BusinessIcon from '@mui/icons-material/Business'
 import CloseIcon from '@mui/icons-material/Close'
-import { alpha } from '@mui/material/styles'
+import { darken } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, StatusChip } from '@/components/ds'
 import { useRole } from '@/auth/role'
@@ -25,6 +25,9 @@ const GRAD: Record<EventAccent, string> = {
   amber: 'linear-gradient(150deg,#5b4410,#9a7420 60%,#d6a23e)',
   red: 'linear-gradient(150deg,#5b1f1c,#a23a34 60%,#e05b54)',
 }
+
+// 행사 분류칩(국제/국내) 텍스트색 = 하단 '행사 사이트 바로가기' 버튼 배경색(통일). 진한 비비드 블루.
+const KIND_BLUE = '#3b82f6'
 
 const toneColor = (th: Theme, tone: 'green' | 'amber' | 'gray') =>
   tone === 'green' ? th.palette.accent.green : tone === 'amber' ? th.palette.accent.amber : th.palette.text.disabled
@@ -43,6 +46,60 @@ function PosterBg({ e }: { e: FabEvent }) {
       )}
       <Box sx={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(8,10,15,.92) 0%, rgba(8,10,15,.42) 40%, rgba(8,10,15,0) 66%)' }} />
     </>
+  )
+}
+
+// 제목 분리 — ' - ' 앞(약칭)은 한 줄 유지, 줄바꿈 시 dash(한글명)부터 다음 줄.
+// 부모는 display:flex; flexWrap:wrap 이어야 함(한 줄에 다 들어가면 한 줄, 아니면 한글명이 다음 줄로).
+function splitTitle(title: string, clampTail?: number, dropDash?: boolean): ReactNode {
+  const idx = title.indexOf(' - ')
+  if (idx === -1) return title
+  // dropDash: 줄바꿈 시 dash 없이 한글명만 다음 줄로 (카드용). 아니면 '- 한글명'으로 연결(팝업용).
+  const tail = dropDash ? title.slice(idx + 3) : title.slice(idx + 1)
+  return (
+    <>
+      <Box component="span" sx={{ whiteSpace: 'nowrap' }}>{title.slice(0, idx)}</Box>
+      <Box component="span" sx={{ minWidth: 0, ...(clampTail ? { display: '-webkit-box', WebkitLineClamp: clampTail, WebkitBoxOrient: 'vertical', overflow: 'hidden' } : null) }}>{tail}</Box>
+    </>
+  )
+}
+
+// 카드 제목 — 한 줄에 들어가면 'ISPSA 2026 - 한글명'(dash 중간), 줄바꿈되면 dash 빼고 한글명부터 다음 줄.
+// 한 줄 여부를 약칭/한글 span의 offsetTop으로 측정(폭 변할 때만 재측정 → 무한루프 방지).
+function CardTitle({ title }: { title: string }) {
+  const idx = title.indexOf(' - ')
+  const wrapRef = useRef<HTMLDivElement | null>(null)
+  const headRef = useRef<HTMLSpanElement | null>(null)
+  const tailRef = useRef<HTMLSpanElement | null>(null)
+  const lastW = useRef(-1)
+  const [oneLine, setOneLine] = useState(false)
+  useLayoutEffect(() => {
+    if (idx === -1) return
+    const measure = () => {
+      const c = wrapRef.current, h = headRef.current, t = tailRef.current
+      if (!c || !h || !t) return
+      const w = c.clientWidth
+      if (w === lastW.current) return
+      lastW.current = w
+      setOneLine(h.offsetTop === t.offsetTop)
+    }
+    lastW.current = -1
+    measure()
+    const ro = new ResizeObserver(measure)
+    if (wrapRef.current) ro.observe(wrapRef.current)
+    return () => ro.disconnect()
+  }, [title, idx])
+  const fontSx = { fontSize: 14, fontWeight: 800, color: '#fff', lineHeight: 1.3, mb: 1, textShadow: '0 1px 6px rgba(0,0,0,.5)' }
+  if (idx === -1) {
+    return <Box sx={{ ...fontSx, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{title}</Box>
+  }
+  const head = title.slice(0, idx)
+  const korean = title.slice(idx + 3)
+  return (
+    <Box ref={wrapRef} sx={{ ...fontSx, display: 'flex', flexWrap: 'wrap', columnGap: '0.3em' }}>
+      <Box component="span" ref={headRef} sx={{ whiteSpace: 'nowrap' }}>{oneLine ? `${head} -` : head}</Box>
+      <Box component="span" ref={tailRef} sx={{ minWidth: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{korean}</Box>
+    </Box>
   )
 }
 
@@ -70,15 +127,21 @@ function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
       <Box sx={{ position: 'relative', aspectRatio: '3 / 4' }}>
         <PosterBg e={e} />
 
-        {/* 상태 pill */}
+        {/* 상태 칩 — 진행중=초록 점멸 dot / 예정=노랑 dot+D-# / 종료=회색 */}
         <Box
-          sx={(th) => ({
+          sx={{
             position: 'absolute', top: 11, left: 11,
-            fontSize: 10.5, fontWeight: 800, letterSpacing: '.02em',
-            px: 1, py: '3px', borderRadius: 999,
-            bgcolor: alpha(toneColor(th, st.tone), 0.92), color: '#fff',
-          })}
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            fontSize: 13, fontWeight: 700, letterSpacing: '.02em',
+            px: '11px', py: '6px', borderRadius: 999,
+            bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: '#fff',
+          }}
         >
+          <Box
+            component="span"
+            className={st.tone === 'green' ? 'live-dot' : undefined}
+            sx={(th) => ({ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, bgcolor: toneColor(th, st.tone) })}
+          />
           {st.label}
         </Box>
 
@@ -97,11 +160,9 @@ function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
 
         {/* 하단 오버레이: 제목 + 일시 */}
         <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '13px 13px 14px' }}>
-          <Typography sx={{ fontSize: 14, fontWeight: 800, color: '#fff', lineHeight: 1.3, mb: 1, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textShadow: '0 1px 6px rgba(0,0,0,.5)' }}>
-            {e.title}
-          </Typography>
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 11, fontWeight: 600, color: '#fff', bgcolor: 'rgba(255,255,255,.16)', backdropFilter: 'blur(3px)', px: 1, py: '3px', borderRadius: 999 }}>
-            <EventIcon sx={{ fontSize: 13 }} /> {fmtEventDate(e.start, e.end)}
+          <CardTitle title={e.title} />
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 13, fontWeight: 500, color: '#fff', bgcolor: 'rgba(255,255,255,.16)', backdropFilter: 'blur(3px)', px: 1.1, py: '4px', borderRadius: 999 }}>
+            <EventIcon sx={{ fontSize: 16 }} /> {fmtEventDate(e.start, e.end)}
           </Box>
         </Box>
       </Box>
@@ -114,13 +175,22 @@ function DetailInfo({ e, st, light }: { e: FabEvent; st: ReturnType<typeof event
   return (
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.25 }}>
-        <StatusChip status={st.tone === 'green' ? 'success' : st.tone === 'amber' ? 'warning' : 'neutral'} label={st.label} />
-        <StatusChip status="info" label={e.kind} />
+        {light ? (
+          <>
+            <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', px: '11px', py: '4px', borderRadius: 999, fontSize: 12, fontWeight: 800, color: th.palette.getContrastText(KIND_BLUE), bgcolor: KIND_BLUE })}>{e.kind}</Box>
+            <Box component="span" sx={(th) => { const c = toneColor(th, st.tone); return { display: 'inline-flex', alignItems: 'center', px: '11px', py: '4px', borderRadius: 999, fontSize: 12, fontWeight: 800, color: th.palette.getContrastText(c), bgcolor: c } }}>{st.label}</Box>
+          </>
+        ) : (
+          <>
+            <StatusChip status="info" label={e.kind} />
+            <StatusChip status={st.tone === 'green' ? 'success' : st.tone === 'amber' ? 'warning' : 'neutral'} label={st.label} />
+          </>
+        )}
       </Box>
       {light ? (
-        <Typography sx={{ fontSize: 19, fontWeight: 800, color: '#fff', lineHeight: 1.35, mb: 1.25, textShadow: '0 1px 8px rgba(0,0,0,.6)' }}>{e.title}</Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: '0.35em', fontSize: 19, fontWeight: 800, color: '#fff', lineHeight: 1.35, mb: 1.25, textShadow: '0 1px 8px rgba(0,0,0,.6)' }}>{splitTitle(e.title)}</Box>
       ) : (
-        <Typography variant="h3" sx={{ mb: 1.5, lineHeight: 1.35 }}>{e.title}</Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: '0.35em', fontSize: 20, fontWeight: 700, color: 'text.primary', lineHeight: 1.35, mb: 1.5 }}>{splitTitle(e.title)}</Box>
       )}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.7, mb: 1.5 }}>
         <Meta icon={<EventIcon />} value={fmtEventDate(e.start, e.end)} light={light} />
@@ -128,15 +198,20 @@ function DetailInfo({ e, st, light }: { e: FabEvent; st: ReturnType<typeof event
         {e.organizer && <Meta icon={<BusinessIcon />} value={e.organizer} light={light} />}
       </Box>
       {e.summary && e.summary.length > 0 && (
-        <Box component="ul" sx={{ m: 0, mb: 2, pl: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 0.7 }}>
+        <Box component="ul" sx={{ m: 0, mb: 2, pl: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 0.6 }}>
           {e.summary.map((s, i) => (
-            <Box component="li" key={i} sx={{ position: 'relative', pl: '14px', fontSize: 13.5, lineHeight: 1.6, color: light ? 'rgba(255,255,255,.86)' : 'text.secondary', textShadow: light ? '0 1px 6px rgba(0,0,0,.7)' : 'none', '&::before': { content: '""', position: 'absolute', left: 0, top: '9px', width: 5, height: 5, borderRadius: '50%', bgcolor: 'primary.main' } }}>
-              {s}
+            <Box component="li" key={i} sx={{ fontSize: 13.5, lineHeight: 1.6, color: light ? 'rgba(255,255,255,.86)' : 'text.secondary', ...(light ? { textShadow: '0 1px 6px rgba(0,0,0,.7)' } : null), ...(s.speakers ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } : null) }}>
+              {s.label && (
+                <Box component="span" sx={{ fontWeight: 700, color: light ? '#fff' : 'text.primary', mr: 0.75 }}>{s.label}</Box>
+              )}
+              {s.speakers && s.speakers.length > 0
+                ? s.speakers.slice(0, 4).join(' · ') + (s.speakers.length > 4 ? ' 등' : '')
+                : s.value}
             </Box>
           ))}
         </Box>
       )}
-      <Button variant="contained" fullWidth startIcon={<OpenInNewIcon />} onClick={() => window.open(e.link, '_blank', 'noopener,noreferrer')}>
+      <Button variant="contained" fullWidth startIcon={<OpenInNewIcon />} onClick={() => window.open(e.link, '_blank', 'noopener,noreferrer')} sx={{ bgcolor: KIND_BLUE, color: '#fff', '&:hover': { bgcolor: darken(KIND_BLUE, 0.14) } }}>
         행사 사이트 바로가기
       </Button>
     </>
