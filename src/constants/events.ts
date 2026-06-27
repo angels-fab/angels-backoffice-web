@@ -36,6 +36,8 @@ export interface FabEvent {
   poster?: string
   /** 팝업 하단 배경색(포스터 하단 가장자리색) — 가로 긴 포스터의 아래 여백을 매끄럽게 채움 */
   posterBg?: string
+  /** 안내문·하단 텍스트가 많은 포스터: 팝업 정보 영역을 강한 검정 스크림으로 덮어 겹침 방지. 기본(여백 있는 포스터)은 옅은 그라데이션 */
+  darkInfo?: boolean
   /** 간략 내용(불릿) — 첫 항목은 개요(회차·규모) */
   summary?: EventSummaryItem[]
   /** 포스터 없을 때 카드 배경 그라데이션 */
@@ -118,6 +120,7 @@ export const FAB_EVENTS: FabEvent[] = [
     link: 'https://event.theise.org/conference/',
     poster: 'events/ises-summer2026.jpg',
     posterBg: 'rgb(16,27,63)',
+    darkInfo: true,
     accent: 'blue',
     summary: [
       { label: '논문마감', value: '2026.06.08 (결과통보 6.15)' },
@@ -135,7 +138,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: 'SEMI',
     link: 'https://www.semi.org/en/connect/events/advanced-packaging-summit-2026',
     poster: 'events/semi-advpkg2026.jpg',
-    posterBg: 'rgb(24,13,82)',
+    posterBg: 'rgb(8,10,15)',
     accent: 'teal',
     summary: [
       { label: '주제', value: 'AI·HPC용 첨단 패키징, Heterogeneous Integration·Chiplet' },
@@ -152,7 +155,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '경기도·수원시',
     link: 'https://www.semipkgshow.com/',
     poster: 'events/asps2026.jpg',
-    posterBg: 'rgb(44,49,145)',
+    posterBg: 'rgb(255,255,255)',
     accent: 'purple',
     summary: [
       { label: '관람', value: '2026.08.26~28' },
@@ -170,7 +173,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국PCB반도체패키징산업협회',
     link: 'https://www.kpcashow.com/kor/aboutus/about.asp',
     poster: 'events/kpca2026.jpg',
-    posterBg: 'rgb(0,200,226)',
+    posterBg: 'rgb(8,10,15)',
+    darkInfo: true,
     accent: 'amber',
     summary: [
       { label: '관람', value: '2026.09.09~11 10:00~17:00' },
@@ -188,7 +192,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국반도체산업협회',
     link: 'https://www.sedex.org/public_html/index.asp',
     poster: 'events/sedex2026.jpg',
-    posterBg: 'rgb(66,71,146)',
+    posterBg: 'rgb(8,10,15)',
     accent: 'red',
     summary: [
       { label: '입장', value: '사전등록(~10/12) 무료 · 현장등록 20,000원' },

@@ -162,12 +162,12 @@ function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
           {/* 분류칩 — 학술=블루 / 교육=그린 / 전시=퍼플 */}
           <Box
             component="span"
-            sx={(th) => ({
+            sx={{
               display: 'inline-flex', alignItems: 'center',
               fontSize: 12.5, fontWeight: 800, letterSpacing: '.02em',
               px: '10px', py: '6px', borderRadius: 999,
-              bgcolor: CAT_COLOR[cat], color: th.palette.getContrastText(CAT_COLOR[cat]),
-            })}
+              bgcolor: CAT_COLOR[cat], color: '#fff',
+            }}
           >
             {cat}
           </Box>
@@ -222,8 +222,11 @@ function DetailInfo({ e, st, light }: { e: FabEvent; st: ReturnType<typeof event
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.25 }}>
         {light ? (
           <>
-            <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', px: '11px', py: '4px', borderRadius: 999, fontSize: 12, fontWeight: 800, color: th.palette.getContrastText(catColor), bgcolor: catColor })}>{e.kind}</Box>
-            <Box component="span" sx={(th) => { const c = toneColor(th, st.tone); return { display: 'inline-flex', alignItems: 'center', px: '11px', py: '4px', borderRadius: 999, fontSize: 12, fontWeight: 800, color: th.palette.getContrastText(c), bgcolor: c } }}>{st.label}</Box>
+            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', px: '11px', py: '4px', borderRadius: 999, fontSize: 12, fontWeight: 800, color: '#fff', bgcolor: catColor }}>{e.kind}</Box>
+            <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', px: '11px', py: '4px', borderRadius: 999, fontSize: 12, fontWeight: 800, color: '#fff', bgcolor: 'rgba(255,255,255,.16)' }}>
+              <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
+              {st.label}
+            </Box>
           </>
         ) : (
           <>
@@ -281,14 +284,23 @@ function EventDetail({ e, onClose }: { e: FabEvent; onClose: () => void }) {
             </Box>
           </>
         )}
-        {/* 하단 정보 그라데이션 */}
-        <Box sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(to top, rgba(8,10,15,.98) 0%, rgba(8,10,15,.9) 12%, rgba(8,10,15,0) 38%)' }} />
         <IconButton onClick={onClose} aria-label="닫기" sx={{ position: 'absolute', top: 8, right: 8, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', '&:hover': { bgcolor: 'rgba(0,0,0,.65)' } }}>
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
-        <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '0 20px 20px', lineHeight: 'normal' }}>
-          <DetailInfo e={e} st={st} light />
-        </Box>
+        {e.darkInfo ? (
+          /* 글자 많은 포스터(안내문·하단 텍스트): 정보 높이만큼 강한 검정 스크림(상단만 페이드) */
+          <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, pt: '72px', px: '20px', pb: '20px', lineHeight: 'normal', background: 'linear-gradient(to top, rgba(8,10,15,.97) 0%, rgba(8,10,15,.97) calc(100% - 72px), rgba(8,10,15,0) 100%)' }}>
+            <DetailInfo e={e} st={st} light />
+          </Box>
+        ) : (
+          /* 기본(하단 여백 있는 포스터, 예: ISPSA): 원래의 옅은 그라데이션 유지 */
+          <>
+            <Box sx={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(to top, rgba(8,10,15,.98) 0%, rgba(8,10,15,.9) 12%, rgba(8,10,15,0) 38%)' }} />
+            <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '0 20px 20px', lineHeight: 'normal' }}>
+              <DetailInfo e={e} st={st} light />
+            </Box>
+          </>
+        )}
       </Box>
     </Dialog>
   )
