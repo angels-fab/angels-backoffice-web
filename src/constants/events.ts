@@ -84,7 +84,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국기술교육대학교',
     link: 'https://setec.koreatech.ac.kr/bbs/bbs/board.php?bo_table=gongji&wr_id=410',
     poster: 'events/ktech-fab-202607.jpg',
-    posterBg: 'rgb(0,56,167)',
+    posterBg: 'rgb(8,18,50)',
+    darkInfo: true,
     accent: 'green',
     summary: [
       { label: '신청', value: '사전등록 필수' },
@@ -101,7 +102,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국기술교육대학교',
     link: 'https://setec.koreatech.ac.kr/bbs/bbs/board.php?bo_table=gongji&wr_id=410',
     poster: 'events/ktech-fab-202607.jpg',
-    posterBg: 'rgb(0,56,167)',
+    posterBg: 'rgb(8,18,50)',
+    darkInfo: true,
     accent: 'green',
     summary: [
       { label: '신청', value: '사전등록 필수' },
@@ -119,7 +121,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '반도체공학회',
     link: 'https://event.theise.org/conference/',
     poster: 'events/ises-summer2026.jpg',
-    posterBg: 'rgb(7,16,33)',
+    posterBg: 'rgb(6,12,28)',
     darkInfo: true,
     accent: 'blue',
     summary: [
@@ -138,7 +140,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: 'SEMI',
     link: 'https://www.semi.org/en/connect/events/advanced-packaging-summit-2026',
     poster: 'events/semi-advpkg2026.jpg',
-    posterBg: 'rgb(8,10,15)',
+    posterBg: 'rgb(8,4,34)',
+    darkInfo: true,
     accent: 'teal',
     summary: [
       { label: '주제', value: 'AI·HPC용 첨단 패키징, Heterogeneous Integration·Chiplet' },
