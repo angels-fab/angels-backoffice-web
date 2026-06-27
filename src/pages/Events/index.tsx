@@ -157,8 +157,8 @@ function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
       <Box sx={{ position: 'relative', aspectRatio: '800 / 1122' }}>
         <PosterBg e={e} />
 
-        {/* 좌상단: 분류칩(학술/교육/전시) → 상태칩 */}
-        <Box sx={{ position: 'absolute', top: 11, left: 11, right: 44, display: 'flex', alignItems: 'flex-start', gap: '6px', flexWrap: 'wrap' }}>
+        {/* 좌상단: 분류칩(학술/교육/전시) → 상태칩 → 바로가기 아이콘 */}
+        <Box sx={{ position: 'absolute', top: 11, left: 11, right: 11, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
           {/* 분류칩 — 학술=블루 / 교육=그린 / 전시=퍼플 */}
           <Box
             component="span"
@@ -187,20 +187,19 @@ function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
             />
             {st.label}
           </Box>
+          {/* 바로가기 아이콘 — 상태칩 옆 */}
+          <IconButton
+            component="a"
+            href={e.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="행사 사이트"
+            onClick={(ev) => ev.stopPropagation()}
+            sx={{ width: 27, height: 27, color: '#fff', bgcolor: 'rgba(255,255,255,.16)', backdropFilter: 'blur(4px)', '&:hover': { bgcolor: 'rgba(255,255,255,.3)' } }}
+          >
+            <OpenInNewIcon sx={{ fontSize: 15 }} />
+          </IconButton>
         </Box>
-
-        {/* 링크 아이콘 */}
-        <IconButton
-          component="a"
-          href={e.link}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="행사 사이트"
-          onClick={(ev) => ev.stopPropagation()}
-          sx={{ position: 'absolute', top: 7, right: 7, width: 30, height: 30, color: '#fff', bgcolor: 'rgba(255,255,255,.14)', backdropFilter: 'blur(4px)', '&:hover': { bgcolor: 'rgba(255,255,255,.26)' } }}
-        >
-          <OpenInNewIcon sx={{ fontSize: 16 }} />
-        </IconButton>
 
         {/* 하단 오버레이: 제목 + 일시 */}
         <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '13px 13px 14px' }}>
@@ -288,8 +287,8 @@ function EventDetail({ e, onClose }: { e: FabEvent; onClose: () => void }) {
           <CloseIcon sx={{ fontSize: 18 }} />
         </IconButton>
         {e.darkInfo ? (
-          /* 글자 많은 포스터(안내문·하단 텍스트): 정보 높이만큼 강한 검정 스크림(상단만 페이드) */
-          <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, pt: '72px', px: '20px', pb: '20px', lineHeight: 'normal', background: 'linear-gradient(to top, rgba(8,10,15,.97) 0%, rgba(8,10,15,.97) calc(100% - 72px), rgba(8,10,15,0) 100%)' }}>
+          /* 바탕색 포스터: 정보 높이만큼 반투명 검정 스크림(.78) — 바탕색이 비쳐 어두운 톤으로 이어짐 */
+          <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, pt: '76px', px: '20px', pb: '20px', lineHeight: 'normal', background: 'linear-gradient(to top, rgba(8,10,15,.80) 0%, rgba(8,10,15,.78) calc(100% - 76px), rgba(8,10,15,0) 100%)' }}>
             <DetailInfo e={e} st={st} light />
           </Box>
         ) : (

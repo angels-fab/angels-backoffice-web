@@ -119,7 +119,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '반도체공학회',
     link: 'https://event.theise.org/conference/',
     poster: 'events/ises-summer2026.jpg',
-    posterBg: 'rgb(8,10,15)',
+    posterBg: 'rgb(7,16,33)',
+    darkInfo: true,
     accent: 'blue',
     summary: [
       { label: '논문마감', value: '2026.06.08 (결과통보 6.15)' },
@@ -172,7 +173,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국PCB반도체패키징산업협회',
     link: 'https://www.kpcashow.com/kor/aboutus/about.asp',
     poster: 'events/kpca2026.jpg',
-    posterBg: 'rgb(8,10,15)',
+    posterBg: 'rgb(6,30,38)',
     darkInfo: true,
     accent: 'amber',
     summary: [
@@ -191,7 +192,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국반도체산업협회',
     link: 'https://www.sedex.org/public_html/index.asp',
     poster: 'events/sedex2026.jpg',
-    posterBg: 'rgb(8,10,15)',
+    posterBg: 'rgb(15,13,30)',
+    darkInfo: true,
     accent: 'red',
     summary: [
       { label: '입장', value: '사전등록(~10/12) 무료 · 현장등록 20,000원' },
