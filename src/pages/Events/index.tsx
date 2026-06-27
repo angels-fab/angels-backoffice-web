@@ -143,7 +143,7 @@ function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
       }}
     >
-      <Box sx={{ position: 'relative', aspectRatio: '3 / 4' }}>
+      <Box sx={{ position: 'relative', aspectRatio: '800 / 1122' }}>
         <PosterBg e={e} />
 
         {/* 상태 칩 — 진행중=초록 점멸 dot / 예정=노랑 dot+D-# / 종료=회색 */}
