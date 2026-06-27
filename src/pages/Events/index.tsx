@@ -48,6 +48,16 @@ function categoryIcon(kind?: string) {
   return CoPresentIcon
 }
 
+// kind → 메뉴 3대 분류(학술·교육·전시) + 분류별 칩 색 (학술=블루, 교육=그린, 전시=퍼플)
+type EventCat = '학술' | '교육' | '전시'
+function eventCategory(kind?: string): EventCat {
+  const k = kind ?? ''
+  if (/교육|세미나|실습|강좌|워크숍|튜토리얼/.test(k)) return '교육'
+  if (/전시|박람|산업전|쇼|show|expo/i.test(k)) return '전시'
+  return '학술' // 국제·국내학회·심포지엄·컨퍼런스·포럼 등
+}
+const CAT_COLOR: Record<EventCat, string> = { 학술: '#3b82f6', 교육: '#10b981', 전시: '#a855f7' }
+
 /** 포스터 영역(이미지 or 그라데이션) + 하단 그라데이션 오버레이 */
 function PosterBg({ e }: { e: FabEvent }) {
   const url = posterUrl(e.poster)
@@ -124,6 +134,7 @@ function CardTitle({ title }: { title: string }) {
 
 function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
   const st = eventStatus(e.start, e.end)
+  const cat = eventCategory(e.kind)
   return (
     <Box
       role="button"
@@ -146,22 +157,36 @@ function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
       <Box sx={{ position: 'relative', aspectRatio: '800 / 1122' }}>
         <PosterBg e={e} />
 
-        {/* 상태 칩 — 진행중=초록 점멸 dot / 예정=노랑 dot+D-# / 종료=회색 */}
-        <Box
-          sx={{
-            position: 'absolute', top: 11, left: 11,
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            fontSize: 13, fontWeight: 700, letterSpacing: '.02em',
-            px: '11px', py: '6px', borderRadius: 999,
-            bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: '#fff',
-          }}
-        >
+        {/* 좌상단: 분류칩(학술/교육/전시) → 상태칩 */}
+        <Box sx={{ position: 'absolute', top: 11, left: 11, right: 44, display: 'flex', alignItems: 'flex-start', gap: '6px', flexWrap: 'wrap' }}>
+          {/* 분류칩 — 학술=블루 / 교육=그린 / 전시=퍼플 */}
           <Box
             component="span"
-            className={st.tone === 'green' ? 'live-dot' : undefined}
-            sx={(th) => ({ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, bgcolor: toneColor(th, st.tone) })}
-          />
-          {st.label}
+            sx={(th) => ({
+              display: 'inline-flex', alignItems: 'center',
+              fontSize: 12.5, fontWeight: 800, letterSpacing: '.02em',
+              px: '10px', py: '6px', borderRadius: 999,
+              bgcolor: CAT_COLOR[cat], color: th.palette.getContrastText(CAT_COLOR[cat]),
+            })}
+          >
+            {cat}
+          </Box>
+          {/* 상태칩 — 진행중=초록 점멸 dot / 예정=노랑 dot+D-# / 종료=회색 */}
+          <Box
+            sx={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              fontSize: 13, fontWeight: 700, letterSpacing: '.02em',
+              px: '11px', py: '6px', borderRadius: 999,
+              bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: '#fff',
+            }}
+          >
+            <Box
+              component="span"
+              className={st.tone === 'green' ? 'live-dot' : undefined}
+              sx={(th) => ({ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, bgcolor: toneColor(th, st.tone) })}
+            />
+            {st.label}
+          </Box>
         </Box>
 
         {/* 링크 아이콘 */}
@@ -191,12 +216,13 @@ function EventCard({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
 
 // 상세 정보 블록 (제목·구분/상태칩·메타·요약·버튼). light=포스터 위 오버레이용(밝은 텍스트).
 function DetailInfo({ e, st, light }: { e: FabEvent; st: ReturnType<typeof eventStatus>; light?: boolean }) {
+  const catColor = CAT_COLOR[eventCategory(e.kind)]
   return (
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1.25 }}>
         {light ? (
           <>
-            <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', px: '11px', py: '4px', borderRadius: 999, fontSize: 12, fontWeight: 800, color: th.palette.getContrastText(KIND_BLUE), bgcolor: KIND_BLUE })}>{e.kind}</Box>
+            <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', px: '11px', py: '4px', borderRadius: 999, fontSize: 12, fontWeight: 800, color: th.palette.getContrastText(catColor), bgcolor: catColor })}>{e.kind}</Box>
             <Box component="span" sx={(th) => { const c = toneColor(th, st.tone); return { display: 'inline-flex', alignItems: 'center', px: '11px', py: '4px', borderRadius: 999, fontSize: 12, fontWeight: 800, color: th.palette.getContrastText(c), bgcolor: c } }}>{st.label}</Box>
           </>
         ) : (
