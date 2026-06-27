@@ -131,6 +131,8 @@ export const FAB_EVENTS: FabEvent[] = [
     venue: '수원컨벤션센터',
     organizer: 'SEMI',
     link: 'https://www.semi.org/en/connect/events/advanced-packaging-summit-2026',
+    poster: 'events/semi-advpkg2026.jpg',
+    posterBg: 'rgb(24,13,82)',
     accent: 'teal',
     summary: [
       { label: '주제', value: 'AI·HPC용 첨단 패키징, Heterogeneous Integration·Chiplet' },
@@ -178,6 +180,8 @@ export const FAB_EVENTS: FabEvent[] = [
     venue: '서울 코엑스',
     organizer: '한국반도체산업협회',
     link: 'https://www.sedex.org/public_html/index.asp',
+    poster: 'events/sedex2026.jpg',
+    posterBg: 'rgb(66,71,146)',
     accent: 'red',
     summary: [
       { label: '입장', value: '사전등록(~10/12) 무료 · 현장등록 20,000원' },
