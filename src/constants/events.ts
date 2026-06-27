@@ -119,8 +119,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '반도체공학회',
     link: 'https://event.theise.org/conference/',
     poster: 'events/ises-summer2026.jpg',
-    posterBg: 'rgb(16,27,63)',
-    darkInfo: true,
+    posterBg: 'rgb(8,10,15)',
     accent: 'blue',
     summary: [
       { label: '논문마감', value: '2026.06.08 (결과통보 6.15)' },
