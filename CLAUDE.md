@@ -34,8 +34,11 @@ GIST ANGELS FAB(반도체 팹) 구축 프로젝트의 사내 관리 대시보드
 
 ## 학술·교육 행사(Events) 등록 규칙 & 워크플로
 
-페이지: `/events` (`src/pages/Events/index.tsx`). 카드 = 유형3(풀블리드 포스터 3:4 + 그라데이션 오버레이 + 상태 pill + 링크아이콘), 클릭 시 상세 Dialog.
+페이지: `/events` (`src/pages/Events/index.tsx`). 카드 = 유형3(풀블리드 포스터 3:4 + 그라데이션 오버레이 + 상태 pill + 링크아이콘), 클릭 시 **인카드 슬라이드업 상세**(Dialog 아님).
 데이터: `src/constants/events.ts`의 `FAB_EVENTS`(repo 모델, git 저장). 포스터 이미지: `public/events/`, 없으면 `accent` 그라데이션. D-day/상태는 `eventStatus()` 자동.
+
+**Events 파일 구조 (3분할)**: `index.tsx`(오케스트레이터 — `useMediaQuery('(max-width:768px)',{noSsr:true})`로 PC 4열 그리드 ↔ 모바일 캐러셀 분기, PC `EventCard` 래퍼) / `eventCard.tsx`(PC·모바일 공유 비주얼 — `EventCardInner`=포스터+칩+기본오버레이+슬라이드업 상세, `PosterBg`/`InCardDetail`/`eventCategory`/`CAT_COLOR` 등. 상수만 import → 순환참조 없음) / `MobileCarousel.tsx`(모바일 전용).
+**모바일(≤768px) UX**: 상태탭(진행중=그린·예정=앰버솔리드+짙은글씨·종료=그레이틴트, `eventStatus().tone`으로 분류·건수) + CSS `scroll-snap` 스냅 캐러셀(카드 86%, 다음 카드 ~12% peek, 라이브러리 없음) + `1 / N` 페이저. **상태 보존 모델**: 세 패널을 모두 마운트하고 비활성만 `display:none`(scrollLeft 보존, `useLayoutEffect`로 탭전환 시 복원) / 카드 열림 = 행사 id 전역 `Set`(탭 무관 독립·유지) — open이 React 상태라 탭전환만으로는 transform/scrim이 안 바뀌어 **슬라이드업 애니메이션 재생 안 됨**(사용자 토글 때만). 카드 토글은 `pointerdown/move`로 **스와이프(>9px)와 탭 구분**, 사이트 링크/버튼 클릭은 `closest('a,button')`로 토글 제외. 상세는 PC 양식 재사용(Event/Place/Business 아이콘+일시·장소·주최, summary 최대 3, OpenInNew 사이트버튼). ※ CDP 프리뷰 리사이즈는 matchMedia `change`를 안 쏴서 라이브 리사이즈로 분기 검증 불가 → **각 폭에서 새로고침(fresh mount)으로 검증**.
 
 **워크플로 (옵션 B — 추가비용 0, Claude API 키 불필요)**: 팀원은 Events "새 예정행사 등록" 버튼(`isAdmin`만 노출, `EVENT_REQUEST_FORM_URL` 구글폼)으로 **행사 URL·구분·포스터(선택)** 제출 → 폼 소유자 이메일 알림 → 관리자가 Claude에게 "행사 큐 등록" 요청 → Claude가 URL에서 정보 추출해 `FAB_EVENTS`에 추가·커밋·푸시. 포스터는 구글폼 업로드(드라이브 저장) → Claude가 가져와 리사이즈(가로 800px·JPEG·~200KB)해 `public/events/`.
 
