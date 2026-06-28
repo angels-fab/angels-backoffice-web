@@ -1,18 +1,8 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
 import { cell, fetchSheet, SHEET_NAME_NOTICE } from '@/api/sheets'
-import { fmtDate, nowStamp, todaySeoul } from '@/utils/date'
+import { fmtDate, nowStamp, isRecentNew } from '@/utils/date'
 import type { Notice } from '@/types'
-
-// 최근 7일 이내면 NEW (내일 날짜까지 허용 — 시간대 여유분)
-function isNoticeNew(dateStr: string): boolean {
-  if (!dateStr) return false
-  const d = new Date(dateStr + 'T00:00:00')
-  if (isNaN(d.getTime())) return false
-  const today = new Date(todaySeoul() + 'T00:00:00')
-  const diff = (today.getTime() - d.getTime()) / 86400000
-  return diff >= -1 && diff <= 7
-}
 
 export const loadNoticeData = createAsyncThunk('notice/load', async (): Promise<Notice[]> => {
   const rows = await fetchSheet(SHEET_NAME_NOTICE)
@@ -88,7 +78,7 @@ export const loadNoticeData = createAsyncThunk('notice/load', async (): Promise<
         author: cell(r, ci.author),
         target: cell(r, ci.target),
         views: Number(cell(r, ci.views).replace(/[^0-9]/g, '')) || 0,
-        isNew: isNoticeNew(createdDate || startDate),
+        isNew: isRecentNew(createdDate || startDate),
       }
     })
 

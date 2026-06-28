@@ -37,7 +37,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { updateImprovement, createImprovement, deleteImprovement } from '@/api/sheets'
 import { useRole } from '@/auth/role'
-import { fmtDate, todaySeoul } from '@/utils/date'
+import { fmtDate, todaySeoul, isRecentNew } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus, statusRank } from './improveMeta'
 import type { ImpStatus } from './improveMeta'
@@ -81,11 +81,13 @@ function LinkField({ value, onChange }: { value: string; onChange: (v: string) =
   )
 }
 
-// 위치/유형 드롭다운 — 화살표 버튼, 클릭 시 시트 목록 표시 (선택만)
+// 위치/유형 드롭다운 — 화살표 버튼, 클릭 시 시트 목록 표시 (선택만).
+// 기존 값이 목록에 없으면(예: 모바일) 그 값을 메뉴에 포함해 표시·보존(강제 변경 방지).
 function DropField({ value, onChange, options, placeholder, width }: { value: string; onChange: (v: string) => void; options: string[]; placeholder: string; width: number }) {
+  const opts = value && !options.includes(value) ? [value, ...options] : options
   return (
     <Select
-      value={options.includes(value) ? value : ''}
+      value={opts.includes(value) ? value : ''}
       onChange={(e) => onChange(e.target.value)}
       displayEmpty
       variant="standard"
@@ -98,7 +100,32 @@ function DropField({ value, onChange, options, placeholder, width }: { value: st
         '& .MuiSelect-icon': { right: 2, color: 'text.secondary' },
       })}
     >
-      {options.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: 13 }}>{o}</MenuItem>)}
+      {opts.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: 13 }}>{o}</MenuItem>)}
+    </Select>
+  )
+}
+
+// 제목 행 셀 즉시 변경용 Select — 상태 Select와 동일한 미니멀 디자인(표준·밑줄 없음·작은 화살표).
+// 기존 값이 목록에 없으면(예: 모바일) 그 값을 표시·보존.
+function CellSelect({ value, options, onChange, disabled, placeholder }: { value: string; options: string[]; onChange: (v: string) => void; disabled: boolean; placeholder: string }) {
+  const opts = value && !options.includes(value) ? [value, ...options] : options
+  return (
+    <Select
+      value={opts.includes(value) ? value : ''}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      displayEmpty
+      variant="standard"
+      disableUnderline
+      MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}
+      renderValue={(v) => (v ? <Box component="span">{v}</Box> : <Box component="span" sx={{ color: 'text.disabled' }}>{placeholder}</Box>)}
+      sx={{
+        fontSize: 12.5, color: 'text.primary', maxWidth: '100%',
+        '& .MuiSelect-select': { p: 0, pr: '18px !important', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
+        '& .MuiSelect-icon': { right: -2, fontSize: 18, color: 'text.secondary' },
+      }}
+    >
+      {opts.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: 13 }}>{o}</MenuItem>)}
     </Select>
   )
 }
@@ -148,8 +175,12 @@ export default function Improve() {
       statusRank(a.status) - statusRank(b.status))
   }, [items, selected])
 
-  // 위치/유형 드롭다운 — 시트 데이터 확인 목록 우선, 없으면 기존 데이터에서 추출
-  const typeOptions = useMemo(() => (sheetType.length ? sheetType : [...new Set([...IMP_TYPE_OPTIONS, ...items.map((t) => t.type).filter(Boolean)])]), [items, sheetType])
+  // 위치/유형 드롭다운 — 시트 데이터 확인 목록 우선, 없으면 기존 데이터에서 추출.
+  // 유형은 공백 정리·중복 제거 후 '모바일' 제외(백엔드도 제외하나 방어적으로 다시 필터). 기존 모바일 글은 데이터 유지.
+  const typeOptions = useMemo(() => {
+    const base = sheetType.length ? sheetType : [...IMP_TYPE_OPTIONS, ...items.map((t) => t.type)]
+    return [...new Set(base.map((s) => (s || '').trim()).filter((s) => s && s !== '모바일'))]
+  }, [items, sheetType])
   const locOptions = useMemo(() => (sheetLoc.length ? sheetLoc : [...new Set(items.map((t) => t.loc).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))), [items, sheetLoc])
 
   const onTab = (s: ImpStatus, shift: boolean) => {
@@ -161,7 +192,9 @@ export default function Improve() {
     })
   }
 
-  const canManage = (t: ImprovementItem) => isAdmin && !!user && user === (t.mgr || '').trim()
+  // 수정(상태·위치·유형·내용·사유) = 로그인 관리자 전체 / 삭제 = 해당 글 담당자(작성자)만
+  const canEdit = isAdmin && !!user && !!authKey
+  const canDelete = (t: ImprovementItem) => isAdmin && !!user && user === (t.mgr || '').trim()
 
   const saveStatus = async (row: ImprovementItem, status: string, reason: string) => {
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
@@ -171,6 +204,21 @@ export default function Improve() {
       setSavingId(null)
       setReasonDlg(null)
       showSnack('상태를 변경했습니다.', 'success')
+      dispatch(loadImproveData())
+    } catch (err) {
+      setSavingId(null)
+      showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
+    }
+  }
+
+  // 제목 행에서 개선위치/유형만 즉시 변경(다른 필드 미변경). 행 단위 savingId로 상태·위치·유형 동시 변경 방지.
+  const saveField = async (row: ImprovementItem, patch: { loc: string } | { type: string }) => {
+    if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
+    setSavingId(row.id)
+    try {
+      await updateImprovement({ author: user, key: authKey, num: row.num, ...patch })
+      setSavingId(null)
+      showSnack('loc' in patch ? '개선위치를 변경했습니다.' : '유형을 변경했습니다.', 'success')
       dispatch(loadImproveData())
     } catch (err) {
       setSavingId(null)
@@ -426,7 +474,9 @@ export default function Improve() {
                 const rm = remarkOf(t)
                 const st = normStatus(t.status)
                 const kind = impKind(st) // 행 배경 상태색 틴트용
-                const manage = canManage(t)
+                const editable = canEdit // 상태·위치·유형·내용·사유 수정 = 로그인 관리자 전체
+                const removable = canDelete(t) // 삭제 = 해당 글 담당자(작성자)만
+                const isNew = isRecentNew(fmtDate(t.date)) // 제안일자 기준 최근 7일(상태·필터 무관)
                 const toggle = () => setExpanded((prev) => { const n = new Set(prev); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })
                 return [
                   <TableRow
@@ -448,6 +498,10 @@ export default function Improve() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: 18, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
                         <Box component="span" sx={{ fontWeight: 500, color: 'text.primary' }}>{t.title}</Box>
+                        {/* 최근 게시글 N 칩 — 제목 → N → 링크 순. 공지 N칩과 동일 디자인, 줄어들지 않게 flexShrink:0 */}
+                        {isNew && (
+                          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: '4px', bgcolor: 'error.main', color: '#fff', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+                        )}
                         {t.link && (
                           <IconButton component="a" href={t.link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련자료" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
                             <OpenInNewIcon sx={{ fontSize: 15 }} />
@@ -455,12 +509,22 @@ export default function Improve() {
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell>{t.loc || '-'}</TableCell>
-                    <TableCell>{t.type || '-'}</TableCell>
+                    {/* 개선위치 — 로그인 관리자는 셀에서 즉시 변경(아코디언 토글 방지: 셀 onClick stop) */}
+                    <TableCell onClick={editable ? stop : undefined} sx={{ maxWidth: 140 }}>
+                      {editable
+                        ? <CellSelect value={t.loc} options={locOptions} disabled={savingId === t.id} placeholder="-" onChange={(v) => { if (v !== (t.loc || '')) void saveField(t, { loc: v }) }} />
+                        : (t.loc || '-')}
+                    </TableCell>
+                    {/* 유형 — 로그인 관리자는 셀에서 즉시 변경(모바일 제외 목록) */}
+                    <TableCell onClick={editable ? stop : undefined} sx={{ maxWidth: 120 }}>
+                      {editable
+                        ? <CellSelect value={t.type} options={typeOptions} disabled={savingId === t.id} placeholder="-" onChange={(v) => { if (v !== (t.type || '')) void saveField(t, { type: v }) }} />
+                        : (t.type || '-')}
+                    </TableCell>
                     <TableCell>{t.author || '-'}</TableCell>
                     <TableCell sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>{fmtDate(t.date)}</TableCell>
-                    <TableCell onClick={stop} sx={{ cursor: manage ? 'default' : 'not-allowed' }}>
-                      {manage ? (
+                    <TableCell onClick={stop} sx={{ cursor: editable ? 'default' : 'not-allowed' }}>
+                      {editable ? (
                         <Select
                           value={st}
                           onChange={(e) => onStatusChange(t, e.target.value)}
@@ -483,10 +547,10 @@ export default function Improve() {
                       ) : rm.kind === 'reason' ? (
                         <Box
                           component="span"
-                          onClick={manage ? (e) => { stop(e); setReasonDlg({ row: t, status: st, value: t.reason || '' }) } : undefined}
-                          sx={{ color: 'text.secondary', whiteSpace: 'normal', cursor: manage ? 'pointer' : 'default' }}
+                          onClick={editable ? (e) => { stop(e); setReasonDlg({ row: t, status: st, value: t.reason || '' }) } : undefined}
+                          sx={{ color: 'text.secondary', whiteSpace: 'normal', cursor: editable ? 'pointer' : 'default' }}
                         >
-                          {rm.text || (manage ? '사유 입력' : '-')}
+                          {rm.text || (editable ? '사유 입력' : '-')}
                         </Box>
                       ) : (
                         <Box component="span" sx={{ color: 'text.disabled' }}>—</Box>
@@ -499,10 +563,11 @@ export default function Improve() {
                       <TableCell colSpan={7} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
                           <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>{t.content || '내용 없음'}</Box>
-                          {manage && (
+                          {(editable || removable) && (
                             <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0, pt: 0.25 }} onClick={stop}>
-                              <Tooltip title="수정"><IconButton size="small" aria-label="수정" onClick={() => openEdit(t)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
-                              <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="삭제" onClick={() => setDeleteDlg(t)}><DeleteOutlineIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+                              {/* 수정 = 로그인 관리자 전체 / 삭제 = 담당자(작성자)만 */}
+                              {editable && <Tooltip title="수정"><IconButton size="small" aria-label="수정" onClick={() => openEdit(t)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>}
+                              {removable && <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="삭제" onClick={() => setDeleteDlg(t)}><DeleteOutlineIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>}
                             </Box>
                           )}
                         </Box>

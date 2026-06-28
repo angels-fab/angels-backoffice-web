@@ -680,7 +680,8 @@ function getImprovements_() {
   }
   // 개선위치/유형 열의 데이터 확인(드롭다운) 목록 — 새 제안 작성 드롭다운 보기로 사용
   const locOptions = dvOptions_(ctx.sh, hIdx, C.loc);
-  const typeOptions = dvOptions_(ctx.sh, hIdx, C.type);
+  // 유형 드롭다운에서 '모바일' 제외(기존 데이터의 모바일 글은 그대로 표시, 앞으로 선택 목록에서만 제외)
+  const typeOptions = dvOptions_(ctx.sh, hIdx, C.type).filter(function (v) { return v !== '모바일'; });
   return json_({ status: 'ok', items: items, headers: ctx.head, locOptions: locOptions, typeOptions: typeOptions });
 }
 
@@ -791,9 +792,8 @@ function updateImprovement_(req) {
   }
   if (rowIdx < 0) return json_({ status: 'error', message: '대상을 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
 
-  // 담당자만 변경 (담당자가 지정돼 있을 때)
-  const rowMgr = C.mgr >= 0 ? String(values[rowIdx][C.mgr] || '').trim() : '';
-  if (rowMgr && rowMgr !== author) return json_({ status: 'error', message: '담당자(' + rowMgr + ')만 변경할 수 있습니다' });
+  // 수정 권한: 로그인(담당자 시트 인증)된 사용자면 누구나 가능(작성자/담당자 무관).
+  // 인증은 위 authError_로 이미 검증됨. 담당자 일치 제한은 제거(삭제는 deleteImprovement_에서 그대로 유지).
 
   const sheetRow = rowIdx + 1;
   const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');

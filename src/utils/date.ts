@@ -8,6 +8,20 @@ export function todaySeoul(): string {
   }).format(new Date())
 }
 
+/**
+ * 최근 게시글(N) 판정 — 공지·개선요청 공용. 서울 기준 오늘과의 차이가 -1~7일이면 새 글.
+ * 빈/유효하지 않은 날짜는 false. 입력은 YYYY-MM-DD(ISO·시트형식은 fmtDate로 정규화 후 전달).
+ * ※ 공지(noticeSlice)의 기존 판정과 동일 로직 — 결과가 바뀌면 안 됨.
+ */
+export function isRecentNew(dateStr: string): boolean {
+  if (!dateStr) return false
+  const d = new Date(dateStr + 'T00:00:00')
+  if (isNaN(d.getTime())) return false
+  const today = new Date(todaySeoul() + 'T00:00:00')
+  const diff = (today.getTime() - d.getTime()) / 86400000
+  return diff >= -1 && diff <= 7
+}
+
 /** 시트 날짜 정규화: ISO(UTC) → 한국시간 기준 YYYY-MM-DD */
 export function fmtDate(v: string): string {
   v = String(v || '').trim()
