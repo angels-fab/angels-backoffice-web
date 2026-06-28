@@ -618,7 +618,7 @@ function improveCtx_() {
   let hIdx = -1;
   for (let i = 0; i < Math.min(values.length, 10); i++) {
     const r = values[i].map(function (c) { return String(c == null ? '' : c).trim(); });
-    if (r.indexOf('제목') >= 0 && (r.indexOf('개선내용') >= 0 || r.indexOf('유형') >= 0 || r.indexOf('상태') >= 0)) { hIdx = i; break; }
+    if (r.indexOf('제목') >= 0 && (r.indexOf('요청내용') >= 0 || r.indexOf('개선내용') >= 0 || r.indexOf('유형') >= 0 || r.indexOf('상태') >= 0)) { hIdx = i; break; }
   }
   if (hIdx < 0) return { error: "'" + sh.getName() + "' 시트 헤더(제목 등)를 찾지 못함" };
   const head = values[hIdx].map(function (c) { return String(c == null ? '' : c).trim(); });
@@ -640,7 +640,8 @@ function improveCtx_() {
     type: col(['유형', '분류', '구분']),
     loc: col(['개선위치', '위치', '장소']),
     title: col(['제목']),
-    content: col(['개선내용', '내용', '상세']),
+    // 헤더 변경 대응: '요청내용' 우선, 기존 '개선내용·내용·상세'도 호환
+    content: col(['요청내용', '개선내용', '내용', '상세']),
     author: col(['작성자', '제안자', '등록자']),
     mgr: col(['담당자', '담당']),
     date: col(['제안일자', '작성일자', '등록일자', '작성일']),
@@ -648,6 +649,8 @@ function improveCtx_() {
     status: col(['상태', '진행상태']),
     end: col(['완료일자', '완료일']),
     reason: reasonCol(),
+    // 작업 메모로 띄울지 여부(체크박스). '메모표시' 우선, '메모'도 호환
+    memo: col(['메모표시', '메모']),
   };
   return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
 }
@@ -676,6 +679,7 @@ function getImprovements_() {
       status: t(r, C.status),
       end: wDate_(r[C.end]),
       reason: t(r, C.reason),
+      memo: wIsChk_(r[C.memo]),
     });
   }
   // 개선위치/유형 열의 데이터 확인(드롭다운) 목록 — 새 제안 작성 드롭다운 보기로 사용
@@ -765,10 +769,13 @@ function createImprovement_(req) {
   set(C.status, IMPROVE_STATUS_DEFAULT);
   set(C.end, '');
   set(C.reason, '');
+  set(C.memo, false); // 신규 행 메모표시 기본 FALSE
   sh.appendRow(row);
   const last = sh.getLastRow();
   copyRowValidation_(sh, hIdx, last, C.status); // 상태·담당자·유형·개선위치 등 드롭다운(칩) 복사
   if (C.urgent >= 0) sh.getRange(last, C.urgent + 1).insertCheckboxes().setValue(req.urgent === true);
+  // 메모표시 체크박스를 명시적으로 삽입(검증 복사에만 의존하지 않음) — 기본 FALSE
+  if (C.memo >= 0) sh.getRange(last, C.memo + 1).insertCheckboxes().setValue(false);
   return json_({ status: 'ok', num: newNum });
 }
 
@@ -828,6 +835,23 @@ function updateImprovement_(req) {
   // 긴급 체크박스는 검증 복사 후 마지막에 적용(값 보존)
   if (req.urgent !== undefined && C.urgent >= 0) {
     sh.getRange(sheetRow, C.urgent + 1).insertCheckboxes().setValue(req.urgent === true);
+  }
+
+  // 메모표시(작업 메모): 상태 전환 자동 규칙 + 수동 토글
+  //  - 접수(또는 접수중) → 검토중으로 '실제 전환되는 순간'에만 자동 TRUE
+  //  - 보류·완료·불가로 변경하면 자동 FALSE
+  //  - 그 외 변경(검토중 유지 등)은 자동으로 건드리지 않음 → 검토중에서 수동 해제하면 FALSE 유지(재로딩해도 강제 TRUE 안 됨)
+  //  - req.memo가 전달되면(핀/패널 수동 토글) 자동 규칙보다 우선
+  if (C.memo >= 0) {
+    const prevStatus = String(values[rowIdx][C.status] == null ? '' : values[rowIdx][C.status]).trim();
+    let memoNext = null; // null = 변경 없음
+    if (req.status !== undefined) {
+      const ns = String(req.status || '').trim();
+      if ((prevStatus === '접수' || prevStatus === '접수중') && ns === '검토중') memoNext = true;
+      else if (ns === '보류' || ns === '완료' || ns === '불가') memoNext = false;
+    }
+    if (req.memo !== undefined) memoNext = (req.memo === true);
+    if (memoNext !== null) sh.getRange(sheetRow, C.memo + 1).insertCheckboxes().setValue(memoNext);
   }
   return json_({ status: 'ok', num: Number(num) || num });
 }

@@ -414,6 +414,8 @@ export interface ImprovementRow {
   status: string
   end: string
   reason: string
+  /** 메모표시 — 해당 개선위치 페이지에 작업 메모로 노출 */
+  memo: boolean
 }
 
 // 일시적 네트워크 오류('Failed to fetch') 대비 재시도 — 멱등 요청(조회·상태변경)에만 사용
@@ -500,6 +502,8 @@ export async function updateImprovement(p: {
   title?: string
   content?: string
   link?: string
+  /** 메모표시 토글(작업 메모 띄우기/해제) */
+  memo?: boolean
 }): Promise<void> {
   // 변경은 멱등(같은 값 재설정 무해)이라 네트워크 오류 시 재시도
   await withRetry(() => postImprove({ action: 'updateImprovement', ...p }))

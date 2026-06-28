@@ -29,6 +29,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
+import PushPinIcon from '@mui/icons-material/PushPin'
+import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '@/components/ds'
@@ -38,8 +40,9 @@ import { loadImproveData } from '@/store/slices/improveSlice'
 import { updateImprovement, createImprovement, deleteImprovement } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { fmtDate, todaySeoul, isRecentNew } from '@/utils/date'
+import { locationToPath } from '@/utils/improveMemo'
 import type { ImprovementItem } from '@/types'
-import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus, statusRank } from './improveMeta'
+import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus, statusRank, isSettled } from './improveMeta'
 import type { ImpStatus } from './improveMeta'
 
 const kindColor = (t: Theme, kind: StatusKind) =>
@@ -192,9 +195,13 @@ export default function Improve() {
     })
   }
 
-  // 수정(상태·위치·유형·내용·사유) = 로그인 관리자 전체 / 삭제 = 해당 글 담당자(작성자)만
+  // 수정(상태·위치·유형·내용·사유·메모) = 로그인 관리자 전체 / 삭제 = 해당 글 담당자(작성자)만
   const canEdit = isAdmin && !!user && !!authKey
   const canDelete = (t: ImprovementItem) => isAdmin && !!user && user === (t.mgr || '').trim()
+  // 작업 메모 열은 로그인 관리자에게만 노출(게스트 미노출). 열 개수 = 메모열 유무에 따라 8/9.
+  const memoCol = canEdit
+  const detailSpan = memoCol ? 8 : 7
+  const fullSpan = memoCol ? 9 : 8
 
   const saveStatus = async (row: ImprovementItem, status: string, reason: string) => {
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
@@ -223,6 +230,21 @@ export default function Improve() {
     } catch (err) {
       setSavingId(null)
       showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
+    }
+  }
+
+  // 작업 메모 띄우기/해제 — 메모표시 토글(다른 필드 미변경). 행 단위 savingId로 동시 변경 방지.
+  const toggleMemo = async (row: ImprovementItem, next: boolean) => {
+    if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
+    setSavingId(row.id)
+    try {
+      await updateImprovement({ author: user, key: authKey, num: row.num, memo: next })
+      setSavingId(null)
+      showSnack(next ? '해당 페이지에 메모를 띄웠습니다.' : '메모를 해제했습니다.', 'success')
+      dispatch(loadImproveData())
+    } catch (err) {
+      setSavingId(null)
+      showSnack(err instanceof Error ? err.message : '메모 변경 실패', 'error')
     }
   }
 
@@ -346,17 +368,18 @@ export default function Improve() {
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status={stKind} label={stLabel} /></TableCell>
         <TableCell />
+        {memoCol && <TableCell />}
       </TableRow>,
       <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, py: 0.75, verticalAlign: 'middle' } }}>
         <TableCell />
-        <TableCell colSpan={6} onClick={stop} sx={{ textAlign: 'left' }}>
+        <TableCell colSpan={memoCol ? 7 : 6} onClick={stop} sx={{ textAlign: 'left' }}>
           <InputBase
             value={cContent}
             onChange={(e) => setCContent(e.target.value)}
-            placeholder="개선내용"
+            placeholder="요청내용"
             multiline
             minRows={1}
-            inputProps={{ 'aria-label': '개선내용' }}
+            inputProps={{ 'aria-label': '요청내용' }}
             sx={(th) => ({ ...inputSx(th), width: '100%', minHeight: 32, py: '6px' })}
           />
         </TableCell>
@@ -458,6 +481,7 @@ export default function Improve() {
                 <TableCell sx={{ width: '1%' }}>제안일자</TableCell>
                 <TableCell sx={{ width: '1%' }}>상태</TableCell>
                 <TableCell sx={{ width: '1%' }}>비고</TableCell>
+                {memoCol && <TableCell sx={{ width: '1%' }}>작업 메모</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -465,7 +489,7 @@ export default function Improve() {
               {isAdmin && editingId === null && composing && renderCompose('new')}
               {listed.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>해당하는 요청이 없습니다</TableCell>
+                  <TableCell colSpan={fullSpan} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>해당하는 요청이 없습니다</TableCell>
                 </TableRow>
               )}
               {listed.map((t) => {
@@ -478,6 +502,17 @@ export default function Improve() {
                 const removable = canDelete(t) // 삭제 = 해당 글 담당자(작성자)만
                 const isNew = isRecentNew(fmtDate(t.date)) // 제안일자 기준 최근 7일(상태·필터 무관)
                 const toggle = () => setExpanded((prev) => { const n = new Set(prev); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })
+                // 작업 메모 핀 — 켜짐=앰버 PushPin / 꺼짐=PushPinOutlined. 종결상태·연결페이지 없으면 활성 불가.
+                const memoOn = t.memo === true
+                const memoTarget = locationToPath(t.loc) // null = 기타/연결 페이지 없음
+                const memoBlocked = !memoOn && (!memoTarget || isSettled(t.status))
+                const memoTip = memoOn
+                  ? '메모 해제'
+                  : !memoTarget
+                    ? '연결할 페이지가 없습니다 (기타 위치)'
+                    : isSettled(t.status)
+                      ? '종결 상태(보류·완료·불가)는 메모를 띄울 수 없습니다'
+                      : '해당 페이지에 띄우기'
                 return [
                   <TableRow
                     key={`${t.id}-r`}
@@ -556,11 +591,29 @@ export default function Improve() {
                         <Box component="span" sx={{ color: 'text.disabled' }}>—</Box>
                       )}
                     </TableCell>
+                    {/* 작업 메모 핀 — 클릭이 아코디언 토글로 전파되지 않게 셀 onClick stop */}
+                    {memoCol && (
+                      <TableCell onClick={stop} sx={{ textAlign: 'center' }}>
+                        <Tooltip title={memoTip}>
+                          <span>
+                            <IconButton
+                              size="small"
+                              aria-label={memoTip}
+                              disabled={memoBlocked || savingId === t.id}
+                              onClick={() => void toggleMemo(t, !memoOn)}
+                              sx={(th) => ({ color: memoOn ? th.palette.accent.amber : 'text.disabled', p: 0.5 })}
+                            >
+                              {memoOn ? <PushPinIcon sx={{ fontSize: 18 }} /> : <PushPinOutlinedIcon sx={{ fontSize: 18 }} />}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </TableCell>
+                    )}
                   </TableRow>,
                   open ? (
                     <TableRow key={`${t.id}-a`} onClick={toggle} sx={(th) => ({ cursor: 'pointer', '& td': { borderTop: 0, bgcolor: alpha(th.palette.accent.blue, 0.09) } })}>
                       <TableCell />
-                      <TableCell colSpan={7} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
+                      <TableCell colSpan={detailSpan} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
                           <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>{t.content || '내용 없음'}</Box>
                           {(editable || removable) && (

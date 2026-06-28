@@ -1,4 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import Box from '@mui/material/Box'
+import Tooltip from '@mui/material/Tooltip'
+import { alpha } from '@mui/material/styles'
 import HomeIcon from '@mui/icons-material/Home'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
@@ -10,6 +13,8 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import { useRole } from '@/auth/role'
+import { useAppSelector } from '@/store/hooks'
+import { memoCountByPath } from '@/utils/improveMemo'
 import { useNavBadges } from './useNavBadges'
 
 interface SideNavItem {
@@ -30,6 +35,9 @@ export default function SideNav() {
   const { pathname } = useLocation()
   const badges = useNavBadges()
   const { isAdmin } = useRole()
+  // 경로별 활성 개선 메모 건수(장비도입/장비운영은 /equipment로 합산) — 관리자 전용 앰버 배지
+  const improveItems = useAppSelector((s) => s.improve.items)
+  const memoCounts = memoCountByPath(improveItems)
 
   const groups: SideNavGroup[] = [
     {
@@ -83,6 +91,32 @@ export default function SideNav() {
               <span className="snav-text">{item.label}</span>
               {item.badge !== undefined && item.badge > 0 && (
                 <span className="snav-badge">{item.badge > 99 ? '99+' : item.badge}</span>
+              )}
+              {/* 개선 메모 건수 — 별도 앰버 배지(기존 배지와 공존), 관리자에게만 */}
+              {isAdmin && (memoCounts[item.path] || 0) > 0 && (
+                <Tooltip title={`개선 메모 ${memoCounts[item.path]}건`} placement="top" arrow>
+                  <Box
+                    component="span"
+                    aria-label={`개선 메모 ${memoCounts[item.path]}건`}
+                    sx={(th) => ({
+                      flexShrink: 0,
+                      display: 'inline-grid',
+                      placeItems: 'center',
+                      minWidth: 18,
+                      height: 18,
+                      px: '5px',
+                      borderRadius: 999,
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      color: th.palette.getContrastText(th.palette.accent.amber),
+                      bgcolor: th.palette.accent.amber,
+                      boxShadow: `0 0 0 3px ${alpha(th.palette.accent.amber, 0.16)}`,
+                    })}
+                  >
+                    {memoCounts[item.path]}
+                  </Box>
+                </Tooltip>
               )}
             </button>
           ))}

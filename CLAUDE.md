@@ -25,6 +25,16 @@ GIST ANGELS FAB(반도체 팹) 구축 프로젝트의 사내 관리 대시보드
 2. **카드 왼쪽에 컬러 보더(색 줄) 넣지 말 것.** 기존 `.card::before` 3px 색 줄은 사용자 요청으로 전부 제거함. 다시 추가 금지.
 3. **홈 대시보드 우선순위: FAB 구축 로드맵 > 장비현황 > 나머지.** 둘 다 동일 레벨 섹션(`.dashboard` + `.dash-title`)이고 크게 유지. 전체적으로 "작아 보이는" 디자인 지양.
 
+## 포털개선요청 '메모표시' (작업 메모)
+
+시트 `메모표시` 체크 개선요청을 해당 `개선위치` 페이지에 공유 작업 메모로 띄움(로그인 관리자만, 게스트 미노출).
+- **시트 헤더 대응**(`Code.gs` improveCtx_): content=`요청내용`(기존 개선내용/내용/상세 호환), memo=`메모표시/메모`. getImprovements가 memo:boolean 반환. create는 신규행 memo=FALSE + `insertCheckboxes` 명시.
+- **자동 규칙**(`updateImprovement_`): 접수/접수중→검토중 **전환 순간만** 자동 TRUE(시트의 이전 상태와 비교) / 보류·완료·불가 자동 FALSE / 그 외(검토중 유지)는 자동 변경 안 함(수동 해제 유지·재로딩해도 강제 TRUE 안 됨) / `req.memo`(핀·패널 수동토글)가 자동규칙보다 우선. 인증 유지·수정권한 정책(로그인 관리자 전체) 유지·삭제(담당자만) 미변경.
+- **경로 매핑 공용유틸** `src/utils/improveMemo.ts`: `MEMO_LOCATION_PATH`(홈→/ · 공지사항→/notice · 업무일정→/calendar · 업무현황→/work · 장비도입·운영·관리→/equipment · 학술·교육·전시→/events · 구축 로드맵→/roadmap · 바로가기→/links · 설정→/settings · 기타/unknown→null). `memosForPath`(하위경로 매칭) / `memoCountByPath`(장비도입+운영을 /equipment로 합산).
+- **보드 핀**(`Improve/index.tsx`): `작업 메모` 열(canEdit일 때만 = 게스트 미노출, colSpan은 memoCol로 8/9 분기). PushPinOutlined↔PushPin(앰버), 종결·기타 비활성+이유 Tooltip, 셀 onClick stop. `toggleMemo`→updateImprovement({memo}).
+- **대상 페이지 UI**: `src/components/PageImprovementMemo.tsx`의 `usePageImprovementMemo()`가 현재경로 메모로 {chip,panel,snackbar} 반환 → `PageHeader`가 제목 옆 칩·아래 패널 렌더(메모 없으면 null=무변화). 진입 시 패널 접힘, 칩 클릭 시 열림+항목 접힘. 스낵바는 마지막 메모 해제 후에도 보이게 관리자에게 항상 렌더.
+- **SideNav**: 경로별 앰버 memoBadge(건수, Tooltip `개선 메모 N건`), 기존 배지와 공존, 관리자 전용.
+
 ## 현재 홈(PC) 레이아웃
 
 1. FAB 구축 로드맵 — 7단계 타임라인, 아이콘 76px로 확대된 상태

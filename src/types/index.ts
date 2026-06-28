@@ -40,7 +40,7 @@ export interface ImprovementItem {
   /** 개선위치 */
   loc: string
   title: string
-  /** 개선내용(본문) */
+  /** 요청내용(본문) — 시트 헤더 '요청내용'(기존 '개선내용' 호환) */
   content: string
   author: string
   /** 담당자 — 상태 변경 권한자 */
@@ -55,6 +55,8 @@ export interface ImprovementItem {
   end: string
   /** 사유 — 반려·보류 공용 */
   reason: string
+  /** 메모표시 — 체크 시 해당 개선위치 페이지에 공유 작업 메모로 노출 */
+  memo: boolean
 }
 
 // ── 장비현황 ──
