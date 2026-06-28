@@ -9,6 +9,20 @@ export const EVENT_REQUEST_FORM_URL =
 
 export type EventAccent = 'blue' | 'teal' | 'green' | 'purple' | 'amber' | 'red'
 
+// 포스터 썸네일 초점(Focal-point Cropping). 포스터마다 제목 위치가 달라, 이미지의 세로 초점(y)을
+// 썸네일의 ~40% 지점에 정렬해 카드 간 제목 높이를 일관되게 한다. 넘치는 부분은 카드에서 크롭,
+// 비율차로 생기는 빈 영역은 블러 배경으로 채운다(이미지 왜곡 없음).
+export interface PosterFocus {
+  /** 포스터의 가로 초점 위치(%) — 보통 50(가운데) */
+  x: number
+  /** 포스터의 세로 초점 위치(%) — 행사 제목이 있는 높이. 이 지점이 썸네일 ~40%에 오도록 정렬 */
+  y: number
+  /** 선택적 확대 배율. 기본 1 (확대는 핵심 내용이 잘리지 않는 선에서 최소화) */
+  scale?: number
+  /** 표시 방식. 기본 cover(채움·크롭) / contain(전체 표시·여백은 블러 배경) */
+  fit?: 'cover' | 'contain'
+}
+
 // 요약 한 줄: 헤더(label) + 내용(value), 또는 연사 목록(speakers).
 export interface EventSummaryItem {
   /** 헤더명 (예: 사전등록·초록마감·Plenary). 없으면 일반 문장 */
@@ -34,6 +48,8 @@ export interface FabEvent {
   link: string
   /** 포스터 이미지 경로 (public 기준, 예: 'events/ispsa2026.jpg'). 없으면 그라데이션 */
   poster?: string
+  /** 썸네일 초점(없으면 x:50,y:40,scale:1,fit:cover). 행사 제목을 카드 ~40%에 정렬 */
+  posterFocus?: PosterFocus
   /** 팝업 하단 배경색(포스터 하단 가장자리색) — 가로 긴 포스터의 아래 여백을 매끄럽게 채움 */
   posterBg?: string
   /** 안내문·하단 텍스트가 많은 포스터: 팝업 정보 영역을 강한 검정 스크림으로 덮어 겹침 방지. 기본(여백 있는 포스터)은 옅은 그라데이션 */
@@ -55,6 +71,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국물리학회(KPS)',
     link: 'https://ispsa.or.kr/',
     poster: 'events/ispsa2026.jpg',
+    posterFocus: { x: 50, y: 24 }, // 'ISPSA 2026' 제목이 상단(~24%)
+
     posterBg: 'rgb(52,58,71)',
     accent: 'blue',
     summary: [
@@ -84,6 +102,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국기술교육대학교',
     link: 'https://setec.koreatech.ac.kr/bbs/bbs/board.php?bo_table=gongji&wr_id=410',
     poster: 'events/ktech-fab-202607.jpg',
+    posterFocus: { x: 50, y: 40 }, // STEC 센터명 텍스트가 중앙(~40%)
     posterBg: 'rgb(8,18,50)',
     darkInfo: true,
     accent: 'green',
@@ -102,6 +121,7 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국기술교육대학교',
     link: 'https://setec.koreatech.ac.kr/bbs/bbs/board.php?bo_table=gongji&wr_id=410',
     poster: 'events/ktech-fab-202607.jpg',
+    posterFocus: { x: 50, y: 40 }, // STEC 센터명 텍스트가 중앙(~40%)
     posterBg: 'rgb(8,18,50)',
     darkInfo: true,
     accent: 'green',
@@ -121,6 +141,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '반도체공학회',
     link: 'https://event.theise.org/conference/',
     poster: 'events/ises-summer2026.jpg',
+    posterFocus: { x: 50, y: 34 }, // '하계종합학술대회' 마스트헤드(~34%)
+
     posterBg: 'rgb(6,12,28)',
     darkInfo: true,
     accent: 'blue',
@@ -140,6 +162,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: 'SEMI',
     link: 'https://www.semi.org/en/connect/events/advanced-packaging-summit-2026',
     poster: 'events/semi-advpkg2026.jpg',
+    posterFocus: { x: 50, y: 32 }, // 'ADVANCED PACKAGING SUMMIT' 타이틀(~32%)
+
     posterBg: 'rgb(8,4,34)',
     darkInfo: true,
     accent: 'teal',
@@ -158,6 +182,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '경기도·수원시',
     link: 'https://www.semipkgshow.com/',
     poster: 'events/asps2026.jpg',
+    posterFocus: { x: 50, y: 37 }, // 'Advanced Semiconductor...' 타이틀(~37%)
+
     posterBg: 'rgb(255,255,255)',
     accent: 'purple',
     summary: [
@@ -176,6 +202,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국PCB반도체패키징산업협회',
     link: 'https://www.kpcashow.com/kor/aboutus/about.asp',
     poster: 'events/kpca2026.jpg',
+    posterFocus: { x: 50, y: 26 }, // '국제 반도체 기판...' 타이틀(~26%)
+
     posterBg: 'rgb(6,30,38)',
     darkInfo: true,
     accent: 'amber',
@@ -195,6 +223,8 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: '한국반도체산업협회',
     link: 'https://www.sedex.org/public_html/index.asp',
     poster: 'events/sedex2026.jpg',
+    posterFocus: { x: 50, y: 26 }, // 'SEDEX 2026' 로고~칩 상단(~26%)
+
     posterBg: 'rgb(15,13,30)',
     darkInfo: true,
     accent: 'red',

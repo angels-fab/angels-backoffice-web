@@ -55,13 +55,44 @@ function eventCategory(kind?: string): EventCat {
 }
 const CAT_COLOR: Record<EventCat, string> = { 학술: '#3b82f6', 교육: '#10b981', 전시: '#a855f7' }
 
-/** 포스터 영역(이미지 or 그라데이션) + 기본카드 하단 가독용 그라데이션 */
+// 포스터 초점 정렬 — 행사 제목(posterFocus.y)이 와야 할 카드 세로 위치(%)
+const FOCUS_TARGET_Y = 40
+const FOCUS_DEFAULT = { x: 50, y: 40, scale: 1, fit: 'cover' as const }
+
+/** 포스터 영역 — 포컬 포인트 크롭(블러 배경층 + 초점 정렬 전경층) + 하단 가독 그라데이션 */
 function PosterBg({ e }: { e: FabEvent }) {
   const url = posterUrl(e.poster)
+  const f = { ...FOCUS_DEFAULT, ...e.posterFocus }
   return (
     <>
       {url ? (
-        <Box component="img" src={url} alt={e.title} loading="lazy" sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        <>
+          {/* 배경층: 같은 포스터를 블러로 — 초점 정렬·비율차로 생긴 빈 영역을 자연스럽게 채움(이미지 왜곡 X) */}
+          <Box
+            component="img"
+            aria-hidden
+            src={url}
+            loading="lazy"
+            sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.18)', filter: 'blur(18px) brightness(.55)' }}
+          />
+          {/* 전경층: 실제 포스터 — 초점 y를 카드 ~40%로 정렬, 넘침은 카드에서 크롭, 비율 유지 */}
+          <Box
+            component="img"
+            src={url}
+            alt={e.title}
+            loading="lazy"
+            sx={{
+              position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+              objectFit: f.fit,
+              objectPosition: `${f.x}% ${f.y}%`,
+              transform:
+                f.fit === 'cover'
+                  ? `translate(${50 - f.x}%, ${FOCUS_TARGET_Y - f.y}%) scale(${f.scale})`
+                  : `scale(${f.scale})`,
+              transformOrigin: `${f.x}% ${f.y}%`,
+            }}
+          />
+        </>
       ) : (
         <>
           <Box sx={{ position: 'absolute', inset: 0, background: GRAD[e.accent ?? 'blue'] }} />
