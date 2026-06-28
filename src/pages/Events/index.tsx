@@ -55,11 +55,10 @@ function eventCategory(kind?: string): EventCat {
 }
 const CAT_COLOR: Record<EventCat, string> = { 학술: '#3b82f6', 교육: '#10b981', 전시: '#a855f7' }
 
-// 포스터 초점 정렬 — 행사 제목(posterFocus.y)이 와야 할 카드 세로 위치(%)
-const FOCUS_TARGET_Y = 40
+// 포스터 초점 기본값 (object-position 기준). 동일비율 포스터는 잘릴 여백이 없어 위치 효과는 미미.
 const FOCUS_DEFAULT = { x: 50, y: 40, scale: 1, fit: 'cover' as const }
 
-/** 포스터 영역 — 포컬 포인트 크롭(블러 배경층 + 초점 정렬 전경층) + 하단 가독 그라데이션 */
+/** 포스터 영역 — 전경은 카드 전체를 덮음(object-position 위치·선택적 scale). 블러 배경은 contain 여백 채움용. */
 function PosterBg({ e }: { e: FabEvent }) {
   const url = posterUrl(e.poster)
   const f = { ...FOCUS_DEFAULT, ...e.posterFocus }
@@ -67,15 +66,17 @@ function PosterBg({ e }: { e: FabEvent }) {
     <>
       {url ? (
         <>
-          {/* 배경층: 같은 포스터를 블러로 — 초점 정렬·비율차로 생긴 빈 영역을 자연스럽게 채움(이미지 왜곡 X) */}
-          <Box
-            component="img"
-            aria-hidden
-            src={url}
-            loading="lazy"
-            sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.18)', filter: 'blur(18px) brightness(.55)' }}
-          />
-          {/* 전경층: 실제 포스터 — 초점 y를 카드 ~40%로 정렬, 넘침은 카드에서 크롭, 비율 유지 */}
+          {/* 배경 블러: contain일 때만(여백 채움). cover는 전경이 카드 전체를 덮어 배경이 보이지 않음 */}
+          {f.fit === 'contain' && (
+            <Box
+              component="img"
+              aria-hidden
+              src={url}
+              loading="lazy"
+              sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transform: 'scale(1.15)', filter: 'blur(20px) brightness(.5)' }}
+            />
+          )}
+          {/* 전경: 카드 전체를 덮음. 위치는 object-position, 확대는 선택적 scale(중앙 기준, 기본 1) */}
           <Box
             component="img"
             src={url}
@@ -85,11 +86,7 @@ function PosterBg({ e }: { e: FabEvent }) {
               position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
               objectFit: f.fit,
               objectPosition: `${f.x}% ${f.y}%`,
-              transform:
-                f.fit === 'cover'
-                  ? `translate(${50 - f.x}%, ${FOCUS_TARGET_Y - f.y}%) scale(${f.scale})`
-                  : `scale(${f.scale})`,
-              transformOrigin: `${f.x}% ${f.y}%`,
+              ...(f.scale && f.scale !== 1 ? { transform: `scale(${f.scale})` } : null),
             }}
           />
         </>

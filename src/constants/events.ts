@@ -9,15 +9,16 @@ export const EVENT_REQUEST_FORM_URL =
 
 export type EventAccent = 'blue' | 'teal' | 'green' | 'purple' | 'amber' | 'red'
 
-// 포스터 썸네일 초점(Focal-point Cropping). 포스터마다 제목 위치가 달라, 이미지의 세로 초점(y)을
-// 썸네일의 ~40% 지점에 정렬해 카드 간 제목 높이를 일관되게 한다. 넘치는 부분은 카드에서 크롭,
-// 비율차로 생기는 빈 영역은 블러 배경으로 채운다(이미지 왜곡 없음).
+// 포스터 썸네일 초점(Focal-point Cropping). 전경 포스터는 카드 전체를 덮고(왜곡 없음),
+// 위치는 object-position(x/y %)으로 조절한다. ※ 잘릴 여백이 있을 때만 효과가 있으므로,
+// 카드와 동일 비율(800×1122) 포스터는 전체가 보여 위치 효과가 거의 없다. fit:'contain'을 주면
+// 전체를 letterbox로 보여주고 남는 여백을 같은 포스터 블러 배경으로 채운다.
 export interface PosterFocus {
-  /** 포스터의 가로 초점 위치(%) — 보통 50(가운데) */
+  /** 가로 초점 object-position(%) — 보통 50 */
   x: number
-  /** 포스터의 세로 초점 위치(%) — 행사 제목이 있는 높이. 이 지점이 썸네일 ~40%에 오도록 정렬 */
+  /** 세로 초점 object-position(%) — 행사 제목 높이. 잘릴 여백이 있을 때 이 지점을 화면에 유지 */
   y: number
-  /** 선택적 확대 배율. 기본 1 (확대는 핵심 내용이 잘리지 않는 선에서 최소화) */
+  /** 선택적 확대 배율(중앙 기준). 1.03~1.1 권장, 기본 1 (핵심 내용 안 잘리게 최소화) */
   scale?: number
   /** 표시 방식. 기본 cover(채움·크롭) / contain(전체 표시·여백은 블러 배경) */
   fit?: 'cover' | 'contain'
