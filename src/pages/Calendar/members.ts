@@ -105,3 +105,24 @@ export function eventParticipants(title: string): string[] {
     .map((s) => s.trim())
     .filter(Boolean)
 }
+
+/**
+ * 일정 해당자 — '@' 참석자(작성 순서 유지)를 우선 사용, 없으면 제목에서 추출.
+ * 둘 다 없으면 ['센터'](membersForEvent의 fallback). 첫 번째가 '대표 해당자'.
+ */
+export function eventMembers(title: string): string[] {
+  const p = eventParticipants(title)
+  return p.length ? p : membersForEvent(title)
+}
+
+/**
+ * 호버·클릭 상세용 원본 제목 — 앞의 [구분] 태그와 '@참석자'만 떼고 본문은 그대로 둔다.
+ * 장소-목적을 파싱·재구성하지 않는다(일정별 제목 표기가 달라 임의 분리 금지).
+ *  예) "[출장] 국외(싱가포르)-SEMICON 참관 @신현진" → "국외(싱가포르)-SEMICON 참관"
+ */
+export function rawTitleNoTags(title: string): string {
+  let t = (title || '').replace(/^\s*\[[^\]]*\]\s*/, '')
+  const at = t.indexOf('@')
+  if (at >= 0) t = t.slice(0, at)
+  return t.trim() || (title || '').trim()
+}

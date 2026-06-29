@@ -1,7 +1,8 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
 import { cell, fetchSheet, SHEET_NAME_NOTICE } from '@/api/sheets'
-import { fmtDate, nowStamp, isRecentNew } from '@/utils/date'
+import { fmtDate, nowStamp } from '@/utils/date'
+import { isNoticeNew } from '@/utils/newPost'
 import type { Notice } from '@/types'
 
 export const loadNoticeData = createAsyncThunk('notice/load', async (): Promise<Notice[]> => {
@@ -78,7 +79,7 @@ export const loadNoticeData = createAsyncThunk('notice/load', async (): Promise<
         author: cell(r, ci.author),
         target: cell(r, ci.target),
         views: Number(cell(r, ci.views).replace(/[^0-9]/g, '')) || 0,
-        isNew: isRecentNew(createdDate || startDate),
+        isNew: isNoticeNew(createdDate || startDate, endDate), // 게시일 7일 + 종료 제외(공용 판정)
       }
     })
 

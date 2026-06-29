@@ -16,7 +16,7 @@ export default function BottomNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { isAdmin } = useRole()
-  const { cal: calCnt, notice: noticeCnt, work: workCnt } = useNavBadges()
+  const { notice: noticeCnt, work: workCnt } = useNavBadges()
 
   const item = (path: string, label: string, icon: JSX.Element, badge?: number) => (
     <button
@@ -38,7 +38,8 @@ export default function BottomNav() {
       {/* 공지·업무·일정은 로그인(관리자) 시에만 */}
       {isAdmin && item('/notice', '공지', <CampaignIcon />, noticeCnt)}
       {isAdmin && item('/work', '업무', <TaskAltIcon />, workCnt)}
-      {isAdmin && item('/calendar', '일정', <CalendarMonthIcon />, calCnt)}
+      {/* 업무일정은 새 글 개념 미사용 → 배지 없음 */}
+      {isAdmin && item('/calendar', '일정', <CalendarMonthIcon />)}
     </nav>
   )
 }

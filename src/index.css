@@ -876,13 +876,13 @@ body.eq-wide main{max-width:98vw}
 .snav-item svg{font-size:18px;flex-shrink:0}
 .snav-item:hover{background:var(--ink2);color:var(--text)}
 .snav-item.active{background:rgba(88,166,255,.12);color:var(--blue);font-weight:700}
-/* 메뉴명 + 위첨자 배지 묶음 — 배지를 메뉴명 바로 뒤 우상단에 붙임(우측 끝으로 밀지 않음) */
-.snav-labelwrap{flex:1;min-width:0;display:inline-flex;align-items:flex-start;gap:4px;white-space:nowrap}
-.snav-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
-/* 아이폰 알림 배지 스타일 — 색+숫자만, 작고 선명하게(약 15px) */
-.sup-badge{flex:none;height:15px;min-width:15px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;transform:translateY(-3px);font-size:9.5px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;box-sizing:border-box}
-.sup-badge.new{background:var(--red);color:#fff}
-.sup-badge.memo{background:var(--amber);color:#1c1303}
+/* 메뉴명(+개선 메모 점) 묶음 — flex:1로 새 글 숫자를 행 오른쪽 끝으로 밀어냄 */
+.snav-text{flex:1;min-width:0;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap}
+.snav-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 개선 메모 — 메뉴명 우상단 작은 노란 점(숫자 없음, 관리자 전용) */
+.snav-memo-dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--amber);transform:translateY(-1px)}
+/* 새 글 숫자 — 행 오른쪽 끝, 빨강 배경·숫자만(볼드 아님) */
+.snav-num{flex:none;min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:500;line-height:17px;text-align:center;box-sizing:border-box}
 .topbar-bell{margin-left:auto;background:none;border:none;color:var(--text2);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;flex-shrink:0;transition:color .15s,background .15s}
 .topbar-bell:hover{color:var(--text);background:var(--ink2)}
 .topbar-brand{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}

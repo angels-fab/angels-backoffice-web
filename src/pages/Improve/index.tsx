@@ -39,7 +39,8 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { updateImprovement, createImprovement, deleteImprovement } from '@/api/sheets'
 import { useRole } from '@/auth/role'
-import { fmtDate, todaySeoul, isRecentNew } from '@/utils/date'
+import { fmtDate, todaySeoul } from '@/utils/date'
+import { isImproveNew } from '@/utils/newPost'
 import { locationToPath } from '@/utils/improveMemo'
 import type { ImprovementItem } from '@/types'
 import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus, statusRank, isSettled } from './improveMeta'
@@ -500,7 +501,7 @@ export default function Improve() {
                 const kind = impKind(st) // 행 배경 상태색 틴트용
                 const editable = canEdit // 상태·위치·유형·내용·사유 수정 = 로그인 관리자 전체
                 const removable = canDelete(t) // 삭제 = 해당 글 담당자(작성자)만
-                const isNew = isRecentNew(fmtDate(t.date)) // 제안일자 기준 최근 7일(상태·필터 무관)
+                const isNew = isImproveNew(t) // 접수·검토중·보류 + 제안일자 최근 7일(사이드바와 동일 판정)
                 const toggle = () => setExpanded((prev) => { const n = new Set(prev); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })
                 // 작업 메모 핀 — 켜짐=앰버 PushPin / 꺼짐=PushPinOutlined. 종결상태·연결페이지 없으면 활성 불가.
                 const memoOn = t.memo === true

@@ -15,6 +15,7 @@ import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
+import { isWorkNew } from '@/utils/newPost'
 import type { WorkItem } from '@/types'
 import { taskSubs, taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
 import SubLine from './SubLine'
@@ -97,6 +98,10 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, isA
       >
         {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
         {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}
+        {/* 새 업무 N 배지 — 진행중+발의 7일(공지 N칩과 동일 디자인). 제목 말줄임과 안 겹치게 flexShrink:0 */}
+        {isWorkNew(t) && (
+          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: '4px', bgcolor: 'error.main', color: '#fff', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+        )}
         <Typography variant="body1" sx={{ flex: 1, minWidth: 120, fontWeight: 600, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: 12.5, fontWeight: 700, borderRadius: '8px', px: 1.25, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>
           {t.mgr || '미지정'}

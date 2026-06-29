@@ -17,10 +17,10 @@ import { loadCalEvents } from '@/store/slices/calSlice'
 import type { CalEvent } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { MEMBERS, memberById, membersForEvent, given, eventContent, eventParticipants, splitPlacePurpose } from './members'
+import { MEMBERS, memberById, membersForEvent, given, eventContent, eventMembers, rawTitleNoTags } from './members'
 import CalFilterBar from './CalFilterBar'
 import ChipContent, { type ChipContentProps } from './ChipContent'
-import ChipTooltip, { type EventDetail } from './ChipTooltip'
+import EventPopover, { type EventDetail } from './EventPopover'
 
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -43,14 +43,24 @@ function rgba(hex: string, a: number) {
 type ViewKey = 'month' | 'timeweek'
 
 function renderEventContent(arg: EventContentArg) {
-  // 종일·멀티데이 포함 모든 칩이 한 줄 → 높이 균일(멀티데이 lane 정확히 쌓임).
-  const { detail, ...chip } = arg.event.extendedProps as unknown as ChipContentProps & { detail: EventDetail }
+  const chip = arg.event.extendedProps as unknown as ChipContentProps
+  // 주 시간표의 시간일정만 'timed'(2줄 가능), 그 외(월간·종일행)는 'daygrid'.
+  const variant: 'daygrid' | 'timed' = !arg.event.allDay && arg.view.type === 'timeGridWeek' ? 'timed' : 'daygrid'
+  // 멀티데이 = 1일 초과 span (FullCalendar가 정규화한 start/end 기준). 주 단위로 나뉜 구간도 동일 적용.
+  const ms = (arg.event.end?.getTime() ?? 0) - (arg.event.start?.getTime() ?? 0)
+  const multiDay = ms > 24 * 3600 * 1000 + 60000
   return (
-    <ChipTooltip detail={detail}>
-      <Box sx={{ display: 'flex', width: '100%', minWidth: 0 }}>
-        <ChipContent {...chip} />
-      </Box>
-    </ChipTooltip>
+    <Box sx={{ display: 'flex', width: '100%', minWidth: 0 }}>
+      <ChipContent
+        participants={chip.participants}
+        catKey={chip.catKey}
+        catColor={chip.catColor}
+        time={chip.time}
+        title={chip.title}
+        variant={variant}
+        multiDay={multiDay}
+      />
+    </Box>
   )
 }
 
@@ -66,8 +76,30 @@ export default function Calendar() {
   const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
   const calRef = useRef<FullCalendar>(null)
 
+  // 호버·클릭 상세 — 마우스 위치 기준. lockedId=클릭 고정된 일정 id(있으면 호버로 안 바뀜).
+  const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number } | null>(null)
+  const lockedId = useRef<string | null>(null)
+  const closePop = () => {
+    lockedId.current = null
+    setPop(null)
+  }
+
   const todayKey = todaySeoul()
   const searchTrim = search.trim()
+
+  // 바깥 클릭·Esc로 고정 상세 닫기 (eventClick은 stopPropagation으로 이 핸들러에 안 닿음)
+  useEffect(() => {
+    const onDocClick = () => closePop()
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePop()
+    }
+    document.addEventListener('click', onDocClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('click', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [])
 
   // 뷰/기준일 변경 시 FullCalendar 동기화 (월=dayGridMonth / 주(시간표)=timeGridWeek).
   // changeView는 flushSync를 유발하므로 렌더 단계 밖(setTimeout)에서 호출.
@@ -78,6 +110,12 @@ export default function Calendar() {
     }, 0)
     return () => clearTimeout(id)
   }, [anchor, view])
+
+  // 뷰·기간·필터 변경 시 열려있던 상세 닫기(스테일 방지)
+  useEffect(() => {
+    lockedId.current = null
+    setPop(null)
+  }, [view, anchor, searchTrim, selCats, selMembers])
 
   // ── 필터 술어 (빈 선택 = 전체) ──
   const catSelected = (cat: RealCat) => selCats.length === 0 || selCats.includes(cat)
@@ -136,22 +174,21 @@ export default function Calendar() {
       const catColor = CAT_META[cat].color
       const time = ev.allDay ? '' : ev.start.slice(11, 16)
       const content = eventContent(ev.title, cat) || catShort(cat)
+      const members = eventMembers(ev.title) // 해당자(@우선, 없으면 센터)
       const props: ChipContentProps = {
-        participants: eventParticipants(ev.title).map((n) => ({ initials: given(n), color: memberById(n).color })),
+        participants: members.map((n) => ({ initials: given(n), color: memberById(n).color })),
         catKey: cat,
         catColor,
         time,
         title: content, // 칩은 "장소-목적"을 그대로 표시
       }
-      // 호버 상세 — 목적=제목, 장소=세부정보로 분리
-      const { place, purpose } = splitPlacePurpose(content)
+      // 호버·클릭 상세 — 원본 제목 그대로(장소-목적 파싱 안 함) + 시간 + 전체 해당자
       const detail: EventDetail = {
         catLabel: CAT_META[cat].label,
         catColor,
         time,
-        purpose: purpose || content,
-        place,
-        members: eventParticipants(ev.title),
+        title: rawTitleNoTags(ev.title),
+        members,
       }
       return {
         id: ev.id,
@@ -326,6 +363,26 @@ export default function Calendar() {
             events={fcEvents}
             eventDisplay="block"
             eventContent={renderEventContent}
+            eventMouseEnter={(info) => {
+              if (lockedId.current) return // 클릭 고정 중엔 호버로 안 바뀜
+              const detail = info.event.extendedProps.detail as EventDetail
+              setPop({ detail, x: info.jsEvent.clientX, y: info.jsEvent.clientY })
+            }}
+            eventMouseLeave={() => {
+              if (!lockedId.current) setPop(null)
+            }}
+            eventClick={(info) => {
+              info.jsEvent.preventDefault()
+              info.jsEvent.stopPropagation() // 바깥-클릭 닫기 핸들러로 전파 방지
+              const id = info.event.id
+              if (lockedId.current === id) {
+                closePop() // 같은 일정 재클릭 = 닫기
+              } else {
+                lockedId.current = id
+                const detail = info.event.extendedProps.detail as EventDetail
+                setPop({ detail, x: info.jsEvent.clientX, y: info.jsEvent.clientY })
+              }
+            }}
             dayMaxEvents={view === 'month' ? 3 : false}
             moreLinkContent={(arg) => `+${arg.num}건`}
             height="auto"
@@ -334,6 +391,7 @@ export default function Calendar() {
         </Box>
       </Box>
 
+      {pop && <EventPopover detail={pop.detail} x={pop.x} y={pop.y} />}
     </PageContainer>
   )
 }

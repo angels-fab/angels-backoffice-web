@@ -46,7 +46,8 @@ export default function SideNav() {
       label: '업무',
       items: [
         { icon: <CampaignIcon />, label: '공지사항', path: '/notice', badge: badges.notice },
-        { icon: <CalendarMonthIcon />, label: '업무일정', path: '/calendar', badge: badges.cal },
+        // 업무일정은 새 글 개념 미사용 → 배지 없음
+        { icon: <CalendarMonthIcon />, label: '업무일정', path: '/calendar' },
         { icon: <AssessmentIcon />, label: '업무현황', path: '/work', badge: badges.work },
         // 장비운영관리 + 장비도입관리 통합 — 페이지 내 상단탭(장비도입/장비운영)으로 전환
         { icon: <MonitorIcon />, label: '장비관리', path: '/equipment' },
@@ -86,23 +87,19 @@ export default function SideNav() {
               onClick={() => navigate(item.path)}
             >
               {item.icon}
-              {/* 메뉴명 + 위첨자 배지(새글=빨강 / 개선메모=노랑, 숫자만). 0건은 숨김·99초과는 99+ */}
-              <span className="snav-labelwrap">
-                <span className="snav-text">{item.label}</span>
-                {item.badge !== undefined && item.badge > 0 && (
-                  <span className="sup-badge new" aria-label={`새 항목 ${item.badge}건`}>
-                    {item.badge > 99 ? '99+' : item.badge}
-                  </span>
-                )}
-                {/* 개선 메모 건수 — 관리자에게만 */}
+              {/* 메뉴명 + 개선 메모 점(메뉴명 우상단, 노란 점·숫자 없음, 관리자 전용) */}
+              <span className="snav-text">
+                <span className="snav-name">{item.label}</span>
                 {isAdmin && (memoCounts[item.path] || 0) > 0 && (
                   <Tooltip title={`개선 메모 ${memoCounts[item.path]}건`} placement="top" arrow>
-                    <span className="sup-badge memo" aria-label={`개선 메모 ${memoCounts[item.path]}건`}>
-                      {memoCounts[item.path] > 99 ? '99+' : memoCounts[item.path]}
-                    </span>
+                    <span className="snav-memo-dot" aria-label={`개선 메모 ${memoCounts[item.path]}건`} />
                   </Tooltip>
                 )}
               </span>
+              {/* 새 글 숫자 — 행 오른쪽 끝, 빨강 배경+숫자만(볼드 X). 0 숨김·99초과 99+ */}
+              {item.badge !== undefined && item.badge > 0 && (
+                <span className="snav-num" aria-label={`새 글 ${item.badge}건`}>{item.badge > 99 ? '99+' : item.badge}</span>
+              )}
             </button>
           ))}
         </div>

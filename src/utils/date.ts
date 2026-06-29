@@ -9,17 +9,18 @@ export function todaySeoul(): string {
 }
 
 /**
- * 최근 게시글(N) 판정 — 공지·개선요청 공용. 서울 기준 오늘과의 차이가 -1~7일이면 새 글.
+ * 새 글 날짜 판정(공용) — 등록일/게시일을 **포함해 7일**이면 새 글. 8일째 0시부터 제외.
+ * 즉 서울 기준 오늘과의 경과일(diff)이 0~6일이면 true(미래 날짜는 false).
  * 빈/유효하지 않은 날짜는 false. 입력은 YYYY-MM-DD(ISO·시트형식은 fmtDate로 정규화 후 전달).
- * ※ 공지(noticeSlice)의 기존 판정과 동일 로직 — 결과가 바뀌면 안 됨.
+ * ※ 포털 전체 새 글 판정의 단일 날짜 기준 — 상태/종료 조건은 utils/newPost에서 덧붙인다.
  */
 export function isRecentNew(dateStr: string): boolean {
   if (!dateStr) return false
   const d = new Date(dateStr + 'T00:00:00')
   if (isNaN(d.getTime())) return false
   const today = new Date(todaySeoul() + 'T00:00:00')
-  const diff = (today.getTime() - d.getTime()) / 86400000
-  return diff >= -1 && diff <= 7
+  const diff = Math.round((today.getTime() - d.getTime()) / 86400000)
+  return diff >= 0 && diff <= 6 // 등록일 포함 7일(0~6), 8일째부터 제외
 }
 
 /** 시트 날짜 정규화: ISO(UTC) → 한국시간 기준 YYYY-MM-DD */

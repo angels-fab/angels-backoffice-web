@@ -1,0 +1,88 @@
+import { useLayoutEffect, useRef, useState } from 'react'
+import Box from '@mui/material/Box'
+import { alpha } from '@mui/material/styles'
+
+/** 일정 상세 데이터 — 원본 제목 그대로(장소-목적 분리 안 함) + 시간 + 전체 해당자 + 분류. */
+export interface EventDetail {
+  catLabel: string
+  catColor: string
+  time?: string
+  /** 작성된 원본 제목([구분]·@참석자만 제거, 본문은 그대로) */
+  title: string
+  /** 전체 해당자(이름) */
+  members: string[]
+}
+
+interface Props {
+  detail: EventDetail
+  /** 상호작용한 마우스 위치(viewport 좌표) */
+  x: number
+  y: number
+}
+
+/**
+ * 호버·클릭 상세 — 마우스 위치 기준으로 띄우고 뷰포트 경계에서 위치를 자동 보정한다.
+ * (멀티데이 막대 중앙이 아니라 사용자가 가리킨/클릭한 지점 근처에 표시)
+ * 닫기는 부모가 담당(호버 leave / 바깥 클릭 / Esc / 같은 일정 재클릭).
+ */
+export default function EventPopover({ detail, x, y }: Props) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [pos, setPos] = useState<{ left: number; top: number; ready: boolean }>({ left: x, top: y + 16, ready: false })
+
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    const m = 10
+    let left = x
+    let top = y + 16
+    if (left + r.width > window.innerWidth - m) left = window.innerWidth - m - r.width
+    if (left < m) left = m
+    if (top + r.height > window.innerHeight - m) top = y - r.height - 12 // 아래 공간 부족 → 위로 뒤집기
+    if (top < m) top = m
+    setPos({ left, top, ready: true })
+  }, [x, y, detail])
+
+  return (
+    <Box
+      ref={ref}
+      onClick={(e) => e.stopPropagation()}
+      role="dialog"
+      aria-label="일정 상세"
+      sx={{
+        position: 'fixed',
+        left: pos.left,
+        top: pos.top,
+        zIndex: 10000, // FullCalendar '+N건' more-link 팝오버(z-index 9999) 위에 떠야 함
+
+        width: 300,
+        maxWidth: 'calc(100vw - 20px)',
+        visibility: pos.ready ? 'visible' : 'hidden',
+        bgcolor: '#151e2c',
+        border: '1px solid #3a485d',
+        borderRadius: '10px',
+        p: 1.5,
+        color: '#fff',
+        boxShadow: '0 14px 38px rgba(0,0,0,.5)',
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+        <Box component="span" sx={{ px: '8px', py: '3px', borderRadius: 999, fontSize: 10.5, fontWeight: 800, color: detail.catColor, bgcolor: alpha(detail.catColor, 0.22) }}>
+          {detail.catLabel}
+        </Box>
+        {detail.time && (
+          <Box component="span" sx={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.7)', fontVariantNumeric: 'tabular-nums' }}>
+            {detail.time}
+          </Box>
+        )}
+      </Box>
+      <Box sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.5, mb: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+        {detail.title}
+      </Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1.25, rowGap: '4px', fontSize: 11.5, lineHeight: 1.5 }}>
+        <Box sx={{ color: 'rgba(255,255,255,.5)', fontWeight: 600 }}>해당자</Box>
+        <Box sx={{ color: 'rgba(255,255,255,.9)' }}>{detail.members.length ? detail.members.join(' · ') : '센터'}</Box>
+      </Box>
+    </Box>
+  )
+}
