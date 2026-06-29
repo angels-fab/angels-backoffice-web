@@ -39,6 +39,8 @@ function doGet(e) {
     if (String(p.action || '') === 'getEqHistory') return getEqHistory_(p);
     // 개선제안 읽기 — '개선사항' 시트(헤더 자동 탐지) → 객체 배열
     if (String(p.action || '') === 'getImprovements') return getImprovements_();
+    // 포털개선요청 답글 읽기 — 삭제 안 된 답글 전체(요청번호별 그룹화는 프런트). 한 번에 로드(N+1 금지).
+    if (String(p.action || '') === 'getReplies') return getReplies_();
   } catch (err) {
     return json_({ status: 'error', message: String(err) });
   }
@@ -131,6 +133,20 @@ function doPost(e) {
         if (req.action === 'createImprovement') return createImprovement_(req);
         if (req.action === 'updateImprovement') return updateImprovement_(req);
         return deleteImprovement_(req);
+      } finally {
+        lock.releaseLock();
+      }
+    }
+    // 포털개선요청 답글 쓰기(등록/수정/삭제처리) — 잠금 하에 처리(답글ID 충돌 방지). 모두 관리자 인증.
+    if (req.action === 'createReply' || req.action === 'updateReply' || req.action === 'deleteReply') {
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(10000)) {
+        return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
+      }
+      try {
+        if (req.action === 'createReply') return createReply_(req);
+        if (req.action === 'updateReply') return updateReply_(req);
+        return deleteReply_(req);
       } finally {
         lock.releaseLock();
       }
@@ -877,6 +893,165 @@ function deleteImprovement_(req) {
   if (rowMgr && rowMgr !== author) return json_({ status: 'error', message: '담당자(' + rowMgr + ')만 삭제할 수 있습니다' });
   sh.deleteRow(rowIdx + 1);
   return json_({ status: 'ok', num: Number(num) || num });
+}
+
+// ── 포털개선요청 답글 ('포털개선답글' 시트, 헤더 자동 탐지·열 위치 비의존) ──
+// 소프트 삭제: 행을 지우지 않고 '삭제여부' 체크박스를 TRUE로. 삭제된 답글은 조회·개수에서 제외.
+const REPLY_SHEET_NAME = '포털개선답글';
+const REPLY_HEADERS = ['답글ID', '요청번호', '작성일시', '작성자', '답글내용', '수정일시', '삭제여부'];
+
+// 시트 + 헤더 컨텍스트. create=true면 시트/헤더가 없을 때 생성. 결과: {sh,values,hIdx,head,col,C} | {missing:true} | {error}
+function replyCtx_(create) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sh = ss.getSheetByName(REPLY_SHEET_NAME);
+  if (!sh) {
+    if (!create) return { missing: true };
+    sh = ss.insertSheet(REPLY_SHEET_NAME);
+    sh.getRange(1, 1, 1, REPLY_HEADERS.length).setValues([REPLY_HEADERS]);
+  }
+  let values = sh.getDataRange().getValues();
+  let hIdx = -1;
+  for (let i = 0; i < Math.min(values.length, 8); i++) {
+    const r = values[i].map(function (c) { return String(c == null ? '' : c).trim(); });
+    if (r.indexOf('답글ID') >= 0 || (r.indexOf('요청번호') >= 0 && r.indexOf('답글내용') >= 0)) { hIdx = i; break; }
+  }
+  if (hIdx < 0) {
+    if (!create) return { error: "'" + REPLY_SHEET_NAME + "' 시트 헤더를 찾지 못함" };
+    sh.getRange(1, 1, 1, REPLY_HEADERS.length).setValues([REPLY_HEADERS]); // 빈 시트 → 헤더 기록
+    values = sh.getDataRange().getValues();
+    hIdx = 0;
+  }
+  const head = values[hIdx].map(function (c) { return String(c == null ? '' : c).trim(); });
+  const col = function (names) { for (let k = 0; k < names.length; k++) { const i = head.indexOf(names[k]); if (i >= 0) return i; } return -1; };
+  const C = {
+    id: col(['답글ID', '답글 ID', 'ID']),
+    reqNum: col(['요청번호', '요청 번호', '번호']),
+    created: col(['작성일시', '작성일자']),
+    author: col(['작성자']),
+    content: col(['답글내용', '내용']),
+    edited: col(['수정일시']),
+    deleted: col(['삭제여부', '삭제']),
+  };
+  return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
+}
+
+// 답글 일시 포맷: Date면 'yyyy-MM-dd HH:mm:ss'(초까지 저장), 문자열이면 그대로.
+function replyTime_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
+  return v == null ? '' : String(v).trim();
+}
+
+// 조회: 삭제 안 된 답글 전체(요청번호별 그룹화는 프런트). 인증 불필요. 시트 없으면 빈 목록.
+function getReplies_() {
+  const ctx = replyCtx_(false);
+  if (ctx.missing) return json_({ status: 'ok', items: [] });
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const values = ctx.values, C = ctx.C, hIdx = ctx.hIdx;
+  const t = function (r, i) { return i < 0 ? '' : (r[i] == null ? '' : String(r[i]).trim()); };
+  const items = [];
+  for (let i = hIdx + 1; i < values.length; i++) {
+    const r = values[i];
+    if (wIsChk_(r[C.deleted])) continue; // 삭제된 답글 제외
+    if (t(r, C.id) === '' && t(r, C.content) === '') continue;
+    items.push({
+      id: t(r, C.id),
+      reqNum: t(r, C.reqNum),
+      created: replyTime_(r[C.created]),
+      author: t(r, C.author),
+      content: r[C.content] == null ? '' : String(r[C.content]), // 줄바꿈 보존
+      edited: replyTime_(r[C.edited]),
+    });
+  }
+  return json_({ status: 'ok', items: items });
+}
+
+// 등록: 관리자 인증 필수. 답글ID=기존 최댓값+1, 작성일시/작성자 자동, 수정일시 빈값, 삭제여부 FALSE.
+function createReply_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const reqNum = String(req.reqNum || '').trim();
+  if (!reqNum) return json_({ status: 'error', message: '대상 요청번호가 없습니다' });
+  const content = String(req.content || '').trim();
+  if (!content) return json_({ status: 'error', message: '답글 내용이 비었습니다' });
+
+  const ctx = replyCtx_(true);
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, head = ctx.head, C = ctx.C;
+
+  let maxId = 0;
+  if (C.id >= 0) for (let i = hIdx + 1; i < values.length; i++) {
+    const v = Number(values[i][C.id]); if (!isNaN(v) && v > maxId) maxId = v;
+  }
+  const newId = maxId + 1;
+  const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
+
+  const row = new Array(Math.max(head.length, REPLY_HEADERS.length)).fill('');
+  const set = function (i, v) { if (i >= 0) row[i] = v; };
+  set(C.id, newId);
+  set(C.reqNum, reqNum);
+  set(C.created, now);
+  set(C.author, author);
+  set(C.content, content);
+  set(C.edited, '');
+  set(C.deleted, false);
+  sh.appendRow(row);
+  if (C.deleted >= 0) sh.getRange(sh.getLastRow(), C.deleted + 1).insertCheckboxes().setValue(false);
+  return json_({ status: 'ok', id: newId, created: now });
+}
+
+// 수정: 관리자 인증 + 본인 작성 답글만. 작성일시·작성자 유지, 답글내용 갱신, 수정일시 기록.
+function updateReply_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const id = String(req.id || '').trim();
+  if (!id) return json_({ status: 'error', message: '대상 답글ID가 없습니다' });
+  const content = String(req.content || '').trim();
+  if (!content) return json_({ status: 'error', message: '답글 내용이 비었습니다' });
+
+  const ctx = replyCtx_(false);
+  if (ctx.missing || ctx.error) return json_({ status: 'error', message: ctx.error || '답글 시트가 없습니다' });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  if (C.id < 0) return json_({ status: 'error', message: '답글ID 열을 찾지 못함' });
+  let rowIdx = -1;
+  for (let i = hIdx + 1; i < values.length; i++) {
+    if (String(values[i][C.id] || '').trim() === id) { rowIdx = i; break; }
+  }
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상 답글을 찾지 못했습니다' });
+  if (wIsChk_(values[rowIdx][C.deleted])) return json_({ status: 'error', message: '이미 삭제된 답글입니다' });
+  const rowAuthor = C.author >= 0 ? String(values[rowIdx][C.author] || '').trim() : '';
+  if (rowAuthor && rowAuthor !== author) return json_({ status: 'error', message: '본인이 작성한 답글만 수정할 수 있습니다' });
+
+  const sheetRow = rowIdx + 1;
+  const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
+  if (C.content >= 0) sh.getRange(sheetRow, C.content + 1).setValue(content);
+  if (C.edited >= 0) sh.getRange(sheetRow, C.edited + 1).setValue(now);
+  return json_({ status: 'ok', id: id, edited: now });
+}
+
+// 삭제처리(소프트): 관리자 인증 + 본인 작성 답글만. 행 삭제 X, 삭제여부=TRUE.
+function deleteReply_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const id = String(req.id || '').trim();
+  if (!id) return json_({ status: 'error', message: '대상 답글ID가 없습니다' });
+
+  const ctx = replyCtx_(false);
+  if (ctx.missing || ctx.error) return json_({ status: 'error', message: ctx.error || '답글 시트가 없습니다' });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  if (C.id < 0) return json_({ status: 'error', message: '답글ID 열을 찾지 못함' });
+  if (C.deleted < 0) return json_({ status: 'error', message: '삭제여부 열을 찾지 못함' });
+  let rowIdx = -1;
+  for (let i = hIdx + 1; i < values.length; i++) {
+    if (String(values[i][C.id] || '').trim() === id) { rowIdx = i; break; }
+  }
+  if (rowIdx < 0) return json_({ status: 'error', message: '대상 답글을 찾지 못했습니다' });
+  const rowAuthor = C.author >= 0 ? String(values[rowIdx][C.author] || '').trim() : '';
+  if (rowAuthor && rowAuthor !== author) return json_({ status: 'error', message: '본인이 작성한 답글만 삭제할 수 있습니다' });
+  sh.getRange(rowIdx + 1, C.deleted + 1).insertCheckboxes().setValue(true);
+  return json_({ status: 'ok', id: id });
 }
 
 // ── 장비도입관리 CRUD (헤더명 기반, 열 위치 비의존) ──

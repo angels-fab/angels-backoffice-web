@@ -10,7 +10,7 @@ import FlightIcon from '@mui/icons-material/Flight'
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import type { SvgIconComponent } from '@mui/icons-material'
-import { given, type TeamMember } from './members'
+import { type TeamMember } from './members'
 import type { RealCat } from './catMeta'
 
 export interface FilterMember {
@@ -46,34 +46,44 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
 
 const LABEL = { fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none' } as const
 
-function MemberAvatar({ m, on }: { m: TeamMember; on: boolean }) {
-  const common = {
-    width: 25,
-    height: 25,
-    borderRadius: '50%',
-    flex: 'none',
-    filter: on ? 'none' : 'grayscale(100%)',
-    opacity: on ? 1 : 0.45,
-    transition: 'filter .15s, opacity .15s',
-  } as const
-  if (m.photo) {
-    return <Box component="img" src={m.photo} alt={m.name} sx={{ ...common, objectFit: 'cover' }} />
-  }
+// 팀원 선택 칩 — 알약형 둥근 사각형(이름 표시). 선택=색 배경+흰 글자 / 미선택=옅은 배경+테두리.
+function MemberPill({ m, on, onToggle }: { m: TeamMember; on: boolean; onToggle: () => void }) {
   return (
     <Box
+      role="button"
+      tabIndex={0}
+      aria-label={`${m.name}${on ? '' : ' (해제됨)'}`}
+      aria-pressed={on}
+      title={m.name}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onToggle()
+        }
+      }}
       sx={{
-        ...common,
-        bgcolor: m.color,
-        color: '#fff',
-        display: 'flex',
+        height: 28,
+        display: 'inline-flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 10,
+        px: '11px',
+        borderRadius: '14px',
+        fontSize: 12,
         fontWeight: 700,
-        letterSpacing: '-0.5px',
+        letterSpacing: '-0.01em',
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
+        cursor: 'pointer',
+        border: '1px solid',
+        transition: 'background .15s, color .15s, border-color .15s',
+        ...(on
+          ? { bgcolor: m.color, color: '#fff', borderColor: m.color }
+          : { bgcolor: alpha(m.color, 0.1), color: 'text.secondary', borderColor: alpha(m.color, 0.3) }),
+        '&:hover': on ? { filter: 'brightness(1.08)' } : { bgcolor: alpha(m.color, 0.2), borderColor: alpha(m.color, 0.5) },
+        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
       }}
     >
-      {given(m.name)}
+      {m.name}
     </Box>
   )
 }
@@ -94,25 +104,9 @@ export default function CalFilterBar({ search, onSearch, members, onToggleMember
       {/* 팀원 */}
       <Box className="cal-fb__team">
         <Box component="span" sx={LABEL}>팀원</Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
           {members.map(({ member, on }) => (
-            <Box
-              key={member.id}
-              role="button"
-              tabIndex={0}
-              aria-label={`${member.name}${on ? '' : ' (해제됨)'}`}
-              title={member.name}
-              onClick={() => onToggleMember(member.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  onToggleMember(member.id)
-                }
-              }}
-              sx={{ display: 'inline-flex', cursor: 'pointer' }}
-            >
-              <MemberAvatar m={member} on={on} />
-            </Box>
+            <MemberPill key={member.id} m={member} on={on} onToggle={() => onToggleMember(member.id)} />
           ))}
         </Box>
         <Box className="cal-fb__sep" sx={(t) => ({ width: '1px', height: 20, bgcolor: t.palette.divider, flex: 'none' })} />

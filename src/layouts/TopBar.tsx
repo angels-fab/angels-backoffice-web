@@ -46,7 +46,11 @@ export default function TopBar() {
     <div className="topbar">
       <div className="topbar-inner">
         <div className="topbar-brand" onClick={() => navigate('/')} role="button" tabIndex={0} title="메인화면으로">
-          <img src={topbarLogo} className="topbar-logo" alt="ANGELS FAB 구축 현황" />
+          {/* 로고 이미지는 'ANGELS 마크 | FAB 구축 포털 시스템' 합본이라, 좌측 ANGELS 마크만 보이게 크롭하고 서비스명은 텍스트로 */}
+          <span className="topbar-logo-wrap">
+            <img src={topbarLogo} className="topbar-logo" alt="ANGELS" />
+          </span>
+          <span className="topbar-brandtext"><b>ANGELS</b> PORTAL</span>
         </div>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

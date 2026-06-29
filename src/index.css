@@ -885,10 +885,14 @@ body.eq-wide main{max-width:98vw}
 .snav-num{flex:none;min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:500;line-height:17px;text-align:center;box-sizing:border-box}
 .topbar-bell{margin-left:auto;background:none;border:none;color:var(--text2);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;flex-shrink:0;transition:color .15s,background .15s}
 .topbar-bell:hover{color:var(--text);background:var(--ink2)}
-.topbar-brand{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
+.topbar-brand{display:flex;align-items:center;gap:9px;cursor:pointer;flex-shrink:0}
+/* 합본 로고에서 좌측 ANGELS 마크만 보이게 가로 크롭 */
+.topbar-logo-wrap{height:34px;width:36px;overflow:hidden;display:flex;align-items:center;flex-shrink:0}
 .topbar-logo{height:34px;width:auto;object-fit:contain;mix-blend-mode:lighten;background:var(--ink)}
+.topbar-brandtext{font-size:16px;font-weight:800;color:var(--text);white-space:nowrap;letter-spacing:.04em}
+.topbar-brandtext b{color:#7dafff;font-weight:900}
 .topbar-title{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;letter-spacing:-.2px;padding-left:12px;margin-left:2px;border-left:1px solid var(--border)}
-@media(max-width:480px){.topbar-title{font-size:12.5px;padding-left:9px}}
+@media(max-width:480px){.topbar-title{font-size:12.5px;padding-left:9px}.topbar-brandtext{font-size:14px}}
 .topbar-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .topbar-nav>.navchip{display:none}
 body.in-page .topbar-nav>.navchip{display:inline-flex}

@@ -18,26 +18,30 @@ interface Props {
   /** 상호작용한 마우스 위치(viewport 좌표) */
   x: number
   y: number
+  /** 클릭으로 고정된 상태 — true면 포인터 이벤트 받음, false(호버)면 포인터 통과(hover 깜빡임 방지) */
+  locked?: boolean
 }
 
 /**
  * 호버·클릭 상세 — 마우스 위치 기준으로 띄우고 뷰포트 경계에서 위치를 자동 보정한다.
  * (멀티데이 막대 중앙이 아니라 사용자가 가리킨/클릭한 지점 근처에 표시)
+ * 호버 상태에서는 pointer-events:none 으로 포인터를 가리지 않아 hover가 반복 해제되지 않는다.
  * 닫기는 부모가 담당(호버 leave / 바깥 클릭 / Esc / 같은 일정 재클릭).
  */
-export default function EventPopover({ detail, x, y }: Props) {
+export default function EventPopover({ detail, x, y, locked }: Props) {
   const ref = useRef<HTMLDivElement | null>(null)
-  const [pos, setPos] = useState<{ left: number; top: number; ready: boolean }>({ left: x, top: y + 16, ready: false })
+  const [pos, setPos] = useState<{ left: number; top: number; ready: boolean }>({ left: x + 14, top: y + 16, ready: false })
 
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
     const r = el.getBoundingClientRect()
     const m = 10
-    let left = x
+    let left = x + 14 // 포인터 오른쪽으로 살짝 띄움
     let top = y + 16
-    if (left + r.width > window.innerWidth - m) left = window.innerWidth - m - r.width
+    if (left + r.width > window.innerWidth - m) left = x - r.width - 14 // 오른쪽 공간 부족 → 포인터 왼쪽
     if (left < m) left = m
+    if (left + r.width > window.innerWidth - m) left = window.innerWidth - m - r.width
     if (top + r.height > window.innerHeight - m) top = y - r.height - 12 // 아래 공간 부족 → 위로 뒤집기
     if (top < m) top = m
     setPos({ left, top, ready: true })
@@ -54,7 +58,7 @@ export default function EventPopover({ detail, x, y }: Props) {
         left: pos.left,
         top: pos.top,
         zIndex: 10000, // FullCalendar '+N건' more-link 팝오버(z-index 9999) 위에 떠야 함
-
+        pointerEvents: locked ? 'auto' : 'none',
         width: 300,
         maxWidth: 'calc(100vw - 20px)',
         visibility: pos.ready ? 'visible' : 'hidden',

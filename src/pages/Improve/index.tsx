@@ -37,12 +37,14 @@ import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
-import { updateImprovement, createImprovement, deleteImprovement } from '@/api/sheets'
+import { addReply, patchReply, removeReply } from '@/store/slices/replySlice'
+import { updateImprovement, createImprovement, deleteImprovement, createReply, updateReply, deleteReply, type ReplyRow } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { fmtDate, todaySeoul } from '@/utils/date'
 import { isImproveNew } from '@/utils/newPost'
 import { locationToPath } from '@/utils/improveMemo'
 import type { ImprovementItem } from '@/types'
+import ReplyThread from './ReplyThread'
 import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus, statusRank, isSettled } from './improveMeta'
 import type { ImpStatus } from './improveMeta'
 
@@ -137,13 +139,25 @@ function CellSelect({ value, options, onChange, disabled, placeholder }: { value
 export default function Improve() {
   const dispatch = useAppDispatch()
   const { items, loading, error, updatedAt, locOptions: sheetLoc, typeOptions: sheetType } = useAppSelector((s) => s.improve)
+  const replies = useAppSelector((s) => s.reply.items)
   const { isAdmin, user, authKey } = useRole()
 
   const [selected, setSelected] = useState<Set<ImpStatus>>(new Set()) // 비었으면 전체
-  const [expanded, setExpanded] = useState<Set<number>>(new Set())
+  const [openId, setOpenId] = useState<number | null>(null) // 아코디언 — 한 번에 하나만 펼침
   const [reasonDlg, setReasonDlg] = useState<ReasonDlg | null>(null)
   const [savingId, setSavingId] = useState<number | null>(null)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
+  // 답글 — 요청번호별 그룹화(작성일시 오름차순) + 등록/삭제 진행중 플래그 + 삭제 확인 대상
+  const [replyBusy, setReplyBusy] = useState(false)
+  const [delReply, setDelReply] = useState<ReplyRow | null>(null)
+  const repliesByReq = useMemo(() => {
+    const m: Record<string, ReplyRow[]> = {}
+    for (const r of replies) (m[r.reqNum] ||= []).push(r)
+    for (const k in m) m[k].sort((a, b) => a.created.localeCompare(b.created))
+    return m
+  }, [replies])
+  // 아코디언 열기/토글 — 다른 글 열면 기존 닫힘. 전환 시 답글 입력/편집 상태는 ReplyThread 리마운트로 초기화(key=t.id).
+  const toggleRow = (id: number) => setOpenId((prev) => (prev === id ? null : id))
 
   // 새 제안(표 상단) / 수정(목록 내 in-place) / 삭제 확인 — 작성 입력은 c* 상태 공용
   const [composing, setComposing] = useState(false)
@@ -270,7 +284,7 @@ export default function Improve() {
     resetCompose(t)
     setComposing(false)
     setEditingId(t.id)
-    setExpanded((prev) => { const n = new Set(prev); n.add(t.id); return n }) // 펼쳐진 상태로 편집
+    setOpenId(t.id) // 펼쳐진 상태로 편집
   }
 
   const handleCreate = async () => {
@@ -318,6 +332,52 @@ export default function Improve() {
     } catch (err) {
       setSaving(false)
       showSnack(err instanceof Error ? err.message : '삭제 실패', 'error')
+    }
+  }
+
+  // ── 답글 (낙관적 업데이트 — 성공 시 store 즉시 반영 → 칩 개수·목록 즉시 갱신) ──
+  const createReplyH = async (reqNum: string, content: string) => {
+    if (!user || !authKey) { showSnack('로그인이 필요합니다.', 'error'); throw new Error('no-auth') }
+    setReplyBusy(true)
+    try {
+      const { id, created } = await createReply({ author: user, key: authKey, reqNum, content })
+      // 서버가 작성일시를 누락(구버전 배포)해도 정렬·표시가 깨지지 않게 클라 폴백(정렬 가능한 yyyy-MM-dd HH:mm:ss)
+      const createdAt = created || `${todaySeoul()} 00:00:00`
+      dispatch(addReply({ id, reqNum, created: createdAt, author: user, content, edited: '' }))
+      setReplyBusy(false)
+      showSnack('답글을 등록했습니다.', 'success')
+    } catch (err) {
+      setReplyBusy(false)
+      showSnack(err instanceof Error ? err.message : '답글 등록 실패', 'error')
+      throw err // 실패 시 입력 유지
+    }
+  }
+  const editReplyH = async (id: string, content: string) => {
+    if (!user || !authKey) { showSnack('로그인이 필요합니다.', 'error'); throw new Error('no-auth') }
+    setReplyBusy(true)
+    try {
+      const { edited } = await updateReply({ author: user, key: authKey, id, content })
+      dispatch(patchReply({ id, content, edited: edited || `${todaySeoul()} 00:00` }))
+      setReplyBusy(false)
+      showSnack('답글을 수정했습니다.', 'success')
+    } catch (err) {
+      setReplyBusy(false)
+      showSnack(err instanceof Error ? err.message : '답글 수정 실패', 'error')
+      throw err
+    }
+  }
+  const confirmDelReply = async () => {
+    if (!delReply || !user || !authKey) return
+    setReplyBusy(true)
+    try {
+      await deleteReply({ author: user, key: authKey, id: delReply.id })
+      dispatch(removeReply(delReply.id))
+      setReplyBusy(false)
+      setDelReply(null)
+      showSnack('답글을 삭제했습니다.', 'success')
+    } catch (err) {
+      setReplyBusy(false)
+      showSnack(err instanceof Error ? err.message : '답글 삭제 실패', 'error')
     }
   }
 
@@ -495,14 +555,15 @@ export default function Improve() {
               )}
               {listed.map((t) => {
                 if (editingId === t.id) return renderCompose('edit', t) // 수정: 그 자리에서 인라인 편집(열 정렬 동일)
-                const open = expanded.has(t.id)
+                const open = openId === t.id
                 const rm = remarkOf(t)
                 const st = normStatus(t.status)
                 const kind = impKind(st) // 행 배경 상태색 틴트용
                 const editable = canEdit // 상태·위치·유형·내용·사유 수정 = 로그인 관리자 전체
                 const removable = canDelete(t) // 삭제 = 해당 글 담당자(작성자)만
                 const isNew = isImproveNew(t) // 접수·검토중·보류 + 제안일자 최근 7일(사이드바와 동일 판정)
-                const toggle = () => setExpanded((prev) => { const n = new Set(prev); n.has(t.id) ? n.delete(t.id) : n.add(t.id); return n })
+                const rowReplies = repliesByReq[t.num] || [] // 이 요청의 답글(삭제 제외)
+                const toggle = () => toggleRow(t.id)
                 // 작업 메모 핀 — 켜짐=앰버 PushPin / 꺼짐=PushPinOutlined. 종결상태·연결페이지 없으면 활성 불가.
                 const memoOn = t.memo === true
                 const memoTarget = locationToPath(t.loc) // null = 기타/연결 페이지 없음
@@ -534,9 +595,13 @@ export default function Improve() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: 18, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
                         <Box component="span" sx={{ fontWeight: 500, color: 'text.primary' }}>{t.title}</Box>
-                        {/* 최근 게시글 N 칩 — 제목 → N → 링크 순. 공지 N칩과 동일 디자인, 줄어들지 않게 flexShrink:0 */}
+                        {/* 제목 → 최근글 N칩 → 답글 +N칩 → 링크 순. 모두 줄어들지 않게 flexShrink:0 */}
                         {isNew && (
                           <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: '4px', bgcolor: 'error.main', color: '#fff', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+                        )}
+                        {/* 답글 +N — 삭제 안 된 답글이 있을 때만. 파란 칩(왼쪽 점 없음), 상태와 무관. 클릭 시 행 토글로 아코디언 펼침 */}
+                        {rowReplies.length > 0 && (
+                          <Box component="span" sx={(th) => ({ flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 18, px: '7px', borderRadius: '9px', fontSize: 10.5, fontWeight: 700, lineHeight: 1, whiteSpace: 'nowrap', color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.14), border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}` })}>답글 +{rowReplies.length}</Box>
                         )}
                         {t.link && (
                           <IconButton component="a" href={t.link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련자료" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
@@ -612,9 +677,10 @@ export default function Improve() {
                     )}
                   </TableRow>,
                   open ? (
-                    <TableRow key={`${t.id}-a`} onClick={toggle} sx={(th) => ({ cursor: 'pointer', '& td': { borderTop: 0, bgcolor: alpha(th.palette.accent.blue, 0.09) } })}>
+                    <TableRow key={`${t.id}-a`} sx={(th) => ({ '& td': { borderTop: 0, bgcolor: alpha(th.palette.accent.blue, 0.09) } })}>
                       <TableCell />
                       <TableCell colSpan={detailSpan} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
+                        {/* 원문 내용 + (관리자) 개선요청 수정/삭제 */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
                           <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>{t.content || '내용 없음'}</Box>
                           {(editable || removable) && (
@@ -625,6 +691,17 @@ export default function Improve() {
                             </Box>
                           )}
                         </Box>
+                        {/* 답글 — 목록(시간순) + (관리자) 입력창. key=t.id로 행 전환 시 입력/편집 상태 초기화 */}
+                        <ReplyThread
+                          key={t.id}
+                          replies={rowReplies}
+                          isAdmin={isAdmin}
+                          user={user}
+                          busy={replyBusy}
+                          onCreate={(content) => createReplyH(t.num, content)}
+                          onEdit={editReplyH}
+                          onRequestDelete={(r) => setDelReply(r)}
+                        />
                       </TableCell>
                     </TableRow>
                   ) : null,
@@ -662,6 +739,18 @@ export default function Improve() {
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteDlg(null)} disabled={saving}>취소</Button>
           <Button variant="contained" color="error" onClick={handleDelete} disabled={saving}>{saving ? '삭제 중…' : '삭제'}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 답글 삭제 확인 팝업 (소프트 삭제) */}
+      <Dialog open={!!delReply} onClose={() => !replyBusy && setDelReply(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
+        <DialogTitle>답글 삭제</DialogTitle>
+        <DialogContent>
+          <Box sx={{ fontSize: 14, color: 'text.primary', lineHeight: 1.7 }}>이 답글을 삭제할까요?<br />삭제하면 목록과 답글 수에서 제외됩니다.</Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDelReply(null)} disabled={replyBusy}>취소</Button>
+          <Button variant="contained" color="error" onClick={confirmDelReply} disabled={replyBusy}>{replyBusy ? '삭제 중…' : '삭제'}</Button>
         </DialogActions>
       </Dialog>
 

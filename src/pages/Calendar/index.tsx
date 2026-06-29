@@ -77,7 +77,8 @@ export default function Calendar() {
   const calRef = useRef<FullCalendar>(null)
 
   // 호버·클릭 상세 — 마우스 위치 기준. lockedId=클릭 고정된 일정 id(있으면 호버로 안 바뀜).
-  const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number } | null>(null)
+  // 호버(locked=false)는 포인터를 따라다니고, 클릭(locked=true)은 그 자리에 고정.
+  const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number; locked: boolean } | null>(null)
   const lockedId = useRef<string | null>(null)
   const closePop = () => {
     lockedId.current = null
@@ -341,9 +342,17 @@ export default function Calendar() {
         onToggleCat={toggleCat}
       />
 
-      {/* 달력 (풀폭) */}
+      {/* 달력 (풀폭) — onMouseMove로 호버 상세가 포인터를 따라다님(고정 상태가 아닐 때만) */}
       <Box sx={{ minWidth: 0 }}>
-        <Box className="fc-theme-angels fc-team">
+        <Box
+          className="fc-theme-angels fc-team"
+          onMouseMove={(e) => {
+            if (lockedId.current) return
+            const x = e.clientX
+            const y = e.clientY
+            setPop((p) => (p && !p.locked ? { ...p, x, y } : p))
+          }}
+        >
           <FullCalendar
             ref={calRef}
             plugins={[dayGridPlugin, timeGridPlugin]}
@@ -366,7 +375,7 @@ export default function Calendar() {
             eventMouseEnter={(info) => {
               if (lockedId.current) return // 클릭 고정 중엔 호버로 안 바뀜
               const detail = info.event.extendedProps.detail as EventDetail
-              setPop({ detail, x: info.jsEvent.clientX, y: info.jsEvent.clientY })
+              setPop({ detail, x: info.jsEvent.clientX, y: info.jsEvent.clientY, locked: false })
             }}
             eventMouseLeave={() => {
               if (!lockedId.current) setPop(null)
@@ -380,7 +389,7 @@ export default function Calendar() {
               } else {
                 lockedId.current = id
                 const detail = info.event.extendedProps.detail as EventDetail
-                setPop({ detail, x: info.jsEvent.clientX, y: info.jsEvent.clientY })
+                setPop({ detail, x: info.jsEvent.clientX, y: info.jsEvent.clientY, locked: true })
               }
             }}
             dayMaxEvents={view === 'month' ? 3 : false}
@@ -391,7 +400,7 @@ export default function Calendar() {
         </Box>
       </Box>
 
-      {pop && <EventPopover detail={pop.detail} x={pop.x} y={pop.y} />}
+      {pop && <EventPopover detail={pop.detail} x={pop.x} y={pop.y} locked={pop.locked} />}
     </PageContainer>
   )
 }

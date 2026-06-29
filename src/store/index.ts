@@ -4,6 +4,7 @@ import eqReducer from './slices/eqSlice'
 import noticeReducer from './slices/noticeSlice'
 import calReducer from './slices/calSlice'
 import improveReducer from './slices/improveSlice'
+import replyReducer from './slices/replySlice'
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     notice: noticeReducer,
     cal: calReducer,
     improve: improveReducer,
+    reply: replyReducer,
   },
 })
 

@@ -513,3 +513,58 @@ export async function updateImprovement(p: {
 export async function deleteImprovement(p: { author: string; key: string; num: string | number }): Promise<void> {
   await postImprove({ action: 'deleteImprovement', ...p })
 }
+
+// ── 포털개선요청 답글 ('포털개선답글' 시트, 소프트 삭제) ──
+export interface ReplyRow {
+  /** 답글ID */
+  id: string
+  /** 요청번호 — 원본 개선요청 num과 연결 */
+  reqNum: string
+  /** 작성일시 'yyyy-MM-dd HH:mm:ss' (KST) */
+  created: string
+  author: string
+  content: string
+  /** 수정일시 — 수정 시에만 값 있음 */
+  edited: string
+}
+
+/** 답글 전체 조회(삭제 제외) — 한 번에 로드 후 요청번호별 그룹화는 프런트. 인증 불필요, 네트워크 재시도. */
+export async function fetchReplies(): Promise<ReplyRow[]> {
+  return withRetry(async () => {
+    const res = await fetch(`${SCRIPT_URL}?action=getReplies&_=${Date.now()}`)
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+    const json = (await res.json()) as { status: string; items?: ReplyRow[]; message?: string }
+    if (json.status !== 'ok') throw new Error(json.message || '답글 불러오기 실패')
+    return json.items || []
+  })
+}
+
+async function postReply(payload: Record<string, unknown>): Promise<{ id?: number | string; created?: string; edited?: string }> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string; id?: number | string; created?: string; edited?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 답글을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '처리 실패')
+  return { id: json.id, created: json.created, edited: json.edited }
+}
+
+/** 답글 등록 (관리자) → { id, created } */
+export async function createReply(p: { author: string; key: string; reqNum: string | number; content: string }): Promise<{ id: string; created: string }> {
+  const { id, created } = await postReply({ action: 'createReply', ...p })
+  return { id: String(id ?? ''), created: created || '' }
+}
+
+/** 답글 수정 (본인 작성만) → { edited } */
+export async function updateReply(p: { author: string; key: string; id: string | number; content: string }): Promise<{ edited: string }> {
+  const { edited } = await postReply({ action: 'updateReply', ...p })
+  return { edited: edited || '' }
+}
+
+/** 답글 삭제처리(소프트, 본인 작성만) — 행 삭제 X, 삭제여부=TRUE */
+export async function deleteReply(p: { author: string; key: string; id: string | number }): Promise<void> {
+  await postReply({ action: 'deleteReply', ...p })
+}
