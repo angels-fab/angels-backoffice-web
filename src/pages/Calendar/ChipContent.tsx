@@ -32,6 +32,7 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
 }
 
 const PILL_H = 21
+const CHIP_RADIUS = 6 // 모서리만 둥근 작은 사각형(알약/트랙 형태 아님)
 const REST_W = 14 // 이름 없는 뒤쪽 칩의 폭
 const SLIVER = 5 // 겹쳤을 때 보이는 초승달 폭 (REST_W - SLIVER 만큼 겹침)
 
@@ -61,7 +62,7 @@ function NamePill({ text, color }: { text: string; color: string }) {
         display: 'inline-flex',
         alignItems: 'center',
         px: '7px',
-        borderRadius: `${PILL_H / 2}px`,
+        borderRadius: `${CHIP_RADIUS}px`,
         bgcolor: color,
         color: '#fff',
         fontSize: 11.5,
@@ -88,7 +89,7 @@ function PillStack({ participants, refEl }: { participants: Participant[]; refEl
           {i === 0 ? (
             <NamePill text={p.initials} color={p.color} />
           ) : (
-            <Box sx={{ width: REST_W, height: PILL_H, borderRadius: `${PILL_H / 2}px`, bgcolor: p.color, border: '1px solid rgba(255,255,255,.28)' }} />
+            <Box sx={{ width: REST_W, height: PILL_H, borderRadius: `${CHIP_RADIUS}px`, bgcolor: p.color, border: '1px solid rgba(255,255,255,.28)' }} />
           )}
         </Box>
       ))}
@@ -135,8 +136,9 @@ export default function ChipContent({ participants, catKey, catColor, time, titl
     return () => ro.disconnect()
   }, [variant, participants.length, title])
 
-  // 월간 멀티데이: 좌블록 최소폭=첫 칸 폭에 맞춰 해당자 묶음을 첫 칸 오른쪽 끝에 정렬.
-  // 알약 칩은 폭이 가변이라 그룹 실제 폭을 측정해 reserve 계산.
+  // 월간 멀티데이: 해당자 그룹의 오른쪽 끝을 '단일 일정의 첫 칸 오른쪽 끝'과 동일 x좌표로.
+  // 멀티데이는 abs harness라 좌측 정렬이 단일과 달라, 단일(인플로우) 일정의 '셀 우측 - event-main 우측'
+  // 인셋을 실제로 측정해 재사용 → group.right = 막대 시작 셀.right - 단일우측인셋 (막대 자체 좌측 오프셋과 무관).
   const [reserve, setReserve] = useState(0)
   useLayoutEffect(() => {
     if (variant !== 'daygrid' || !multiDay) {
@@ -144,10 +146,28 @@ export default function ChipContent({ participants, catKey, catColor, time, titl
       return
     }
     const measure = () => {
-      const cell = document.querySelector('.fc-daygrid-day') as HTMLElement | null
-      const cw = cell ? cell.getBoundingClientRect().width : 0
+      const root = rootRef.current
+      if (!root) return
+      const rr = root.getBoundingClientRect()
+      const cells = Array.from(document.querySelectorAll('.fc-daygrid-day')) as HTMLElement[]
+      const firstCell = cells.find((c) => {
+        const r = c.getBoundingClientRect()
+        return rr.left >= r.left - 1 && rr.left < r.right
+      })
+      if (!firstCell) return
+      // 단일(인플로우, abs 아님) 일정의 우측 인셋 측정
+      let singleRightInset = 0
+      const ref = (Array.from(document.querySelectorAll('.fc-daygrid-event')) as HTMLElement[]).find(
+        (el) => !el.closest('.fc-daygrid-event-harness-abs') && el.querySelector('.fc-event-main'),
+      )
+      const refMain = ref?.querySelector('.fc-event-main') as HTMLElement | null
+      const refCell = ref?.closest('.fc-daygrid-day') as HTMLElement | null
+      if (refMain && refCell) {
+        singleRightInset = refCell.getBoundingClientRect().right - refMain.getBoundingClientRect().right
+      }
+      const targetRight = firstCell.getBoundingClientRect().right - singleRightInset
       const gw = groupRef.current ? groupRef.current.getBoundingClientRect().width : 0
-      setReserve(cw > 0 ? Math.max(40, cw - gw - 14) : 0)
+      setReserve(Math.max(24, targetRight - rr.left - 5 - gw)) // 5 = 좌블록↔해당자 gap
     }
     measure()
     const ro = new ResizeObserver(measure)

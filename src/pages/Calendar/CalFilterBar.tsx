@@ -67,7 +67,7 @@ function MemberPill({ m, on, onToggle }: { m: TeamMember; on: boolean; onToggle:
         display: 'inline-flex',
         alignItems: 'center',
         px: '11px',
-        borderRadius: '14px',
+        borderRadius: '8px',
         fontSize: 12,
         fontWeight: 700,
         letterSpacing: '-0.01em',

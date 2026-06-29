@@ -80,6 +80,8 @@ export default function Calendar() {
   // 호버(locked=false)는 포인터를 따라다니고, 클릭(locked=true)은 그 자리에 고정.
   const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number; locked: boolean } | null>(null)
   const lockedId = useRef<string | null>(null)
+  // 멀티데이 segment마다 .fc-event 전체에 붙인 hit-area 리스너 해제 함수(중복등록·누수 방지)
+  const hitCleanup = useRef(new WeakMap<HTMLElement, () => void>())
   const closePop = () => {
     lockedId.current = null
     setPop(null)
@@ -372,24 +374,42 @@ export default function Calendar() {
             events={fcEvents}
             eventDisplay="block"
             eventContent={renderEventContent}
-            eventMouseEnter={(info) => {
-              if (lockedId.current) return // 클릭 고정 중엔 호버로 안 바뀜
+            // 각 렌더 segment의 .fc-event 전체(텍스트 없는 이어지는 구간 포함)를 hit area로 사용.
+            // eventMouseEnter/Click 프롭 대신 segment 엘리먼트에 직접 리스너를 붙여 모든 구간에서 동작.
+            eventDidMount={(info) => {
               const detail = info.event.extendedProps.detail as EventDetail
-              setPop({ detail, x: info.jsEvent.clientX, y: info.jsEvent.clientY, locked: false })
+              const onEnter = (e: MouseEvent) => {
+                if (lockedId.current) return // 클릭 고정 중엔 호버로 안 바뀜
+                setPop({ detail, x: e.clientX, y: e.clientY, locked: false })
+              }
+              const onLeave = () => {
+                if (!lockedId.current) setPop(null)
+              }
+              const onClick = (e: MouseEvent) => {
+                e.preventDefault()
+                e.stopPropagation() // 바깥-클릭 닫기 핸들러로 전파 방지
+                const id = info.event.id
+                if (lockedId.current === id) {
+                  closePop() // 같은 일정 재클릭 = 닫기
+                } else {
+                  lockedId.current = id
+                  setPop({ detail, x: e.clientX, y: e.clientY, locked: true })
+                }
+              }
+              info.el.addEventListener('mouseenter', onEnter)
+              info.el.addEventListener('mouseleave', onLeave)
+              info.el.addEventListener('click', onClick)
+              hitCleanup.current.set(info.el, () => {
+                info.el.removeEventListener('mouseenter', onEnter)
+                info.el.removeEventListener('mouseleave', onLeave)
+                info.el.removeEventListener('click', onClick)
+              })
             }}
-            eventMouseLeave={() => {
-              if (!lockedId.current) setPop(null)
-            }}
-            eventClick={(info) => {
-              info.jsEvent.preventDefault()
-              info.jsEvent.stopPropagation() // 바깥-클릭 닫기 핸들러로 전파 방지
-              const id = info.event.id
-              if (lockedId.current === id) {
-                closePop() // 같은 일정 재클릭 = 닫기
-              } else {
-                lockedId.current = id
-                const detail = info.event.extendedProps.detail as EventDetail
-                setPop({ detail, x: info.jsEvent.clientX, y: info.jsEvent.clientY, locked: true })
+            eventWillUnmount={(info) => {
+              const fn = hitCleanup.current.get(info.el)
+              if (fn) {
+                fn()
+                hitCleanup.current.delete(info.el)
               }
             }}
             dayMaxEvents={view === 'month' ? 3 : false}
