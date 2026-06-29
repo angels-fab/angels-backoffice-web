@@ -6,6 +6,7 @@ import SchoolIcon from '@mui/icons-material/School'
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1'
 import FlightIcon from '@mui/icons-material/Flight'
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
+import BeachAccessIcon from '@mui/icons-material/BeachAccess'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import type { SvgIconComponent } from '@mui/icons-material'
 import type { RealCat } from './catMeta'
@@ -28,11 +29,12 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
   recruit: PersonAddAlt1Icon,
   trip_dom: DirectionsCarIcon,
   trip_intl: FlightIcon,
+  leave: BeachAccessIcon,
   etc: MoreHorizIcon,
 }
 
 const PILL_H = 21
-const CHIP_RADIUS = 6 // 모서리만 둥근 작은 사각형(알약/트랙 형태 아님)
+const CHIP_RADIUS = 8 // 모서리만 둥근 작은 사각형(알약/트랙 형태 아님)
 const REST_W = 14 // 이름 없는 뒤쪽 칩의 폭
 const SLIVER = 5 // 겹쳤을 때 보이는 초승달 폭 (REST_W - SLIVER 만큼 겹침)
 
@@ -61,7 +63,7 @@ function NamePill({ text, color }: { text: string; color: string }) {
         height: PILL_H,
         display: 'inline-flex',
         alignItems: 'center',
-        px: '7px',
+        px: '5px',
         borderRadius: `${CHIP_RADIUS}px`,
         bgcolor: color,
         color: '#fff',

@@ -8,6 +8,7 @@ import SchoolIcon from '@mui/icons-material/School'
 import PersonAddAlt1Icon from '@mui/icons-material/PersonAddAlt1'
 import FlightIcon from '@mui/icons-material/Flight'
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
+import BeachAccessIcon from '@mui/icons-material/BeachAccess'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { type TeamMember } from './members'
@@ -41,6 +42,7 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
   recruit: PersonAddAlt1Icon,
   trip_dom: DirectionsCarIcon,
   trip_intl: FlightIcon,
+  leave: BeachAccessIcon,
   etc: MoreHorizIcon,
 }
 
@@ -66,8 +68,8 @@ function MemberPill({ m, on, onToggle }: { m: TeamMember; on: boolean; onToggle:
         height: 28,
         display: 'inline-flex',
         alignItems: 'center',
-        px: '11px',
-        borderRadius: '8px',
+        px: '8px',
+        borderRadius: '10px',
         fontSize: 12,
         fontWeight: 700,
         letterSpacing: '-0.01em',

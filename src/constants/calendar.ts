@@ -11,6 +11,8 @@ export const CAL_CATS: CalCat[] = [
   { id: 'recruit', label: '채용', cls: 'f-recruit', color: accent.purple },
   { id: 'trip_dom', label: '국내출장', cls: 'f-trip', color: accent.amber },
   { id: 'trip_intl', label: '국외출장', cls: 'f-trip', color: accent.amber },
+  // 연차 — catMeta.ts와 동일 색/라벨(홈 대시보드·캘린더 일치). 로즈핑크.
+  { id: 'leave', label: '연차', cls: 'f-leave', color: '#D87CA6' },
   { id: 'etc', label: '기타', cls: 'f-etc', color: '#7D8899' },
 ]
 

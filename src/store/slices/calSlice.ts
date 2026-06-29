@@ -17,6 +17,8 @@ function classify(title: string): CalEvent['cat'] {
   const m = (title || '').match(/^\s*\[([^\]]+)\]/)
   if (!m) return evCat(title)
   const tag = m[1]
+  // 연차/반차/휴가는 제목 앞 구분 태그로만 분류(일반 제목 속 '연차' 단어로는 분류 안 함)
+  if (/연차|반차|휴가/.test(tag)) return 'leave'
   if (/회의|미팅|보고|위원회/.test(tag)) return 'meeting'
   if (/업무/.test(tag)) return 'work'
   if (/교육|세미나|워크숍|강의/.test(tag)) return 'edu'

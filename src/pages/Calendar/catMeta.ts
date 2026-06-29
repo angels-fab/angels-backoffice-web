@@ -16,7 +16,9 @@ export const CAT_META: Record<RealCat, { label: string; status: StatusKind; colo
   recruit: { label: '채용', status: 'purple', color: accent.purple },
   trip_dom: { label: '국내출장', status: 'warning', color: accent.amber },
   trip_intl: { label: '국외출장', status: 'warning', color: accent.amber },
+  // 연차/반차/휴가 — 기존 색과 구분되는 차분한 로즈핑크(테마 accent에 없어 catMeta 공용 구조에 추가). status는 미사용 SummaryPanel용 placeholder.
+  leave: { label: '연차', status: 'purple', color: '#D87CA6' },
   etc: { label: '기타', status: 'neutral', color: '#7D8899' },
 }
 
-export const CAT_ORDER: RealCat[] = ['meeting', 'work', 'edu', 'recruit', 'trip_dom', 'trip_intl', 'etc']
+export const CAT_ORDER: RealCat[] = ['meeting', 'work', 'edu', 'recruit', 'trip_dom', 'trip_intl', 'leave', 'etc']

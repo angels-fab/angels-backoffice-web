@@ -160,7 +160,7 @@ export interface EqCounts {
 export type EqStateKey = '도입예정' | '도입중' | '운영중' | '비가동' | '미분류'
 
 // ── 캘린더 ──
-export type CalCatId = 'all' | 'meeting' | 'work' | 'edu' | 'recruit' | 'trip_dom' | 'trip_intl' | 'etc'
+export type CalCatId = 'all' | 'meeting' | 'work' | 'edu' | 'recruit' | 'trip_dom' | 'trip_intl' | 'leave' | 'etc'
 
 export interface CalCat {
   id: CalCatId
