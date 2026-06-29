@@ -11,6 +11,7 @@ import EventNoteIcon from '@mui/icons-material/EventNote'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import SearchIcon from '@mui/icons-material/Search'
 import { PageContainer, PageHeader } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadCalEvents } from '@/store/slices/calSlice'
@@ -76,15 +77,24 @@ export default function Calendar() {
   const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
   const calRef = useRef<FullCalendar>(null)
 
-  // 호버·클릭 상세 — 마우스 위치 기준. lockedId=클릭 고정된 일정 id(있으면 호버로 안 바뀜).
-  // 호버(locked=false)는 포인터를 따라다니고, 클릭(locked=true)은 그 자리에 고정.
+  // 호버·클릭 상세 — 마우스 위치 기준. 호버(locked=false)는 포인터를 따라다니고, 클릭(locked=true)은 그 자리 고정.
   const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number; locked: boolean } | null>(null)
-  const lockedId = useRef<string | null>(null)
-  // 멀티데이 segment마다 .fc-event 전체에 붙인 hit-area 리스너 해제 함수(중복등록·누수 방지)
-  const hitCleanup = useRef(new WeakMap<HTMLElement, () => void>())
+  const lockedEl = useRef<HTMLElement | null>(null) // 클릭 고정된 .fc-event segment
+  // segment(.fc-event element) → 원본 일정 상세. eventDidMount에서 채우고 eventWillUnmount에서 제거.
+  const detailMap = useRef(new WeakMap<HTMLElement, EventDetail>())
   const closePop = () => {
-    lockedId.current = null
+    lockedEl.current = null
     setPop(null)
+  }
+  // 포인터 (x,y)가 가리키는 .fc-event segment 찾기 — elementsFromPoint는 다른 칸의 day-events 컨테이너에
+  // 덮인 멀티데이 막대도 함께 반환하므로, 중간·마지막 칸의 빈 영역에서도 실제 막대를 찾아낸다.
+  const findEvAt = (x: number, y: number): HTMLElement | null => {
+    const stack = document.elementsFromPoint(x, y) as HTMLElement[]
+    for (const el of stack) {
+      const fe = el.closest('.fc-event') as HTMLElement | null
+      if (fe && detailMap.current.has(fe)) return fe
+    }
+    return null
   }
 
   const todayKey = todaySeoul()
@@ -116,7 +126,7 @@ export default function Calendar() {
 
   // 뷰·기간·필터 변경 시 열려있던 상세 닫기(스테일 방지)
   useEffect(() => {
-    lockedId.current = null
+    lockedEl.current = null
     setPop(null)
   }, [view, anchor, searchTrim, selCats, selMembers])
 
@@ -246,113 +256,133 @@ export default function Calendar() {
         }
       />
 
-      {/* 툴바 — 뷰 토글 / 오늘 / 이전·다음 / 기간 */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', mb: 2 }}>
-        <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: '9px' }}>
-          {([{ k: 'month', l: '월' }, { k: 'timeweek', l: '주' }] as const).map((t) => (
-            <Box
-              key={t.k}
-              component="button"
-              onClick={() => setView(t.k)}
-              sx={{
-                px: '18px',
-                py: '6px',
-                borderRadius: '7px',
-                fontSize: 13,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                border: 'none',
-                fontWeight: view === t.k ? 700 : 600,
-                color: view === t.k ? 'primary.main' : 'text.secondary',
-                bgcolor: view === t.k ? 'background.paper' : 'transparent',
-                boxShadow: view === t.k ? '0 1px 2px rgba(0,0,0,.35)' : 'none',
-                transition: 'all .12s',
-              }}
-            >
-              {t.l}
-            </Box>
-          ))}
+      {/* 툴바 — 한 행(space-between): 왼쪽=[월/주]·[‹|오늘|›] 그룹·년월 / 오른쪽=검색·주말.
+          반응형: 좁아지면 검색이 한 줄 전체로 내려감(order/flex-basis). */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px 8px', mb: 2 }}>
+        {/* 왼쪽 그룹 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', order: 1 }}>
+          {/* 월/주 토글 */}
+          <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: '9px' }}>
+            {([{ k: 'month', l: '월' }, { k: 'timeweek', l: '주' }] as const).map((t) => (
+              <Box
+                key={t.k}
+                component="button"
+                onClick={() => setView(t.k)}
+                sx={{
+                  px: '16px', py: '6px', borderRadius: '7px', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', border: 'none',
+                  fontWeight: view === t.k ? 700 : 600,
+                  color: view === t.k ? 'primary.main' : 'text.secondary',
+                  bgcolor: view === t.k ? 'background.paper' : 'transparent',
+                  boxShadow: view === t.k ? '0 1px 2px rgba(0,0,0,.35)' : 'none',
+                  transition: 'all .12s',
+                }}
+              >
+                {t.l}
+              </Box>
+            ))}
+          </Box>
+
+          {/* 이전 · 오늘 · 다음 — 하나의 외곽선 버튼 그룹(바깥 모서리만 둥글게, 사이 얇은 구분선) */}
+          {(() => {
+            const navBtn = {
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '100%',
+              border: 'none', bgcolor: 'transparent', color: 'text.secondary', cursor: 'pointer', fontFamily: 'inherit',
+              transition: 'background .12s, color .12s',
+              '&:hover': { bgcolor: 'background.elevated', color: 'text.primary' },
+              '&:active': { bgcolor: 'action.selected' },
+              '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-2px' },
+            } as const
+            const sep = { width: '1px', flex: 'none', bgcolor: 'divider' } as const
+            return (
+              <Box role="group" aria-label="기간 이동" sx={{ display: 'inline-flex', alignItems: 'stretch', height: 34, border: '1px solid', borderColor: 'divider', borderRadius: '9px', overflow: 'hidden', bgcolor: 'background.paper' }}>
+                <Box component="button" aria-label="이전" onClick={() => shift(-1)} sx={{ ...navBtn, width: 32 }}><ChevronLeftIcon sx={{ fontSize: 20 }} /></Box>
+                <Box sx={sep} />
+                <Box component="button" onClick={goToday} sx={{ ...navBtn, px: '14px', fontSize: 13, fontWeight: 600 }}>오늘</Box>
+                <Box sx={sep} />
+                <Box component="button" aria-label="다음" onClick={() => shift(1)} sx={{ ...navBtn, width: 32 }}><ChevronRightIcon sx={{ fontSize: 20 }} /></Box>
+              </Box>
+            )
+          })()}
+
+          <Typography component="span" sx={{ ml: '2px', fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+            {periodLabel}
+          </Typography>
         </Box>
 
-        <Box sx={(th) => ({ width: '1px', height: 22, bgcolor: th.palette.divider })} />
-
-        <Box
-          component="button"
-          onClick={goToday}
-          sx={{
-            height: 34,
-            px: '16px',
-            borderRadius: '9px',
-            border: '1px solid',
-            borderColor: 'divider',
-            color: 'text.secondary',
-            fontSize: 13,
-            fontWeight: 600,
-            bgcolor: 'background.paper',
-            fontFamily: 'inherit',
-            cursor: 'pointer',
-            transition: 'background .12s',
-            '&:hover': { bgcolor: 'background.elevated' },
-          }}
-        >
-          오늘
+        {/* 검색 — 우측(주말 보기 왼쪽). 좁은 화면에서는 한 줄 전체로 내려감(order 3 + basis 100%) */}
+        <Box sx={{ position: 'relative', order: { xs: 3, sm: 2 }, ml: { sm: 'auto' }, flex: { xs: '1 1 100%', sm: '0 1 240px' }, maxWidth: { sm: 260 } }}>
+          <SearchIcon sx={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: 'text.disabled' }} />
+          <Box
+            component="input"
+            value={search}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+            placeholder="검색 (팀원·구분·내용)"
+            sx={(th) => ({
+              width: '100%', height: 34, border: `1px solid ${th.palette.divider}`, borderRadius: '9px',
+              p: '0 10px 0 30px', fontSize: 13, fontFamily: 'inherit', color: 'text.primary', bgcolor: 'background.paper', outline: 'none',
+              '&::placeholder': { color: th.palette.text.disabled },
+              '&:focus': { borderColor: th.palette.primary.main },
+            })}
+          />
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <IconButton aria-label="이전" onClick={() => shift(-1)} size="small" sx={{ color: 'text.secondary' }}>
-            <ChevronLeftIcon />
-          </IconButton>
-          <IconButton aria-label="다음" onClick={() => shift(1)} size="small" sx={{ color: 'text.secondary' }}>
-            <ChevronRightIcon />
-          </IconButton>
-        </Box>
-
-        <Typography component="span" sx={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>
-          {periodLabel}
-        </Typography>
-
+        {/* 주말 보기 — 검색 오른쪽 */}
         <Box
           component="button"
           onClick={() => setShowWeekends((s) => !s)}
           sx={{
-            ml: { md: 'auto' },
-            height: 34,
-            px: '14px',
-            borderRadius: '9px',
-            border: '1px solid',
+            order: { xs: 2, sm: 3 }, flex: '0 0 auto',
+            height: 34, px: '14px', borderRadius: '9px', border: '1px solid',
             borderColor: showWeekends ? 'primary.main' : 'divider',
             color: showWeekends ? 'primary.main' : 'text.secondary',
             bgcolor: showWeekends ? 'background.elevated' : 'background.paper',
-            fontSize: 13,
-            fontWeight: 600,
-            fontFamily: 'inherit',
-            cursor: 'pointer',
-            transition: 'all .12s',
+            fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .12s',
           }}
         >
           {showWeekends ? '주말 숨기기' : '주말 보기'}
         </Box>
       </Box>
 
-      {/* 상단 필터 바 (좌측 사이드바 대체) — 달력 풀폭 확보 */}
+      {/* 상단 필터 바 — 팀원·일정 종류만(검색은 상단 툴바로 이동) */}
       <CalFilterBar
-        search={search}
-        onSearch={setSearch}
         members={sidebarMembers}
         onToggleMember={toggleMember}
         cats={sidebarCats}
         onToggleCat={toggleCat}
       />
 
-      {/* 달력 (풀폭) — onMouseMove로 호버 상세가 포인터를 따라다님(고정 상태가 아닐 때만) */}
+      {/* 달력 (풀폭) — 컨테이너 위임: 포인터 위치의 .fc-event를 elementsFromPoint로 찾아
+          모든 멀티데이 segment(시작·중간·마지막, 텍스트 없는 빈 영역 포함)에서 호버·클릭 동작.
+          호버 상세는 포인터를 따라다니고(기존 동작 유지), 클릭은 그 자리에 고정. */}
       <Box sx={{ minWidth: 0 }}>
         <Box
           className="fc-theme-angels fc-team"
-          onMouseMove={(e) => {
-            if (lockedId.current) return
+          onPointerMove={(e) => {
+            if (lockedEl.current) return // 클릭 고정 중엔 호버로 안 바뀜
             const x = e.clientX
             const y = e.clientY
-            setPop((p) => (p && !p.locked ? { ...p, x, y } : p))
+            const el = findEvAt(x, y)
+            if (el) {
+              const detail = detailMap.current.get(el)
+              if (detail) setPop({ detail, x, y, locked: false })
+            } else {
+              setPop((p) => (p && !p.locked ? null : p)) // 일정 밖으로 나가면 호버 닫힘
+            }
+          }}
+          onPointerLeave={() => {
+            if (!lockedEl.current) setPop(null)
+          }}
+          onClick={(e) => {
+            const el = findEvAt(e.clientX, e.clientY)
+            if (!el) return // 빈 곳 클릭은 바깥-클릭 닫기 핸들러로
+            e.stopPropagation() // 바깥-클릭 닫기로 전파 방지(하나의 클릭 경로)
+            const detail = detailMap.current.get(el)
+            if (lockedEl.current === el) {
+              closePop() // 같은 segment 재클릭 = 닫기
+            } else if (detail) {
+              lockedEl.current = el
+              setPop({ detail, x: e.clientX, y: e.clientY, locked: true })
+            }
           }}
         >
           <FullCalendar
@@ -374,43 +404,13 @@ export default function Calendar() {
             events={fcEvents}
             eventDisplay="block"
             eventContent={renderEventContent}
-            // 각 렌더 segment의 .fc-event 전체(텍스트 없는 이어지는 구간 포함)를 hit area로 사용.
-            // eventMouseEnter/Click 프롭 대신 segment 엘리먼트에 직접 리스너를 붙여 모든 구간에서 동작.
+            // 각 segment(.fc-event) → 원본 상세 매핑만 등록. 실제 hit 판정은 컨테이너 위임이 담당.
             eventDidMount={(info) => {
-              const detail = info.event.extendedProps.detail as EventDetail
-              const onEnter = (e: MouseEvent) => {
-                if (lockedId.current) return // 클릭 고정 중엔 호버로 안 바뀜
-                setPop({ detail, x: e.clientX, y: e.clientY, locked: false })
-              }
-              const onLeave = () => {
-                if (!lockedId.current) setPop(null)
-              }
-              const onClick = (e: MouseEvent) => {
-                e.preventDefault()
-                e.stopPropagation() // 바깥-클릭 닫기 핸들러로 전파 방지
-                const id = info.event.id
-                if (lockedId.current === id) {
-                  closePop() // 같은 일정 재클릭 = 닫기
-                } else {
-                  lockedId.current = id
-                  setPop({ detail, x: e.clientX, y: e.clientY, locked: true })
-                }
-              }
-              info.el.addEventListener('mouseenter', onEnter)
-              info.el.addEventListener('mouseleave', onLeave)
-              info.el.addEventListener('click', onClick)
-              hitCleanup.current.set(info.el, () => {
-                info.el.removeEventListener('mouseenter', onEnter)
-                info.el.removeEventListener('mouseleave', onLeave)
-                info.el.removeEventListener('click', onClick)
-              })
+              detailMap.current.set(info.el, info.event.extendedProps.detail as EventDetail)
             }}
             eventWillUnmount={(info) => {
-              const fn = hitCleanup.current.get(info.el)
-              if (fn) {
-                fn()
-                hitCleanup.current.delete(info.el)
-              }
+              detailMap.current.delete(info.el)
+              if (lockedEl.current === info.el) closePop()
             }}
             dayMaxEvents={view === 'month' ? 3 : false}
             moreLinkContent={(arg) => `+${arg.num}건`}

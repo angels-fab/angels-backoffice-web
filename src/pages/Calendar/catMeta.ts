@@ -21,4 +21,5 @@ export const CAT_META: Record<RealCat, { label: string; status: StatusKind; colo
   etc: { label: '기타', status: 'neutral', color: '#7D8899' },
 }
 
-export const CAT_ORDER: RealCat[] = ['meeting', 'work', 'edu', 'recruit', 'trip_dom', 'trip_intl', 'leave', 'etc']
+// 채용(recruit)은 별도 필터 미노출 — [채용] 일정은 classify에서 기타로 통합됨. (CAT_META엔 타입 안전상 유지)
+export const CAT_ORDER: RealCat[] = ['meeting', 'work', 'edu', 'trip_dom', 'trip_intl', 'leave', 'etc']

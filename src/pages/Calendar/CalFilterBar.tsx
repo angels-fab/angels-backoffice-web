@@ -1,7 +1,5 @@
-import type { ChangeEvent } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
-import SearchIcon from '@mui/icons-material/Search'
 import GroupsIcon from '@mui/icons-material/Groups'
 import WorkIcon from '@mui/icons-material/Work'
 import SchoolIcon from '@mui/icons-material/School'
@@ -27,8 +25,6 @@ export interface FilterCat {
 }
 
 export interface CalFilterBarProps {
-  search: string
-  onSearch: (v: string) => void
   members: FilterMember[]
   onToggleMember: (id: string) => void
   cats: FilterCat[]
@@ -90,8 +86,8 @@ function MemberPill({ m, on, onToggle }: { m: TeamMember; on: boolean; onToggle:
   )
 }
 
-/** 달력 상단 가로 필터 바 — 팀원(아바타 토글) + 일정 종류(아이콘 칩) + 검색. 좌측 사이드바 대체. */
-export default function CalFilterBar({ search, onSearch, members, onToggleMember, cats, onToggleCat }: CalFilterBarProps) {
+/** 달력 상단 가로 필터 바 — 팀원(알약 토글) + 일정 종류(아이콘 칩). 검색은 상단 툴바로 이동. */
+export default function CalFilterBar({ members, onToggleMember, cats, onToggleCat }: CalFilterBarProps) {
   return (
     <Box
       className="cal-fb"
@@ -153,31 +149,6 @@ export default function CalFilterBar({ search, onSearch, members, onToggleMember
             )
           })}
         </Box>
-      </Box>
-
-      {/* 검색 */}
-      <Box className="cal-fb__search" sx={{ position: 'relative' }}>
-        <SearchIcon sx={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: 'text.disabled' }} />
-        <Box
-          component="input"
-          value={search}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onSearch(e.target.value)}
-          placeholder="검색 (팀원·구분·내용)"
-          sx={(t) => ({
-            width: '100%',
-            height: 32,
-            border: `1px solid ${t.palette.divider}`,
-            borderRadius: '8px',
-            p: '0 10px 0 28px',
-            fontSize: 12,
-            fontFamily: 'inherit',
-            color: 'text.primary',
-            bgcolor: 'background.default',
-            outline: 'none',
-            '&::placeholder': { color: t.palette.text.disabled },
-            '&:focus': { borderColor: t.palette.primary.main },
-          })}
-        />
       </Box>
     </Box>
   )

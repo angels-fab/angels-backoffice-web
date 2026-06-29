@@ -7,9 +7,8 @@ import type { CalEvent } from '@/types'
 function evCat(title: string): CalEvent['cat'] {
   if (/회의|미팅|보고|위원회/.test(title)) return 'meeting'
   if (/교육|세미나|워크숍|강의/.test(title)) return 'edu'
-  if (/채용|면접|공고/.test(title)) return 'recruit'
   if (/출장|실사|방문/.test(title)) return /국외|해외/.test(title) ? 'trip_intl' : 'trip_dom'
-  return 'etc'
+  return 'etc' // 채용 등은 기타로(별도 채용 분류 미노출)
 }
 
 // 개정 규칙: [업무구분]이 제목 맨 앞. 대괄호 태그 우선 분류, 없으면 위 키워드 폴백.
@@ -17,14 +16,13 @@ function classify(title: string): CalEvent['cat'] {
   const m = (title || '').match(/^\s*\[([^\]]+)\]/)
   if (!m) return evCat(title)
   const tag = m[1]
-  // 연차/반차/휴가는 제목 앞 구분 태그로만 분류(일반 제목 속 '연차' 단어로는 분류 안 함)
-  if (/연차|반차|휴가/.test(tag)) return 'leave'
+  // 연차/반차/휴가/사가는 제목 앞 구분 태그로만 분류(일반 제목 속 단어로는 분류 안 함)
+  if (/연차|반차|휴가|사가/.test(tag)) return 'leave'
   if (/회의|미팅|보고|위원회/.test(tag)) return 'meeting'
   if (/업무/.test(tag)) return 'work'
   if (/교육|세미나|워크숍|강의/.test(tag)) return 'edu'
-  if (/채용|면접|공고/.test(tag)) return 'recruit'
   if (/출장|실사|방문/.test(tag)) return /국외|해외/.test(title) ? 'trip_intl' : 'trip_dom'
-  return 'etc'
+  return 'etc' // [채용] 등은 기타로 통합(별도 채용 필터 제거)
 }
 
 const DAY = 24 * 3600 * 1000
