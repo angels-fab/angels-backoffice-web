@@ -32,6 +32,17 @@ const parseKey = (s: string) => {
 }
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n)
 const startOfWeek = (d: Date) => addDays(d, -d.getDay())
+// 현재 뷰에서 실제로 보이는 날짜 범위 [start, end) — datesSet가 FC 실제값으로 갱신하기 전 초기값/폴백.
+// 월간(dayGridMonth, firstDay=0, fixedWeekCount=false)=달이 걸친 주 전체(이전달 말·다음달 초 포함), 주간(timeGridWeek)=그 주.
+function gridRange(view: ViewKey, anchor: Date): { start: Date; end: Date } {
+  if (view === 'month') {
+    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+    const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)
+    return { start: startOfWeek(first), end: addDays(startOfWeek(last), 7) }
+  }
+  const start = startOfWeek(anchor)
+  return { start, end: addDays(start, 7) }
+}
 const catShort = (cat: RealCat) => CAT_META[cat].label.split('/')[0]
 function rgba(hex: string, a: number) {
   const h = hex.replace('#', '')
@@ -75,6 +86,8 @@ export default function Calendar() {
   const [selMembers, setSelMembers] = useState<string[]>([]) // 빈 배열 = 전체 선택
   const [selCats, setSelCats] = useState<RealCat[]>([]) // 빈 배열 = 전체 선택
   const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
+  // 화면에 실제로 보이는 날짜 범위(FC activeStart/activeEnd). 종류별 건수 집계에 사용. datesSet에서 실제값 주입.
+  const [visRange, setVisRange] = useState<{ start: Date; end: Date }>(() => gridRange('month', parseKey(todaySeoul())))
   const calRef = useRef<FullCalendar>(null)
 
   // 호버·클릭 상세 — 마우스 위치 기준. 호버(locked=false)는 포인터를 따라다니고, 클릭(locked=true)은 그 자리 고정.
@@ -153,15 +166,28 @@ export default function Calendar() {
   const toggleMember = (id: string) => setSelMembers((prev) => isolateToggle(prev, id, MEMBERS.length))
   const toggleCat = (id: RealCat) => setSelCats((prev) => isolateToggle(prev, id, CAT_ORDER.length))
 
-  // ── 사이드바 데이터 ──
+  // ── 종류별 건수 ──
+  // 현재 보이는 날짜 범위 ∩ (주말 보기) ∩ 팀원 필터 ∩ 검색어로 집계. 종류 필터는 적용하지 않음
+  // (각 종류 칩에 "선택 가능한 건수"를 계속 노출 — 종류를 골라도 다른 종류 숫자가 0이 되지 않게).
+  // allEvents는 날짜별로 펼쳐져 있어 같은 id가 여러 행 → 멀티데이는 id 기준 1회만 집계.
   const catCounts = useMemo(() => {
-    const byId = new Map<string, CalEvent>()
-    for (const ev of allEvents) if (!byId.has(ev.id)) byId.set(ev.id, ev)
     const counts: Record<string, number> = {}
     for (const c of CAT_ORDER) counts[c] = 0
-    for (const ev of byId.values()) counts[ev.cat]++
+    const seen = new Set<string>()
+    const { start, end } = visRange
+    for (const ev of allEvents) {
+      if (seen.has(ev.id)) continue
+      const d = parseKey(ev.date)
+      if (d < start || d >= end) continue // 화면에 보이는 범위 밖
+      if (!showWeekends && (d.getDay() === 0 || d.getDay() === 6)) continue // 주말 숨김 시 주말 전용일 제외
+      if (!membersForEvent(ev.title).some(memberSelected)) continue
+      if (!searchMatch(ev)) continue
+      seen.add(ev.id) // 보이는 평일 1칸이라도 통과하면 그 일정 1건 집계
+      counts[ev.cat] = (counts[ev.cat] || 0) + 1
+    }
     return counts
-  }, [allEvents])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allEvents, visRange, showWeekends, selMembers, searchTrim])
 
   const sidebarMembers = useMemo(
     () => MEMBERS.map((m) => ({ member: m, on: memberSelected(m.id) })),
@@ -358,10 +384,13 @@ export default function Calendar() {
         <Box
           className="fc-theme-angels fc-team"
           onPointerMove={(e) => {
-            if (lockedEl.current) return // 클릭 고정 중엔 호버로 안 바뀜
             const x = e.clientX
             const y = e.clientY
             const el = findEvAt(x, y)
+            // 손가락 포인터 — 일정 위(가려진 멀티데이 중간·마지막 구간 포함)에서만 pointer, 그 외엔 기본 커서.
+            // 가려진 구간은 위 칸의 day-events 컨테이너가 덮어 .fc-event의 cursor:pointer가 안 보이므로 컨테이너에 직접 지정.
+            e.currentTarget.style.cursor = el ? 'pointer' : ''
+            if (lockedEl.current) return // 클릭 고정 중엔 호버로 안 바뀜
             if (el) {
               const detail = detailMap.current.get(el)
               if (detail) setPop({ detail, x, y, locked: false })
@@ -404,6 +433,8 @@ export default function Calendar() {
             events={fcEvents}
             eventDisplay="block"
             eventContent={renderEventContent}
+            // 실제 보이는 날짜 범위(activeStart/activeEnd) → 종류별 건수 집계 기준. 이동·뷰전환 시 즉시 갱신.
+            datesSet={(arg) => setVisRange({ start: arg.start, end: arg.end })}
             // 각 segment(.fc-event) → 원본 상세 매핑만 등록. 실제 hit 판정은 컨테이너 위임이 담당.
             eventDidMount={(info) => {
               detailMap.current.set(info.el, info.event.extendedProps.detail as EventDetail)

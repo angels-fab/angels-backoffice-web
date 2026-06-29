@@ -61,7 +61,7 @@ function MemberPill({ m, on, onToggle }: { m: TeamMember; on: boolean; onToggle:
         }
       }}
       sx={{
-        height: 28,
+        height: 26,
         display: 'inline-flex',
         alignItems: 'center',
         px: '8px',
@@ -101,7 +101,7 @@ export default function CalFilterBar({ members, onToggleMember, cats, onToggleCa
     >
       {/* 팀원 */}
       <Box className="cal-fb__team">
-        <Box component="span" sx={LABEL}>팀원</Box>
+        <Box component="span" className="cal-fb__teamlbl" sx={LABEL}>팀원</Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
           {members.map(({ member, on }) => (
             <MemberPill key={member.id} m={member} on={on} onToggle={() => onToggleMember(member.id)} />

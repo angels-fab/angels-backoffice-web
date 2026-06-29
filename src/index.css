@@ -1059,18 +1059,11 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
   main{padding-bottom:84px}
 }
 
-/* === 업무일정 필터바 반응형 (CalFilterBar) — 바 자체 폭 기준(container query) ===
-   검색은 상단 툴바로 이동. 바는 팀원 · 종류칩만.
-   단계1: 팀원 · 종류칩 한 줄
-   단계2(<=1000px): 종류 그룹이 아랫줄로 + 칩 들여쓰기 줄바꿈 */
-.cal-fb{container-type:inline-size;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
-.cal-fb__team{display:flex;align-items:center;gap:8px;flex:0 0 auto;order:0}
-.cal-fb__cats{display:flex;align-items:center;gap:8px;order:1;flex:0 1 auto;min-width:0}
-.cal-fb__chips{display:flex;flex-wrap:nowrap;align-items:center;gap:6px;min-width:0}
-@container (max-width:1000px){
-  /* 종류 그룹 통째로 아랫줄 + 칩은 기타(마지막)부터 하나씩 들여쓰기 줄바꿈. (검색은 상단 툴바로 이동) */
-  .cal-fb__sep{display:none}
-  .cal-fb__cats{order:2;flex:1 1 100%;position:relative;padding-left:38px;align-items:flex-start}
-  .cal-fb__cats>.cal-fb__catlbl{position:absolute;left:0;top:5px;margin:0}
-  .cal-fb__chips{flex-wrap:wrap;row-gap:6px}
-}
+/* === 업무일정 필터바 (CalFilterBar) — 팀원/종류 2줄 고정 ===
+   검색은 상단 툴바로 이동. 두 줄을 항상 스택하고, 라벨을 좌측에 절대배치 + 동일 들여쓰기(padding-left)로
+   두 줄의 라벨 x좌표·첫 칩 시작 x좌표·간격을 일치시킨다. 칩이 넘치면 같은 들여쓰기로 줄바꿈(행잉 인덴트). */
+.cal-fb{container-type:inline-size;display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.cal-fb__team,.cal-fb__cats{display:flex;align-items:flex-start;gap:0;position:relative;padding-left:27px;min-width:0}
+.cal-fb__teamlbl,.cal-fb__catlbl{position:absolute;left:0;top:6px;margin:0}
+.cal-fb__chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.cal-fb__sep{display:none}
