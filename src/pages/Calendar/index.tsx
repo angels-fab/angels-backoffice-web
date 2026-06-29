@@ -17,9 +17,10 @@ import { loadCalEvents } from '@/store/slices/calSlice'
 import type { CalEvent } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { MEMBERS, memberById, membersForEvent, given, eventContent, eventParticipants } from './members'
+import { MEMBERS, memberById, membersForEvent, given, eventContent, eventParticipants, splitPlacePurpose } from './members'
 import CalFilterBar from './CalFilterBar'
 import ChipContent, { type ChipContentProps } from './ChipContent'
+import ChipTooltip, { type EventDetail } from './ChipTooltip'
 
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -42,9 +43,15 @@ function rgba(hex: string, a: number) {
 type ViewKey = 'month' | 'timeweek'
 
 function renderEventContent(arg: EventContentArg) {
-  // 주 시간표(timeGridWeek)의 종일 칸만 1줄 컴팩트. 월간·시간일정은 2줄로 높이 통일(겹침 방지).
-  const dense = arg.event.allDay && arg.view.type === 'timeGridWeek'
-  return <ChipContent {...(arg.event.extendedProps as unknown as ChipContentProps)} dense={dense} />
+  // 종일·멀티데이 포함 모든 칩이 한 줄 → 높이 균일(멀티데이 lane 정확히 쌓임).
+  const { detail, ...chip } = arg.event.extendedProps as unknown as ChipContentProps & { detail: EventDetail }
+  return (
+    <ChipTooltip detail={detail}>
+      <Box sx={{ display: 'flex', width: '100%', minWidth: 0 }}>
+        <ChipContent {...chip} />
+      </Box>
+    </ChipTooltip>
+  )
 }
 
 export default function Calendar() {
@@ -127,12 +134,24 @@ export default function Calendar() {
     return [...byId.values()].filter(eventActive).map((ev) => {
       const cat = ev.cat
       const catColor = CAT_META[cat].color
+      const time = ev.allDay ? '' : ev.start.slice(11, 16)
+      const content = eventContent(ev.title, cat) || catShort(cat)
       const props: ChipContentProps = {
         participants: eventParticipants(ev.title).map((n) => ({ initials: given(n), color: memberById(n).color })),
         catKey: cat,
         catColor,
-        time: ev.allDay ? '' : ev.start.slice(11, 16),
-        title: eventContent(ev.title, cat) || catShort(cat),
+        time,
+        title: content, // 칩은 "장소-목적"을 그대로 표시
+      }
+      // 호버 상세 — 목적=제목, 장소=세부정보로 분리
+      const { place, purpose } = splitPlacePurpose(content)
+      const detail: EventDetail = {
+        catLabel: CAT_META[cat].label,
+        catColor,
+        time,
+        purpose: purpose || content,
+        place,
+        members: eventParticipants(ev.title),
       }
       return {
         id: ev.id,
@@ -142,7 +161,7 @@ export default function Calendar() {
         allDay: ev.allDay,
         backgroundColor: rgba(catColor, 0.18),
         borderColor: catColor,
-        extendedProps: props,
+        extendedProps: { ...props, detail },
       }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps

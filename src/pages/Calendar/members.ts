@@ -83,6 +83,18 @@ export function eventContent(title: string, cat: string): string {
   return t || (title || '').trim()
 }
 
+/**
+ * 일정 내용(장소-목적)을 호버 상세용으로 분리. 첫 구분자 '-'(–—) 기준.
+ * 캘린더 칩은 "장소-목적"을 그대로 표시하고, 호버에서만 목적=제목·장소=세부정보로 나눈다.
+ * 출장은 eventContent에서 국내/국외·괄호가 정리된 "목적지-목적" 형태라 같은 규칙이 적용됨.
+ *  예) "중회의실-주간 업무 협의" → {place:'중회의실', purpose:'주간 업무 협의'}
+ */
+export function splitPlacePurpose(content: string): { place: string; purpose: string } {
+  const m = (content || '').match(/^(.+?)\s*[-–—]\s*(.+)$/)
+  if (m) return { place: m[1].trim(), purpose: m[2].trim() }
+  return { place: '', purpose: (content || '').trim() }
+}
+
 /** 참석자 목록 — 제목의 '@' 뒤 쉼표 구분(예 "@신현진, 박주봉" → ['신현진','박주봉']). */
 export function eventParticipants(title: string): string[] {
   const at = (title || '').indexOf('@')

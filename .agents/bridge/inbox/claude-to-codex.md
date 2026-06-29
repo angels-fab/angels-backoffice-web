@@ -1,6 +1,35 @@
 # Claude To Codex
 
-## Summary (최신: STEP27)
+## Summary (최신: 사이드 배지 + 캘린더 한 줄 칩)
+
+- **PC 사이드 메뉴 위첨자 배지 개편 + 업무일정(월간 캘린더) 일정 칩 한 줄 배열** 구현·라이브 검증 완료. 사용자 직접 지시(참고 시안 `public/calendar-one-line-demo.html`). **프런트 전용**(시트/Apps Script 무변경).
+- type-check 통과, 라이브 dev 검증(콘솔 에러 0).
+
+### What changed
+
+1. **사이드 배지(아이폰 알림 스타일)** — `src/layouts/SideNav.tsx` + `src/index.css`
+   - 새글=빨강(`--red`)·개선메모=노랑(`--amber`) **원형 위첨자 배지, 색+숫자만**(N 글자·아이콘 제거). 메뉴명 바로 뒤 우상단에 나란히. 높이 15px(14~16px). 0건 숨김·99초과 99+.
+   - 기존 행 우측 회색 pill(`.snav-badge`)·앰버 MUI 박스 배지 제거 → `.snav-labelwrap`+`.sup-badge.new/.memo`로 교체. 메모 Tooltip(개선 메모 N건)·관리자 전용 게이트 유지.
+2. **캘린더 일정 칩 한 줄** — `src/pages/Calendar/ChipContent.tsx` (2줄→1줄 재작성)
+   - 종일·멀티데이 포함 **항상 한 줄**: 구분아이콘 → 시간 → 장소-목적(말줄임) → 해당자 원형칩(20px, 겹침). `dense` prop 제거.
+   - 해당자는 우측 끝으로 안 밀림: 제목 `flex:0 1 auto`, 해당자 `flex:none`(margin-left:auto 미사용). 짧은 제목=바로 옆(간격 5px), 긴 제목=제목만 말줄임+해당자 항상 표시. 멀티데이 바도 동일(측정: 4일 span에서 해당자 제목 옆 5px, 우측 264px 여백).
+3. **호버 상세 분리** — 신규 `src/pages/Calendar/ChipTooltip.tsx` + `members.ts splitPlacePurpose()`
+   - 칩은 "장소-목적" 그대로, **호버 Tooltip에서만** 목적=제목(굵게)·장소=세부정보로 분리(+구분칩·시간·해당자). 월간(`index.tsx renderEventContent`)·주간(`WeekBoard.tsx`) 공통 적용. 국내/국외출장도 "목적지-목적" 동일 규칙.
+   - 기존 필터·분류색·클릭 동작 유지. 월간 뷰엔 기존에 호버 상세가 없어 신규 추가.
+
+### Verification (live dev, console 0 errors)
+
+- 사이드: 공지사항 [2빨강] / 업무일정 [6빨강][1노랑 나란히] / 업무현황 [6빨강]. 스타일 계산값 = new bg #E05B54·흰글씨, memo bg #D6A23E·짙은글씨, h15px·fs9.5px.
+- 캘린더: 전 칩 높이 20~25px(한 줄). 멀티데이 3건(여수·부산·제주) 한 줄+해당자 옆. 호버 "한양대-반도체소자 관련" → {국내출장 / 목적:반도체소자 관련 / 장소:한양대 / 해당자:신현진}.
+
+### 자문 요청 (사용자용 — 요약·추천만)
+
+- **모바일**: 이번 작업은 PC 사이드바·월간 캘린더 한정. 모바일 하단탭 배지(`bnav-badge`)는 그대로 둠 — 동일 스타일 적용할지 사용자 의견.
+- (별건) Events 행사 상세 팝업 낮은 화면 잘림 수정 커밋 `7c90f09`은 구 Dialog 구조 기반이라 현재 인카드 구조에선 무의미(폐기됨).
+
+---
+
+## (이전) Summary (STEP27)
 
 - **STEP27 — 새 업무 인라인 폼 개편 + 완료 다이얼로그 Remind 체크박스** 구현·라이브 검증 완료. 사용자 직접 지시(9개 항목). **프런트 전용**: 시트 스키마/Apps Script 무변경(@42 유지).
 - type-check 통과, production build 통과(기존 chunk-size 경고만), 라이브 dev에서 9개 항목 모두 동작 확인(콘솔 에러 0).

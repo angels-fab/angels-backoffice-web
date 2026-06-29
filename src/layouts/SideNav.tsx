@@ -1,7 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import Box from '@mui/material/Box'
 import Tooltip from '@mui/material/Tooltip'
-import { alpha } from '@mui/material/styles'
 import HomeIcon from '@mui/icons-material/Home'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
@@ -88,36 +86,23 @@ export default function SideNav() {
               onClick={() => navigate(item.path)}
             >
               {item.icon}
-              <span className="snav-text">{item.label}</span>
-              {item.badge !== undefined && item.badge > 0 && (
-                <span className="snav-badge">{item.badge > 99 ? '99+' : item.badge}</span>
-              )}
-              {/* 개선 메모 건수 — 별도 앰버 배지(기존 배지와 공존), 관리자에게만 */}
-              {isAdmin && (memoCounts[item.path] || 0) > 0 && (
-                <Tooltip title={`개선 메모 ${memoCounts[item.path]}건`} placement="top" arrow>
-                  <Box
-                    component="span"
-                    aria-label={`개선 메모 ${memoCounts[item.path]}건`}
-                    sx={(th) => ({
-                      flexShrink: 0,
-                      display: 'inline-grid',
-                      placeItems: 'center',
-                      minWidth: 18,
-                      height: 18,
-                      px: '5px',
-                      borderRadius: 999,
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      lineHeight: 1,
-                      color: th.palette.getContrastText(th.palette.accent.amber),
-                      bgcolor: th.palette.accent.amber,
-                      boxShadow: `0 0 0 3px ${alpha(th.palette.accent.amber, 0.16)}`,
-                    })}
-                  >
-                    {memoCounts[item.path]}
-                  </Box>
-                </Tooltip>
-              )}
+              {/* 메뉴명 + 위첨자 배지(새글=빨강 / 개선메모=노랑, 숫자만). 0건은 숨김·99초과는 99+ */}
+              <span className="snav-labelwrap">
+                <span className="snav-text">{item.label}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="sup-badge new" aria-label={`새 항목 ${item.badge}건`}>
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </span>
+                )}
+                {/* 개선 메모 건수 — 관리자에게만 */}
+                {isAdmin && (memoCounts[item.path] || 0) > 0 && (
+                  <Tooltip title={`개선 메모 ${memoCounts[item.path]}건`} placement="top" arrow>
+                    <span className="sup-badge memo" aria-label={`개선 메모 ${memoCounts[item.path]}건`}>
+                      {memoCounts[item.path] > 99 ? '99+' : memoCounts[item.path]}
+                    </span>
+                  </Tooltip>
+                )}
+              </span>
             </button>
           ))}
         </div>

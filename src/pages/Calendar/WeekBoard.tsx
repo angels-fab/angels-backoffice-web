@@ -3,8 +3,9 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import type { CalEvent } from '@/types'
 import { CAT_META } from './catMeta'
-import { given, memberById, membersForEvent, eventContent, eventParticipants, type TeamMember } from './members'
+import { given, memberById, membersForEvent, eventContent, eventParticipants, splitPlacePurpose, type TeamMember } from './members'
 import ChipContent from './ChipContent'
+import ChipTooltip, { type EventDetail } from './ChipTooltip'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -30,28 +31,40 @@ function dowColor(dow: number): string {
 
 function Chip({ ev }: { ev: CalEvent }) {
   const color = CAT_META[ev.cat].color
+  const time = ev.allDay ? '' : ev.start.slice(11, 16)
+  const content = eventContent(ev.title, ev.cat) || ev.title
+  const { place, purpose } = splitPlacePurpose(content)
+  const detail: EventDetail = {
+    catLabel: CAT_META[ev.cat].label,
+    catColor: color,
+    time,
+    purpose: purpose || content,
+    place,
+    members: eventParticipants(ev.title),
+  }
   return (
-    <Box
-      title={ev.title}
-      sx={{
-        p: '2px 7px 2px 8px',
-        borderRadius: '6px',
-        borderLeft: `3px solid ${color}`,
-        bgcolor: alpha(color, 0.18),
-        fontSize: 12,
-        color: 'text.primary',
-        lineHeight: 1.5,
-        minWidth: 0,
-      }}
-    >
-      <ChipContent
-        participants={eventParticipants(ev.title).map((n) => ({ initials: given(n), color: memberById(n).color }))}
-        catKey={ev.cat}
-        catColor={color}
-        time={ev.allDay ? '' : ev.start.slice(11, 16)}
-        title={eventContent(ev.title, ev.cat) || ev.title}
-      />
-    </Box>
+    <ChipTooltip detail={detail}>
+      <Box
+        sx={{
+          p: '2px 7px 2px 8px',
+          borderRadius: '6px',
+          borderLeft: `3px solid ${color}`,
+          bgcolor: alpha(color, 0.18),
+          fontSize: 12,
+          color: 'text.primary',
+          lineHeight: 1.5,
+          minWidth: 0,
+        }}
+      >
+        <ChipContent
+          participants={eventParticipants(ev.title).map((n) => ({ initials: given(n), color: memberById(n).color }))}
+          catKey={ev.cat}
+          catColor={color}
+          time={time}
+          title={content}
+        />
+      </Box>
+    </ChipTooltip>
   )
 }
 

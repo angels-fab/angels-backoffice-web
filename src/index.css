@@ -876,9 +876,13 @@ body.eq-wide main{max-width:98vw}
 .snav-item svg{font-size:18px;flex-shrink:0}
 .snav-item:hover{background:var(--ink2);color:var(--text)}
 .snav-item.active{background:rgba(88,166,255,.12);color:var(--blue);font-weight:700}
-.snav-text{flex:1;white-space:nowrap}
-.snav-badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--ink3);color:var(--text2);font-size:10.5px;font-weight:700;line-height:18px;text-align:center;box-sizing:border-box}
-.snav-item.active .snav-badge{background:var(--blue);color:#fff}
+/* 메뉴명 + 위첨자 배지 묶음 — 배지를 메뉴명 바로 뒤 우상단에 붙임(우측 끝으로 밀지 않음) */
+.snav-labelwrap{flex:1;min-width:0;display:inline-flex;align-items:flex-start;gap:4px;white-space:nowrap}
+.snav-text{min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* 아이폰 알림 배지 스타일 — 색+숫자만, 작고 선명하게(약 15px) */
+.sup-badge{flex:none;height:15px;min-width:15px;padding:0 4px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;transform:translateY(-3px);font-size:9.5px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;box-sizing:border-box}
+.sup-badge.new{background:var(--red);color:#fff}
+.sup-badge.memo{background:var(--amber);color:#1c1303}
 .topbar-bell{margin-left:auto;background:none;border:none;color:var(--text2);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;flex-shrink:0;transition:color .15s,background .15s}
 .topbar-bell:hover{color:var(--text);background:var(--ink2)}
 .topbar-brand{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
