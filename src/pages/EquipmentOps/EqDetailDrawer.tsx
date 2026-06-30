@@ -16,6 +16,7 @@ import { AppDrawer, StatusChip } from '@/components/ds'
 import { updateEquipment, fetchEqHistory, type EqHistoryItem } from '@/api/sheets'
 import type { EqGroup, EqStateKey } from '@/types'
 import { EQ_STATE, eqStateKey } from './eqMeta'
+import { codeRange, missingLabels } from '@/pages/Equipment/batchUtil'
 
 // 수정 가능 필드(11) — 읽기 전용: 관리번호/장비명/장비종류/도입금액/재원
 type FieldKey = 'mgr' | 'maker' | 'model' | 'assetNo' | 'nfec' | 'installLoc' | 'installDate' | 'vendor' | 'mgr2' | 'contact' | 'note'
@@ -31,12 +32,14 @@ const blankForm = (): Record<FieldKey, string> =>
 // 상태 변경 선택지 (STEP23: 선택 → 확인 Dialog에서 사유 입력 후 적용, 사유는 운영이력에 함께 기록)
 const STATE_ORDER = ['도입예정', '도입중', '운영중', '비가동'] as const
 
-function MetaRow({ label, value }: { label: string; value?: string }) {
+function MetaRow({ label, value, warn }: { label: string; value?: string; warn?: boolean }) {
   const v = (value ?? '').trim()
+  // 필수 등록정보 미등록은 황색 강조(warn), 그 외 빈값은 회색
+  const emptyColor = warn ? 'warning.main' : 'text.disabled'
   return (
     <Box sx={{ display: 'flex', gap: 1.5 }}>
       <Typography variant="body2" sx={{ width: 76, flexShrink: 0, color: 'text.disabled' }}>{label}</Typography>
-      <Typography variant="body2" sx={{ flex: 1, minWidth: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: v ? 'text.primary' : 'text.disabled' }}>{v || '미등록'}</Typography>
+      <Typography variant="body2" sx={{ flex: 1, minWidth: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: v ? 'text.primary' : emptyColor }}>{v || '미등록'}</Typography>
     </Box>
   )
 }
@@ -185,10 +188,11 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
     }
   }
 
+  const REG = new Set<FieldKey>(['maker', 'model', 'installLoc', 'nfec']) // 필수 등록정보 — 미등록 시 황색
   const fieldRow = (g: EqGroup, key: FieldKey) =>
     editing
       ? <EditRow key={key} label={LABELS[key]} value={form[key]} onChange={set(key)} multiline={key === 'note'} />
-      : <MetaRow key={key} label={LABELS[key]} value={String(g[key] ?? '')} />
+      : <MetaRow key={key} label={LABELS[key]} value={String(g[key] ?? '')} warn={REG.has(key)} />
 
   return (
     <>
@@ -196,7 +200,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
         open={!!group}
         onClose={onClose}
         title={group?.name ?? ''}
-        subtitle={group ? `${group.cat || '장비'}${group.count > 1 ? ` · ${group.count}대` : ''}` : ''}
+        subtitle={group ? `${group.count}대 · ${codeRange(group)} · ${group.cat || '장비'} · ${group.type || '-'}` : ''}
         width={520}
         footer={
           group && isAdmin ? (
@@ -225,9 +229,24 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
               <Typography variant="caption" sx={{ ml: 'auto', color: 'text.disabled', fontFamily: 'monospace', wordBreak: 'break-all' }}>{codes || '관리번호 미등록'}</Typography>
             </Box>
 
+            {/* 등록정보 상태 안내 — 누락=황색 / 완료=녹색 */}
+            {(() => {
+              const miss = missingLabels(group)
+              const ok = miss.length === 0
+              return (
+                <Box sx={{ p: 1.5, borderRadius: 2, border: 1, borderColor: ok ? 'success.main' : 'warning.main', bgcolor: (t) => (ok ? t.palette.success.main : t.palette.warning.main) + '1f' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, color: ok ? 'success.main' : 'warning.main', mb: ok ? 0 : 0.25 }}>
+                    {ok ? '등록정보 확인 완료' : `확인 필요 · 필수정보 ${miss.length}개 누락`}
+                  </Typography>
+                  {!ok && <Typography variant="caption" sx={{ color: 'text.secondary' }}>{miss.join(' · ')}</Typography>}
+                </Box>
+              )
+            })()}
+
             <Section title="기본 정보">
               {fieldRow(group, 'mgr')}
               <MetaRow label="장비종류" value={group.type} />
+              {group.variantNames.length > 0 && <MetaRow label="세부 구성" value={group.variantNames.join(', ')} />}
               {fieldRow(group, 'maker')}
               {fieldRow(group, 'model')}
               {fieldRow(group, 'assetNo')}

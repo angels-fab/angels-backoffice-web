@@ -94,7 +94,11 @@ export interface EqRawItem {
   timeline: string[]
 }
 
-/** 장비명 기준 그룹 (목록 표시 단위) */
+/**
+ * 도입배치 그룹 (목록·타임라인 표시 단위).
+ * 묶음 기준 = 정규화 장비명(baseName) + 도입일정(시작·단계) + 담당자 + 내/외자가 모두 동일.
+ * 같은 장비명이라도 일정이 다르면 별도 배치(행)로 분리된다.
+ */
 export interface EqGroup {
   name: string
   cat: string
@@ -122,6 +126,14 @@ export interface EqGroup {
   variants: EqRawItem[]
   hasVariant: boolean
   timeline: string[]
+  /** 대표 관리번호(=codes[0]) — 운영이력·딥링크·상세 기준 */
+  repCode: string
+  /** 대표 도입일정 시작 yyyy-MM-dd (배치 내 공통) — 정렬·예정월·드래그 기준 */
+  start: string
+  /** 대표 단계별 소요기간(개월) — 배치 내 공통 (리사이즈·상세 단계바) */
+  stages: Record<string, string>
+  /** 배치 내 세부 변형명(괄호 안). 예: ['Acid','Hood']. 없으면 빈 배열 */
+  variantNames: string[]
 }
 
 /** '장비도입관리' 시트 1행 = 도입 프로젝트 1건 (CRUD 표시 단위, 헤더명 기반) */

@@ -3,22 +3,12 @@ import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
+import Button from '@mui/material/Button'
 import MonitorIcon from '@mui/icons-material/Monitor'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
-import {
-  PageContainer,
-  PageHeader,
-  ContentSection,
-  AppCard,
-  CardGrid,
-  FilterBar,
-  SearchBar,
-  StatusChip,
-  StatTile,
-  EmptyState,
-} from '@/components/ds'
+import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -27,68 +17,35 @@ import type { EqGroup, EqStateKey } from '@/types'
 import { EQ_STATE, eqStateKey } from './eqMeta'
 import EqDetailDrawer from './EqDetailDrawer'
 import EquipmentTabs from '@/pages/Equipment/EquipmentTabs'
+import { QtyBadge, codeRange, missingLabels } from '@/pages/Equipment/batchUtil'
 
-const k = (v: number) => Math.round(v / 1000).toLocaleString()
-
-/** 장비 카드(전체 목록). 장비명·담당자·종류·도입금액·관리번호 Compact. */
-function EqCard({ g, onPick }: { g: EqGroup; onPick: (g: EqGroup) => void }) {
-  const meta = EQ_STATE[eqStateKey(g.state)]
-  const code = g.codes.filter(Boolean)[0]
-  const codeLabel = code ? `${code}${g.count > 1 ? ` 외 ${g.count - 1}` : ''}` : ''
-  return (
-    <AppCard interactive onClick={() => onPick(g)} padding={16}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          <StatusChip status={meta.status} label={meta.label} />
-          {g.cat && <StatusChip status="neutral" label={g.cat} />}
-        </Box>
-        <Typography variant="subtitle1" sx={{ lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-          {g.name}
-        </Typography>
-        <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 0.25, pt: 0.5 }}>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {g.mgr || '담당 미지정'}{g.type ? ` · ${g.type}` : ''}
-          </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
-            <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 700 }}>
-              {g.price ? `${k(g.price)} 천원` : '금액 미정'}
-            </Typography>
-            {codeLabel && <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{codeLabel}</Typography>}
-          </Box>
-        </Box>
-      </Box>
-    </AppCard>
-  )
-}
-
-const STATE_TABS: ('전체' | EqStateKey)[] = ['전체', '운영중', '도입중', '도입예정', '비가동']
+const STATE_ORDER: EqStateKey[] = ['운영중', '도입중', '도입예정', '비가동', '미분류']
 
 export default function EquipmentOps() {
   const dispatch = useAppDispatch()
   const { raw, groups, loading, error, updatedAt } = useAppSelector((s) => s.eq)
   const c = useAppSelector(selectEqCounts)
   const [searchParams, setSearchParams] = useSearchParams()
-  const [stateTab, setStateTab] = useState<'전체' | EqStateKey>('전체')
-  const [cat, setCat] = useState('전체')
+  const [stateF, setStateF] = useState('전체')
+  const [catF, setCatF] = useState('전체')
+  const [mgrF, setMgrF] = useState('전체')
   const [query, setQuery] = useState('')
+  const [missingOnly, setMissingOnly] = useState(false)
   const [picked, setPicked] = useState<EqGroup | null>(null)
   const { isAdmin, user, authKey } = useRole()
   const [snack, setSnack] = useState<{ open: boolean; msg: string; severity: 'success' | 'error' }>({ open: false, msg: '', severity: 'success' })
   const showSnack = (msg: string, severity: 'success' | 'error' = 'success') => setSnack({ open: true, msg, severity })
 
-  // STEP20 저장 성공 → 재fetch 후 picked를 새 그룹으로 갱신(Drawer 즉시 반영)
   const handleSaved = async (name: string) => {
     const payload = await dispatch(loadEqData()).unwrap().catch(() => null)
-    if (payload && Array.isArray(payload.groups)) {
-      setPicked(payload.groups.find((g) => g.name === name) ?? null)
-    }
+    if (payload && Array.isArray(payload.groups)) setPicked(payload.groups.find((g) => g.name === name) ?? null)
   }
 
-  // 통합검색 딥링크(/equipment-ops?focus=<장비명>) → 해당 장비 상세 Drawer 자동 오픈
+  // 딥링크(/equipment-ops?focus=<장비명|관리번호>)
   useEffect(() => {
     const focus = searchParams.get('focus')
     if (!focus || !groups.length) return
-    const g = groups.find((x) => x.name === focus)
+    const g = groups.find((x) => x.name === focus || x.codes.includes(focus))
     if (g) setPicked(g)
     const next = new URLSearchParams(searchParams)
     next.delete('focus')
@@ -96,69 +53,50 @@ export default function EquipmentOps() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, groups])
 
-  // 예산 (천원)
-  const budget = useMemo(() => {
-    const won = raw.reduce((s, e) => s + (e.price || 0), 0)
-    const local = raw.filter((e) => (e.fund || '').includes('지방비')).reduce((s, e) => s + (e.price || 0), 0)
-    const nat = raw.filter((e) => (e.fund || '').includes('국비')).reduce((s, e) => s + (e.price || 0), 0)
-    return { won, local, nat }
+  // ── 요약: 분류·담당자 breakdown / 상태 / 필수정보 누락 ──
+  const overview = useMemo(() => {
+    const catUnits: Record<string, number> = {}
+    const mgrs = new Set<string>()
+    let missUnits = 0
+    const missTypes = new Set<string>()
+    const baseOf = (n: string) => { const m = String(n || '').trim().match(/^([^(]+)\s*\(/); return m ? m[1].trim() : String(n || '').trim() }
+    raw.forEach((e) => {
+      if (e.cat) catUnits[e.cat] = (catUnits[e.cat] || 0) + 1
+      if (e.mgr) mgrs.add(e.mgr)
+      if (missingLabels(e).length) { missUnits++; if (e.name) missTypes.add(baseOf(e.name)) }
+    })
+    return { catUnits, mgrCount: mgrs.size, missUnits, missTypes: missTypes.size }
   }, [raw])
 
-  // 카테고리별 현황 (raw 단위 집계 + 예산)
-  const categories = useMemo(() => {
-    const map = new Map<string, { cat: string; total: number; op: number; install: number; plan: number; down: number; budget: number }>()
-    for (const e of raw) {
-      const name = e.cat || '기타'
-      const m = map.get(name) ?? { cat: name, total: 0, op: 0, install: 0, plan: 0, down: 0, budget: 0 }
-      m.total++
-      m.budget += e.price || 0
-      const key = eqStateKey(e.state)
-      if (key === '운영중') m.op++
-      else if (key === '도입중') m.install++
-      else if (key === '도입예정') m.plan++
-      else if (key === '비가동') m.down++
-      // '미분류'는 어느 칩에도 합산하지 않음(데이터 오류 → 시트에서 정정)
-      map.set(name, m)
-    }
-    return [...map.values()].sort((a, b) => b.total - a.total)
-  }, [raw])
+  const dominant = useMemo(() => {
+    let best: EqStateKey = '도입예정', bestN = -1
+    STATE_ORDER.forEach((s) => { if (c.units[s] > bestN) { bestN = c.units[s]; best = s } })
+    return best
+  }, [c])
 
-  // 담당자별 장비 현황 (raw 단위)
-  const managers = useMemo(() => {
-    const map = new Map<string, { mgr: string; total: number; op: number; install: number; plan: number; down: number }>()
-    for (const e of raw) {
-      const name = e.mgr || '미지정'
-      const m = map.get(name) ?? { mgr: name, total: 0, op: 0, install: 0, plan: 0, down: 0 }
-      m.total++
-      const key = eqStateKey(e.state)
-      if (key === '운영중') m.op++
-      else if (key === '도입중') m.install++
-      else if (key === '도입예정') m.plan++
-      else if (key === '비가동') m.down++
-      // '미분류'는 어느 칩에도 합산하지 않음(데이터 오류 → 시트에서 정정)
-      map.set(name, m)
-    }
-    return [...map.values()].sort((a, b) => b.total - a.total)
-  }, [raw])
+  // ── 필터 ──
+  const catOpts = useMemo(() => ['전체', ...[...new Set(groups.map((g) => g.cat).filter(Boolean))]], [groups])
+  const mgrOpts = useMemo(() => ['전체', ...[...new Set(groups.map((g) => g.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [groups])
+  const stateOpts = useMemo(() => ['전체', ...STATE_ORDER.filter((s) => groups.some((g) => eqStateKey(g.state) === s))], [groups])
 
-  // 전체 목록 필터
-  const presentCats = useMemo(() => ['전체', ...[...new Set(groups.map((g) => g.cat).filter(Boolean))]], [groups])
   const listed = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return groups
-      .filter((g) => stateTab === '전체' || eqStateKey(g.state) === stateTab)
-      .filter((g) => cat === '전체' || g.cat === cat)
-      .filter((g) => !q || `${g.name} ${g.codes.join(' ')} ${g.mgr} ${g.maker} ${g.model}`.toLowerCase().includes(q))
-  }, [groups, stateTab, cat, query])
-
-  const tabCount = (s: '전체' | EqStateKey) => (s === '전체' ? c.total : c.units[s])
+    return groups.filter((g) => {
+      if (stateF !== '전체' && eqStateKey(g.state) !== stateF) return false
+      if (catF !== '전체' && g.cat !== catF) return false
+      if (mgrF !== '전체' && (g.mgr || '') !== mgrF) return false
+      if (missingOnly && missingLabels(g).length === 0) return false
+      if (q && !`${g.name} ${g.codes.join(' ')} ${g.mgr} ${g.maker} ${g.model} ${g.variantNames.join(' ')}`.toLowerCase().includes(q)) return false
+      return true
+    })
+  }, [groups, stateF, catF, mgrF, missingOnly, query])
 
   return (
     <PageContainer>
       <PageHeader
         icon={<MonitorIcon />}
         title="장비 관리"
-        subtitle="장비 총괄 현황 — 전체 자산·상태·담당"
+        subtitle="장비 총괄 — 자산정보·운영상태·이력"
         updatedAt={error ? '연결 실패' : updatedAt || undefined}
         actions={
           <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
@@ -167,110 +105,109 @@ export default function EquipmentOps() {
         }
       />
 
-      {/* 장비관리 상단 탭 (장비도입 / 장비운영) */}
       <EquipmentTabs />
 
-      {/* ① KPI — 총 장비 / 상태별 (대수 + 종 보조) */}
-      <ContentSection>
-        <CardGrid columns={5}>
-          <StatTile value={c.total} unit="대" label="총 장비" status="info" sub={`${c.types}종`} />
-          <StatTile value={c.units['운영중']} unit="대" label="운영중" status="success" sub={`${c.typesBy['운영중']}종`} />
-          <StatTile value={c.units['도입중']} unit="대" label="도입중" status="teal" sub={`${c.typesBy['도입중']}종`} />
-          <StatTile value={c.units['도입예정']} unit="대" label="도입예정" status="info" sub={`${c.typesBy['도입예정']}종`} />
-          <StatTile value={c.units['비가동']} unit="대" label="비가동" status="error" sub={`${c.typesBy['비가동']}종`} />
-        </CardGrid>
-      </ContentSection>
+      {/* 요약 3카드 */}
+      <Box className="eq-strip" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1.4fr 1fr 1fr' }, gap: 1, mb: 2 }}>
+        <AppCard padding={16}>
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 1 }}>전체 장비</Typography>
+          <Typography sx={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{c.total}<Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 600, ml: 0.5 }}>대 · {c.types}종</Box></Typography>
+          <Box sx={{ display: 'flex', gap: 1.5, mt: 1.25, flexWrap: 'wrap', color: 'text.disabled', fontSize: 11 }}>
+            {Object.entries(overview.catUnits).map(([cat, n]) => (
+              <span key={cat}>{cat} <Box component="span" sx={{ color: 'text.secondary', fontWeight: 700 }}>{n}</Box></span>
+            ))}
+            <span>담당자 <Box component="span" sx={{ color: 'text.secondary', fontWeight: 700 }}>{overview.mgrCount}명</Box></span>
+          </Box>
+        </AppCard>
 
-      {/* ② 카테고리 현황 */}
-      <ContentSection title="카테고리 현황" description="분류별 장비 수 · 도입예산 · 상태">
-        <CardGrid minColWidth={220}>
-          {categories.map((m) => (
-            <AppCard key={m.cat} padding={16}>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 1 }}>
-                <Typography variant="subtitle1">{m.cat}</Typography>
-                <Typography variant="body2"><Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>{m.total}</Box>대</Typography>
-              </Box>
-              <Typography variant="caption" sx={{ display: 'block', mt: 0.25, color: 'text.secondary' }}>
-                도입예산 <Box component="span" sx={{ color: 'text.primary', fontWeight: 700 }}>{k(m.budget)}</Box> 천원
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1 }}>
-                {m.op > 0 && <StatusChip status="success" label={`운영 ${m.op}`} />}
-                {m.install > 0 && <StatusChip status="teal" label={`설치 ${m.install}`} />}
-                {m.plan > 0 && <StatusChip status="info" label={`예정 ${m.plan}`} />}
-                {m.down > 0 && <StatusChip status="error" label={`비가동 ${m.down}`} />}
-              </Box>
-            </AppCard>
-          ))}
-        </CardGrid>
-      </ContentSection>
+        <AppCard padding={16}>
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 1 }}>운영 상태</Typography>
+          <Typography sx={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{c.units[dominant]}<Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 600, ml: 0.5 }}>대 {EQ_STATE[dominant].label}</Box></Typography>
+          <Box sx={{ display: 'flex', gap: 1.5, mt: 1.25, flexWrap: 'wrap', color: 'text.disabled', fontSize: 11 }}>
+            {STATE_ORDER.filter((s) => s !== dominant && c.units[s] > 0).map((s) => (
+              <span key={s}>{EQ_STATE[s].label} <Box component="span" sx={{ color: 'text.secondary', fontWeight: 700 }}>{c.units[s]}</Box></span>
+            ))}
+          </Box>
+        </AppCard>
 
-      {/* ③ 담당자별 장비 현황 */}
-      <ContentSection title="담당자별 장비 현황">
-        <CardGrid minColWidth={200}>
-          {managers.map((m) => (
-            <AppCard key={m.mgr} padding={16}>
-              <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 1 }}>
-                <Typography variant="subtitle1">{m.mgr}</Typography>
-                <Typography variant="body2"><Box component="span" sx={{ color: 'text.primary', fontWeight: 800 }}>{m.total}</Box>대</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 1 }}>
-                {m.op > 0 && <StatusChip status="success" label={`운영 ${m.op}`} />}
-                {m.install > 0 && <StatusChip status="teal" label={`설치 ${m.install}`} />}
-                {m.plan > 0 && <StatusChip status="info" label={`예정 ${m.plan}`} />}
-                {m.down > 0 && <StatusChip status="error" label={`비가동 ${m.down}`} />}
-              </Box>
-            </AppCard>
-          ))}
-        </CardGrid>
-      </ContentSection>
+        <AppCard padding={16} sx={{ borderColor: overview.missTypes ? 'warning.main' : undefined }}>
+          <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 1 }}>필수정보 누락</Typography>
+          <Typography sx={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: overview.missTypes ? 'warning.main' : 'text.primary' }}>
+            {overview.missTypes}<Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 600, ml: 0.5 }}>종 · {overview.missUnits}대</Box>
+          </Typography>
+          <Typography sx={{ mt: 1.25, fontSize: 11, color: 'warning.main' }}>제조사·모델명·설치장소·NFEC 확인 필요</Typography>
+        </AppCard>
+      </Box>
 
-      {/* ④ 예산 현황 (compact) */}
-      <ContentSection title="예산 현황" description="단위: 천원">
-        <CardGrid columns={3}>
-          <AppCard padding={16}>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>총 도입예산</Typography>
-            <Typography variant="h3" sx={{ fontWeight: 800, mt: 0.5 }}>{k(budget.won)}</Typography>
-          </AppCard>
-          <AppCard padding={16}>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>지방비 예산</Typography>
-            <Typography variant="h3" sx={{ fontWeight: 800, mt: 0.5 }}>{k(budget.local)}</Typography>
-          </AppCard>
-          <AppCard padding={16}>
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>국비 예산 <Box component="span" sx={{ color: 'text.disabled' }}>(예상)</Box></Typography>
-            <Typography variant="h3" sx={{ fontWeight: 800, mt: 0.5 }}>{k(budget.nat)}</Typography>
-          </AppCard>
-        </CardGrid>
-      </ContentSection>
-
-      {/* ⑤ 전체 장비 목록 */}
-      <ContentSection title="전체 장비 목록" count={listed.length} last>
-        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
-          {STATE_TABS.map((s) => (
-            <StatusChip
-              key={s}
-              status={s === '전체' ? 'neutral' : EQ_STATE[s].status}
-              label={`${s === '전체' ? '전체' : EQ_STATE[s].label} ${tabCount(s)}`}
-              selected={stateTab === s}
-              onClick={() => setStateTab(s)}
-            />
-          ))}
+      {/* 장비대장 */}
+      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper', overflow: 'hidden' }}>
+        <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>장비대장 <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 500 }}>전체 {c.types}종 · {c.total}대</Box></Typography>
+          <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            <select className="eq-select" value={stateF} onChange={(e) => setStateF(e.target.value)} aria-label="운영상태">
+              {stateOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 상태' : EQ_STATE[o as EqStateKey]?.label || o}</option>)}
+            </select>
+            <select className="eq-select" value={catF} onChange={(e) => setCatF(e.target.value)} aria-label="분류">
+              {catOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 분류' : o}</option>)}
+            </select>
+            <select className="eq-select" value={mgrF} onChange={(e) => setMgrF(e.target.value)} aria-label="담당자">
+              {mgrOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 담당자' : o}</option>)}
+            </select>
+            <Box component="input" className="eq-search" value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} placeholder="장비명·관리번호·제조사 검색" aria-label="운영장비 검색" />
+            <Button size="small" variant={missingOnly ? 'contained' : 'outlined'} onClick={() => setMissingOnly((m) => !m)} sx={{ flexShrink: 0, py: 0.4, fontSize: 12.5, color: missingOnly ? undefined : 'text.secondary', borderColor: 'divider' }}>
+              누락정보만
+            </Button>
+          </Box>
         </Box>
-        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호·담당자 검색" />}>
-          {presentCats.map((cName) => (
-            <StatusChip key={cName} status="neutral" label={cName} selected={cat === cName} onClick={() => setCat(cName)} />
-          ))}
-        </FilterBar>
 
         {listed.length === 0 ? (
-          <AppCard padding={0}><EmptyState size="sm" title="해당 장비가 없습니다" /></AppCard>
+          <EmptyState size="sm" title="조건에 맞는 장비가 없습니다" />
         ) : (
-          <CardGrid minColWidth={260}>
-            {listed.map((g) => (
-              <EqCard key={g.name} g={g} onPick={setPicked} />
-            ))}
-          </CardGrid>
+          <Box sx={{ overflowX: 'auto' }}>
+            <Box component="table" className="eq-ledger" sx={{ width: '100%', minWidth: 1000 }}>
+              <Box component="thead">
+                <Box component="tr">
+                  {['관리번호', '장비명', '수량', '분류', '담당자', '운영상태', '설치장소', '누락정보', '최근 이력'].map((h) => (
+                    <Box component="th" key={h}>{h}</Box>
+                  ))}
+                </Box>
+              </Box>
+              <Box component="tbody">
+                {listed.map((g, idx) => {
+                  const meta = EQ_STATE[eqStateKey(g.state)]
+                  const miss = missingLabels(g)
+                  return (
+                    <Box component="tr" key={g.repCode || g.name + idx} onClick={() => setPicked(g)} sx={{ cursor: 'pointer' }}>
+                      <Box component="td" className="lg-code">{codeRange(g)}</Box>
+                      <Box component="td" className="lg-primary">
+                        {g.name}{g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400 }}> · {g.variantNames.join('/')}</Box> : null}
+                      </Box>
+                      <Box component="td"><QtyBadge n={g.count} /></Box>
+                      <Box component="td">{g.cat || '-'}</Box>
+                      <Box component="td">{g.mgr || '-'}</Box>
+                      <Box component="td"><StatusChip status={meta.status} label={meta.label} /></Box>
+                      <Box component="td" sx={{ color: g.installLoc ? 'text.secondary' : 'warning.main' }}>{g.installLoc || '미등록'}</Box>
+                      <Box component="td">
+                        {miss.length === 0 ? (
+                          <Box component="span" sx={{ color: 'text.disabled' }}>없음</Box>
+                        ) : (
+                          <Box className="lg-miss">
+                            {miss.slice(0, 2).map((m) => (
+                              <Box component="span" key={m} className="lg-chip" sx={{ color: 'warning.main', borderColor: (t) => t.palette.warning.main + '66' }}>{m}</Box>
+                            ))}
+                            {miss.length > 2 && <Box component="span" sx={{ color: 'text.disabled', fontSize: 11 }}>+{miss.length - 2}</Box>}
+                          </Box>
+                        )}
+                      </Box>
+                      <Box component="td" sx={{ color: 'text.disabled' }}>-</Box>
+                    </Box>
+                  )
+                })}
+              </Box>
+            </Box>
+          </Box>
         )}
-      </ContentSection>
+      </Box>
 
       <EqDetailDrawer
         group={picked}
@@ -282,15 +219,8 @@ export default function EquipmentOps() {
         showSnack={showSnack}
       />
 
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={3000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>
-          {snack.msg}
-        </Alert>
+      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
       </Snackbar>
     </PageContainer>
   )

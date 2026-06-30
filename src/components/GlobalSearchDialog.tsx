@@ -98,40 +98,47 @@ export default function GlobalSearchDialog({ open, onClose }: GlobalSearchDialog
         }
       })
 
-    // ③ 장비도입관리 — 장비명·담당자·도입방법·진행단계
-    const eqProjHits: Hit[] = groups
+    // ③ 장비도입관리 — 장비명·담당자·도입방법·진행단계.
+    // 같은 장비명(여러 도입배치)은 검색결과 1건(종 기준)으로 합침 — 대수 합산, key 중복 방지. 딥링크는 장비명으로(해당 페이지서 첫 배치 포커스).
+    const projByName = new Map<string, { g: (typeof groups)[number]; info: ReturnType<typeof groupStage>; total: number }>()
+    groups
       .map((g) => ({ g, info: groupStage(g.timeline, months, todayHalf) }))
-      .filter(({ g, info }) => {
-        const chip = phaseChip(info)
-        return match(`${g.name} ${g.mgr} ${g.bid} ${g.type} ${chip.label}`)
+      .filter(({ g, info }) => match(`${g.name} ${g.mgr} ${g.bid} ${g.type} ${phaseChip(info).label}`))
+      .forEach(({ g, info }) => {
+        const cur = projByName.get(g.name)
+        if (cur) cur.total += g.count
+        else projByName.set(g.name, { g, info, total: g.count })
       })
-      .map(({ g, info }) => {
-        const chip = phaseChip(info)
-        return {
-          id: `eqproj-${g.name}`,
-          title: g.count > 1 ? `${g.name} (${g.count}대)` : g.name,
-          subtitle: [g.mgr || '담당 미지정', g.bid || g.type].filter(Boolean).join(' · '),
-          status: { label: chip.label, kind: chip.status },
-          to: `/equipment?focus=${encodeURIComponent(g.name)}`,
-        }
-      })
+    const eqProjHits: Hit[] = [...projByName.values()].map(({ g, info, total }) => {
+      const chip = phaseChip(info)
+      return {
+        id: `eqproj-${g.name}`,
+        title: total > 1 ? `${g.name} (${total}대)` : g.name,
+        subtitle: [g.mgr || '담당 미지정', g.bid || g.type].filter(Boolean).join(' · '),
+        status: { label: chip.label, kind: chip.status },
+        to: `/equipment?focus=${encodeURIComponent(g.name)}`,
+      }
+    })
 
-    // ④ 장비운영관리 — 장비명·분류·담당자·상태
-    const eqOpsHits: Hit[] = groups
-      .filter((g) => {
-        const st = EQ_STATE[eqStateKey(g.state)].label
-        return match(`${g.name} ${g.cat} ${g.mgr} ${st}`)
+    // ④ 장비운영관리 — 장비명·분류·담당자·상태. 동일 장비명 1건 합산(종 기준).
+    const opsByName = new Map<string, { g: (typeof groups)[number]; total: number }>()
+    groups
+      .filter((g) => match(`${g.name} ${g.cat} ${g.mgr} ${EQ_STATE[eqStateKey(g.state)].label}`))
+      .forEach((g) => {
+        const cur = opsByName.get(g.name)
+        if (cur) cur.total += g.count
+        else opsByName.set(g.name, { g, total: g.count })
       })
-      .map((g) => {
-        const st = EQ_STATE[eqStateKey(g.state)]
-        return {
-          id: `eqops-${g.name}`,
-          title: g.count > 1 ? `${g.name} (${g.count}대)` : g.name,
-          subtitle: [g.mgr || '담당 미지정', g.cat].filter(Boolean).join(' · '),
-          status: { label: st.label, kind: st.status },
-          to: `/equipment-ops?focus=${encodeURIComponent(g.name)}`,
-        }
-      })
+    const eqOpsHits: Hit[] = [...opsByName.values()].map(({ g, total }) => {
+      const st = EQ_STATE[eqStateKey(g.state)]
+      return {
+        id: `eqops-${g.name}`,
+        title: total > 1 ? `${g.name} (${total}대)` : g.name,
+        subtitle: [g.mgr || '담당 미지정', g.cat].filter(Boolean).join(' · '),
+        status: { label: st.label, kind: st.status },
+        to: `/equipment-ops?focus=${encodeURIComponent(g.name)}`,
+      }
+    })
 
     return [
       { key: 'notice', label: '공지사항', icon: <CampaignIcon fontSize="small" />, ...take(noticeHits) },

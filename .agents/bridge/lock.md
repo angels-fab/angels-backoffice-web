@@ -2,14 +2,8 @@
 
 status: free
 current_worker: none
-task: (직전: 캘린더 손가락포인터 전구간 / 종류건수=visible range+팀원+검색(종류제외) / 라벨·첫칩 간격 동일 / 팀원칩 26px — 완료·커밋·자동배포)
+task: (직전: 장비관리 UX 개편 v2 — 도입배치 그룹핑·도입(타임라인/단계별/목록)·운영 장비대장·드로어 배치인식·모바일 — 완료·커밋·배포)
 started_at: -
-
-## Do Not Edit While Locked
-
-- src/store/slices/calSlice.ts (사가·채용 분류)
-- src/pages/Calendar/* (hit area·상단 조작부·필터박스)
-- src/index.css (fc-event hit area·toolbar)
 
 ## Notes
 
