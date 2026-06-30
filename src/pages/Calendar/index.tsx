@@ -429,6 +429,8 @@ export default function Calendar() {
             slotDuration="01:00:00"
             slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
             eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+            // 같은 시간대 겹치는 일정은 좌우로 균등 분할(겹치지 않게). 기본 true는 50% 겹침이라 false로.
+            slotEventOverlap={false}
             allDaySlot
             events={fcEvents}
             eventDisplay="block"

@@ -17,9 +17,30 @@ import type { EqGroup, EqStateKey } from '@/types'
 import { EQ_STATE, eqStateKey } from './eqMeta'
 import EqDetailDrawer from './EqDetailDrawer'
 import EquipmentTabs from '@/pages/Equipment/EquipmentTabs'
-import { QtyBadge, codeRange, missingLabels } from '@/pages/Equipment/batchUtil'
+import { NameWithQty, codeRange, missingLabels, isRegRequired } from '@/pages/Equipment/batchUtil'
+import { useTableSort, sortRows, SortTh } from '@/pages/Equipment/sortable'
 
 const STATE_ORDER: EqStateKey[] = ['운영중', '도입중', '도입예정', '비가동', '미분류']
+
+// 장비대장 정렬 열 — 관리번호·장비명·분류·담당자·운영상태·설치장소·누락정보·최근이력
+type OpsCol = 'code' | 'name' | 'cat' | 'mgr' | 'state' | 'installLoc' | 'missing' | 'recent'
+const OPS_COLS: { key: OpsCol; label: string }[] = [
+  { key: 'code', label: '관리번호' }, { key: 'name', label: '장비명' }, { key: 'cat', label: '분류' },
+  { key: 'mgr', label: '담당자' }, { key: 'state', label: '운영상태' }, { key: 'installLoc', label: '설치장소' },
+  { key: 'missing', label: '누락정보' }, { key: 'recent', label: '최근 이력' },
+]
+const opsAccessor = (g: EqGroup, c: OpsCol): string | number | null => {
+  switch (c) {
+    case 'code': return g.codes[0] || null
+    case 'name': return g.name
+    case 'cat': return g.cat || null
+    case 'mgr': return g.mgr || null
+    case 'state': return EQ_STATE[eqStateKey(g.state)].label
+    case 'installLoc': return g.installLoc || null
+    case 'missing': return missingLabels(g).length
+    case 'recent': return null
+  }
+}
 
 export default function EquipmentOps() {
   const dispatch = useAppDispatch()
@@ -90,6 +111,10 @@ export default function EquipmentOps() {
       return true
     })
   }, [groups, stateF, catF, mgrF, missingOnly, query])
+
+  // 헤더 정렬(검색·필터 적용된 결과 위에서 수행)
+  const sort = useTableSort<OpsCol>()
+  const sorted = useMemo(() => sortRows(listed, sort.col, sort.dir, opsAccessor), [listed, sort.col, sort.dir])
 
   return (
     <PageContainer>
@@ -164,32 +189,35 @@ export default function EquipmentOps() {
           <EmptyState size="sm" title="조건에 맞는 장비가 없습니다" />
         ) : (
           <Box sx={{ overflowX: 'auto' }}>
-            <Box component="table" className="eq-ledger" sx={{ width: '100%', minWidth: 1000 }}>
+            <Box component="table" className="eq-ledger" sx={{ width: '100%', minWidth: 880 }}>
               <Box component="thead">
                 <Box component="tr">
-                  {['관리번호', '장비명', '수량', '분류', '담당자', '운영상태', '설치장소', '누락정보', '최근 이력'].map((h) => (
-                    <Box component="th" key={h}>{h}</Box>
+                  {OPS_COLS.map((col) => (
+                    <SortTh key={col.key} label={col.label} colKey={col.key} active={sort.col === col.key} dir={sort.dir} onSort={(c) => sort.onSort(c as OpsCol)} />
                   ))}
                 </Box>
               </Box>
               <Box component="tbody">
-                {listed.map((g, idx) => {
+                {sorted.map((g, idx) => {
                   const meta = EQ_STATE[eqStateKey(g.state)]
                   const miss = missingLabels(g)
+                  const req = isRegRequired(g.state)
                   return (
                     <Box component="tr" key={g.repCode || g.name + idx} onClick={() => setPicked(g)} sx={{ cursor: 'pointer' }}>
                       <Box component="td" className="lg-code">{codeRange(g)}</Box>
                       <Box component="td" className="lg-primary">
-                        {g.name}{g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400 }}> · {g.variantNames.join('/')}</Box> : null}
+                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
+                          <NameWithQty name={g.name} count={g.count} fontSize={11.5} />
+                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400, fontSize: 11, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
+                        </Box>
                       </Box>
-                      <Box component="td"><QtyBadge n={g.count} /></Box>
                       <Box component="td">{g.cat || '-'}</Box>
                       <Box component="td">{g.mgr || '-'}</Box>
                       <Box component="td"><StatusChip status={meta.status} label={meta.label} /></Box>
-                      <Box component="td" sx={{ color: g.installLoc ? 'text.secondary' : 'warning.main' }}>{g.installLoc || '미등록'}</Box>
+                      <Box component="td" sx={{ color: g.installLoc ? 'text.secondary' : req ? 'warning.main' : 'text.disabled' }}>{g.installLoc || '미등록'}</Box>
                       <Box component="td">
                         {miss.length === 0 ? (
-                          <Box component="span" sx={{ color: 'text.disabled' }}>없음</Box>
+                          <Box component="span" sx={{ color: 'text.disabled' }}>{req ? '없음' : '—'}</Box>
                         ) : (
                           <Box className="lg-miss">
                             {miss.slice(0, 2).map((m) => (

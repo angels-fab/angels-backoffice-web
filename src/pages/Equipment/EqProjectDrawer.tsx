@@ -6,7 +6,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { AppDrawer, StatusChip } from '@/components/ds'
 import type { EqGroup } from '@/types'
 import { STAGE, STAGE_ORDER, phaseChip, type StageInfo } from './stageMeta'
-import { codeRange } from './batchUtil'
+import { codeRange, isRegRequired } from './batchUtil'
 
 function MetaRow({ label, value, missing }: { label: string; value: string; missing?: boolean }) {
   return (
@@ -42,6 +42,8 @@ export default function EqProjectDrawer({ group, info, onClose, isAdmin, onEdit,
     const now = new Date()
     return +m[1] * 12 + +m[2] < now.getFullYear() * 12 + now.getMonth() + 1
   })()
+  // 도입예정 등은 등록정보가 아직 미요구 — 누락/황색 표기 안 함(장비운영 누락규칙과 동일)
+  const regRequired = isRegRequired(group?.state)
   const reg: { label: string; value: string }[] = group
     ? [
         { label: '제조사', value: group.maker },
@@ -50,7 +52,7 @@ export default function EqProjectDrawer({ group, info, onClose, isAdmin, onEdit,
         { label: 'NFEC', value: group.nfec },
       ]
     : []
-  const missingCount = reg.filter((r) => !r.value).length
+  const missingCount = regRequired ? reg.filter((r) => !r.value).length : 0
 
   return (
     <AppDrawer
@@ -118,14 +120,14 @@ export default function EqProjectDrawer({ group, info, onClose, isAdmin, onEdit,
             <MetaRow label="도입방법" value={group.bid} />
           </Box>
 
-          {/* 등록 정보 (미등록=황색) */}
+          {/* 등록 정보 — 필수 상태(도입중·운영중·비가동)에서만 미등록=황색/누락 표기. 도입예정은 일반 표기. */}
           <Box>
             <Typography variant="subtitle2" sx={{ mb: 0.75 }}>
               등록 정보{missingCount > 0 ? ` · 누락 ${missingCount}` : ''}
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {reg.map((r) => (
-                <MetaRow key={r.label} label={r.label} value={r.value || MISSING} missing={!r.value} />
+                <MetaRow key={r.label} label={r.label} value={r.value || MISSING} missing={regRequired && !r.value} />
               ))}
             </Box>
           </Box>

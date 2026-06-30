@@ -16,7 +16,7 @@ import { AppDrawer, StatusChip } from '@/components/ds'
 import { updateEquipment, fetchEqHistory, type EqHistoryItem } from '@/api/sheets'
 import type { EqGroup, EqStateKey } from '@/types'
 import { EQ_STATE, eqStateKey } from './eqMeta'
-import { codeRange, missingLabels } from '@/pages/Equipment/batchUtil'
+import { codeRange, missingLabels, isRegRequired } from '@/pages/Equipment/batchUtil'
 
 // 수정 가능 필드(11) — 읽기 전용: 관리번호/장비명/장비종류/도입금액/재원
 type FieldKey = 'mgr' | 'maker' | 'model' | 'assetNo' | 'nfec' | 'installLoc' | 'installDate' | 'vendor' | 'mgr2' | 'contact' | 'note'
@@ -188,11 +188,12 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
     }
   }
 
-  const REG = new Set<FieldKey>(['maker', 'model', 'installLoc', 'nfec']) // 필수 등록정보 — 미등록 시 황색
+  const REG = new Set<FieldKey>(['maker', 'model', 'installLoc', 'nfec']) // 필수 등록정보
+  const regRequired = group ? isRegRequired(group.state) : false // 도입예정은 미요구 → 황색 강조/누락 집계 제외
   const fieldRow = (g: EqGroup, key: FieldKey) =>
     editing
       ? <EditRow key={key} label={LABELS[key]} value={form[key]} onChange={set(key)} multiline={key === 'note'} />
-      : <MetaRow key={key} label={LABELS[key]} value={String(g[key] ?? '')} warn={REG.has(key)} />
+      : <MetaRow key={key} label={LABELS[key]} value={String(g[key] ?? '')} warn={REG.has(key) && regRequired} />
 
   return (
     <>
@@ -229,8 +230,16 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
               <Typography variant="caption" sx={{ ml: 'auto', color: 'text.disabled', fontFamily: 'monospace', wordBreak: 'break-all' }}>{codes || '관리번호 미등록'}</Typography>
             </Box>
 
-            {/* 등록정보 상태 안내 — 누락=황색 / 완료=녹색 */}
+            {/* 등록정보 상태 안내 — 도입예정=중립(미요구) / 누락=황색 / 완료=녹색 */}
             {(() => {
+              if (!regRequired) {
+                return (
+                  <Box sx={{ p: 1.5, borderRadius: 2, border: 1, borderColor: 'divider', bgcolor: 'background.elevated' }}>
+                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary', mb: 0.25 }}>도입예정 단계</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>제조사·모델명·설치장소·NFEC 등은 도입 진행 시 등록합니다.</Typography>
+                  </Box>
+                )
+              }
               const miss = missingLabels(group)
               const ok = miss.length === 0
               return (

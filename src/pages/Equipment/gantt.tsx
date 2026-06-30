@@ -2,7 +2,6 @@
 import type { MouseEvent as ReactMouseEvent } from 'react'
 import type { TlMonth } from '@/types'
 import { STAGE, STAGE_ORDER } from './stageMeta'
-import { MONTH_WIDTH } from './timeline'
 
 export const TL_VISIBLE_MONTHS = 36 // 표시 최대 월 수 — 실제 구간은 시트에 일정이 있는 범위를 따라감 (eqSlice에서 앞뒤 빈 달 제거)
 
@@ -10,10 +9,10 @@ export const TL_VISIBLE_MONTHS = 36 // 표시 최대 월 수 — 실제 구간�
 export const TL_STAGE_COLOR: Record<string, string> = Object.fromEntries(STAGE_ORDER.map((c) => [c, STAGE[c].color]))
 export const TL_STAGE_NAME: Record<string, string> = Object.fromEntries(STAGE_ORDER.map((c) => [c, STAGE[c].label]))
 
-// 모든 월을 동일한 고정 px(MONTH_WIDTH)로 — 축 전체 균일. 단일 상수(timeline.ts) 참조.
+// 모든 월을 동일 비율(1fr)로 — 콘텐츠 폭에 맞춰 균등 배분(가로 스크롤 없이 전체 표시).
 function ganttGridTemplate(months: TlMonth[]): string {
   const n = Math.min(months.length, TL_VISIBLE_MONTHS)
-  return `repeat(${n}, ${MONTH_WIDTH}px)`
+  return `repeat(${n}, minmax(0, 1fr))`
 }
 
 // 월 헤더 바 (연도행 + 월행 2단 구조)
@@ -33,7 +32,7 @@ export function GanttHeader({ months: allMonths }: { months: TlMonth[] }) {
     <div className="gantt-head-wrap">
       <div
         className="gantt-yearrow"
-        style={{ gridTemplateColumns: yearGroups.map(g => g.count * MONTH_WIDTH + 'px').join(' ') }}
+        style={{ gridTemplateColumns: yearGroups.map(g => g.count + 'fr').join(' ') }}
       >
         {yearGroups.map((g, i) => (
           <div key={i} className="gantt-ycell">

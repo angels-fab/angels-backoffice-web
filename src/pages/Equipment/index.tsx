@@ -27,19 +27,49 @@ import { useRole } from '@/auth/role'
 import type { EqGroup, ScheduleItem } from '@/types'
 import { STAGE, STAGE_ORDER, groupStage, phaseChip, todayHalfIndex, type StageCode, type StageInfo } from './stageMeta'
 import { GanttHeader, GanttBar } from './gantt'
-import { calcHalfDelta, shiftStart, fmtStartMonth, MONTH_WIDTH, HALF_MONTH_WIDTH } from './timeline'
+import { calcHalfDelta, shiftStart, fmtStartMonth } from './timeline'
 import DragTip from './DragTip'
 import type { DragTipData } from './DragTip'
 import EqProjectDrawer from './EqProjectDrawer'
 import ScheduleWrite from './ScheduleWrite'
 import EquipmentTabs from './EquipmentTabs'
-import { QtyBadge, codeRange } from './batchUtil'
+import { NameWithQty, codeRange } from './batchUtil'
+import { useTableSort, sortRows, SortTh } from './sortable'
 
-const GANTT_NAME_W = 220
+const GANTT_NAME_W = 150 // 장비명 열(축소) — 나머지는 간트가 가변폭으로 채움(가로 스크롤 없음)
+// 가변폭 간트에서 반월 1칸의 실제 픽셀폭 = 간트영역 폭 / (월수*2). 드래그/리사이즈 스냅 기준.
+const measureHalfPx = (el: Element | null, monthCount: number): number => {
+  const w = el?.getBoundingClientRect().width || 0
+  return monthCount > 0 && w > 0 ? w / (monthCount * 2) : 28
+}
 const k = (v: number) => Math.round(v / 1000).toLocaleString()
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
 type IntroView = 'timeline' | 'stage' | 'list'
 type Batch = { g: EqGroup; info: StageInfo }
+
+// 'YYYY.M'(dueMonth) → 정렬용 정수(연*12+월). 비어있으면 null
+const dueToNum = (due: string): number | null => {
+  const m = (due || '').match(/^(\d{4})\.(\d{1,2})/)
+  return m ? +m[1] * 12 + +m[2] : null
+}
+// 도입 목록 정렬 열(수량 열 제거) — 관리번호·장비명·담당자·구분·현재단계·다음일정·총도입금액
+type ProjCol = 'code' | 'name' | 'mgr' | 'type' | 'stage' | 'due' | 'price'
+const PROJ_COLS: { key: ProjCol; label: string; right?: boolean }[] = [
+  { key: 'code', label: '관리번호' }, { key: 'name', label: '장비명' }, { key: 'mgr', label: '담당자' },
+  { key: 'type', label: '구분' }, { key: 'stage', label: '현재 단계' }, { key: 'due', label: '다음 일정' },
+  { key: 'price', label: '총 도입금액', right: true },
+]
+const projAccessor = (b: Batch, c: ProjCol): string | number | null => {
+  switch (c) {
+    case 'code': return b.g.codes[0] || null
+    case 'name': return b.g.name
+    case 'mgr': return b.g.mgr || null
+    case 'type': return b.g.type || null
+    case 'stage': return phaseChip(b.info).label
+    case 'due': return dueToNum(b.info.dueMonth)
+    case 'price': return b.g.price || 0
+  }
+}
 
 // 드래그 종료 후 확인 모달용 (적용 전까지 Redux/시트 미반영). codes=배치 내 전체 관리번호.
 type PendingChange = {
@@ -150,6 +180,10 @@ export default function Equipment() {
     })
   }, [enriched, fltStage, fltMgr, fltType, query])
 
+  // 목록형 헤더 정렬(검색·필터 적용된 filtered 위에서 수행)
+  const listSort = useTableSort<ProjCol>()
+  const sortedList = useMemo(() => sortRows(filtered, listSort.col, listSort.dir, projAccessor), [filtered, listSort.col, listSort.dir])
+
   // ── CRUD ──
   const showSnack = (msg: string, severity: 'success' | 'error' = 'success') => setSnack({ open: true, msg, severity })
 
@@ -196,9 +230,6 @@ export default function Equipment() {
     )
   }
 
-  // 간트 가로 스크롤 컨테이너
-  const scrollRef = useRef<HTMLDivElement>(null)
-
   // ── 드래그(전체 이동) ── 배치 내 모든 code에 동일 delta
   const dragRef = useRef<{ codes: string[]; repStart: string; startX: number; halfPx: number } | null>(null)
   const lastDeltaRef = useRef(0)
@@ -214,7 +245,7 @@ export default function Equipment() {
 
   const startDrag = (e: ReactMouseEvent, g: EqGroup) => {
     if (!canEdit || !g.codes.length || pending || histBusy) return
-    dragRef.current = { codes: g.codes, repStart: g.start, startX: e.clientX, halfPx: HALF_MONTH_WIDTH }
+    dragRef.current = { codes: g.codes, repStart: g.start, startX: e.clientX, halfPx: measureHalfPx(e.currentTarget, months.length) }
     lastDeltaRef.current = 0
     draggedRef.current = false
     setPreview({ rep: g.repCode, px: 0 })
@@ -261,18 +292,7 @@ export default function Equipment() {
     }
   }, [dragging, schedule])
 
-  // 마우스 휠 → 가로 스크롤
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const onWheel = (e: WheelEvent) => {
-      if (el.scrollWidth <= el.clientWidth || !e.deltaY) return
-      el.scrollLeft += e.deltaY
-      e.preventDefault()
-    }
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
-  }, [view])
+  // (간트는 콘텐츠 폭에 맞춰 가변폭 — 가로 스크롤 없음. 휠→가로스크롤 변환 제거: 상하 스크롤이 좌우로 새지 않음)
 
   // ── 리사이즈(단계 길이) ── 배치 내 모든 code에 동일 적용
   const resizeRef = useRef<{ codes: string[]; stage: string; startX: number; halfPx: number; baseHalves: number } | null>(null)
@@ -285,7 +305,7 @@ export default function Equipment() {
     const label = STAGE[stageCode as StageCode]?.label
     if (!label) return
     const baseHalves = Math.max(1, Math.round(Number(g.stages?.[label] || 0) * 2))
-    resizeRef.current = { codes: g.codes, stage: label, startX: e.clientX, halfPx: HALF_MONTH_WIDTH, baseHalves }
+    resizeRef.current = { codes: g.codes, stage: label, startX: e.clientX, halfPx: measureHalfPx(e.currentTarget.closest('.gantt-wrap'), months.length), baseHalves }
     lastResizeHalvesRef.current = baseHalves
     draggedRef.current = false
     setResizePrev({ rep: g.repCode, tl: g.timeline })
@@ -459,8 +479,8 @@ export default function Equipment() {
     return cols
   }, [filtered])
 
-  // 오늘 세로선 위치(px) — months 축 범위 안일 때만
-  const todayLeft = todayHalf >= 0 && todayHalf <= months.length * 2 ? todayHalf * HALF_MONTH_WIDTH : -1
+  // 오늘 세로선 위치(간트영역 내 비율 0~1) — months 축 범위 안일 때만(가변폭이라 px 대신 비율)
+  const todayFrac = todayHalf >= 0 && todayHalf <= months.length * 2 ? todayHalf / (months.length * 2) : -1
 
   const openEdit = (g: EqGroup) => {
     const rep = schedule.find((s) => s.code === g.repCode) ?? schedule.find((s) => g.codes.includes(s.code)) ?? null
@@ -549,69 +569,52 @@ export default function Equipment() {
         {filtered.length === 0 ? (
           <EmptyState size="sm" title="조건에 맞는 도입 장비가 없습니다" />
         ) : view === 'timeline' ? (
-          /* ── 타임라인 ── */
-          <Box ref={scrollRef} sx={{ overflowX: 'auto' }}>
-            <Box sx={{ minWidth: GANTT_NAME_W + Math.max(months.length, 8) * MONTH_WIDTH, position: 'relative' }}>
-              {/* 헤더 */}
-              <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                <Box className="eq-tl-namehead" sx={{ width: GANTT_NAME_W, flexShrink: 0, px: 1.5, py: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRight: 1, borderColor: 'divider' }}>
-                  <Typography sx={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled' }}>장비 · 단계 · 담당자</Typography>
-                  {todayLeft >= 0 && (
-                    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 9, fontWeight: 600, color: 'primary.main' }}>
-                      <Box sx={{ width: 2, height: 12, borderRadius: 1, bgcolor: 'primary.main' }} /> 오늘
-                    </Box>
-                  )}
+          /* ── 타임라인 (가변폭·가로 스크롤 없음·고밀도) ── */
+          <Box sx={{ position: 'relative', overflow: 'hidden' }}>
+            {/* 헤더 */}
+            <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
+              <Box sx={{ width: GANTT_NAME_W, flexShrink: 0, px: 1.25, py: 0.75, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5, borderRight: 1, borderColor: 'divider' }}>
+                <Typography sx={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.02em', color: 'text.disabled', whiteSpace: 'nowrap' }}>장비</Typography>
+                {todayFrac >= 0 && (
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, fontSize: 9, fontWeight: 600, color: 'primary.main' }}>
+                    <Box sx={{ width: 2, height: 11, borderRadius: 1, bgcolor: 'primary.main' }} /> 오늘
+                  </Box>
+                )}
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <GanttHeader months={months} />
+              </Box>
+            </Box>
+            {/* 오늘 세로선 (간트영역 비율 위치 — 가변폭 calc) */}
+            {todayFrac >= 0 && (
+              <Box sx={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${GANTT_NAME_W}px + ${todayFrac} * (100% - ${GANTT_NAME_W}px))`, width: '1px', bgcolor: 'primary.main', opacity: 0.6, pointerEvents: 'none', zIndex: 2 }} />
+            )}
+            {/* 행 — 장비명(+2대 이상 수량)만, 보조정보는 상세 드로어로 이관(고밀도) */}
+            {filtered.map(({ g, info }, idx) => (
+              <Box
+                key={g.repCode || idx}
+                role="button" tabIndex={0}
+                aria-label={`도입배치: ${g.name}${g.count > 1 ? ` ${g.count}대` : ''}`}
+                onClick={() => { if (draggedRef.current) { draggedRef.current = false; return } setPicked({ g, info }) }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicked({ g, info }) } }}
+                sx={{ display: 'flex', alignItems: 'center', minHeight: 32, cursor: 'pointer', borderTop: 1, borderColor: 'divider', '&:hover': { bgcolor: 'background.elevated' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 } }}
+              >
+                <Box sx={{ width: GANTT_NAME_W, flexShrink: 0, minWidth: 0, px: 1.25, py: 0.5, borderRight: 1, borderColor: 'divider' }}>
+                  <NameWithQty name={g.name} count={g.count} fontSize={12} />
                 </Box>
-                <Box sx={{ width: months.length * MONTH_WIDTH, flexShrink: 0 }}>
-                  <GanttHeader months={months} />
+                <Box
+                  sx={{ flex: 1, minWidth: 0, py: 0.5, cursor: canEdit ? 'grab' : undefined, userSelect: 'none' }}
+                  onMouseDown={canEdit ? (e) => startDrag(e, g) : undefined}
+                >
+                  <GanttBar
+                    tl={resizePrev?.rep === g.repCode ? resizePrev.tl : g.timeline}
+                    months={months}
+                    previewPx={preview?.rep === g.repCode ? preview.px : 0}
+                    onResizeStart={canEdit ? (e, stageCode) => startResize(e, g, stageCode) : undefined}
+                  />
                 </Box>
               </Box>
-              {/* 오늘 세로선 (범위 내일 때만) */}
-              {todayLeft >= 0 && (
-                <Box sx={{ position: 'absolute', top: 0, bottom: 0, left: GANTT_NAME_W + todayLeft, width: '1px', bgcolor: 'primary.main', opacity: 0.65, pointerEvents: 'none', zIndex: 2 }} />
-              )}
-              {/* 행 */}
-              {filtered.map(({ g, info }, idx) => {
-                const chip = phaseChip(info)
-                const sColor = info.phase === 'done' ? STAGE.설.color : info.phase === 'progress' ? (info.code ? STAGE[info.code].color : undefined) : undefined
-                return (
-                  <Box
-                    key={g.repCode || idx}
-                    role="button" tabIndex={0}
-                    aria-label={`도입배치: ${g.name} ${g.count}대`}
-                    onClick={() => { if (draggedRef.current) { draggedRef.current = false; return } setPicked({ g, info }) }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicked({ g, info }) } }}
-                    sx={{ display: 'flex', alignItems: 'center', minHeight: 44, cursor: 'pointer', borderTop: 1, borderColor: 'divider', '&:hover': { bgcolor: 'background.elevated' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 } }}
-                  >
-                    <Box sx={{ width: GANTT_NAME_W, flexShrink: 0, minWidth: 0, px: 1.5, py: 0.75, borderRight: 1, borderColor: 'divider' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-                        <Typography sx={{ fontSize: 12.5, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</Typography>
-                        <QtyBadge n={g.count} />
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25, color: 'text.disabled', fontSize: 10, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4 }}>
-                          <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: sColor || 'text.disabled', flexShrink: 0 }} />
-                          {chip.label}
-                        </Box>
-                        <span>·</span><span>{g.mgr || '미지정'}</span>
-                        <span>·</span><span>{codeRange(g)}</span>
-                      </Box>
-                    </Box>
-                    <Box
-                      sx={{ width: months.length * MONTH_WIDTH, flexShrink: 0, cursor: canEdit ? 'grab' : undefined, userSelect: 'none' }}
-                      onMouseDown={canEdit ? (e) => startDrag(e, g) : undefined}
-                    >
-                      <GanttBar
-                        tl={resizePrev?.rep === g.repCode ? resizePrev.tl : g.timeline}
-                        months={months}
-                        previewPx={preview?.rep === g.repCode ? preview.px : 0}
-                        onResizeStart={canEdit ? (e, stageCode) => startResize(e, g, stageCode) : undefined}
-                      />
-                    </Box>
-                  </Box>
-                )
-              })}
-            </Box>
+            ))}
           </Box>
         ) : view === 'stage' ? (
           /* ── 단계별 칸반 ── */
@@ -632,9 +635,8 @@ export default function Equipment() {
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicked({ g, info }) } }}
                       sx={{ p: 1, mb: 0.75, border: 1, borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper', cursor: 'pointer', '&:hover': { borderColor: 'text.disabled' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main' } }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
-                        <Typography sx={{ fontSize: 12, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</Typography>
-                        <QtyBadge n={g.count} />
+                      <Box sx={{ mb: 0.5 }}>
+                        <NameWithQty name={g.name} count={g.count} fontSize={12} />
                       </Box>
                       <Typography sx={{ fontSize: 10.5, color: 'text.disabled' }}>
                         {g.mgr || '미지정'}{info.dueMonth ? ` · ${info.dueMonth}` : ''}{g.variantNames.length ? ` · ${g.variantNames.join('/')}` : ''}
@@ -646,31 +648,33 @@ export default function Equipment() {
             ))}
           </Box>
         ) : (
-          /* ── 목록 ── */
+          /* ── 목록 (수량 열 없음·헤더 정렬) ── */
           <Box sx={{ overflowX: 'auto' }}>
-            <Box component="table" className="eq-ledger" sx={{ width: '100%', minWidth: 760 }}>
+            <Box component="table" className="eq-ledger" sx={{ width: '100%', minWidth: 720 }}>
               <Box component="thead">
                 <Box component="tr">
-                  {['관리번호', '장비명', '수량', '담당자', '구분', '현재 단계', '다음 일정', '총 도입금액'].map((h) => (
-                    <Box component="th" key={h}>{h}</Box>
+                  {PROJ_COLS.map((col) => (
+                    <SortTh key={col.key} label={col.label} colKey={col.key} right={col.right} active={listSort.col === col.key} dir={listSort.dir} onSort={(c) => listSort.onSort(c as ProjCol)} />
                   ))}
                 </Box>
               </Box>
               <Box component="tbody">
-                {filtered.map(({ g, info }, idx) => {
+                {sortedList.map(({ g, info }, idx) => {
                   const chip = phaseChip(info)
                   return (
                     <Box component="tr" key={g.repCode || idx} onClick={() => setPicked({ g, info })} sx={{ cursor: 'pointer' }}>
                       <Box component="td" className="lg-code">{codeRange(g)}</Box>
                       <Box component="td" className="lg-primary">
-                        {g.name}{g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400 }}> · {g.variantNames.join('/')}</Box> : null}
+                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
+                          <NameWithQty name={g.name} count={g.count} fontSize={11.5} />
+                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400, fontSize: 11, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
+                        </Box>
                       </Box>
-                      <Box component="td"><QtyBadge n={g.count} /></Box>
                       <Box component="td">{g.mgr || '-'}</Box>
                       <Box component="td">{g.type || '-'}</Box>
                       <Box component="td"><Box component="span" className="lg-chip" sx={{ color: STAGE_DOT(info) }}>{chip.label}</Box></Box>
                       <Box component="td">{info.dueMonth || '-'}</Box>
-                      <Box component="td">{g.price ? `${k(g.price)} 천원` : '-'}</Box>
+                      <Box component="td" sx={{ textAlign: 'right' }}>{g.price ? `${k(g.price)} 천원` : '-'}</Box>
                     </Box>
                   )
                 })}
