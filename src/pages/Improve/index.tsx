@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Button from '@mui/material/Button'
@@ -20,6 +20,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import TextField from '@mui/material/TextField'
+import CircularProgress from '@mui/material/CircularProgress'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
@@ -38,7 +39,7 @@ import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { addReply, patchReply, removeReply } from '@/store/slices/replySlice'
-import { updateImprovement, createImprovement, deleteImprovement, createReply, updateReply, deleteReply, type ReplyRow } from '@/api/sheets'
+import { updateImprovement, deleteImprovement, createImprovements, fetchDrafts, saveDrafts, deleteDrafts, createReply, updateReply, deleteReply, type ReplyRow } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { fmtDate, todaySeoul } from '@/utils/date'
 import { isImproveNew } from '@/utils/newPost'
@@ -136,6 +137,30 @@ function CellSelect({ value, options, onChange, disabled, placeholder }: { value
   )
 }
 
+// 긴급 토글 박스 — 켜짐=빨강 채움 '!' / 꺼짐=외곽선. 인라인 수정·작성 모달 카드 공용.
+function UrgentBox({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <Tooltip title={on ? '긴급 해제' : '긴급'}>
+      <Box
+        role="checkbox" aria-checked={on} aria-label="긴급" tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } }}
+        sx={(th) => ({
+          width: 24, height: 24, borderRadius: '5px', cursor: 'pointer', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, lineHeight: 1,
+          border: '1px solid',
+          ...(on
+            ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: '#fff' }
+            : { borderColor: th.palette.divider, color: 'text.disabled', bgcolor: 'transparent' }),
+        })}
+      >!</Box>
+    </Tooltip>
+  )
+}
+
+// 작성 모달 카드 — 아직 게시되지 않은 개선요청 초안. key=React 키(로컬), id=시트 임시저장ID(신규는 빈값).
+type DraftCard = { key: number; id: string; urgent: boolean; title: string; loc: string; link: string; content: string }
+
 export default function Improve() {
   const dispatch = useAppDispatch()
   const { items, loading, error, updatedAt, locOptions: sheetLoc } = useAppSelector((s) => s.improve)
@@ -159,8 +184,7 @@ export default function Improve() {
   // 아코디언 열기/토글 — 다른 글 열면 기존 닫힘. 전환 시 답글 입력/편집 상태는 ReplyThread 리마운트로 초기화(key=t.id).
   const toggleRow = (id: number) => setOpenId((prev) => (prev === id ? null : id))
 
-  // 새 제안(표 상단) / 수정(목록 내 in-place) / 삭제 확인 — 작성 입력은 c* 상태 공용
-  const [composing, setComposing] = useState(false)
+  // 수정(목록 내 in-place) / 삭제 확인 — 수정 입력은 c* 상태 공용
   const [editingId, setEditingId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleteDlg, setDeleteDlg] = useState<ImprovementItem | null>(null)
@@ -169,6 +193,15 @@ export default function Improve() {
   const [cLoc, setCLoc] = useState('')
   const [cLink, setCLink] = useState('')
   const [cContent, setCContent] = useState('')
+
+  // 새 개선요청 작성 모달(#12 멀티카드 + #8 배경클릭 닫힘 비활성 + #9 수동 임시저장)
+  const [composeOpen, setComposeOpen] = useState(false)
+  const [cards, setCards] = useState<DraftCard[]>([])
+  const [draftsLoading, setDraftsLoading] = useState(false)
+  const [savingDraft, setSavingDraft] = useState(false)
+  const [publishing, setPublishing] = useState(false)
+  const [closeConfirm, setCloseConfirm] = useState(false)
+  const cardSeq = useRef(0)
 
   const showSnack = (msg: string, severity: Snack['severity'] = 'success') => setSnack({ open: true, msg, severity })
 
@@ -274,27 +307,90 @@ export default function Improve() {
     setCUrgent(t?.urgent ?? false); setCTitle(t?.title ?? ''); setCLoc(t?.loc ?? '')
     setCLink(t?.link ?? ''); setCContent(t?.content ?? '')
   }
-  const openNew = () => { resetCompose(); setEditingId(null); setComposing(true) }
   const openEdit = (t: ImprovementItem) => {
     resetCompose(t)
-    setComposing(false)
     setEditingId(t.id)
     setOpenId(t.id) // 펼쳐진 상태로 편집
   }
 
-  const handleCreate = async () => {
-    if (saving) return
-    if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
-    if (!cTitle.trim()) return showSnack('제목을 입력해주세요.', 'error')
-    setSaving(true)
+  // ── 새 개선요청 작성 모달(멀티카드) ──
+  const blankCard = (): DraftCard => ({ key: (cardSeq.current += 1), id: '', urgent: false, title: '', loc: '', link: '', content: '' })
+  const toCards = (rows: { id: string; urgent: boolean; title: string; loc: string; link: string; content: string }[]): DraftCard[] =>
+    rows.map((r) => ({ key: (cardSeq.current += 1), id: r.id, urgent: r.urgent, title: r.title, loc: r.loc, link: r.link, content: r.content }))
+
+  // 열기 = 저장된 임시저장 불러오기(없으면 빈 카드 1개). 실패해도(미배포) 빈 카드로 시작.
+  const openCompose = async () => {
+    setComposeOpen(true)
+    setCards([])
+    if (!user || !authKey) { setCards([blankCard()]); return }
+    setDraftsLoading(true)
     try {
-      await createImprovement({ author: user, key: authKey, urgent: cUrgent, loc: cLoc.trim(), title: cTitle.trim(), content: cContent.trim(), mgr: user, link: cLink.trim() })
-      setSaving(false); setComposing(false)
-      showSnack('요청을 등록했습니다.', 'success')
+      const rows = await fetchDrafts({ author: user, key: authKey })
+      setCards(rows.length ? toCards(rows) : [blankCard()])
+    } catch (err) {
+      setCards([blankCard()])
+      showSnack(err instanceof Error ? err.message : '임시저장 불러오기 실패', 'error')
+    } finally {
+      setDraftsLoading(false)
+    }
+  }
+
+  const patchCard = (key: number, patch: Partial<DraftCard>) => setCards((cs) => cs.map((c) => (c.key === key ? { ...c, ...patch } : c)))
+  const addCard = () => setCards((cs) => [...cs, blankCard()]) // 새 카드 개선위치 미승계(빈 카드)
+  const removeCard = (key: number) => setCards((cs) => { const next = cs.filter((c) => c.key !== key); return next.length ? next : [blankCard()] })
+
+  const cardDirty = (c: DraftCard) => !!(c.title.trim() || c.content.trim() || c.link.trim() || c.loc.trim() || c.urgent)
+  const isDirty = cards.some(cardDirty)
+  const publishable = cards.filter((c) => c.title.trim())
+
+  const doClose = () => { setComposeOpen(false); setCloseConfirm(false); setCards([]) }
+  // 배경클릭·Esc로는 닫히지 않음(#8). X/취소만 호출 — 내용 있으면 확인 팝업.
+  const requestClose = () => { if (savingDraft || publishing) return; if (isDirty) setCloseConfirm(true); else doClose() }
+
+  const draftPayload = () => cards.filter(cardDirty).map((c) => ({ id: c.id || undefined, urgent: c.urgent, title: c.title.trim(), loc: c.loc.trim(), link: c.link.trim(), content: c.content.trim() }))
+
+  const handleSaveDrafts = async (thenClose: boolean) => {
+    if (savingDraft || publishing) return
+    if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
+    const payload = draftPayload()
+    // 저장할 내용이 없으면 서버를 건드리지 않는다(기존 저장분 파괴적 삭제 방지)
+    if (!payload.length) {
+      if (thenClose) doClose()
+      else { setCloseConfirm(false); showSnack('저장할 내용이 없습니다.', 'info') }
+      return
+    }
+    setSavingDraft(true)
+    try {
+      const rows = await saveDrafts({ author: user, key: authKey, drafts: payload })
+      setSavingDraft(false)
+      if (thenClose) { doClose(); showSnack('임시저장 후 닫았습니다.', 'success') }
+      else { setCards(rows.length ? toCards(rows) : [blankCard()]); setCloseConfirm(false); showSnack('임시저장했습니다.', 'success') }
+    } catch (err) {
+      setSavingDraft(false)
+      showSnack(err instanceof Error ? err.message : '임시저장 실패', 'error')
+    }
+  }
+
+  const handlePublish = async () => {
+    if (publishing || savingDraft) return
+    if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
+    if (!publishable.length) return showSnack('등록할 요청의 제목을 입력해주세요.', 'error')
+    // 제목 없이 내용/링크/위치만 채운 카드가 있으면 실수 방지 경고(빈 카드는 무시)
+    if (cards.some((c) => !c.title.trim() && (c.content.trim() || c.link.trim() || c.loc.trim())))
+      return showSnack('제목이 없는 요청이 있습니다. 제목을 입력하거나 그 카드를 비워주세요.', 'error')
+    setPublishing(true)
+    try {
+      await createImprovements({ author: user, key: authKey, items: publishable.map((c) => ({ urgent: c.urgent, loc: c.loc.trim(), title: c.title.trim(), content: c.content.trim(), link: c.link.trim() })) })
+      // 방금 게시한(임시저장에서 온) 항목만 정리 — 게시하지 않은 저장분은 보존
+      const usedIds = publishable.map((c) => c.id).filter(Boolean)
+      if (usedIds.length) { try { await deleteDrafts({ author: user, key: authKey, ids: usedIds }) } catch { /* 임시저장 정리 실패는 치명적 아님 */ } }
+      setPublishing(false)
+      doClose()
+      showSnack(`${publishable.length}건을 등록했습니다.`, 'success')
       dispatch(loadImproveData())
     } catch (err) {
-      setSaving(false)
-      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+      setPublishing(false)
+      showSnack(err instanceof Error ? err.message : '일괄등록 실패', 'error')
     }
   }
 
@@ -378,36 +474,20 @@ export default function Improve() {
 
   const stop = (e: React.MouseEvent) => e.stopPropagation()
 
-  // 작성/수정 공용 인라인 행(이전 버전과 동일한 열 정렬 구조). 제목줄 배경 클릭 시 접힘(입력 셀은 stopPropagation).
-  const renderCompose = (mode: 'new' | 'edit', t?: ImprovementItem) => {
-    const onCancel = mode === 'new' ? () => setComposing(false) : () => setEditingId(null)
-    const onSave = mode === 'new' ? handleCreate : () => { if (t) void handleEdit(t) }
-    const author = mode === 'new' ? (user || '-') : (t?.author || '-')
-    const dateStr = mode === 'new' ? fmtDate(todaySeoul()) : fmtDate(t?.date || '')
-    const stLabel = mode === 'new' ? '접수' : normStatus(t?.status || '')
-    const stKind: StatusKind = mode === 'new' ? 'neutral' : impKind(stLabel)
-    const kb = mode === 'new' ? 'new' : `edit-${t!.id}`
+  // 수정 인라인 행(목록과 동일한 열 정렬 구조). 제목줄 배경 클릭 시 접힘(입력 셀은 stopPropagation).
+  // 신규 작성은 별도 멀티카드 모달(아래 composeOpen)로 분리됨.
+  const renderEditRow = (t: ImprovementItem) => {
+    const onCancel = () => setEditingId(null)
+    const onSave = () => void handleEdit(t)
+    const author = t.author || '-'
+    const dateStr = fmtDate(t.date || '')
+    const stLabel = normStatus(t.status || '')
+    const stKind: StatusKind = impKind(stLabel)
+    const kb = `edit-${t.id}`
     const greenBg = (th: Theme) => alpha(th.palette.accent.green, 0.06)
-    const urgentBox = (
-      <Tooltip title={cUrgent ? '긴급 해제' : '긴급'}>
-        <Box
-          role="checkbox" aria-checked={cUrgent} aria-label="긴급" tabIndex={0}
-          onClick={() => setCUrgent((v) => !v)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCUrgent((v) => !v) } }}
-          sx={(th) => ({
-            width: 24, height: 24, mx: 'auto', borderRadius: '5px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, lineHeight: 1,
-            border: '1px solid',
-            ...(cUrgent
-              ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: '#fff' }
-              : { borderColor: th.palette.divider, color: 'text.disabled', bgcolor: 'transparent' }),
-          })}
-        >!</Box>
-      </Tooltip>
-    )
     return [
       <TableRow key={`${kb}-1`} onClick={onCancel} sx={{ cursor: 'pointer', '& td': { verticalAlign: 'middle', bgcolor: greenBg, py: 1 } }}>
-        <TableCell onClick={stop} sx={{ textAlign: 'center' }}>{urgentBox}</TableCell>
+        <TableCell onClick={stop} sx={{ textAlign: 'center' }}><Box sx={{ display: 'flex', justifyContent: 'center' }}><UrgentBox on={cUrgent} onToggle={() => setCUrgent((v) => !v)} /></Box></TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
           <InputBase
             value={cTitle}
@@ -440,7 +520,7 @@ export default function Improve() {
         </TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'center' }}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Tooltip title={mode === 'edit' ? '수정 저장' : '저장'}>
+            <Tooltip title="수정 저장">
               <span><IconButton size="small" color="success" aria-label="저장" onClick={onSave} disabled={saving}><CheckIcon sx={{ fontSize: 19 }} /></IconButton></span>
             </Tooltip>
             <Tooltip title="취소">
@@ -501,13 +581,13 @@ export default function Improve() {
           </Box>
           {isAdmin && (
             <Button
-              onClick={() => { if (composing) setComposing(false); else openNew() }}
+              onClick={() => void openCompose()}
               startIcon={<AddIcon />}
               variant="outlined"
               size="small"
               sx={(th) => {
                 const c = th.palette.accent.green
-                const on = composing // 클릭해 작성칸이 열리면 초록 채움+흰 글자로 스르륵 전환
+                const on = composeOpen // 작성 모달이 열리면 초록 채움+흰 글자로 전환
                 return {
                   fontWeight: 500,
                   whiteSpace: 'nowrap',
@@ -539,15 +619,14 @@ export default function Improve() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {/* 새 요청 작성 행: 헤더 우상단 '새 요청' 버튼 클릭 시 표 최상단(헤더 바로 아래, 최신글 위)에 열림 */}
-              {isAdmin && editingId === null && composing && renderCompose('new')}
+              {/* 신규 작성은 멀티카드 모달(우상단 '새 요청' 버튼)로 분리 — 표에는 수정 인라인만 */}
               {listed.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={fullSpan} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>해당하는 요청이 없습니다</TableCell>
                 </TableRow>
               )}
               {listed.map((t) => {
-                if (editingId === t.id) return renderCompose('edit', t) // 수정: 그 자리에서 인라인 편집(열 정렬 동일)
+                if (editingId === t.id) return renderEditRow(t) // 수정: 그 자리에서 인라인 편집(열 정렬 동일)
                 const open = openId === t.id
                 const rm = remarkOf(t)
                 const st = normStatus(t.status)
@@ -698,6 +777,82 @@ export default function Improve() {
           </Table>
         </AppCard>
       </ContentSection>
+
+      {/* 새 개선요청 작성 모달 — 멀티카드 + 임시저장 + 일괄등록. 배경클릭·Esc로 닫히지 않음(X/취소만) */}
+      <Dialog
+        open={composeOpen}
+        onClose={() => { /* 배경클릭·Esc로 닫히지 않음(#8) — X/취소 버튼만 requestClose 호출 */ }}
+        fullWidth
+        maxWidth="sm"
+        scroll="paper"
+        slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pr: 1 }}>
+          <Box component="span">새 개선요청{cards.length > 1 ? ` · ${cards.length}건` : ''}</Box>
+          <IconButton aria-label="닫기" onClick={requestClose} disabled={savingDraft || publishing} size="small" sx={{ color: 'text.secondary' }}>
+            <CloseIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {draftsLoading ? (
+            <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}><CircularProgress size={28} /></Box>
+          ) : (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {cards.map((c, idx) => (
+                <Box key={c.key} sx={(th) => ({ border: '1px solid', borderColor: 'divider', borderRadius: '10px', p: 1.5, bgcolor: alpha(th.palette.accent.green, 0.04) })}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Box component="span" sx={{ fontSize: 12, fontWeight: 700, color: 'text.secondary' }}>요청 {idx + 1}</Box>
+                    <UrgentBox on={c.urgent} onToggle={() => patchCard(c.key, { urgent: !c.urgent })} />
+                    <Box sx={{ flex: 1 }} />
+                    <Tooltip title="이 카드 삭제">
+                      <IconButton size="small" color="error" aria-label="카드 삭제" onClick={() => removeCard(c.key)} disabled={savingDraft || publishing}><DeleteOutlineIcon sx={{ fontSize: 18 }} /></IconButton>
+                    </Tooltip>
+                  </Box>
+                  <InputBase
+                    value={c.title}
+                    onChange={(e) => patchCard(c.key, { title: e.target.value })}
+                    placeholder="제목"
+                    inputProps={{ 'aria-label': '제목' }}
+                    endAdornment={<LinkField value={c.link} onChange={(v) => patchCard(c.key, { link: v })} />}
+                    sx={(th) => ({ ...inputSx(th), width: '100%', height: 36, mb: 1 })}
+                  />
+                  <Box sx={{ mb: 1 }}><DropField value={c.loc} onChange={(v) => patchCard(c.key, { loc: v })} options={locOptions} placeholder="개선위치" width={160} /></Box>
+                  <InputBase
+                    value={c.content}
+                    onChange={(e) => patchCard(c.key, { content: e.target.value })}
+                    placeholder="요청내용"
+                    multiline
+                    minRows={2}
+                    inputProps={{ 'aria-label': '요청내용' }}
+                    sx={(th) => ({ ...inputSx(th), width: '100%', py: '8px' })}
+                  />
+                </Box>
+              ))}
+              <Button onClick={addCard} startIcon={<AddIcon />} variant="outlined" size="small" disabled={savingDraft || publishing} sx={{ alignSelf: 'flex-start', color: 'text.secondary', borderColor: 'divider' }}>요청 추가</Button>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 2.5, pb: 2, gap: 1, flexWrap: 'wrap' }}>
+          <Button onClick={() => void handleSaveDrafts(false)} disabled={savingDraft || publishing || draftsLoading} sx={{ color: 'text.secondary' }}>{savingDraft ? '임시저장 중…' : '임시저장'}</Button>
+          <Box sx={{ flex: 1 }} />
+          <Button color="error" onClick={requestClose} disabled={savingDraft || publishing}>취소</Button>
+          <Button variant="contained" color="success" onClick={() => void handlePublish()} disabled={publishing || savingDraft || draftsLoading || publishable.length === 0}>{publishing ? '등록 중…' : `${publishable.length}건 등록`}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 작성 중 닫기 확인 — 임시저장 후 닫기 / 저장 안 함 / 계속 작성 */}
+      <Dialog open={closeConfirm} onClose={() => !savingDraft && setCloseConfirm(false)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
+        <DialogTitle>작성 중인 내용이 있습니다</DialogTitle>
+        <DialogContent>
+          <Box sx={{ fontSize: 14, color: 'text.primary', lineHeight: 1.7 }}>작성 중인 요청을 임시저장할까요?<br />저장하지 않으면 이번에 작성한 내용은 사라집니다.</Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
+          <Button onClick={() => setCloseConfirm(false)} disabled={savingDraft}>계속 작성</Button>
+          <Box sx={{ flex: 1 }} />
+          <Button color="error" onClick={doClose} disabled={savingDraft}>저장 안 함</Button>
+          <Button variant="contained" color="success" onClick={() => void handleSaveDrafts(true)} disabled={savingDraft}>{savingDraft ? '저장 중…' : '임시저장 후 닫기'}</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* 보류·불가 사유 입력 팝업 */}
       <Dialog open={!!reasonDlg} onClose={() => savingId === null && setReasonDlg(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>

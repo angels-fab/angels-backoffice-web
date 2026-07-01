@@ -568,3 +568,67 @@ export async function updateReply(p: { author: string; key: string; id: string |
 export async function deleteReply(p: { author: string; key: string; id: string | number }): Promise<void> {
   await postReply({ action: 'deleteReply', ...p })
 }
+
+// ── 포털개선요청 임시저장 ('포털개선요청_임시저장' 시트) + 일괄등록 ──
+export interface DraftRow {
+  /** 임시저장ID */
+  id: string
+  urgent: boolean
+  title: string
+  /** 관련자료 링크 */
+  link: string
+  /** 개선위치 */
+  loc: string
+  content: string
+  /** 최종저장일시 'yyyy-MM-dd HH:mm:ss' (KST) */
+  savedAt: string
+}
+/** 임시저장 저장용 카드(id는 신규 카드면 생략) */
+export interface DraftInput {
+  id?: string
+  urgent: boolean
+  title: string
+  link: string
+  loc: string
+  content: string
+}
+
+async function postDraft(payload: Record<string, unknown>): Promise<{ items?: DraftRow[]; nums?: number[]; deleted?: number }> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string; items?: DraftRow[]; nums?: number[]; deleted?: number }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 임시저장을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '처리 실패')
+  return { items: json.items, nums: json.nums, deleted: json.deleted }
+}
+
+/** 임시저장 조회(본인 것만) — 인증 필수. 멱등 읽기라 네트워크 재시도. */
+export async function fetchDrafts(p: { author: string; key: string }): Promise<DraftRow[]> {
+  const { items } = await withRetry(() => postDraft({ action: 'getDrafts', ...p }))
+  return items || []
+}
+
+/** 임시저장 저장(수동, 본인 것 전체 대치) → 저장된 목록(부여된 ID 포함) */
+export async function saveDrafts(p: { author: string; key: string; drafts: DraftInput[] }): Promise<DraftRow[]> {
+  const { items } = await postDraft({ action: 'saveDrafts', ...p })
+  return items || []
+}
+
+/** 임시저장 삭제 — ids 전달 시 해당만, 없으면 본인 전체(일괄등록 후 정리). */
+export async function deleteDrafts(p: { author: string; key: string; ids?: string[] }): Promise<void> {
+  await postDraft({ action: 'deleteDrafts', ...p })
+}
+
+/** 여러 개선요청 일괄등록(각 카드=독립 게시글) → 부여된 번호 목록. 중복등록 방지 위해 단일 시도. */
+export async function createImprovements(p: {
+  author: string
+  key: string
+  items: Array<{ urgent: boolean; loc: string; title: string; content: string; link: string }>
+}): Promise<number[]> {
+  const { nums } = await postDraft({ action: 'createImprovements', ...p })
+  return nums || []
+}

@@ -151,6 +151,22 @@ function doPost(e) {
         lock.releaseLock();
       }
     }
+    // 포털개선요청 임시저장 조회(본인 것만) — 인증 필수, 읽기라 잠금 불필요.
+    if (req.action === 'getDrafts') return getDrafts_(req);
+    // 임시저장 저장/삭제 + 일괄등록 — 잠금 하에 처리(ID·번호 충돌 방지). 모두 로그인 인증.
+    if (req.action === 'saveDrafts' || req.action === 'deleteDrafts' || req.action === 'createImprovements') {
+      const lock = LockService.getScriptLock();
+      if (!lock.tryLock(10000)) {
+        return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
+      }
+      try {
+        if (req.action === 'saveDrafts') return saveDrafts_(req);
+        if (req.action === 'deleteDrafts') return deleteDrafts_(req);
+        return createImprovements_(req);
+      } finally {
+        lock.releaseLock();
+      }
+    }
     // 관리자 모드(내부 UI 게이트) — '담당자' 시트 사번+비밀번호 검증. 비밀번호는 노출하지 않음.
     // 성공 시 담당자 이름을 함께 반환(공지 작성 게시자명 자동 사용).
     if (req.action === 'verifyAdmin') {
@@ -1052,6 +1068,217 @@ function deleteReply_(req) {
   if (rowAuthor && rowAuthor !== author) return json_({ status: 'error', message: '본인이 작성한 답글만 삭제할 수 있습니다' });
   sh.getRange(rowIdx + 1, C.deleted + 1).insertCheckboxes().setValue(true);
   return json_({ status: 'ok', id: id });
+}
+
+// ── 포털개선요청 임시저장('포털개선요청_임시저장' 시트) + 일괄등록 ──
+// 임시저장: 자동저장 없음(수동 '임시저장' 버튼만). 로그인 사용자(작성자) 본인 것만 조회·저장·삭제.
+// 저장은 '본인 것 전체 대치'(현재 카드 목록으로 교체) 방식. 시트 헤더는 자동 탐지(행 위치 비의존).
+const DRAFT_SHEET_NAME = '포털개선요청_임시저장';
+const DRAFT_HEADERS = ['임시저장ID', '긴급', '제목', '관련자료', '개선위치', '작성자', '최종저장일시', '요청내용'];
+
+// 시트 + 헤더 컨텍스트. create=true면 시트/헤더가 없을 때 생성. {sh,values,hIdx,head,col,C} | {missing:true} | {error}
+function draftCtx_(create) {
+  const ss = SpreadsheetApp.openById(SHEET_ID);
+  let sh = ss.getSheetByName(DRAFT_SHEET_NAME);
+  if (!sh) {
+    if (!create) return { missing: true };
+    sh = ss.insertSheet(DRAFT_SHEET_NAME);
+    sh.getRange(1, 1, 1, DRAFT_HEADERS.length).setValues([DRAFT_HEADERS]);
+  }
+  let values = sh.getDataRange().getValues();
+  let hIdx = -1;
+  for (let i = 0; i < Math.min(values.length, 10); i++) {
+    const r = values[i].map(function (c) { return String(c == null ? '' : c).trim(); });
+    if (r.indexOf('임시저장ID') >= 0 || (r.indexOf('제목') >= 0 && r.indexOf('요청내용') >= 0)) { hIdx = i; break; }
+  }
+  if (hIdx < 0) {
+    if (!create) return { error: "'" + DRAFT_SHEET_NAME + "' 시트 헤더를 찾지 못함" };
+    sh.getRange(1, 1, 1, DRAFT_HEADERS.length).setValues([DRAFT_HEADERS]); // 빈 시트 → 헤더 기록
+    values = sh.getDataRange().getValues();
+    hIdx = 0;
+  }
+  const head = values[hIdx].map(function (c) { return String(c == null ? '' : c).trim(); });
+  const col = function (names) { for (let k = 0; k < names.length; k++) { const i = head.indexOf(names[k]); if (i >= 0) return i; } return -1; };
+  const C = {
+    id: col(['임시저장ID', '임시저장 ID', 'ID']),
+    urgent: col(['긴급', '긴급여부']),
+    title: col(['제목']),
+    link: col(['관련자료', '자료', '링크', 'link']),
+    loc: col(['개선위치', '위치', '장소']),
+    author: col(['작성자', '제안자', '등록자']),
+    savedAt: col(['최종저장일시', '저장일시', '작성일시', '수정일시']),
+    content: col(['요청내용', '개선내용', '내용', '상세']),
+  };
+  return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
+}
+
+// 조회: 로그인 사용자(작성자) 본인 임시저장만. 인증 필수. 시트 없으면 빈 목록.
+function getDrafts_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const ctx = draftCtx_(false);
+  if (ctx.missing) return json_({ status: 'ok', items: [] });
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const values = ctx.values, C = ctx.C, hIdx = ctx.hIdx;
+  const t = function (r, i) { return i < 0 ? '' : (r[i] == null ? '' : String(r[i]).trim()); };
+  const items = [];
+  for (let i = hIdx + 1; i < values.length; i++) {
+    const r = values[i];
+    if (C.author >= 0 && t(r, C.author) !== author) continue; // 본인 것만
+    if (t(r, C.id) === '' && t(r, C.title) === '' && t(r, C.content) === '') continue;
+    items.push({
+      id: t(r, C.id),
+      urgent: wIsChk_(r[C.urgent]),
+      title: t(r, C.title),
+      link: t(r, C.link),
+      loc: t(r, C.loc),
+      content: r[C.content] == null ? '' : String(r[C.content]), // 줄바꿈 보존
+      savedAt: replyTime_(r[C.savedAt]),
+    });
+  }
+  return json_({ status: 'ok', items: items });
+}
+
+// 저장(수동): 본인 임시저장 전체를 전달된 목록으로 교체(전체 대치). 빈 카드(제목·내용·링크·위치 모두 빈)는 저장 안 함.
+function saveDrafts_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const drafts = (req.drafts && req.drafts.length) ? req.drafts : [];
+
+  const ctx = draftCtx_(true);
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, head = ctx.head, C = ctx.C;
+  const t = function (r, i) { return i < 0 ? '' : (r[i] == null ? '' : String(r[i]).trim()); };
+
+  // 저장할 '비어있지 않은' 카드만 추림.
+  const toWrite = [];
+  for (let d = 0; d < drafts.length; d++) {
+    const dr = drafts[d] || {};
+    const title = String(dr.title || '').trim();
+    const content = String(dr.content == null ? '' : dr.content);
+    const link = String(dr.link || '').trim();
+    const loc = String(dr.loc || '').trim();
+    const urgent = dr.urgent === true;
+    if (!title && !content.trim() && !link && !loc && !urgent) continue; // 빈 카드 skip
+    toWrite.push({ title: title, content: content, link: link, loc: loc, urgent: urgent });
+  }
+
+  // 저장할 내용이 하나도 없으면 파괴적 삭제를 하지 않는다(기존 저장분 보존) — 기존 임시저장을 그대로 반환.
+  // ('전체 비우기'는 별도 deleteDrafts_로만. saveDrafts_의 무조건 선삭제로 인한 데이터 유실 방지)
+  if (!toWrite.length) {
+    const cur = [];
+    for (let i = hIdx + 1; i < values.length; i++) {
+      const r = values[i];
+      if (C.author >= 0 && t(r, C.author) !== author) continue;
+      if (t(r, C.id) === '' && t(r, C.title) === '' && t(r, C.content) === '') continue;
+      cur.push({ id: t(r, C.id), urgent: wIsChk_(r[C.urgent]), title: t(r, C.title), link: t(r, C.link), loc: t(r, C.loc), content: r[C.content] == null ? '' : String(r[C.content]), savedAt: replyTime_(r[C.savedAt]) });
+    }
+    return json_({ status: 'ok', items: cur });
+  }
+
+  // 새 ID는 기존 최대 ID(다른 사용자 것 포함) 위로 부여(충돌 방지).
+  let maxId = 0;
+  if (C.id >= 0) for (let i = hIdx + 1; i < values.length; i++) {
+    const v = Number(values[i][C.id]); if (!isNaN(v) && v > maxId) maxId = v;
+  }
+  // 본인 기존 임시저장 행 삭제(아래에서 위로 — 인덱스 밀림 방지) 후 새 목록으로 전체 대치.
+  if (C.author >= 0) {
+    for (let i = values.length - 1; i > hIdx; i--) {
+      if (String(values[i][C.author] || '').trim() === author) sh.deleteRow(i + 1);
+    }
+  }
+  const now = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm:ss');
+  const saved = [];
+  for (let d = 0; d < toWrite.length; d++) {
+    const dr = toWrite[d];
+    const newId = ++maxId;
+    const row = new Array(Math.max(head.length, DRAFT_HEADERS.length)).fill('');
+    const set = function (i, v) { if (i >= 0) row[i] = v; };
+    set(C.id, newId);
+    set(C.urgent, dr.urgent);
+    set(C.title, dr.title);
+    set(C.link, dr.link);
+    set(C.loc, dr.loc);
+    set(C.author, author);
+    set(C.savedAt, now);
+    set(C.content, dr.content);
+    sh.appendRow(row);
+    if (C.urgent >= 0) sh.getRange(sh.getLastRow(), C.urgent + 1).insertCheckboxes().setValue(dr.urgent);
+    saved.push({ id: String(newId), urgent: dr.urgent, title: dr.title, link: dr.link, loc: dr.loc, content: dr.content, savedAt: now });
+  }
+  return json_({ status: 'ok', items: saved });
+}
+
+// 삭제: 본인 임시저장. ids 전달 시 해당 ID만, 없으면 본인 전체(일괄등록 후 정리).
+function deleteDrafts_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const ctx = draftCtx_(false);
+  if (ctx.missing) return json_({ status: 'ok', deleted: 0 });
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  const ids = (req.ids && req.ids.length) ? req.ids.map(function (x) { return String(x).trim(); }) : null;
+  let deleted = 0;
+  for (let i = values.length - 1; i > hIdx; i--) {
+    if (C.author >= 0 && String(values[i][C.author] || '').trim() !== author) continue;
+    if (ids && ids.indexOf(String(values[i][C.id] || '').trim()) < 0) continue;
+    sh.deleteRow(i + 1); deleted++;
+  }
+  return json_({ status: 'ok', deleted: deleted });
+}
+
+// 일괄등록: 여러 개선요청을 각각 독립 게시글로 등록. 로그인 사용자만. 각 카드 제목 필수.
+// 단건 createImprovement_과 동일 규칙(상태=접수·제안일자=오늘·담당자=작성자·유형 빈값·메모 FALSE).
+function createImprovements_(req) {
+  const author = String(req.author || '').trim();
+  const authErr = authError_(author, String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const items = (req.items && req.items.length) ? req.items : [];
+  if (!items.length) return json_({ status: 'error', message: '등록할 요청이 없습니다' });
+  for (let i = 0; i < items.length; i++) {
+    if (!String((items[i] || {}).title || '').trim()) return json_({ status: 'error', message: (i + 1) + '번째 요청의 제목이 비었습니다' });
+  }
+
+  const ctx = improveCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, head = ctx.head, C = ctx.C;
+
+  let maxNum = 0;
+  if (C.num >= 0) for (let i = hIdx + 1; i < values.length; i++) {
+    const v = Number(values[i][C.num]); if (!isNaN(v) && v > maxNum) maxNum = v;
+  }
+  const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  const nums = [];
+  for (let k = 0; k < items.length; k++) {
+    const it = items[k] || {};
+    const newNum = ++maxNum;
+    const row = new Array(head.length).fill('');
+    const set = function (i, v) { if (i >= 0) row[i] = v; };
+    set(C.num, newNum);
+    set(C.urgent, it.urgent === true);
+    set(C.type, '');            // 유형 제거(Phase1)
+    set(C.loc, String(it.loc || ''));
+    set(C.title, String(it.title).trim());
+    set(C.content, String(it.content || ''));
+    set(C.author, author);
+    set(C.mgr, author);         // 삭제 권한 = 작성자
+    set(C.date, today);
+    set(C.link, String(it.link || ''));
+    set(C.status, IMPROVE_STATUS_DEFAULT);
+    set(C.end, '');
+    set(C.reason, '');
+    set(C.memo, false);
+    sh.appendRow(row);
+    const last = sh.getLastRow();
+    copyRowValidation_(sh, hIdx, last, C.status); // 상태·개선위치 등 드롭다운(칩) 복사
+    if (C.urgent >= 0) sh.getRange(last, C.urgent + 1).insertCheckboxes().setValue(it.urgent === true);
+    if (C.memo >= 0) sh.getRange(last, C.memo + 1).insertCheckboxes().setValue(false);
+    nums.push(newNum);
+  }
+  return json_({ status: 'ok', nums: nums });
 }
 
 // ── 장비도입관리 CRUD (헤더명 기반, 열 위치 비의존) ──
