@@ -4,6 +4,8 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import CoPresentIcon from '@mui/icons-material/CoPresent'
+import LinkIcon from '@mui/icons-material/Link'
 import { useRole } from '@/auth/role'
 import { useNavBadges } from './useNavBadges'
 
@@ -34,12 +36,15 @@ export default function BottomNav() {
   return (
     <nav className="bottom-nav" id="bottom-nav">
       {item('/', '홈', <HomeIcon />)}
-      {item('/equipment', '장비', <MonitorIcon />)}
-      {/* 공지·업무·일정은 로그인(관리자) 시에만 */}
+      {/* 장비·공지·업무·일정은 로그인(관리자) 전용 */}
+      {isAdmin && item('/equipment', '장비', <MonitorIcon />)}
       {isAdmin && item('/notice', '공지', <CampaignIcon />, noticeCnt)}
       {isAdmin && item('/work', '업무', <TaskAltIcon />, workCnt)}
       {/* 업무일정은 새 글 개념 미사용 → 배지 없음 */}
       {isAdmin && item('/calendar', '일정', <CalendarMonthIcon />)}
+      {/* 게스트는 공개 메뉴(행사·바로가기)로 이동 가능하게 */}
+      {!isAdmin && item('/events', '행사', <CoPresentIcon />)}
+      {!isAdmin && item('/links', '바로가기', <LinkIcon />)}
     </nav>
   )
 }

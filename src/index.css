@@ -628,6 +628,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .gantt-resize-h{position:absolute;top:0;right:0;width:7px;height:100%;cursor:ew-resize;z-index:2}
 .gantt-resize-h::after{content:'';position:absolute;top:0;right:0;width:2px;height:100%;background:rgba(255,255,255,.6);opacity:0;transition:opacity .1s}
 .gantt-resize-h:hover::after{opacity:1}
+/* 첫 단계 시작점 핸들 (첫 단계 왼쪽 끝) */
+.gantt-resize-start{right:auto;left:0}
+.gantt-resize-start::after{right:auto;left:0}
 /* 월 헤더 바 */
 .gantt-header-slot{width:100%}
 .gantt-head-wrap{grid-column:4;display:flex;flex-direction:column;width:100%}

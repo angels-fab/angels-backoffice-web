@@ -8,6 +8,9 @@ import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import TextField from '@mui/material/TextField'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined'
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
@@ -23,6 +26,8 @@ import { memosForPath } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import ReplyThread from '@/pages/Improve/ReplyThread'
+import { StatusChip } from '@/components/ds'
+import { IMP_STATUSES, impKind, needsReason, normStatus, isSettled } from '@/pages/Improve/improveMeta'
 
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
 
@@ -113,6 +118,7 @@ function ReplyCountChip({ count, onClick }: { count: number; onClick: () => void
 /** 메모 한 건 — 번호·제목·작성자·개선위치 + 답글 +N + 펼치면 내용·답글 통합 표시. */
 function MemoRow({
   t, replies, open, onToggle, onRemove, removing, isAdmin, user, replyBusy, onCreateReply, onEditReply, onRequestDeleteReply,
+  onStatusChange, savingStatus,
 }: {
   t: ImprovementItem
   replies: ReplyRow[]
@@ -126,7 +132,10 @@ function MemoRow({
   onCreateReply: (reqNum: string, content: string) => Promise<void>
   onEditReply: (id: string, content: string) => Promise<void>
   onRequestDeleteReply: (r: ReplyRow) => void
+  onStatusChange: (status: string) => void
+  savingStatus: boolean
 }) {
+  const st = normStatus(t.status)
   return (
     <Box sx={{ py: 1.25, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -140,6 +149,23 @@ function MemoRow({
         <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: 999 })}>
           <PlaceOutlinedIcon sx={{ fontSize: 13 }} />{t.loc || '-'}
         </Box>
+        {/* 상태 — 메인 보드와 동일 값·색. 관리자는 여기서 바로 변경(보류·완료·불가는 확인 팝업). */}
+        {isAdmin ? (
+          <Select
+            value={st}
+            onChange={(e) => onStatusChange(e.target.value)}
+            disabled={savingStatus}
+            variant="standard"
+            disableUnderline
+            IconComponent={() => null}
+            renderValue={(v) => <StatusChip status={impKind(v)} label={v} />}
+            sx={{ '& .MuiSelect-select': { p: 0, pr: '0 !important' } }}
+          >
+            {IMP_STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: 13 }}>{s}</MenuItem>)}
+          </Select>
+        ) : (
+          <StatusChip status={impKind(st)} label={st || '-'} />
+        )}
         {replies.length > 0 && <ReplyCountChip count={replies.length} onClick={onToggle} />}
         <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
           <Button
@@ -196,6 +222,8 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const [replyBusy, setReplyBusy] = useState(false)
   const [delReply, setDelReply] = useState<ReplyRow | null>(null)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
+  const [savingStatusNum, setSavingStatusNum] = useState<string | null>(null)
+  const [statusDlg, setStatusDlg] = useState<{ row: ImprovementItem; status: string; value: string } | null>(null)
 
   const memos = useMemo(() => memosForPath(items, pathname), [items, pathname])
   // 삭제 안 된 답글을 요청번호별로 그룹화(작성일시 오름차순) — 게시판과 동일 데이터
@@ -252,8 +280,35 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
     }
   }
 
+  // ── 상태 변경 (메인 보드와 동일 값·색·확인규칙). 저장 후 재로드로 메인 목록·메모 즉시 동기화. ──
+  const saveStatus = async (t: ImprovementItem, status: string, reason: string) => {
+    if (!user || !authKey) { showSnack('로그인이 필요합니다.', 'error'); return }
+    setSavingStatusNum(t.num)
+    try {
+      await updateImprovement({ author: user, key: authKey, num: t.num, status, reason })
+      setSavingStatusNum(null)
+      setStatusDlg(null)
+      showSnack('상태를 변경했습니다.', 'success')
+      dispatch(loadImproveData()) // 종결 전환 시 자동 memo=FALSE → 이 패널에서도 자연스럽게 제외됨
+    } catch (err) {
+      setSavingStatusNum(null)
+      showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
+    }
+  }
+  // 보류·완료·불가(종결)는 확인 팝업(보류·불가는 사유 입력), 그 외는 즉시 반영
+  const onStatusChange = (t: ImprovementItem, status: string) => {
+    if (status === normStatus(t.status)) return
+    if (isSettled(status)) setStatusDlg({ row: t, status, value: t.reason || '' })
+    else void saveStatus(t, status, '')
+  }
+  const applyStatusDlg = () => {
+    if (!statusDlg) return
+    if (needsReason(statusDlg.status) && !statusDlg.value.trim()) return showSnack('사유를 입력해주세요.', 'error')
+    void saveStatus(statusDlg.row, statusDlg.status, needsReason(statusDlg.status) ? statusDlg.value.trim() : '')
+  }
+
   const admin = isAdmin && !!user && !!authKey
-  // 스낵바 + 답글 삭제 확인 Dialog — 관리자에게 항상 렌더(패널 상태와 무관)
+  // 스낵바 + 답글 삭제 + 상태변경 확인 Dialog — 관리자에게 항상 렌더(패널 상태와 무관)
   const snackbar = admin ? (
     <>
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
@@ -269,6 +324,26 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDelReply(null)} disabled={replyBusy}>취소</Button>
           <Button variant="contained" color="error" onClick={confirmDelReply} disabled={replyBusy}>{replyBusy ? '삭제 중…' : '삭제'}</Button>
+        </DialogActions>
+      </Dialog>
+      {/* 상태 변경 확인(보류·완료·불가) — 보류·불가는 사유 입력 */}
+      <Dialog open={!!statusDlg} onClose={() => savingStatusNum === null && setStatusDlg(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
+        <DialogTitle>상태를 '{statusDlg?.status}'(으)로 변경할까요?</DialogTitle>
+        <DialogContent>
+          <Box sx={{ fontSize: 13, color: 'text.secondary', mb: statusDlg && needsReason(statusDlg.status) ? 1.5 : 0 }}>「{statusDlg?.row.title}」</Box>
+          {statusDlg && needsReason(statusDlg.status) && (
+            <TextField
+              autoFocus fullWidth multiline minRows={3}
+              value={statusDlg.value}
+              onChange={(e) => setStatusDlg((p) => (p ? { ...p, value: e.target.value } : p))}
+              placeholder={`${statusDlg.status} 사유를 입력해주세요.`}
+              disabled={savingStatusNum !== null}
+            />
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setStatusDlg(null)} disabled={savingStatusNum !== null} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button variant="contained" onClick={applyStatusDlg} disabled={savingStatusNum !== null}>{savingStatusNum !== null ? '변경 중…' : '변경'}</Button>
         </DialogActions>
       </Dialog>
     </>
@@ -326,6 +401,8 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
             onCreateReply={createReplyH}
             onEditReply={editReplyH}
             onRequestDeleteReply={(r) => setDelReply(r)}
+            onStatusChange={(status) => onStatusChange(t, status)}
+            savingStatus={savingStatusNum === t.num}
           />
         ))}
       </Box>

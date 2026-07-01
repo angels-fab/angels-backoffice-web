@@ -1,5 +1,5 @@
 // 도입 타임라인 간트차트 — 월 단위 그리드, 각 월 안에 반달(전반/후반) 2칸
-import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { TlMonth } from '@/types'
 import { STAGE, STAGE_ORDER } from './stageMeta'
 
@@ -60,20 +60,25 @@ export function GanttHeader({ months: allMonths }: { months: TlMonth[] }) {
 
 // 각 장비 간트 막대
 // previewPx: 드래그(이동) 중 실시간 미리보기용 가로 이동량(px). 색 막대 레이어만 이동(격자선 고정).
-// onResizeStart: 단계 오른쪽 끝 핸들 mousedown(STEP16 리사이즈). 있으면 각 단계 끝에 핸들 표시.
+// onResizeStart: 단계 오른쪽 끝 핸들 — 단계 길이 조절. onStartResize: 첫 단계 왼쪽 시작점 핸들.
 export function GanttBar({
   tl,
   months: allMonths,
   previewPx = 0,
   onResizeStart,
+  onStartResize,
 }: {
   tl: string[]
   months: TlMonth[]
   previewPx?: number
-  onResizeStart?: (e: ReactMouseEvent, stageCode: string) => void
+  onResizeStart?: (e: ReactPointerEvent, stageCode: string) => void
+  onStartResize?: (e: ReactPointerEvent, stageCode: string) => void
 }) {
   const months = allMonths.slice(0, TL_VISIBLE_MONTHS)
   const template = ganttGridTemplate(months)
+  // 가장 이른 채워진 반월 index(첫 단계 시작 셀) — 여기에만 좌측 시작핸들
+  let firstFilled = -1
+  for (let i = 0; i < tl.length; i++) { if ((tl[i] || '').trim()) { firstFilled = i; break } }
   const cols = []
   for (let mi = 0; mi < months.length; mi++) {
     const m = months[mi]
@@ -84,21 +89,31 @@ export function GanttBar({
     cols.push({ mi, m, isYearStart, isYearEnd, s1, s2 })
   }
 
-  // 반월 칸 1개 렌더. 단계의 오른쪽 경계 칸(다음 칸이 다른 코드/빈칸)이면 리사이즈 핸들을 셀 안쪽 우측에 붙인다.
+  // 반월 칸 1개 렌더. 단계의 오른쪽 경계 칸엔 길이조절 핸들, 첫 단계 시작 칸엔 좌측 시작핸들.
   const renderHalf = (hi: number, m: TlMonth, half: string) => {
     const code = (tl[hi] || '').trim()
     const isEnd = !!code && (tl[hi + 1] || '').trim() !== code
+    const isFirstStart = !!code && hi === firstFilled
     return (
       <div
         className="gantt-cell"
         style={code ? { background: TL_STAGE_COLOR[code] || undefined } : undefined}
         title={code ? `${m.year || ''} ${m.month || ''} ${half}: ${TL_STAGE_NAME[code] || code}` : undefined}
       >
+        {isFirstStart && onStartResize && (
+          <span
+            className="gantt-resize-h gantt-resize-start"
+            title={`${TL_STAGE_NAME[code] || code} 시작일 조절 (드래그)`}
+            style={{ touchAction: 'none' }}
+            onPointerDown={(e) => { e.stopPropagation(); onStartResize(e, code) }}
+          />
+        )}
         {isEnd && onResizeStart && (
           <span
             className="gantt-resize-h"
             title={`${TL_STAGE_NAME[code] || code} 기간 조절 (드래그)`}
-            onMouseDown={(e) => { e.stopPropagation(); onResizeStart(e, code) }}
+            style={{ touchAction: 'none' }}
+            onPointerDown={(e) => { e.stopPropagation(); onResizeStart(e, code) }}
           />
         )}
       </div>

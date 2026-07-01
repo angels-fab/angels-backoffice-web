@@ -6,6 +6,7 @@ import { PageContainer, PageHeader, ContentSection } from '@/components/ds'
 import { useRole } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
 import Greeting from './Greeting'
+import RoadmapCard from './RoadmapCard'
 import KpiOverview from './dash/KpiOverview'
 import ScheduleSection from './dash/ScheduleSection'
 import WorkStatusSection from './dash/WorkStatusSection'
@@ -39,7 +40,12 @@ export default function Home() {
 
       <PageHeader icon={<SpaceDashboardIcon />} title="운영 대시보드" updatedAt={updatedAt || undefined} />
 
-      {/* 로그인(관리자) 전용 섹션 — 게스트에겐 공개 정보(장비 현황)만 노출 */}
+      {/* FAB 구축 로드맵 — 전용 페이지 폐지, 홈의 주요 섹션으로 이관(전체 공개) */}
+      <ContentSection title="FAB 구축 로드맵" last={!isAdmin}>
+        <RoadmapCard />
+      </ContentSection>
+
+      {/* 로그인(관리자) 전용 섹션 — 게스트에겐 공개 정보(로드맵)만 노출 */}
       {isAdmin && (
         <>
           {/* ① KPI Overview */}
@@ -56,13 +62,13 @@ export default function Home() {
           <ContentSection title="업무 현황" action={moreBtn('/work')}>
             <WorkStatusSection />
           </ContentSection>
+
+          {/* ④ 장비 현황 — 로그인(관리자) 전용 */}
+          <ContentSection title="장비 현황" action={moreBtn('/equipment')}>
+            <EquipmentSection />
+          </ContentSection>
         </>
       )}
-
-      {/* ④ 장비 현황 — 공개(게스트도 표시) */}
-      <ContentSection title="장비 현황" action={moreBtn('/equipment')} last={!isAdmin}>
-        <EquipmentSection />
-      </ContentSection>
 
       {/* ⑤ 공지사항 — 로그인 전용 */}
       {isAdmin && (

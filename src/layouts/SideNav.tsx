@@ -6,7 +6,6 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import MonitorIcon from '@mui/icons-material/Monitor'
 import LinkIcon from '@mui/icons-material/Link'
-import TimelineIcon from '@mui/icons-material/Timeline'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
@@ -57,7 +56,6 @@ export default function SideNav() {
       label: '정보',
       items: [
         { icon: <CoPresentIcon />, label: '학술·교육·전시', path: '/events' },
-        { icon: <TimelineIcon />, label: '구축 로드맵', path: '/roadmap' },
         { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve },
         { icon: <LinkIcon />, label: '바로가기', path: '/links' },
         // 설정은 로그인(관리자) 전용 — 게스트에겐 숨김(라우트도 RequireAdmin로 보호)
@@ -69,8 +67,8 @@ export default function SideNav() {
   const isActive = (path: string) =>
     path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(path + '/')
 
-  // 게스트(로그아웃)는 공개 메뉴만: 홈 · 장비도입관리 · 학술·교육 행사 · 구축 로드맵 · 바로가기. 로그인 시 전체.
-  const GUEST_PATHS = new Set(['/', '/equipment', '/events', '/roadmap', '/links'])
+  // 게스트(로그아웃)는 공개 메뉴만: 홈 · 학술·교육 행사 · 바로가기. 장비관리는 로그인(관리자) 전용. 로그인 시 전체.
+  const GUEST_PATHS = new Set(['/', '/events', '/links'])
   const visibleGroups = groups
     .map((g) => ({ ...g, items: isAdmin ? g.items : g.items.filter((it) => GUEST_PATHS.has(it.path)) }))
     .filter((g) => g.items.length > 0)

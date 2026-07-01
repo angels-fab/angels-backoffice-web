@@ -45,7 +45,7 @@ import { isImproveNew } from '@/utils/newPost'
 import { locationToPath } from '@/utils/improveMemo'
 import type { ImprovementItem } from '@/types'
 import ReplyThread from './ReplyThread'
-import { IMP_STATUSES, IMP_TYPE_OPTIONS, impKind, needsReason, remarkOf, normStatus, statusRank, isSettled } from './improveMeta'
+import { IMP_STATUSES, impKind, needsReason, remarkOf, normStatus, statusRank, isSettled } from './improveMeta'
 import type { ImpStatus } from './improveMeta'
 
 const kindColor = (t: Theme, kind: StatusKind) =>
@@ -138,7 +138,7 @@ function CellSelect({ value, options, onChange, disabled, placeholder }: { value
 
 export default function Improve() {
   const dispatch = useAppDispatch()
-  const { items, loading, error, updatedAt, locOptions: sheetLoc, typeOptions: sheetType } = useAppSelector((s) => s.improve)
+  const { items, loading, error, updatedAt, locOptions: sheetLoc } = useAppSelector((s) => s.improve)
   const replies = useAppSelector((s) => s.reply.items)
   const { isAdmin, user, authKey } = useRole()
 
@@ -167,7 +167,6 @@ export default function Improve() {
   const [cUrgent, setCUrgent] = useState(false)
   const [cTitle, setCTitle] = useState('')
   const [cLoc, setCLoc] = useState('')
-  const [cType, setCType] = useState('')
   const [cLink, setCLink] = useState('')
   const [cContent, setCContent] = useState('')
 
@@ -193,12 +192,7 @@ export default function Improve() {
       statusRank(a.status) - statusRank(b.status))
   }, [items, selected])
 
-  // 위치/유형 드롭다운 — 시트 데이터 확인 목록 우선, 없으면 기존 데이터에서 추출.
-  // 유형은 공백 정리·중복 제거 후 '모바일' 제외(백엔드도 제외하나 방어적으로 다시 필터). 기존 모바일 글은 데이터 유지.
-  const typeOptions = useMemo(() => {
-    const base = sheetType.length ? sheetType : [...IMP_TYPE_OPTIONS, ...items.map((t) => t.type)]
-    return [...new Set(base.map((s) => (s || '').trim()).filter((s) => s && s !== '모바일'))]
-  }, [items, sheetType])
+  // 개선위치 드롭다운 — 시트 데이터 확인 목록 우선, 없으면 기존 데이터에서 추출. (유형 항목은 제거됨)
   const locOptions = useMemo(() => (sheetLoc.length ? sheetLoc : [...new Set(items.map((t) => t.loc).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))), [items, sheetLoc])
 
   const onTab = (s: ImpStatus, shift: boolean) => {
@@ -215,8 +209,9 @@ export default function Improve() {
   const canDelete = (t: ImprovementItem) => isAdmin && !!user && user === (t.mgr || '').trim()
   // 작업 메모 열은 로그인 관리자에게만 노출(게스트 미노출). 열 개수 = 메모열 유무에 따라 8/9.
   const memoCol = canEdit
-  const detailSpan = memoCol ? 8 : 7
-  const fullSpan = memoCol ? 9 : 8
+  // 유형 열 제거로 열 수 1 감소
+  const detailSpan = memoCol ? 7 : 6
+  const fullSpan = memoCol ? 8 : 7
 
   const saveStatus = async (row: ImprovementItem, status: string, reason: string) => {
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
@@ -233,14 +228,14 @@ export default function Improve() {
     }
   }
 
-  // 제목 행에서 개선위치/유형만 즉시 변경(다른 필드 미변경). 행 단위 savingId로 상태·위치·유형 동시 변경 방지.
-  const saveField = async (row: ImprovementItem, patch: { loc: string } | { type: string }) => {
+  // 제목 행에서 개선위치만 즉시 변경(다른 필드 미변경). 행 단위 savingId로 동시 변경 방지.
+  const saveField = async (row: ImprovementItem, patch: { loc: string }) => {
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
     setSavingId(row.id)
     try {
       await updateImprovement({ author: user, key: authKey, num: row.num, ...patch })
       setSavingId(null)
-      showSnack('loc' in patch ? '개선위치를 변경했습니다.' : '유형을 변경했습니다.', 'success')
+      showSnack('개선위치를 변경했습니다.', 'success')
       dispatch(loadImproveData())
     } catch (err) {
       setSavingId(null)
@@ -277,7 +272,7 @@ export default function Improve() {
 
   const resetCompose = (t?: ImprovementItem) => {
     setCUrgent(t?.urgent ?? false); setCTitle(t?.title ?? ''); setCLoc(t?.loc ?? '')
-    setCType(t?.type ?? ''); setCLink(t?.link ?? ''); setCContent(t?.content ?? '')
+    setCLink(t?.link ?? ''); setCContent(t?.content ?? '')
   }
   const openNew = () => { resetCompose(); setEditingId(null); setComposing(true) }
   const openEdit = (t: ImprovementItem) => {
@@ -293,7 +288,7 @@ export default function Improve() {
     if (!cTitle.trim()) return showSnack('제목을 입력해주세요.', 'error')
     setSaving(true)
     try {
-      await createImprovement({ author: user, key: authKey, urgent: cUrgent, type: cType.trim(), loc: cLoc.trim(), title: cTitle.trim(), content: cContent.trim(), mgr: user, link: cLink.trim() })
+      await createImprovement({ author: user, key: authKey, urgent: cUrgent, loc: cLoc.trim(), title: cTitle.trim(), content: cContent.trim(), mgr: user, link: cLink.trim() })
       setSaving(false); setComposing(false)
       showSnack('요청을 등록했습니다.', 'success')
       dispatch(loadImproveData())
@@ -310,7 +305,7 @@ export default function Improve() {
     setSaving(true)
     try {
       // 상태는 건드리지 않고 내용 필드만 수정(완료일자·사유 보존)
-      await updateImprovement({ author: user, key: authKey, num: t.num, urgent: cUrgent, type: cType.trim(), loc: cLoc.trim(), title: cTitle.trim(), content: cContent.trim(), link: cLink.trim() })
+      await updateImprovement({ author: user, key: authKey, num: t.num, urgent: cUrgent, loc: cLoc.trim(), title: cTitle.trim(), content: cContent.trim(), link: cLink.trim() })
       setSaving(false); setEditingId(null)
       showSnack('수정했습니다.', 'success')
       dispatch(loadImproveData())
@@ -424,7 +419,6 @@ export default function Improve() {
           />
         </TableCell>
         <TableCell onClick={stop}><DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="위치" width={96} /></TableCell>
-        <TableCell onClick={stop}><DropField value={cType} onChange={setCType} options={typeOptions} placeholder="유형" width={84} /></TableCell>
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{author}</TableCell>
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status={stKind} label={stLabel} /></TableCell>
@@ -433,7 +427,7 @@ export default function Improve() {
       </TableRow>,
       <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, py: 0.75, verticalAlign: 'middle' } }}>
         <TableCell />
-        <TableCell colSpan={memoCol ? 7 : 6} onClick={stop} sx={{ textAlign: 'left' }}>
+        <TableCell colSpan={memoCol ? 6 : 5} onClick={stop} sx={{ textAlign: 'left' }}>
           <InputBase
             value={cContent}
             onChange={(e) => setCContent(e.target.value)}
@@ -537,7 +531,6 @@ export default function Improve() {
                 <TableCell sx={{ width: '1%' }}>번호</TableCell>
                 <TableCell sx={{ width: '100%' }}>제목</TableCell>
                 <TableCell sx={{ width: '1%' }}>개선위치</TableCell>
-                <TableCell sx={{ width: '1%' }}>유형</TableCell>
                 <TableCell sx={{ width: '1%' }}>작성자</TableCell>
                 <TableCell sx={{ width: '1%' }}>제안일자</TableCell>
                 <TableCell sx={{ width: '1%' }}>상태</TableCell>
@@ -615,12 +608,6 @@ export default function Improve() {
                       {editable
                         ? <CellSelect value={t.loc} options={locOptions} disabled={savingId === t.id} placeholder="-" onChange={(v) => { if (v !== (t.loc || '')) void saveField(t, { loc: v }) }} />
                         : (t.loc || '-')}
-                    </TableCell>
-                    {/* 유형 — 로그인 관리자는 셀에서 즉시 변경(모바일 제외 목록) */}
-                    <TableCell onClick={editable ? stop : undefined} sx={{ maxWidth: 120 }}>
-                      {editable
-                        ? <CellSelect value={t.type} options={typeOptions} disabled={savingId === t.id} placeholder="-" onChange={(v) => { if (v !== (t.type || '')) void saveField(t, { type: v }) }} />
-                        : (t.type || '-')}
                     </TableCell>
                     <TableCell>{t.author || '-'}</TableCell>
                     <TableCell sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>{fmtDate(t.date)}</TableCell>

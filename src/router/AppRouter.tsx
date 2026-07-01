@@ -7,7 +7,6 @@ import Work from '@/pages/Work'
 import Equipment from '@/pages/Equipment'
 import EquipmentOps from '@/pages/EquipmentOps'
 import Links from '@/pages/Links'
-import Roadmap from '@/pages/Roadmap'
 import Events from '@/pages/Events'
 import Settings from '@/pages/Settings'
 import Improve from '@/pages/Improve'
@@ -28,11 +27,12 @@ export function AppRouter() {
         <Route path="/notice/:num" element={<Notice />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/work" element={<Work />} />
-        <Route path="/equipment" element={<Equipment />} />
-        <Route path="/equipment-ops" element={<EquipmentOps />} />
+        {/* 장비관리 — 로그인(관리자) 전용. 게스트는 홈으로 리다이렉트 */}
+        <Route path="/equipment" element={<RequireAdmin><Equipment /></RequireAdmin>} />
+        <Route path="/equipment-ops" element={<RequireAdmin><EquipmentOps /></RequireAdmin>} />
         <Route path="/links" element={<Links />} />
         <Route path="/improve" element={<Improve />} />
-        <Route path="/roadmap" element={<Roadmap />} />
+        {/* 구축 로드맵 전용 페이지 제거 — 콘텐츠는 홈으로 이관. /roadmap 접근은 전역 규칙(홈 리다이렉트) */}
         <Route path="/events" element={<Events />} />
         {/* 설정 — 로그인(관리자) 전용. 게스트는 홈으로 (로그인은 상단바 '관리자 모드' 버튼) */}
         <Route path="/settings" element={<RequireAdmin><Settings /></RequireAdmin>} />

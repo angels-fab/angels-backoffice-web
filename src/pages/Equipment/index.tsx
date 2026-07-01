@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { MouseEvent as ReactMouseEvent } from 'react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -27,7 +27,7 @@ import { useRole } from '@/auth/role'
 import type { EqGroup, ScheduleItem } from '@/types'
 import { STAGE, STAGE_ORDER, groupStage, phaseChip, todayHalfIndex, type StageCode, type StageInfo } from './stageMeta'
 import { GanttHeader, GanttBar } from './gantt'
-import { calcHalfDelta, shiftStart, fmtStartMonth } from './timeline'
+import { calcHalfDelta, shiftStart, fmtStartMonth, halfToStart, startToHalf, itemTimelineForMonths } from './timeline'
 import DragTip from './DragTip'
 import type { DragTipData } from './DragTip'
 import EqProjectDrawer from './EqProjectDrawer'
@@ -73,7 +73,7 @@ const projAccessor = (b: Batch, c: ProjCol): string | number | null => {
 
 // 드래그 종료 후 확인 모달용 (적용 전까지 Redux/시트 미반영). codes=배치 내 전체 관리번호.
 type PendingChange = {
-  kind: 'move' | 'resize'
+  kind: 'move' | 'resize' | 'startResize'
   codes: string[]
   stage?: string
   deltaHalves: number
@@ -83,11 +83,13 @@ type PendingChange = {
   after: string
   delta: string
   qty: number
+  /** startResize(첫 단계 시작점) 확정값 — start·첫단계 개월 동시 적용 */
+  startPatch?: { start: string; months: string }
 }
 // Undo/Redo 히스토리 (저장된 변경의 before/after 절대값, 배치 전체 codes)
 type HistEntry = {
   codes: string[]
-  kind: 'move' | 'resize'
+  kind: 'move' | 'resize' | 'startResize'
   stage?: string
   before: { start?: string; stageMonths?: string }
   after: { start?: string; stageMonths?: string }
@@ -110,7 +112,7 @@ export default function Equipment() {
   const counts = useAppSelector(selectEqCounts)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [view, setView] = useState<IntroView>('timeline')
+  const [view, setView] = useState<IntroView>('stage') // 기본 보기 = 단계별
   const [editMode, setEditMode] = useState(false) // '일정 편집' 토글 — 켤 때만 드래그/리사이즈(실수 방지)
   const [fltStage, setFltStage] = useState('전체')
   const [fltMgr, setFltMgr] = useState('전체')
@@ -243,11 +245,14 @@ export default function Equipment() {
   const [redoStack, setRedoStack] = useState<HistEntry[]>([])
   const [histBusy, setHistBusy] = useState(false)
 
-  const startDrag = (e: ReactMouseEvent, g: EqGroup) => {
+  const abortedRef = useRef(false) // Esc 취소 표시 — onUp이 확정을 건너뛰게
+
+  const startDrag = (e: ReactPointerEvent, g: EqGroup) => {
     if (!canEdit || !g.codes.length || pending || histBusy) return
     dragRef.current = { codes: g.codes, repStart: g.start, startX: e.clientX, halfPx: measureHalfPx(e.currentTarget, months.length) }
     lastDeltaRef.current = 0
     draggedRef.current = false
+    abortedRef.current = false
     setPreview({ rep: g.repCode, px: 0 })
     setDragging(true)
     e.preventDefault()
@@ -255,7 +260,7 @@ export default function Equipment() {
 
   useEffect(() => {
     if (!dragging) return
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       const d = dragRef.current
       if (!d) return
       const px = e.clientX - d.startX
@@ -275,6 +280,7 @@ export default function Equipment() {
       lastDeltaRef.current = 0
       setDragging(false)
       setTip(null)
+      if (abortedRef.current) { setPreview(null); return } // Esc 취소 → 확정 안 함(원복)
       if (d && dh) {
         setPending({
           kind: 'move', codes: d.codes, deltaHalves: dh, qty: d.codes.length,
@@ -284,30 +290,33 @@ export default function Equipment() {
         })
       } else setPreview(null)
     }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
     return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
     }
   }, [dragging, schedule])
 
   // (간트는 콘텐츠 폭에 맞춰 가변폭 — 가로 스크롤 없음. 휠→가로스크롤 변환 제거: 상하 스크롤이 좌우로 새지 않음)
 
-  // ── 리사이즈(단계 길이) ── 배치 내 모든 code에 동일 적용
-  const resizeRef = useRef<{ codes: string[]; stage: string; startX: number; halfPx: number; baseHalves: number } | null>(null)
+  // ── 리사이즈(단계 길이) ── 배치 내 모든 code에 동일 적용. 드래그 중 막대가 실시간 반영.
+  const resizeRef = useRef<{ codes: string[]; stage: string; repStart: string; repStages: Record<string, string>; startX: number; halfPx: number; baseHalves: number } | null>(null)
   const lastResizeHalvesRef = useRef(0)
   const [resizing, setResizing] = useState(false)
   const [resizePrev, setResizePrev] = useState<{ rep: string; tl: string[] } | null>(null)
 
-  const startResize = (e: ReactMouseEvent, g: EqGroup, stageCode: string) => {
+  const startResize = (e: ReactPointerEvent, g: EqGroup, stageCode: string) => {
     if (!canEdit || !g.codes.length || pending || histBusy) return
     const label = STAGE[stageCode as StageCode]?.label
     if (!label) return
     const baseHalves = Math.max(1, Math.round(Number(g.stages?.[label] || 0) * 2))
-    resizeRef.current = { codes: g.codes, stage: label, startX: e.clientX, halfPx: measureHalfPx(e.currentTarget.closest('.gantt-wrap'), months.length), baseHalves }
+    resizeRef.current = { codes: g.codes, stage: label, repStart: g.start, repStages: g.stages, startX: e.clientX, halfPx: measureHalfPx(e.currentTarget.closest('.gantt-wrap'), months.length), baseHalves }
     lastResizeHalvesRef.current = baseHalves
     draggedRef.current = false
+    abortedRef.current = false
     setResizePrev({ rep: g.repCode, tl: g.timeline })
     setResizing(true)
     e.preventDefault()
@@ -315,7 +324,8 @@ export default function Equipment() {
 
   useEffect(() => {
     if (!resizing) return
-    const onMove = (e: MouseEvent) => {
+    const rep = resizeRef.current ? schedule.find((s) => s.code === resizeRef.current!.codes[0]) : undefined
+    const onMove = (e: PointerEvent) => {
       const d = resizeRef.current
       if (!d) return
       const px = e.clientX - d.startX
@@ -323,6 +333,9 @@ export default function Equipment() {
       const nextHalves = Math.max(1, d.baseHalves + calcHalfDelta(px, d.halfPx))
       lastResizeHalvesRef.current = nextHalves
       const deltaH = nextHalves - d.baseHalves
+      // 실시간 미리보기 — 해당 단계 길이만 바꾼 timeline 재계산
+      const tl = itemTimelineForMonths(d.repStart, { ...d.repStages, [d.stage]: String(nextHalves / 2) }, months)
+      setResizePrev({ rep: rep?.code ?? d.codes[0], tl })
       setTip({
         x: e.clientX, y: e.clientY,
         lines: [d.stage, `${d.baseHalves / 2}개월 → ${nextHalves / 2}개월`, `(${deltaH > 0 ? '+' : ''}${deltaH / 2}개월)`],
@@ -335,6 +348,7 @@ export default function Equipment() {
       lastResizeHalvesRef.current = 0
       setResizing(false)
       setTip(null)
+      if (abortedRef.current) { setResizePrev(null); return }
       if (d && nextHalves && nextHalves !== d.baseHalves) {
         const deltaH = nextHalves - d.baseHalves
         setPending({
@@ -345,13 +359,106 @@ export default function Equipment() {
         })
       } else setResizePrev(null)
     }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
     return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
     }
-  }, [resizing])
+  }, [resizing, schedule, months])
+
+  // ── 첫 단계 시작점 리사이즈 ── 첫 단계만 늘고/줄고(다음 단계 시작=첫 단계 끝 고정). start·첫단계 길이 동시 변경.
+  const firstRef = useRef<{ codes: string[]; label: string; repStart: string; repStages: Record<string, string>; startX: number; halfPx: number; baseStartHalf: number; baseDurHalves: number; endHalf: number } | null>(null)
+  const lastFirstDeltaRef = useRef(0)
+  const [firstResizing, setFirstResizing] = useState(false)
+
+  const startFirstResize = (e: ReactPointerEvent, g: EqGroup, stageCode: string) => {
+    if (!canEdit || !g.codes.length || pending || histBusy) return
+    const label = STAGE[stageCode as StageCode]?.label
+    if (!label) return
+    const baseStartHalf = startToHalf(g.start)
+    if (baseStartHalf == null) return
+    const baseDurHalves = Math.max(1, Math.round(Number(g.stages?.[label] || 0) * 2))
+    firstRef.current = {
+      codes: g.codes, label, repStart: g.start, repStages: g.stages,
+      startX: e.clientX, halfPx: measureHalfPx(e.currentTarget.closest('.gantt-wrap'), months.length),
+      baseStartHalf, baseDurHalves, endHalf: baseStartHalf + baseDurHalves, // 첫 단계 끝(고정 기준)
+    }
+    lastFirstDeltaRef.current = 0
+    draggedRef.current = false
+    abortedRef.current = false
+    setResizePrev({ rep: g.repCode, tl: g.timeline })
+    setFirstResizing(true)
+    e.preventDefault()
+  }
+
+  useEffect(() => {
+    if (!firstResizing) return
+    const rep = firstRef.current ? schedule.find((s) => s.code === firstRef.current!.codes[0]) : undefined
+    const onMove = (e: PointerEvent) => {
+      const d = firstRef.current
+      if (!d) return
+      const px = e.clientX - d.startX
+      if (Math.abs(px) > 3) draggedRef.current = true
+      // 시작점을 delta 반월 이동하되, 끝(endHalf)은 고정 → 새 시작 ≤ endHalf-1, ≥ 0
+      let newStartHalf = d.baseStartHalf + calcHalfDelta(px, d.halfPx)
+      newStartHalf = Math.max(0, Math.min(newStartHalf, d.endHalf - 1))
+      const delta = newStartHalf - d.baseStartHalf // 음수=앞당김
+      lastFirstDeltaRef.current = delta
+      const newDurHalves = d.endHalf - newStartHalf // 끝 고정
+      const newStart = halfToStart(newStartHalf)
+      const tl = itemTimelineForMonths(newStart, { ...d.repStages, [d.label]: String(newDurHalves / 2) }, months)
+      setResizePrev({ rep: rep?.code ?? d.codes[0], tl })
+      setTip({
+        x: e.clientX, y: e.clientY,
+        lines: ['첫 단계 시작', `${fmtStartMonth(d.repStart)} → ${fmtStartMonth(newStart)}`, `${d.label} ${newDurHalves / 2}개월`],
+      })
+    }
+    const onUp = () => {
+      const d = firstRef.current
+      const delta = lastFirstDeltaRef.current
+      firstRef.current = null
+      lastFirstDeltaRef.current = 0
+      setFirstResizing(false)
+      setTip(null)
+      if (abortedRef.current) { setResizePrev(null); return }
+      if (d && delta) {
+        const newStartHalf = d.baseStartHalf + delta
+        const newDurHalves = d.endHalf - newStartHalf
+        setPending({
+          kind: 'startResize', codes: d.codes, stage: d.label, deltaHalves: delta, qty: d.codes.length,
+          title: '첫 단계 시작일을 변경하시겠습니까?', stageName: d.label,
+          before: fmtStartMonth(d.repStart), after: fmtStartMonth(halfToStart(newStartHalf)),
+          delta: `${delta > 0 ? '+' : ''}${delta / 2}개월`,
+          startPatch: { start: halfToStart(newStartHalf), months: String(newDurHalves / 2) },
+        })
+      } else setResizePrev(null)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [firstResizing, schedule, months])
+
+  // Esc — 진행 중 제스처 취소(원복)
+  useEffect(() => {
+    if (!dragging && !resizing && !firstResizing) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      abortedRef.current = true
+      dragRef.current = null; resizeRef.current = null; firstRef.current = null
+      setDragging(false); setResizing(false); setFirstResizing(false)
+      setPreview(null); setResizePrev(null); setTip(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [dragging, resizing, firstResizing])
 
   // 적용 — 낙관적 reducer + 배치 전체 저장 + 재fetch
   const applyPending = async () => {
@@ -362,29 +469,40 @@ export default function Equipment() {
     if (!rep) { setPending(null); setPreview(null); setResizePrev(null); return }
     setApplying(true)
     let entry: HistEntry
+    let mut: (it: ScheduleItem) => { start: string; stages: Record<string, string> }
     if (p.kind === 'move') {
       const newStart = shiftStart(rep.start, p.deltaHalves)
       dispatch(shiftScheduleStart({ codes: p.codes, deltaHalves: p.deltaHalves }))
       entry = { codes: p.codes, kind: 'move', before: { start: rep.start }, after: { start: newStart } }
-    } else {
+      mut = (it) => ({ start: shiftStart(it.start, p.deltaHalves), stages: it.stages })
+    } else if (p.kind === 'resize') {
       const base = Math.max(1, Math.round(Number(rep.stages?.[p.stage!] || 0) * 2))
       const next = Math.max(1, base + p.deltaHalves)
       dispatch(resizeScheduleStage({ codes: p.codes, stage: p.stage!, deltaHalves: p.deltaHalves }))
       entry = { codes: p.codes, kind: 'resize', stage: p.stage, before: { stageMonths: String(base / 2) }, after: { stageMonths: String(next / 2) } }
+      mut = (it) => {
+        const b = Math.max(1, Math.round(Number(it.stages?.[p.stage!] || 0) * 2))
+        return { start: it.start, stages: { ...it.stages, [p.stage!]: String(Math.max(1, b + p.deltaHalves) / 2) } }
+      }
+    } else {
+      // startResize — 첫 단계 시작·길이 절대값 동시 적용(배치 공통)
+      const sp = p.startPatch!
+      const beforeDur = String(Math.max(1, Math.round(Number(rep.stages?.[p.stage!] || 0) * 2)) / 2)
+      dispatch(setScheduleStart({ codes: p.codes, start: sp.start }))
+      dispatch(setScheduleStage({ codes: p.codes, stage: p.stage!, value: sp.months }))
+      entry = { codes: p.codes, kind: 'startResize', stage: p.stage, before: { start: rep.start, stageMonths: beforeDur }, after: { start: sp.start, stageMonths: sp.months } }
+      mut = (it) => ({ start: sp.start, stages: { ...it.stages, [p.stage!]: sp.months } })
     }
     setPreview(null)
     setResizePrev(null)
     try {
-      await persistBatch(p.codes, (it) =>
-        p.kind === 'move'
-          ? { start: shiftStart(it.start, p.deltaHalves), stages: it.stages }
-          : { start: it.start, stages: { ...it.stages, [p.stage!]: String(Math.max(1, Math.max(1, Math.round(Number(it.stages?.[p.stage!] || 0) * 2)) + p.deltaHalves) / 2) } },
-      )
+      await persistBatch(p.codes, mut)
       setUndoStack((s) => [...s, entry].slice(-50))
       setRedoStack([])
       setApplying(false)
       setPending(null)
-      showSnack(p.kind === 'move' ? `일정을 이동·저장했습니다${p.qty > 1 ? ` (${p.qty}대)` : ''}.` : `기간을 변경·저장했습니다${p.qty > 1 ? ` (${p.qty}대)` : ''}.`, 'success')
+      const qtyTxt = p.qty > 1 ? ` (${p.qty}대)` : ''
+      showSnack(p.kind === 'move' ? `일정을 이동·저장했습니다${qtyTxt}.` : p.kind === 'resize' ? `기간을 변경·저장했습니다${qtyTxt}.` : `첫 단계 시작일을 변경·저장했습니다${qtyTxt}.`, 'success')
       await dispatch(loadEqData()).unwrap().catch(() => {})
     } catch (err) {
       setApplying(false)
@@ -416,6 +534,10 @@ export default function Equipment() {
       } else if (entry.kind === 'resize' && entry.stage && target.stageMonths != null) {
         dispatch(setScheduleStage({ codes: entry.codes, stage: entry.stage, value: target.stageMonths }))
         await persistBatch(entry.codes, (it) => ({ start: it.start, stages: { ...it.stages, [entry.stage!]: target.stageMonths! } }))
+      } else if (entry.kind === 'startResize' && entry.stage && target.start != null && target.stageMonths != null) {
+        dispatch(setScheduleStart({ codes: entry.codes, start: target.start }))
+        dispatch(setScheduleStage({ codes: entry.codes, stage: entry.stage, value: target.stageMonths }))
+        await persistBatch(entry.codes, (it) => ({ start: target.start!, stages: { ...it.stages, [entry.stage!]: target.stageMonths! } }))
       }
       await dispatch(loadEqData()).unwrap().catch(() => {})
       return true
@@ -532,7 +654,7 @@ export default function Equipment() {
         <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           {/* 보기 전환 */}
           <Box sx={{ display: 'inline-flex', gap: 0.5 }}>
-            {([['timeline', '타임라인'], ['stage', '단계별'], ['list', '목록']] as [IntroView, string][]).map(([v, label]) => (
+            {([['stage', '단계별'], ['timeline', '타임라인'], ['list', '목록']] as [IntroView, string][]).map(([v, label]) => (
               <Button
                 key={v} size="small" disableElevation variant={view === v ? 'contained' : 'text'}
                 onClick={() => setView(v)}
@@ -603,14 +725,15 @@ export default function Equipment() {
                   <NameWithQty name={g.name} count={g.count} fontSize={12} />
                 </Box>
                 <Box
-                  sx={{ flex: 1, minWidth: 0, py: 0.5, cursor: canEdit ? 'grab' : undefined, userSelect: 'none' }}
-                  onMouseDown={canEdit ? (e) => startDrag(e, g) : undefined}
+                  sx={{ flex: 1, minWidth: 0, py: 0.5, cursor: canEdit ? 'grab' : undefined, userSelect: 'none', touchAction: canEdit ? 'none' : undefined }}
+                  onPointerDown={canEdit ? (e) => startDrag(e, g) : undefined}
                 >
                   <GanttBar
                     tl={resizePrev?.rep === g.repCode ? resizePrev.tl : g.timeline}
                     months={months}
                     previewPx={preview?.rep === g.repCode ? preview.px : 0}
                     onResizeStart={canEdit ? (e, stageCode) => startResize(e, g, stageCode) : undefined}
+                    onStartResize={canEdit ? (e, stageCode) => startFirstResize(e, g, stageCode) : undefined}
                   />
                 </Box>
               </Box>

@@ -84,7 +84,8 @@ export default function Calendar() {
   const [anchor, setAnchor] = useState<Date>(() => parseKey(todaySeoul()))
   const [search, setSearch] = useState('')
   const [selMembers, setSelMembers] = useState<string[]>([]) // 빈 배열 = 전체 선택
-  const [selCats, setSelCats] = useState<RealCat[]>([]) // 빈 배열 = 전체 선택
+  const [selCats, setSelCats] = useState<RealCat[]>([]) // 빈 배열 = 전체(종류 '전체' 칩)
+  const [multiSel, setMultiSel] = useState(false) // 모바일 복수선택 모드(Shift 대체)
   const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
   // 화면에 실제로 보이는 날짜 범위(FC activeStart/activeEnd). 종류별 건수 집계에 사용. datesSet에서 실제값 주입.
   const [visRange, setVisRange] = useState<{ start: Date; end: Date }>(() => gridRange('month', parseKey(todaySeoul())))
@@ -156,15 +157,22 @@ export default function Calendar() {
   const eventActive = (ev: CalEvent) =>
     catSelected(ev.cat) && membersForEvent(ev.title).some(memberSelected) && searchMatch(ev)
 
-  // 전체선택 상태에서 한 탭 클릭 = 그것만 선택 / 선택된 탭 재클릭 = 해제(마지막 해제 시 전체로 복귀)
-  const isolateToggle = <T,>(prev: T[], id: T, total: number): T[] => {
-    if (prev.length === 0 || prev.length >= total) return [id] // 전체선택(빈 배열 또는 모두 포함) → 그것만
-    if (prev.includes(id)) return prev.filter((x) => x !== id) // 선택 해제(마지막이면 [] = 전체)
-    const next = [...prev, id]
-    return next.length >= total ? [] : next // 모두 선택되면 전체(빈 배열)로 정규화
-  }
-  const toggleMember = (id: string) => setSelMembers((prev) => isolateToggle(prev, id, MEMBERS.length))
-  const toggleCat = (id: RealCat) => setSelCats((prev) => isolateToggle(prev, id, CAT_ORDER.length))
+  // 필터 선택 — 일반 클릭=단일선택(그것만) / additive(Shift·모바일 복수모드)=추가·해제 토글.
+  // 팀원: [] = 전체(모든 칩 on). additive로 하나 해제하면 [전체−그것]로 확장 후 토글, 모두 켜지면 [](전체) 정규화.
+  const toggleMember = (id: string, additive: boolean) => setSelMembers((prev) => {
+    if (!additive) return [id]
+    const all = MEMBERS.map((m) => m.id)
+    const base = prev.length === 0 ? all : prev
+    const next = base.includes(id) ? base.filter((x) => x !== id) : [...base, id]
+    return next.length >= all.length ? [] : next
+  })
+  // 종류: [] = 전체('전체' 칩 on, 개별 off). 일반클릭=그 종류만 / '전체' 칩=[] / additive=개별 토글(모두 해제→[] 전체 자동, 모두 선택→[] 전체)
+  const toggleCat = (id: RealCat, additive: boolean) => setSelCats((prev) => {
+    if (!additive) return [id]
+    const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    return next.length >= CAT_ORDER.length ? [] : next
+  })
+  const selectAllCats = () => setSelCats([])
 
   // ── 종류별 건수 ──
   // 현재 보이는 날짜 범위 ∩ (주말 보기) ∩ 팀원 필터 ∩ 검색어로 집계. 종류 필터는 적용하지 않음
@@ -194,13 +202,16 @@ export default function Calendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [selMembers],
   )
+  // 개별 종류 칩 on = 명시 선택된 것만(전체([])일 땐 개별 칩 dim, '전체' 칩만 on — 동시선택 방지)
   const sidebarCats = CAT_ORDER.map((id) => ({
     id,
     label: CAT_META[id].label,
     color: CAT_META[id].color,
     count: catCounts[id] || 0,
-    on: catSelected(id),
+    on: selCats.includes(id),
   }))
+  const allCatsOn = selCats.length === 0
+  const catsTotalCount = CAT_ORDER.reduce((s, id) => s + (catCounts[id] || 0), 0)
 
   // ── FullCalendar 이벤트 ──
   // 여러 날 일정은 가로로 이어지는 바(스팬)로 표시. 겹침은 칩 높이를 시간/종일 모두 2줄로 통일해
@@ -375,6 +386,11 @@ export default function Calendar() {
         onToggleMember={toggleMember}
         cats={sidebarCats}
         onToggleCat={toggleCat}
+        allCatsOn={allCatsOn}
+        onSelectAllCats={selectAllCats}
+        totalCount={catsTotalCount}
+        multiSelect={multiSel}
+        onToggleMulti={() => setMultiSel((m) => !m)}
       />
 
       {/* 달력 (풀폭) — 컨테이너 위임: 포인터 위치의 .fc-event를 elementsFromPoint로 찾아

@@ -17,7 +17,7 @@ export const MEMO_LOCATION_PATH: Record<string, string> = {
   '장비운영관리': '/equipment',
   '장비관리': '/equipment',
   '학술·교육·전시': '/events',
-  '구축 로드맵': '/roadmap',
+  '구축 로드맵': '/', // 전용 페이지 폐지 — 홈으로 이관되어 홈 경로에 메모 표시
   '바로가기': '/links',
   '설정': '/settings',
 }
