@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -18,6 +19,8 @@ import AddIcon from '@mui/icons-material/Add'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
 import EditCalendarIcon from '@mui/icons-material/EditCalendar'
+import CheckIcon from '@mui/icons-material/Check'
+import CloseIcon from '@mui/icons-material/Close'
 import { PageContainer, PageHeader, StatTile, EmptyState } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
@@ -43,7 +46,7 @@ const measureHalfPx = (el: Element | null, monthCount: number): number => {
   return monthCount > 0 && w > 0 ? w / (monthCount * 2) : 28
 }
 const k = (v: number) => Math.round(v / 1000).toLocaleString()
-type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
+type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info' }
 type IntroView = 'timeline' | 'stage' | 'list'
 type Batch = { g: EqGroup; info: StageInfo }
 
@@ -83,6 +86,9 @@ type PendingChange = {
   after: string
   delta: string
   qty: number
+  /** 드롭 지점(포인터) viewport 좌표 — 근처 확인 UI 위치 */
+  x: number
+  y: number
   /** startResize(첫 단계 시작점) 확정값 — start·첫단계 개월 동시 적용 */
   startPatch?: { start: string; months: string }
 }
@@ -187,7 +193,7 @@ export default function Equipment() {
   const sortedList = useMemo(() => sortRows(filtered, listSort.col, listSort.dir, projAccessor), [filtered, listSort.col, listSort.dir])
 
   // ── CRUD ──
-  const showSnack = (msg: string, severity: 'success' | 'error' = 'success') => setSnack({ open: true, msg, severity })
+  const showSnack = (msg: string, severity: Snack['severity'] = 'success') => setSnack({ open: true, msg, severity })
 
   const handleSaved = async (code: string, isEdit: boolean) => {
     setWriteOpen(false)
@@ -240,15 +246,18 @@ export default function Equipment() {
   const [dragging, setDragging] = useState(false)
   const [tip, setTip] = useState<DragTipData | null>(null)
   const [pending, setPending] = useState<PendingChange | null>(null)
-  const [applying, setApplying] = useState(false)
   const [undoStack, setUndoStack] = useState<HistEntry[]>([])
   const [redoStack, setRedoStack] = useState<HistEntry[]>([])
-  const [histBusy, setHistBusy] = useState(false)
 
   const abortedRef = useRef(false) // Esc 취소 표시 — onUp이 확정을 건너뛰게
+  const lastPtRef = useRef({ x: 0, y: 0 }) // 마지막 포인터 좌표(드롭 확인 UI 위치)
+  // 편집 세션 원본 스냅샷(편집 시작 시 보관) — 취소 시 복구·저장 시 변경분 판별
+  const snapshotRef = useRef<Map<string, { start: string; stages: Record<string, string> }> | null>(null)
+  const [exitDlg, setExitDlg] = useState(false) // 편집 종료 → 저장/취소 선택 다이얼로그
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const startDrag = (e: ReactPointerEvent, g: EqGroup) => {
-    if (!canEdit || !g.codes.length || pending || histBusy) return
+    if (!canEdit || !g.codes.length || pending) return
     dragRef.current = { codes: g.codes, repStart: g.start, startX: e.clientX, halfPx: measureHalfPx(e.currentTarget, months.length) }
     lastDeltaRef.current = 0
     draggedRef.current = false
@@ -265,12 +274,14 @@ export default function Equipment() {
       if (!d) return
       const px = e.clientX - d.startX
       if (Math.abs(px) > 3) draggedRef.current = true
+      lastPtRef.current = { x: e.clientX, y: e.clientY }
       const dh = calcHalfDelta(px, d.halfPx)
       lastDeltaRef.current = dh
       setPreview({ rep: d.codes[0] ? schedule.find((s) => s.code === d.codes[0])?.code ?? '' : '', px: dh * d.halfPx })
+      // 안내: 1줄 단계명+변경량 / 2줄 변경 전후 / 3줄 취소 안내
       setTip({
         x: e.clientX, y: e.clientY,
-        lines: [`${dh > 0 ? '+' : ''}${dh / 2}개월`, `${fmtStartMonth(d.repStart)} → ${fmtStartMonth(shiftStart(d.repStart, dh))}`],
+        lines: [`일정 이동  ${dh > 0 ? '+' : ''}${dh / 2}개월`, `${fmtStartMonth(d.repStart)} → ${fmtStartMonth(shiftStart(d.repStart, dh))}`, '변경 취소: ESC'],
       })
     }
     const onUp = () => {
@@ -284,9 +295,10 @@ export default function Equipment() {
       if (d && dh) {
         setPending({
           kind: 'move', codes: d.codes, deltaHalves: dh, qty: d.codes.length,
-          title: '일정을 이동하시겠습니까?',
+          title: '일정을 이동하시겠습니까?', stageName: '일정 이동',
           before: fmtStartMonth(d.repStart), after: fmtStartMonth(shiftStart(d.repStart, dh)),
           delta: `${dh > 0 ? '+' : ''}${dh / 2}개월`,
+          x: lastPtRef.current.x, y: lastPtRef.current.y,
         })
       } else setPreview(null)
     }
@@ -309,7 +321,7 @@ export default function Equipment() {
   const [resizePrev, setResizePrev] = useState<{ rep: string; tl: string[] } | null>(null)
 
   const startResize = (e: ReactPointerEvent, g: EqGroup, stageCode: string) => {
-    if (!canEdit || !g.codes.length || pending || histBusy) return
+    if (!canEdit || !g.codes.length || pending) return
     const label = STAGE[stageCode as StageCode]?.label
     if (!label) return
     const baseHalves = Math.max(1, Math.round(Number(g.stages?.[label] || 0) * 2))
@@ -330,6 +342,7 @@ export default function Equipment() {
       if (!d) return
       const px = e.clientX - d.startX
       if (Math.abs(px) > 3) draggedRef.current = true
+      lastPtRef.current = { x: e.clientX, y: e.clientY }
       const nextHalves = Math.max(1, d.baseHalves + calcHalfDelta(px, d.halfPx))
       lastResizeHalvesRef.current = nextHalves
       const deltaH = nextHalves - d.baseHalves
@@ -338,7 +351,7 @@ export default function Equipment() {
       setResizePrev({ rep: rep?.code ?? d.codes[0], tl })
       setTip({
         x: e.clientX, y: e.clientY,
-        lines: [d.stage, `${d.baseHalves / 2}개월 → ${nextHalves / 2}개월`, `(${deltaH > 0 ? '+' : ''}${deltaH / 2}개월)`],
+        lines: [`${d.stage}  ${deltaH > 0 ? '+' : ''}${deltaH / 2}개월`, `${d.baseHalves / 2}개월 → ${nextHalves / 2}개월`, '변경 취소: ESC'],
       })
     }
     const onUp = () => {
@@ -356,6 +369,7 @@ export default function Equipment() {
           title: '기간을 변경하시겠습니까?', stageName: d.stage,
           before: `${d.baseHalves / 2}개월`, after: `${nextHalves / 2}개월`,
           delta: `${deltaH > 0 ? '+' : ''}${deltaH / 2}개월`,
+          x: lastPtRef.current.x, y: lastPtRef.current.y,
         })
       } else setResizePrev(null)
     }
@@ -375,7 +389,7 @@ export default function Equipment() {
   const [firstResizing, setFirstResizing] = useState(false)
 
   const startFirstResize = (e: ReactPointerEvent, g: EqGroup, stageCode: string) => {
-    if (!canEdit || !g.codes.length || pending || histBusy) return
+    if (!canEdit || !g.codes.length || pending) return
     const label = STAGE[stageCode as StageCode]?.label
     if (!label) return
     const baseStartHalf = startToHalf(g.start)
@@ -402,6 +416,7 @@ export default function Equipment() {
       if (!d) return
       const px = e.clientX - d.startX
       if (Math.abs(px) > 3) draggedRef.current = true
+      lastPtRef.current = { x: e.clientX, y: e.clientY }
       // 시작점을 delta 반월 이동하되, 끝(endHalf)은 고정 → 새 시작 ≤ endHalf-1, ≥ 0
       let newStartHalf = d.baseStartHalf + calcHalfDelta(px, d.halfPx)
       newStartHalf = Math.max(0, Math.min(newStartHalf, d.endHalf - 1))
@@ -413,7 +428,7 @@ export default function Equipment() {
       setResizePrev({ rep: rep?.code ?? d.codes[0], tl })
       setTip({
         x: e.clientX, y: e.clientY,
-        lines: ['첫 단계 시작', `${fmtStartMonth(d.repStart)} → ${fmtStartMonth(newStart)}`, `${d.label} ${newDurHalves / 2}개월`],
+        lines: [`첫 단계 시작  ${delta > 0 ? '+' : ''}${delta / 2}개월`, `${fmtStartMonth(d.repStart)} → ${fmtStartMonth(newStart)}`, '변경 취소: ESC'],
       })
     }
     const onUp = () => {
@@ -429,10 +444,11 @@ export default function Equipment() {
         const newDurHalves = d.endHalf - newStartHalf
         setPending({
           kind: 'startResize', codes: d.codes, stage: d.label, deltaHalves: delta, qty: d.codes.length,
-          title: '첫 단계 시작일을 변경하시겠습니까?', stageName: d.label,
+          title: '첫 단계 시작일을 변경하시겠습니까?', stageName: `첫 단계(${d.label})`,
           before: fmtStartMonth(d.repStart), after: fmtStartMonth(halfToStart(newStartHalf)),
           delta: `${delta > 0 ? '+' : ''}${delta / 2}개월`,
           startPatch: { start: halfToStart(newStartHalf), months: String(newDurHalves / 2) },
+          x: lastPtRef.current.x, y: lastPtRef.current.y,
         })
       } else setResizePrev(null)
     }
@@ -460,30 +476,22 @@ export default function Equipment() {
     return () => window.removeEventListener('keydown', onKey)
   }, [dragging, resizing, firstResizing])
 
-  // 적용 — 낙관적 reducer + 배치 전체 저장 + 재fetch
-  const applyPending = async () => {
-    if (!pending || applying) return
-    if (!user || !authKey) { showSnack('관리자 로그인이 필요합니다.', 'error'); return }
+  // ✓ — 개별 변경을 로컬 임시 편집본(Redux)에만 반영. Google Sheets 저장은 '편집 종료 → 저장'에서 일괄.
+  const applyPending = () => {
+    if (!pending) return
     const p = pending
     const rep = schedule.find((s) => s.code === p.codes[0])
     if (!rep) { setPending(null); setPreview(null); setResizePrev(null); return }
-    setApplying(true)
     let entry: HistEntry
-    let mut: (it: ScheduleItem) => { start: string; stages: Record<string, string> }
     if (p.kind === 'move') {
       const newStart = shiftStart(rep.start, p.deltaHalves)
       dispatch(shiftScheduleStart({ codes: p.codes, deltaHalves: p.deltaHalves }))
       entry = { codes: p.codes, kind: 'move', before: { start: rep.start }, after: { start: newStart } }
-      mut = (it) => ({ start: shiftStart(it.start, p.deltaHalves), stages: it.stages })
     } else if (p.kind === 'resize') {
       const base = Math.max(1, Math.round(Number(rep.stages?.[p.stage!] || 0) * 2))
       const next = Math.max(1, base + p.deltaHalves)
       dispatch(resizeScheduleStage({ codes: p.codes, stage: p.stage!, deltaHalves: p.deltaHalves }))
       entry = { codes: p.codes, kind: 'resize', stage: p.stage, before: { stageMonths: String(base / 2) }, after: { stageMonths: String(next / 2) } }
-      mut = (it) => {
-        const b = Math.max(1, Math.round(Number(it.stages?.[p.stage!] || 0) * 2))
-        return { start: it.start, stages: { ...it.stages, [p.stage!]: String(Math.max(1, b + p.deltaHalves) / 2) } }
-      }
     } else {
       // startResize — 첫 단계 시작·길이 절대값 동시 적용(배치 공통)
       const sp = p.startPatch!
@@ -491,83 +499,105 @@ export default function Equipment() {
       dispatch(setScheduleStart({ codes: p.codes, start: sp.start }))
       dispatch(setScheduleStage({ codes: p.codes, stage: p.stage!, value: sp.months }))
       entry = { codes: p.codes, kind: 'startResize', stage: p.stage, before: { start: rep.start, stageMonths: beforeDur }, after: { start: sp.start, stageMonths: sp.months } }
-      mut = (it) => ({ start: sp.start, stages: { ...it.stages, [p.stage!]: sp.months } })
     }
-    setPreview(null)
-    setResizePrev(null)
-    try {
-      await persistBatch(p.codes, mut)
-      setUndoStack((s) => [...s, entry].slice(-50))
-      setRedoStack([])
-      setApplying(false)
-      setPending(null)
-      const qtyTxt = p.qty > 1 ? ` (${p.qty}대)` : ''
-      showSnack(p.kind === 'move' ? `일정을 이동·저장했습니다${qtyTxt}.` : p.kind === 'resize' ? `기간을 변경·저장했습니다${qtyTxt}.` : `첫 단계 시작일을 변경·저장했습니다${qtyTxt}.`, 'success')
-      await dispatch(loadEqData()).unwrap().catch(() => {})
-    } catch (err) {
-      setApplying(false)
-      setPending(null)
-      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
-      await dispatch(loadEqData()).unwrap().catch(() => {})
-    }
+    setUndoStack((s) => [...s, entry].slice(-50))
+    setRedoStack([])
+    setPending(null); setPreview(null); setResizePrev(null)
   }
 
-  const cancelPending = () => {
-    if (applying) return
-    setPending(null)
-    setPreview(null)
-    setResizePrev(null)
-  }
+  // ✗ — 이 변경만 취소(로컬 미반영, 원위치)
+  const cancelPending = () => { setPending(null); setPreview(null); setResizePrev(null) }
 
-  // ── Undo/Redo ──
-  const histBusyRef = useRef(false)
-  const applyHistory = async (entry: HistEntry, dir: 'undo' | 'redo'): Promise<boolean> => {
-    if (histBusyRef.current) return false
-    if (!user || !authKey) { showSnack('관리자 로그인이 필요합니다.', 'error'); return false }
-    histBusyRef.current = true
-    setHistBusy(true)
+  // ── Undo/Redo — 로컬 임시 편집본만 변경(저장은 '편집 종료 → 저장'에서 일괄) ──
+  const applyHistory = (entry: HistEntry, dir: 'undo' | 'redo') => {
     const target = dir === 'undo' ? entry.before : entry.after
-    try {
-      if (entry.kind === 'move' && target.start != null) {
-        dispatch(setScheduleStart({ codes: entry.codes, start: target.start }))
-        await persistBatch(entry.codes, (it) => ({ start: target.start!, stages: it.stages }))
-      } else if (entry.kind === 'resize' && entry.stage && target.stageMonths != null) {
-        dispatch(setScheduleStage({ codes: entry.codes, stage: entry.stage, value: target.stageMonths }))
-        await persistBatch(entry.codes, (it) => ({ start: it.start, stages: { ...it.stages, [entry.stage!]: target.stageMonths! } }))
-      } else if (entry.kind === 'startResize' && entry.stage && target.start != null && target.stageMonths != null) {
-        dispatch(setScheduleStart({ codes: entry.codes, start: target.start }))
-        dispatch(setScheduleStage({ codes: entry.codes, stage: entry.stage, value: target.stageMonths }))
-        await persistBatch(entry.codes, (it) => ({ start: target.start!, stages: { ...it.stages, [entry.stage!]: target.stageMonths! } }))
-      }
-      await dispatch(loadEqData()).unwrap().catch(() => {})
-      return true
-    } catch (err) {
-      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
-      await dispatch(loadEqData()).unwrap().catch(() => {})
-      return false
-    } finally {
-      histBusyRef.current = false
-      setHistBusy(false)
+    if (entry.kind === 'move' && target.start != null) {
+      dispatch(setScheduleStart({ codes: entry.codes, start: target.start }))
+    } else if (entry.kind === 'resize' && entry.stage && target.stageMonths != null) {
+      dispatch(setScheduleStage({ codes: entry.codes, stage: entry.stage, value: target.stageMonths }))
+    } else if (entry.kind === 'startResize' && entry.stage && target.start != null && target.stageMonths != null) {
+      dispatch(setScheduleStart({ codes: entry.codes, start: target.start }))
+      dispatch(setScheduleStage({ codes: entry.codes, stage: entry.stage, value: target.stageMonths }))
     }
+  }
+  const undo = () => {
+    if (!undoStack.length) return
+    const entry = undoStack[undoStack.length - 1]
+    applyHistory(entry, 'undo')
+    setUndoStack((s) => s.slice(0, -1)); setRedoStack((s) => [...s, entry])
+  }
+  const redo = () => {
+    if (!redoStack.length) return
+    const entry = redoStack[redoStack.length - 1]
+    applyHistory(entry, 'redo')
+    setRedoStack((s) => s.slice(0, -1)); setUndoStack((s) => [...s, entry])
   }
 
-  const undo = async () => {
-    if (!undoStack.length || histBusy) return
-    const entry = undoStack[undoStack.length - 1]
-    if (await applyHistory(entry, 'undo')) {
-      setUndoStack((s) => s.slice(0, -1))
-      setRedoStack((s) => [...s, entry])
-      showSnack('실행취소했습니다.', 'success')
+  // ── 편집 세션(로컬 임시) 시작/종료 — 저장은 '편집 종료 → 저장'에서 변경분만 1회 일괄 ──
+  const stagesEq = (a: Record<string, string>, b: Record<string, string>) => {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)])
+    for (const key of keys) if (String(a[key] ?? '') !== String(b[key] ?? '')) return false
+    return true
+  }
+  const changedCodes = (): string[] => {
+    const snap = snapshotRef.current
+    if (!snap) return []
+    const out: string[] = []
+    for (const it of schedule) {
+      const s = snap.get(it.code)
+      if (!s) continue
+      if (s.start !== it.start || !stagesEq(s.stages, it.stages)) out.push(it.code)
+    }
+    return out
+  }
+  const startEditMode = () => {
+    snapshotRef.current = new Map(schedule.map((s) => [s.code, { start: s.start, stages: { ...s.stages } }]))
+    setUndoStack([]); setRedoStack([])
+    setEditMode(true)
+  }
+  const closeEditSession = () => { snapshotRef.current = null; setUndoStack([]); setRedoStack([]); setExitDlg(false); setEditMode(false) }
+  // 편집 종료 버튼 — 미확정 변경 정리 후, 변경 있으면 저장/취소 선택, 없으면 그대로 종료(시트 호출 없음)
+  const requestExitEdit = () => {
+    cancelPending()
+    if (changedCodes().length === 0) closeEditSession()
+    else setExitDlg(true)
+  }
+  // 저장 — 이번 편집의 변경분만 Google Sheets에 한 번에 일괄 저장(현재 로컬 상태 기준)
+  const finishEditSave = async () => {
+    if (savingEdit) return
+    if (!user || !authKey) { showSnack('관리자 로그인이 필요합니다.', 'error'); return }
+    const codes = changedCodes()
+    if (!codes.length) { closeEditSession(); return }
+    setSavingEdit(true)
+    try {
+      await persistBatch(codes, (it) => ({ start: it.start, stages: it.stages }))
+      setSavingEdit(false)
+      closeEditSession()
+      showSnack(`일정 변경 ${codes.length}건을 저장했습니다.`, 'success')
+      await dispatch(loadEqData()).unwrap().catch(() => {})
+    } catch (err) {
+      setSavingEdit(false)
+      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
     }
   }
-  const redo = async () => {
-    if (!redoStack.length || histBusy) return
-    const entry = redoStack[redoStack.length - 1]
-    if (await applyHistory(entry, 'redo')) {
-      setRedoStack((s) => s.slice(0, -1))
-      setUndoStack((s) => [...s, entry])
-      showSnack('다시실행했습니다.', 'success')
+  // 취소 — 이번 편집의 모든 변경을 편집 시작 전 상태로 되돌림(로컬만, 시트 호출 없음)
+  const finishEditCancel = () => {
+    const snap = snapshotRef.current
+    if (snap) {
+      for (const it of schedule) {
+        const s = snap.get(it.code)
+        if (!s) continue
+        if (s.start !== it.start) dispatch(setScheduleStart({ codes: [it.code], start: s.start }))
+        if (!stagesEq(s.stages, it.stages)) {
+          const keys = new Set([...Object.keys(s.stages), ...Object.keys(it.stages)])
+          for (const key of keys) if (String(s.stages[key] ?? '') !== String(it.stages[key] ?? '')) {
+            dispatch(setScheduleStage({ codes: [it.code], stage: key, value: String(s.stages[key] ?? '0') }))
+          }
+        }
+      }
     }
+    closeEditSession()
+    showSnack('변경을 취소했습니다.', 'info')
   }
 
   const undoRef = useRef<() => void>(() => {})
@@ -575,7 +605,7 @@ export default function Equipment() {
   const blockKeyRef = useRef(false)
   undoRef.current = undo
   redoRef.current = redo
-  blockKeyRef.current = !!(pending || writeOpen || editTarget || deleteTarget || dragging || resizing || histBusy)
+  blockKeyRef.current = !!(pending || writeOpen || editTarget || deleteTarget || dragging || resizing)
   useEffect(() => {
     if (!isAdmin) return
     const onKey = (e: KeyboardEvent) => {
@@ -621,10 +651,10 @@ export default function Equipment() {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {isAdmin && (
               <>
-                <IconButton aria-label="실행취소" title="실행취소 (Ctrl+Z)" onClick={undo} disabled={!undoStack.length || histBusy} size="small" sx={{ color: 'text.secondary' }}>
+                <IconButton aria-label="실행취소" title="실행취소 (Ctrl+Z)" onClick={undo} disabled={!undoStack.length} size="small" sx={{ color: 'text.secondary' }}>
                   <UndoIcon sx={{ fontSize: 20 }} />
                 </IconButton>
-                <IconButton aria-label="다시실행" title="다시실행 (Ctrl+Shift+Z)" onClick={redo} disabled={!redoStack.length || histBusy} size="small" sx={{ color: 'text.secondary' }}>
+                <IconButton aria-label="다시실행" title="다시실행 (Ctrl+Shift+Z)" onClick={redo} disabled={!redoStack.length} size="small" sx={{ color: 'text.secondary' }}>
                   <RedoIcon sx={{ fontSize: 20 }} />
                 </IconButton>
                 <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => { setEditTarget(null); setWriteOpen(true) }}>
@@ -679,7 +709,7 @@ export default function Equipment() {
             {isAdmin && (
               <Button
                 size="small" variant={editMode ? 'contained' : 'outlined'} startIcon={<EditCalendarIcon sx={{ fontSize: 16 }} />}
-                onClick={() => setEditMode((m) => !m)}
+                onClick={() => (editMode ? requestExitEdit() : startEditMode())}
                 sx={{ flexShrink: 0, py: 0.4, fontSize: 12.5, color: editMode ? undefined : 'text.secondary', borderColor: 'divider' }}
               >
                 {editMode ? '편집 종료' : '일정 편집'}
@@ -839,40 +869,22 @@ export default function Equipment() {
         </DialogActions>
       </Dialog>
 
-      {/* 드래그 변경 확인 */}
-      <Dialog open={!!pending} onClose={cancelPending} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
-        <DialogTitle>{pending?.title}</DialogTitle>
+      {/* 개별 변경 확인 — 포인터 근처 작은 UI(✓ 반영 / ✗ 취소). 큰 중앙 모달 아님. 저장은 편집 종료 시 일괄. */}
+      {pending && <PendingConfirm p={pending} onApply={applyPending} onCancel={cancelPending} />}
+
+      {/* 편집 종료 — 저장 / 되돌리기(취소) / 계속 편집 선택 */}
+      <Dialog open={exitDlg} onClose={() => !savingEdit && setExitDlg(false)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 380 } } } }}>
+        <DialogTitle>일정 편집을 마칠까요?</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, pt: 0.5 }}>
-            {pending && pending.qty > 1 && (
-              <Box sx={{ display: 'flex', gap: 1.5 }}>
-                <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.secondary' }}>대상</Typography>
-                <Typography variant="body2">{pending.qty}대 (배치 전체)</Typography>
-              </Box>
-            )}
-            {pending?.stageName && (
-              <Box sx={{ display: 'flex', gap: 1.5 }}>
-                <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.secondary' }}>단계</Typography>
-                <Typography variant="body2">{pending.stageName}</Typography>
-              </Box>
-            )}
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.secondary' }}>변경 전</Typography>
-              <Typography variant="body2">{pending?.before}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.secondary' }}>변경 후</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>{pending?.after}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1.5 }}>
-              <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.secondary' }}>변경량</Typography>
-              <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 600 }}>{pending?.delta}</Typography>
-            </Box>
-          </Box>
+          <DialogContentText sx={{ color: 'text.secondary' }}>
+            변경한 일정을 저장하거나, 편집 시작 전 상태로 되돌릴 수 있습니다.
+          </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={cancelPending} disabled={applying} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button variant="contained" onClick={applyPending} disabled={applying}>{applying ? '적용 중…' : '적용'}</Button>
+        <DialogActions sx={{ px: 3, pb: 2, gap: 0.5, flexWrap: 'wrap' }}>
+          <Button onClick={() => setExitDlg(false)} disabled={savingEdit} sx={{ color: 'text.secondary' }}>계속 편집</Button>
+          <Box sx={{ flex: 1 }} />
+          <Button color="error" onClick={finishEditCancel} disabled={savingEdit}>변경 취소</Button>
+          <Button variant="contained" color="success" onClick={finishEditSave} disabled={savingEdit}>{savingEdit ? '저장 중…' : '저장'}</Button>
         </DialogActions>
       </Dialog>
 
@@ -882,6 +894,36 @@ export default function Equipment() {
 
       <DragTip tip={tip} />
     </PageContainer>
+  )
+}
+
+// 개별 변경 확인 — 드롭 지점(포인터) 근처 소형 UI. 1줄 단계명+변경량 / 2줄 변경 전→후 / ✓ 반영·✗ 취소.
+function PendingConfirm({ p, onApply, onCancel }: { p: PendingChange; onApply: () => void; onCancel: () => void }) {
+  const flipX = typeof window !== 'undefined' && p.x > window.innerWidth - 220
+  const flipY = typeof window !== 'undefined' && p.y > window.innerHeight - 130
+  return createPortal(
+    <Box
+      sx={{
+        position: 'fixed',
+        left: p.x + (flipX ? -16 : 16),
+        top: p.y + (flipY ? -16 : 16),
+        transform: `translate(${flipX ? '-100%' : '0'}, ${flipY ? '-100%' : '0'})`,
+        zIndex: 2100, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1.5,
+        boxShadow: 8, p: 1, minWidth: 150,
+      }}
+    >
+      <Typography sx={{ fontSize: 12.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+        {p.stageName ? `${p.stageName}  ` : ''}<Box component="span" sx={{ color: 'primary.main' }}>{p.delta}</Box>
+      </Typography>
+      <Typography sx={{ fontSize: 12, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', mt: 0.25 }}>
+        {p.before} → {p.after}{p.qty > 1 ? `  (${p.qty}대)` : ''}
+      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
+        <IconButton size="small" color="success" aria-label="변경 반영" onClick={onApply} sx={{ p: 0.5 }}><CheckIcon sx={{ fontSize: 18 }} /></IconButton>
+        <IconButton size="small" color="error" aria-label="변경 취소" onClick={onCancel} sx={{ p: 0.5 }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+      </Box>
+    </Box>,
+    document.body,
   )
 }
 

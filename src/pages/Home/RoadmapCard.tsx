@@ -76,8 +76,8 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
   return (
     <Box
       sx={{
-        maxWidth: 940,
-        mx: 'auto',
+        // 아래 섹션 카드들과 동일한 전체 너비(카드 바깥 경계선 기준 정렬) — 폭 제한은 상위 PageContainer가 담당
+        width: '100%',
         background: 'linear-gradient(160deg,#141d2b,#0e151f)',
         border: '1px solid #243245',
         borderRadius: '22px',

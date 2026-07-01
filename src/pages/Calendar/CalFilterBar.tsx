@@ -9,7 +9,6 @@ import FlightIcon from '@mui/icons-material/Flight'
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import BeachAccessIcon from '@mui/icons-material/BeachAccess'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
-import SelectAllIcon from '@mui/icons-material/SelectAll'
 import LibraryAddCheckIcon from '@mui/icons-material/LibraryAddCheck'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { type TeamMember } from './members'
@@ -32,11 +31,8 @@ export interface CalFilterBarProps {
   onToggleMember: (id: string, additive: boolean) => void
   cats: FilterCat[]
   onToggleCat: (id: RealCat, additive: boolean) => void
-  /** 종류 '전체' 상태(selCats 비어있음) */
-  allCatsOn: boolean
-  onSelectAllCats: () => void
-  /** '전체' 칩 건수(현재 표시 범위 총계) */
-  totalCount: number
+  /** 복수선택 버튼 노출 여부 — 모바일에서만(PC는 Shift+클릭) */
+  showMulti: boolean
   /** 모바일 복수선택 모드(Shift 대체) */
   multiSelect: boolean
   onToggleMulti: () => void
@@ -54,10 +50,9 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
 }
 
 const LABEL = { fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none' } as const
-const ALL_COLOR = '#7d8899' // '전체' 칩 중립색
 
-// 클릭/키보드에서 additive(추가선택) 여부 — Shift 또는 모바일 복수모드
-const isAdditive = (e: { shiftKey?: boolean }, multi: boolean) => !!e.shiftKey || multi
+// Shift+클릭(또는 모바일 복수모드)이면 추가선택. Shift+클릭 시 텍스트가 선택되지 않도록 mousedown에서 기본동작 차단.
+const preventShiftSelect = (e: React.MouseEvent) => { if (e.shiftKey) e.preventDefault() }
 
 // 팀원 선택 칩 — 알약형 둥근 사각형(이름 표시). 선택=색 배경+흰 글자 / 미선택=옅은 배경+테두리.
 function MemberPill({ m, on, multi, onToggle }: { m: TeamMember; on: boolean; multi: boolean; onToggle: (additive: boolean) => void }) {
@@ -68,11 +63,12 @@ function MemberPill({ m, on, multi, onToggle }: { m: TeamMember; on: boolean; mu
       aria-label={`${m.name}${on ? '' : ' (해제됨)'}`}
       aria-pressed={on}
       title={m.name}
-      onClick={(e) => onToggle(isAdditive(e, multi))}
+      onMouseDown={preventShiftSelect}
+      onClick={(e) => onToggle(!!e.shiftKey || multi)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          onToggle(isAdditive(e, multi))
+          onToggle(!!e.shiftKey || multi)
         }
       }}
       sx={{
@@ -87,6 +83,7 @@ function MemberPill({ m, on, multi, onToggle }: { m: TeamMember; on: boolean; mu
         lineHeight: 1,
         whiteSpace: 'nowrap',
         cursor: 'pointer',
+        userSelect: 'none',
         border: '1px solid',
         transition: 'background .15s, color .15s, border-color .15s',
         ...(on
@@ -112,11 +109,12 @@ function CatChip({ icon: Icon, label, color, count, on, rotate, onClick }: {
       tabIndex={0}
       aria-label={`${label} ${count}건${on ? '' : ' (해제됨)'}`}
       aria-pressed={on}
+      onMouseDown={preventShiftSelect}
       onClick={onClick}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e) } }}
       sx={{
         display: 'inline-flex', alignItems: 'center', gap: '5px', p: '4px 9px', borderRadius: '999px',
-        bgcolor: alpha(color, on ? 0.16 : 0.06), cursor: 'pointer', whiteSpace: 'nowrap',
+        bgcolor: alpha(color, on ? 0.16 : 0.06), cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none',
         opacity: on ? 1 : 0.45, transition: 'opacity .15s, background .15s',
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
       }}
@@ -129,12 +127,14 @@ function CatChip({ icon: Icon, label, color, count, on, rotate, onClick }: {
 }
 
 /**
- * 달력 상단 가로 필터 바 — 팀원(알약 토글) + 일정 종류(아이콘 칩, 맨 앞 '전체').
- * 일반 클릭=단일선택 / Shift·복수모드=추가선택. 검색은 상단 툴바로 이동.
+ * 달력 상단 가로 필터 바 — 팀원(알약 토글) + 일정 종류(아이콘 칩).
+ * 일반 클릭=단일선택(재클릭 시 해제/전체) / Shift+클릭(PC)·복수모드(모바일)=추가선택. 검색은 상단 툴바.
  */
 export default function CalFilterBar({
-  members, onToggleMember, cats, onToggleCat, allCatsOn, onSelectAllCats, totalCount, multiSelect, onToggleMulti,
+  members, onToggleMember, cats, onToggleCat, showMulti, multiSelect, onToggleMulti,
 }: CalFilterBarProps) {
+  // PC에서는 Shift+클릭만 추가선택(복수 버튼 없음) → multi는 모바일에서만 유효
+  const effMulti = showMulti && multiSelect
   return (
     <Box
       className="cal-fb"
@@ -144,6 +144,7 @@ export default function CalFilterBar({
         bgcolor: 'background.paper',
         border: `1px solid ${t.palette.divider}`,
         borderRadius: '12px',
+        userSelect: 'none',
       })}
     >
       {/* 팀원 */}
@@ -151,49 +152,46 @@ export default function CalFilterBar({
         <Box component="span" className="cal-fb__teamlbl" sx={LABEL}>팀원</Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
           {members.map(({ member, on }) => (
-            <MemberPill key={member.id} m={member} on={on} multi={multiSelect} onToggle={(add) => onToggleMember(member.id, add)} />
+            <MemberPill key={member.id} m={member} on={on} multi={effMulti} onToggle={(add) => onToggleMember(member.id, add)} />
           ))}
         </Box>
-        {/* 복수선택 토글(Shift 대체·모바일용). 활성 시 강조 */}
-        <Tooltip title="여러 개 선택 (Shift+클릭과 동일)" placement="top" arrow>
-          <Box
-            role="button"
-            tabIndex={0}
-            aria-label="복수선택 모드"
-            aria-pressed={multiSelect}
-            onClick={onToggleMulti}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleMulti() } }}
-            sx={(t) => ({
-              ml: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px', height: 26, px: '8px',
-              borderRadius: '8px', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', flex: 'none',
-              border: '1px solid',
-              ...(multiSelect
-                ? { bgcolor: alpha(t.palette.primary.main, 0.16), color: 'primary.main', borderColor: t.palette.primary.main }
-                : { bgcolor: 'transparent', color: 'text.disabled', borderColor: t.palette.divider }),
-              '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
-            })}
-          >
-            <LibraryAddCheckIcon sx={{ fontSize: 15 }} /> 복수선택
-          </Box>
-        </Tooltip>
+        {/* 복수선택 토글 — 모바일 전용(Shift 대체). PC는 미노출. */}
+        {showMulti && (
+          <Tooltip title="여러 개 선택" placement="top" arrow>
+            <Box
+              role="button"
+              tabIndex={0}
+              aria-label="복수선택 모드"
+              aria-pressed={multiSelect}
+              onClick={onToggleMulti}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleMulti() } }}
+              sx={(t) => ({
+                ml: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px', height: 26, px: '8px',
+                borderRadius: '8px', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', flex: 'none', userSelect: 'none',
+                border: '1px solid',
+                ...(multiSelect
+                  ? { bgcolor: alpha(t.palette.primary.main, 0.16), color: 'primary.main', borderColor: t.palette.primary.main }
+                  : { bgcolor: 'transparent', color: 'text.disabled', borderColor: t.palette.divider }),
+                '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+              })}
+            >
+              <LibraryAddCheckIcon sx={{ fontSize: 15 }} /> 복수선택
+            </Box>
+          </Tooltip>
+        )}
         <Box className="cal-fb__sep" sx={(t) => ({ width: '1px', height: 20, bgcolor: t.palette.divider, flex: 'none' })} />
       </Box>
 
-      {/* 일정 종류 */}
+      {/* 일정 종류 (0건 종류는 상위에서 숨김 처리) */}
       <Box className="cal-fb__cats">
         <Box component="span" className="cal-fb__catlbl" sx={LABEL}>종류</Box>
         <Box className="cal-fb__chips">
-          {/* '전체' 칩 — 선택 시 개별 해제(selCats=[]) */}
-          <CatChip
-            icon={SelectAllIcon} label="전체" color={ALL_COLOR} count={totalCount} on={allCatsOn}
-            onClick={() => onSelectAllCats()}
-          />
           {cats.map((c) => (
             <CatChip
               key={c.id}
               icon={CAT_ICON[c.id]} label={c.label} color={c.color} count={c.count} on={c.on}
               rotate={c.id === 'trip_intl'}
-              onClick={(e) => onToggleCat(c.id, isAdditive(e, multiSelect))}
+              onClick={(e) => onToggleCat(c.id, !!e.shiftKey || effMulti)}
             />
           ))}
         </Box>
