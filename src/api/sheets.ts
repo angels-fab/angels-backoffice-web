@@ -166,6 +166,8 @@ export interface WorkRow {
   link: string
   remind: boolean
   chief: boolean
+  /** 포털정렬순서 — 진행중 카드 수동 정렬값(빈값 가능) */
+  order: string
 }
 
 /** 업무 목록 읽기 — 백엔드가 헤더명으로 행을 객체로 변환해 반환 */
@@ -224,6 +226,30 @@ export async function updateWork(p: WorkInput & { num: string | number }): Promi
 /** 업무 삭제 (번호 기준) */
 export async function deleteWork(p: { num: string | number; author: string; key: string }): Promise<void> {
   await postWork({ action: 'deleteWork', ...p })
+}
+
+/** 진행중 카드 수동 정렬순서 저장 — '포털정렬순서' 열만 갱신(행 이동 없음). 최종 순서를 한 번에 전송. */
+export interface WorkOrderEntry { num: string; order: number }
+export async function updateWorkOrder(p: { author: string; key: string; orders: WorkOrderEntry[] }): Promise<void> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateWorkOrder', ...p }) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 순서 저장을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '처리 실패')
+}
+
+/** 페이지 종료 직전 마지막 순서를 best-effort로 전송(sendBeacon). UA가 큐잉을 수락하면 true. */
+export function beaconWorkOrder(p: { author: string; key: string; orders: WorkOrderEntry[] }): boolean {
+  try {
+    if (!p.orders.length || typeof navigator === 'undefined' || !navigator.sendBeacon) return false
+    return navigator.sendBeacon(SCRIPT_URL, JSON.stringify({ action: 'updateWorkOrder', ...p }))
+  } catch {
+    return false
+  }
 }
 
 // ── 장비도입관리 CRUD (헤더명 기준) ──

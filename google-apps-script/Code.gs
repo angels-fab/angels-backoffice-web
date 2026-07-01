@@ -84,7 +84,7 @@ function doPost(e) {
       }
     }
     // 센터 업무 현황 쓰기(추가/수정/삭제) — 잠금 하에 처리(번호 충돌·행삭제 경합 방지)
-    if (req.action === 'createWork' || req.action === 'updateWork' || req.action === 'deleteWork') {
+    if (req.action === 'createWork' || req.action === 'updateWork' || req.action === 'deleteWork' || req.action === 'updateWorkOrder') {
       const lock = LockService.getScriptLock();
       if (!lock.tryLock(10000)) {
         return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
@@ -92,7 +92,8 @@ function doPost(e) {
       try {
         if (req.action === 'createWork') return createWork_(req);
         if (req.action === 'updateWork') return updateWork_(req);
-        return deleteWork_(req);
+        if (req.action === 'deleteWork') return deleteWork_(req);
+        return updateWorkOrder_(req);
       } finally {
         lock.releaseLock();
       }
@@ -437,6 +438,8 @@ function workCtx_() {
     remind: col(['Remind', 'remind', '리마인드']),
     chief: col(['검토 필요', '검토필요', '센터장 검토', '센터장검토', '센터장 Check', '센터장', 'Check', 'check']),
     link: col(['링크', '관련링크', 'link']),
+    // 진행중 카드 수동 정렬순서(포털 전용) — 없으면 updateWorkOrder_에서 자동 생성
+    order: col(['포털정렬순서', '정렬순서', '표시순서', '순서']),
   };
   return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
 }
@@ -470,6 +473,7 @@ function getWorks_() {
       start: wDate_(r[C.start]), plan: wDate_(r[C.plan]), time: wTime_(r[C.time]),
       loc: t(r, C.loc), mgr: t(r, C.mgr), status: t(r, C.status), end: wDate_(r[C.end]),
       link: t(r, C.link), remind: wIsChk_(r[C.remind]), chief: wIsChk_(r[C.chief]),
+      order: t(r, C.order),
     });
   }
   return json_({ status: 'ok', items: items });
@@ -584,6 +588,50 @@ function deleteWork_(req) {
   if (rowIdx < 0) return json_({ status: 'error', message: '대상 업무를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
   ctx.sh.deleteRow(rowIdx + 1);
   return json_({ status: 'ok' });
+}
+
+// 진행중 카드 수동 정렬순서 저장(포털 전용) — '포털정렬순서' 열만 갱신. 행 이동/교체 없음.
+// orders=[{num, order}]. 값이 이미 같은 행은 건너뜀(실제 변경분만 기록). 열이 없으면 헤더 끝에 자동 생성.
+function updateWorkOrder_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const orders = (req.orders && req.orders.length) ? req.orders : [];
+  if (!orders.length) return json_({ status: 'ok', updated: 0 });
+
+  const ctx = workCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, head = ctx.head, C = ctx.C;
+  if (C.num < 0) return json_({ status: 'error', message: '번호 열을 찾지 못함' });
+
+  // '포털정렬순서' 열이 없으면 헤더 맨 끝에 새 열로 생성(기존 데이터/열 영향 없음).
+  let orderCol = C.order;
+  let createdCol = false;
+  if (orderCol < 0) {
+    orderCol = head.length;
+    sh.getRange(hIdx + 1, orderCol + 1).setValue('포털정렬순서');
+    createdCol = true;
+  }
+
+  const rowByNum = {};
+  for (let i = hIdx + 1; i < values.length; i++) {
+    rowByNum[String(values[i][C.num] || '').trim()] = i;
+  }
+  let updated = 0;
+  for (let k = 0; k < orders.length; k++) {
+    const o = orders[k] || {};
+    const num = String(o.num || '').trim();
+    if (!num) continue;
+    const ri = rowByNum[num];
+    if (ri === undefined) continue;
+    const newVal = Number(o.order);
+    if (isNaN(newVal)) continue;
+    // 기존 값과 같으면 건너뜀(새로 만든 열이면 항상 기록)
+    const cur = createdCol ? NaN : Number(values[ri][orderCol]);
+    if (!isNaN(cur) && cur === newVal) continue;
+    sh.getRange(ri + 1, orderCol + 1).setValue(newVal);
+    updated++;
+  }
+  return json_({ status: 'ok', updated: updated });
 }
 
 // 시트에서 '상태'를 바꾸면 웹과 동일 규칙을 적용 (설치형 onEdit 핸들러):

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -33,7 +33,7 @@ import {
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData } from '@/store/slices/workSlice'
-import { createWork, deleteWork, updateWork, fetchAuthors } from '@/api/sheets'
+import { createWork, deleteWork, updateWork, fetchAuthors, updateWorkOrder, beaconWorkOrder, type WorkOrderEntry } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
@@ -47,6 +47,7 @@ import NewTaskCard from './NewTaskCard'
 import type { NewTaskForm } from './NewTaskCard'
 import TaskGridAccordion from './TaskGridAccordion'
 import TaskListDrawer from './TaskListDrawer'
+import ReorderableTaskGrid from './ReorderableTaskGrid'
 
 // Remind 표시 방식 — 'inline'(KPI 아래 마스터-디테일) / 'drawer'(우측 드로어)
 const REMIND_VARIANT: 'drawer' | 'inline' = 'inline'
@@ -175,6 +176,15 @@ export default function Work() {
   const [authors, setAuthors] = useState<string[] | null>(null) // 담당자 시트 이름 명단(자동완성)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
 
+  // 진행중 카드 수동 정렬(포털정렬순서) — 낙관적 오버레이(저장 후 재로딩 안 하므로 로컬 유지) + 디바운스 저장
+  const [orderMap, setOrderMap] = useState<Record<string, number>>({})
+  const [orderError, setOrderError] = useState(false)
+  const orderTimer = useRef<number | null>(null)
+  const pendingOrderRef = useRef<WorkOrderEntry[] | null>(null)
+  const savingRef = useRef(false) // 저장 POST 진행 중 여부(동시 저장 방지)
+  const authRef = useRef({ user, authKey })
+  authRef.current = { user, authKey }
+
   // 담당자 시트('이름' 열, 헤더 자동 인식)에서 명단 로드 — 새 담당자 추가 시 자동 반영
   useEffect(() => {
     fetchAuthors().then(setAuthors).catch(() => setAuthors(null))
@@ -253,6 +263,20 @@ export default function Work() {
       .filter((t) => !q || `${t.task} ${t.mgr} ${t.dept} ${t.cat} ${t.loc}`.toLowerCase().includes(q))
       .sort(cmpChief)
   }, [pool, cat, mgr, query])
+
+  // 진행중 카드 표시 순서 = 포털정렬순서(낙관적 orderMap 우선) 오름차순, 미지정은 Check우선·최신순 뒤로.
+  // (진행중 뷰는 필터를 숨기므로 전체 진행중 대상. 드래그 순서변경은 이 목록에만 적용.)
+  const inProgressList = useMemo(() => {
+    const rank = (t: WorkItem) => {
+      const o = orderMap[t.num]
+      if (o !== undefined) return o
+      const n = Number(t.order)
+      return t.order !== '' && !isNaN(n) ? n : Infinity
+    }
+    return items
+      .filter((t) => classify(t) === 'inProgress')
+      .sort((a, b) => rank(a) - rank(b) || cmpChief(a, b))
+  }, [items, orderMap])
 
   // Remind/완료 — 메인 목록과 독립 파생(Remind=인라인 펼침, 완료=Drawer)
   const remindList = useMemo(() => items.filter((t) => t.remind).sort(cmpRemind), [items])
@@ -467,6 +491,63 @@ export default function Work() {
   // 수정 폼의 구분 옵션 — 기존 값이 표준 6개에 없으면 그 값도 선택 가능하게 포함(데이터 손실 방지)
   const editOptionsFor = (t: WorkItem) =>
     t.cat && !fieldOptions.cats.includes(t.cat) ? { ...fieldOptions, cats: [t.cat, ...fieldOptions.cats] } : fieldOptions
+
+  // ── 진행중 카드 순서변경 저장 (포털정렬순서만 갱신 · 5초 디바운스 · 성공은 무표시 · 실패만 안내) ──
+  // 동시 저장 방지(savingRef): 저장 중이면 새로 시작하지 않고, 진행 중 요청의 finally가 최신 순서를 이어서 저장.
+  // pendingOrderRef는 저장 성공(그 사이 새 순서 없음) 시에만 비움 → 비행 중 언로드 시 beacon이 그대로 백업.
+  const flushOrderSave = useCallback(async () => {
+    if (orderTimer.current) { clearTimeout(orderTimer.current); orderTimer.current = null }
+    if (savingRef.current) return
+    const orders = pendingOrderRef.current
+    const { user: u, authKey: k } = authRef.current
+    if (!orders || !u || !k) return
+    savingRef.current = true
+    try {
+      await updateWorkOrder({ author: u, key: k, orders })
+      setOrderError(false)
+      if (pendingOrderRef.current === orders) pendingOrderRef.current = null // 비행 중 새 순서 없으면 클리어
+    } catch {
+      setOrderError(true) // pendingOrderRef 유지(재시도)
+    } finally {
+      savingRef.current = false
+      // 비행 중 도착한 최신 순서가 있으면 이어서 저장(항상 마지막 순서가 최종 기록)
+      if (pendingOrderRef.current && pendingOrderRef.current !== orders) void flushOrderSave()
+    }
+  }, [])
+
+  // 드롭으로 순서가 실제 바뀌면: 낙관적 반영(orderMap) + 최종 순서만 5초 뒤 한 번에 저장(재이동 시 타이머 리셋)
+  const handleReorder = (orderedNums: string[]) => {
+    const map: Record<string, number> = {}
+    const orders: WorkOrderEntry[] = orderedNums.map((num, i) => {
+      const v = (i + 1) * 10
+      map[num] = v
+      return { num, order: v }
+    })
+    setOrderMap((prev) => ({ ...prev, ...map }))
+    pendingOrderRef.current = orders
+    setOrderError(false)
+    if (orderTimer.current) clearTimeout(orderTimer.current)
+    orderTimer.current = window.setTimeout(() => { void flushOrderSave() }, 5000)
+  }
+
+  // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
+  useEffect(() => {
+    const beacon = () => {
+      const orders = pendingOrderRef.current
+      const { user: u, authKey: k } = authRef.current
+      // sendBeacon이 큐잉을 수락한 경우에만 비움 — 실패 시 유지해 남은 fetch 타이머가 이어서 저장
+      if (orders && u && k && beaconWorkOrder({ author: u, key: k, orders })) pendingOrderRef.current = null
+    }
+    const onVis = () => { if (document.visibilityState === 'hidden') beacon() }
+    window.addEventListener('pagehide', beacon)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('pagehide', beacon)
+      document.removeEventListener('visibilitychange', onVis)
+      if (orderTimer.current) clearTimeout(orderTimer.current)
+      beacon()
+    }
+  }, [])
 
   // 업무 행 — 수정 중이면 그 자리에서 인라인 편집(전폭), 아니면 카드
   const renderTask = (t: WorkItem, tone: 'green' | 'gray') =>
@@ -734,34 +815,46 @@ export default function Work() {
             {isAdmin && <AddCard onClick={startCompose} />}
           </CardGrid>
         ) : view === 'inProgress' ? (
-          // 진행중 — 1행: '업무 목록' 헤더(좌) + 새 업무 카드(우). 그 아래: 진행중 초록 카드 2x2.
-          <CardGrid columns={2}>
-            <Box sx={{ gridColumn: { sm: '1' }, gridRow: { sm: '1' }, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Box
-                sx={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  width: 40, height: 40, borderRadius: 2, bgcolor: 'background.elevated', color: 'primary.main',
-                  '& svg': { fontSize: 22 },
-                }}
-              >
-                <ChecklistIcon />
+          // 진행중 — 1행: '업무 목록' 헤더(좌) + 새 업무 카드(우). 그 아래: 진행중 초록 카드(삽입정렬 드래그).
+          <>
+            <CardGrid columns={2} sx={{ mb: 2 }}>
+              <Box sx={{ gridColumn: { sm: '1' }, gridRow: { sm: '1' }, display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+                <Box
+                  sx={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    width: 40, height: 40, borderRadius: 2, bgcolor: 'background.elevated', color: 'primary.main',
+                    '& svg': { fontSize: 22 },
+                  }}
+                >
+                  <ChecklistIcon />
+                </Box>
+                <Typography variant="h2" component="h2">업무 목록</Typography>
+                <Typography variant="body2" sx={{ color: 'text.disabled' }}>{inProgressList.length}</Typography>
+                {isAdmin && (
+                  <Typography variant="body2" sx={{ color: 'text.disabled', ml: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: { xs: 'none', md: 'block' } }}>
+                    카드를 끌어 순서 변경
+                  </Typography>
+                )}
               </Box>
-              <Typography variant="h2" component="h2">업무 목록</Typography>
-              <Typography variant="body2" sx={{ color: 'text.disabled' }}>{listed.length}</Typography>
-            </Box>
-            {/* 새 업무 칸: 헤더와 같은 행(2열)을 항상 차지(로그인/로그아웃 무관 배열 고정). 버튼만 관리자에게 노출. */}
-            <Box key="new" sx={{ gridColumn: { sm: '2' }, gridRow: { sm: '1' } }}>
-              {isAdmin && (
-                <>
-                  {!composing && <AddCard height={64} onClick={startCompose} />}
-                  <Collapse in={composing} unmountOnExit>
-                    <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
-                  </Collapse>
-                </>
-              )}
-            </Box>
-            {listed.map((t) => renderTask(t, 'green'))}
-          </CardGrid>
+              {/* 새 업무 칸: 헤더와 같은 행(2열)을 항상 차지(로그인/로그아웃 무관 배열 고정). 버튼만 관리자에게 노출. */}
+              <Box key="new" sx={{ gridColumn: { sm: '2' }, gridRow: { sm: '1' } }}>
+                {isAdmin && (
+                  <>
+                    {!composing && <AddCard height={64} onClick={startCompose} />}
+                    <Collapse in={composing} unmountOnExit>
+                      <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+                    </Collapse>
+                  </>
+                )}
+              </Box>
+            </CardGrid>
+            <ReorderableTaskGrid
+              items={inProgressList}
+              canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
+              onReorder={handleReorder}
+              renderCard={(t) => renderTask(t, 'green')}
+            />
+          </>
         ) : (
           // 완료(회색) — 2열 그리드. 새 업무 카드 없음, 카드의 완료 버튼도 없음(이미 완료).
           <CardGrid columns={2}>
@@ -898,6 +991,19 @@ export default function Work() {
       >
         <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>
           {snack.msg}
+        </Alert>
+      </Snackbar>
+
+      {/* 순서 저장 실패 — 이때만 안내 + 재시도(정상 저장은 무표시) */}
+      <Snackbar open={orderError} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert
+          severity="error"
+          variant="filled"
+          action={<Button color="inherit" size="small" onClick={() => void flushOrderSave()}>다시 시도</Button>}
+          onClose={() => setOrderError(false)}
+          sx={{ width: '100%' }}
+        >
+          카드 순서 저장에 실패했습니다.
         </Alert>
       </Snackbar>
     </PageContainer>

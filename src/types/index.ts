@@ -27,6 +27,8 @@ export interface WorkItem {
   remind: boolean
   /** 검토 필요 체크 (구 센터장 검토) */
   chief: boolean
+  /** 포털정렬순서 — 진행중 카드 수동 정렬값(빈값=미지정). 드래그 순서변경에서만 사용 */
+  order: string
 }
 
 /** 개선제안 ('개선사항' 시트) */
