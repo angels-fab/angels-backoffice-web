@@ -168,8 +168,6 @@ export interface WorkRow {
   chief: boolean
   /** 포털정렬순서 — 진행중 카드 수동 정렬값(빈값 가능) */
   order: string
-  /** 업무내용서식 — 본문 리치 텍스트 JSON(버전 포함). 열 없거나 빈값이면 '' */
-  contentFmt: string
 }
 
 /** 업무 목록 읽기 — 백엔드가 헤더명으로 행을 객체로 변환해 반환 */
@@ -201,12 +199,6 @@ export interface WorkInput {
   link?: string
   remind?: boolean
   chief?: boolean
-  /**
-   * 업무내용서식 — 본문 리치 텍스트 JSON. **명시적으로 전달할 때만** 저장/갱신된다.
-   * undefined(미전달)면 백엔드는 기존 서식값을 보존한다(빈칸으로 덮어쓰지 않음).
-   * 빈 문자열('')은 '서식 없음'을 의도적으로 저장하는 값으로 취급한다.
-   */
-  contentFmt?: string
 }
 
 async function postWork(payload: Record<string, unknown>): Promise<{ num?: number }> {

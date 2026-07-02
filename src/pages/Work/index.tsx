@@ -39,7 +39,6 @@ import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
 import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS } from './workMeta'
-import { docHasMarks, fmtSignature } from './richContent'
 import TaskCard from './TaskCard'
 import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
@@ -80,7 +79,6 @@ function toForm(t: WorkItem): NewTaskForm {
     cat: t.cat || '',
     title: lines[0] || '',
     body: dashToBullet(lines.slice(1).join('\n')),
-    bodyFmt: t.contentFmt || '',
     mgr: t.mgr || '',
     start: t.start || '',
     plan: t.plan || '',
@@ -90,19 +88,6 @@ function toForm(t: WorkItem): NewTaskForm {
     link: t.link || '',
     chief: !!t.chief,
   }
-}
-
-/**
- * 저장할 '업무내용서식' 값 결정. (기존 행 강제 마이그레이션 없음)
- *  - 'error': 본문은 있는데 서식 직렬화가 실패 → 저장 중단(일반 텍스트도 저장 안 함).
- *  - { value }: 서식 저장(mark 있음) 또는 서식 제거 반영(mark 없음+기존 서식 있었음). value=''이면 '서식 없음' 문서.
- *  - {}: 미전달 → 백엔드가 기존 서식값 보존(빈칸 강제 채움 안 함).
- */
-function contentFmtForSave(form: NewTaskForm, hadFmt: boolean): { value?: string } | 'error' {
-  const hasText = !!form.body.replace(/\s+$/, '')
-  if (hasText && !form.bodyFmt) return 'error'
-  if (docHasMarks(form.bodyFmt) || hadFmt) return { value: form.bodyFmt || '' }
-  return {}
 }
 
 // KPI 카드의 라운드 정사각 칩 (진행중=초록·Remind=앰버·완료=회색)
@@ -351,8 +336,6 @@ export default function Work() {
     // 화면의 글머리 '• '는 시트엔 dash '- '로 저장(관례 유지)
     const bodyText = bulletToDash(form.body.replace(/\s+$/, ''))
     const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
-    const cf = contentFmtForSave(form, false)
-    if (cf === 'error') return showSnack('본문 서식 처리에 실패했습니다. 다시 시도해주세요.', 'error')
     setSavingNew(true)
     try {
       await createWork({
@@ -362,7 +345,6 @@ export default function Work() {
         time: form.time.trim(), loc: form.loc.trim(), mgr: form.mgr.trim(),
         status: '진행중', link: form.link.trim(),
         remind: false, chief: form.chief,
-        contentFmt: cf.value,
       })
       setSavingNew(false)
       setComposing(false)
@@ -385,7 +367,6 @@ export default function Work() {
     const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
     return (
       normTask(task) !== normTask(item.task) ||
-      fmtSignature(form.bodyFmt) !== fmtSignature(item.contentFmt) ||
       form.cat.trim() !== (item.cat || '') ||
       form.dept.trim() !== (item.dept || '') ||
       form.start !== (item.start || '') ||
@@ -413,9 +394,6 @@ export default function Work() {
     const titleLine = form.title.trim()
     const bodyText = bulletToDash(form.body.replace(/\s+$/, ''))
     const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
-    const hadFmt = !!(item.contentFmt && item.contentFmt.trim())
-    const cf = contentFmtForSave(form, hadFmt)
-    if (cf === 'error') return showSnack('본문 서식 처리에 실패했습니다. 다시 시도해주세요.', 'error')
     setSavingEdit(true)
     try {
       await updateWork({
@@ -424,7 +402,6 @@ export default function Work() {
         dept: form.dept.trim(), mat: item.mat, start: form.start, plan: form.plan,
         time: form.time.trim(), loc: form.loc.trim(), mgr: form.mgr.trim(),
         link: form.link.trim(), remind: item.remind, chief: form.chief,
-        contentFmt: cf.value,
       })
       setSavingEdit(false)
       setPendingEdit(null)

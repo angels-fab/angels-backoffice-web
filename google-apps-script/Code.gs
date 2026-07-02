@@ -440,8 +440,6 @@ function workCtx_() {
     link: col(['링크', '관련링크', 'link']),
     // 진행중 카드 수동 정렬순서(포털 전용) — 없으면 updateWorkOrder_에서 자동 생성
     order: col(['포털정렬순서', '정렬순서', '표시순서', '순서']),
-    // 업무내용서식 — 본문 리치 텍스트 JSON(있으면 헤더명으로 인식, 없으면 하위 호환으로 무시)
-    contentFmt: col(['업무내용서식']),
   };
   return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
 }
@@ -476,7 +474,6 @@ function getWorks_() {
       loc: t(r, C.loc), mgr: t(r, C.mgr), status: t(r, C.status), end: wDate_(r[C.end]),
       link: t(r, C.link), remind: wIsChk_(r[C.remind]), chief: wIsChk_(r[C.chief]),
       order: t(r, C.order),
-      contentFmt: t(r, C.contentFmt),
     });
   }
   return json_({ status: 'ok', items: items });
@@ -523,7 +520,6 @@ function createWork_(req) {
   set(C.status, status);
   set(C.end, endVal);
   set(C.link, String(req.link || ''));
-  set(C.contentFmt, String(req.contentFmt || '')); // 업무내용서식(없으면 빈칸)
   set(C.remind, req.remind === true);
   set(C.chief, chiefVal);
   sh.appendRow(row);
@@ -571,9 +567,6 @@ function updateWork_(req) {
   set(C.status, status);
   set(C.end, endVal);
   set(C.link, String(req.link || ''));
-  // 업무내용서식: 명시적으로 전달될 때만 갱신(미전달이면 기존 서식값 보존 — 빈칸으로 덮어쓰지 않음).
-  //   ''(빈 문자열)은 '서식 없음'을 의도적으로 저장하는 값으로 취급.
-  if (req.contentFmt !== undefined) set(C.contentFmt, String(req.contentFmt || ''));
   if (C.remind >= 0) sh.getRange(sheetRow, C.remind + 1).insertCheckboxes().setValue(req.remind === true);
   if (C.chief >= 0) sh.getRange(sheetRow, C.chief + 1).insertCheckboxes().setValue(chiefVal);
   return json_({ status: 'ok', num: Number(num) || num });

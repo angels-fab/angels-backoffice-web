@@ -7,8 +7,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { AppDrawer, StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { W_STATUS, classify, taskTitle, taskLink } from './workMeta'
-import { workBodyLines } from './richContent'
+import { W_STATUS, classify, taskSubs, taskTitle, taskLink } from './workMeta'
 import SubLine from './SubLine'
 
 function MetaRow({ label, value }: { label: string; value: string }) {
@@ -34,7 +33,7 @@ export interface TaskDetailDrawerProps {
 /** 업무 상세 Drawer — 전체 항목 표시. 관리자면 수정/삭제. */
 export default function TaskDetailDrawer({ task, onClose, isAdmin, onEdit, onDelete, nonModal }: TaskDetailDrawerProps) {
   const st = task ? W_STATUS[classify(task)] : null
-  const subs = task ? workBodyLines(task) : []
+  const subs = task ? taskSubs(task) : []
   const link = task ? taskLink(task) : null
 
   return (
@@ -97,7 +96,7 @@ export default function TaskDetailDrawer({ task, onClose, isAdmin, onEdit, onDel
               <Typography variant="subtitle2" sx={{ mb: 0.75 }}>업무 내용</Typography>
               <Box>
                 {subs.map((l, i) => (
-                  <SubLine key={i} bodyLine={l} />
+                  <SubLine key={i} line={l} />
                 ))}
               </Box>
             </Box>

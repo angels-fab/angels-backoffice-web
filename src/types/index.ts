@@ -29,8 +29,6 @@ export interface WorkItem {
   chief: boolean
   /** 포털정렬순서 — 진행중 카드 수동 정렬값(빈값=미지정). 드래그 순서변경에서만 사용 */
   order: string
-  /** 업무내용서식 — 본문 리치 텍스트 JSON(버전 포함). 빈값=서식 없음(일반 텍스트 표시) */
-  contentFmt: string
 }
 
 /** 개선제안 ('개선사항' 시트) */

@@ -3,24 +3,44 @@ import type { WorkItem } from '@/types'
 import { fmtDate } from '@/utils/date'
 import { workCatStyle } from '@/utils/workCat'
 import { displayBullet } from './workMeta'
-import { workBodyLines, RunSpans, type BodyLine } from './richContent'
 
-// 내용 한 줄(서식 포함) → 기호/본문 분리 + hanging indent (앞 들여쓰기 보존)
-function BodyLineRow({ line }: { line: BodyLine }) {
-  const style = line.indentPx ? { marginLeft: line.indentPx } : undefined
+// 내용 한 줄 → 기호/본문 분리 + hanging indent (앞 들여쓰기 보존)
+function SubLine({ line }: { line: string }) {
+  const lead = String(line).match(/^[ \t]*/)?.[0] || ''
+  const indentPx = lead.replace(/\t/g, '    ').length * 4
+  const body = String(line).slice(lead.length)
+  const style = indentPx ? { marginLeft: indentPx } : undefined
+  const m = body.match(/^([-–—•*▪◦·●○]|[①-⑳]|\d+[.)]|[가-힣][.)])\s*([\s\S]*)$/)
+  if (m) {
+    return (
+      <div className="sub-line" style={style}>
+        <span className="sub-mark">{displayBullet(m[1])}</span>
+        <span className="sub-text">{m[2]}</span>
+      </div>
+    )
+  }
   return (
     <div className="sub-line" style={style}>
-      {line.marker && <span className="sub-mark">{displayBullet(line.marker)}</span>}
-      <span className="sub-text"><RunSpans runs={line.runs} /></span>
+      <span className="sub-text">{body}</span>
     </div>
   )
 }
 
 // 업무 항목 (표형: 구분 | 내용 | 담당자 | 발의일자 | 링크)
 export default function WorkRow({ t }: { t: WorkItem }) {
-  const title = String(t.task || '').split(/\r?\n/)[0] || ''
-  // 본문: '업무내용서식'이 유효하면 서식 적용, 아니면 일반 텍스트. 시간/장소도 포함.
-  const subs = workBodyLines(t)
+  const lines = String(t.task || '').split(/\r?\n/)
+  const title = lines[0] || ''
+  const subs = lines
+    .slice(1)
+    .map(l => l.replace(/\s+$/, ''))
+    .filter(l => l.trim())
+  // G(시간)·H(장소)가 있으면 내용 마지막 줄에 dash로 추가
+  if (t.time || t.loc) {
+    const parts: string[] = []
+    if (t.time) parts.push('시간: ' + t.time)
+    if (t.loc) parts.push('장소: ' + t.loc)
+    subs.push('- ' + parts.join(' | '))
+  }
   // L열 링크가 URL이면 표 우측에 외부 링크 아이콘(새 창)
   const linkUrl = String(t.link || '').match(/https?:\/\/[^\s]+/)
 
@@ -48,7 +68,7 @@ export default function WorkRow({ t }: { t: WorkItem }) {
           {subs.length > 0 && (
             <div className="cur-subs">
               {subs.map((l, i) => (
-                <BodyLineRow key={i} line={l} />
+                <SubLine key={i} line={l} />
               ))}
             </div>
           )}

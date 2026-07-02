@@ -22,8 +22,7 @@ import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
-import { workBodyLines } from './richContent'
+import { taskSubs, taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
 import SubLine from './SubLine'
 
 export type GridTone = 'amber' | 'gray'
@@ -133,7 +132,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
 
   // ── 공유: 디테일 본문(제목·담당자·내용·예정/완료/링크) ──
   const detailBody = (st: WorkItem, showActions?: boolean) => {
-    const subs = workBodyLines(st)
+    const subs = taskSubs(st)
     const link = taskLink(st)
     return (
       <>
@@ -145,7 +144,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
           </Box>
         </Box>
         {subs.length > 0 ? (
-          <Box>{subs.map((l, k) => <SubLine key={k} bodyLine={l} />)}</Box>
+          <Box>{subs.map((l, k) => <SubLine key={k} line={l} />)}</Box>
         ) : (
           <Typography variant="body2" sx={{ color: 'text.disabled' }}>상세 내용 없음</Typography>
         )}
