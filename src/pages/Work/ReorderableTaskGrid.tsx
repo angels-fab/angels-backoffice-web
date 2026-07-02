@@ -35,6 +35,10 @@ interface Props {
   onStatusDrop?: (nums: string[], zone: DropZone) => StatusDropResult
   /** 드래그 시작/존 변경/종료 알림(KPI 강조용) */
   onZoneChange?: (dragging: boolean, zone: DropZone | null) => void
+  /** 카드 더블클릭 — 수정모드 진입(부모가 권한 확인) */
+  onCardDoubleClick?: (num: string) => void
+  /** 카드 영역 좌우 빈 공간에 드롭 — 삭제 확인(단일 드래그만) */
+  onDeleteDrop?: (num: string) => void
 }
 
 const overlap = (a: Rect, b: DOMRect): number => {
@@ -55,6 +59,7 @@ const overlap = (a: Rect, b: DOMRect): number => {
 export default function ReorderableTaskGrid({
   items, renderCard, canDrag, onReorder,
   selectedNums, onSelectToggle, onDragStartCard, onStatusDrop, onZoneChange,
+  onCardDoubleClick, onDeleteDrop,
 }: Props) {
   const gridRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef(new Map<string, HTMLElement>())
@@ -74,6 +79,9 @@ export default function ReorderableTaskGrid({
   const onDragStartCardRef = useRef(onDragStartCard); onDragStartCardRef.current = onDragStartCard
   const onStatusDropRef = useRef(onStatusDrop); onStatusDropRef.current = onStatusDrop
   const onZoneChangeRef = useRef(onZoneChange); onZoneChangeRef.current = onZoneChange
+  const onCardDoubleClickRef = useRef(onCardDoubleClick); onCardDoubleClickRef.current = onCardDoubleClick
+  const onDeleteDropRef = useRef(onDeleteDrop); onDeleteDropRef.current = onDeleteDrop
+  const deleteZoneRef = useRef(false) // 좌우 빈 공간(삭제) 위 여부
   const overIndexRef = useRef(0)
 
   const pending = useRef<null | { num: string; pointerType: string; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
@@ -172,6 +180,7 @@ export default function ReorderableTaskGrid({
     document.addEventListener('selectstart', onSelectStart)
     document.body.style.cursor = 'grabbing'
     zoneRef.current = null
+    deleteZoneRef.current = false
     onZoneChangeRef.current?.(true, null)
     setMultiCount(multiNums ? multiNums.length : 1)
     setOverIndex(originIndex)
@@ -209,6 +218,20 @@ export default function ReorderableTaskGrid({
     const prevZone = zoneRef.current?.zone ?? null
     zoneRef.current = zh
     if ((zh?.zone ?? null) !== prevZone) onZoneChangeRef.current?.(true, zh?.zone ?? null)
+    // 카드 영역 좌우 빈 공간 = 삭제 영역(단일 드래그·존 밖에서만). 오버레이에 경고 표시.
+    if (onDeleteDropRef.current && !d.multiNums) {
+      const gr = gridRef.current?.getBoundingClientRect()
+      const del = !zh && !!gr && (e.clientX < gr.left - 24 || e.clientX > gr.right + 24)
+      if (del !== deleteZoneRef.current) {
+        deleteZoneRef.current = del
+        if (liftedRef.current) {
+          liftedRef.current.style.outline = del ? '2px dashed rgba(224,91,84,.95)' : ''
+          liftedRef.current.style.outlineOffset = del ? '3px' : ''
+          liftedRef.current.style.opacity = del ? '0.55' : '0.9'
+        }
+      }
+      if (del && liftedRef.current) liftedRef.current.style.transform = 'scale(0.9)'
+    }
     // 존 위이거나 복수 드래그면 삽입정렬 이동 없음(원위치 placeholder 유지)
     if (zh || d.multiNums) {
       if (overIndexRef.current !== d.originIndex) { overIndexRef.current = d.originIndex; setOverIndex(d.originIndex) }
@@ -241,6 +264,16 @@ export default function ReorderableTaskGrid({
   const onEnd = () => {
     const d = drag.current
     const zh = zoneRef.current
+    // 좌우 빈 공간 드롭 = 삭제 확인(단일). 카드는 원위치로 되돌리고 부모가 경고 다이얼로그를 연다.
+    if (d && !zh && deleteZoneRef.current && !d.multiNums && onDeleteDropRef.current) {
+      const num = d.num
+      deleteZoneRef.current = false
+      finishDrag(false)
+      cleanupPending()
+      onDeleteDropRef.current(num)
+      return
+    }
+    deleteZoneRef.current = false
     if (d && zh && onStatusDropRef.current) {
       const nums = d.multiNums ?? [d.num]
       const res = onStatusDropRef.current(nums, zh.zone)
@@ -279,7 +312,7 @@ export default function ReorderableTaskGrid({
     if (pending.current || drag.current) return
     if (e.button !== 0) return // 주 버튼만
     if ((e.target as HTMLElement).closest('button, a')) return // 버튼·링크는 드래그 제외
-    if (e.shiftKey) e.preventDefault() // Shift 구간선택 시 텍스트 선택 방지
+    if (e.shiftKey || e.detail >= 2) e.preventDefault() // Shift 구간선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
     if (!item || !canDragRef.current(item)) return
     const el = cellRefs.current.get(num)
@@ -363,6 +396,11 @@ export default function ReorderableTaskGrid({
             aria-selected={selected}
             onPointerDown={(e) => onPointerDown(e, num)}
             onClickCapture={(e) => onClickCapture(e, num)}
+            onDoubleClick={(e) => {
+              if (Date.now() < suppressClickUntil.current) return
+              if ((e.target as HTMLElement).closest('button, a')) return
+              onCardDoubleClickRef.current?.(num)
+            }}
             // 카드가 늘어난 셀 높이를 채우도록(높이 통일 시 하단 여백이 카드 내부로) — 자식(카드) height:100%
             sx={(th) => ({
               position: 'relative', minWidth: 0, touchAction: 'pan-y',

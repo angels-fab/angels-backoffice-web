@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
+import ButtonBase from '@mui/material/ButtonBase'
 import Tooltip from '@mui/material/Tooltip'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
@@ -103,6 +103,50 @@ function AddCard({ onClick, height = 120 }: { onClick: () => void; height?: numb
     >
       <AddIcon sx={{ fontSize: 22 }} /> 새 업무
     </Box>
+  )
+}
+
+// 헤더 컨트롤용 버튼그룹 — Undo/Redo 그룹과 최신순/오래된순 그룹이 같은 스타일·크기를 공유
+function BtnGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <Box
+      sx={(th) => ({
+        display: 'flex', alignItems: 'stretch', height: 30, flexShrink: 0,
+        border: '1px solid', borderColor: 'divider', borderRadius: '8px', overflow: 'hidden',
+        bgcolor: alpha(th.palette.text.primary, 0.03),
+        '& > *:not(:first-of-type)': { borderLeft: '1px solid', borderLeftColor: 'divider' },
+      })}
+    >
+      {children}
+    </Box>
+  )
+}
+
+function GroupBtn({ label, icon, selected, disabled, onClick, title }: {
+  label?: string; icon?: React.ReactNode; selected?: boolean; disabled?: boolean; onClick: () => void; title: string
+}) {
+  return (
+    <Tooltip title={title}>
+      <Box component="span" sx={{ display: 'flex' }}>
+        <ButtonBase
+          aria-label={title}
+          aria-pressed={selected}
+          disabled={disabled}
+          onClick={onClick}
+          sx={(th) => ({
+            px: icon ? 0 : 1.25, minWidth: icon ? 34 : 0,
+            fontSize: 12.5, fontWeight: 600, lineHeight: 1,
+            color: selected ? th.palette.primary.main : 'text.secondary',
+            bgcolor: selected ? alpha(th.palette.primary.main, 0.14) : 'transparent',
+            transition: 'background-color .12s',
+            '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.06) },
+            '&.Mui-disabled': { color: 'text.disabled' },
+          })}
+        >
+          {icon ?? label}
+        </ButtonBase>
+      </Box>
+    </Tooltip>
   )
 }
 
@@ -250,6 +294,14 @@ export default function Work() {
       .filter((t) => classify(t) === 'inProgress')
       .sort((a, b) => rank(a) - rank(b) || cmpChief(a, b))
   }, [items, orderMap])
+  // 진행중 표시 목록 — 탭필터·검색 적용(순서는 포털정렬순서 유지)
+  const inProgressListed = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return inProgressList
+      .filter((t) => cat === '전체' || normCat(t.cat) === normCat(cat))
+      .filter((t) => mgr === '전체' || (t.mgr || '') === mgr)
+      .filter((t) => !q || `${t.task} ${t.mgr} ${t.dept} ${t.cat} ${t.loc}`.toLowerCase().includes(q))
+  }, [inProgressList, cat, mgr, query])
 
   // 통합 Undo/Redo — 순서변경·상태변경 히스토리(HistEntry) 스택
   const undoStack = useRef<HistEntry[]>([])
@@ -519,9 +571,18 @@ export default function Work() {
   }
 
   // 드래그 드롭으로 순서가 실제 바뀜 → 사용자 지정 순서(발의일 정렬 강조 해제)
+  // 필터·검색으로 부분 목록만 보이는 상태에서 드래그하면, 부분 순서를 전체 순서에 병합해
+  // 나머지 카드의 상대 순서를 보존한다(부분만 재부여 시 전체 순서 붕괴 방지).
   const handleReorder = (orderedNums: string[]) => {
-    pushEntry({ kind: 'order', before: currentOrderNums(), after: orderedNums })
-    setDateSort('none'); commitOrder(orderedNums); bumpHist()
+    const full = currentOrderNums()
+    let finalOrder = orderedNums
+    if (orderedNums.length !== full.length) {
+      const inSet = new Set(orderedNums)
+      let i = 0
+      finalOrder = full.map((n) => (inSet.has(n) ? orderedNums[i++] : n))
+    }
+    pushEntry({ kind: 'order', before: full, after: finalOrder })
+    setDateSort('none'); commitOrder(finalOrder); bumpHist()
   }
 
   // 발의일자 기준 정렬(최신순=내림차순 / 오래된순=오름차순). 같은 날짜는 stable sort로 현재 표시순서 유지.
@@ -616,7 +677,7 @@ export default function Work() {
     return () => window.removeEventListener('keydown', onKey)
   }, [clearSelection])
 
-  const visibleList = view === 'inProgress' ? inProgressList : listed
+  const visibleList = view === 'inProgress' ? inProgressListed : listed
   const visibleRef = useRef(visibleList); visibleRef.current = visibleList
   // Cmd/Ctrl=개별 토글, Shift=시각적 순서 기준 구간 선택(선택모드 탭 포함)
   const toggleSelect = (num: string, mods: { shift: boolean }) => {
@@ -701,6 +762,19 @@ export default function Work() {
     return { changedNums: changes.map((c) => c.num), finalize }
   }
 
+  // 카드 더블클릭 → in-place 수정모드(관리자)
+  const handleCardDoubleClick = (num: string) => {
+    if (!isAdmin || !user || !authKey) return
+    const t = items.find((x) => x.num === num)
+    if (t && editingId !== t.id) startEdit(t)
+  }
+  // 카드 영역 좌우 빈 공간 드롭 → 삭제 확인 다이얼로그(기존 경고 재사용)
+  const handleDeleteDrop = (num: string) => {
+    if (!isAdmin || !user || !authKey) return
+    const t = items.find((x) => x.num === num)
+    if (t) setDeleteTarget(t)
+  }
+
   // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
   useEffect(() => {
     const beacon = () => {
@@ -769,86 +843,82 @@ export default function Work() {
         pulse={pulse}
       />
 
-      {/* ② 업무 목록 — 항상 진행중(메인) */}
-      <ContentSection title={view === 'inProgress' ? undefined : '업무 목록'} count={view === 'inProgress' ? undefined : `${listed.length}`} last={!SHOW_MANAGER_STATUS}>
-        {/* 진행중 뷰는 회의용으로 깔끔하게 — 구분 필터·검색·담당자 필터 숨김 */}
-        {view !== 'inProgress' && (
-          <>
-            <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무명·담당자·부서·구분·장소 검색" />}>
-              {presentCats.map((c) => (
-                <StatusChip key={c} status="neutral" label={c} selected={cat === c} onClick={() => setCat(c)} />
-              ))}
-            </FilterBar>
-            {presentMgrs.length > 1 && (
-              <FilterBar>
-                {presentMgrs.map((m) => (
-                  <StatusChip key={m} status="info" label={m} selected={mgr === m} onClick={() => setMgr(m)} />
-                ))}
-              </FilterBar>
-            )}
-          </>
-        )}
-
-        {listed.length === 0 && view !== 'inProgress' ? (
-          <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
-        ) : view === 'inProgress' ? (
-          // 진행중 — 1행: '업무 목록' 헤더(좌) + 새 업무 카드(우). 그 아래: 진행중 초록 카드(삽입정렬 드래그).
-          <>
-            <CardGrid columns={2} sx={{ mb: 2 }}>
-              <Box sx={{ gridColumn: { sm: '1' }, gridRow: { sm: '1' }, display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-                <Box
-                  sx={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    width: 40, height: 40, borderRadius: 2, bgcolor: 'background.elevated', color: 'primary.main',
-                    '& svg': { fontSize: 22 },
-                  }}
-                >
-                  <ChecklistIcon />
-                </Box>
-                <Typography variant="h2" component="h2">업무 목록</Typography>
-                <Typography variant="body2" sx={{ color: 'text.disabled' }}>{inProgressList.length}</Typography>
-                {isAdmin && (
-                  <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                    {selected.size > 0 && (
-                      <>
-                        <StatusChip status="info" label={`${selected.size}건 선택`} />
-                        <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
-                      </>
-                    )}
-                    <Tooltip title="순서 실행취소 (Ctrl/Cmd+Z)">
-                      <span>
-                        <IconButton size="small" aria-label="순서 실행취소" disabled={!canUndo} onClick={doUndo} sx={{ color: 'text.secondary', p: 0.5 }}>
-                          <UndoIcon sx={{ fontSize: 18 }} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title="순서 다시실행 (Ctrl/Cmd+Shift+Z)">
-                      <span>
-                        <IconButton size="small" aria-label="순서 다시실행" disabled={!canRedo} onClick={doRedo} sx={{ color: 'text.secondary', p: 0.5 }}>
-                          <RedoIcon sx={{ fontSize: 18 }} />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Typography variant="body2" sx={{ color: 'text.disabled', mx: 0.25, display: { xs: 'none', sm: 'block' } }}>발의일</Typography>
-                    <StatusChip status="neutral" label="최신순" selected={dateSort === 'latest'} onClick={() => applyDateSort('latest')} />
-                    <StatusChip status="neutral" label="오래된순" selected={dateSort === 'oldest'} onClick={() => applyDateSort('oldest')} />
-                  </Box>
-                )}
-              </Box>
-              {/* 새 업무 칸: 헤더와 같은 행(2열)을 항상 차지(로그인/로그아웃 무관 배열 고정). 버튼만 관리자에게 노출. */}
-              <Box key="new" sx={{ gridColumn: { sm: '2' }, gridRow: { sm: '1' } }}>
-                {isAdmin && (
+      {/* ② 업무 목록 — 4개 상태 뷰 공통 인터페이스(동일 헤더·필터·검색·새 업무) */}
+      <ContentSection last={!SHOW_MANAGER_STATUS}>
+        {/* 헤더 1행: 아이콘+제목+건수+선택도구+Undo/Redo(+진행중 정렬) | 새 업무 */}
+        <CardGrid columns={2} sx={{ mb: 2 }}>
+          <Box sx={{ gridColumn: { sm: '1' }, gridRow: { sm: '1' }, display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+            <Box
+              sx={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                width: 40, height: 40, borderRadius: 2, bgcolor: 'background.elevated', color: 'primary.main',
+                '& svg': { fontSize: 22 },
+              }}
+            >
+              <ChecklistIcon />
+            </Box>
+            <Typography variant="h2" component="h2">업무 목록</Typography>
+            <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+              {view === 'inProgress' ? inProgressListed.length : listed.length}
+            </Typography>
+            {isAdmin && (
+              <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
+                {selected.size > 0 && (
                   <>
-                    {!composing && <AddCard height={64} onClick={startCompose} />}
-                    <Collapse in={composing} unmountOnExit>
-                      <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
-                    </Collapse>
+                    <StatusChip status="info" label={`${selected.size}건 선택`} />
+                    <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
                   </>
                 )}
+                <BtnGroup>
+                  <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: 16 }} />} disabled={!canUndo} onClick={doUndo} />
+                  <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
+                </BtnGroup>
+                {view === 'inProgress' && (
+                  <BtnGroup>
+                    <GroupBtn title="발의일 최신순 정렬" label="최신순" selected={dateSort === 'latest'} onClick={() => applyDateSort('latest')} />
+                    <GroupBtn title="발의일 오래된순 정렬" label="오래된순" selected={dateSort === 'oldest'} onClick={() => applyDateSort('oldest')} />
+                  </BtnGroup>
+                )}
               </Box>
-            </CardGrid>
+            )}
+          </Box>
+          {/* 새 업무 칸 — 모든 상태 뷰에서 노출. 작성은 진행중 뷰의 인라인 카드에서(startCompose가 전환). */}
+          <Box key="new" sx={{ gridColumn: { sm: '2' }, gridRow: { sm: '1' } }}>
+            {isAdmin && (
+              view === 'inProgress' ? (
+                <>
+                  {!composing && <AddCard height={64} onClick={startCompose} />}
+                  <Collapse in={composing} unmountOnExit>
+                    <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+                  </Collapse>
+                </>
+              ) : (
+                <AddCard height={64} onClick={startCompose} />
+              )
+            )}
+          </Box>
+        </CardGrid>
+
+        {/* 탭필터 + 검색 — 모든 상태 뷰 공통 */}
+        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무명·담당자·부서·구분·장소 검색" />}>
+          {presentCats.map((c) => (
+            <StatusChip key={c} status="neutral" label={c} selected={cat === c} onClick={() => setCat(c)} />
+          ))}
+        </FilterBar>
+        {presentMgrs.length > 1 && (
+          <FilterBar>
+            {presentMgrs.map((m) => (
+              <StatusChip key={m} status="info" label={m} selected={mgr === m} onClick={() => setMgr(m)} />
+            ))}
+          </FilterBar>
+        )}
+
+        {view === 'inProgress' ? (
+          inProgressListed.length === 0 ? (
+            <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
+          ) : (
             <ReorderableTaskGrid
-              items={inProgressList}
+              items={inProgressListed}
               canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
               onReorder={handleReorder}
               renderCard={(t) => renderTask(t, 'green')}
@@ -857,30 +927,27 @@ export default function Work() {
               onDragStartCard={() => clearSelection()}
               onStatusDrop={handleStatusDrop}
               onZoneChange={onZoneChange}
+              onCardDoubleClick={handleCardDoubleClick}
+              onDeleteDrop={handleDeleteDrop}
             />
-          </>
+          )
+        ) : listed.length === 0 ? (
+          <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
         ) : (
-          // 보류·Check·완료·Remind — 2열 카드(상태 드래그·복수선택). 카드 상세/수정/삭제 동작 보존.
-          <>
-            {selected.size > 0 && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <StatusChip status="info" label={`${selected.size}건 선택`} />
-                <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
-              </Box>
-            )}
-            <StatusDragGrid
-              items={listed}
-              renderCard={(t) => renderTask(t, classify(t) === 'done' ? 'gray' : classify(t) === 'hold' ? 'amber' : 'green')}
-              canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
-              selectedNums={selected}
-              selMode={selMode}
-              onSelectToggle={toggleSelect}
-              onLongPress={enterSelMode}
-              onDragStartCard={() => clearSelection()}
-              onStatusDrop={handleStatusDrop}
-              onZoneChange={onZoneChange}
-            />
-          </>
+          <StatusDragGrid
+            items={listed}
+            renderCard={(t) => renderTask(t, classify(t) === 'done' ? 'gray' : classify(t) === 'hold' ? 'amber' : 'green')}
+            canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
+            selectedNums={selected}
+            selMode={selMode}
+            onSelectToggle={toggleSelect}
+            onLongPress={enterSelMode}
+            onDragStartCard={() => clearSelection()}
+            onStatusDrop={handleStatusDrop}
+            onZoneChange={onZoneChange}
+            onCardDoubleClick={handleCardDoubleClick}
+            onDeleteDrop={handleDeleteDrop}
+          />
         )}
       </ContentSection>
 

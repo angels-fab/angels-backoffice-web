@@ -27,6 +27,10 @@ interface Props {
   onStatusDrop: (nums: string[], zone: DropZone) => StatusDropResult
   /** 드래그 시작/존 변경/종료 알림(KPI 강조용) */
   onZoneChange: (dragging: boolean, zone: DropZone | null) => void
+  /** 카드 더블클릭 — 수정모드 진입(부모가 권한 확인) */
+  onCardDoubleClick?: (num: string) => void
+  /** 카드 영역 좌우 빈 공간에 드롭 — 삭제 확인(단일 드래그만) */
+  onDeleteDrop?: (num: string) => void
 }
 
 /**
@@ -36,7 +40,9 @@ interface Props {
 export default function StatusDragGrid({
   items, renderCard, canDrag, selectedNums, selMode,
   onSelectToggle, onLongPress, onDragStartCard, onStatusDrop, onZoneChange,
+  onCardDoubleClick, onDeleteDrop,
 }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef(new Map<string, HTMLElement>())
   const liftedRef = useRef<HTMLDivElement | null>(null)
   const [dragNum, setDragNum] = useState<string | null>(null)
@@ -51,6 +57,9 @@ export default function StatusDragGrid({
   const onDragStartCardRef = useRef(onDragStartCard); onDragStartCardRef.current = onDragStartCard
   const onStatusDropRef = useRef(onStatusDrop); onStatusDropRef.current = onStatusDrop
   const onZoneChangeRef = useRef(onZoneChange); onZoneChangeRef.current = onZoneChange
+  const onCardDoubleClickRef = useRef(onCardDoubleClick); onCardDoubleClickRef.current = onCardDoubleClick
+  const onDeleteDropRef = useRef(onDeleteDrop); onDeleteDropRef.current = onDeleteDrop
+  const deleteZoneRef = useRef(false)
 
   const pending = useRef<null | { num: string; pointerType: string; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
   const drag = useRef<null | { num: string; nums: string[]; width: number; height: number; offsetX: number; offsetY: number; startLeft: number; startTop: number; scale: number }>(null)
@@ -91,6 +100,7 @@ export default function StatusDragGrid({
     document.addEventListener('selectstart', onSelectStart)
     document.body.style.cursor = 'grabbing'
     zoneRef.current = null
+    deleteZoneRef.current = false
     onZoneChangeRef.current(true, null)
     setMultiCount(nums.length)
     setDragNum(p.num)
@@ -127,6 +137,20 @@ export default function StatusDragGrid({
     const prev = zoneRef.current?.zone ?? null
     zoneRef.current = zh
     if ((zh?.zone ?? null) !== prev) onZoneChangeRef.current(true, zh?.zone ?? null)
+    // 카드 영역 좌우 빈 공간 = 삭제 영역(단일 드래그·존 밖에서만)
+    if (onDeleteDropRef.current && d.nums.length === 1) {
+      const gr = rootRef.current?.getBoundingClientRect()
+      const del = !zh && !!gr && (e.clientX < gr.left - 24 || e.clientX > gr.right + 24)
+      if (del !== deleteZoneRef.current) {
+        deleteZoneRef.current = del
+        if (el) {
+          el.style.outline = del ? '2px dashed rgba(224,91,84,.95)' : ''
+          el.style.outlineOffset = del ? '3px' : ''
+          el.style.opacity = del ? '0.55' : '0.92'
+        }
+      }
+      if (del && el) el.style.transform = 'scale(0.9)'
+    }
   }
 
   const endDrag = () => {
@@ -141,6 +165,16 @@ export default function StatusDragGrid({
   const onEnd = () => {
     const d = drag.current
     const zh = zoneRef.current
+    // 좌우 빈 공간 드롭 = 삭제 확인(단일)
+    if (d && !zh && deleteZoneRef.current && d.nums.length === 1 && onDeleteDropRef.current) {
+      const num = d.num
+      deleteZoneRef.current = false
+      endDrag()
+      cleanupPending()
+      onDeleteDropRef.current(num)
+      return
+    }
+    deleteZoneRef.current = false
     if (d && zh) {
       const res = onStatusDropRef.current(d.nums, zh.zone)
       if (res) {
@@ -170,7 +204,7 @@ export default function StatusDragGrid({
     if (pending.current || drag.current) return
     if (e.button !== 0) return
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
-    if (e.shiftKey) e.preventDefault() // Shift 구간선택 시 텍스트 선택 방지
+    if (e.shiftKey || e.detail >= 2) e.preventDefault() // Shift 구간선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
     if (!item || !canDragRef.current(item)) return
     const el = cellRefs.current.get(num)
@@ -222,6 +256,7 @@ export default function StatusDragGrid({
 
   return (
     <Box
+      ref={rootRef}
       onDragStart={(e) => e.preventDefault()}
       sx={{
         display: 'grid',
@@ -242,6 +277,11 @@ export default function StatusDragGrid({
             aria-selected={selected}
             onPointerDown={(e) => onPointerDown(e, t.num)}
             onClickCapture={(e) => onClickCapture(e, t.num)}
+            onDoubleClick={(e) => {
+              if (Date.now() < suppressClickUntil.current) return
+              if ((e.target as HTMLElement).closest('button, a')) return
+              onCardDoubleClickRef.current?.(t.num)
+            }}
             sx={(th) => ({
               position: 'relative', minWidth: 0, touchAction: 'pan-y',
               '& > *:first-of-type': { height: '100%' },

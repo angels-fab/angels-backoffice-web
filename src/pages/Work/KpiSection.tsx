@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -63,6 +64,18 @@ export default function KpiSection({
   view, onOpenView, dragging, activeZone, pulse,
 }: KpiSectionProps) {
   const checkTotal = checkInProgCount + checkHoldCount
+
+  // 스크롤해도 KPI가 상단(topbar 아래)에 고정 — 드래그 목적지를 항상 노출(PC). 모바일은 화면을 너무 가려 일반 흐름 유지.
+  const [stickyTop, setStickyTop] = useState(62)
+  useEffect(() => {
+    const measure = () => {
+      const bar = document.querySelector<HTMLElement>('.topbar')
+      setStickyTop(bar ? bar.offsetHeight : 0)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
 
   const pulseSx = (zone: DropZone) =>
     pulse && pulse.zone === zone ? { animation: 'kpiPulse .34s ease-out' } : {}
@@ -157,7 +170,18 @@ export default function KpiSection({
   }
 
   return (
-    <ContentSection sx={{ mb: '26px' }}>
+    <ContentSection
+      sx={{
+        mb: '10px',
+        // PC(md+): topbar 아래 sticky. 칩 돌출(-15px)을 배경으로 받치는 하단 패딩 포함.
+        position: { xs: 'static', md: 'sticky' },
+        top: { md: `${stickyTop}px` },
+        zIndex: 30,
+        bgcolor: { md: 'background.default' },
+        pt: { md: '6px' },
+        pb: { md: '18px' },
+      }}
+    >
       {/* 스트립 — PC(md+)에서는 외곽 테두리 1개의 긴 카드, 좁은 폭에서는 두 그룹 카드 상하 배치 */}
       <Box
         sx={{
