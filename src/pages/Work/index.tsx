@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import Dialog from '@mui/material/Dialog'
@@ -19,6 +21,8 @@ import AddIcon from '@mui/icons-material/Add'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import UndoIcon from '@mui/icons-material/Undo'
+import RedoIcon from '@mui/icons-material/Redo'
 import { alpha } from '@mui/material/styles'
 import {
   PageContainer,
@@ -279,6 +283,21 @@ export default function Work() {
       .sort((a, b) => rank(a) - rank(b) || cmpChief(a, b))
   }, [items, orderMap])
 
+  // 진행중 카드 순서 실행취소/다시실행 — 표시순서(num 배열) 스택. 저장(commitOrder)까지 함께 되돌림.
+  const undoStack = useRef<string[][]>([])
+  const redoStack = useRef<string[][]>([])
+  const [, forceHist] = useState(0)
+  const bumpHist = () => forceHist((v) => v + 1)
+  const inProgressListRef = useRef(inProgressList)
+  inProgressListRef.current = inProgressList
+  const currentOrderNums = () => inProgressListRef.current.map((t) => t.num)
+  // 진행중 카드 구성(추가/완료/삭제)이 바뀌면 순서 히스토리 초기화 — 다른 카드 집합엔 되돌림 무의미
+  const inProgKey = useMemo(
+    () => items.filter((t) => classify(t) === 'inProgress').map((t) => t.num).sort().join(','),
+    [items],
+  )
+  useEffect(() => { undoStack.current = []; redoStack.current = []; bumpHist() }, [inProgKey])
+
   // Remind/완료 — 메인 목록과 독립 파생(Remind=인라인 펼침, 완료=Drawer)
   const remindList = useMemo(() => items.filter((t) => t.remind).sort(cmpRemind), [items])
   const doneList = useMemo(() => items.filter((t) => classify(t) === 'done').sort(cmp), [items])
@@ -531,8 +550,15 @@ export default function Work() {
     orderTimer.current = window.setTimeout(() => { void flushOrderSave() }, 3000)
   }
 
+  // 새 순서 확정 전 현재 순서를 undo 스택에 적재(다시실행 스택은 비움)
+  const pushUndo = () => {
+    undoStack.current.push(currentOrderNums())
+    if (undoStack.current.length > 100) undoStack.current.shift()
+    redoStack.current = []
+  }
+
   // 드래그 드롭으로 순서가 실제 바뀜 → 사용자 지정 순서(발의일 정렬 강조 해제)
-  const handleReorder = (orderedNums: string[]) => { setDateSort('none'); commitOrder(orderedNums) }
+  const handleReorder = (orderedNums: string[]) => { pushUndo(); setDateSort('none'); commitOrder(orderedNums); bumpHist() }
 
   // 발의일자 기준 정렬(최신순=내림차순 / 오래된순=오름차순). 같은 날짜는 stable sort로 현재 표시순서 유지.
   // 결과를 새 사용자 지정 순서로 취급해 포털정렬순서를 재계산·저장(3초 디바운스).
@@ -541,9 +567,49 @@ export default function Work() {
       const d = dateSortValue(a.start) - dateSortValue(b.start)
       return dir === 'latest' ? -d : d
     })
+    pushUndo()
     setDateSort(dir)
     commitOrder(sorted.map((t) => t.num))
+    bumpHist()
   }
+
+  // 실행취소: 직전 순서로 복귀(현재 순서는 다시실행 스택으로) / 다시실행: 그 반대. 복귀 순서도 저장.
+  const canUndo = undoStack.current.length > 0
+  const canRedo = redoStack.current.length > 0
+  const doUndo = () => {
+    if (!undoStack.current.length) return
+    const prev = undoStack.current.pop() as string[]
+    redoStack.current.push(currentOrderNums())
+    setDateSort('none')
+    commitOrder(prev)
+    bumpHist()
+  }
+  const doRedo = () => {
+    if (!redoStack.current.length) return
+    const next = redoStack.current.pop() as string[]
+    undoStack.current.push(currentOrderNums())
+    setDateSort('none')
+    commitOrder(next)
+    bumpHist()
+  }
+  // 키보드 단축키(Ctrl/Cmd+Z=실행취소, +Shift=다시실행). 입력란 포커스 중엔 비활성. 진행중 뷰·관리자만.
+  const undoRef = useRef(doUndo); undoRef.current = doUndo
+  const redoRef = useRef(doRedo); redoRef.current = doRedo
+  const viewRef = useRef(view); viewRef.current = view
+  useEffect(() => {
+    if (!isAdmin) return
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.altKey) return
+      if ((e.key || '').toLowerCase() !== 'z') return
+      if (viewRef.current !== 'inProgress') return
+      const el = document.activeElement as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      e.preventDefault()
+      if (e.shiftKey) redoRef.current(); else undoRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isAdmin])
 
   // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
   useEffect(() => {
@@ -847,7 +913,21 @@ export default function Work() {
                 <Typography variant="body2" sx={{ color: 'text.disabled' }}>{inProgressList.length}</Typography>
                 {isAdmin && (
                   <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
-                    <Typography variant="body2" sx={{ color: 'text.disabled', mr: 0.25, display: { xs: 'none', sm: 'block' } }}>발의일</Typography>
+                    <Tooltip title="순서 실행취소 (Ctrl/Cmd+Z)">
+                      <span>
+                        <IconButton size="small" aria-label="순서 실행취소" disabled={!canUndo} onClick={doUndo} sx={{ color: 'text.secondary', p: 0.5 }}>
+                          <UndoIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title="순서 다시실행 (Ctrl/Cmd+Shift+Z)">
+                      <span>
+                        <IconButton size="small" aria-label="순서 다시실행" disabled={!canRedo} onClick={doRedo} sx={{ color: 'text.secondary', p: 0.5 }}>
+                          <RedoIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Typography variant="body2" sx={{ color: 'text.disabled', mx: 0.25, display: { xs: 'none', sm: 'block' } }}>발의일</Typography>
                     <StatusChip status="neutral" label="최신순" selected={dateSort === 'latest'} onClick={() => applyDateSort('latest')} />
                     <StatusChip status="neutral" label="오래된순" selected={dateSort === 'oldest'} onClick={() => applyDateSort('oldest')} />
                   </Box>
