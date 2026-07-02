@@ -215,34 +215,35 @@ export default function KpiSection({
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); if (holdCount > 0) onToggleHold() } }}
                   sx={{ position: 'relative', width: { xs: 92, sm: 104 }, height: { xs: 92, sm: 104 }, flexShrink: 0, cursor: holdCount > 0 ? 'pointer' : 'default', opacity: holdCount > 0 ? 1 : 0.45 }}
                 >
-                  {/* 서류(정자세) — 불릿·글줄 배경 + 정중앙 건수 */}
+                  {/* 서류 래퍼(정자세) — 하단 ~18px가 서랍 뒤로 꽂힘. 배지는 서류 모서리 기준 */}
                   <Box sx={{
-                    position: 'absolute', bottom: 24, left: '50%', transform: 'translateX(-50%)',
-                    width: 72, height: { xs: 64, sm: 72 },
-                    bgcolor: 'background.elevated', border: `1px solid ${alpha(amber, 0.6)}`, borderRadius: '8px', overflow: 'hidden',
+                    position: 'absolute', bottom: { xs: 14, sm: 16 }, left: '50%', transform: 'translateX(-50%)',
+                    width: 68, height: { xs: 62, sm: 70 },
                   }}>
-                    <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px', px: 1.25 }}>
-                      {[100, 100, 62, 78].map((w, i) => (
-                        <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: alpha(th.palette.text.secondary, 0.32), flexShrink: 0 }} />
-                          <Box sx={{ width: `${w}%`, height: 2, borderRadius: '1px', bgcolor: alpha(th.palette.text.secondary, 0.2) }} />
-                        </Box>
-                      ))}
+                    <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'background.elevated', border: `1px solid ${alpha(amber, 0.6)}`, borderRadius: '8px', overflow: 'hidden' }}>
+                      {/* 글줄·불릿 배경 — 꽂힌(가려질) 하단만큼 위로 치우침 */}
+                      <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px', px: 1.25, pb: '16px' }}>
+                        {[100, 100, 62, 78].map((w, i) => (
+                          <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: alpha(th.palette.text.secondary, 0.32), flexShrink: 0 }} />
+                            <Box sx={{ width: `${w}%`, height: 2, borderRadius: '1px', bgcolor: alpha(th.palette.text.secondary, 0.2) }} />
+                          </Box>
+                        ))}
+                      </Box>
+                      {/* 건수 — 서랍 위로 보이는 영역의 정중앙 */}
+                      <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pb: '16px' }}>
+                        <Typography component="span" sx={{ fontSize: { xs: 24, sm: 27 }, fontWeight: 800, lineHeight: 1, bgcolor: 'background.elevated', px: 0.75, py: 0.25, borderRadius: '6px' }}>
+                          {holdCount}
+                        </Typography>
+                      </Box>
                     </Box>
-                    <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Typography component="span" sx={{ fontSize: { xs: 26, sm: 30 }, fontWeight: 800, lineHeight: 1, bgcolor: 'background.elevated', px: 0.75, py: 0.25, borderRadius: '6px' }}>
-                        {holdCount}
-                      </Typography>
-                    </Box>
+                    {/* 서류 우상단 ✓N — 보류 소속 Check(앰버 테두리) */}
+                    <CheckBadge count={checkHold.length} hold />
                   </Box>
-                  {/* 서류 우상단 ✓N — 보류 소속 Check(앰버 테두리) */}
-                  <Box sx={{ position: 'absolute', top: { xs: -4, sm: -2 }, right: 2 }}>
-                    <Box sx={{ position: 'relative' }}><CheckBadge count={checkHold.length} hold /></Box>
-                  </Box>
-                  {/* 서랍 — '보류' 라벨 가운데 */}
+                  {/* 서랍 — 서류 하단을 가리며 '꽂힌' 모양. '보류' 라벨 가운데 */}
                   <Box sx={{
-                    position: 'absolute', bottom: 0, left: 0, right: 0, height: 34,
-                    borderRadius: '9px', bgcolor: alpha(amber, 0.14), border: `1px solid ${alpha(amber, 0.6)}`,
+                    position: 'absolute', bottom: 0, left: 0, right: 0, height: { xs: 30, sm: 34 },
+                    borderRadius: '9px', bgcolor: '#2a2416', border: `1px solid ${alpha(amber, 0.6)}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
                   }}>
                     <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 600, color: amber, lineHeight: 1 }}>보류</Typography>
