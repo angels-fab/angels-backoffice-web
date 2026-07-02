@@ -1,19 +1,17 @@
-import type { KeyboardEvent, ReactNode } from 'react'
+import type { KeyboardEvent } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
-import { alpha, useTheme } from '@mui/material/styles'
-import { AppCard, ContentSection } from '@/components/ds'
+import { ContentSection } from '@/components/ds'
 import type { DropZone, WorkView } from './dropZones'
 
 /**
- * 업무현황 KPI 2열 — 명시적 버튼만 목록을 연다(카드 배경은 클릭 불가).
- * 진행중 카드: 숨쉬는 초록 링(버튼·드롭존) + Check 필(버튼) + 보류 보관함(버튼·드롭존).
- * 완료 카드: 완료 박스(버튼·드롭존) + Remind 필(버튼·드롭존) + 옆면 플래그.
- * 드래그 중에는 드롭존이 상태색으로 강조되고, 포인터가 든 존은 살짝 확대된다.
+ * 업무현황 KPI — 확정 시안(docs/mockups/work-kpi-4col-nested.html)의 4열 연결형 스트립.
+ * 진행중/보류/완료/Remind 가 하나의 긴 카드 안에 4열(외곽 테두리 1개 + 동일 세로 구분선),
+ * 각 영역은 상태색 컬러 워시(경계 2%만 양쪽 색이 직접 섞임). 클릭=상태 목록, 선택=배경 농도.
+ * 진행중·보류의 '건' 오른쪽에 보라 원형 Check 배지(absolute, 중앙축 불변), 그룹 경계 하단에
+ * '부서장 확인' 통합 칩(클릭=Check 목록). 드롭존(data-dropzone)·강조·펄스 계약은 기존 그대로.
  */
 
 export interface KpiSectionProps {
@@ -24,10 +22,10 @@ export interface KpiSectionProps {
   doneCount: number
   totalCount: number
   remindCount: number
-  /** 현재 열린 목록 — 각 버튼의 선택 상태 표시 */
+  /** 현재 열린 목록 — 선택 상태(배경 농도)로 표시 */
   view: WorkView
   onOpenView: (v: WorkView) => void
-  /** 카드 드래그 진행 중(존 활성 표시) */
+  /** 카드 드래그 진행 중(드롭존 표시) */
   dragging: boolean
   /** 포인터가 들어와 있는 드롭존 */
   activeZone: DropZone | null
@@ -35,27 +33,25 @@ export interface KpiSectionProps {
   pulse: { zone: DropZone; tick: number } | null
 }
 
-// 우상단 ✓N 배지 — 보라 채움 + (보류 소속) 앰버 테두리
-function CheckBadge({ count, hold }: { count: number; hold?: boolean }) {
-  const th = useTheme()
-  if (count <= 0) return null
-  return (
-    <Box
-      component="span"
-      sx={{
-        position: 'absolute', top: -9, right: -9, zIndex: 1,
-        display: 'inline-flex', alignItems: 'center', gap: '2px',
-        px: 0.9, py: 0.25, borderRadius: '999px',
-        bgcolor: th.palette.accent.purple, color: '#1a1030',
-        fontSize: 12, fontWeight: 700, lineHeight: 1,
-        border: hold ? `1.5px solid ${th.palette.accent.amber}` : `2px solid ${th.palette.background.default}`,
-      }}
-    >
-      <CheckIcon sx={{ fontSize: 12 }} />
-      {count}
-    </Box>
-  )
+// 시안 고정 색상(다크 전용 포털) — 상태명/워시/강조는 경계 2% 혼합 규칙을 그대로 사용
+const LABEL: Record<DropZone, string> = { inProgress: '#72c78d', hold: '#79a9e2', done: '#c2cad5', remind: '#e0bc74' }
+const WASH: Record<DropZone, string> = {
+  inProgress: 'linear-gradient(to right, rgba(77,161,103,.1) 0 98%, rgba(81,153,161,.098) 100%)',
+  hold: 'linear-gradient(to right, rgba(81,153,161,.098) 0%, rgba(84,145,218,.095) 2% 98%, rgba(113,149,194,.09) 100%)',
+  done: 'linear-gradient(to right, rgba(113,149,194,.09) 0%, rgba(141,152,169,.085) 2% 98%, rgba(178,157,116,.078) 100%)',
+  remind: 'linear-gradient(to right, rgba(178,157,116,.078) 0%, rgba(214,162,62,.07) 2% 100%)',
 }
+const STRONG: Record<DropZone, string> = {
+  inProgress: 'linear-gradient(to right, rgba(77,161,103,.34) 0 98%, rgba(81,153,161,.34) 100%)',
+  hold: 'linear-gradient(to right, rgba(81,153,161,.34) 0%, rgba(84,145,218,.34) 2% 98%, rgba(113,149,194,.34) 100%)',
+  done: 'linear-gradient(to right, rgba(113,149,194,.28) 0%, rgba(141,152,169,.28) 2% 98%, rgba(178,157,116,.28) 100%)',
+  remind: 'linear-gradient(to right, rgba(178,157,116,.25) 0%, rgba(214,162,62,.25) 2% 100%)',
+}
+const ZONE_RING: Record<DropZone, string> = {
+  inProgress: 'rgba(77,161,103,.55)', hold: 'rgba(84,145,218,.55)', done: 'rgba(141,152,169,.55)', remind: 'rgba(214,162,62,.55)',
+}
+const LABEL_KO: Record<DropZone, string> = { inProgress: '진행중', hold: '보류', done: '완료', remind: 'Remind' }
+const DIVIDER = 'rgba(170,180,195,.22)'
 
 const keyActivate = (fn: () => void) => (e: KeyboardEvent) => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); fn() }
@@ -63,226 +59,167 @@ const keyActivate = (fn: () => void) => (e: KeyboardEvent) => {
 
 export default function KpiSection({
   inProgressCount, holdCount, checkInProgCount, checkHoldCount,
-  doneCount, totalCount, remindCount,
+  doneCount, remindCount,
   view, onOpenView, dragging, activeZone, pulse,
 }: KpiSectionProps) {
-  const th = useTheme()
-  const green = th.palette.accent.green
-  const amber = th.palette.accent.amber
-  const purple = th.palette.accent.purple
-  const gray = th.palette.text.secondary
   const checkTotal = checkInProgCount + checkHoldCount
 
-  // 드롭존 공통 강조 — 드래그 중 상태색 테두리, 포인터 진입 시 1.02 확대(transform 전용)
-  const zoneSx = (zone: DropZone, color: string) => ({
-    transition: 'transform .12s ease, box-shadow .12s ease, background-color .12s ease',
-    ...(dragging ? { boxShadow: `0 0 0 1.5px ${alpha(color, activeZone === zone ? 0.95 : 0.5)}` } : {}),
-    ...(activeZone === zone ? { transform: 'scale(1.02)' } : {}),
-  })
-
-  // 펄스 — key 교체로 애니메이션 재시작
   const pulseSx = (zone: DropZone) =>
     pulse && pulse.zone === zone ? { animation: 'kpiPulse .34s ease-out' } : {}
   const pulseKey = (zone: DropZone) => (pulse && pulse.zone === zone ? pulse.tick : 0)
 
-  // Check 필 아이콘 — 최대 5개(진행중 먼저), 초과 +N
-  const pillDots: boolean[] = [
-    ...Array.from({ length: checkInProgCount }, () => false),
-    ...Array.from({ length: checkHoldCount }, () => true),
-  ]
-  const shownDots = pillDots.slice(0, 5)
-  const moreDots = pillDots.length - shownDots.length
-
-  const flagCount = Math.min(remindCount, 16)
-
-  const dotEl = (hold: boolean, i: number): ReactNode => (
-    <Box
-      key={i}
-      component="span"
-      sx={{
-        width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-        bgcolor: purple, color: '#1a1030',
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        border: hold ? `1.5px solid ${amber}` : `1.5px solid #101826`,
-        ...(i > 0 ? { ml: '-8px' } : {}),
-      }}
-    >
-      <CheckIcon sx={{ fontSize: 13 }} />
-    </Box>
-  )
-
-  return (
-    <ContentSection sx={{ mb: '14px' }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2, '& > *': { minWidth: 0 } }}>
-
-        {/* ── 진행중 카드 — 배경 클릭 불가. 링·필·보관함이 각자 버튼 ── */}
-        <AppCard padding={18} sx={{ overflow: 'visible' }}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: { xs: 1, sm: 1.5 }, minHeight: { xs: 96, sm: 108 } }}>
-
-            {/* 링(버튼·드롭존) — 클릭=진행중 목록, 드롭=상태 '진행중' */}
+  // 상태 영역(타일) — 클릭=목록, 드롭존, 선택/호버=배경 농도(테두리 없음), 하단 30px 인디케이터
+  const tile = (zone: DropZone, count: number, checkCount: number, radius: { xs: string; md: string }) => {
+    const selected = view === zone
+    const highlighted = selected || activeZone === zone
+    return (
+      <Box
+        role="button"
+        tabIndex={0}
+        aria-pressed={selected}
+        aria-label={`${LABEL_KO[zone]} 업무 목록 열기 (${count}건${checkCount > 0 ? `, 부서장 확인 ${checkCount}건` : ''})`}
+        data-dropzone={zone}
+        onClick={() => onOpenView(zone)}
+        onKeyDown={keyActivate(() => onOpenView(zone))}
+        sx={{
+          position: 'relative', minWidth: 0, minHeight: { xs: 104, md: 132 },
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '7px', textAlign: 'center', cursor: 'pointer', color: LABEL[zone],
+          borderRadius: { xs: radius.xs, md: radius.md },
+          background: highlighted ? STRONG[zone] : WASH[zone],
+          transition: 'background .14s ease, box-shadow .14s ease, transform .14s ease',
+          '&:hover': { background: STRONG[zone] },
+          '&:focus-visible': { outline: '2px solid #7db3ef', outlineOffset: '-3px' },
+          // 하단 인디케이터(호버·선택 시) — 장식이므로 pointer-events 없음(pseudo)
+          '&::after': {
+            content: '""', position: 'absolute', left: '50%', bottom: 9, width: 30, height: 2,
+            borderRadius: '999px', bgcolor: 'currentColor', transform: 'translateX(-50%)',
+            opacity: selected ? 0.72 : 0, transition: 'opacity .14s', pointerEvents: 'none',
+          },
+          '&:hover::after': { opacity: 0.72 },
+          // 드래그 중: 드롭 가능 영역 상태색 안쪽 링, 활성 존은 강조 배경 + 1.02 확대
+          ...(dragging ? { boxShadow: `inset 0 0 0 1.5px ${ZONE_RING[zone]}` } : {}),
+          ...(activeZone === zone ? { transform: 'scale(1.02)', zIndex: 1 } : {}),
+        }}
+      >
+        {/* 건수(위) — Check 배지는 레이아웃 폭에 미포함(absolute)이라 중앙축 불변 */}
+        <Box sx={{ position: 'relative', display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+          <Typography
+            key={pulseKey(zone)}
+            component="span"
+            sx={{ fontSize: { xs: 31, md: 43 }, fontWeight: 800, lineHeight: 0.95, letterSpacing: '-0.04em', color: '#fff', ...pulseSx(zone) }}
+          >
+            {count}
+          </Typography>
+          <Typography component="span" sx={{ fontSize: 13, fontWeight: 700, color: '#aab4c3', lineHeight: 1 }}>건</Typography>
+          {checkCount > 0 && (
             <Box
-              role="button"
-              tabIndex={0}
-              aria-label="진행중 업무 목록 열기"
-              aria-pressed={view === 'inProgress'}
-              data-dropzone="inProgress"
-              onClick={() => onOpenView('inProgress')}
-              onKeyDown={keyActivate(() => onOpenView('inProgress'))}
+              component="span"
+              aria-hidden
               sx={{
-                position: 'relative', width: { xs: 92, sm: 104 }, height: { xs: 92, sm: 104 }, flexShrink: 0,
-                cursor: 'pointer', borderRadius: '50%',
-                ...zoneSx('inProgress', green),
-                '&:hover .kpi-ring-core': { bgcolor: alpha(green, 0.16) },
+                position: 'absolute', left: 'calc(100% + 7px)', top: '50%', transform: 'translateY(-50%)',
+                width: { xs: 22, md: 23 }, height: { xs: 22, md: 23 },
+                border: '1px solid rgba(169,138,224,.52)', borderRadius: '999px',
+                bgcolor: '#29233a', color: '#d7c6f6',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: { xs: 12.5, md: 13 }, fontWeight: 800, lineHeight: 1,
+                boxShadow: '0 3px 9px rgba(0,0,0,.2)', pointerEvents: 'none',
               }}
             >
-              <Box component="span" sx={{ position: 'absolute', inset: '4px', borderRadius: '50%', border: `3px solid ${green}`, animation: 'kpiBreath 2.4s ease-in-out infinite' }} />
-              <Box className="kpi-ring-core" sx={{ position: 'absolute', inset: '4px', borderRadius: '50%', bgcolor: alpha(green, view === 'inProgress' ? 0.18 : 0.09), transition: 'background-color .15s', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px' }}>
-                <Typography key={pulseKey('inProgress')} component="span" sx={{ fontSize: { xs: 26, sm: 30 }, fontWeight: 800, lineHeight: 1, ...pulseSx('inProgress') }}>{inProgressCount}</Typography>
-                <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 600, color: green, lineHeight: 1 }}>진행중</Typography>
-              </Box>
-              <CheckBadge count={checkInProgCount} />
-            </Box>
-
-            {/* Check 모아보기 필(버튼) — 클릭=Check 목록(진행중·보류 통합) */}
-            <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignSelf: 'center', minWidth: 0 }}>
-              {checkTotal > 0 && (
-                <Tooltip title={`Check 업무 ${checkTotal}건 목록 (진행중 ${checkInProgCount} · 보류 ${checkHoldCount})`}>
-                  <Box
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Check 업무 ${checkTotal}건 목록 열기`}
-                    aria-pressed={view === 'check'}
-                    onClick={() => onOpenView('check')}
-                    onKeyDown={keyActivate(() => onOpenView('check'))}
-                    sx={{
-                      display: 'inline-flex', alignItems: 'center', gap: 0.5,
-                      pl: 0.75, pr: 1, py: 0.6, borderRadius: '999px', cursor: 'pointer',
-                      border: `1px solid ${alpha(purple, view === 'check' ? 0.9 : 0.45)}`,
-                      bgcolor: alpha(purple, view === 'check' ? 0.2 : 0.08),
-                      transition: 'background-color .15s, border-color .15s',
-                      '&:hover': { bgcolor: alpha(purple, 0.22) },
-                    }}
-                  >
-                    {shownDots.map((hold, i) => dotEl(hold, i))}
-                    {moreDots > 0 && (
-                      <Typography component="span" sx={{ fontSize: 12, fontWeight: 700, color: purple, ml: 0.25 }}>+{moreDots}</Typography>
-                    )}
-                    <ExpandMoreIcon sx={{ fontSize: 16, color: 'text.secondary', transition: 'transform .2s', transform: view === 'check' ? 'rotate(180deg)' : 'none' }} />
-                  </Box>
-                </Tooltip>
-              )}
-            </Box>
-
-            {/* 보류 보관함(버튼·드롭존) — 클릭=보류 목록, 드롭=상태 '보류' */}
-            <Box
-              role="button"
-              tabIndex={0}
-              aria-label={`보류 업무 목록 열기 (${holdCount}건)`}
-              aria-pressed={view === 'hold'}
-              data-dropzone="hold"
-              onClick={() => onOpenView('hold')}
-              onKeyDown={keyActivate(() => onOpenView('hold'))}
-              sx={{
-                position: 'relative', width: { xs: 92, sm: 104 }, height: { xs: 92, sm: 104 }, flexShrink: 0,
-                cursor: 'pointer', borderRadius: '10px',
-                opacity: holdCount > 0 || dragging || view === 'hold' ? 1 : 0.5,
-                ...zoneSx('hold', amber),
-              }}
-            >
-              {/* 서류 — 하단이 서랍 뒤로 꽂힘 */}
-              <Box sx={{ position: 'absolute', bottom: { xs: 14, sm: 16 }, left: '50%', transform: 'translateX(-50%)', width: 68, height: { xs: 62, sm: 70 } }}>
-                <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'background.elevated', border: `1px solid ${alpha(amber, 0.6)}`, borderRadius: '8px', overflow: 'hidden' }}>
-                  <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '6px', px: 1.25, pb: '16px' }}>
-                    {[100, 100, 62, 78].map((w, i) => (
-                      <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Box sx={{ width: 3, height: 3, borderRadius: '50%', bgcolor: alpha(gray, 0.32), flexShrink: 0 }} />
-                        <Box sx={{ width: `${w}%`, height: 2, borderRadius: '1px', bgcolor: alpha(gray, 0.2) }} />
-                      </Box>
-                    ))}
-                  </Box>
-                  <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pb: '16px' }}>
-                    <Typography key={pulseKey('hold')} component="span" sx={{ fontSize: { xs: 24, sm: 27 }, fontWeight: 800, lineHeight: 1, bgcolor: 'background.elevated', px: 0.75, py: 0.25, borderRadius: '6px', ...pulseSx('hold') }}>
-                      {holdCount}
-                    </Typography>
-                  </Box>
-                </Box>
-                <CheckBadge count={checkHoldCount} hold />
-              </Box>
-              {/* 서랍 */}
-              <Box sx={{
-                position: 'absolute', bottom: 0, left: 0, right: 0, height: { xs: 30, sm: 34 },
-                borderRadius: '9px', bgcolor: '#2a2416',
-                border: `1px solid ${alpha(amber, view === 'hold' ? 0.95 : 0.6)}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-              }}>
-                <Typography component="span" sx={{ fontSize: 12.5, fontWeight: 600, color: amber, lineHeight: 1 }}>보류</Typography>
-                <ExpandMoreIcon sx={{ fontSize: 14, color: alpha(amber, 0.8), transition: 'transform .2s', transform: view === 'hold' ? 'rotate(180deg)' : 'none' }} />
-              </Box>
-            </Box>
-          </Box>
-        </AppCard>
-
-        {/* ── 완료 카드 — 배경 클릭 불가. 완료 박스·Remind 필이 각자 버튼 ── */}
-        <AppCard padding={18} sx={{ overflow: 'hidden', position: 'relative' }}>
-          {flagCount > 0 && (
-            <Box aria-hidden sx={{ position: 'absolute', top: 12, bottom: 12, right: -1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', zIndex: 1, pointerEvents: 'none' }}>
-              {Array.from({ length: flagCount }, (_, i) => (
-                <Box key={i} sx={{
-                  width: i % 2 === 0 ? 16 : 13, height: 5, borderRadius: '3px 0 0 3px',
-                  bgcolor: i % 2 === 0 ? amber : alpha(amber, 0.55), alignSelf: 'flex-end',
-                }} />
-              ))}
+              {checkCount}
             </Box>
           )}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 1.5 }, minHeight: { xs: 96, sm: 108 }, pr: '18px' }}>
-            {/* 완료 박스(버튼·드롭존) — 클릭=완료 목록, 드롭=완료(Remind 해제) */}
-            <Box
-              role="button"
-              tabIndex={0}
-              aria-label={`완료 업무 목록 열기 (${doneCount}건)`}
-              aria-pressed={view === 'done'}
-              data-dropzone="done"
-              onClick={() => onOpenView('done')}
-              onKeyDown={keyActivate(() => onOpenView('done'))}
-              sx={{
-                flexShrink: 0, px: 2.25, py: 1.75, borderRadius: '12px', cursor: 'pointer',
-                bgcolor: alpha(gray, view === 'done' ? 0.24 : 0.14),
-                display: 'flex', alignItems: 'baseline', gap: 0.75,
-                '&:hover': { bgcolor: alpha(gray, 0.26) },
-                ...zoneSx('done', gray),
-              }}
-            >
-              <Typography component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'text.secondary', lineHeight: 1 }}>완료</Typography>
-              <Typography key={pulseKey('done')} component="span" sx={{ fontSize: { xs: 26, sm: 30 }, fontWeight: 800, lineHeight: 1, ...pulseSx('done') }}>{doneCount}</Typography>
-              <Typography component="span" sx={{ fontSize: 13, fontWeight: 700, color: 'text.disabled', lineHeight: 1 }}>/{totalCount}</Typography>
-            </Box>
+        </Box>
+        {/* 상태명(아래) — 상태 대표색 */}
+        <Typography component="span" sx={{ fontSize: { xs: 14, md: 16 }, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em', color: LABEL[zone] }}>
+          {LABEL_KO[zone]}
+        </Typography>
+      </Box>
+    )
+  }
 
-            {/* Remind 필(버튼·드롭존) — 클릭=Remind 목록, 드롭=완료+Remind */}
-            <Box
-              role="button"
-              tabIndex={0}
-              aria-label={`Remind 업무 목록 열기 (${remindCount}건)`}
-              aria-pressed={view === 'remind'}
-              data-dropzone="remind"
-              onClick={() => onOpenView('remind')}
-              onKeyDown={keyActivate(() => onOpenView('remind'))}
-              sx={{
-                display: 'inline-flex', alignItems: 'center', gap: 0.5, px: 1.25, py: 0.6,
-                borderRadius: '999px', cursor: 'pointer', flexShrink: 0,
-                border: `1px solid ${alpha(amber, view === 'remind' ? 0.9 : 0.45)}`,
-                bgcolor: alpha(amber, view === 'remind' ? 0.22 : 0.12), color: amber,
-                '&:hover': { bgcolor: alpha(amber, 0.24) },
-                ...zoneSx('remind', amber),
-              }}
-            >
-              <NotificationsActiveIcon sx={{ fontSize: 15 }} />
-              <Typography key={pulseKey('remind')} component="span" sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1, ...pulseSx('remind') }}>Remind {remindCount}</Typography>
-              <ExpandMoreIcon sx={{ fontSize: 15, transition: 'transform .2s', transform: view === 'remind' ? 'rotate(180deg)' : 'none' }} />
-            </Box>
+  // 그룹(2타일) 공통 — 내부 중앙 세로 구분선(장식, pointer-events 없음)
+  const familySx = {
+    position: 'relative' as const,
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    minWidth: 0,
+    // 모바일(<md): 그룹이 독립 카드
+    border: { xs: '1px solid', md: 0 },
+    borderColor: { xs: 'divider', md: 'transparent' },
+    borderRadius: { xs: '15px', md: 0 },
+    bgcolor: { xs: 'background.paper', md: 'transparent' },
+    overflow: 'visible',
+    '&::after': {
+      content: '""', position: 'absolute', zIndex: 2, left: '50%', top: 17, bottom: 17, width: '1px',
+      bgcolor: DIVIDER, pointerEvents: 'none',
+    },
+  }
 
-            <Box sx={{ flex: 1, minWidth: 4 }} />
-          </Box>
-        </AppCard>
+  return (
+    <ContentSection sx={{ mb: '26px' }}>
+      {/* 스트립 — PC(md+)에서는 외곽 테두리 1개의 긴 카드, 좁은 폭에서는 두 그룹 카드 상하 배치 */}
+      <Box
+        sx={{
+          position: 'relative',
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+          gap: { xs: '26px', md: 0 },
+          border: { xs: 0, md: '1px solid' },
+          borderColor: { md: 'divider' },
+          borderRadius: { md: '18px' },
+          bgcolor: { xs: 'transparent', md: 'background.paper' },
+          overflow: 'visible',
+          '& > *': { minWidth: 0 },
+          // 보류/완료 사이 중앙 구분선(PC 연결형에서만)
+          '&::after': {
+            content: '""', position: 'absolute', zIndex: 2, left: '50%', top: 17, bottom: 17, width: '1px',
+            bgcolor: DIVIDER, pointerEvents: 'none', display: { xs: 'none', md: 'block' },
+          },
+        }}
+      >
+        {/* 진행중 + 보류 그룹 */}
+        <Box aria-label="진행 업무 그룹" sx={familySx}>
+          {tile('inProgress', inProgressCount, checkInProgCount, { xs: '14px 0 0 14px', md: '17px 0 0 17px' })}
+          {tile('hold', holdCount, checkHoldCount, { xs: '0 14px 14px 0', md: '0' })}
+          {/* 부서장 확인 통합 칩 — 진행중·보류 경계 하단에 걸침. 클릭=Check 목록(진행중+보류) */}
+          {checkTotal > 0 && (
+            <Tooltip title={`진행중 ${checkInProgCount}건 · 보류 ${checkHoldCount}건`}>
+              <Box
+                role="button"
+                tabIndex={0}
+                aria-pressed={view === 'check'}
+                aria-label={`부서장 확인 업무 ${checkTotal}건 목록 열기`}
+                onClick={(e) => { e.stopPropagation(); onOpenView('check') }}
+                onKeyDown={keyActivate(() => onOpenView('check'))}
+                sx={{
+                  position: 'absolute', zIndex: 4, left: '50%', bottom: { xs: -14, md: -15 },
+                  transform: 'translateX(-50%)',
+                  height: { xs: 28, md: 30 }, px: '11px',
+                  border: '1px solid rgba(169,138,224,.42)', borderRadius: '999px',
+                  bgcolor: view === 'check' ? 'rgba(169,138,224,.22)' : '#1b202b',
+                  color: '#c5adf0',
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                  fontSize: { xs: 10.5, md: 11 }, fontWeight: 800, whiteSpace: 'nowrap', cursor: 'pointer',
+                  boxShadow: '0 5px 14px rgba(0,0,0,.28)',
+                  transition: 'background-color .14s ease, border-color .14s ease, transform .14s ease',
+                  '&:hover': { bgcolor: 'rgba(169,138,224,.18)', borderColor: 'rgba(169,138,224,.65)', transform: 'translateX(-50%) translateY(-1px)' },
+                  '&:focus-visible': { outline: '2px solid #bfa7ef', outlineOffset: '2px' },
+                }}
+              >
+                <CheckIcon sx={{ fontSize: 14 }} />
+                <Box component="span">부서장 확인</Box>
+                <Box component="span" sx={{ fontSize: { xs: 12.5, md: 13 }, fontWeight: 800, color: '#d7c6f6' }}>{checkTotal}</Box>
+              </Box>
+            </Tooltip>
+          )}
+        </Box>
+
+        {/* 완료 + Remind 그룹 */}
+        <Box aria-label="완료 업무 그룹" sx={familySx}>
+          {tile('done', doneCount, 0, { xs: '14px 0 0 14px', md: '0' })}
+          {tile('remind', remindCount, 0, { xs: '0 14px 14px 0', md: '0 17px 17px 0' })}
+        </Box>
       </Box>
     </ContentSection>
   )
