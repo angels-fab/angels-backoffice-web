@@ -33,31 +33,28 @@ import {
   EmptyState,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { loadWorkData } from '@/store/slices/workSlice'
-import { createWork, deleteWork, updateWork, fetchAuthors, updateWorkOrder, beaconWorkOrder, type WorkOrderEntry } from '@/api/sheets'
+import { loadWorkData, patchWorkItems } from '@/store/slices/workSlice'
+import { createWork, deleteWork, updateWork, fetchAuthors, updateWorkOrder, beaconWorkOrder, updateWorkStatuses, type WorkOrderEntry, type WorkStatusChange } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
 import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS } from './workMeta'
-import TaskCard from './TaskCard'
 import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import WorkWrite from './WorkWrite'
 import NewTaskCard from './NewTaskCard'
 import type { NewTaskForm } from './NewTaskCard'
-import TaskGridAccordion from './TaskGridAccordion'
-import TaskListDrawer from './TaskListDrawer'
 import ReorderableTaskGrid from './ReorderableTaskGrid'
 import KpiSection from './KpiSection'
+import StatusDragGrid from './StatusDragGrid'
+import type { DropZone, StatusDropResult, WorkView } from './dropZones'
 
-// Remind 표시 방식 — 'inline'(KPI 아래 마스터-디테일) / 'drawer'(우측 드로어)
-const REMIND_VARIANT: 'drawer' | 'inline' = 'inline'
-// 완료 표시 방식 — 'drawer'(우측 드로어, 검색+목록+하단 내용) / 'inline'(KPI 아래 슬라이드)
-const DONE_VARIANT: 'drawer' | 'inline' = 'drawer'
-
-// 상단 KPI 단일 선택 뷰 (진행중/Remind/완료 중 하나만 선택)
-type KpiView = 'inProgress' | 'remind' | 'done'
+// 통합 Undo/Redo 히스토리 — 순서변경·상태변경을 시간순 하나의 스택으로
+interface FieldSnap { status: string; remind: boolean; chief: boolean; end: string }
+type HistEntry =
+  | { kind: 'order'; before: string[]; after: string[] }
+  | { kind: 'status'; changes: { num: string; before: FieldSnap; after: FieldSnap }[] }
 // STEP24 — 담당자 현황 섹션 임시 숨김(구조 보존, 추후 재노출 시 true)
 const SHOW_MANAGER_STATUS = false
 
@@ -65,14 +62,6 @@ const SHOW_MANAGER_STATUS = false
 const cmp = (a: WorkItem, b: WorkItem) => dateSortValue(b.start) - dateSortValue(a.start)
 // 진행중: Check(chief) 선택 카드 우선, 그다음 최신순
 const cmpChief = (a: WorkItem, b: WorkItem) => (b.chief ? 1 : 0) - (a.chief ? 1 : 0) || cmp(a, b)
-// Remind: 업무구분 순(설계적정성→장비→예산→인사→행정→교육세미나), 같은 구분은 최신순
-const REMIND_CAT_ORDER = ['설계적정성', '장비', '예산', '인사', '행정', '교육세미나']
-const remindCatRank = (cat: string) => {
-  const n = normCat(cat)
-  const i = REMIND_CAT_ORDER.findIndex((o) => n.startsWith(normCat(o)))
-  return i < 0 ? 999 : i
-}
-const cmpRemind = (a: WorkItem, b: WorkItem) => remindCatRank(a.cat) - remindCatRank(b.cat) || cmp(a, b)
 
 // 업무 → 인라인 편집 폼 값 (task 첫 줄=제목, 나머지=본문 / 본문 글머리 '- ' → 화면 '• ')
 function toForm(t: WorkItem): NewTaskForm {
@@ -117,19 +106,14 @@ function AddCard({ onClick, height = 120 }: { onClick: () => void; height?: numb
   )
 }
 
-type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info' }
+type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info'; retry?: () => void }
 
 export default function Work() {
   const dispatch = useAppDispatch()
   const { items, error, updatedAt } = useAppSelector((s) => s.work)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [view, setView] = useState<KpiView>('inProgress') // 메인 목록은 항상 진행중
-  const [remindOpen, setRemindOpen] = useState(false) // Remind: KPI 아래 인라인 펼침(토글·모션)
-  const [remindDrawerOpen, setRemindDrawerOpen] = useState(false) // Remind: 우측 드로어 변형
-  const [doneDrawerOpen, setDoneDrawerOpen] = useState(false) // 완료: 우측 드로어 변형
-  const [doneOpen, setDoneOpen] = useState(false) // 완료: 하단 인라인 슬라이드(검색+아코디언)
-  const [doneQuery, setDoneQuery] = useState('') // 완료 패널 검색어
+  const [view, setView] = useState<WorkView>('inProgress') // KPI 버튼이 전환하는 메인 목록
   const [selectedTask, setSelectedTask] = useState<number | null>(null) // 업무카드 단일 선택(테두리)
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
@@ -163,6 +147,15 @@ export default function Work() {
   const savingRef = useRef(false) // 저장 POST 진행 중 여부(동시 저장 방지)
   const authRef = useRef({ user, authKey })
   authRef.current = { user, authKey }
+
+  // 복수선택(Cmd/Ctrl·Shift·모바일 롱프레스) + KPI 드롭존 드래그 상태 + 상태 저장 직렬화 큐
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selMode, setSelMode] = useState(false) // 모바일 선택모드
+  const selAnchor = useRef<string | null>(null)
+  const [dragUi, setDragUi] = useState<{ dragging: boolean; zone: DropZone | null }>({ dragging: false, zone: null })
+  const [pulse, setPulse] = useState<{ zone: DropZone; tick: number } | null>(null)
+  const zoneClickSuppress = useRef(0) // 드롭 직후 존 클릭(목록 열림) 억제
+  const saveChain = useRef<Promise<void>>(Promise.resolve()) // 배치 저장 직렬화(응답 역전 방지)
 
   // 담당자 시트('이름' 열, 헤더 자동 인식)에서 명단 로드 — 새 담당자 추가 시 자동 반영
   useEffect(() => {
@@ -227,10 +220,11 @@ export default function Work() {
     }
   }, [items, authors])
 
-  const pool = useMemo(
-    () => (view === 'remind' ? items.filter((t) => t.remind) : items.filter((t) => classify(t) === view)),
-    [items, view],
-  )
+  const pool = useMemo(() => {
+    if (view === 'remind') return items.filter((t) => t.remind)
+    if (view === 'check') return items.filter((t) => t.chief && (classify(t) === 'inProgress' || classify(t) === 'hold'))
+    return items.filter((t) => classify(t) === view)
+  }, [items, view])
 
   const presentMgrs = useMemo(() => ['전체', ...[...new Set(pool.map((t) => t.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [pool])
 
@@ -257,38 +251,25 @@ export default function Work() {
       .sort((a, b) => rank(a) - rank(b) || cmpChief(a, b))
   }, [items, orderMap])
 
-  // 진행중 카드 순서 실행취소/다시실행 — 표시순서(num 배열) 스택. 저장(commitOrder)까지 함께 되돌림.
-  const undoStack = useRef<string[][]>([])
-  const redoStack = useRef<string[][]>([])
+  // 통합 Undo/Redo — 순서변경·상태변경 히스토리(HistEntry) 스택
+  const undoStack = useRef<HistEntry[]>([])
+  const redoStack = useRef<HistEntry[]>([])
   const [, forceHist] = useState(0)
   const bumpHist = () => forceHist((v) => v + 1)
   const inProgressListRef = useRef(inProgressList)
   inProgressListRef.current = inProgressList
   const currentOrderNums = () => inProgressListRef.current.map((t) => t.num)
-  // 진행중 카드 구성(추가/완료/삭제)이 바뀌면 순서 히스토리 초기화 — 다른 카드 집합엔 되돌림 무의미
-  const inProgKey = useMemo(
-    () => items.filter((t) => classify(t) === 'inProgress').map((t) => t.num).sort().join(','),
-    [items],
-  )
-  useEffect(() => { undoStack.current = []; redoStack.current = []; bumpHist() }, [inProgKey])
+  // 서버 재조회(등록/수정/삭제 등 loadWorkData) 시 히스토리 초기화 — 외부 변경 뒤 되돌림은 무의미
+  useEffect(() => { undoStack.current = []; redoStack.current = []; bumpHist() }, [updatedAt])
 
-  // Remind/완료 — 메인 목록과 독립 파생(Remind=인라인 펼침, 완료=Drawer)
-  const remindList = useMemo(() => items.filter((t) => t.remind).sort(cmpRemind), [items])
-  const doneList = useMemo(() => items.filter((t) => classify(t) === 'done').sort(cmp), [items])
-  // KPI 보류 보관함 + Check 모아보기(진행중·보류 통합 — Check는 완료 시 자동 해제라 이 둘로 전수)
+  // KPI 파생 목록 — 보류 / Check(진행중·보류 통합, Check는 완료 시 자동 해제라 이 둘로 전수)
   const holdList = useMemo(() => items.filter((t) => classify(t) === 'hold').sort(cmp), [items])
   const checkInProg = useMemo(() => items.filter((t) => t.chief && classify(t) === 'inProgress').sort(cmp), [items])
   const checkHold = useMemo(() => items.filter((t) => t.chief && classify(t) === 'hold').sort(cmp), [items])
-  const [checkOpen, setCheckOpen] = useState(false) // Check 모아보기 패널
-  const [holdOpen, setHoldOpen] = useState(false) // 보류 보관함 패널
-  const doneFiltered = useMemo(() => {
-    const q = doneQuery.trim().toLowerCase()
-    if (!q) return doneList
-    return doneList.filter((t) => `${t.task} ${t.mgr} ${t.cat} ${t.dept}`.toLowerCase().includes(q))
-  }, [doneList, doneQuery])
 
-  // 단일 선택 — 같은 카드를 다시 눌러도 해제되지 않음(계속 선택), 다른 카드 선택 시 자동 전환
-  const selectView = (v: KpiView) => {
+  // KPI 버튼 → 목록 전환(드롭 직후 존 클릭은 억제)
+  const openView = (v: WorkView) => {
+    if (Date.now() < zoneClickSuppress.current) return
     // 인라인 작성 중 내용이 있으면 뷰 전환으로 사라지기 전에 확인
     if (composing && composeDirty && !window.confirm('작성 중인 새 업무가 있습니다. 이동하면 입력한 내용이 사라집니다. 이동할까요?')) return
     setView(v)
@@ -530,15 +511,18 @@ export default function Work() {
     orderTimer.current = window.setTimeout(() => { void flushOrderSave() }, 3000)
   }
 
-  // 새 순서 확정 전 현재 순서를 undo 스택에 적재(다시실행 스택은 비움)
-  const pushUndo = () => {
-    undoStack.current.push(currentOrderNums())
+  // 새 히스토리 항목 적재(다시실행 스택은 비움)
+  const pushEntry = (e: HistEntry) => {
+    undoStack.current.push(e)
     if (undoStack.current.length > 100) undoStack.current.shift()
     redoStack.current = []
   }
 
   // 드래그 드롭으로 순서가 실제 바뀜 → 사용자 지정 순서(발의일 정렬 강조 해제)
-  const handleReorder = (orderedNums: string[]) => { pushUndo(); setDateSort('none'); commitOrder(orderedNums); bumpHist() }
+  const handleReorder = (orderedNums: string[]) => {
+    pushEntry({ kind: 'order', before: currentOrderNums(), after: orderedNums })
+    setDateSort('none'); commitOrder(orderedNums); bumpHist()
+  }
 
   // 발의일자 기준 정렬(최신순=내림차순 / 오래된순=오름차순). 같은 날짜는 stable sort로 현재 표시순서 유지.
   // 결과를 새 사용자 지정 순서로 취급해 포털정렬순서를 재계산·저장(3초 디바운스).
@@ -547,41 +531,66 @@ export default function Work() {
       const d = dateSortValue(a.start) - dateSortValue(b.start)
       return dir === 'latest' ? -d : d
     })
-    pushUndo()
+    pushEntry({ kind: 'order', before: currentOrderNums(), after: sorted.map((t) => t.num) })
     setDateSort(dir)
     commitOrder(sorted.map((t) => t.num))
     bumpHist()
   }
 
-  // 실행취소: 직전 순서로 복귀(현재 순서는 다시실행 스택으로) / 다시실행: 그 반대. 복귀 순서도 저장.
+  // ── 상태 배치 저장 — 직렬화 큐(연속 드롭·Undo/Redo 응답 역전 방지). 성공 무표시, 실패만 롤백+재시도 ──
+  const enqueueStatusSave = (changes: WorkStatusChange[], onFail: () => void, retry: () => void) => {
+    const { user: u, authKey: k } = authRef.current
+    if (!u || !k || changes.length === 0) return
+    const job = async () => {
+      try {
+        await updateWorkStatuses({ author: u, key: k, changes })
+      } catch (err) {
+        onFail()
+        setSnack({ open: true, msg: err instanceof Error ? err.message : '상태 변경 저장 실패', severity: 'error', retry })
+      }
+    }
+    saveChain.current = saveChain.current.then(job, job)
+  }
+  const snapToChange = (num: string, snap: FieldSnap, prevStatus: string): WorkStatusChange =>
+    ({ num, status: snap.status, remind: snap.remind, chief: snap.chief, end: snap.end || undefined, prevStatus })
+
+  // 히스토리 상태 항목을 앞/뒤 방향으로 적용(Undo/Redo 공용) — 로컬 패치 + 배치 저장, 실패 시 반대 방향 복구
+  const applyStatusEntry = (e: Extract<HistEntry, { kind: 'status' }>, dir: 'forward' | 'back') => {
+    const side = dir === 'forward' ? ('after' as const) : ('before' as const)
+    const other = dir === 'forward' ? ('before' as const) : ('after' as const)
+    dispatch(patchWorkItems(e.changes.map((c) => ({ num: c.num, patch: c[side] }))))
+    enqueueStatusSave(
+      e.changes.map((c) => snapToChange(c.num, c[side], c[other].status)),
+      () => dispatch(patchWorkItems(e.changes.map((c) => ({ num: c.num, patch: c[other] })))),
+      () => applyStatusEntry(e, dir),
+    )
+  }
+
+  // 실행취소/다시실행 — 순서·상태 공용. 복수 상태변경은 항목 하나로 전체 복구/재적용.
   const canUndo = undoStack.current.length > 0
   const canRedo = redoStack.current.length > 0
   const doUndo = () => {
-    if (!undoStack.current.length) return
-    const prev = undoStack.current.pop() as string[]
-    redoStack.current.push(currentOrderNums())
-    setDateSort('none')
-    commitOrder(prev)
+    const e = undoStack.current.pop()
+    if (!e) return
+    redoStack.current.push(e)
+    if (e.kind === 'order') { setDateSort('none'); commitOrder(e.before) } else applyStatusEntry(e, 'back')
     bumpHist()
   }
   const doRedo = () => {
-    if (!redoStack.current.length) return
-    const next = redoStack.current.pop() as string[]
-    undoStack.current.push(currentOrderNums())
-    setDateSort('none')
-    commitOrder(next)
+    const e = redoStack.current.pop()
+    if (!e) return
+    undoStack.current.push(e)
+    if (e.kind === 'order') { setDateSort('none'); commitOrder(e.after) } else applyStatusEntry(e, 'forward')
     bumpHist()
   }
-  // 키보드 단축키(Ctrl/Cmd+Z=실행취소, +Shift=다시실행). 입력란 포커스 중엔 비활성. 진행중 뷰·관리자만.
+  // 키보드 단축키(Ctrl/Cmd+Z=실행취소, +Shift=다시실행). 입력란 포커스 중엔 가로채지 않음. 관리자만.
   const undoRef = useRef(doUndo); undoRef.current = doUndo
   const redoRef = useRef(doRedo); redoRef.current = doRedo
-  const viewRef = useRef(view); viewRef.current = view
   useEffect(() => {
     if (!isAdmin) return
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey) return
       if ((e.key || '').toLowerCase() !== 'z') return
-      if (viewRef.current !== 'inProgress') return
       const el = document.activeElement as HTMLElement | null
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
       e.preventDefault()
@@ -590,6 +599,107 @@ export default function Work() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [isAdmin])
+
+  // ── 복수선택 ──
+  const clearSelection = useCallback(() => { setSelected(new Set()); setSelMode(false); selAnchor.current = null }, [])
+  // 목록 이동·필터·검색 변경·로그아웃 시 해제
+  useEffect(() => { clearSelection() }, [view, cat, mgr, query, user, clearSelection])
+  // ESC — 선택/선택모드 종료(입력란 포커스 제외)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      const el = document.activeElement as HTMLElement | null
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      clearSelection()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [clearSelection])
+
+  const visibleList = view === 'inProgress' ? inProgressList : listed
+  const visibleRef = useRef(visibleList); visibleRef.current = visibleList
+  // Cmd/Ctrl=개별 토글, Shift=시각적 순서 기준 구간 선택(선택모드 탭 포함)
+  const toggleSelect = (num: string, mods: { shift: boolean }) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (mods.shift && selAnchor.current) {
+        const nums = visibleRef.current.map((t) => t.num)
+        const a = nums.indexOf(selAnchor.current)
+        const b = nums.indexOf(num)
+        if (a >= 0 && b >= 0) {
+          const [s, e] = a < b ? [a, b] : [b, a]
+          for (let i = s; i <= e; i++) next.add(nums[i])
+          return next
+        }
+      }
+      if (next.has(num)) next.delete(num)
+      else next.add(num)
+      selAnchor.current = num
+      return next
+    })
+  }
+  // 모바일 롱프레스 — 선택모드 진입 + 해당 카드 선택
+  const enterSelMode = (num: string) => {
+    setSelMode(true)
+    selAnchor.current = num
+    setSelected((prev) => { const n = new Set(prev); n.add(num); return n })
+  }
+
+  // ── KPI 드롭존 ──
+  const onZoneChange = useCallback((dragging: boolean, zone: DropZone | null) => {
+    if (!dragging) zoneClickSuppress.current = Date.now() + 350
+    setDragUi((p) => (p.dragging === dragging && p.zone === zone ? p : { dragging, zone }))
+  }, [])
+
+  // 존별 목표 필드 — 진행중↔보류는 Check 유지 / 완료·Remind는 Check 해제 / 복귀는 완료일자 비움(자동 규칙)
+  const zoneFields = (t: WorkItem, zone: DropZone): FieldSnap => {
+    const c = classify(t)
+    const activeSide = c === 'inProgress' || c === 'hold'
+    if (zone === 'inProgress') return { status: '진행중', remind: false, chief: activeSide ? !!t.chief : false, end: '' }
+    if (zone === 'hold') return { status: '보류', remind: false, chief: activeSide ? !!t.chief : false, end: '' }
+    // done/remind: Remind 업무를 완료에 놓으면 완료 유지+Remind만 해제(완료일자 보존)
+    return { status: '완료', remind: zone === 'remind', chief: false, end: c === 'done' ? (t.end || '') : '' }
+  }
+
+  // 드롭 처리 — null=변경 없음(원위치·호출/이력 없음). finalize는 흡입 애니메이션 후 그리드가 호출.
+  const handleStatusDrop = (nums: string[], zone: DropZone): StatusDropResult => {
+    const { user: u, authKey: k } = authRef.current
+    if (!isAdmin || !u || !k) return null
+    const targets = nums
+      .map((n) => items.find((t) => t.num === n))
+      .filter((t): t is WorkItem => !!t && editingId !== t.id && ['inProgress', 'hold', 'done'].includes(classify(t)))
+    const changes = targets
+      .map((t) => ({
+        num: t.num,
+        before: { status: (t.status || '').trim(), remind: !!t.remind, chief: !!t.chief, end: t.end || '' },
+        after: zoneFields(t, zone),
+      }))
+      .filter((c) => c.before.status !== c.after.status || c.before.remind !== c.after.remind)
+    if (changes.length === 0) return null
+    const entry: HistEntry = { kind: 'status', changes }
+    const finalize = () => {
+      const applyAfter = () => dispatch(patchWorkItems(changes.map((c) => ({ num: c.num, patch: c.after }))))
+      const rollback = () => {
+        dispatch(patchWorkItems(changes.map((c) => ({ num: c.num, patch: c.before }))))
+        undoStack.current = undoStack.current.filter((x) => x !== entry)
+        redoStack.current = redoStack.current.filter((x) => x !== entry)
+        bumpHist()
+      }
+      function send() {
+        enqueueStatusSave(changes.map((c) => snapToChange(c.num, c.after, c.before.status)), rollback, retryDrop)
+      }
+      function retryDrop() {
+        applyAfter(); pushEntry(entry); bumpHist(); send()
+      }
+      applyAfter()
+      pushEntry(entry)
+      bumpHist()
+      clearSelection()
+      setPulse((p) => ({ zone, tick: (p?.tick ?? 0) + 1 }))
+      send()
+    }
+    return { changedNums: changes.map((c) => c.num), finalize }
+  }
 
   // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
   useEffect(() => {
@@ -611,7 +721,7 @@ export default function Work() {
   }, [])
 
   // 업무 행 — 수정 중이면 그 자리에서 인라인 편집(전폭), 아니면 카드
-  const renderTask = (t: WorkItem, tone: 'green' | 'gray') =>
+  const renderTask = (t: WorkItem, tone: 'green' | 'amber' | 'gray') =>
     editingId === t.id ? (
       <NewTaskCard
         key={t.id}
@@ -643,126 +753,21 @@ export default function Work() {
         updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
       />
 
-      {/* ① KPI — 2열: 진행중(링·Check 필·보류 보관함) / 완료(박스·Remind 필·옆면 플래그) */}
+      {/* ① KPI — 2열. 명시적 버튼(링/Check 필/보관함/완료 박스/Remind 필)만 목록을 열고, 드래그 드롭존을 겸함 */}
       <KpiSection
         inProgressCount={counts.inProgress}
+        holdCount={holdList.length}
+        checkInProgCount={checkInProg.length}
+        checkHoldCount={checkHold.length}
         doneCount={counts.done}
         totalCount={counts.total}
         remindCount={counts.remind}
-        checkInProg={checkInProg}
-        checkHold={checkHold}
-        holdList={holdList}
-        inProgressSelected={view === 'inProgress'}
-        checkOpen={checkOpen}
-        holdOpen={holdOpen}
-        remindActive={REMIND_VARIANT === 'drawer' ? remindDrawerOpen : remindOpen}
-        doneActive={DONE_VARIANT === 'drawer' ? doneDrawerOpen : doneOpen}
-        isAdmin={isAdmin && !!user && !!authKey}
-        onSelectInProgress={() => selectView('inProgress')}
-        onToggleCheck={() => setCheckOpen((o) => !o)}
-        onToggleHold={() => setHoldOpen((o) => !o)}
-        onToggleRemind={() => (REMIND_VARIANT === 'drawer' ? setRemindDrawerOpen((o) => !o) : setRemindOpen((o) => !o))}
-        onToggleDone={() => (DONE_VARIANT === 'drawer' ? setDoneDrawerOpen((o) => !o) : setDoneOpen((o) => !o))}
-        onPick={(t) => setPicked(t)}
-        onResume={(t) => setRevertTarget(t)}
-        onComplete={(t) => setCompleteTarget(t)}
+        view={view}
+        onOpenView={openView}
+        dragging={dragUi.dragging}
+        activeZone={dragUi.zone}
+        pulse={pulse}
       />
-
-      {/* Remind 드로어 변형 — 우측 드로어, 상단 1열 목록 + 하단 내용 */}
-      {REMIND_VARIANT === 'drawer' && (
-        <TaskListDrawer
-          open={remindDrawerOpen}
-          onClose={() => setRemindDrawerOpen(false)}
-          title="Remind 업무"
-          tone="amber"
-          items={remindList}
-          isAdmin={isAdmin}
-          onEdit={startEdit}
-          onComplete={(it) => setCompleteTarget(it)}
-          onDelete={(it) => setDeleteTarget(it)}
-        />
-      )}
-
-      {/* 완료 드로어 변형 — 우측 드로어, 검색 + 1열 목록 + 하단 내용 */}
-      {DONE_VARIANT === 'drawer' && (
-        <TaskListDrawer
-          open={doneDrawerOpen}
-          onClose={() => setDoneDrawerOpen(false)}
-          title="완료 업무"
-          tone="gray"
-          searchable
-          filterable
-          searchPlaceholder="완료 업무 검색 (제목·담당자·내용)"
-          items={doneList}
-          isAdmin={isAdmin}
-          onEdit={startEdit}
-          onDelete={(it) => setDeleteTarget(it)}
-          editingId={editingId}
-          renderEdit={(t) => (
-            <NewTaskCard
-              saving={savingEdit}
-              options={editOptionsFor(t)}
-              initial={toForm(t)}
-              onCancel={() => setEditingId(null)}
-              onSave={(form) => handleSaveEdit(t, form)}
-            />
-          )}
-        />
-      )}
-
-      {/* Remind — KPI 아래 인라인 펼침(3열·압정+제목+담당자 컴팩트). 토글 시 모션, 진행중 목록을 아래로 밀어냄. */}
-      {REMIND_VARIANT === 'inline' && (
-      <Collapse in={remindOpen} unmountOnExit>
-        <ContentSection>
-          {remindList.length === 0 ? (
-            <AppCard padding={0}><EmptyState size="sm" title="Remind 업무가 없습니다" /></AppCard>
-          ) : (
-            <TaskGridAccordion
-              items={remindList}
-              tone="amber"
-              masterDetail
-              isAdmin={isAdmin}
-              onEdit={startEdit}
-              onComplete={(it) => setCompleteTarget(it)}
-              onDelete={(it) => setDeleteTarget(it)}
-              onRevert={(it) => setRevertTarget(it)}
-              editingId={editingId}
-              renderEdit={(t) => (
-                <NewTaskCard
-                  saving={savingEdit}
-                  options={editOptionsFor(t)}
-                  initial={toForm(t)}
-                  onCancel={() => setEditingId(null)}
-                  onSave={(form) => handleSaveEdit(t, form)}
-                />
-              )}
-            />
-          )}
-        </ContentSection>
-      </Collapse>
-      )}
-
-      {/* 완료 — 하단 인라인 슬라이드: 검색 + 제목 아코디언(내용) + 높이 제한 스크롤(123건 대응) */}
-      {DONE_VARIANT === 'inline' && (
-      <Collapse in={doneOpen} unmountOnExit>
-        <ContentSection>
-          <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '12px', overflow: 'hidden' }}>
-            <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-              <SearchBar value={doneQuery} onChange={setDoneQuery} placeholder="완료 업무 검색 (제목·담당자·내용)" />
-            </Box>
-            <Box sx={{ maxHeight: 420, overflowY: 'auto', p: 1.5 }}>
-              {doneFiltered.length === 0 ? (
-                <Typography variant="body2" sx={{ color: 'text.disabled', py: 3, textAlign: 'center' }}>
-                  {doneQuery ? '검색 결과가 없습니다' : '완료된 업무가 없습니다'}
-                </Typography>
-              ) : (
-                <TaskGridAccordion items={doneFiltered} tone="gray" isAdmin={isAdmin} onEdit={startEdit} onDelete={(it) => setDeleteTarget(it)} />
-              )}
-            </Box>
-          </Box>
-        </ContentSection>
-      </Collapse>
-      )}
 
       {/* ② 업무 목록 — 항상 진행중(메인) */}
       <ContentSection title={view === 'inProgress' ? undefined : '업무 목록'} count={view === 'inProgress' ? undefined : `${listed.length}`} last={!SHOW_MANAGER_STATUS}>
@@ -786,14 +791,6 @@ export default function Work() {
 
         {listed.length === 0 && view !== 'inProgress' ? (
           <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
-        ) : view === 'remind' ? (
-          // Remind — 압정 카드 그리드 (앰버 톤, 선택 시 테두리)
-          <CardGrid minColWidth={260}>
-            {listed.map((t) => (
-              <TaskCard key={t.id} t={t} onPick={setPicked} selected={selectedTask === t.id} onSelect={() => setSelectedTask(t.id)} />
-            ))}
-            {isAdmin && <AddCard onClick={startCompose} />}
-          </CardGrid>
         ) : view === 'inProgress' ? (
           // 진행중 — 1행: '업무 목록' 헤더(좌) + 새 업무 카드(우). 그 아래: 진행중 초록 카드(삽입정렬 드래그).
           <>
@@ -812,6 +809,12 @@ export default function Work() {
                 <Typography variant="body2" sx={{ color: 'text.disabled' }}>{inProgressList.length}</Typography>
                 {isAdmin && (
                   <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                    {selected.size > 0 && (
+                      <>
+                        <StatusChip status="info" label={`${selected.size}건 선택`} />
+                        <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
+                      </>
+                    )}
                     <Tooltip title="순서 실행취소 (Ctrl/Cmd+Z)">
                       <span>
                         <IconButton size="small" aria-label="순서 실행취소" disabled={!canUndo} onClick={doUndo} sx={{ color: 'text.secondary', p: 0.5 }}>
@@ -849,13 +852,35 @@ export default function Work() {
               canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
               onReorder={handleReorder}
               renderCard={(t) => renderTask(t, 'green')}
+              selectedNums={selected}
+              onSelectToggle={toggleSelect}
+              onDragStartCard={() => clearSelection()}
+              onStatusDrop={handleStatusDrop}
+              onZoneChange={onZoneChange}
             />
           </>
         ) : (
-          // 완료(회색) — 2열 그리드. 새 업무 카드 없음, 카드의 완료 버튼도 없음(이미 완료).
-          <CardGrid columns={2}>
-            {listed.map((t) => renderTask(t, 'gray'))}
-          </CardGrid>
+          // 보류·Check·완료·Remind — 2열 카드(상태 드래그·복수선택). 카드 상세/수정/삭제 동작 보존.
+          <>
+            {selected.size > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                <StatusChip status="info" label={`${selected.size}건 선택`} />
+                <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
+              </Box>
+            )}
+            <StatusDragGrid
+              items={listed}
+              renderCard={(t) => renderTask(t, classify(t) === 'done' ? 'gray' : classify(t) === 'hold' ? 'amber' : 'green')}
+              canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
+              selectedNums={selected}
+              selMode={selMode}
+              onSelectToggle={toggleSelect}
+              onLongPress={enterSelMode}
+              onDragStartCard={() => clearSelection()}
+              onStatusDrop={handleStatusDrop}
+              onZoneChange={onZoneChange}
+            />
+          </>
         )}
       </ContentSection>
 
@@ -978,14 +1003,24 @@ export default function Work() {
         </DialogActions>
       </Dialog>
 
-      {/* 결과 Snackbar */}
+      {/* 결과 Snackbar — 상태 저장 실패 시에는 '다시 시도' 제공 */}
       <Snackbar
         open={snack.open}
-        autoHideDuration={3000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
+        autoHideDuration={snack.retry ? 8000 : 3000}
+        onClose={() => setSnack((s) => ({ ...s, open: false, retry: undefined }))}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>
+        <Alert
+          severity={snack.severity}
+          variant="filled"
+          action={snack.retry ? (
+            <Button color="inherit" size="small" onClick={() => { const r = snack.retry; setSnack((s) => ({ ...s, open: false, retry: undefined })); r?.() }}>
+              다시 시도
+            </Button>
+          ) : undefined}
+          onClose={() => setSnack((s) => ({ ...s, open: false, retry: undefined }))}
+          sx={{ width: '100%' }}
+        >
           {snack.msg}
         </Alert>
       </Snackbar>

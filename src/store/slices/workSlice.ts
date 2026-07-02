@@ -1,4 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
+import type { PayloadAction } from '@reduxjs/toolkit'
 import { getWorks } from '@/api/sheets'
 import { nowStamp } from '@/utils/date'
 import type { WorkItem } from '@/types'
@@ -26,10 +27,24 @@ const initialState: WorkState = {
   updatedAt: null,
 }
 
+/** 상태 드래그/Undo·Redo의 낙관적 반영·롤백용 부분 갱신 */
+export interface WorkItemPatch {
+  num: string
+  patch: Partial<Pick<WorkItem, 'status' | 'remind' | 'chief' | 'end'>>
+}
+
 const workSlice = createSlice({
   name: 'work',
   initialState,
-  reducers: {},
+  reducers: {
+    // 서버 재조회 없이 항목 일부 필드만 로컬 갱신(낙관적 반영/실패 롤백/Undo·Redo)
+    patchWorkItems(state, action: PayloadAction<WorkItemPatch[]>) {
+      for (const { num, patch } of action.payload) {
+        const it = state.items.find((t) => t.num === num)
+        if (it) Object.assign(it, patch)
+      }
+    },
+  },
   extraReducers: builder => {
     builder
       .addCase(loadWorkData.pending, state => {
@@ -52,4 +67,5 @@ const workSlice = createSlice({
   },
 })
 
+export const { patchWorkItems } = workSlice.actions
 export default workSlice.reducer

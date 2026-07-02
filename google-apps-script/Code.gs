@@ -83,8 +83,8 @@ function doPost(e) {
         lock.releaseLock();
       }
     }
-    // 센터 업무 현황 쓰기(추가/수정/삭제) — 잠금 하에 처리(번호 충돌·행삭제 경합 방지)
-    if (req.action === 'createWork' || req.action === 'updateWork' || req.action === 'deleteWork' || req.action === 'updateWorkOrder') {
+    // 센터 업무 현황 쓰기(추가/수정/삭제/일괄상태) — 잠금 하에 처리(번호 충돌·행삭제 경합 방지)
+    if (req.action === 'createWork' || req.action === 'updateWork' || req.action === 'deleteWork' || req.action === 'updateWorkOrder' || req.action === 'updateWorkStatuses') {
       const lock = LockService.getScriptLock();
       if (!lock.tryLock(10000)) {
         return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
@@ -93,6 +93,7 @@ function doPost(e) {
         if (req.action === 'createWork') return createWork_(req);
         if (req.action === 'updateWork') return updateWork_(req);
         if (req.action === 'deleteWork') return deleteWork_(req);
+        if (req.action === 'updateWorkStatuses') return updateWorkStatuses_(req);
         return updateWorkOrder_(req);
       } finally {
         lock.releaseLock();
@@ -485,6 +486,20 @@ function workEndAuto_(status, endGiven, today) {
   return '';
 }
 
+// 상태·완료일자·Remind·검토필요 셀 쓰기 공용 규칙 — 단건(updateWork_)·배치(updateWorkStatuses_)가 공유.
+// opts={status, remind, chief, end(문자열)}. 적용된 값을 반환.
+function applyWorkStatus_(sh, C, sheetRow, opts) {
+  const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+  const endVal = workEndAuto_(opts.status, String(opts.end || '').trim(), today);
+  // 완료되면 '검토 필요'는 자동 해제
+  const chiefVal = opts.status === '완료' ? false : (opts.chief === true);
+  if (C.status >= 0) sh.getRange(sheetRow, C.status + 1).setValue(opts.status);
+  if (C.end >= 0) sh.getRange(sheetRow, C.end + 1).setValue(endVal);
+  if (C.remind >= 0) sh.getRange(sheetRow, C.remind + 1).insertCheckboxes().setValue(opts.remind === true);
+  if (C.chief >= 0) sh.getRange(sheetRow, C.chief + 1).insertCheckboxes().setValue(chiefVal);
+  return { status: opts.status, end: endVal, remind: opts.remind === true, chief: chiefVal };
+}
+
 function createWork_(req) {
   const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
   if (authErr) return json_({ status: 'error', message: authErr });
@@ -547,12 +562,9 @@ function updateWork_(req) {
   if (rowIdx < 0) return json_({ status: 'error', message: '대상 업무를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
 
   const sheetRow = rowIdx + 1;
-  const today = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
   const status = String(req.status || '진행중').trim();
+  // end 미지정 시 기존 셀값을 완료일자 후보로 유지 (기존 단건 동작 그대로)
   const endGiven = req.end !== undefined ? String(req.end || '').trim() : wDate_(values[rowIdx][C.end]);
-  const endVal = workEndAuto_(status, endGiven, today);
-  // 완료되면 '검토 필요'는 자동 해제
-  const chiefVal = status === '완료' ? false : (req.chief === true);
 
   const set = function (i, v) { if (i >= 0) sh.getRange(sheetRow, i + 1).setValue(v); };
   set(C.cat, String(req.cat || ''));
@@ -564,12 +576,87 @@ function updateWork_(req) {
   set(C.time, String(req.time || ''));
   set(C.loc, String(req.loc || ''));
   set(C.mgr, String(req.mgr || ''));
-  set(C.status, status);
-  set(C.end, endVal);
   set(C.link, String(req.link || ''));
-  if (C.remind >= 0) sh.getRange(sheetRow, C.remind + 1).insertCheckboxes().setValue(req.remind === true);
-  if (C.chief >= 0) sh.getRange(sheetRow, C.chief + 1).insertCheckboxes().setValue(chiefVal);
+  applyWorkStatus_(sh, C, sheetRow, { status: status, end: endGiven, remind: req.remind === true, chief: req.chief === true });
   return json_({ status: 'ok', num: Number(num) || num });
+}
+
+// 배치 상태변경 — 여러 업무의 상태를 한 요청으로 갱신. changes=[{num, status, remind, chief, end, prevStatus}].
+// 전체 검증(존재/허용상태/중복/prevStatus 충돌) 통과 후에만 쓰기 시작, 중간 실패 시 백업값으로 역순 복구.
+function updateWorkStatuses_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const changes = (req.changes && req.changes.length) ? req.changes : [];
+  if (!changes.length) return json_({ status: 'ok', updated: [] });
+
+  const ctx = workCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const sh = ctx.sh, values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  if (C.num < 0) return json_({ status: 'error', message: '번호 열을 찾지 못함' });
+  if (C.status < 0) return json_({ status: 'error', message: '상태 열을 찾지 못함' });
+
+  const rowByNum = {};
+  for (let i = hIdx + 1; i < values.length; i++) {
+    rowByNum[String(values[i][C.num] || '').trim()] = i;
+  }
+
+  // 1차 전체 검증(쓰기 전) — 하나라도 실패하면 아무 행도 건드리지 않음
+  const ALLOWED = ['진행중', '보류', '완료'];
+  const seen = {};
+  const targets = [];
+  for (let k = 0; k < changes.length; k++) {
+    const c = changes[k] || {};
+    const num = String(c.num || '').trim();
+    if (!num) return json_({ status: 'error', message: (k + 1) + '번째 항목의 업무 번호가 없습니다' });
+    if (seen[num]) return json_({ status: 'error', message: num + '번 업무가 요청에 중복되어 있습니다' });
+    seen[num] = true;
+    const status = String(c.status || '').trim();
+    if (ALLOWED.indexOf(status) < 0) return json_({ status: 'error', message: num + '번 업무의 상태값이 올바르지 않습니다: ' + status });
+    const rowIdx = rowByNum[num];
+    if (rowIdx === undefined) return json_({ status: 'error', message: num + '번 업무를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
+    // prevStatus가 주어졌으면 시트의 현재 상태와 일치해야 함(동시수정 충돌 감지)
+    if (c.prevStatus != null) {
+      const cur = String(values[rowIdx][C.status] || '').trim();
+      if (cur !== String(c.prevStatus).trim()) {
+        return json_({ status: 'error', message: num + '번 업무의 상태가 이미 바뀌었습니다 (현재: ' + (cur || '없음') + '). 새로고침 후 다시 시도해주세요' });
+      }
+    }
+    targets.push({ rowIdx: rowIdx, status: status, remind: c.remind === true, chief: c.chief === true, end: String(c.end || '').trim() });
+  }
+
+  // 백업 — 중간 실패 시 복구할 원본 값
+  const backups = targets.map(function (t) {
+    const r = values[t.rowIdx];
+    return {
+      status: r[C.status],
+      end: C.end >= 0 ? r[C.end] : '',
+      remind: C.remind >= 0 ? wIsChk_(r[C.remind]) : false,
+      chief: C.chief >= 0 ? wIsChk_(r[C.chief]) : false,
+    };
+  });
+
+  // 쓰기 — 실패 시 쓰기를 시도한 행(부분 쓰기 포함)까지 역순 복구
+  let wrote = -1;
+  try {
+    for (let k = 0; k < targets.length; k++) {
+      wrote = k;
+      const t = targets[k];
+      applyWorkStatus_(sh, C, t.rowIdx + 1, { status: t.status, remind: t.remind, chief: t.chief, end: t.end });
+    }
+  } catch (err) {
+    for (let k = wrote; k >= 0; k--) {
+      const row = targets[k].rowIdx + 1, b = backups[k];
+      try {
+        sh.getRange(row, C.status + 1).setValue(b.status);
+        if (C.end >= 0) sh.getRange(row, C.end + 1).setValue(b.end);
+        if (C.remind >= 0) sh.getRange(row, C.remind + 1).insertCheckboxes().setValue(b.remind);
+        if (C.chief >= 0) sh.getRange(row, C.chief + 1).insertCheckboxes().setValue(b.chief);
+      } catch (e2) { /* 복구 중 오류는 무시하고 나머지 행 계속 복구 */ }
+    }
+    return json_({ status: 'error', message: '일괄 변경 중 오류가 발생해 원래 값으로 복구했습니다: ' + String(err) });
+  }
+
+  return json_({ status: 'ok', updated: changes.map(function (c) { return { num: c.num, status: c.status }; }) });
 }
 
 function deleteWork_(req) {

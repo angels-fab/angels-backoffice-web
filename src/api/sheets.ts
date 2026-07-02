@@ -242,6 +242,33 @@ export async function updateWorkOrder(p: { author: string; key: string; orders: 
   if (json.status !== 'ok') throw new Error(json.message || '처리 실패')
 }
 
+/**
+ * 업무 상태 배치 변경(드래그 상태변경/Undo·Redo 공용) — 한 번의 요청으로 여러 업무의
+ * 상태·Remind·Check를 원자적으로 갱신. 백엔드는 전체 검증 후 쓰기, 실패 시 복구.
+ */
+export interface WorkStatusChange {
+  num: string | number
+  /** 목표 상태: 진행중 | 보류 | 완료 */
+  status: string
+  remind: boolean
+  chief: boolean
+  /** 완료 상태 유지 시 기존 완료일자 보존용. 미지정('' 포함 undefined)이면 백엔드 자동 규칙(완료=오늘/그 외=비움) */
+  end?: string
+  /** 충돌 확인용 — 요청 시점에 클라이언트가 알고 있던 시트 상태(다르면 전체 실패) */
+  prevStatus?: string
+}
+export async function updateWorkStatuses(p: { author: string; key: string; changes: WorkStatusChange[] }): Promise<void> {
+  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'updateWorkStatuses', ...p }) })
+  if (!res.ok) throw new Error('HTTP ' + res.status)
+  let json: { status: string; message?: string }
+  try {
+    json = (await res.json()) as typeof json
+  } catch {
+    throw new Error('서버가 아직 상태 배치 변경을 지원하지 않습니다 (Apps Script 재배포 필요)')
+  }
+  if (json.status !== 'ok') throw new Error(json.message || '상태 변경 실패')
+}
+
 /** 페이지 종료 직전 마지막 순서를 best-effort로 전송(sendBeacon). UA가 큐잉을 수락하면 true. */
 export function beaconWorkOrder(p: { author: string; key: string; orders: WorkOrderEntry[] }): boolean {
   try {
