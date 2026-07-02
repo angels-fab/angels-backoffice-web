@@ -36,7 +36,7 @@ const posterUrl = (poster?: string) => (poster ? `${import.meta.env.BASE_URL}${p
 // 분류 → 아이콘 (포스터 없을 때 카드 가운데에 크게)
 function categoryIcon(kind?: string) {
   const k = kind ?? ''
-  if (/교육|세미나|실습|강좌/.test(k)) return SchoolIcon
+  if (/교육|세미나|실습|강좌|워크숍|튜토리얼/.test(k)) return SchoolIcon
   if (/전시|박람|산업전|쇼|show/i.test(k)) return StorefrontIcon
   if (/컨퍼런스|conference|summit|포럼|forum/i.test(k)) return ForumIcon
   if (/학회|학술|심포지엄|symposium/i.test(k)) return GroupsIcon

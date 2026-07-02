@@ -63,6 +63,25 @@ export interface FabEvent {
 
 export const FAB_EVENTS: FabEvent[] = [
   {
+    id: 'msem2026',
+    title: 'Korea MS-EM Workshop 2026 - 재료과학·전자현미경 워크숍',
+    kind: '워크숍',
+    start: '2026-07-15',
+    end: '2026-07-16',
+    venue: 'Thermo Fisher Scientific 기흥 오피스',
+    organizer: 'Thermo Fisher Scientific Korea',
+    link: 'https://forms.office.com/Pages/ResponsePage.aspx?id=LXJ9toqqd0ehaevremo7ZzGWTXyzMzxHmdZdpNM5NqNURjBEODdHT1lOQUhONllNQlI0R01WU1NXQS4u',
+    poster: 'events/msem2026.jpg',
+    posterFocus: { x: 50, y: 8 }, // 상단 제목 밴드(빨강 헤더 + 행사명)
+    accent: 'red',
+    summary: [
+      { label: '참가비', value: '무료 · 사전등록 필수(좌석 한정)' },
+      { label: '대상', value: '재료과학·배터리·반도체 분석 연구자' },
+      { label: '구성', value: 'Day1 TEM(4D-STEM)·Day2 SEM-FIB(재료·배터리)' },
+      { label: '주요 강사', value: 'Yong-Soo Yang(KAIST)·HaeRyoung Kim(KIST) 등' },
+    ],
+  },
+  {
     id: 'ispsa2026',
     title: 'ISPSA 2026 - 제22회 반도체 물리·응용 국제심포지엄',
     kind: '국제학회',
