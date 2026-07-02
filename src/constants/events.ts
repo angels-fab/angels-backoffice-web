@@ -72,7 +72,9 @@ export const FAB_EVENTS: FabEvent[] = [
     organizer: 'Thermo Fisher Scientific Korea',
     link: 'https://forms.office.com/Pages/ResponsePage.aspx?id=LXJ9toqqd0ehaevremo7ZzGWTXyzMzxHmdZdpNM5NqNURjBEODdHT1lOQUhONllNQlI0R01WU1NXQS4u',
     poster: 'events/msem2026.jpg',
-    posterFocus: { x: 50, y: 8 }, // 상단 제목 밴드(빨강 헤더 + 행사명)
+    posterFocus: { x: 50, y: 50 }, // Thermo Fisher 레드 키비주얼(로고 중앙)
+    posterBg: 'rgb(227,30,39)', // Thermo 레드(상세 정보영역 스크림 바탕)
+    darkInfo: true,
     accent: 'red',
     summary: [
       { label: '참가비', value: '무료 · 사전등록 필수(좌석 한정)' },

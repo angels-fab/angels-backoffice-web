@@ -17,7 +17,8 @@ import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import { isWorkNew } from '@/utils/newPost'
 import type { WorkItem } from '@/types'
-import { taskSubs, taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
+import { taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
+import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
 
 export type CardTone = 'green' | 'amber' | 'gray'
@@ -45,7 +46,7 @@ export interface TaskAccordionProps {
  */
 export default function TaskAccordion({ t, tone, selected = false, onSelect, isAdmin, onEdit, onComplete, onDelete }: TaskAccordionProps) {
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null)
-  const subs = taskSubs(t)
+  const subs = workBodyLines(t)
   const link = taskLink(t)
   const isDone = (t.status || '').trim() === '완료'
   // 부서는 제목줄 칩으로 이동 — 본문 메타는 예정/완료만
@@ -156,7 +157,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, isA
           {subs.length > 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               {subs.map((l, i) => (
-                <SubLine key={i} line={l} />
+                <SubLine key={i} bodyLine={l} />
               ))}
             </Box>
           ) : (
