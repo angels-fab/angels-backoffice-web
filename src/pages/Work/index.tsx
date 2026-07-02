@@ -18,9 +18,6 @@ import Collapse from '@mui/material/Collapse'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import ChecklistIcon from '@mui/icons-material/Checklist'
 import AddIcon from '@mui/icons-material/Add'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
 import { alpha } from '@mui/material/styles'
@@ -52,6 +49,7 @@ import type { NewTaskForm } from './NewTaskCard'
 import TaskGridAccordion from './TaskGridAccordion'
 import TaskListDrawer from './TaskListDrawer'
 import ReorderableTaskGrid from './ReorderableTaskGrid'
+import KpiSection from './KpiSection'
 
 // Remind 표시 방식 — 'inline'(KPI 아래 마스터-디테일) / 'drawer'(우측 드로어)
 const REMIND_VARIANT: 'drawer' | 'inline' = 'inline'
@@ -92,30 +90,6 @@ function toForm(t: WorkItem): NewTaskForm {
     link: t.link || '',
     chief: !!t.chief,
   }
-}
-
-// KPI 카드의 라운드 정사각 칩 (진행중=초록·Remind=앰버·완료=회색)
-// fill=true면 고정 정사각 대신 행 높이에 맞춰 세로로 늘어남(진행중 카드 하단까지 채우기용).
-function SquareChip({ label, tone, fill, compact }: { label: string; tone: 'green' | 'amber' | 'gray'; fill?: boolean; compact?: boolean }) {
-  const W = compact ? { xs: 70, sm: 76, lg: 82 } : { xs: 78, sm: 88, lg: 98 }
-  return (
-    <Box
-      sx={(t) => {
-        const c = tone === 'green' ? t.palette.accent.green : tone === 'amber' ? t.palette.accent.amber : t.palette.text.secondary
-        return {
-          width: W, flexShrink: 0, borderRadius: '18px',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          bgcolor: alpha(c, 0.15), color: c,
-          fontWeight: 800, fontSize: { xs: 18, sm: 21, lg: 23 }, lineHeight: 1.1, px: 0.5, textAlign: 'center',
-          ...(fill
-            ? { alignSelf: 'stretch', minHeight: W }
-            : { height: W }),
-        }
-      }}
-    >
-      {label}
-    </Box>
-  )
 }
 
 // 'Add 카드' — 미선택 카드 톤(점선) + 호버 시 채움 미리보기. 누르면 새 업무 작성.
@@ -301,6 +275,12 @@ export default function Work() {
   // Remind/완료 — 메인 목록과 독립 파생(Remind=인라인 펼침, 완료=Drawer)
   const remindList = useMemo(() => items.filter((t) => t.remind).sort(cmpRemind), [items])
   const doneList = useMemo(() => items.filter((t) => classify(t) === 'done').sort(cmp), [items])
+  // KPI 보류 보관함 + Check 모아보기(진행중·보류 통합 — Check는 완료 시 자동 해제라 이 둘로 전수)
+  const holdList = useMemo(() => items.filter((t) => classify(t) === 'hold').sort(cmp), [items])
+  const checkInProg = useMemo(() => items.filter((t) => t.chief && classify(t) === 'inProgress').sort(cmp), [items])
+  const checkHold = useMemo(() => items.filter((t) => t.chief && classify(t) === 'hold').sort(cmp), [items])
+  const [checkOpen, setCheckOpen] = useState(false) // Check 모아보기 패널
+  const [holdOpen, setHoldOpen] = useState(false) // 보류 보관함 패널
   const doneFiltered = useMemo(() => {
     const q = doneQuery.trim().toLowerCase()
     if (!q) return doneList
@@ -663,111 +643,30 @@ export default function Work() {
         updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
       />
 
-      {/* ① KPI — 진행중(내부 Check) / Remind / 완료. 동일 너비(3열) · 단일 선택(선택색=칩 색, 옅은 채움) */}
-      <ContentSection sx={{ mb: '14px' }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2, '& > *': { minWidth: 0 } }}>
-          {/* 진행중 (메인, 4) — 정사각 칩 + 건수 + 우측 보라 박스(1건+Check) */}
-          <AppCard
-            interactive
-            onClick={() => selectView('inProgress')}
-            ariaLabel="진행중 업무 보기"
-            padding={18}
-            sx={{
-              gridColumn: { md: '1 / -1', lg: 'auto' },
-              display: 'flex', flexDirection: 'column',
-              ...(view === 'inProgress'
-                ? { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, 0.12) }
-                : {}),
-              '&:hover': { borderColor: (t) => t.palette.accent.green, bgcolor: (t) => alpha(t.palette.accent.green, view === 'inProgress' ? 0.18 : 0.08) },
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1, minHeight: 116, flex: 1 }}>
-              <SquareChip label="진행중" tone="green" fill />
-              {/* 칩 바로 오른쪽: 건수 */}
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, flexShrink: 0, alignSelf: 'center', ml: { xs: '6px', sm: '10px', lg: '14px' } }}>
-                <Typography component="span" sx={{ fontSize: { xs: 32, sm: 40, lg: 46 }, fontWeight: 800, lineHeight: 1 }}>{counts.inProgress}</Typography>
-                <Typography component="span" sx={{ fontSize: 17, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
-              </Box>
-              <Box sx={{ flex: 1 }} />
-              {/* 우측 보라 박스 — 1건 + Check 한 박스 (표시 전용, 클릭은 진행중 카드로 위임) */}
-              <Box
-                aria-hidden
-                sx={(t) => ({
-                  flexShrink: 0, width: { xs: 66, sm: 78, lg: 88 },
-                  border: 1, borderColor: alpha(t.palette.accent.purple, 0.55), bgcolor: alpha(t.palette.accent.purple, 0.14),
-                  borderRadius: '16px',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75,
-                  color: t.palette.accent.purple,
-                })}
-              >
-                <Typography sx={{ fontSize: { xs: 18, lg: 24 }, fontWeight: 800, lineHeight: 1 }}>{counts.chief}건</Typography>
-                <Typography sx={{ fontSize: { xs: 16, lg: 22 }, fontWeight: 700, lineHeight: 1 }}>Check</Typography>
-              </Box>
-            </Box>
-          </AppCard>
-
-          {/* Remind — 정사각 칩 + 건수(좌 묶음). 선택색 amber */}
-          <AppCard
-            interactive
-            onClick={() => (REMIND_VARIANT === 'drawer' ? setRemindDrawerOpen(true) : setRemindOpen((o) => !o))}
-            ariaLabel="Remind 업무 펼치기"
-            padding={18}
-            sx={{
-              overflow: 'hidden',
-              display: 'flex', flexDirection: 'column',
-              ...(remindOpen
-                ? { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, 0.12) }
-                : {}),
-              '&:hover': { borderColor: (t) => t.palette.accent.amber, bgcolor: (t) => alpha(t.palette.accent.amber, remindOpen ? 0.18 : 0.08) },
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1, minHeight: 116, flex: 1 }}>
-              <SquareChip label="Remind" tone="amber" fill />
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, alignSelf: 'center', ml: { xs: '6px', sm: '10px', lg: '14px' } }}>
-                <Typography component="span" sx={{ fontSize: { xs: 32, sm: 40, lg: 46 }, fontWeight: 800, lineHeight: 1 }}>{counts.remind}</Typography>
-                <Typography component="span" sx={{ fontSize: 17, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
-              </Box>
-              <Box sx={{ flex: 1 }} />
-              {/* 우측 세로 펼침 컨트롤 — 완료 KPI처럼 우측 배치(문구는 펼치기/접기 그대로) */}
-              <Box sx={(t) => ({ flexShrink: 0, alignSelf: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.25, color: remindOpen ? t.palette.accent.amber : 'text.secondary' })}>
-                <ExpandMoreIcon sx={{ fontSize: 26, transition: 'transform .2s', transform: remindOpen ? 'rotate(180deg)' : 'none' }} />
-                <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1 }}>{REMIND_VARIANT === 'drawer' ? '목록 열기' : remindOpen ? '접기' : '펼치기'}</Typography>
-              </Box>
-            </Box>
-          </AppCard>
-
-          {/* 완료 — 정사각 회색 칩 + 완료/전체 건수(좌 묶음). 선택색 gray */}
-          <AppCard
-            interactive
-            onClick={() => (DONE_VARIANT === 'drawer' ? setDoneDrawerOpen((o) => !o) : setDoneOpen((o) => !o))}
-            ariaLabel="완료 업무 목록 열기/닫기"
-            padding={18}
-            sx={{
-              overflow: 'hidden',
-              display: 'flex', flexDirection: 'column',
-              ...(doneDrawerOpen || doneOpen
-                ? { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, 0.1) }
-                : {}),
-              '&:hover': { borderColor: (t) => t.palette.text.secondary, bgcolor: (t) => alpha(t.palette.text.secondary, (doneDrawerOpen || doneOpen) ? 0.16 : 0.07) },
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1, minHeight: 116, flex: 1 }}>
-              <SquareChip label="완료" tone="gray" fill />
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.25, alignSelf: 'center', ml: { xs: '4px', sm: '6px', lg: '8px' } }}>
-                <Typography component="span" sx={{ fontSize: { xs: 22, sm: 26, lg: 30 }, fontWeight: 800, lineHeight: 1 }}>{counts.done}</Typography>
-                <Typography component="span" sx={{ fontSize: { xs: 13, sm: 15, lg: 16 }, fontWeight: 700, color: 'text.disabled' }}>/{counts.total}</Typography>
-                <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 4 }} />
-              {/* 우측 세로 컨트롤 — 쉐브론(좌=열기·우=닫기) + 라벨 */}
-              <Box sx={(t) => ({ flexShrink: 0, alignSelf: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.25, color: doneDrawerOpen ? t.palette.text.primary : 'text.secondary' })}>
-                {doneDrawerOpen ? <ChevronRightIcon sx={{ fontSize: 26 }} /> : <ChevronLeftIcon sx={{ fontSize: 26 }} />}
-                <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1 }}>{doneDrawerOpen ? '닫기' : '열기'}</Typography>
-              </Box>
-            </Box>
-          </AppCard>
-        </Box>
-      </ContentSection>
+      {/* ① KPI — 2열: 진행중(링·Check 필·보류 보관함) / 완료(박스·Remind 필·옆면 플래그) */}
+      <KpiSection
+        inProgressCount={counts.inProgress}
+        doneCount={counts.done}
+        totalCount={counts.total}
+        remindCount={counts.remind}
+        checkInProg={checkInProg}
+        checkHold={checkHold}
+        holdList={holdList}
+        inProgressSelected={view === 'inProgress'}
+        checkOpen={checkOpen}
+        holdOpen={holdOpen}
+        remindActive={REMIND_VARIANT === 'drawer' ? remindDrawerOpen : remindOpen}
+        doneActive={DONE_VARIANT === 'drawer' ? doneDrawerOpen : doneOpen}
+        isAdmin={isAdmin && !!user && !!authKey}
+        onSelectInProgress={() => selectView('inProgress')}
+        onToggleCheck={() => setCheckOpen((o) => !o)}
+        onToggleHold={() => setHoldOpen((o) => !o)}
+        onToggleRemind={() => (REMIND_VARIANT === 'drawer' ? setRemindDrawerOpen((o) => !o) : setRemindOpen((o) => !o))}
+        onToggleDone={() => (DONE_VARIANT === 'drawer' ? setDoneDrawerOpen((o) => !o) : setDoneOpen((o) => !o))}
+        onPick={(t) => setPicked(t)}
+        onResume={(t) => setRevertTarget(t)}
+        onComplete={(t) => setCompleteTarget(t)}
+      />
 
       {/* Remind 드로어 변형 — 우측 드로어, 상단 1열 목록 + 하단 내용 */}
       {REMIND_VARIANT === 'drawer' && (

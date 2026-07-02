@@ -111,6 +111,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes liveDotBlink{0%,100%{opacity:1}50%{opacity:.25}}
 .live-dot{animation:liveDotBlink 1.15s ease-in-out infinite}
+/* 업무현황 KPI 진행중 링 — 투명도 숨쉬기(회전·파동 없음) */
+@keyframes kpiBreath{0%,100%{opacity:1}50%{opacity:.32}}
 .load-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 .preview-loading{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text3);font-size:12px;padding:18px 4px}
 /* 업무 구분 필터 + 검색 */
