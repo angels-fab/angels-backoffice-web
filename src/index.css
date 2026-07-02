@@ -223,6 +223,13 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wc-color[data-color="green"]{color:var(--green)}
 .wc-color[data-color="blue"]{color:var(--blue)}
 .wc-color[data-color="purple"]{color:var(--purple)}
+/* 하이라이트(형광펜) — 반투명 배경, 본문색 유지 */
+.wc-hl{color:inherit;border-radius:3px;padding:0 .12em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.wc-hl[data-hl="amber"]{background:color-mix(in srgb,var(--amber) 34%,transparent)}
+.wc-hl[data-hl="green"]{background:color-mix(in srgb,var(--green) 30%,transparent)}
+.wc-hl[data-hl="blue"]{background:color-mix(in srgb,var(--blue) 34%,transparent)}
+.wc-hl[data-hl="purple"]{background:color-mix(in srgb,var(--purple) 34%,transparent)}
+.wc-hl[data-hl="pink"]{background:color-mix(in srgb,var(--red) 30%,transparent)}
 /* TipTap 본문 에디터(작성/수정) — 카드 폭 안에서 줄바꿈, 가로 스크롤 없음 */
 .wc-editor{outline:none;min-height:66px;font-size:13px;line-height:1.6;color:var(--text);
   background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;

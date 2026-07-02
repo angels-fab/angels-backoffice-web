@@ -29,6 +29,7 @@
     "@tiptap/extension-italic": "^2.27.2",
     "@tiptap/extension-paragraph": "^2.27.2",
     "@tiptap/extension-placeholder": "^2.27.2",
+    "@tiptap/extension-strike": "^2.27.2",
     "@tiptap/extension-text": "^2.27.2",
     "@tiptap/extension-underline": "^2.27.2",
     "@tiptap/pm": "^2.27.2",

@@ -9,7 +9,9 @@ import CheckIcon from '@mui/icons-material/Check'
 import FormatBoldIcon from '@mui/icons-material/FormatBold'
 import FormatItalicIcon from '@mui/icons-material/FormatItalic'
 import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined'
+import StrikethroughSIcon from '@mui/icons-material/StrikethroughS'
 import FormatColorTextIcon from '@mui/icons-material/FormatColorText'
+import BorderColorIcon from '@mui/icons-material/BorderColor'
 import FormatClearIcon from '@mui/icons-material/FormatClear'
 import { alpha } from '@mui/material/styles'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -21,12 +23,14 @@ import Text from '@tiptap/extension-text'
 import Bold from '@tiptap/extension-bold'
 import Italic from '@tiptap/extension-italic'
 import Underline from '@tiptap/extension-underline'
+import Strike from '@tiptap/extension-strike'
 import History from '@tiptap/extension-history'
 import Placeholder from '@tiptap/extension-placeholder'
 import { circledNumber } from './workMeta'
 import {
   serializeContentFmt, parseContentFmt, plainToDoc,
   COLOR_TOKENS, COLOR_LABEL, COLOR_VAR, type ColorToken,
+  HIGHLIGHT_TOKENS, HIGHLIGHT_LABEL, HL_BG, type HighlightToken,
 } from './richContent'
 
 // ── 커스텀 mark: 글자색 토큰(raw hex 아님) — <span data-color="red"> 로 렌더, CSS가 테마색 적용 ──
@@ -43,6 +47,22 @@ const ColorTokenMark = Mark.create({
   },
   parseHTML() { return [{ tag: 'span[data-color]' }] },
   renderHTML({ HTMLAttributes }) { return ['span', mergeAttributes({ class: 'wc-color' }, HTMLAttributes), 0] },
+})
+
+// ── 커스텀 mark: 하이라이트 토큰 — <mark data-hl="amber"> 로 렌더, CSS가 반투명 배경 적용 ──
+const HighlightTokenMark = Mark.create({
+  name: 'highlightToken',
+  addAttributes() {
+    return {
+      token: {
+        default: 'amber',
+        parseHTML: (el) => el.getAttribute('data-hl') || 'amber',
+        renderHTML: (attrs) => (attrs.token ? { 'data-hl': attrs.token } : {}),
+      },
+    }
+  },
+  parseHTML() { return [{ tag: 'mark[data-hl]' }] },
+  renderHTML({ HTMLAttributes }) { return ['mark', mergeAttributes({ class: 'wc-hl' }, HTMLAttributes), 0] },
 })
 
 // ── 입력 규칙: 줄 시작 '- ' → '• ', 'ㅇN ' → 들여쓴 동그라미 숫자(기존 textarea 동작 재현) ──
@@ -114,6 +134,7 @@ export default function RichContentEditor({
 }: RichContentEditorProps) {
   const [focused, setFocused] = useState(false)
   const [colorAnchor, setColorAnchor] = useState<HTMLElement | null>(null)
+  const [hlAnchor, setHlAnchor] = useState<HTMLElement | null>(null)
 
   const initialContent = useMemo(() => {
     const doc = parseContentFmt(valueJson)
@@ -131,7 +152,7 @@ export default function RichContentEditor({
   const editor = useEditor({
     extensions: [
       Document, Paragraph, Text,
-      Bold, Italic, Underline, ColorTokenMark,
+      Bold, Italic, Underline, Strike, ColorTokenMark, HighlightTokenMark,
       History,
       Placeholder.configure({ placeholder: placeholder || '' }),
       InlineMarkerRules,
@@ -146,8 +167,9 @@ export default function RichContentEditor({
 
   useEffect(() => { editor?.setEditable(!disabled) }, [disabled, editor])
 
-  const active = !disabled && (focused || Boolean(colorAnchor))
+  const active = !disabled && (focused || Boolean(colorAnchor) || Boolean(hlAnchor))
   const curColor: ColorToken = (editor?.isActive('colorToken') ? editor.getAttributes('colorToken').token : 'default') as ColorToken
+  const curHl: HighlightToken = (editor?.isActive('highlightToken') ? editor.getAttributes('highlightToken').token : 'none') as HighlightToken
 
   const applyColor = (token: ColorToken) => {
     if (!editor) return
@@ -155,6 +177,14 @@ export default function RichContentEditor({
     if (token === 'default') chain.unsetMark('colorToken').run()
     else chain.setMark('colorToken', { token }).run()
     setColorAnchor(null)
+  }
+
+  const applyHighlight = (token: HighlightToken) => {
+    if (!editor) return
+    const chain = editor.chain().focus()
+    if (token === 'none') chain.unsetMark('highlightToken').run()
+    else chain.setMark('highlightToken', { token }).run()
+    setHlAnchor(null)
   }
 
   return (
@@ -178,7 +208,28 @@ export default function RichContentEditor({
           <MarkBtn title="밑줄 (Ctrl+U)" active={editor?.isActive('underline')} onClick={() => editor?.chain().focus().toggleUnderline().run()}>
             <FormatUnderlinedIcon sx={{ fontSize: 18 }} />
           </MarkBtn>
+          <MarkBtn title="취소선" active={editor?.isActive('strike')} onClick={() => editor?.chain().focus().toggleStrike().run()}>
+            <StrikethroughSIcon sx={{ fontSize: 18 }} />
+          </MarkBtn>
           <Divider orientation="vertical" flexItem sx={{ my: 0.25 }} />
+          <Tooltip title="형광펜">
+            <span>
+              <IconButton
+                size="small"
+                aria-label="형광펜"
+                aria-pressed={curHl !== 'none'}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={(e) => setHlAnchor(e.currentTarget)}
+                sx={(th) => ({
+                  p: 0.4, borderRadius: '7px', color: 'text.secondary',
+                  bgcolor: curHl !== 'none' ? HL_BG[curHl] : 'transparent',
+                  '&:hover': { bgcolor: curHl !== 'none' ? HL_BG[curHl] : alpha(th.palette.accent.green, 0.1) },
+                })}
+              >
+                <BorderColorIcon sx={{ fontSize: 18 }} />
+              </IconButton>
+            </span>
+          </Tooltip>
           <Tooltip title="글자색">
             <span>
               <IconButton
@@ -225,6 +276,29 @@ export default function RichContentEditor({
             />
             <Box component="span" sx={{ flex: 1 }}>{COLOR_LABEL[tk]}</Box>
             {curColor === tk && <CheckIcon sx={{ fontSize: 15, color: 'accent.green' }} />}
+          </MenuItem>
+        ))}
+      </Menu>
+
+      <Menu
+        anchorEl={hlAnchor}
+        open={Boolean(hlAnchor)}
+        onClose={() => setHlAnchor(null)}
+        slotProps={{ list: { dense: true, onMouseDown: (e: React.MouseEvent) => e.preventDefault() } }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        {HIGHLIGHT_TOKENS.map((tk) => (
+          <MenuItem key={tk} onClick={() => applyHighlight(tk)} sx={{ gap: 1, fontSize: 13, minHeight: 34 }}>
+            <Box
+              component="span"
+              sx={(th) => ({
+                width: 14, height: 14, borderRadius: '4px', flexShrink: 0,
+                bgcolor: tk === 'none' ? 'transparent' : HL_BG[tk],
+                border: tk === 'none' ? `1.5px solid ${th.palette.text.secondary}` : `1px solid ${alpha(th.palette.text.primary, 0.15)}`,
+              })}
+            />
+            <Box component="span" sx={{ flex: 1 }}>{HIGHLIGHT_LABEL[tk]}</Box>
+            {curHl === tk && <CheckIcon sx={{ fontSize: 15, color: 'accent.green' }} />}
           </MenuItem>
         ))}
       </Menu>
