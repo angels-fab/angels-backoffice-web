@@ -89,11 +89,13 @@ export default function ReorderableTaskGrid({ items, renderCard, canDrag, onReor
     })
   })
 
+  const onSelectStart = (e: Event) => e.preventDefault() // 드래그 중 텍스트 선택 방지
   const cleanupListeners = () => {
     document.removeEventListener('pointermove', onMove)
     document.removeEventListener('pointerup', onEnd)
     document.removeEventListener('pointercancel', onCancel)
     document.removeEventListener('keydown', onKeyDown)
+    document.removeEventListener('selectstart', onSelectStart)
     if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
   }
   const cleanupPending = () => { pending.current = null; cleanupListeners() }
@@ -133,6 +135,9 @@ export default function ReorderableTaskGrid({ items, renderCard, canDrag, onReor
     nums.forEach((n) => { const el = cellRefs.current.get(n); if (el) flipRects.current.set(n, el.getBoundingClientRect()) })
     overIndexRef.current = originIndex
     if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
+    // 텍스트 선택 방지: 기존 선택 해제 + 드래그 동안 selectstart 차단
+    try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
+    document.addEventListener('selectstart', onSelectStart)
     document.body.style.cursor = 'grabbing'
     setOverIndex(originIndex)
     setDragNum(p.num)
@@ -222,13 +227,16 @@ export default function ReorderableTaskGrid({ items, renderCard, canDrag, onReor
   return (
     <Box
       ref={gridRef}
+      onDragStart={(e) => e.preventDefault()} // 네이티브 드래그(텍스트·이미지) 차단
       sx={{
         display: 'grid',
         gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
         gap: `${layout.cardGap}px`,
-        alignItems: 'start',
-        // 드래그 중: 카드 포인터이벤트 차단 → hover 테두리 자체가 생기지 않음(placeholder 점선은 유지)
-        ...(dragNum ? { '& .reorder-cell': { pointerEvents: 'none' } } : {}),
+        // 같은 행 카드 높이 통일(PC 2열): 그리드 행이 가장 높은 카드에 맞춰 늘어나고, 짧은 카드는 하단 여백이 늘어남.
+        // 다음 행에는 영향 없음. 모바일 1열은 행마다 카드 1개라 자연 높이.
+        alignItems: 'stretch',
+        // 드래그 중: 카드 포인터이벤트 차단(hover 억제) + 텍스트 선택 방지
+        ...(dragNum ? { '& .reorder-cell': { pointerEvents: 'none' }, userSelect: 'none', WebkitUserSelect: 'none' } : {}),
       }}
     >
       {displayNums.map((num) => {
@@ -255,7 +263,8 @@ export default function ReorderableTaskGrid({ items, renderCard, canDrag, onReor
             ref={setCellRef(num)}
             onPointerDown={(e) => onPointerDown(e, num)}
             onClickCapture={onClickCapture}
-            sx={{ minWidth: 0, touchAction: 'pan-y' }}
+            // 카드가 늘어난 셀 높이를 채우도록(높이 통일 시 하단 여백이 카드 내부로) — 자식(카드) height:100%
+            sx={{ minWidth: 0, touchAction: 'pan-y', '& > *': { height: '100%' } }}
           >
             {renderCard(item)}
           </Box>
@@ -273,8 +282,9 @@ export default function ReorderableTaskGrid({ items, renderCard, canDrag, onReor
           aria-hidden
           sx={{
             position: 'fixed', zIndex: (th) => th.zIndex.modal + 1,
-            width: drag.current?.width, pointerEvents: 'none',
+            width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none',
             opacity: 0.9, boxShadow: '0 20px 50px rgba(0,0,0,.48)', borderRadius: 1,
+            '& > *': { height: '100%' }, // 들어올린 카드도 원래(늘어난) 높이 유지
           }}
         >
           {renderCard(dragItem)}

@@ -179,6 +179,7 @@ export default function Work() {
   // 진행중 카드 수동 정렬(포털정렬순서) — 낙관적 오버레이(저장 후 재로딩 안 하므로 로컬 유지) + 디바운스 저장
   const [orderMap, setOrderMap] = useState<Record<string, number>>({})
   const [orderError, setOrderError] = useState(false)
+  const [dateSort, setDateSort] = useState<'none' | 'latest' | 'oldest'>('none') // 발의일 정렬 강조(직접 드래그 시 해제)
   const orderTimer = useRef<number | null>(null)
   const pendingOrderRef = useRef<WorkOrderEntry[] | null>(null)
   const savingRef = useRef(false) // 저장 POST 진행 중 여부(동시 저장 방지)
@@ -492,7 +493,7 @@ export default function Work() {
   const editOptionsFor = (t: WorkItem) =>
     t.cat && !fieldOptions.cats.includes(t.cat) ? { ...fieldOptions, cats: [t.cat, ...fieldOptions.cats] } : fieldOptions
 
-  // ── 진행중 카드 순서변경 저장 (포털정렬순서만 갱신 · 5초 디바운스 · 성공은 무표시 · 실패만 안내) ──
+  // ── 진행중 카드 순서변경 저장 (포털정렬순서만 갱신 · 3초 디바운스 · 성공은 무표시 · 실패만 안내) ──
   // 동시 저장 방지(savingRef): 저장 중이면 새로 시작하지 않고, 진행 중 요청의 finally가 최신 순서를 이어서 저장.
   // pendingOrderRef는 저장 성공(그 사이 새 순서 없음) 시에만 비움 → 비행 중 언로드 시 beacon이 그대로 백업.
   const flushOrderSave = useCallback(async () => {
@@ -515,8 +516,8 @@ export default function Work() {
     }
   }, [])
 
-  // 드롭으로 순서가 실제 바뀌면: 낙관적 반영(orderMap) + 최종 순서만 5초 뒤 한 번에 저장(재이동 시 타이머 리셋)
-  const handleReorder = (orderedNums: string[]) => {
+  // 최종 순서 확정 → 낙관적 반영(orderMap) + 최종 순서만 3초 뒤 한 번에 저장(재변경 시 타이머 리셋). 드래그·날짜정렬 공용.
+  const commitOrder = (orderedNums: string[]) => {
     const map: Record<string, number> = {}
     const orders: WorkOrderEntry[] = orderedNums.map((num, i) => {
       const v = (i + 1) * 10
@@ -527,7 +528,21 @@ export default function Work() {
     pendingOrderRef.current = orders
     setOrderError(false)
     if (orderTimer.current) clearTimeout(orderTimer.current)
-    orderTimer.current = window.setTimeout(() => { void flushOrderSave() }, 5000)
+    orderTimer.current = window.setTimeout(() => { void flushOrderSave() }, 3000)
+  }
+
+  // 드래그 드롭으로 순서가 실제 바뀜 → 사용자 지정 순서(발의일 정렬 강조 해제)
+  const handleReorder = (orderedNums: string[]) => { setDateSort('none'); commitOrder(orderedNums) }
+
+  // 발의일자 기준 정렬(최신순=내림차순 / 오래된순=오름차순). 같은 날짜는 stable sort로 현재 표시순서 유지.
+  // 결과를 새 사용자 지정 순서로 취급해 포털정렬순서를 재계산·저장(3초 디바운스).
+  const applyDateSort = (dir: 'latest' | 'oldest') => {
+    const sorted = [...inProgressList].sort((a, b) => {
+      const d = dateSortValue(a.start) - dateSortValue(b.start)
+      return dir === 'latest' ? -d : d
+    })
+    setDateSort(dir)
+    commitOrder(sorted.map((t) => t.num))
   }
 
   // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
@@ -831,9 +846,11 @@ export default function Work() {
                 <Typography variant="h2" component="h2">업무 목록</Typography>
                 <Typography variant="body2" sx={{ color: 'text.disabled' }}>{inProgressList.length}</Typography>
                 {isAdmin && (
-                  <Typography variant="body2" sx={{ color: 'text.disabled', ml: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: { xs: 'none', md: 'block' } }}>
-                    카드를 끌어 순서 변경
-                  </Typography>
+                  <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flexShrink: 0 }}>
+                    <Typography variant="body2" sx={{ color: 'text.disabled', mr: 0.25, display: { xs: 'none', sm: 'block' } }}>발의일</Typography>
+                    <StatusChip status="neutral" label="최신순" selected={dateSort === 'latest'} onClick={() => applyDateSort('latest')} />
+                    <StatusChip status="neutral" label="오래된순" selected={dateSort === 'oldest'} onClick={() => applyDateSort('oldest')} />
+                  </Box>
                 )}
               </Box>
               {/* 새 업무 칸: 헤더와 같은 행(2열)을 항상 차지(로그인/로그아웃 무관 배열 고정). 버튼만 관리자에게 노출. */}

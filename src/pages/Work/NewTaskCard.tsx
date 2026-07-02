@@ -8,7 +8,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
-import { ComboField, SelectField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
+import { ComboField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
 import { dashToBullet, circledNumber } from './workMeta'
 
 /** 인라인 새 업무 작성 폼 값 — 저장 시 index에서 createWork/updateWork 페이로드로 변환 */
@@ -175,7 +175,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
           borderBottom: 1, borderColor: alpha(th.palette.accent.green, 0.3),
         })}
       >
-        <SelectField value={cat} onChange={setCat} options={options.cats} placeholder="구분" ariaLabel="구분" sx={{ width: 96, flexShrink: 0 }} />
+        <ComboField value={cat} onChange={setCat} options={options.cats} placeholder="구분" ariaLabel="구분" sx={{ width: 112, flexShrink: 0 }} />
         <ComboField value={dept} onChange={setDept} options={options.depts} placeholder="관련부서" ariaLabel="부서" sx={{ width: 124, flexShrink: 0 }} />
         <ComboField value={mgr} onChange={setMgr} options={options.mgrs} placeholder="담당자" ariaLabel="담당자" sx={{ width: 84, flexShrink: 0 }} />
         <Box sx={{ flex: 1, minWidth: 4 }} />
