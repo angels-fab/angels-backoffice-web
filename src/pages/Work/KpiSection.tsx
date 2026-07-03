@@ -99,6 +99,10 @@ export default function KpiSection({
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: '7px', textAlign: 'center', cursor: 'pointer', color: LABEL[zone],
           borderRadius: { xs: radius.xs, md: radius.md },
+          // 하단 인디케이터가 타일 곡률 밖으로 삐져나오지 않게 타일 단위로만 클리핑
+          // (컨테이너 overflow:hidden 금지 — '부서장 확인' 칩은 family에 붙어 있어 영향 없음.
+          //  타일 밖으로 나가는 자식이 없고, 각 위치별 radius를 그대로 따라 모서리가 감싸짐)
+          overflow: 'hidden',
           background: highlighted ? STRONG[zone] : WASH[zone],
           transition: 'background .14s ease, box-shadow .14s ease, transform .14s ease',
           '&:hover': { background: STRONG[zone] },

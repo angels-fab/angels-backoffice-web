@@ -3,9 +3,7 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
-import { taskTitle } from './workMeta'
-import DragToken from './DragToken'
-import { gatherToToken, genieOverlayInto, trashAt, zoneAt, TOKEN_SIZE, TOKEN_SCALE, type DropZone, type StatusDropResult } from './dropZones'
+import { dragShrinkScale, genieOverlayInto, trashAt, zoneAt, type DropZone, type StatusDropResult } from './dropZones'
 
 const ACTIVATION_DISTANCE = 8 // px 이상 이동해야 드래그 시작(마우스)
 const LONG_PRESS_MS = 480 // 터치 롱프레스 = 복수선택 모드 진입
@@ -31,8 +29,8 @@ interface Props {
   onZoneChange: (dragging: boolean, zone: DropZone | null) => void
   /** 카드 더블클릭 — 수정모드 진입(부모가 권한 확인) */
   onCardDoubleClick?: (num: string) => void
-  /** 휴지통에 드롭 — 흡입 없이 삭제 확인부터(부모가 확인창·흡입·삭제 담당). at=토큰 중심 좌표 */
-  onDeleteDrop?: (nums: string[], at: { x: number; y: number }) => void
+  /** 휴지통에 드롭 — 흡입 없이 삭제 확인부터(부모가 확인창·흡입·삭제 담당). at=드롭 시점 오버레이 기하(고정 표시용) */
+  onDeleteDrop?: (nums: string[], at: { cx: number; cy: number; w: number; h: number; scale: number }) => void
   /** 휴지통 위 진입/이탈(부모 휴지통 강조용) */
   onTrashHover?: (hover: boolean) => void
   /** 삭제 확인 대기 카드(흐림) — 부모의 확인창 라이프사이클 동안 유지 */
@@ -76,7 +74,7 @@ export default function StatusDragGrid({
   const trashHoverRef = useRef(false)
 
   const pending = useRef<null | { num: string; pointerType: string; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
-  const drag = useRef<null | { num: string; nums: string[]; width: number; height: number; offsetX: number; offsetY: number }>(null)
+  const drag = useRef<null | { num: string; nums: string[]; width: number; height: number; offsetX: number; offsetY: number; scale: number }>(null)
   const zoneRef = useRef<null | { zone: DropZone; rect: DOMRect }>(null)
   const longPress = useRef<number | null>(null)
   const lastPointer = useRef({ x: 0, y: 0 })
@@ -107,11 +105,9 @@ export default function StatusDragGrid({
     }
     drag.current = {
       num: p.num, nums,
-      width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY,
+      width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY, scale: 1,
     }
     if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
-    // 카드 → 토큰 모임 모핑(복수는 스태거)
-    nums.forEach((n, i) => { const el = cellRefs.current.get(n); if (el) gatherToToken(el, clientX, clientY, i) })
     try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
     document.addEventListener('selectstart', onSelectStart)
     document.body.style.cursor = 'grabbing'
@@ -141,10 +137,16 @@ export default function StatusDragGrid({
     const d = drag.current
     if (!d) return
     e.preventDefault()
-    // 토큰은 포인터 중앙 추적 — 크기(스케일)는 드롭 대상과 무관하게 불변
+    // 오버레이 = 원본 직사각형 카드가 그랩 지점을 따라 이동, 대상 접근 시에만 거리 비례 축소(smoothstep)
+    const left = e.clientX - d.offsetX
+    const top = e.clientY - d.offsetY
+    const s = dragShrinkScale(e.clientX, e.clientY, d.width, d.height)
+    d.scale = s
     if (liftedRef.current) {
-      liftedRef.current.style.left = `${e.clientX}px`
-      liftedRef.current.style.top = `${e.clientY}px`
+      liftedRef.current.style.left = `${left}px`
+      liftedRef.current.style.top = `${top}px`
+      liftedRef.current.style.transform = s === 1 ? '' : `scale(${s})`
+      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * s).toFixed(1)}px`)
     }
     const zh = zoneAt(e.clientX, e.clientY)
     const prev = zoneRef.current?.zone ?? null
@@ -173,11 +175,15 @@ export default function StatusDragGrid({
   const onEnd = () => {
     const d = drag.current
     const zh = zoneRef.current
-    // 휴지통 드롭 — 흡입 없이 부모에 확인 위임(단일·복수). 토큰 중심 = 포인터 좌표.
-    // 잡은 카드(d.num)를 맨 앞에 — 부모 고정 토큰이 드래그 토큰과 같은 카드 정보를 유지.
+    // 휴지통 드롭 — 흡입 없이 부모에 확인 위임(단일·복수). 드롭 시점 오버레이 기하를 전달.
+    // 잡은 카드(d.num)를 맨 앞에 — 고정 표시가 드래그하던 카드와 동일하도록.
     if (d && !zh && trashHoverRef.current && onDeleteDropRef.current) {
       const nums = [d.num, ...d.nums.filter((n) => n !== d.num)]
-      const at = { ...lastPointer.current }
+      const at = {
+        cx: lastPointer.current.x - d.offsetX + d.width / 2,
+        cy: lastPointer.current.y - d.offsetY + d.height / 2,
+        w: d.width, h: d.height, scale: d.scale,
+      }
       endDrag()
       cleanupPending()
       onDeleteDropRef.current(nums, at)
@@ -310,24 +316,47 @@ export default function StatusDragGrid({
         )
       })}
 
-      {/* 드래그 토큰(포인터 중앙 추적) — 정사각 50% 고정 스케일, 복수는 스택+N건. 위치는 ref로 명령형 갱신 */}
+      {/* 들어올린 카드(그랩 지점 추적) — 원본 직사각형 비율·크기 유지, 대상 접근 시에만 거리 비례 축소.
+          복수는 직사각형 카드가 살짝 포개진 스택 + N건 배지. 위치·스케일은 ref로 명령형 갱신 */}
       {dragNum && dragItem && (
         <Box
           ref={(el: HTMLDivElement | null) => {
             liftedRef.current = el
-            if (el) { el.style.left = `${lastPointer.current.x}px`; el.style.top = `${lastPointer.current.y}px` }
+            const d = drag.current
+            if (el && d) {
+              el.style.left = `${lastPointer.current.x - d.offsetX}px`
+              el.style.top = `${lastPointer.current.y - d.offsetY}px`
+              if (d.scale !== 1) el.style.transform = `scale(${d.scale})`
+            }
           }}
           aria-hidden
-          sx={{
-            position: 'fixed', zIndex: (th) => th.zIndex.modal + 1,
-            width: TOKEN_SIZE, height: TOKEN_SIZE, pointerEvents: 'none',
-            transform: `translate(-50%, -50%) scale(${TOKEN_SCALE})`, transformOrigin: '50% 50%',
-            opacity: 0, animation: 'workTokenIn .14s ease .12s forwards',
-            '@keyframes workTokenIn': { to: { opacity: 0.96 } },
-            '@media (prefers-reduced-motion: reduce)': { animation: 'none', opacity: 0.96 },
-          }}
+          sx={(th) => ({
+            position: 'fixed', zIndex: th.zIndex.modal + 1,
+            width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none',
+            opacity: 0.92, borderRadius: 1, transformOrigin: '50% 50%',
+            '--stack-gap': '10px',
+            ...(overTrash ? { outline: '2px dashed rgba(224,91,84,.95)', outlineOffset: '3px' } : {}),
+          })}
         >
-          <DragToken cat={dragItem.cat} title={taskTitle(dragItem)} count={multiCount} danger={overTrash} />
+          {multiCount > 2 && (
+            <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(calc(var(--stack-gap) * 2), calc(var(--stack-gap) * 2))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
+          )}
+          {multiCount > 1 && (
+            <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
+          )}
+          <Box sx={{ position: 'relative', height: '100%', boxShadow: '0 20px 50px rgba(0,0,0,.48)', borderRadius: 1, '& > *': { height: '100%' } }}>
+            {renderCard(dragItem)}
+            {multiCount > 1 && (
+              <Box sx={(th) => ({
+                position: 'absolute', top: -10, right: -10, zIndex: 2,
+                px: 1, py: 0.4, borderRadius: '999px',
+                bgcolor: th.palette.accent.blue, color: '#fff',
+                fontSize: 12.5, fontWeight: 700, lineHeight: 1,
+              })}>
+                {multiCount}건
+              </Box>
+            )}
+          </Box>
         </Box>
       )}
     </Box>

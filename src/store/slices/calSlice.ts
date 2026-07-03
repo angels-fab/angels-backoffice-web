@@ -30,29 +30,41 @@ const dstr = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 export const loadCalEvents = createAsyncThunk('cal/load', async (): Promise<CalEvent[]> => {
-  const raw = await fetchCalendarEvents()
-  const out: CalEvent[] = []
-  raw.forEach(ev => {
-    const s = new Date(ev.start)
-    if (isNaN(s.getTime())) return
-    // 종일 일정의 끝은 '다음 날 0시'(미포함)라서 하루 빼면 실제 마지막 날
-    const e = new Date(new Date(ev.end).getTime() - (ev.allDay ? DAY : 0))
-    const sTime = ev.start.slice(11)
-    const eTime = ev.end.slice(11)
-    const time = ev.allDay ? '종일' : sTime + (eTime !== sTime ? '-' + eTime : '')
-    const cat = classify(ev.title)
-    // 여러 날짜에 걸친 일정은 날짜마다 한 칸씩 (최대 60일 안전장치).
-    // 수정/삭제는 원본 이벤트 기준이라 id·start·end·allDay·recurring을 모든 칸에 그대로 싣는다.
-    let t = new Date(s.getFullYear(), s.getMonth(), s.getDate())
-    for (let i = 0; i < 60 && t <= e; i++) {
-      out.push({
-        date: dstr(t), title: ev.title, cat, time, loc: ev.loc,
-        id: ev.id, start: ev.start, end: ev.end, allDay: ev.allDay, recurring: ev.recurring,
+  // 일시 오류(네트워크·리다이렉트·5xx·파싱) 대비 — 짧은 간격으로 최대 2회 자동 재시도.
+  // 원인은 콘솔에 남겨 진단 가능하게 하고, 최종 실패만 rejected로 전달(기존 일정은 리듀서가 유지).
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    try {
+      const raw = await fetchCalendarEvents()
+      const out: CalEvent[] = []
+      raw.forEach(ev => {
+        const s = new Date(ev.start)
+        if (isNaN(s.getTime())) return
+        // 종일 일정의 끝은 '다음 날 0시'(미포함)라서 하루 빼면 실제 마지막 날
+        const e = new Date(new Date(ev.end).getTime() - (ev.allDay ? DAY : 0))
+        const sTime = ev.start.slice(11)
+        const eTime = ev.end.slice(11)
+        const time = ev.allDay ? '종일' : sTime + (eTime !== sTime ? '-' + eTime : '')
+        const cat = classify(ev.title)
+        // 여러 날짜에 걸친 일정은 날짜마다 한 칸씩 (최대 60일 안전장치).
+        // 수정/삭제는 원본 이벤트 기준이라 id·start·end·allDay·recurring을 모든 칸에 그대로 싣는다.
+        let t = new Date(s.getFullYear(), s.getMonth(), s.getDate())
+        for (let i = 0; i < 60 && t <= e; i++) {
+          out.push({
+            date: dstr(t), title: ev.title, cat, time, loc: ev.loc,
+            id: ev.id, start: ev.start, end: ev.end, allDay: ev.allDay, recurring: ev.recurring,
+          })
+          t = new Date(t.getTime() + DAY)
+        }
       })
-      t = new Date(t.getTime() + DAY)
+      return out
+    } catch (err) {
+      lastErr = err
+      console.error(`[calendar] 일정 불러오기 실패 (시도 ${attempt + 1}/3)`, err)
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 700 * (attempt + 1)))
     }
-  })
-  return out
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('일정 불러오기 실패')
 })
 
 interface CalState {
@@ -60,6 +72,8 @@ interface CalState {
   ready: boolean
   loading: boolean
   error: boolean
+  /** 마지막 실패 원인(진단용 — 오류 안내에 함께 표시) */
+  errorMsg: string | null
   updatedAt: string | null
 }
 
@@ -68,6 +82,7 @@ const initialState: CalState = {
   ready: false,
   loading: false,
   error: false,
+  errorMsg: null,
   updatedAt: null,
 }
 
@@ -79,20 +94,22 @@ const calSlice = createSlice({
     builder
       .addCase(loadCalEvents.pending, state => {
         state.loading = true
-        state.error = false
       })
       .addCase(loadCalEvents.fulfilled, (state, action) => {
         state.events = action.payload
         state.ready = true
         state.loading = false
+        state.error = false
+        state.errorMsg = null
         state.updatedAt = nowStamp()
       })
-      .addCase(loadCalEvents.rejected, state => {
-        state.events = []
+      .addCase(loadCalEvents.rejected, (state, action) => {
+        // 기존에 정상적으로 불러온 일정은 지우지 않는다(빈 화면 방지) — 오류 상태만 표시.
+        // updatedAt도 유지해 '마지막으로 불러온' 시각을 알 수 있게 한다.
         state.ready = true
         state.loading = false
         state.error = true
-        state.updatedAt = null
+        state.errorMsg = action.error.message || '알 수 없는 오류'
       })
   },
 })

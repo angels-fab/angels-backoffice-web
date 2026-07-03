@@ -67,7 +67,8 @@ export interface RawCalEvent {
 }
 
 export async function fetchCalendarEvents(): Promise<RawCalEvent[]> {
-  const res = await fetch(`${SCRIPT_URL}?calendar=1`)
+  // cache-buster — 재시도 시 중간 캐시(브라우저·리다이렉트 경유)의 오래된 실패 응답 재사용 방지
+  const res = await fetch(`${SCRIPT_URL}?calendar=1&cb=${Date.now()}`)
   if (!res.ok) throw new Error('HTTP ' + res.status)
   const json = (await res.json()) as { status: string; message?: string; data?: RawCalEvent[] }
   if (json.status !== 'ok') throw new Error(json.message || '오류')

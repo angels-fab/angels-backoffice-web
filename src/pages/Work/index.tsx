@@ -53,8 +53,7 @@ import type { NewTaskForm } from './NewTaskCard'
 import ReorderableTaskGrid from './ReorderableTaskGrid'
 import KpiSection from './KpiSection'
 import StatusDragGrid from './StatusDragGrid'
-import DragToken from './DragToken'
-import { genieOverlayInto, TOKEN_SIZE, TOKEN_SCALE, type DropZone, type StatusDropResult, type WorkView } from './dropZones'
+import { genieOverlayInto, type DropZone, type StatusDropResult, type WorkView } from './dropZones'
 
 // 통합 Undo/Redo 히스토리 — 순서변경·상태변경을 시간순 하나의 스택으로
 interface FieldSnap { status: string; remind: boolean; chief: boolean; end: string }
@@ -165,10 +164,11 @@ function GroupBtn({ label, icon, selected, disabled, onClick, title }: {
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info'; retry?: () => void }
 
 // 삭제 요청(메뉴·휴지통 드롭 공용) — token이 있으면 휴지통 플로: 확인창 → (동의 시) 지니 흡입 → 실제 삭제.
+// token = 드롭 시점 오버레이 기하(중심·원본 크기·축소율) — 같은 자리·크기로 카드를 고정 표시.
 // phase: confirm=확인창 표시 / suck=흡입 중(확인창 닫힘·카드 흐림 유지) / clearing=삭제 처리(카드 숨김)
 type DeleteReq = {
   items: WorkItem[]
-  token?: { x: number; y: number; cat?: string; title: string }
+  token?: { cx: number; cy: number; w: number; h: number; scale: number }
   phase: 'confirm' | 'suck' | 'clearing'
 }
 
@@ -885,10 +885,10 @@ export default function Work() {
     const t = items.find((x) => x.num === num)
     if (t && editingId !== t.id) startEdit(t)
   }
-  // 휴지통 드롭(단일·복수) — 흡입 없이 확인창부터. 토큰은 드롭 지점에 고정 표시, 취소 시 원상 복원.
-  // 진행 중 삭제 라이프사이클(확인창·흡입·API) 동안 새 요청은 무시 — deleteReq 덮어쓰기 방지.
+  // 휴지통 드롭(단일·복수) — 흡입 없이 확인창부터. 드래그하던 카드를 드롭 자리·크기 그대로 고정 표시,
+  // 취소 시 원상 복원. 진행 중 삭제 라이프사이클 동안 새 요청은 무시 — deleteReq 덮어쓰기 방지.
   // 수정모드(in-place 편집) 카드는 대상에서 제외(존 드롭과 동일 가드).
-  const handleDeleteDrop = (nums: string[], at: { x: number; y: number }) => {
+  const handleDeleteDrop = (nums: string[], at: { cx: number; cy: number; w: number; h: number; scale: number }) => {
     if (!isAdmin || !user || !authKey) return
     if (deleting || deleteReq) return
     const targets = nums
@@ -896,11 +896,7 @@ export default function Work() {
       .filter((t): t is WorkItem => !!t && editingId !== t.id)
     if (targets.length === 0) return
     setTrashHover(false)
-    setDeleteReq({
-      items: targets,
-      token: { x: at.x, y: at.y, cat: targets[0].cat, title: taskTitle(targets[0]) },
-      phase: 'confirm',
-    })
+    setDeleteReq({ items: targets, token: at, phase: 'confirm' })
   }
   // 카드 메뉴·상세 Drawer의 삭제 — 확인창만(토큰·흡입 없음). 진행 중 라이프사이클 보호 동일.
   const requestDelete = (t: WorkItem) => {
@@ -998,73 +994,78 @@ export default function Work() {
           )
         })()}
 
-        {/* 필터·조작부 — 얇은 위아래 구분선, PC 2열(좌: 구분/담당자 · 우: Undo/Redo+정렬 / 검색), 모바일 세로 스택 */}
+        {/* 필터·조작부 — 얇은 위아래 구분선. PC 2행 그리드: [구분|Undo·정렬] / [담당자|검색] (수평·수직 기준선 정렬),
+            모바일 단일 열: 구분 → 담당자 → Undo·정렬 → 검색. 우측 열 폭은 두 행이 공유(grid auto column)해 일정. */}
         <Box
           sx={{
             borderTop: '1px solid', borderBottom: '1px solid', borderColor: 'divider',
-            py: 1.5, mb: 2.5,
-            display: 'flex', gap: { xs: 1.5, md: 2.5 }, alignItems: 'flex-start',
-            flexDirection: { xs: 'column', md: 'row' },
+            py: 1.25, mb: 2.5,
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) auto' },
+            gridTemplateAreas: {
+              xs: '"cats" "mgrs" "controls" "search"',
+              md: presentMgrs.length > 0 ? '"cats controls" "mgrs search"' : '"cats controls" ". search"',
+            },
+            columnGap: { md: 2.5 }, rowGap: 1,
+            alignItems: 'center',
           }}
         >
-          {/* 좌: 구분·담당자 필터(좁은 행 간격) */}
-          <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            {presentCats.length > 0 && (
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44, pt: '6px' }}>구분</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
-                  {presentCats.map((c) => (
-                    <StatusChip
-                      key={c}
-                      status="neutral"
-                      label={c}
-                      selected={selCats.has(normCat(c))}
-                      onClick={(e) => toggleCat(normCat(c), e.shiftKey)}
-                      onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-            )}
-            {presentMgrs.length > 0 && (
-              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44, pt: '6px' }}>담당자</Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
-                  {presentMgrs.map((m) => (
-                    <StatusChip
-                      key={m}
-                      status="info"
-                      label={m}
-                      selected={selMgrs.has(m)}
-                      onClick={(e) => toggleMgr(m, e.shiftKey)}
-                      onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
-                    />
-                  ))}
-                </Box>
-              </Box>
-            )}
-          </Box>
-          {/* 우: 윗줄 [Undo|Redo][날짜|담당자|구분] / 아랫줄 [검색창] */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: { xs: 'stretch', md: 'flex-end' }, width: { xs: '100%', md: 'auto' }, flexShrink: 0 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
-              {isAdmin && selected.size > 0 && (
-                <>
-                  <StatusChip status="info" label={`${selected.size}건 선택`} />
-                  <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
-                </>
-              )}
-              {isAdmin && (
-                <BtnGroup>
-                  <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: 16 }} />} disabled={!canUndo} onClick={doUndo} />
-                  <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
-                </BtnGroup>
-              )}
-              <BtnGroup>
-                <GroupBtn title="날짜 정렬(재클릭 시 방향 전환)" label="날짜" icon={sortArrow('date')} selected={listSort?.key === 'date'} onClick={() => toggleListSort('date')} />
-                <GroupBtn title="담당자 가나다 정렬(재클릭 시 방향 전환)" label="담당자" icon={sortArrow('mgr')} selected={listSort?.key === 'mgr'} onClick={() => toggleListSort('mgr')} />
-                <GroupBtn title="업무구분 정렬(재클릭 시 방향 전환)" label="구분" icon={sortArrow('cat')} selected={listSort?.key === 'cat'} onClick={() => toggleListSort('cat')} />
-              </BtnGroup>
+          {/* 1행 좌: 구분 필터 */}
+          <Box sx={{ gridArea: 'cats', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+            <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44 }}>구분</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
+              {presentCats.map((c) => (
+                <StatusChip
+                  key={c}
+                  status="neutral"
+                  label={c}
+                  selected={selCats.has(normCat(c))}
+                  onClick={(e) => toggleCat(normCat(c), e.shiftKey)}
+                  onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
+                />
+              ))}
             </Box>
+          </Box>
+          {/* 2행 좌: 담당자 필터 — 라벨 폭(44px)·칩 높이·수직 중앙 기준을 구분 행과 공유 */}
+          {presentMgrs.length > 0 && (
+            <Box sx={{ gridArea: 'mgrs', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+              <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44 }}>담당자</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
+                {presentMgrs.map((m) => (
+                  <StatusChip
+                    key={m}
+                    status="info"
+                    label={m}
+                    selected={selMgrs.has(m)}
+                    onClick={(e) => toggleMgr(m, e.shiftKey)}
+                    onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+          {/* 1행 우: 선택 도구 + Undo/Redo + 정렬 */}
+          <Box sx={{ gridArea: 'controls', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+            {isAdmin && selected.size > 0 && (
+              <>
+                <StatusChip status="info" label={`${selected.size}건 선택`} />
+                <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
+              </>
+            )}
+            {isAdmin && (
+              <BtnGroup>
+                <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: 16 }} />} disabled={!canUndo} onClick={doUndo} />
+                <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
+              </BtnGroup>
+            )}
+            <BtnGroup>
+              <GroupBtn title="날짜 정렬(재클릭 시 방향 전환)" label="날짜" icon={sortArrow('date')} selected={listSort?.key === 'date'} onClick={() => toggleListSort('date')} />
+              <GroupBtn title="담당자 가나다 정렬(재클릭 시 방향 전환)" label="담당자" icon={sortArrow('mgr')} selected={listSort?.key === 'mgr'} onClick={() => toggleListSort('mgr')} />
+              <GroupBtn title="업무구분 정렬(재클릭 시 방향 전환)" label="구분" icon={sortArrow('cat')} selected={listSort?.key === 'cat'} onClick={() => toggleListSort('cat')} />
+            </BtnGroup>
+          </Box>
+          {/* 2행 우: 검색창 — 우측 열 전체 폭 사용(윗줄 컨트롤과 좌우 기준선 일치) */}
+          <Box sx={{ gridArea: 'search', minWidth: 0 }}>
             <SearchBar value={query} onChange={setQuery} width="100%" placeholder="업무명·담당자·부서·구분·장소 검색" sx={{ minWidth: { md: 290 } }} />
           </Box>
         </Box>
@@ -1301,22 +1302,48 @@ export default function Work() {
         </Box>
       )}
 
-      {/* 휴지통 드롭 후 고정 토큰 — 확인창 동안 드롭 지점에 유지, 동의 시 지니 흡입의 원본 */}
-      {deleteReq?.token && deleteReq.phase !== 'clearing' && (
-        <Box
-          ref={frozenTokenRef}
-          aria-hidden
-          sx={(th) => ({
-            position: 'fixed', zIndex: th.zIndex.modal - 1,
-            left: deleteReq.token!.x, top: deleteReq.token!.y,
-            width: TOKEN_SIZE, height: TOKEN_SIZE, pointerEvents: 'none',
-            transform: `translate(-50%, -50%) scale(${TOKEN_SCALE})`, transformOrigin: '50% 50%',
-            opacity: 0.96,
-          })}
-        >
-          <DragToken cat={deleteReq.token.cat} title={deleteReq.token.title} count={deleteReq.items.length} danger />
-        </Box>
-      )}
+      {/* 휴지통 드롭 후 고정 카드 — 드래그하던 카드가 드롭 자리·축소 크기 그대로 확인창 동안 유지, 동의 시 지니 흡입의 원본 */}
+      {deleteReq?.token && deleteReq.phase !== 'clearing' && (() => {
+        const t0 = deleteReq.items[0]
+        const tone = classify(t0) === 'done' ? 'gray' as const : classify(t0) === 'hold' ? 'amber' as const : 'green' as const
+        const n = deleteReq.items.length
+        const tk = deleteReq.token
+        return (
+          <Box
+            ref={frozenTokenRef}
+            aria-hidden
+            sx={(th) => ({
+              position: 'fixed', zIndex: th.zIndex.modal - 1,
+              left: tk.cx - tk.w / 2, top: tk.cy - tk.h / 2,
+              width: tk.w, height: tk.h, pointerEvents: 'none',
+              transform: `scale(${tk.scale})`, transformOrigin: '50% 50%',
+              opacity: 0.92, borderRadius: 1,
+              outline: '2px dashed rgba(224,91,84,.95)', outlineOffset: '3px',
+              '--stack-gap': `${Math.max(2, 10 * tk.scale).toFixed(1)}px`,
+            })}
+          >
+            {n > 2 && (
+              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(calc(var(--stack-gap) * 2), calc(var(--stack-gap) * 2))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
+            )}
+            {n > 1 && (
+              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
+            )}
+            <Box sx={{ position: 'relative', height: '100%', boxShadow: '0 20px 50px rgba(0,0,0,.48)', borderRadius: 1, overflow: 'hidden', '& > *': { height: '100%' } }}>
+              <TaskAccordion t={t0} tone={tone} isAdmin={false} />
+              {n > 1 && (
+                <Box sx={(th) => ({
+                  position: 'absolute', top: 6, right: 6, zIndex: 2,
+                  px: 1, py: 0.4, borderRadius: '999px',
+                  bgcolor: th.palette.accent.blue, color: '#fff',
+                  fontSize: 12.5, fontWeight: 700, lineHeight: 1,
+                })}>
+                  {n}건
+                </Box>
+              )}
+            </Box>
+          </Box>
+        )
+      })()}
 
       {/* 순서 저장 실패 — 이때만 안내 + 재시도(정상 저장은 무표시) */}
       <Snackbar open={orderError} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>

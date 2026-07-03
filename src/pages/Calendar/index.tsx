@@ -8,6 +8,8 @@ import type { EventContentArg } from '@fullcalendar/core'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
+import Alert from '@mui/material/Alert'
+import Button from '@mui/material/Button'
 import EventNoteIcon from '@mui/icons-material/EventNote'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
@@ -79,7 +81,7 @@ function renderEventContent(arg: EventContentArg) {
 
 export default function Calendar() {
   const dispatch = useAppDispatch()
-  const { events: allEvents, loading, updatedAt } = useAppSelector((s) => s.cal)
+  const { events: allEvents, loading, error, errorMsg, updatedAt } = useAppSelector((s) => s.cal)
 
   const [view, setView] = useState<ViewKey>('month')
   const [anchor, setAnchor] = useState<Date>(() => parseKey(todaySeoul()))
@@ -115,6 +117,13 @@ export default function Calendar() {
 
   const todayKey = todaySeoul()
   const searchTrim = search.trim()
+
+  // 실패 상태에서 캘린더 페이지에 다시 진입하면 자동 재시도(마운트 시 1회).
+  // 성공하면 리듀서가 오류 안내를 제거하고 updatedAt을 갱신한다.
+  useEffect(() => {
+    if (error && !loading) dispatch(loadCalEvents())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 바깥 클릭·Esc로 고정 상세 닫기 (eventClick은 stopPropagation으로 이 핸들러에 안 닿음)
   useEffect(() => {
@@ -301,6 +310,24 @@ export default function Calendar() {
           </IconButton>
         }
       />
+
+      {/* 일정 불러오기 최종 실패 — 빈 화면 대신 오류 안내 + 다시 시도. 기존 일정이 있으면 유지 표시 중임을 알림 */}
+      {error && (
+        <Alert
+          severity={allEvents.length > 0 ? 'warning' : 'error'}
+          sx={{ mb: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => dispatch(loadCalEvents())} disabled={loading}>
+              {loading ? '불러오는 중…' : '다시 시도'}
+            </Button>
+          }
+        >
+          {allEvents.length > 0
+            ? `일정 새로고침에 실패했습니다. 마지막으로 불러온 일정(${updatedAt || '이전'})을 표시 중입니다.`
+            : '일정을 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
+          {errorMsg ? ` — ${errorMsg}` : ''}
+        </Alert>
+      )}
 
       {/* 툴바 — 한 행(space-between): 왼쪽=[월/주]·[‹|오늘|›] 그룹·년월 / 오른쪽=검색·주말.
           반응형: 좁아지면 검색이 한 줄 전체로 내려감(order/flex-basis). */}

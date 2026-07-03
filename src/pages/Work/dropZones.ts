@@ -12,10 +12,8 @@ export type DropZone = 'inProgress' | 'hold' | 'done' | 'remind'
 export type StatusDropResult = null | { changedNums: string[]; finalize: () => void }
 
 const ZONE_PAD = 10 // 존 판정 여유(px)
-
-// 드래그 토큰(시안 docs/mockups/work-drag-trash.html) — 2배 크기로 그려 0.5 스케일(고정 축소율 50%, 존 접근·진입해도 불변)
-export const TOKEN_SIZE = 180
-export const TOKEN_SCALE = 0.5
+const APPROACH = 220 // 대상 접근 축소 시작 거리(px)
+const FIT_INSET = 12 // 대상 내부 완전 진입 시 상하좌우 여백(px)
 
 export function zoneRects(): { zone: DropZone; el: HTMLElement; rect: DOMRect }[] {
   return [...document.querySelectorAll<HTMLElement>('[data-dropzone]')].map((el) => ({
@@ -45,52 +43,41 @@ export function trashAt(x: number, y: number): DOMRect | null {
   return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad ? r : null
 }
 
+const smoothstep = (t: number) => t * t * (3 - 2 * t)
+
+/**
+ * 드래그 카드 축소율 — 원래 직사각형 비율·크기를 유지하다가, 가장 가까운 대상(KPI 존·휴지통)에
+ * 220px 이내로 접근하면 거리 비례(smoothstep 보간)로 부드럽게 축소. 대상 내부에 완전히 들어가면
+ * 그 대상 안쪽(상하좌우 12px 여백)에 비율 유지로 맞는 크기. 멀어지면 같은 곡선으로 복원.
+ * 고정 scale이 아니라 카드·대상의 실측 크기로 계산(KPI·휴지통 동일 규칙).
+ */
+export function dragShrinkScale(x: number, y: number, cardW: number, cardH: number): number {
+  const rects: DOMRect[] = zoneRects().map((z) => z.rect)
+  const trashEl = document.querySelector<HTMLElement>('[data-trashzone]')
+  if (trashEl) rects.push(trashEl.getBoundingClientRect())
+  let best: { d: number; rect: DOMRect } | null = null
+  for (const r of rects) {
+    const dx = Math.max(r.left - x, 0, x - r.right)
+    const dy = Math.max(r.top - y, 0, y - r.bottom)
+    const d = Math.hypot(dx, dy) // 내부면 0
+    if (!best || d < best.d) best = { d, rect: r }
+  }
+  if (!best || best.d >= APPROACH || cardW <= 0 || cardH <= 0) return 1
+  const fit = Math.min(
+    (best.rect.width - FIT_INSET * 2) / cardW,
+    (best.rect.height - FIT_INSET * 2) / cardH,
+    1,
+  )
+  const t = smoothstep(1 - best.d / APPROACH)
+  return 1 + (Math.max(fit, 0.05) - 1) * t
+}
+
 export function prefersReducedMotion(): boolean {
   try {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
   } catch {
     return false
   }
-}
-
-/**
- * 카드 → 토큰 모임(모핑) — 드래그 시작 시 원본 카드의 클론이 포인터 위 정사각 토큰
- * 위치·크기로 좁혀지며 사라진다(시안 gatherCard). 복수는 index 스태거로 살짝 겹쳐 모임.
- * fire-and-forget: 실패·백그라운드 탭이어도 안전망 타이머로 반드시 클론 제거.
- */
-export function gatherToToken(cardEl: HTMLElement, x: number, y: number, index: number): void {
-  if (prefersReducedMotion()) return
-  try {
-    const r = cardEl.getBoundingClientRect()
-    const clone = cardEl.cloneNode(true) as HTMLElement
-    clone.setAttribute('aria-hidden', 'true')
-    Object.assign(clone.style, {
-      position: 'fixed', left: `${r.left}px`, top: `${r.top}px`,
-      width: `${r.width}px`, height: `${r.height}px`, margin: '0', minHeight: '0',
-      pointerEvents: 'none', zIndex: '1300', transition: 'none', overflow: 'hidden', // 토큰(modal+1)보다 아래 — 시안 레이어링
-
-      transformOrigin: '50% 50%', willChange: 'left, top, width, height, opacity, border-radius',
-      filter: 'drop-shadow(0 10px 18px rgba(0,0,0,.32))',
-    })
-    document.body.appendChild(clone)
-    const side = TOKEN_SIZE * TOKEN_SCALE // 토큰 시각 크기
-    const off = Math.min(index, 2) * 4
-    const duration = 240 + index * 25
-    const anim = clone.animate(
-      [
-        { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, opacity: 0.9, borderRadius: '8px' },
-        { offset: 0.72, left: `${x - side / 2 + off}px`, top: `${y - side / 2 + off}px`, width: `${side}px`, height: `${side}px`, opacity: 0.6, borderRadius: '11px' },
-        { left: `${x - side / 2 + off}px`, top: `${y - side / 2 + off}px`, width: `${side}px`, height: `${side}px`, opacity: 0, borderRadius: '13px' },
-      ],
-      { duration, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' },
-    )
-    let settled = false
-    const done = () => { if (settled) return; settled = true; try { clone.remove() } catch { /* noop */ } }
-    anim.onfinish = done
-    anim.oncancel = done
-    anim.finished?.then(done, done)
-    window.setTimeout(done, duration + 180)
-  } catch { /* noop */ }
 }
 
 /**
