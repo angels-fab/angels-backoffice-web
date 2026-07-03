@@ -1,18 +1,19 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import { alpha } from '@mui/material/styles'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
-import { dragScale, suckOverlayInto, zoneAt, type DropZone, type StatusDropResult } from './dropZones'
+import { taskTitle } from './workMeta'
+import DragToken from './DragToken'
+import { gatherToToken, genieOverlayInto, trashAt, zoneAt, TOKEN_SIZE, TOKEN_SCALE, type DropZone, type StatusDropResult } from './dropZones'
 
-// 시안(docs/mockups/work-card-reorder.html) 물리값
+// 시안(docs/mockups/work-card-reorder.html · work-drag-trash.html) 물리값
 const ACTIVATION_DISTANCE = 8 // px 이상 움직여야 드래그 시작(마우스)
 const TOUCH_HOLD_MS = 250 // 터치는 길게 눌러야 시작(스크롤과 구분)
 const SLOT_OVERLAP = 0.28 // 다른 슬롯으로 이동 판정 최소 겹침 비율
 const RETURN_OVERLAP = 0.2 // 원위치 복귀 판정 최소 겹침 비율
 const MOVE_DURATION = 180 // 이동 애니메이션(ms)
-const CLICK_SUPPRESS_MS = 350 // 드롭 직후 클릭(카드 열기) 억제
+const CLICK_SUPPRESS_MS = 350 // 드롭 직후 클릭(카드 선택) 억제
 
 interface Rect { left: number; top: number; right: number; bottom: number; width: number; height: number }
 
@@ -27,9 +28,9 @@ interface Props {
   onReorder: (orderedNums: string[]) => void
   /** 복수선택 상태(선택 시각·복수 드래그) */
   selectedNums?: Set<string>
-  /** Cmd/Ctrl/Shift 클릭 선택 토글 */
-  onSelectToggle?: (num: string, mods: { shift: boolean }) => void
-  /** 선택 안 된 카드를 잡음 — 부모가 선택 해제 */
+  /** 일반=단일선택 / toggle(Cmd·Ctrl)=추가·해제 / shift=범위 */
+  onSelectToggle?: (num: string, mods: { shift: boolean; toggle: boolean }) => void
+  /** 선택 안 된 카드를 잡음 — 부모가 그 카드만 선택 */
   onDragStartCard?: (num: string) => void
   /** KPI 드롭존에 놓음 — null=변경 없음(원위치 복귀) */
   onStatusDrop?: (nums: string[], zone: DropZone) => StatusDropResult
@@ -37,8 +38,14 @@ interface Props {
   onZoneChange?: (dragging: boolean, zone: DropZone | null) => void
   /** 카드 더블클릭 — 수정모드 진입(부모가 권한 확인) */
   onCardDoubleClick?: (num: string) => void
-  /** 카드 영역 좌우 빈 공간에 드롭 — 삭제 확인(단일 드래그만) */
-  onDeleteDrop?: (num: string) => void
+  /** 휴지통에 드롭 — 흡입 없이 삭제 확인부터(부모가 확인창·흡입·삭제 담당). at=토큰 중심 좌표 */
+  onDeleteDrop?: (nums: string[], at: { x: number; y: number }) => void
+  /** 휴지통 위 진입/이탈(부모 휴지통 강조용) */
+  onTrashHover?: (hover: boolean) => void
+  /** 삭제 확인 대기 카드(흐림) — 부모의 확인창 라이프사이클 동안 유지 */
+  awaitingNums?: Set<string>
+  /** 삭제 확정(흡입 후) — 대기 카드를 숨김 */
+  awaitingHidden?: boolean
 }
 
 const overlap = (a: Rect, b: DOMRect): number => {
@@ -48,18 +55,19 @@ const overlap = (a: Rect, b: DOMRect): number => {
 }
 
 /**
- * 진행중 업무카드 삽입정렬 드래그 그리드 + KPI 상태변경 드롭.
- * - 핸들 없이 카드 전체를 잡아 이동(버튼·링크 제외). 짧은 클릭은 카드 열기.
+ * 진행중 업무카드 삽입정렬 드래그 그리드 + KPI 상태변경 드롭 + 휴지통 삭제.
+ * - 핸들 없이 카드 전체를 잡아 이동(버튼·링크 제외). 짧은 클릭은 카드 선택.
  * - swap이 아닌 삽입정렬: A를 D 자리로 옮기면 B-C-D-A. 원래 순서 기준으로 매번 목적지 재계산(누적오차 없음).
  * - 드래그 중 목적지 placeholder 표시 + 영향 카드 FLIP 애니메이션. drag-active 동안 hover 테두리 억제.
- * - KPI 드롭존 접근 시 카드 축소, 드롭 시 흡입 애니메이션 후 상태변경.
- * - 복수선택 카드 중 하나를 잡으면 전체를 스택 미리보기로 함께 이동(복수는 존 드롭 전용, 삽입정렬 없음).
+ * - 드래그 시작 시 카드가 포인터로 모이며 50% 정사각 토큰으로 모핑. 크기는 드롭까지 불변.
+ * - KPI 드롭 시 지니 흡입 후 상태변경 / 휴지통 드롭은 흡입 없이 부모에 확인 위임.
+ * - 복수선택 카드 중 하나를 잡으면 전체가 스택 토큰으로 함께 이동(복수는 존·휴지통 전용, 삽입정렬 없음).
  * - 마우스 8px / 터치 250ms 롱프레스로 시작. Esc·취소 시 원위치. 저장은 부모가 담당.
  */
 export default function ReorderableTaskGrid({
   items, renderCard, canDrag, onReorder,
   selectedNums, onSelectToggle, onDragStartCard, onStatusDrop, onZoneChange,
-  onCardDoubleClick, onDeleteDrop,
+  onCardDoubleClick, onDeleteDrop, onTrashHover, awaitingNums, awaitingHidden,
 }: Props) {
   const gridRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef(new Map<string, HTMLElement>())
@@ -69,6 +77,7 @@ export default function ReorderableTaskGrid({
   const [dragNum, setDragNum] = useState<string | null>(null)
   const [overIndex, setOverIndex] = useState(0)
   const [multiCount, setMultiCount] = useState(0)
+  const [overTrash, setOverTrash] = useState(false) // 토큰 danger 톤
 
   // 최신 props/상태를 이벤트 핸들러에서 읽기 위한 ref
   const itemsRef = useRef(items); itemsRef.current = items
@@ -81,11 +90,12 @@ export default function ReorderableTaskGrid({
   const onZoneChangeRef = useRef(onZoneChange); onZoneChangeRef.current = onZoneChange
   const onCardDoubleClickRef = useRef(onCardDoubleClick); onCardDoubleClickRef.current = onCardDoubleClick
   const onDeleteDropRef = useRef(onDeleteDrop); onDeleteDropRef.current = onDeleteDrop
-  const deleteZoneRef = useRef(false) // 좌우 빈 공간(삭제) 위 여부
+  const onTrashHoverRef = useRef(onTrashHover); onTrashHoverRef.current = onTrashHover
+  const trashHoverRef = useRef(false) // 휴지통 위 여부
   const overIndexRef = useRef(0)
 
   const pending = useRef<null | { num: string; pointerType: string; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
-  const drag = useRef<null | { num: string; multiNums: string[] | null; baseOrder: string[]; slotRects: DOMRect[]; originIndex: number; width: number; height: number; offsetX: number; offsetY: number; startLeft: number; startTop: number; scale: number }>(null)
+  const drag = useRef<null | { num: string; multiNums: string[] | null; baseOrder: string[]; slotRects: DOMRect[]; originIndex: number; width: number; height: number; offsetX: number; offsetY: number }>(null)
   const zoneRef = useRef<null | { zone: DropZone; rect: DOMRect }>(null)
   const longPress = useRef<number | null>(null)
   const lastPointer = useRef({ x: 0, y: 0 })
@@ -158,7 +168,7 @@ export default function ReorderableTaskGrid({
       if (!el) return // 측정 불가 → 시작 안 함
       slotRects.push(el.getBoundingClientRect())
     }
-    // 복수 드래그 — 선택된 카드를 잡으면 선택 전체(표시 순서), 아니면 선택 해제 후 한 장
+    // 복수 드래그 — 선택된 카드를 잡으면 선택 전체(표시 순서), 아니면 그 카드만 선택 후 한 장
     const sel = selectedRef.current
     let multiNums: string[] | null = null
     if (sel && sel.has(p.num) && sel.size > 1) {
@@ -169,19 +179,23 @@ export default function ReorderableTaskGrid({
     drag.current = {
       num: p.num, multiNums, baseOrder: nums, slotRects, originIndex,
       width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY,
-      startLeft: clientX - p.offsetX, startTop: clientY - p.offsetY, scale: 1,
     }
     flipRects.current.clear()
     nums.forEach((n) => { const el = cellRefs.current.get(n); if (el) flipRects.current.set(n, el.getBoundingClientRect()) })
     overIndexRef.current = originIndex
     if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
+    // 카드 → 토큰 모임 모핑(복수는 스태거). 클론은 렌더 전 rect 기준이라 placeholder 전환과 자연 연결.
+    const gatherNums = multiNums ?? [p.num]
+    gatherNums.forEach((n, i) => { const el = cellRefs.current.get(n); if (el) gatherToToken(el, clientX, clientY, i) })
     // 텍스트 선택 방지: 기존 선택 해제 + 드래그 동안 selectstart 차단
     try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
     document.addEventListener('selectstart', onSelectStart)
     document.body.style.cursor = 'grabbing'
     zoneRef.current = null
-    deleteZoneRef.current = false
+    trashHoverRef.current = false
+    lastPointer.current = { x: clientX, y: clientY }
     onZoneChangeRef.current?.(true, null)
+    setOverTrash(false)
     setMultiCount(multiNums ? multiNums.length : 1)
     setOverIndex(originIndex)
     setDragNum(p.num)
@@ -203,40 +217,30 @@ export default function ReorderableTaskGrid({
     const d = drag.current
     if (!d) return
     e.preventDefault()
-    const left = e.clientX - d.offsetX
-    const top = e.clientY - d.offsetY
-    // KPI 드롭존 히트테스트 + 접근 축소(transform 전용)
-    const zh = onStatusDropRef.current ? zoneAt(e.clientX, e.clientY) : null
-    const s = onStatusDropRef.current ? dragScale(e.clientX, e.clientY, !!zh) : 1
-    d.scale = s
+    // 토큰은 포인터 중앙 추적 — 크기(스케일)는 드롭 대상과 무관하게 불변
     if (liftedRef.current) {
-      liftedRef.current.style.left = `${left}px`
-      liftedRef.current.style.top = `${top}px`
-      liftedRef.current.style.transform = s === 1 ? '' : `scale(${s})`
-      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * ((s - 0.72) / 0.28)).toFixed(1)}px`)
+      liftedRef.current.style.left = `${e.clientX}px`
+      liftedRef.current.style.top = `${e.clientY}px`
     }
+    // KPI 드롭존 + 휴지통 히트테스트
+    const zh = onStatusDropRef.current ? zoneAt(e.clientX, e.clientY) : null
     const prevZone = zoneRef.current?.zone ?? null
     zoneRef.current = zh
     if ((zh?.zone ?? null) !== prevZone) onZoneChangeRef.current?.(true, zh?.zone ?? null)
-    // 카드 영역 좌우 빈 공간 = 삭제 영역(단일 드래그·존 밖에서만). 오버레이에 경고 표시.
-    if (onDeleteDropRef.current && !d.multiNums) {
-      const gr = gridRef.current?.getBoundingClientRect()
-      const del = !zh && !!gr && (e.clientX < gr.left - 24 || e.clientX > gr.right + 24)
-      if (del !== deleteZoneRef.current) {
-        deleteZoneRef.current = del
-        if (liftedRef.current) {
-          liftedRef.current.style.outline = del ? '2px dashed rgba(224,91,84,.95)' : ''
-          liftedRef.current.style.outlineOffset = del ? '3px' : ''
-          liftedRef.current.style.opacity = del ? '0.55' : '0.9'
-        }
-      }
-      if (del && liftedRef.current) liftedRef.current.style.transform = 'scale(0.9)'
+    const tr = onDeleteDropRef.current && !zh ? trashAt(e.clientX, e.clientY) : null
+    if (!!tr !== trashHoverRef.current) {
+      trashHoverRef.current = !!tr
+      setOverTrash(!!tr)
+      onTrashHoverRef.current?.(!!tr)
     }
-    // 존 위이거나 복수 드래그면 삽입정렬 이동 없음(원위치 placeholder 유지)
-    if (zh || d.multiNums) {
+    // 존·휴지통 위이거나 복수 드래그면 삽입정렬 이동 없음(원위치 placeholder 유지)
+    if (zh || tr || d.multiNums) {
       if (overIndexRef.current !== d.originIndex) { overIndexRef.current = d.originIndex; setOverIndex(d.originIndex) }
       return
     }
+    // 삽입정렬 판정은 원본 카드 크기의 가상 사각형으로(토큰 시각과 무관 — 기존 동작 보존)
+    const left = e.clientX - d.offsetX
+    const top = e.clientY - d.offsetY
     const moving: Rect = { left, top, right: left + d.width, bottom: top + d.height, width: d.width, height: d.height }
     const next = detectTargetIndex(moving)
     if (next !== overIndexRef.current) { overIndexRef.current = next; setOverIndex(next) }
@@ -254,7 +258,10 @@ export default function ReorderableTaskGrid({
     drag.current = null
     flipRects.current.clear()
     suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS
+    trashHoverRef.current = false
     onZoneChangeRef.current?.(false, null)
+    onTrashHoverRef.current?.(false)
+    setOverTrash(false)
     setDragNum(null)
     setOverIndex(0)
     setMultiCount(0)
@@ -264,16 +271,15 @@ export default function ReorderableTaskGrid({
   const onEnd = () => {
     const d = drag.current
     const zh = zoneRef.current
-    // 좌우 빈 공간 드롭 = 삭제 확인(단일). 카드는 원위치로 되돌리고 부모가 경고 다이얼로그를 연다.
-    if (d && !zh && deleteZoneRef.current && !d.multiNums && onDeleteDropRef.current) {
-      const num = d.num
-      deleteZoneRef.current = false
+    // 휴지통 드롭 — 흡입 없이 부모에 확인 위임(단일·복수). 토큰 중심 = 포인터 좌표.
+    if (d && !zh && trashHoverRef.current && onDeleteDropRef.current) {
+      const nums = d.multiNums ?? [d.num]
+      const at = { ...lastPointer.current }
       finishDrag(false)
       cleanupPending()
-      onDeleteDropRef.current(num)
+      onDeleteDropRef.current(nums, at)
       return
     }
-    deleteZoneRef.current = false
     if (d && zh && onStatusDropRef.current) {
       const nums = d.multiNums ?? [d.num]
       const res = onStatusDropRef.current(nums, zh.zone)
@@ -285,10 +291,9 @@ export default function ReorderableTaskGrid({
           if (el) { el.style.opacity = '0'; el.style.pointerEvents = 'none' }
         }
         const lifted = liftedRef.current
-        const scale = d.scale
         const finalize = res.finalize
         if (lifted) {
-          void suckOverlayInto(lifted, zh.rect, scale).then(finalize)
+          void genieOverlayInto(lifted, zh.rect).then(finalize)
         } else {
           finalize()
         }
@@ -312,7 +317,7 @@ export default function ReorderableTaskGrid({
     if (pending.current || drag.current) return
     if (e.button !== 0) return // 주 버튼만
     if ((e.target as HTMLElement).closest('button, a')) return // 버튼·링크는 드래그 제외
-    if (e.shiftKey || e.detail >= 2) e.preventDefault() // Shift 구간선택·더블클릭 시 텍스트 선택 방지
+    if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
     if (!item || !canDragRef.current(item)) return
     const el = cellRefs.current.get(num)
@@ -335,16 +340,15 @@ export default function ReorderableTaskGrid({
     }
   }
 
-  // 드롭 직후의 클릭(카드 선택/열기) 억제 + Cmd/Ctrl/Shift 복수선택 — 캡처 단계에서 가로챔
+  // 클릭 선택(캡처 단계) — 일반=그 카드만 / Cmd·Ctrl=토글 / Shift=범위. 드롭 직후 클릭은 억제.
   const onClickCapture = (e: React.MouseEvent, num: string) => {
     if (Date.now() < suppressClickUntil.current) { e.preventDefault(); e.stopPropagation(); return }
     if (!onSelectToggleRef.current) return
-    if (!(e.metaKey || e.ctrlKey || e.shiftKey)) return
-    if ((e.target as HTMLElement).closest('button, a')) return
+    if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
     const item = itemsRef.current.find((i) => i.num === num)
     if (!item || !canDragRef.current(item)) return
     e.preventDefault(); e.stopPropagation()
-    onSelectToggleRef.current(num, { shift: e.shiftKey })
+    onSelectToggleRef.current(num, { shift: e.shiftKey, toggle: e.metaKey || e.ctrlKey })
   }
 
   const setCellRef = (num: string) => (el: HTMLElement | null) => {
@@ -388,6 +392,7 @@ export default function ReorderableTaskGrid({
         if (!item) return null
         const selected = !!selectedNums?.has(num)
         const isDragSource = draggingMulti && selected
+        const awaiting = !!awaitingNums?.has(num)
         return (
           <Box
             key={num}
@@ -406,56 +411,39 @@ export default function ReorderableTaskGrid({
               position: 'relative', minWidth: 0, touchAction: 'pan-y',
               '& > *:first-of-type': { height: '100%' },
               borderRadius: 1,
-              ...(selected ? { outline: `2px solid ${alpha(th.palette.accent.blue, 0.9)}`, outlineOffset: '-1px' } : {}),
+              // 선택 = 테두리 + 은은한 배경 워시(체크·배지 없음)
+              ...(selected ? {
+                outline: `2px solid ${alpha(th.palette.accent.blue, 0.9)}`, outlineOffset: '-1px',
+                '&::after': { content: '""', position: 'absolute', inset: 0, borderRadius: 1, bgcolor: alpha(th.palette.accent.blue, 0.09), pointerEvents: 'none', zIndex: 1 },
+              } : {}),
               ...(isDragSource ? { opacity: 0.35 } : {}),
+              ...(awaiting ? { opacity: awaitingHidden ? 0 : 0.32, pointerEvents: 'none' } : {}),
               transition: 'opacity .15s',
             })}
           >
             {renderCard(item)}
-            {selected && (
-              <CheckCircleIcon
-                sx={(th) => ({ position: 'absolute', top: 6, right: 6, fontSize: 20, color: th.palette.accent.blue, pointerEvents: 'none', zIndex: 2, bgcolor: th.palette.background.default, borderRadius: '50%' })}
-              />
-            )}
           </Box>
         )
       })}
 
-      {/* 들어올린 카드(포인터 추적) — position:fixed, 포인터이벤트 없음. 위치·축소는 ref로 명령형 갱신 */}
+      {/* 드래그 토큰(포인터 중앙 추적) — 정사각 50% 고정 스케일, 복수는 스택+N건. 위치는 ref로 명령형 갱신 */}
       {dragNum && dragItem && (
         <Box
           ref={(el: HTMLDivElement | null) => {
             liftedRef.current = el
-            const d = drag.current
-            if (el && d) { el.style.left = `${d.startLeft}px`; el.style.top = `${d.startTop}px` }
+            if (el) { el.style.left = `${lastPointer.current.x}px`; el.style.top = `${lastPointer.current.y}px` }
           }}
           aria-hidden
           sx={{
             position: 'fixed', zIndex: (th) => th.zIndex.modal + 1,
-            width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none',
-            opacity: 0.9, borderRadius: 1, transformOrigin: '50% 50%',
-            '--stack-gap': '10px',
+            width: TOKEN_SIZE, height: TOKEN_SIZE, pointerEvents: 'none',
+            transform: `translate(-50%, -50%) scale(${TOKEN_SCALE})`, transformOrigin: '50% 50%',
+            opacity: 0, animation: 'workTokenIn .14s ease .12s forwards',
+            '@keyframes workTokenIn': { to: { opacity: 0.96 } },
+            '@media (prefers-reduced-motion: reduce)': { animation: 'none', opacity: 0.96 },
           }}
         >
-          {multiCount > 2 && (
-            <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(calc(var(--stack-gap) * 2), calc(var(--stack-gap) * 2))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
-          )}
-          {multiCount > 1 && (
-            <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
-          )}
-          <Box sx={{ position: 'relative', height: '100%', boxShadow: '0 20px 50px rgba(0,0,0,.48)', borderRadius: 1, '& > *': { height: '100%' } }}>
-            {renderCard(dragItem)}
-            {multiCount > 1 && (
-              <Box sx={(th) => ({
-                position: 'absolute', top: -10, right: -10, zIndex: 2,
-                px: 1, py: 0.4, borderRadius: '999px',
-                bgcolor: th.palette.accent.blue, color: '#fff',
-                fontSize: 12.5, fontWeight: 700, lineHeight: 1,
-              })}>
-                {multiCount}건
-              </Box>
-            )}
-          </Box>
+          <DragToken cat={dragItem.cat} title={taskTitle(dragItem)} count={multiCount} danger={overTrash} />
         </Box>
       )}
     </Box>

@@ -12,9 +12,10 @@ export type DropZone = 'inProgress' | 'hold' | 'done' | 'remind'
 export type StatusDropResult = null | { changedNums: string[]; finalize: () => void }
 
 const ZONE_PAD = 10 // 존 판정 여유(px)
-const APPROACH = 240 // 접근 축소 시작 거리(px)
-const SCALE_NEAR = 0.82 // 접근 시 최소 축소
-const SCALE_INSIDE = 0.76 // 존 안 축소
+
+// 드래그 토큰(시안 docs/mockups/work-drag-trash.html) — 2배 크기로 그려 0.5 스케일(고정 축소율 50%, 존 접근·진입해도 불변)
+export const TOKEN_SIZE = 180
+export const TOKEN_SCALE = 0.5
 
 export function zoneRects(): { zone: DropZone; el: HTMLElement; rect: DOMRect }[] {
   return [...document.querySelectorAll<HTMLElement>('[data-dropzone]')].map((el) => ({
@@ -35,24 +36,13 @@ export function zoneAt(x: number, y: number): { zone: DropZone; rect: DOMRect } 
   return null
 }
 
-function nearestZoneDistance(x: number, y: number): number {
-  let best = Infinity
-  for (const z of zoneRects()) {
-    const r = z.rect
-    const dx = Math.max(r.left - x, 0, x - r.right)
-    const dy = Math.max(r.top - y, 0, y - r.bottom)
-    const d = Math.hypot(dx, dy)
-    if (d < best) best = d
-  }
-  return best
-}
-
-/** 이동 중 카드 축소율 — 접근 전 1, 접근할수록 0.82까지, 존 안 0.76 (transform 전용) */
-export function dragScale(x: number, y: number, inside: boolean): number {
-  if (inside) return SCALE_INSIDE
-  const d = nearestZoneDistance(x, y)
-  if (d >= APPROACH) return 1
-  return 1 - (1 - d / APPROACH) * (1 - SCALE_NEAR)
+/** 포인터가 휴지통(드래그 중에만 렌더되는 [data-trashzone]) 위인지 — 있으면 rect */
+export function trashAt(x: number, y: number): DOMRect | null {
+  const el = document.querySelector<HTMLElement>('[data-trashzone]')
+  if (!el) return null
+  const r = el.getBoundingClientRect()
+  const pad = 8
+  return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad ? r : null
 }
 
 export function prefersReducedMotion(): boolean {
@@ -64,45 +54,95 @@ export function prefersReducedMotion(): boolean {
 }
 
 /**
- * 흡입 애니메이션 — 드래그 오버레이의 클론을 목적지 중심으로 이동·축소·페이드(WAAPI, 250~320ms).
- * 원본 오버레이는 즉시 언마운트해도 된다. reduced-motion이면 즉시 resolve.
+ * 카드 → 토큰 모임(모핑) — 드래그 시작 시 원본 카드의 클론이 포인터 위 정사각 토큰
+ * 위치·크기로 좁혀지며 사라진다(시안 gatherCard). 복수는 index 스태거로 살짝 겹쳐 모임.
+ * fire-and-forget: 실패·백그라운드 탭이어도 안전망 타이머로 반드시 클론 제거.
  */
-export function suckOverlayInto(src: HTMLElement, zoneRect: DOMRect, startScale: number): Promise<void> {
-  if (prefersReducedMotion()) return Promise.resolve()
+export function gatherToToken(cardEl: HTMLElement, x: number, y: number, index: number): void {
+  if (prefersReducedMotion()) return
+  try {
+    const r = cardEl.getBoundingClientRect()
+    const clone = cardEl.cloneNode(true) as HTMLElement
+    clone.setAttribute('aria-hidden', 'true')
+    Object.assign(clone.style, {
+      position: 'fixed', left: `${r.left}px`, top: `${r.top}px`,
+      width: `${r.width}px`, height: `${r.height}px`, margin: '0', minHeight: '0',
+      pointerEvents: 'none', zIndex: '1300', transition: 'none', overflow: 'hidden', // 토큰(modal+1)보다 아래 — 시안 레이어링
+
+      transformOrigin: '50% 50%', willChange: 'left, top, width, height, opacity, border-radius',
+      filter: 'drop-shadow(0 10px 18px rgba(0,0,0,.32))',
+    })
+    document.body.appendChild(clone)
+    const side = TOKEN_SIZE * TOKEN_SCALE // 토큰 시각 크기
+    const off = Math.min(index, 2) * 4
+    const duration = 240 + index * 25
+    const anim = clone.animate(
+      [
+        { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, opacity: 0.9, borderRadius: '8px' },
+        { offset: 0.72, left: `${x - side / 2 + off}px`, top: `${y - side / 2 + off}px`, width: `${side}px`, height: `${side}px`, opacity: 0.6, borderRadius: '11px' },
+        { left: `${x - side / 2 + off}px`, top: `${y - side / 2 + off}px`, width: `${side}px`, height: `${side}px`, opacity: 0, borderRadius: '13px' },
+      ],
+      { duration, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'forwards' },
+    )
+    let settled = false
+    const done = () => { if (settled) return; settled = true; try { clone.remove() } catch { /* noop */ } }
+    anim.onfinish = done
+    anim.oncancel = done
+    anim.finished?.then(done, done)
+    window.setTimeout(done, duration + 180)
+  } catch { /* noop */ }
+}
+
+/**
+ * 지니 흡입 — 오버레이(토큰)의 클론이 목적지 중심으로 이동하며 폭이 점차 좁아지고
+ * 투명해지는 지니 형태(clip-path)로 빨려 들어간다(시안 genieInto). 원본은 즉시 숨기고
+ * 언마운트해도 된다. flashEl을 주면 목적지가 밝기 플래시로 반응한다.
+ * 데이터 확정이 애니메이션 이벤트에 볼모잡히지 않도록 안전망 타이머로 반드시 resolve.
+ */
+export function genieOverlayInto(src: HTMLElement, zoneRect: DOMRect, flashEl?: Element | null): Promise<void> {
+  const hideSrc = () => { try { src.style.visibility = 'hidden' } catch { /* noop */ } }
+  if (prefersReducedMotion()) { hideSrc(); return Promise.resolve() }
   return new Promise((resolve) => {
     try {
       const rect = src.getBoundingClientRect() // 시각(스케일 반영) 박스
       const w = src.offsetWidth || rect.width
       const h = src.offsetHeight || rect.height
-      const cxv = rect.left + rect.width / 2
-      const cyv = rect.top + rect.height / 2
+      const s = w > 0 ? rect.width / w : 1 // 현재 시각 스케일(토큰=0.5)
+      const cx = rect.left + rect.width / 2
+      const cy = rect.top + rect.height / 2
       const clone = src.cloneNode(true) as HTMLElement
       clone.setAttribute('aria-hidden', 'true')
       Object.assign(clone.style, {
-        position: 'fixed',
-        left: `${cxv - w / 2}px`,
-        top: `${cyv - h / 2}px`,
-        width: `${w}px`,
-        height: `${h}px`,
-        margin: '0',
-        pointerEvents: 'none',
-        zIndex: '2000',
-        transition: 'none',
-        transform: `scale(${startScale})`,
-        transformOrigin: '50% 50%',
+        position: 'fixed', left: `${cx - w / 2}px`, top: `${cy - h / 2}px`,
+        width: `${w}px`, height: `${h}px`, margin: '0', pointerEvents: 'none',
+        zIndex: '2000', transition: 'none', animation: 'none', opacity: '0.96',
+        transform: `scale(${s})`, transformOrigin: '50% 50%',
+        willChange: 'transform, opacity, clip-path',
       })
       document.body.appendChild(clone)
-      const tx = zoneRect.left + zoneRect.width / 2 - cxv
-      const ty = zoneRect.top + zoneRect.height / 2 - cyv
+      hideSrc()
+      const tx = zoneRect.left + zoneRect.width / 2 - cx
+      const ty = zoneRect.top + zoneRect.height / 2 - cy
+      const upward = ty < 0 // 목적지가 위쪽(KPI 존)인지 아래쪽(휴지통)인지에 따라 좁아지는 방향 결정
+      const wide = upward ? 'polygon(42% 0,58% 0,100% 100%,0 100%)' : 'polygon(0 0,100% 0,58% 100%,42% 100%)'
+      const narrow = upward ? 'polygon(48% 0,52% 0,72% 100%,28% 100%)' : 'polygon(28% 0,72% 0,52% 100%,48% 100%)'
+      const full = 'polygon(0 0,100% 0,100% 100%,0 100%)'
+      const DUR = 470
       const anim = clone.animate(
         [
-          { transform: `translate(0px, 0px) scale(${startScale})`, opacity: 1 },
-          { transform: `translate(${tx}px, ${ty}px) scale(0.15)`, opacity: 0 },
+          { transform: `translate(0px, 0px) scale(${s})`, clipPath: full, opacity: 0.96 },
+          { offset: 0.48, transform: `translate(${tx * 0.5}px, ${ty * 0.45}px) scale(${s * 0.84}, ${s})`, clipPath: wide, opacity: 0.92 },
+          { offset: 0.78, transform: `translate(${tx * 0.82}px, ${ty * 0.8}px) scale(${s * 0.36}, ${s * 0.64})`, clipPath: narrow, opacity: 0.72 },
+          { transform: `translate(${tx}px, ${ty}px) scale(${s * 0.05}, ${s * 0.2})`, clipPath: narrow, opacity: 0 },
         ],
-        { duration: 300, easing: 'cubic-bezier(.5,0,.75,.4)', fill: 'forwards' },
+        { duration: DUR, easing: 'cubic-bezier(.45,0,.7,.25)', fill: 'forwards' },
       )
-      // 데이터 확정이 애니메이션 이벤트에 볼모잡히지 않도록 — 백그라운드 탭 등에서 이벤트가
-      // 지연/누락돼도 안전망 타이머로 반드시 resolve(중복 호출은 settled로 1회 보장).
+      try {
+        flashEl?.animate?.(
+          [{ filter: 'brightness(1)' }, { filter: 'brightness(1.9)' }, { filter: 'brightness(1)' }],
+          { duration: DUR, easing: 'ease-out' },
+        )
+      } catch { /* noop */ }
       let settled = false
       const done = () => {
         if (settled) return
@@ -113,8 +153,9 @@ export function suckOverlayInto(src: HTMLElement, zoneRect: DOMRect, startScale:
       anim.onfinish = done
       anim.oncancel = done
       anim.finished?.then(done, done)
-      window.setTimeout(done, 300 + 180)
+      window.setTimeout(done, DUR + 180)
     } catch {
+      hideSrc()
       resolve()
     }
   })

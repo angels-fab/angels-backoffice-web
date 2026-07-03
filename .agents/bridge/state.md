@@ -66,6 +66,8 @@
 - 2026-06-16: STEP24(업무현황 회의뷰) 구현 + 적대적 리뷰 수정. `npm.cmd run type-check` + `npm.cmd run build` 통과; 라이브 dev(/work): 업무목록 KPI 바로 아래·기본 진행중·아코디언7 모두 펼침·개별 접기(7→6)·전체탭→컴팩트행·Remind 워딩·담당자현황 숨김·'검토' 단축·장소 중복 해소(maxLoc=1)·콘솔0. **미커밋**.
 - 2026-06-16: STEP23·24·상태 어휘 개편 **커밋·자동배포 완료**(f8bfee3). 이후 STEP25(KPI 보류/취소 제거·Check·Remind 토글·카드 재구성) 구현 + type-check/build 통과 + 라이브 dev 검증(서버 재기동 후 콘솔0, KPI 4타일·Remind 토글·압정카드·YYYY-MM-DD) → **커밋·자동배포 완료**. 운영 규칙=자동배포.
 - 2026-06-16: STEP26(KPI '전체' 타일·상태칩행 제거·목록 2열 아코디언·SubLine 들여쓰기 공용화) 구현 + type-check/build 통과 + 라이브 dev(서버 재기동, 1280px) 검증(KPI 5타일 전체가 완료/Check 사이·진행중 2열 펼침/완료 2열 접힘·Remind 담당자 우측·글머리기호 분리·콘솔0) → **커밋·자동배포 완료**.
+- 2026-07-02: 업무현황 UX 8종(스티키 KPI·더블클릭 수정·뷰 인터페이스 통일·진행중 필터/검색·버튼그룹 통일 등) **커밋(03c5792)·자동배포 완료**(Pages 큐 정체로 지연 후 게시 확인).
+- 2026-07-03: 업무카드 선택·드래그 UX 개편(시안 docs/mockups/work-drag-trash.html) — 일반클릭 단일선택/Ctrl토글/Shift범위(앵커 유지)/빈공간 해제, 드래그 시 50% 정사각 토큰 모핑(크기 불변)+복수 모임 스택(N건 배지), 존 드롭 지니(clip-path) 흡입, 하단중앙 휴지통(드래그 중만·활성=색만 변화·DeleteOutline), 삭제 순서=드롭→확인창→동의 시 흡입→삭제(복수 지원 '선택한 업무 N건'), 기존 순서변경·상태변경·Undo/Redo·저장 유지. 신규 `DragToken.tsx`, `dropZones.ts`에 gatherToToken/genieOverlayInto/trashAt(dragScale 폐지).
 
 ## Decisions
 

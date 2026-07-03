@@ -20,6 +20,7 @@ import ChecklistIcon from '@mui/icons-material/Checklist'
 import AddIcon from '@mui/icons-material/Add'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { alpha } from '@mui/material/styles'
 import {
   PageContainer,
@@ -48,7 +49,8 @@ import type { NewTaskForm } from './NewTaskCard'
 import ReorderableTaskGrid from './ReorderableTaskGrid'
 import KpiSection from './KpiSection'
 import StatusDragGrid from './StatusDragGrid'
-import type { DropZone, StatusDropResult, WorkView } from './dropZones'
+import DragToken from './DragToken'
+import { genieOverlayInto, TOKEN_SIZE, TOKEN_SCALE, type DropZone, type StatusDropResult, type WorkView } from './dropZones'
 
 // 통합 Undo/Redo 히스토리 — 순서변경·상태변경을 시간순 하나의 스택으로
 interface FieldSnap { status: string; remind: boolean; chief: boolean; end: string }
@@ -152,21 +154,29 @@ function GroupBtn({ label, icon, selected, disabled, onClick, title }: {
 
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info'; retry?: () => void }
 
+// 삭제 요청(메뉴·휴지통 드롭 공용) — token이 있으면 휴지통 플로: 확인창 → (동의 시) 지니 흡입 → 실제 삭제.
+// phase: confirm=확인창 표시 / suck=흡입 중(확인창 닫힘·카드 흐림 유지) / clearing=삭제 처리(카드 숨김)
+type DeleteReq = {
+  items: WorkItem[]
+  token?: { x: number; y: number; cat?: string; title: string }
+  phase: 'confirm' | 'suck' | 'clearing'
+}
+
 export default function Work() {
   const dispatch = useAppDispatch()
   const { items, error, updatedAt } = useAppSelector((s) => s.work)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<WorkView>('inProgress') // KPI 버튼이 전환하는 메인 목록
-  const [selectedTask, setSelectedTask] = useState<number | null>(null) // 업무카드 단일 선택(테두리)
   const [cat, setCat] = useState('전체')
   const [mgr, setMgr] = useState('전체')
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<WorkItem | null>(null)
   const [writeOpen, setWriteOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<WorkItem | null>(null)
-  const [deleteTarget, setDeleteTarget] = useState<WorkItem | null>(null)
+  const [deleteReq, setDeleteReq] = useState<DeleteReq | null>(null) // 삭제 확인·흡입·처리 라이프사이클
   const [deleting, setDeleting] = useState(false)
+  const [trashHover, setTrashHover] = useState(false) // 드래그 토큰이 휴지통 위
   const [completeTarget, setCompleteTarget] = useState<WorkItem | null>(null)
   const [completing, setCompleting] = useState(false)
   const [remindOnComplete, setRemindOnComplete] = useState(false) // 완료 시 Remind 업무로 설정 체크박스
@@ -200,6 +210,8 @@ export default function Work() {
   const [pulse, setPulse] = useState<{ zone: DropZone; tick: number } | null>(null)
   const zoneClickSuppress = useRef(0) // 드롭 직후 존 클릭(목록 열림) 억제
   const saveChain = useRef<Promise<void>>(Promise.resolve()) // 배치 저장 직렬화(응답 역전 방지)
+  const trashElRef = useRef<HTMLDivElement | null>(null) // 하단 중앙 휴지통(흡입 목적지 rect)
+  const frozenTokenRef = useRef<HTMLDivElement | null>(null) // 휴지통 드롭 후 확인창 동안 고정된 토큰
 
   // 담당자 시트('이름' 열, 헤더 자동 인식)에서 명단 로드 — 새 담당자 추가 시 자동 반영
   useEffect(() => {
@@ -326,7 +338,6 @@ export default function Work() {
     if (composing && composeDirty && !window.confirm('작성 중인 새 업무가 있습니다. 이동하면 입력한 내용이 사라집니다. 이동할까요?')) return
     setView(v)
     setMgr('전체')
-    setSelectedTask(null)
     setComposing(false)
     setEditingId(null)
   }
@@ -334,7 +345,6 @@ export default function Work() {
   // '새 업무' 카드 클릭 → 진행중 뷰에서 인라인 편집 카드 펼침(별도 창 없음)
   const startCompose = () => {
     setView('inProgress')
-    setSelectedTask(null)
     setEditingId(null)
     setComposing(true)
   }
@@ -342,7 +352,6 @@ export default function Work() {
   // 업무카드 수정 아이콘 → 그 자리에서 in-place 편집(팝업 없음)
   const startEdit = (t: WorkItem) => {
     setComposing(false)
-    setSelectedTask(t.id)
     setEditingId(t.id)
   }
 
@@ -504,20 +513,37 @@ export default function Work() {
     }
   }
 
+  // 삭제 동의 — 휴지통 플로(token)는 확인창을 먼저 닫고 토큰이 휴지통으로 지니 흡입된 뒤 실제 삭제.
+  // 메뉴 삭제(token 없음)는 기존처럼 확인창을 유지한 채 바로 삭제. 목록 갱신 완료까지 카드 숨김 유지.
   const confirmDelete = async () => {
-    if (!deleteTarget || deleting) return
+    const req = deleteReq
+    if (!req || deleting || req.phase !== 'confirm') return
     if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
     setDeleting(true)
     try {
-      await deleteWork({ num: deleteTarget.num, author: user, key: authKey })
-      setDeleting(false)
-      setDeleteTarget(null)
-      setPicked(null)
-      showSnack('업무를 삭제했습니다.', 'success')
-      dispatch(loadWorkData())
+      if (req.token) {
+        setDeleteReq({ ...req, phase: 'suck' }) // 확인창 닫힘 — 토큰·휴지통은 유지
+        const rect = trashElRef.current?.getBoundingClientRect()
+        if (frozenTokenRef.current && rect) await genieOverlayInto(frozenTokenRef.current, rect, trashElRef.current)
+        setDeleteReq({ ...req, phase: 'clearing' }) // 흡입 끝 — 카드 화면 제거
+      }
+      let failed = 0
+      for (const it of req.items) {
+        try {
+          await deleteWork({ num: it.num, author: user, key: authKey })
+        } catch { failed++ }
+      }
+      if (picked && req.items.some((i) => i.num === picked.num)) setPicked(null)
+      if (failed > 0) showSnack(`${req.items.length - failed}건 삭제, ${failed}건은 실패했습니다.`, 'error')
+      else showSnack(req.items.length > 1 ? `업무 ${req.items.length}건을 삭제했습니다.` : '업무를 삭제했습니다.', 'success')
+      await dispatch(loadWorkData()) // 새 목록 도착까지 숨김 유지(깜빡임 방지)
     } catch (err) {
-      setDeleting(false)
       showSnack(err instanceof Error ? err.message : '삭제 실패', 'error')
+      dispatch(loadWorkData())
+    } finally {
+      setDeleting(false)
+      setDeleteReq(null)
+      clearSelection()
     }
   }
 
@@ -679,24 +705,29 @@ export default function Work() {
 
   const visibleList = view === 'inProgress' ? inProgressListed : listed
   const visibleRef = useRef(visibleList); visibleRef.current = visibleList
-  // Cmd/Ctrl=개별 토글, Shift=시각적 순서 기준 구간 선택(선택모드 탭 포함)
-  const toggleSelect = (num: string, mods: { shift: boolean }) => {
+  // 일반 클릭=그 카드만 선택(기존 해제) / Cmd·Ctrl=개별 토글 / Shift=앵커(최초 선택)부터 시각적 순서 범위 선택.
+  // Shift 범위는 기존 선택을 대체(+Cmd·Ctrl이면 합집합) — 앵커는 항상 범위에 포함되어 선택에서 빠지지 않는다.
+  const toggleSelect = (num: string, mods: { shift: boolean; toggle: boolean }) => {
     setSelected((prev) => {
-      const next = new Set(prev)
       if (mods.shift && selAnchor.current) {
         const nums = visibleRef.current.map((t) => t.num)
         const a = nums.indexOf(selAnchor.current)
         const b = nums.indexOf(num)
         if (a >= 0 && b >= 0) {
           const [s, e] = a < b ? [a, b] : [b, a]
-          for (let i = s; i <= e; i++) next.add(nums[i])
-          return next
+          const range = nums.slice(s, e + 1)
+          return mods.toggle ? new Set([...prev, ...range]) : new Set(range)
         }
       }
-      if (next.has(num)) next.delete(num)
-      else next.add(num)
+      if (mods.toggle) {
+        const next = new Set(prev)
+        if (next.has(num)) next.delete(num)
+        else next.add(num)
+        selAnchor.current = num
+        return next
+      }
       selAnchor.current = num
-      return next
+      return new Set([num]) // 일반 클릭 — 단일 선택
     })
   }
   // 모바일 롱프레스 — 선택모드 진입 + 해당 카드 선택
@@ -705,6 +736,22 @@ export default function Work() {
     selAnchor.current = num
     setSelected((prev) => { const n = new Set(prev); n.add(num); return n })
   }
+  // 선택 안 된 카드를 드래그로 잡음 — 그 카드만 선택(기존 복수선택 해제)
+  const selectOnly = useCallback((num: string) => {
+    selAnchor.current = num
+    setSelected(new Set([num]))
+    setSelMode(false)
+  }, [])
+  // 카드 주변 빈 공간 클릭 = 전체 선택 해제(카드·버튼·입력·드롭존·팝업 제외 — 카드 클릭은 캡처에서 전파 중단됨)
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && t.closest('.reorder-cell, .sdg-cell, button, a, input, textarea, [data-dropzone], [data-trashzone], .MuiModal-root, .MuiPopover-root')) return
+      clearSelection()
+    }
+    document.addEventListener('click', onDocClick)
+    return () => document.removeEventListener('click', onDocClick)
+  }, [clearSelection])
 
   // ── KPI 드롭존 ──
   const onZoneChange = useCallback((dragging: boolean, zone: DropZone | null) => {
@@ -768,12 +815,26 @@ export default function Work() {
     const t = items.find((x) => x.num === num)
     if (t && editingId !== t.id) startEdit(t)
   }
-  // 카드 영역 좌우 빈 공간 드롭 → 삭제 확인 다이얼로그(기존 경고 재사용)
-  const handleDeleteDrop = (num: string) => {
+  // 휴지통 드롭(단일·복수) — 흡입 없이 확인창부터. 토큰은 드롭 지점에 고정 표시, 취소 시 원상 복원.
+  const handleDeleteDrop = (nums: string[], at: { x: number; y: number }) => {
     if (!isAdmin || !user || !authKey) return
-    const t = items.find((x) => x.num === num)
-    if (t) setDeleteTarget(t)
+    const targets = nums.map((n) => items.find((x) => x.num === n)).filter((t): t is WorkItem => !!t)
+    if (targets.length === 0) return
+    setTrashHover(false)
+    setDeleteReq({
+      items: targets,
+      token: { x: at.x, y: at.y, cat: targets[0].cat, title: taskTitle(targets[0]) },
+      phase: 'confirm',
+    })
   }
+  // 카드 메뉴·상세 Drawer의 삭제 — 확인창만(토큰·흡입 없음)
+  const requestDelete = (t: WorkItem) => setDeleteReq({ items: [t], phase: 'confirm' })
+  // 삭제 확인 대기 카드(휴지통 플로만) — 확인창 동안 흐림, 흡입 후 숨김
+  const awaitingNums = useMemo(
+    () => (deleteReq?.token ? new Set(deleteReq.items.map((i) => i.num)) : undefined),
+    [deleteReq],
+  )
+  const awaitingHidden = deleteReq?.phase === 'clearing'
 
   // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
   useEffect(() => {
@@ -810,12 +871,10 @@ export default function Work() {
         key={t.id}
         t={t}
         tone={tone}
-        selected={selectedTask === t.id}
-        onSelect={() => setSelectedTask(t.id)}
         isAdmin={isAdmin}
         onEdit={startEdit}
         onComplete={(it) => setCompleteTarget(it)}
-        onDelete={(it) => setDeleteTarget(it)}
+        onDelete={requestDelete}
       />
     )
 
@@ -924,11 +983,14 @@ export default function Work() {
               renderCard={(t) => renderTask(t, 'green')}
               selectedNums={selected}
               onSelectToggle={toggleSelect}
-              onDragStartCard={() => clearSelection()}
+              onDragStartCard={selectOnly}
               onStatusDrop={handleStatusDrop}
               onZoneChange={onZoneChange}
               onCardDoubleClick={handleCardDoubleClick}
               onDeleteDrop={handleDeleteDrop}
+              onTrashHover={setTrashHover}
+              awaitingNums={awaitingNums}
+              awaitingHidden={awaitingHidden}
             />
           )
         ) : listed.length === 0 ? (
@@ -942,11 +1004,14 @@ export default function Work() {
             selMode={selMode}
             onSelectToggle={toggleSelect}
             onLongPress={enterSelMode}
-            onDragStartCard={() => clearSelection()}
+            onDragStartCard={selectOnly}
             onStatusDrop={handleStatusDrop}
             onZoneChange={onZoneChange}
             onCardDoubleClick={handleCardDoubleClick}
             onDeleteDrop={handleDeleteDrop}
+            onTrashHover={setTrashHover}
+            awaitingNums={awaitingNums}
+            awaitingHidden={awaitingHidden}
           />
         )}
       </ContentSection>
@@ -984,7 +1049,7 @@ export default function Work() {
         onClose={() => setPicked(null)}
         isAdmin={isAdmin}
         onEdit={(t) => setEditTarget(t)}
-        onDelete={(t) => setDeleteTarget(t)}
+        onDelete={requestDelete}
       />
 
       {isAdmin && (
@@ -996,16 +1061,20 @@ export default function Work() {
         />
       )}
 
-      {/* 삭제 확인 Dialog */}
-      <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
-        <DialogTitle>정말 삭제하시겠습니까?</DialogTitle>
+      {/* 삭제 확인 Dialog — 휴지통 드롭은 흡입 전에 이 확인창부터. 취소 시 토큰·카드 원상 복원 */}
+      <Dialog open={deleteReq?.phase === 'confirm'} onClose={() => !deleting && setDeleteReq(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
+        <DialogTitle>
+          {deleteReq && deleteReq.items.length > 1 ? `선택한 업무 ${deleteReq.items.length}건을 삭제할까요?` : '정말 삭제하시겠습니까?'}
+        </DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ color: 'text.secondary' }}>
-            「{deleteTarget ? taskTitle(deleteTarget) : ''}」 업무를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+            {deleteReq && deleteReq.items.length > 1
+              ? '삭제를 누르면 선택한 카드가 휴지통으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.'
+              : `「${deleteReq ? taskTitle(deleteReq.items[0]) : ''}」 업무를 삭제합니다. 이 작업은 되돌릴 수 없습니다.`}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button onClick={() => setDeleteReq(null)} disabled={deleting} sx={{ color: 'text.secondary' }}>취소</Button>
           <Button color="error" variant="contained" onClick={confirmDelete} disabled={deleting}>
             {deleting ? '삭제 중…' : '삭제'}
           </Button>
@@ -1091,6 +1160,61 @@ export default function Work() {
           {snack.msg}
         </Alert>
       </Snackbar>
+
+      {/* 휴지통 — 드래그 중·삭제 확인 동안만 하단 중앙 고정. 활성화는 색·밝기만(위치·크기 불변) */}
+      {isAdmin && (dragUi.dragging || (deleteReq?.token && deleteReq.phase !== 'clearing')) && (
+        <Box
+          data-trashzone
+          ref={trashElRef}
+          aria-hidden
+          sx={(th) => {
+            const active = trashHover || (!!deleteReq?.token && deleteReq.phase !== 'clearing')
+            return {
+              position: 'fixed', zIndex: th.zIndex.modal - 1,
+              left: 0, right: 0, mx: 'auto', bottom: { xs: 86, md: 28 },
+              width: 'min(244px, calc(100vw - 32px))', height: 64,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.25,
+              borderRadius: '17px',
+              border: active ? '1.5px solid #f07a74' : `1.5px dashed ${alpha(th.palette.error.main, 0.56)}`,
+              bgcolor: active ? 'rgba(148,43,43,.82)' : 'rgba(26,21,25,.94)',
+              color: active ? '#fff' : '#ef9995',
+              backdropFilter: 'blur(14px)',
+              boxShadow: active
+                ? '0 0 0 7px rgba(230,103,97,.12), 0 18px 50px rgba(0,0,0,.5)'
+                : '0 18px 50px rgba(0,0,0,.42)',
+              transition: 'background-color .14s, border-color .14s, box-shadow .14s, color .14s',
+              animation: 'workTrashIn .18s ease both',
+              '@keyframes workTrashIn': { from: { opacity: 0, transform: 'translateY(24px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+              '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+            }
+          }}
+        >
+          <DeleteOutlineIcon sx={{ fontSize: 27 }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+            <Box sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>휴지통으로 이동</Box>
+            <Box sx={{ fontSize: 10.5, opacity: 0.75, lineHeight: 1.2 }}>
+              {trashHover || deleteReq?.token ? '놓아서 삭제 확인' : '여기에 놓으면 삭제 확인'}
+            </Box>
+          </Box>
+        </Box>
+      )}
+
+      {/* 휴지통 드롭 후 고정 토큰 — 확인창 동안 드롭 지점에 유지, 동의 시 지니 흡입의 원본 */}
+      {deleteReq?.token && deleteReq.phase !== 'clearing' && (
+        <Box
+          ref={frozenTokenRef}
+          aria-hidden
+          sx={(th) => ({
+            position: 'fixed', zIndex: th.zIndex.modal - 1,
+            left: deleteReq.token!.x, top: deleteReq.token!.y,
+            width: TOKEN_SIZE, height: TOKEN_SIZE, pointerEvents: 'none',
+            transform: `translate(-50%, -50%) scale(${TOKEN_SCALE})`, transformOrigin: '50% 50%',
+            opacity: 0.96,
+          })}
+        >
+          <DragToken cat={deleteReq.token.cat} title={deleteReq.token.title} count={deleteReq.items.length} danger />
+        </Box>
+      )}
 
       {/* 순서 저장 실패 — 이때만 안내 + 재시도(정상 저장은 무표시) */}
       <Snackbar open={orderError} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
