@@ -45,31 +45,35 @@ export function trashAt(x: number, y: number): DOMRect | null {
 
 const smoothstep = (t: number) => t * t * (3 - 2 * t)
 
+/** 대상 rect 안쪽(상하좌우 12px 여백)에 비율 유지로 맞는 축소율 — 실측 크기 계산 */
+export function fitScaleInto(rect: DOMRect, cardW: number, cardH: number): number {
+  if (cardW <= 0 || cardH <= 0) return 1
+  return Math.max(
+    Math.min((rect.width - FIT_INSET * 2) / cardW, (rect.height - FIT_INSET * 2) / cardH, 1),
+    0.05,
+  )
+}
+
 /**
- * 드래그 카드 축소율 — 원래 직사각형 비율·크기를 유지하다가, 가장 가까운 대상(KPI 존·휴지통)에
- * 220px 이내로 접근하면 거리 비례(smoothstep 보간)로 부드럽게 축소. 대상 내부에 완전히 들어가면
- * 그 대상 안쪽(상하좌우 12px 여백)에 비율 유지로 맞는 크기. 멀어지면 같은 곡선으로 복원.
- * 고정 scale이 아니라 카드·대상의 실측 크기로 계산(KPI·휴지통 동일 규칙).
+ * 드래그 카드 축소율 — 원래 직사각형 비율·크기를 유지하다가, 가장 가까운 **KPI 존**에
+ * 220px 이내로 접근하면 거리 비례(smoothstep 보간)로 부드럽게 축소. 존 내부에 완전히
+ * 들어가면 존 안쪽(상하좌우 12px 여백)에 비율 유지로 맞는 크기. 멀어지면 같은 곡선으로 복원.
+ * ※ 휴지통은 거리 기반 축소 대상이 아님 — 실제 드롭영역에 닿았을 때만 그리드가
+ *   fitScaleInto(휴지통 rect)로 축소(CSS transition이 진입/이탈을 부드럽게 이어줌).
  */
 export function dragShrinkScale(x: number, y: number, cardW: number, cardH: number): number {
-  const rects: DOMRect[] = zoneRects().map((z) => z.rect)
-  const trashEl = document.querySelector<HTMLElement>('[data-trashzone]')
-  if (trashEl) rects.push(trashEl.getBoundingClientRect())
   let best: { d: number; rect: DOMRect } | null = null
-  for (const r of rects) {
+  for (const z of zoneRects()) {
+    const r = z.rect
     const dx = Math.max(r.left - x, 0, x - r.right)
     const dy = Math.max(r.top - y, 0, y - r.bottom)
     const d = Math.hypot(dx, dy) // 내부면 0
     if (!best || d < best.d) best = { d, rect: r }
   }
   if (!best || best.d >= APPROACH || cardW <= 0 || cardH <= 0) return 1
-  const fit = Math.min(
-    (best.rect.width - FIT_INSET * 2) / cardW,
-    (best.rect.height - FIT_INSET * 2) / cardH,
-    1,
-  )
+  const fit = fitScaleInto(best.rect, cardW, cardH)
   const t = smoothstep(1 - best.d / APPROACH)
-  return 1 + (Math.max(fit, 0.05) - 1) * t
+  return 1 + (fit - 1) * t
 }
 
 export function prefersReducedMotion(): boolean {

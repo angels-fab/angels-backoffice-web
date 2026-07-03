@@ -225,13 +225,15 @@ export default function KpiSection({
                   transform: 'translateX(-50%)',
                   height: { xs: 28, md: 30 }, px: '11px',
                   border: '1px solid rgba(169,138,224,.42)', borderRadius: '999px',
-                  bgcolor: view === 'check' ? 'rgba(169,138,224,.22)' : '#1b202b',
+                  // 배경은 항상 완전 불투명(반투명 rgba 금지) — 뒤 KPI 테두리·구분선이 비치지 않게
+                  // 기본 표면색(#1b202b)에 보라(#a98ae0)를 섞은 불투명 혼합색: 호버 ≈18%, 선택 ≈26%
+                  bgcolor: view === 'check' ? '#413a5a' : '#1b202b',
                   color: '#c5adf0',
                   display: 'flex', alignItems: 'center', gap: '7px',
                   fontSize: { xs: 10.5, md: 11 }, fontWeight: 800, whiteSpace: 'nowrap', cursor: 'pointer',
                   boxShadow: '0 5px 14px rgba(0,0,0,.28)',
                   transition: 'background-color .14s ease, border-color .14s ease, transform .14s ease',
-                  '&:hover': { bgcolor: 'rgba(169,138,224,.18)', borderColor: 'rgba(169,138,224,.65)', transform: 'translateX(-50%) translateY(-1px)' },
+                  '&:hover': { bgcolor: view === 'check' ? '#4a4266' : '#342e4a', borderColor: 'rgba(169,138,224,.65)', transform: 'translateX(-50%) translateY(-1px)' },
                   '&:focus-visible': { outline: '2px solid #bfa7ef', outlineOffset: '2px' },
                 }}
               >

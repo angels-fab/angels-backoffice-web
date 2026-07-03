@@ -12,7 +12,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
-import FormControlLabel from '@mui/material/FormControlLabel'
+import Drawer from '@mui/material/Drawer'
 import Checkbox from '@mui/material/Checkbox'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import AddIcon from '@mui/icons-material/Add'
@@ -38,8 +38,8 @@ import {
   EmptyState,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { loadWorkData, patchWorkItems } from '@/store/slices/workSlice'
-import { createWork, deleteWork, updateWork, fetchAuthors, updateWorkOrder, beaconWorkOrder, updateWorkStatuses, type WorkOrderEntry, type WorkStatusChange } from '@/api/sheets'
+import { loadWorkData, patchWorkItems, softDeleteWorkItems, restoreWorkItems } from '@/store/slices/workSlice'
+import { createWork, deleteWork, restoreWorks, updateWork, fetchAuthors, updateWorkOrder, beaconWorkOrder, updateWorkStatuses, type WorkOrderEntry, type WorkStatusChange } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
@@ -49,6 +49,7 @@ import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import WorkWrite from './WorkWrite'
 import NewTaskCard from './NewTaskCard'
+import { docHasMarks, fmtSignature } from './richContent'
 import type { NewTaskForm } from './NewTaskCard'
 import ReorderableTaskGrid from './ReorderableTaskGrid'
 import KpiSection from './KpiSection'
@@ -84,6 +85,7 @@ function toForm(t: WorkItem): NewTaskForm {
     cat: t.cat || '',
     title: lines[0] || '',
     body: dashToBullet(lines.slice(1).join('\n')),
+    bodyFmt: t.contentFmt || '',
     mgr: t.mgr || '',
     start: t.start || '',
     plan: t.plan || '',
@@ -93,6 +95,19 @@ function toForm(t: WorkItem): NewTaskForm {
     link: t.link || '',
     chief: !!t.chief,
   }
+}
+
+/**
+ * 저장할 '업무내용서식' 값 결정. (기존 행 강제 마이그레이션 없음)
+ *  - 'error': 본문은 있는데 서식 직렬화가 실패 → 저장 중단(일반 텍스트도 저장 안 함).
+ *  - { value }: 서식 저장(mark 있음) 또는 서식 제거 반영(mark 없음+기존 서식 있었음). value=''이면 '서식 없음' 문서.
+ *  - {}: 미전달 → 백엔드가 기존 서식값 보존(빈칸 강제 채움 안 함).
+ */
+function contentFmtForSave(form: NewTaskForm, hadFmt: boolean): { value?: string } | 'error' {
+  const hasText = !!form.body.replace(/\s+$/, '')
+  if (hasText && !form.bodyFmt) return 'error'
+  if (docHasMarks(form.bodyFmt) || hadFmt) return { value: form.bodyFmt || '' }
+  return {}
 }
 
 // '+' 새 업무 버튼(42×28) — 제목행 건수 옆, 진행중 뷰에서만. 누르면 카드 그리드 첫 칸에 인라인 작성란.
@@ -174,7 +189,7 @@ type DeleteReq = {
 
 export default function Work() {
   const dispatch = useAppDispatch()
-  const { items, error, updatedAt } = useAppSelector((s) => s.work)
+  const { items, trashed, error, updatedAt } = useAppSelector((s) => s.work)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<WorkView>('inProgress') // KPI 버튼이 전환하는 메인 목록
@@ -188,12 +203,9 @@ export default function Work() {
   const [deleteReq, setDeleteReq] = useState<DeleteReq | null>(null) // 삭제 확인·흡입·처리 라이프사이클
   const [deleting, setDeleting] = useState(false)
   const [trashHover, setTrashHover] = useState(false) // 드래그 토큰이 휴지통 위
-  const [completeTarget, setCompleteTarget] = useState<WorkItem | null>(null)
-  const [completing, setCompleting] = useState(false)
-  const [remindOnComplete, setRemindOnComplete] = useState(false) // 완료 시 Remind 업무로 설정 체크박스
-  const [revertTarget, setRevertTarget] = useState<WorkItem | null>(null) // 진행중 되돌리기 확인 대상
-  const [reverting, setReverting] = useState(false)
-  const [revertChief, setRevertChief] = useState(false) // 되돌릴 때 Check 여부
+  const [undoSnack, setUndoSnack] = useState<{ nums: string[]; count: number } | null>(null) // 삭제 직후 10초 실행 취소
+  const [trashOpen, setTrashOpen] = useState(false) // 휴지통 드로어
+  const [trashSel, setTrashSel] = useState<Set<string>>(new Set()) // 휴지통 복수선택(선택 복원)
   const [composing, setComposing] = useState(false) // 새 업무 카드 → 인라인 편집 모드
   const [composeDirty, setComposeDirty] = useState(false) // 인라인 편집 중 입력값 존재 여부
   const [savingNew, setSavingNew] = useState(false)
@@ -302,33 +314,27 @@ export default function Work() {
     [q],
   )
 
-  // 필터 후보 — 현재 상태 뷰 + 상대 필터 + 검색 조건에서 1건 이상만 노출(0건 숨김·조건 변경 시 자동 복귀).
-  // 자기 자신 필터는 무시하고 집계(선택 중에도 형제 후보 유지 — 업무일정과 동일).
+  // 필터 후보 — 전체(비삭제) 업무 기준으로 고정: 검색·필터 조작 중 칩의 존재·위치·순서가 바뀌지 않는다.
+  // 건수는 '현재 선택된 KPI 상태의 전체 업무'(pool) 기준 — 담당자·구분·검색어와 무관, KPI 변경 시에만 재계산.
+  // 0건도 숨기지 않고 `장비 0`처럼 표시. 삭제일시가 있는 업무는 items에서 이미 제외되어 집계에 안 들어감.
   const presentCats = useMemo(
-    () => [...new Set(pool.filter((t) => matchMgr(t) && matchQuery(t)).map((t) => t.cat).filter(Boolean))]
-      .sort((a, b) => workCatRank(a) - workCatRank(b)),
-    [pool, matchMgr, matchQuery],
+    () => [...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b)),
+    [items],
   )
   const presentMgrs = useMemo(
-    () => [...new Set(pool.filter((t) => matchCat(t) && matchQuery(t)).map((t) => t.mgr).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b, 'ko')),
-    [pool, matchCat, matchQuery],
+    () => [...new Set(items.map((t) => t.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')),
+    [items],
   )
-  // 조건 변화로 사라진 후보에 대한 선택 잔존 제거(보이지 않는 활성 필터 방지)
-  useEffect(() => {
-    setSelCats((prev) => {
-      const avail = new Set(presentCats.map((c) => normCat(c)))
-      const next = new Set([...prev].filter((c) => avail.has(c)))
-      return next.size === prev.size ? prev : next
-    })
-  }, [presentCats])
-  useEffect(() => {
-    setSelMgrs((prev) => {
-      const avail = new Set(presentMgrs)
-      const next = new Set([...prev].filter((m) => avail.has(m)))
-      return next.size === prev.size ? prev : next
-    })
-  }, [presentMgrs])
+  const catCounts = useMemo(() => {
+    const m: Record<string, number> = {}
+    for (const t of pool) { const k = normCat(t.cat); if (k) m[k] = (m[k] || 0) + 1 }
+    return m
+  }, [pool])
+  const mgrCounts = useMemo(() => {
+    const m: Record<string, number> = {}
+    for (const t of pool) { const k = t.mgr || ''; if (k) m[k] = (m[k] || 0) + 1 }
+    return m
+  }, [pool])
 
   // 표시 전용 정렬 적용(안정 정렬 — 동률은 기존 순서 유지). 시트·포털정렬순서 미변경.
   const applyListSort = useCallback((arr: WorkItem[]) => {
@@ -387,7 +393,6 @@ export default function Work() {
     // 인라인 작성 중 내용이 있으면 뷰 전환으로 사라지기 전에 확인
     if (composing && composeDirty && !window.confirm('작성 중인 새 업무가 있습니다. 이동하면 입력한 내용이 사라집니다. 이동할까요?')) return
     setView(v)
-    setSelMgrs(new Set()) // 담당자 필터는 상태 뷰별 후보가 달라 전환 시 초기화
     setComposing(false)
     setEditingId(null)
   }
@@ -426,6 +431,8 @@ export default function Work() {
     // 화면의 글머리 '• '는 시트엔 dash '- '로 저장(관례 유지)
     const bodyText = bulletToDash(form.body.replace(/\s+$/, ''))
     const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
+    const cf = contentFmtForSave(form, false)
+    if (cf === 'error') return showSnack('본문 서식 처리에 실패했습니다. 다시 시도해주세요.', 'error')
     setSavingNew(true)
     try {
       await createWork({
@@ -435,6 +442,7 @@ export default function Work() {
         time: form.time.trim(), loc: form.loc.trim(), mgr: form.mgr.trim(),
         status: '진행중', link: form.link.trim(),
         remind: false, chief: form.chief,
+        contentFmt: cf.value,
       })
       setSavingNew(false)
       setComposing(false)
@@ -457,6 +465,7 @@ export default function Work() {
     const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
     return (
       normTask(task) !== normTask(item.task) ||
+      fmtSignature(form.bodyFmt) !== fmtSignature(item.contentFmt) ||
       form.cat.trim() !== (item.cat || '') ||
       form.dept.trim() !== (item.dept || '') ||
       form.start !== (item.start || '') ||
@@ -484,6 +493,9 @@ export default function Work() {
     const titleLine = form.title.trim()
     const bodyText = bulletToDash(form.body.replace(/\s+$/, ''))
     const task = bodyText ? `${titleLine}\n${bodyText}` : titleLine
+    const hadFmt = !!(item.contentFmt && item.contentFmt.trim())
+    const cf = contentFmtForSave(form, hadFmt)
+    if (cf === 'error') return showSnack('본문 서식 처리에 실패했습니다. 다시 시도해주세요.', 'error')
     setSavingEdit(true)
     try {
       await updateWork({
@@ -492,6 +504,7 @@ export default function Work() {
         dept: form.dept.trim(), mat: item.mat, start: form.start, plan: form.plan,
         time: form.time.trim(), loc: form.loc.trim(), mgr: form.mgr.trim(),
         link: form.link.trim(), remind: item.remind, chief: form.chief,
+        contentFmt: cf.value,
       })
       setSavingEdit(false)
       setPendingEdit(null)
@@ -504,95 +517,68 @@ export default function Work() {
     }
   }
 
-  // 완료 다이얼로그가 열릴 때 Remind 체크박스를 현재 업무의 Remind 상태로 초기화
-  useEffect(() => {
-    setRemindOnComplete(completeTarget?.remind ?? false)
-  }, [completeTarget])
-
-  // 완료 아이콘 → 확인 Dialog 후 상태를 '완료'로 변경(시트 반영). 체크박스 값으로 Remind도 함께 반영.
-  const confirmComplete = async () => {
-    if (!completeTarget || completing) return
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
-    const item = completeTarget
-    setCompleting(true)
-    try {
-      await updateWork({
-        num: item.num, author: user, key: authKey,
-        cat: item.cat, task: item.task, status: '완료',
-        dept: item.dept, mat: item.mat, start: item.start, plan: item.plan,
-        time: item.time, loc: item.loc, mgr: item.mgr, link: item.link,
-        remind: remindOnComplete, chief: item.chief,
-      })
-      setCompleting(false)
-      setCompleteTarget(null)
-      showSnack('완료로 변경했습니다.', 'success')
-      dispatch(loadWorkData())
-    } catch (err) {
-      setCompleting(false)
-      showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
-    }
-  }
-
-  // 되돌리기 확인 다이얼로그가 열릴 때 Check 체크박스를 현재 업무의 Check 상태로 초기화
-  useEffect(() => {
-    setRevertChief(revertTarget?.chief ?? false)
-  }, [revertTarget])
-
-  // 진행중으로 되돌리기(확인 후) — 상태 '진행중' + Remind 해제(진행중 목록 편입) + Check는 체크박스 값.
-  const confirmRevert = async () => {
-    if (!revertTarget || reverting) return
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
-    const item = revertTarget
-    setReverting(true)
-    try {
-      await updateWork({
-        num: item.num, author: user, key: authKey,
-        cat: item.cat, task: item.task, status: '진행중',
-        dept: item.dept, mat: item.mat, start: item.start, plan: item.plan,
-        time: item.time, loc: item.loc, mgr: item.mgr, link: item.link,
-        remind: false, chief: revertChief,
-      })
-      setReverting(false)
-      setRevertTarget(null)
-      showSnack('진행중 업무로 되돌렸습니다.', 'success')
-      dispatch(loadWorkData())
-    } catch (err) {
-      setReverting(false)
-      showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
-    }
-  }
-
-  // 삭제 동의 — 휴지통 플로(token)는 확인창을 먼저 닫고 토큰이 휴지통으로 지니 흡입된 뒤 실제 삭제.
-  // 메뉴 삭제(token 없음)는 기존처럼 확인창을 유지한 채 바로 삭제. 목록 갱신 완료까지 카드 숨김 유지.
+  // 삭제 동의 — 소프트 삭제: 시트 행을 지우지 않고 '삭제일시' 기록. 휴지통 플로(token)는 확인창을
+  // 먼저 닫고 카드가 휴지통으로 지니 흡입된 뒤, 화면에서 즉시 제거(낙관) → API 기록.
+  // 실패 시 화면 상태 롤백 + 오류 안내. 성공 시 10초 '실행 취소' 스낵바.
   const confirmDelete = async () => {
     const req = deleteReq
     if (!req || deleting || req.phase !== 'confirm') return
     if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
     setDeleting(true)
+    const nums = req.items.map((t) => t.num)
     try {
       if (req.token) {
-        setDeleteReq({ ...req, phase: 'suck' }) // 확인창 닫힘 — 토큰·휴지통은 유지
+        setDeleteReq({ ...req, phase: 'suck' }) // 확인창 닫힘 — 고정 카드·휴지통은 유지
         const rect = trashElRef.current?.getBoundingClientRect()
         if (frozenTokenRef.current && rect) await genieOverlayInto(frozenTokenRef.current, rect, trashElRef.current)
-        setDeleteReq({ ...req, phase: 'clearing' }) // 흡입 끝 — 카드 화면 제거
       }
-      let failed = 0
-      for (const it of req.items) {
-        try {
-          await deleteWork({ num: it.num, author: user, key: authKey })
-        } catch { failed++ }
-      }
+      // 낙관 반영 — 화면에서 즉시 제거(items → 휴지통). 스탬프는 백엔드와 같은 형식(KST yyyy-MM-dd HH:mm)
+      const stamp = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 16)
+      dispatch(softDeleteWorkItems({ nums, deletedAt: stamp }))
       if (picked && req.items.some((i) => i.num === picked.num)) setPicked(null)
-      if (failed > 0) showSnack(`${req.items.length - failed}건 삭제, ${failed}건은 실패했습니다.`, 'error')
-      else showSnack(req.items.length > 1 ? `업무 ${req.items.length}건을 삭제했습니다.` : '업무를 삭제했습니다.', 'success')
-      await dispatch(loadWorkData()) // 새 목록 도착까지 숨김 유지(깜빡임 방지)
-    } catch (err) {
-      showSnack(err instanceof Error ? err.message : '삭제 실패', 'error')
-      dispatch(loadWorkData())
+      setDeleteReq(null)
+      clearSelection()
+      try {
+        await deleteWork({ nums, author: user, key: authKey })
+        setUndoSnack({ nums, count: nums.length })
+      } catch (err) {
+        // 기록 실패 — 화면 롤백(휴지통 → 목록) + 오류 안내
+        dispatch(restoreWorkItems({ nums }))
+        showSnack(err instanceof Error ? err.message : '삭제 기록에 실패해 되돌렸습니다.', 'error')
+      }
     } finally {
       setDeleting(false)
       setDeleteReq(null)
-      clearSelection()
+    }
+  }
+
+  // 삭제 실행 취소(10초 스낵바) — 삭제일시를 비우고 원래 상태로 복원. 실패 시 휴지통에 유지.
+  const undoDelete = async (nums: string[]) => {
+    setUndoSnack(null)
+    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    try {
+      const { orders } = await restoreWorks({ nums, author: user, key: authKey })
+      dispatch(restoreWorkItems({ nums, orders }))
+      showSnack('삭제를 취소했습니다.', 'success')
+    } catch (err) {
+      showSnack(err instanceof Error ? err.message : '실행 취소에 실패했습니다. 휴지통에서 복원할 수 있습니다.', 'error')
+    }
+  }
+
+  // 휴지통 복원(개별·선택) — 상태·Remind·Check 유지, 진행중은 수동정렬 맨 아래(백엔드가 순서 부여)
+  const [restoring, setRestoring] = useState(false)
+  const restoreFromTrash = async (nums: string[]) => {
+    if (!user || !authKey || restoring || nums.length === 0) return
+    setRestoring(true)
+    try {
+      const { orders } = await restoreWorks({ nums, author: user, key: authKey })
+      dispatch(restoreWorkItems({ nums, orders }))
+      setTrashSel(new Set())
+      showSnack(nums.length > 1 ? `업무 ${nums.length}건을 복원했습니다.` : '업무를 복원했습니다.', 'success')
+    } catch (err) {
+      showSnack(err instanceof Error ? err.message : '복원에 실패했습니다.', 'error')
+    } finally {
+      setRestoring(false)
     }
   }
 
@@ -941,15 +927,7 @@ export default function Work() {
         onSave={(form) => handleSaveEdit(t, form)}
       />
     ) : (
-      <TaskAccordion
-        key={t.id}
-        t={t}
-        tone={tone}
-        isAdmin={isAdmin}
-        onEdit={startEdit}
-        onComplete={(it) => setCompleteTarget(it)}
-        onDelete={requestDelete}
-      />
+      <TaskAccordion key={t.id} t={t} tone={tone} />
     )
 
   return (
@@ -1018,7 +996,7 @@ export default function Work() {
                 <StatusChip
                   key={c}
                   status="neutral"
-                  label={c}
+                  label={`${c} ${catCounts[normCat(c)] || 0}`}
                   selected={selCats.has(normCat(c))}
                   onClick={(e) => toggleCat(normCat(c), e.shiftKey)}
                   onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
@@ -1035,7 +1013,7 @@ export default function Work() {
                   <StatusChip
                     key={m}
                     status="info"
-                    label={m}
+                    label={`${m} ${mgrCounts[m] || 0}`}
                     selected={selMgrs.has(m)}
                     onClick={(e) => toggleMgr(m, e.shiftKey)}
                     onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
@@ -1051,6 +1029,25 @@ export default function Work() {
                 <StatusChip status="info" label={`${selected.size}건 선택`} />
                 <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
               </>
+            )}
+            {isAdmin && (
+              <ButtonBase
+                aria-label={`휴지통 열기 (삭제 업무 ${trashed.length}건)`}
+                disabled={trashed.length === 0}
+                onClick={() => setTrashOpen(true)}
+                sx={(th) => ({
+                  height: 30, px: 1.25, gap: 0.5, flexShrink: 0,
+                  border: '1px solid', borderColor: 'divider', borderRadius: '8px',
+                  bgcolor: alpha(th.palette.text.primary, 0.03),
+                  color: trashed.length > 0 ? th.palette.accent.red : 'text.disabled',
+                  fontSize: 12.5, fontWeight: 600, lineHeight: 1,
+                  '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.06) },
+                  '&.Mui-disabled': { color: 'text.disabled' },
+                })}
+              >
+                <DeleteOutlineIcon sx={{ fontSize: 15 }} />
+                휴지통 {trashed.length}
+              </ButtonBase>
             )}
             {isAdmin && (
               <BtnGroup>
@@ -1184,48 +1181,6 @@ export default function Work() {
         </DialogActions>
       </Dialog>
 
-      {/* 완료 확인 Dialog */}
-      <Dialog open={!!completeTarget} onClose={() => !completing && setCompleteTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
-        <DialogTitle>업무를 완료하시겠습니까?</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: 'text.secondary' }}>
-            「{completeTarget ? taskTitle(completeTarget) : ''}」 업무를 완료 상태로 변경합니다.
-          </DialogContentText>
-          <FormControlLabel
-            sx={{ mt: 1.5 }}
-            control={<Checkbox checked={remindOnComplete} onChange={(e) => setRemindOnComplete(e.target.checked)} disabled={completing} />}
-            label="Remind 업무로 설정"
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setCompleteTarget(null)} disabled={completing} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button color="success" variant="contained" onClick={confirmComplete} disabled={completing}>
-            {completing ? '변경 중…' : '확인'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* 진행중 되돌리기 확인 Dialog (Check 여부 선택) */}
-      <Dialog open={!!revertTarget} onClose={() => !reverting && setRevertTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
-        <DialogTitle>진행중 업무로 되돌리시겠습니까?</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: 'text.secondary' }}>
-            「{revertTarget ? taskTitle(revertTarget) : ''}」 업무를 진행중 상태로 되돌립니다. (Remind 해제)
-          </DialogContentText>
-          <FormControlLabel
-            sx={{ mt: 1.5 }}
-            control={<Checkbox checked={revertChief} onChange={(e) => setRevertChief(e.target.checked)} disabled={reverting} />}
-            label="Check 표시"
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setRevertTarget(null)} disabled={reverting} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button color="success" variant="contained" onClick={confirmRevert} disabled={reverting}>
-            {reverting ? '되돌리는 중…' : '되돌리기'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* 수정 확인 Dialog (in-place 편집 → 확인 시 저장) */}
       <Dialog open={!!pendingEdit} onClose={() => !savingEdit && setPendingEdit(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
         <DialogTitle>수정하시겠습니까?</DialogTitle>
@@ -1329,7 +1284,7 @@ export default function Work() {
               <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
             )}
             <Box sx={{ position: 'relative', height: '100%', boxShadow: '0 20px 50px rgba(0,0,0,.48)', borderRadius: 1, overflow: 'hidden', '& > *': { height: '100%' } }}>
-              <TaskAccordion t={t0} tone={tone} isAdmin={false} />
+              <TaskAccordion t={t0} tone={tone} />
               {n > 1 && (
                 <Box sx={(th) => ({
                   position: 'absolute', top: 6, right: 6, zIndex: 2,
@@ -1344,6 +1299,88 @@ export default function Work() {
           </Box>
         )
       })()}
+
+      {/* 삭제 직후 10초 실행 취소 스낵바 */}
+      <Snackbar
+        open={!!undoSnack}
+        autoHideDuration={10000}
+        onClose={(_, reason) => { if (reason !== 'clickaway') setUndoSnack(null) }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity="info"
+          variant="filled"
+          action={
+            <Button color="inherit" size="small" onClick={() => undoSnack && void undoDelete(undoSnack.nums)}>
+              실행 취소
+            </Button>
+          }
+          onClose={() => setUndoSnack(null)}
+          sx={{ width: '100%' }}
+        >
+          {undoSnack && undoSnack.count > 1 ? `업무 ${undoSnack.count}건을 삭제했습니다.` : '업무를 삭제했습니다.'}
+        </Alert>
+      </Snackbar>
+
+      {/* 휴지통 드로어 — 삭제일시 내림차순, 개별/선택 복원(영구삭제 없음) */}
+      <Drawer anchor="right" open={trashOpen} onClose={() => { setTrashOpen(false); setTrashSel(new Set()) }}>
+        <Box sx={{ width: { xs: '88vw', sm: 400 }, p: 2, display: 'flex', flexDirection: 'column', gap: 1.25, height: '100%' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DeleteOutlineIcon sx={(th) => ({ fontSize: 20, color: th.palette.accent.red })} />
+            <Typography variant="h3" component="h3" sx={{ fontWeight: 800 }}>휴지통</Typography>
+            <Typography variant="body2" sx={{ color: 'text.disabled' }}>{trashed.length}건</Typography>
+            <Box sx={{ ml: 'auto' }}>
+              <Button
+                size="small"
+                variant="outlined"
+                disabled={trashSel.size === 0 || restoring}
+                onClick={() => void restoreFromTrash([...trashSel])}
+              >
+                {restoring ? '복원 중…' : `선택 복원${trashSel.size ? ` (${trashSel.size})` : ''}`}
+              </Button>
+            </Box>
+          </Box>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            복원하면 삭제 전 상태 그대로 목록에 돌아갑니다. 진행중 업무는 목록 맨 아래에 배치됩니다.
+          </Typography>
+          <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {trashed.length === 0 && (
+              <Typography variant="body2" sx={{ color: 'text.disabled', textAlign: 'center', py: 6 }}>삭제된 업무가 없습니다</Typography>
+            )}
+            {[...trashed]
+              .sort((a, b) => (b.deletedAt || '').localeCompare(a.deletedAt || ''))
+              .map((t) => {
+                const checked = trashSel.has(t.num)
+                const stateLabel = `${(t.status || '').trim() || '미정'}${t.remind ? ' · Remind' : ''}${t.chief ? ' · Check' : ''}`
+                return (
+                  <Box
+                    key={t.num}
+                    sx={(th) => ({
+                      p: 1.25, border: '1px solid', borderColor: checked ? alpha(th.palette.accent.blue, 0.8) : 'divider',
+                      borderRadius: 1.5, bgcolor: checked ? alpha(th.palette.accent.blue, 0.08) : 'background.paper',
+                      display: 'flex', gap: 1, alignItems: 'flex-start', cursor: 'pointer',
+                    })}
+                    onClick={() => setTrashSel((prev) => { const n = new Set(prev); if (n.has(t.num)) n.delete(t.num); else n.add(t.num); return n })}
+                  >
+                    <Checkbox size="small" checked={checked} sx={{ p: 0.25, mt: 0.1 }} onClick={(e) => e.stopPropagation()} onChange={() => setTrashSel((prev) => { const n = new Set(prev); if (n.has(t.num)) n.delete(t.num); else n.add(t.num); return n })} />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, alignItems: 'center' }}>
+                        <StatusChip status={classify(t) === 'done' ? 'neutral' : classify(t) === 'hold' ? 'info' : 'success'} label={stateLabel} />
+                        {t.cat && <StatusChip status="neutral" label={t.cat} />}
+                        {t.mgr && <StatusChip status="info" label={t.mgr} />}
+                      </Box>
+                      <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 0.5 }}>삭제 {t.deletedAt}</Typography>
+                    </Box>
+                    <Button size="small" disabled={restoring} onClick={(e) => { e.stopPropagation(); void restoreFromTrash([t.num]) }} sx={{ flexShrink: 0 }}>
+                      복원
+                    </Button>
+                  </Box>
+                )
+              })}
+          </Box>
+        </Box>
+      </Drawer>
 
       {/* 순서 저장 실패 — 이때만 안내 + 재시도(정상 저장은 무표시) */}
       <Snackbar open={orderError} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>

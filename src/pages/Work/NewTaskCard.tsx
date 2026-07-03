@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
@@ -9,13 +9,16 @@ import CloseIcon from '@mui/icons-material/Close'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
 import { ComboField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
-import { dashToBullet, circledNumber } from './workMeta'
+import RichContentEditor from './RichContentEditor'
 
 /** 인라인 새 업무 작성 폼 값 — 저장 시 index에서 createWork/updateWork 페이로드로 변환 */
 export interface NewTaskForm {
   cat: string
   title: string
+  /** 업무 본문 일반 텍스트(• 글머리 포함) — 시트 '업무내용' 저장·검색·대체표시용 */
   body: string
+  /** 업무 본문 서식 JSON(버전 포함) — 시트 '업무내용서식' 저장용 */
+  bodyFmt: string
   mgr: string
   start: string
   plan: string
@@ -96,6 +99,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
   const [cat, setCat] = useState(initial?.cat ?? '')
   const [title, setTitle] = useState(initial?.title ?? '')
   const [body, setBody] = useState(initial?.body ?? '')
+  const [bodyFmt, setBodyFmt] = useState(initial?.bodyFmt ?? '')
   const [mgr, setMgr] = useState(initial?.mgr ?? '')
   const [start, setStart] = useState(initial?.start ?? '')
   const [plan, setPlan] = useState(initial?.plan ?? '')
@@ -105,47 +109,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
   const [link, setLink] = useState(initial?.link ?? '')
   const [chief, setChief] = useState(initial?.chief ?? false)
 
-  // 본문 textarea 커서 제어(자동 글머리·동그라미 변환 후 위치 복원)
-  const bodyRef = useRef<HTMLTextAreaElement | null>(null)
-  const caretRef = useRef<number | null>(null)
-  useLayoutEffect(() => {
-    if (caretRef.current != null && bodyRef.current) {
-      const pos = caretRef.current
-      bodyRef.current.selectionStart = bodyRef.current.selectionEnd = pos
-      caretRef.current = null
-    }
-  }, [body])
-
-  // 입력 변환 — '- ' → '• '(길이 보존) + 줄 시작 'ㅇN ' → 동그라미 숫자(하위 들여쓰기). 커서도 함께 보정.
-  const onBodyChange = (e: ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
-    const ta = e.target
-    const raw = ta.value
-    const cursor = ta.selectionStart ?? raw.length
-    const text1 = dashToBullet(raw) // 길이 보존 → 커서 영향 없음
-    let cur = cursor
-    let out = text1
-    // 커서가 있는 줄에서 'ㅇ(1~2자리)+공백' → 들여쓴 동그라미 숫자(상위 bullet의 하위 항목)
-    const ls = text1.lastIndexOf('\n', cur - 1) + 1
-    const leRel = text1.indexOf('\n', cur)
-    const le = leRel < 0 ? text1.length : leRel
-    const line = text1.slice(ls, le)
-    const m = line.match(/^([ \t]*)[ㅇᄋ](\d{1,2}) /)
-    if (m) {
-      const ch = circledNumber(parseInt(m[2], 10))
-      if (ch) {
-        const indent = m[1].length >= 2 ? m[1] : '  ' // 하위 글머리: 최소 2칸 들여쓰기
-        const replacement = indent + ch + ' '
-        const newLine = replacement + line.slice(m[0].length)
-        out = text1.slice(0, ls) + newLine + text1.slice(le)
-        const matchAbsEnd = ls + m[0].length
-        cur = cur >= matchAbsEnd ? cur + (replacement.length - m[0].length) : ls + replacement.length
-      }
-    }
-    if (out !== raw) caretRef.current = cur
-    setBody(out)
-  }
-
-  // 입력값 존재 여부를 부모에 보고 — 뷰 전환 시 작성 중 내용 손실 방지(확인 안내)
+  // 입력값 존재 여부를 부모에 보고 — 뷰 전환 시 작성 중 내용 손실 방지(확인 안내). body=일반 텍스트(빈값 판정용)
   const dirty = !!(cat || title || body || mgr || start || plan || dept || time || loc || link || chief)
   useEffect(() => {
     onDirtyChange?.(dirty)
@@ -154,7 +118,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
 
   const save = () => {
     if (saving) return
-    onSave({ cat, title, body, mgr, start, plan, dept, time, loc, link, chief })
+    onSave({ cat, title, body, bodyFmt, mgr, start, plan, dept, time, loc, link, chief })
   }
 
   return (
@@ -212,15 +176,13 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
             <TimeRangeField value={time} onChange={setTime} sx={{ width: 150, flexShrink: 0 }} />
             <ComboField value={loc} onChange={setLoc} options={options.locs} placeholder="장소" ariaLabel="장소" sx={{ width: 128, flexShrink: 0 }} />
           </Box>
-          <Field
-            value={body}
-            onChangeEvent={onBodyChange}
-            inputRef={bodyRef}
-            placeholder="업무 내용 — '- '는 글머리(•), 'ㅇ1 '는 동그라미 숫자(①)"
+          <RichContentEditor
+            valueJson={initial?.bodyFmt ?? ''}
+            valuePlain={initial?.body ?? ''}
+            onChange={({ json, text }) => { setBody(text); setBodyFmt(json) }}
+            placeholder="업무 내용 — '- '는 글머리(•), 'ㅇ1 '는 동그라미 숫자(①). 본문 선택 시 서식 툴바"
+            disabled={saving}
             ariaLabel="업무 내용"
-            multiline
-            minRows={3}
-            sx={{ alignItems: 'flex-start' }}
           />
         </Box>
         {/* Check 토글 — 보라(활성)/회색(비활성), 업무 카드의 Check 칩과 동일 크기 */}

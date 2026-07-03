@@ -169,6 +169,10 @@ export interface WorkRow {
   chief: boolean
   /** 포털정렬순서 — 진행중 카드 수동 정렬값(빈값 가능) */
   order: string
+  /** 업무내용서식 — 본문 리치 텍스트 JSON(버전 포함). 열 없거나 빈값이면 '' */
+  contentFmt: string
+  /** 삭제일시(소프트 삭제) — 값이 있으면 휴지통 항목 */
+  deletedAt: string
 }
 
 /** 업무 목록 읽기 — 백엔드가 헤더명으로 행을 객체로 변환해 반환 */
@@ -200,10 +204,26 @@ export interface WorkInput {
   link?: string
   remind?: boolean
   chief?: boolean
+  /**
+   * 업무내용서식 — 본문 리치 텍스트 JSON. **명시적으로 전달할 때만** 저장/갱신된다.
+   * undefined(미전달)면 백엔드는 기존 서식값을 보존한다(빈칸으로 덮어쓰지 않음).
+   * 빈 문자열('')은 '서식 없음'을 의도적으로 저장하는 값으로 취급한다.
+   */
+  contentFmt?: string
 }
 
 async function postWork(payload: Record<string, unknown>): Promise<{ num?: number }> {
-  const res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+  // 타임아웃 — 응답이 오지 않는(행 걸린) 요청이 삭제/저장 플로를 영구히 잠그지 않도록 25초 후 중단
+  const ctrl = new AbortController()
+  const timer = window.setTimeout(() => ctrl.abort(), 25000)
+  let res: Response
+  try {
+    res = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload), signal: ctrl.signal })
+  } catch (err) {
+    throw new Error(ctrl.signal.aborted ? '요청 시간이 초과됐습니다. 잠시 후 다시 시도해주세요' : String(err instanceof Error ? err.message : err))
+  } finally {
+    window.clearTimeout(timer)
+  }
   if (!res.ok) throw new Error('HTTP ' + res.status)
   let json: { status: string; message?: string; num?: number }
   try {
@@ -225,8 +245,16 @@ export async function updateWork(p: WorkInput & { num: string | number }): Promi
   await postWork({ action: 'updateWork', ...p })
 }
 /** 업무 삭제 (번호 기준) */
-export async function deleteWork(p: { num: string | number; author: string; key: string }): Promise<void> {
-  await postWork({ action: 'deleteWork', ...p })
+// 소프트 삭제 — 행을 지우지 않고 '삭제일시'에 기록(단건 num 또는 복수 nums). 응답 deletedAt=기록된 시각.
+export async function deleteWork(p: { nums: (string | number)[]; author: string; key: string }): Promise<{ deletedAt: string }> {
+  const json = await postWork({ action: 'deleteWork', ...p })
+  return { deletedAt: String((json as { deletedAt?: string }).deletedAt || '') }
+}
+
+// 휴지통 복원 — '삭제일시'를 비움(상태·Remind·Check 유지). 진행중은 수동정렬 맨 아래(orders에 새 순서값).
+export async function restoreWorks(p: { nums: (string | number)[]; author: string; key: string }): Promise<{ orders: Record<string, number> }> {
+  const json = await postWork({ action: 'restoreWorks', ...p })
+  return { orders: ((json as { orders?: Record<string, number> }).orders) || {} }
 }
 
 /** 진행중 카드 수동 정렬순서 저장 — '포털정렬순서' 열만 갱신(행 이동 없음). 최종 순서를 한 번에 전송. */

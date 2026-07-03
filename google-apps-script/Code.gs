@@ -84,7 +84,7 @@ function doPost(e) {
       }
     }
     // 센터 업무 현황 쓰기(추가/수정/삭제/일괄상태) — 잠금 하에 처리(번호 충돌·행삭제 경합 방지)
-    if (req.action === 'createWork' || req.action === 'updateWork' || req.action === 'deleteWork' || req.action === 'updateWorkOrder' || req.action === 'updateWorkStatuses') {
+    if (req.action === 'createWork' || req.action === 'updateWork' || req.action === 'deleteWork' || req.action === 'restoreWorks' || req.action === 'updateWorkOrder' || req.action === 'updateWorkStatuses') {
       const lock = LockService.getScriptLock();
       if (!lock.tryLock(10000)) {
         return json_({ status: 'error', message: '요청이 몰려 있습니다. 잠시 후 다시 시도해주세요' });
@@ -93,6 +93,7 @@ function doPost(e) {
         if (req.action === 'createWork') return createWork_(req);
         if (req.action === 'updateWork') return updateWork_(req);
         if (req.action === 'deleteWork') return deleteWork_(req);
+        if (req.action === 'restoreWorks') return restoreWorks_(req);
         if (req.action === 'updateWorkStatuses') return updateWorkStatuses_(req);
         return updateWorkOrder_(req);
       } finally {
@@ -441,6 +442,10 @@ function workCtx_() {
     link: col(['링크', '관련링크', 'link']),
     // 진행중 카드 수동 정렬순서(포털 전용) — 없으면 updateWorkOrder_에서 자동 생성
     order: col(['포털정렬순서', '정렬순서', '표시순서', '순서']),
+    // 업무내용서식 — 본문 리치 텍스트 JSON(있으면 헤더명으로 인식, 없으면 하위 호환으로 무시)
+    contentFmt: col(['업무내용서식']),
+    // 소프트 삭제 — 값이 있으면 삭제된 업무(목록·집계 제외, 휴지통 표시). 행은 보존.
+    del: col(['삭제일시']),
   };
   return { sh: sh, values: values, hIdx: hIdx, head: head, col: col, C: C };
 }
@@ -456,6 +461,10 @@ function wDate_(v) {
 }
 function wTime_(v) {
   if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Seoul', 'HH:mm');
+  return v == null ? '' : String(v).trim();
+}
+function wDateTime_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
   return v == null ? '' : String(v).trim();
 }
 
@@ -475,6 +484,8 @@ function getWorks_() {
       loc: t(r, C.loc), mgr: t(r, C.mgr), status: t(r, C.status), end: wDate_(r[C.end]),
       link: t(r, C.link), remind: wIsChk_(r[C.remind]), chief: wIsChk_(r[C.chief]),
       order: t(r, C.order),
+      contentFmt: t(r, C.contentFmt),
+      deletedAt: C.del < 0 ? '' : wDateTime_(r[C.del]),
     });
   }
   return json_({ status: 'ok', items: items });
@@ -535,6 +546,7 @@ function createWork_(req) {
   set(C.status, status);
   set(C.end, endVal);
   set(C.link, String(req.link || ''));
+  set(C.contentFmt, String(req.contentFmt || '')); // 업무내용서식(없으면 빈칸)
   set(C.remind, req.remind === true);
   set(C.chief, chiefVal);
   sh.appendRow(row);
@@ -577,6 +589,9 @@ function updateWork_(req) {
   set(C.loc, String(req.loc || ''));
   set(C.mgr, String(req.mgr || ''));
   set(C.link, String(req.link || ''));
+  // 업무내용서식: 명시적으로 전달될 때만 갱신(미전달이면 기존 서식값 보존 — 빈칸으로 덮어쓰지 않음).
+  //   ''(빈 문자열)은 '서식 없음'을 의도적으로 저장하는 값으로 취급.
+  if (req.contentFmt !== undefined) set(C.contentFmt, String(req.contentFmt || ''));
   applyWorkStatus_(sh, C, sheetRow, { status: status, end: endGiven, remind: req.remind === true, chief: req.chief === true });
   return json_({ status: 'ok', num: Number(num) || num });
 }
@@ -659,22 +674,120 @@ function updateWorkStatuses_(req) {
   return json_({ status: 'ok', updated: changes.map(function (c) { return { num: c.num, status: c.status }; }) });
 }
 
+// '삭제일시' 열 인덱스 확보 — 없으면 헤더 끝에 자동 생성(기존 데이터/열 영향 없음)
+function ensureDelCol_(ctx) {
+  if (ctx.C.del >= 0) return ctx.C.del;
+  const colIdx = ctx.head.length;
+  ctx.sh.getRange(ctx.hIdx + 1, colIdx + 1).setValue('삭제일시');
+  return colIdx;
+}
+
+// 소프트 삭제 — 행을 지우지 않고 '삭제일시'에 KST 현재시각 기록. 상태·Remind·Check·정렬순서·내용 보존.
+// req.nums=[...] 또는 req.num 단건. 전체 검증(존재/중복/이미 삭제) 후에만 쓰기, 중간 실패 시 기록분 역순 복구.
 function deleteWork_(req) {
   const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
   if (authErr) return json_({ status: 'error', message: authErr });
-  const num = String(req.num || '').trim();
-  if (!num) return json_({ status: 'error', message: '대상 업무 번호가 없습니다' });
+  const nums = (req.nums && req.nums.length) ? req.nums.map(function (n) { return String(n || '').trim(); })
+    : [String(req.num || '').trim()];
+  if (!nums.length || nums.some(function (n) { return !n; })) return json_({ status: 'error', message: '대상 업무 번호가 없습니다' });
+
   const ctx = workCtx_();
   if (ctx.error) return json_({ status: 'error', message: ctx.error });
-  const values = ctx.values, hIdx = ctx.hIdx, C = ctx.C;
+  const values = ctx.values, hIdx = ctx.hIdx, C = ctx.C, sh = ctx.sh;
   if (C.num < 0) return json_({ status: 'error', message: '번호 열을 찾지 못함' });
-  let rowIdx = -1;
-  for (let i = hIdx + 1; i < values.length; i++) {
-    if (String(values[i][C.num] || '').trim() === num) { rowIdx = i; break; }
+
+  const rowByNum = {};
+  for (let i = hIdx + 1; i < values.length; i++) rowByNum[String(values[i][C.num] || '').trim()] = i;
+  const seen = {};
+  const rows = [];
+  for (let k = 0; k < nums.length; k++) {
+    const n = nums[k];
+    if (seen[n]) return json_({ status: 'error', message: n + '번 업무가 요청에 중복되어 있습니다' });
+    seen[n] = true;
+    const rowIdx = rowByNum[n];
+    if (rowIdx === undefined) return json_({ status: 'error', message: n + '번 업무를 찾지 못했습니다' });
+    if (C.del >= 0 && String(values[rowIdx][C.del] || '').trim() !== '') {
+      return json_({ status: 'error', message: n + '번 업무는 이미 삭제되어 있습니다. 새로고침 후 확인해주세요' });
+    }
+    rows.push(rowIdx);
   }
-  if (rowIdx < 0) return json_({ status: 'error', message: '대상 업무를 찾지 못했습니다 (이미 삭제됐을 수 있어요)' });
-  ctx.sh.deleteRow(rowIdx + 1);
-  return json_({ status: 'ok' });
+
+  const delCol = ensureDelCol_(ctx);
+  const stamp = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd HH:mm');
+  let wrote = -1;
+  try {
+    for (let k = 0; k < rows.length; k++) { wrote = k; sh.getRange(rows[k] + 1, delCol + 1).setValue(stamp); }
+  } catch (err) {
+    for (let k = wrote; k >= 0; k--) { try { sh.getRange(rows[k] + 1, delCol + 1).setValue(''); } catch (e2) { /* 계속 복구 */ } }
+    return json_({ status: 'error', message: '삭제 기록 중 오류가 발생해 되돌렸습니다: ' + String(err) });
+  }
+  return json_({ status: 'ok', deletedAt: stamp, nums: nums });
+}
+
+// 휴지통 복원 — '삭제일시'를 비움. 삭제 전 상태·Remind·Check 그대로 유지.
+// 진행중 업무는 현재 진행중 수동정렬 목록의 맨 아래(최대 포털정렬순서+10)로 배치.
+function restoreWorks_(req) {
+  const authErr = authError_(String(req.author || '').trim(), String(req.key || '').trim());
+  if (authErr) return json_({ status: 'error', message: authErr });
+  const nums = (req.nums && req.nums.length) ? req.nums.map(function (n) { return String(n || '').trim(); })
+    : [String(req.num || '').trim()];
+  if (!nums.length || nums.some(function (n) { return !n; })) return json_({ status: 'error', message: '대상 업무 번호가 없습니다' });
+
+  const ctx = workCtx_();
+  if (ctx.error) return json_({ status: 'error', message: ctx.error });
+  const values = ctx.values, hIdx = ctx.hIdx, C = ctx.C, sh = ctx.sh;
+  if (C.num < 0) return json_({ status: 'error', message: '번호 열을 찾지 못함' });
+  if (C.del < 0) return json_({ status: 'error', message: '삭제일시 열을 찾지 못함' });
+
+  const rowByNum = {};
+  for (let i = hIdx + 1; i < values.length; i++) rowByNum[String(values[i][C.num] || '').trim()] = i;
+  const rows = [];
+  for (let k = 0; k < nums.length; k++) {
+    const n = nums[k];
+    const rowIdx = rowByNum[n];
+    if (rowIdx === undefined) return json_({ status: 'error', message: n + '번 업무를 찾지 못했습니다' });
+    if (String(values[rowIdx][C.del] || '').trim() === '') {
+      return json_({ status: 'error', message: n + '번 업무는 삭제 상태가 아닙니다. 새로고침 후 확인해주세요' });
+    }
+    rows.push(rowIdx);
+  }
+
+  // 진행중 복원 배치용 — 비삭제 진행중 행들의 최대 포털정렬순서
+  let maxOrder = 0;
+  if (C.order >= 0 && C.status >= 0) {
+    for (let i = hIdx + 1; i < values.length; i++) {
+      if (String(values[i][C.del] || '').trim() !== '') continue;
+      if (String(values[i][C.status] || '').trim() !== '진행중') continue;
+      const v = Number(values[i][C.order]);
+      if (!isNaN(v) && v > maxOrder) maxOrder = v;
+    }
+  }
+
+  const orders = {};
+  let wrote = -1;
+  const backups = rows.map(function (rowIdx) { return { del: values[rowIdx][C.del], order: C.order >= 0 ? values[rowIdx][C.order] : '' }; });
+  try {
+    for (let k = 0; k < rows.length; k++) {
+      wrote = k;
+      const rowIdx = rows[k];
+      sh.getRange(rowIdx + 1, C.del + 1).setValue('');
+      // 진행중은 수동정렬 맨 아래로 — 그 외 상태는 기존 정렬규칙(기존 값 유지)
+      if (C.order >= 0 && String(values[rowIdx][C.status] || '').trim() === '진행중') {
+        maxOrder += 10;
+        sh.getRange(rowIdx + 1, C.order + 1).setValue(maxOrder);
+        orders[nums[k]] = maxOrder;
+      }
+    }
+  } catch (err) {
+    for (let k = wrote; k >= 0; k--) {
+      try {
+        sh.getRange(rows[k] + 1, C.del + 1).setValue(backups[k].del);
+        if (C.order >= 0) sh.getRange(rows[k] + 1, C.order + 1).setValue(backups[k].order);
+      } catch (e2) { /* 계속 복구 */ }
+    }
+    return json_({ status: 'error', message: '복원 중 오류가 발생해 되돌렸습니다: ' + String(err) });
+  }
+  return json_({ status: 'ok', nums: nums, orders: orders });
 }
 
 // 진행중 카드 수동 정렬순서 저장(포털 전용) — '포털정렬순서' 열만 갱신. 행 이동/교체 없음.

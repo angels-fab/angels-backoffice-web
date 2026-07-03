@@ -3,14 +3,16 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
-import { dragShrinkScale, genieOverlayInto, trashAt, zoneAt, type DropZone, type StatusDropResult } from './dropZones'
+import { dragShrinkScale, fitScaleInto, genieOverlayInto, trashAt, zoneAt, type DropZone, type StatusDropResult } from './dropZones'
 
-// 시안(docs/mockups/work-card-reorder.html · work-drag-trash.html) 물리값
+// 시안(docs/mockups/work-card-motion-only.html · work-drag-trash.html) 물리값
 const ACTIVATION_DISTANCE = 8 // px 이상 움직여야 드래그 시작(마우스)
 const TOUCH_HOLD_MS = 250 // 터치는 길게 눌러야 시작(스크롤과 구분)
-const SLOT_OVERLAP = 0.28 // 다른 슬롯으로 이동 판정 최소 겹침 비율
-const RETURN_OVERLAP = 0.2 // 원위치 복귀 판정 최소 겹침 비율
-const MOVE_DURATION = 180 // 이동 애니메이션(ms)
+const SWITCH_MARGIN = 28 // 새 슬롯이 현재 슬롯보다 이만큼 명확히 가까울 때만 재배치(중심거리, px)
+const SWITCH_LOCK_MS = 240 // 재배치 시작 후 추가 재배치 판정 잠금(왕복 방지)
+const MOVE_DURATION = 240 // 주변 카드 자리 이동 애니메이션(ms)
+const SETTLE_DURATION = 180 // 드롭 후 최종 정착 애니메이션(ms)
+const MOVE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)' // 부드러운 감속곡선
 const CLICK_SUPPRESS_MS = 350 // 드롭 직후 클릭(카드 선택) 억제
 
 interface Rect { left: number; top: number; right: number; bottom: number; width: number; height: number }
@@ -48,11 +50,8 @@ interface Props {
   leading?: React.ReactNode
 }
 
-const overlap = (a: Rect, b: DOMRect): number => {
-  const w = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left))
-  const h = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top))
-  return (w * h) / Math.max(1, a.width * a.height)
-}
+const centerDist = (a: Rect, b: DOMRect): number =>
+  Math.hypot(a.left + a.width / 2 - (b.left + b.width / 2), a.top + a.height / 2 - (b.top + b.height / 2))
 
 /**
  * 진행중 업무카드 삽입정렬 드래그 그리드 + KPI 상태변경 드롭 + 휴지통 삭제.
@@ -99,6 +98,8 @@ export default function ReorderableTaskGrid({
 
   const pending = useRef<null | { num: string; pointerType: string; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
   const drag = useRef<null | { num: string; multiNums: string[] | null; baseOrder: string[]; slotRects: DOMRect[]; originIndex: number; width: number; height: number; offsetX: number; offsetY: number; scale: number }>(null)
+  const switchLockUntil = useRef(0) // 재배치 직후 추가 판정 잠금 시각
+  const settleFrom = useRef<null | { num: string; rect: DOMRect }>(null) // 드롭 정착 애니메이션 시작 위치
   const zoneRef = useRef<null | { zone: DropZone; rect: DOMRect }>(null)
   const longPress = useRef<number | null>(null)
   const lastPointer = useRef({ x: 0, y: 0 })
@@ -116,8 +117,31 @@ export default function ReorderableTaskGrid({
     dragItem = items.find((i) => i.num === dragNum)
   }
 
-  // FLIP — 렌더 후 위치 변화한 카드를 이전 위치에서 새 위치로 애니메이션(드래그 중에만)
+  // FLIP — 렌더 후 위치 변화한 카드를 이전 위치에서 새 위치로 애니메이션(드래그 중에만).
+  // 기존 애니메이션은 취소 후 시작(중첩으로 인한 왕복·떨림 방지), 240ms 감속곡선.
   useLayoutEffect(() => {
+    // 드롭 정착 — 들어올렸던 카드가 오버레이 마지막 위치에서 슬롯 자리로 180ms에 내려앉음
+    const st = settleFrom.current
+    if (st) {
+      settleFrom.current = null
+      const el = cellRefs.current.get(st.num)
+      if (el) {
+        const now = el.getBoundingClientRect()
+        if (now.width > 0) {
+          const dx = st.rect.left + st.rect.width / 2 - (now.left + now.width / 2)
+          const dy = st.rect.top + st.rect.height / 2 - (now.top + now.height / 2)
+          const sc = Math.max(0.05, st.rect.width / now.width)
+          el.getAnimations?.().forEach((a) => a.cancel())
+          el.animate(
+            [
+              { transform: `translate(${dx}px, ${dy}px) scale(${sc})`, opacity: 0.92 },
+              { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+            ],
+            { duration: SETTLE_DURATION, easing: MOVE_EASING },
+          )
+        }
+      }
+    }
     const dragging = !!drag.current
     cellRefs.current.forEach((el, num) => {
       if (num === dragNum) return
@@ -127,7 +151,7 @@ export default function ReorderableTaskGrid({
         el.getAnimations?.().forEach((a) => a.cancel())
         el.animate(
           [{ transform: `translate(${prev.left - now.left}px, ${prev.top - now.top}px)` }, { transform: 'translate(0,0)' }],
-          { duration: MOVE_DURATION, easing: 'cubic-bezier(.2,.8,.2,1)' },
+          { duration: MOVE_DURATION, easing: MOVE_EASING },
         )
       }
       flipRects.current.set(num, now)
@@ -145,18 +169,26 @@ export default function ReorderableTaskGrid({
   }
   const cleanupPending = () => { pending.current = null; cleanupListeners() }
 
+  // 목적지 판정 — 드래그 시작 시 고정 저장한 슬롯 좌표(d.slotRects) 기준 중심거리.
+  // 이동한 카드들의 현재 위치로 재계산하지 않으며(왕복 방지), 새 슬롯이 현재 슬롯보다
+  // SWITCH_MARGIN(28px) 이상 명확히 가까울 때만 재배치. 재배치 후 SWITCH_LOCK_MS(240ms) 동안 판정 잠금.
+  // 가장 가까운 슬롯으로 바로 이동(중간 슬롯 순차 이동 없음) — 1·2·3열/모바일 배열 공통.
   const detectTargetIndex = (moving: Rect): number => {
     const d = drag.current
     if (!d) return overIndexRef.current
-    let best = overIndexRef.current
-    let bestScore = 0
+    if (Date.now() < switchLockUntil.current) return overIndexRef.current
+    let best = 0
+    let bestD = Infinity
     d.slotRects.forEach((slot, i) => {
-      const s = overlap(moving, slot)
-      if (s > bestScore) { bestScore = s; best = i }
+      const dist = centerDist(moving, slot)
+      if (dist < bestD) { bestD = dist; best = i }
     })
-    if (best === d.originIndex && bestScore >= RETURN_OVERLAP) return best
-    if (best !== overIndexRef.current && bestScore >= SLOT_OVERLAP) return best
-    return overIndexRef.current
+    const cur = overIndexRef.current
+    if (best === cur) return cur
+    const curD = centerDist(moving, d.slotRects[cur])
+    if (curD - bestD < SWITCH_MARGIN) return cur
+    switchLockUntil.current = Date.now() + SWITCH_LOCK_MS
+    return best
   }
 
   const beginDrag = (clientX: number, clientY: number) => {
@@ -186,6 +218,7 @@ export default function ReorderableTaskGrid({
     flipRects.current.clear()
     nums.forEach((n) => { const el = cellRefs.current.get(n); if (el) flipRects.current.set(n, el.getBoundingClientRect()) })
     overIndexRef.current = originIndex
+    switchLockUntil.current = 0
     if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
     // 텍스트 선택 방지: 기존 선택 해제 + 드래그 동안 selectstart 차단
     try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
@@ -217,18 +250,6 @@ export default function ReorderableTaskGrid({
     const d = drag.current
     if (!d) return
     e.preventDefault()
-    // 오버레이 = 원본 직사각형 카드가 잡은 지점(그랩 오프셋)을 따라 이동.
-    // 대상(존·휴지통) 접근 시에만 거리 비례로 부드럽게 축소(dragShrinkScale — smoothstep).
-    const left = e.clientX - d.offsetX
-    const top = e.clientY - d.offsetY
-    const s = dragShrinkScale(e.clientX, e.clientY, d.width, d.height)
-    d.scale = s
-    if (liftedRef.current) {
-      liftedRef.current.style.left = `${left}px`
-      liftedRef.current.style.top = `${top}px`
-      liftedRef.current.style.transform = s === 1 ? '' : `scale(${s})`
-      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * s).toFixed(1)}px`)
-    }
     // KPI 드롭존 + 휴지통 히트테스트
     const zh = onStatusDropRef.current ? zoneAt(e.clientX, e.clientY) : null
     const prevZone = zoneRef.current?.zone ?? null
@@ -239,6 +260,19 @@ export default function ReorderableTaskGrid({
       trashHoverRef.current = !!tr
       setOverTrash(!!tr)
       onTrashHoverRef.current?.(!!tr)
+    }
+    // 오버레이 = 원본 직사각형 카드가 잡은 지점(그랩 오프셋)을 따라 이동.
+    // 축소 규칙: KPI 존은 220px 거리 비례(smoothstep), 휴지통은 드롭영역에 '닿았을 때만'
+    // 내부 크기로(전환은 오버레이 CSS transition이 부드럽게 이어줌 — 주변 통과 시 원본 유지).
+    const left = e.clientX - d.offsetX
+    const top = e.clientY - d.offsetY
+    const s = tr ? fitScaleInto(tr, d.width, d.height) : dragShrinkScale(e.clientX, e.clientY, d.width, d.height)
+    d.scale = s
+    if (liftedRef.current) {
+      liftedRef.current.style.left = `${left}px`
+      liftedRef.current.style.top = `${top}px`
+      liftedRef.current.style.transform = s === 1 ? '' : `scale(${s})`
+      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * s).toFixed(1)}px`)
     }
     // 존·휴지통 위이거나 복수 드래그면 삽입정렬 이동 없음(원위치 placeholder 유지)
     if (zh || tr || d.multiNums) {
@@ -321,7 +355,12 @@ export default function ReorderableTaskGrid({
       return
     }
     zoneRef.current = null
-    if (d) finishDrag(true)
+    if (d) {
+      // 일반 드롭 — 오버레이 마지막 시각 위치에서 슬롯으로 180ms 정착 애니메이션
+      const lifted = liftedRef.current
+      if (lifted) settleFrom.current = { num: d.num, rect: lifted.getBoundingClientRect() }
+      finishDrag(true)
+    }
     cleanupPending()
   }
   const onCancel = () => { zoneRef.current = null; if (drag.current) finishDrag(false); cleanupPending() }
@@ -460,6 +499,8 @@ export default function ReorderableTaskGrid({
             position: 'fixed', zIndex: th.zIndex.modal + 1,
             width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none',
             opacity: 0.92, borderRadius: 1, transformOrigin: '50% 50%',
+            // 휴지통 진입/이탈의 계단식 축소를 부드럽게 잇는 전이(위치 left/top은 즉시 반영)
+            transition: `transform .18s ${MOVE_EASING}`,
             '--stack-gap': '10px',
             ...(overTrash ? { outline: '2px dashed rgba(224,91,84,.95)', outlineOffset: '3px' } : {}),
           })}

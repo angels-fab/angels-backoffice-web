@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>업무카드 이동 모션 시안</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d1016;--panel:#151a23;--line:#2b3442;--text:#eef2f7;--muted:#8f9bad;--green:#63c47b;--blue:#68a7ed}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Pretendard,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(1040px,calc(100% - 32px));margin:0 auto;padding:54px 0 80px}
+    .head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:18px}
+    h1{margin:0 0 6px;font-size:23px}.desc{margin:0;color:var(--muted);font-size:13px}.motion{color:#a9e1b5;font-size:12px;border:1px solid rgba(99,196,123,.3);border-radius:8px;padding:7px 10px;background:rgba(99,196,123,.08)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;position:relative;user-select:none;-webkit-user-select:none}
+    .card{min-height:142px;border:1px solid var(--line);border-radius:11px;background:linear-gradient(180deg,rgba(99,196,123,.10),rgba(99,196,123,.055));overflow:hidden;cursor:grab;touch-action:none;will-change:transform;transition:border-color .15s,box-shadow .15s,opacity .15s}
+    .card:hover{border-color:rgba(99,196,123,.55)}.card.is-source{opacity:.18}.card.is-settling{animation:settle 180ms cubic-bezier(.22,1,.36,1)}
+    @keyframes settle{0%{box-shadow:0 0 0 2px rgba(99,196,123,.65)}100%{box-shadow:none}}
+    .top{height:47px;display:flex;align-items:center;gap:8px;padding:0 13px;background:rgba(99,196,123,.10);border-bottom:1px solid rgba(99,196,123,.18)}
+    .chip{height:23px;padding:0 8px;border:1px solid rgba(104,167,237,.38);border-radius:7px;color:#91c3fa;background:rgba(104,167,237,.12);display:inline-flex;align-items:center;font-size:11px;font-weight:800}
+    .title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:750}.owner{margin-left:auto;color:#a8e0b4;font-size:12px;font-weight:750}
+    .body{padding:14px 15px;color:#c3cad5;font-size:13px;line-height:1.65}.meta{color:var(--muted);font-size:11px;margin-bottom:7px}
+    .placeholder{min-height:142px;border:2px dashed rgba(99,196,123,.68);border-radius:11px;background:rgba(99,196,123,.045)}
+    .floating{position:fixed;z-index:20;pointer-events:none;margin:0;opacity:.96;cursor:grabbing;box-shadow:0 20px 48px rgba(0,0,0,.48);transform:rotate(.35deg)}
+    .hint{margin-top:16px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;color:var(--muted);font-size:12px;text-align:center;background:rgba(255,255,255,.018)}
+    @media(max-width:680px){main{padding-top:28px}.head{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.motion{display:none}}
+  </style>
+</head>
+<body>
+<main>
+  <header class="head">
+    <div><h1>업무카드 이동 모션</h1><p class="desc">카드를 목적지 슬롯 쪽으로 이동하면 주변 카드가 한 번씩 차분하게 자리를 비웁니다.</p></div>
+    <div class="motion">자리 이동 240ms · 드롭 정착 180ms</div>
+  </header>
+  <section class="grid" id="grid">
+    <article class="card"><div class="top"><span class="chip">장비</span><span class="title">ZEISS 장비 도입 일정 검토</span><span class="owner">박세리</span></div><div class="body"><div class="meta">발의일 2026.06.30</div>입찰 일정과 설치 조건을 확인하고 관련 부서 의견을 정리합니다.</div></article>
+    <article class="card"><div class="top"><span class="chip">행정</span><span class="title">센터 운영규정 개정안 작성</span><span class="owner">조성범</span></div><div class="body"><div class="meta">발의일 2026.06.27</div>운영규정 변경사항과 내부 검토 의견을 반영합니다.</div></article>
+    <article class="card"><div class="top"><span class="chip">예산</span><span class="title">하반기 예산 집행계획 수립</span><span class="owner">신현진</span></div><div class="body"><div class="meta">발의일 2026.06.24</div>세부 사업별 예산 집행시기와 잔액을 점검합니다.</div></article>
+    <article class="card"><div class="top"><span class="chip">교육</span><span class="title">신규 사용자 안전교육 준비</span><span class="owner">박주봉</span></div><div class="body"><div class="meta">발의일 2026.06.21</div>교육자료와 참석대상자 명단을 최종 확인합니다.</div></article>
+    <article class="card"><div class="top"><span class="chip">인사</span><span class="title">채용 면접 평가자료 취합</span><span class="owner">센터</span></div><div class="body"><div class="meta">발의일 2026.06.18</div>위원별 평가자료를 취합하고 결과보고서를 준비합니다.</div></article>
+    <article class="card"><div class="top"><span class="chip">설계</span><span class="title">설계 적정성 검토 의견 회신</span><span class="owner">조성범</span></div><div class="body"><div class="meta">발의일 2026.06.16</div>검토기관의 보완 요청을 확인하고 회신안을 작성합니다.</div></article>
+  </section>
+  <div class="hint">드래그 시작 시 자리 좌표를 고정해, 다른 카드가 움직이는 동안 목표 위치가 흔들리지 않도록 했습니다.</div>
+</main>
+<script>
+  const grid=document.querySelector('#grid');let drag=null;
+  const cards=()=>[...grid.querySelectorAll('.card:not(.floating):not(.is-source)')];
+  const snapshot=()=>new Map(cards().map(el=>[el,el.getBoundingClientRect()]));
+  const flip=(before)=>{cards().forEach(el=>{const a=before.get(el),b=el.getBoundingClientRect();if(!a)return;const x=a.left-b.left,y=a.top-b.top;if(!x&&!y)return;el.animate([{transform:`translate(${x}px,${y}px)`},{transform:'translate(0,0)'}],{duration:240,easing:'cubic-bezier(.22,1,.36,1)'})})};
+  const down=(e)=>{const source=e.target.closest('.card');if(!source||e.button!==0)return;e.preventDefault();const all=[...grid.querySelectorAll('.card')];const slots=all.map(el=>{const s=el.getBoundingClientRect();return{cx:s.left+s.width/2,cy:s.top+s.height/2}});const startIndex=all.indexOf(source);const r=source.getBoundingClientRect();source.setPointerCapture(e.pointerId);const ghost=source.cloneNode(true);ghost.classList.add('floating');Object.assign(ghost.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});document.body.append(ghost);const ph=document.createElement('div');ph.className='placeholder';source.after(ph);source.classList.add('is-source');source.style.display='none';drag={source,ghost,ph,dx:e.clientX-r.left,dy:e.clientY-r.top,width:r.width,height:r.height,slots,currentIndex:startIndex,lockedUntil:0}};
+  const move=(e)=>{if(!drag)return;e.preventDefault();const left=e.clientX-drag.dx,top=e.clientY-drag.dy;drag.ghost.style.left=left+'px';drag.ghost.style.top=top+'px';if(Date.now()<drag.lockedUntil)return;const cx=left+drag.width/2,cy=top+drag.height/2;let candidate=drag.currentIndex,best=Infinity;drag.slots.forEach((s,i)=>{const d=Math.hypot(cx-s.cx,cy-s.cy);if(d<best){best=d;candidate=i}});if(candidate===drag.currentIndex)return;const current=drag.slots[drag.currentIndex];const currentDistance=Math.hypot(cx-current.cx,cy-current.cy);if(best+28>=currentDistance)return;const before=snapshot();const others=[...grid.children].filter(el=>el!==drag.source&&el!==drag.ph);if(candidate>=others.length)grid.append(drag.ph);else grid.insertBefore(drag.ph,others[candidate]);drag.currentIndex=candidate;drag.lockedUntil=Date.now()+240;flip(before)};
+  const up=()=>{if(!drag)return;const before=snapshot();grid.insertBefore(drag.source,drag.ph);drag.source.style.display='';drag.source.classList.remove('is-source');drag.source.classList.add('is-settling');drag.ph.remove();drag.ghost.remove();flip(before);const settled=drag.source;setTimeout(()=>settled.classList.remove('is-settling'),200);drag=null};
+  grid.addEventListener('pointerdown',down);window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',up);window.addEventListener('pointercancel',up);
+</script>
+</body>
+</html>

@@ -14,7 +14,8 @@ import { SearchBar, StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { taskSubs, taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
+import { taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
+import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
 
 export type DrawerTone = 'amber' | 'gray'
@@ -173,12 +174,12 @@ export default function TaskListDrawer({
                 )}
               </Box>
               {(() => {
-                const subs = taskSubs(selTask)
+                const subs = workBodyLines(selTask)
                 const link = taskLink(selTask)
                 return (
                   <>
                     {subs.length > 0 ? (
-                      <Box>{subs.map((l, k) => <SubLine key={k} line={l} />)}</Box>
+                      <Box>{subs.map((l, k) => <SubLine key={k} bodyLine={l} />)}</Box>
                     ) : (
                       <Typography variant="body2" sx={{ color: 'text.disabled' }}>상세 내용 없음</Typography>
                     )}

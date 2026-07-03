@@ -222,6 +222,21 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .sub-line{display:flex;gap:5px;align-items:flex-start}
 .sub-mark{flex-shrink:0}
 .sub-text{flex:1;min-width:0;word-break:break-word}
+
+/* ── 업무내용 리치 텍스트 ── */
+/* 글자색 토큰(의미 기반) → 테마 팔레트. 다크/라이트 모두 index.css 변수로 대비 확보 */
+.wc-color[data-color="red"]{color:var(--red)}
+.wc-color[data-color="amber"]{color:var(--amber)}
+.wc-color[data-color="green"]{color:var(--green)}
+.wc-color[data-color="blue"]{color:var(--blue)}
+.wc-color[data-color="purple"]{color:var(--purple)}
+/* TipTap 본문 에디터(작성/수정) — 카드 폭 안에서 줄바꿈, 가로 스크롤 없음 */
+.wc-editor{outline:none;min-height:66px;font-size:13px;line-height:1.6;color:var(--text);
+  background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;
+  padding:6px 8px;overflow-wrap:anywhere;word-break:break-word}
+.wc-editor:focus{border-color:var(--green)}
+.wc-editor p{margin:0}
+.wc-editor p.is-editor-empty:first-child::before{content:attr(data-placeholder);color:var(--text3,#7d8590);float:left;height:0;pointer-events:none}
 @media(max-width:620px){
   /* 모바일: 공지 게시판처럼 담당자·발의일자 숨기고 간결하게 */
   .cur-c-mgr,.cur-c-date{display:none !important}

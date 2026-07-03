@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
-import { dragShrinkScale, genieOverlayInto, trashAt, zoneAt, type DropZone, type StatusDropResult } from './dropZones'
+import { dragShrinkScale, fitScaleInto, genieOverlayInto, trashAt, zoneAt, type DropZone, type StatusDropResult } from './dropZones'
 
 const ACTIVATION_DISTANCE = 8 // px 이상 이동해야 드래그 시작(마우스)
 const LONG_PRESS_MS = 480 // 터치 롱프레스 = 복수선택 모드 진입
@@ -137,17 +137,6 @@ export default function StatusDragGrid({
     const d = drag.current
     if (!d) return
     e.preventDefault()
-    // 오버레이 = 원본 직사각형 카드가 그랩 지점을 따라 이동, 대상 접근 시에만 거리 비례 축소(smoothstep)
-    const left = e.clientX - d.offsetX
-    const top = e.clientY - d.offsetY
-    const s = dragShrinkScale(e.clientX, e.clientY, d.width, d.height)
-    d.scale = s
-    if (liftedRef.current) {
-      liftedRef.current.style.left = `${left}px`
-      liftedRef.current.style.top = `${top}px`
-      liftedRef.current.style.transform = s === 1 ? '' : `scale(${s})`
-      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * s).toFixed(1)}px`)
-    }
     const zh = zoneAt(e.clientX, e.clientY)
     const prev = zoneRef.current?.zone ?? null
     zoneRef.current = zh
@@ -157,6 +146,18 @@ export default function StatusDragGrid({
       trashHoverRef.current = !!tr
       setOverTrash(!!tr)
       onTrashHoverRef.current?.(!!tr)
+    }
+    // 오버레이 = 원본 직사각형 카드가 그랩 지점을 따라 이동.
+    // KPI 존은 220px 거리 비례 축소, 휴지통은 드롭영역 접촉 시에만 내부 크기(전이는 CSS transition)
+    const left = e.clientX - d.offsetX
+    const top = e.clientY - d.offsetY
+    const s = tr ? fitScaleInto(tr, d.width, d.height) : dragShrinkScale(e.clientX, e.clientY, d.width, d.height)
+    d.scale = s
+    if (liftedRef.current) {
+      liftedRef.current.style.left = `${left}px`
+      liftedRef.current.style.top = `${top}px`
+      liftedRef.current.style.transform = s === 1 ? '' : `scale(${s})`
+      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * s).toFixed(1)}px`)
     }
   }
 
@@ -334,6 +335,8 @@ export default function StatusDragGrid({
             position: 'fixed', zIndex: th.zIndex.modal + 1,
             width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none',
             opacity: 0.92, borderRadius: 1, transformOrigin: '50% 50%',
+            // 휴지통 진입/이탈의 계단식 축소를 부드럽게 잇는 전이(위치 left/top은 즉시 반영)
+            transition: 'transform .18s cubic-bezier(0.22, 1, 0.36, 1)',
             '--stack-gap': '10px',
             ...(overTrash ? { outline: '2px dashed rgba(224,91,84,.95)', outlineOffset: '3px' } : {}),
           })}

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>업무현황 · 업무목록 조작부 시안</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" />
+  <style>
+    *{box-sizing:border-box}
+    :root{--nav-w:226px;--bg:#0d1016;--panel:#141a23;--panel2:#181f2a;--line:#293445;--line2:#344259;--text:#f3f6fb;--muted:#8d9aaf;--blue:#5e9fe8;--green:#59bb78;--hold:#6398d5;--done:#aab3c2;--remind:#d8aa50;--danger:#e26b66}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{overflow-x:hidden}.material-symbols-rounded{font-size:20px;line-height:1;font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+    button,input{font:inherit}button{color:inherit}
+    .app{min-height:100vh}.side{position:fixed;z-index:20;inset:0 auto 0 0;width:var(--nav-w);border-right:1px solid #202938;background:#0c0f15;padding:22px 16px}.brand{height:44px;display:flex;align-items:center;gap:10px;padding:0 10px;font-weight:850;letter-spacing:.04em}.brand-mark{width:29px;height:29px;border:1px solid #547cab;border-radius:9px;display:grid;place-items:center;color:#83b8f2;overflow:hidden}.nav-label{margin:28px 11px 9px;color:#68768b;font-size:11px;font-weight:800}.nav-item{height:42px;padding:0 12px;border-radius:10px;display:flex;align-items:center;gap:11px;color:#98a5b8;font-size:13px}.nav-item.active{background:#182638;color:#74b5fb;font-weight:800}.nav-item .material-symbols-rounded{width:20px;flex:0 0 20px;overflow:hidden;white-space:nowrap;font-size:19px}
+    .main{margin-left:var(--nav-w);min-height:100vh;padding:30px 32px 110px}.page{width:min(1160px,100%);margin:0 auto}.kicker{margin:0 0 8px;color:#74839a;font-size:11px;font-weight:800}.page-title{margin:0 0 22px;font-size:24px;letter-spacing:-.035em}
+    .state-tabs{display:grid;grid-template-columns:repeat(4,1fr);overflow:hidden;border:1px solid var(--line);border-radius:15px;background:#121720;margin-bottom:22px}.state-tab{position:relative;min-height:74px;border:0;border-right:1px solid var(--line);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:11px;transition:.16s}.state-tab:last-child{border-right:0}.state-tab:hover{background:#1b2330}.state-tab.active{background:#1c2733;box-shadow:inset 0 -3px var(--state)}.state-tab .state-dot{width:8px;height:8px;border-radius:50%;background:var(--state);box-shadow:0 0 0 5px color-mix(in srgb,var(--state) 13%,transparent)}.state-tab b{font-size:14px}.state-tab strong{font-size:22px;color:var(--state)}.state-tab small{color:var(--muted);font-size:11px;margin-left:-7px}.state-tab[data-state="progress"]{--state:var(--green)}.state-tab[data-state="hold"]{--state:var(--hold)}.state-tab[data-state="done"]{--state:var(--done)}.state-tab[data-state="remind"]{--state:var(--remind)}
+    .work-shell{background:transparent}
+    .list-head{min-height:54px;padding:0 0 12px;border-bottom:0;display:flex;align-items:center;gap:12px}.head-title{--accent:#72c78d;display:flex;align-items:center;gap:7px;min-width:0}.title-icon{width:23px;height:23px;flex:0 0 23px;color:var(--accent);display:grid;place-items:center;transition:color .16s}.title-icon .material-symbols-rounded{font-size:22px}.head-title h2{margin:0;color:var(--accent);font-size:18px;letter-spacing:-.025em;transition:color .16s}.head-title>.list-count{color:var(--muted);font-size:12px}.head-actions{margin-left:auto;display:flex;align-items:center;gap:8px}.icon-group,.sort-group{height:36px;display:flex;overflow:hidden;border:1px solid var(--line2);border-radius:9px;background:#141a23}.icon-btn,.sort-btn{height:100%;border:0;border-right:1px solid var(--line2);background:transparent;display:grid;place-items:center;cursor:pointer}.icon-btn{width:36px;padding:0}.icon-btn .material-symbols-rounded{font-size:18px}.icon-btn:last-child,.sort-btn:last-child{border-right:0}.icon-btn:disabled{color:#5b6677;cursor:default}.sort-btn{padding:0 12px;color:#98a5b7;font-size:12px;font-weight:750}.sort-btn.active{background:#243145;color:#e7eef7}.new-btn{width:42px;height:28px;padding:0;border:1px solid #397952;border-radius:8px;background:#183225;color:#72d08f;display:grid;place-items:center;cursor:pointer}.new-btn:hover{background:#21452f}.new-btn[hidden]{display:none}.new-btn .material-symbols-rounded{font-size:19px}
+    .compose{display:none;width:calc(50% - 5px);margin:0 0 12px auto;padding:14px;border:1px solid #356649;border-radius:12px;background:#14221b}.compose.open{display:flex;align-items:center;gap:9px}.compose input{flex:1;min-width:0;height:38px;border:1px solid var(--line2);border-radius:9px;background:#0f141c;color:var(--text);padding:0 12px;outline:none}.compose button{height:34px;border:1px solid var(--line);border-radius:8px;background:#1b2430;cursor:pointer;padding:0 11px;font-size:12px}
+    .filters{padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:14px;align-items:stretch}.filter-stack{display:flex;flex-direction:column;gap:4px;min-width:0}.filter-row{display:grid;grid-template-columns:48px minmax(0,1fr);gap:6px;align-items:start}.filter-label{padding-top:7px;color:#75849a;font-size:11px;font-weight:850}.chips{display:flex;flex-wrap:wrap;gap:6px;min-height:32px}.filter-chip{height:31px;padding:0 11px;border:1px solid #3a4656;border-radius:9px;background:#1a2029;color:#929daf;cursor:pointer;font-size:12px;font-weight:750;transition:.12s;white-space:nowrap}.filter-chip:hover{border-color:#52637a;color:#d8e0ea}.filter-chip.on{border-color:#557aab;background:#1a3350;color:#84bfff}.filter-row.member .filter-chip.on{border-color:#3c729d;background:#142c40;color:#70b5eb}.filter-chip .count{margin-left:5px;color:inherit;opacity:.65;font-size:10px}.filter-tools{padding-left:14px;border-left:1px solid rgba(170,180,195,.14);display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:7px}.filter-tools-top{display:flex;align-items:center;justify-content:flex-end;gap:8px}.search{position:relative;width:100%}.search .material-symbols-rounded{position:absolute;left:11px;top:8px;color:#6f7d91;font-size:18px}.search input{width:100%;height:34px;border:1px solid var(--line2);border-radius:9px;background:#101620;color:#dce3ed;padding:0 12px 0 36px;outline:none;font-size:12px}.search input:focus{border-color:#507ba9}.search input::placeholder{color:#667388}.filter-help{grid-column:2;margin-top:-2px;color:#5f6d80;font-size:10px}
+    .cards{padding:12px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.task{position:relative;min-height:126px;padding:15px 16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);cursor:grab;transition:.15s}.task:hover{border-color:#3b4a60;background:#171e29}.task[hidden]{display:none}.task.dragging{opacity:.28}.task-top{display:flex;align-items:center;gap:7px;margin-bottom:11px;color:#8492a6;font-size:11px}.cat{padding:3px 7px;border-radius:7px;background:#1c2d43;color:#77afe9;font-weight:800}.task-date{margin-left:auto}.more{width:30px;height:30px;margin:-7px -8px -7px 0;border:0;border-radius:8px;background:transparent;color:#8794a6;display:grid;place-items:center;cursor:pointer;font-size:15px;font-weight:900;letter-spacing:-.08em}.more:hover,.more[aria-expanded="true"]{background:#263142;color:#fff}.task h3{margin:0 38px 8px 0;font-size:14px;line-height:1.45}.task p{margin:0;color:#9aa6b7;font-size:11.5px;line-height:1.55}.card-menu{display:none;position:absolute;z-index:30;right:10px;top:45px;width:132px;padding:5px;border:1px solid #3b485c;border-radius:10px;background:#202733;box-shadow:0 14px 36px rgba(0,0,0,.48)}.card-menu.open{display:block}.card-menu button{width:100%;height:34px;border:0;border-radius:7px;background:transparent;color:#c8d1dc;display:flex;align-items:center;gap:8px;padding:0 9px;cursor:pointer;font-size:12px;text-align:left}.card-menu button:hover{background:#2a3443}.card-menu button.danger{color:#ef8b86}.card-menu .material-symbols-rounded{display:none}
+    .more .material-symbols-rounded{width:auto;font-family:inherit;font-size:0}.more .material-symbols-rounded::after{content:'···';font-size:15px}
+    .empty{display:none;grid-column:1/-1;padding:50px;text-align:center;color:var(--muted);font-size:13px}.empty.show{display:block}
+    .trash{position:fixed;z-index:90;left:calc(var(--nav-w) + (100vw - var(--nav-w))/2);bottom:24px;width:230px;height:62px;transform:translate(-50%,22px);opacity:0;pointer-events:none;border:1.5px dashed rgba(226,107,102,.62);border-radius:15px;background:rgba(42,25,29,.96);box-shadow:0 18px 44px rgba(0,0,0,.45);color:#ef918c;display:flex;align-items:center;justify-content:center;gap:9px;transition:opacity .16s,transform .16s,background .12s,border-color .12s}.trash.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}.trash.over{border-style:solid;border-color:#f08b86;background:#743436}.trash .material-symbols-rounded{font-size:25px}.trash b{font-size:12px}.trash small{display:block;margin-top:2px;color:#d4a4a2;font-size:10px}
+    dialog{width:min(390px,calc(100vw - 30px));padding:0;border:1px solid #38465a;border-radius:15px;background:#181f2a;color:var(--text);box-shadow:0 24px 70px rgba(0,0,0,.65)}dialog::backdrop{background:rgba(5,8,12,.72)}.dialog-body{padding:22px}.dialog-body h3{margin:0 0 8px;font-size:17px}.dialog-body p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}.dialog-actions{padding:12px 15px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}.dialog-actions button{height:34px;padding:0 13px;border:1px solid var(--line2);border-radius:8px;background:#212a38;cursor:pointer;font-weight:800}.dialog-actions .danger{border-color:#b94f4b;background:#a84441}.toast{position:fixed;z-index:100;left:calc(var(--nav-w) + (100vw - var(--nav-w))/2);bottom:28px;transform:translate(-50%,18px);opacity:0;padding:10px 14px;border:1px solid var(--line2);border-radius:10px;background:#222b38;color:#dde5ef;font-size:12px;pointer-events:none;transition:.18s}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:900px){.main{padding:24px 18px 100px}.filters{grid-template-columns:1fr}.filter-row{grid-template-columns:44px 1fr}.filter-help{grid-column:2}.filter-tools{padding:9px 0 0;border-left:0;border-top:1px solid rgba(170,180,195,.12)}.filter-tools-top{justify-content:flex-start}.list-head{align-items:flex-start}.state-tab strong{font-size:19px}}
+    @media(max-width:720px){:root{--nav-w:0px}.side{display:none}.main{margin-left:0;padding:18px 12px 100px}.page-title{font-size:21px}.state-tabs{grid-template-columns:repeat(2,1fr)}.state-tab:nth-child(2){border-right:0}.state-tab:nth-child(-n+2){border-bottom:1px solid var(--line)}.list-head{display:block}.head-title{margin-bottom:3px}.icon-group{display:none}.sort-group{flex-shrink:0}.compose{width:100%;margin:0 0 12px}.filters{padding:9px 0}.filter-row{display:block}.filter-label{display:block;padding:0 0 5px}.filter-help{margin-top:5px}.cards{grid-template-columns:1fr;padding:10px 0 0}.trash,.toast{left:50%}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><span class="brand-mark"><span class="material-symbols-rounded">hub</span></span>ANGELS</div>
+      <p class="nav-label">업무</p>
+      <div class="nav-item"><span class="material-symbols-rounded">calendar_month</span>업무일정</div>
+      <div class="nav-item active"><span class="material-symbols-rounded">analytics</span>업무현황</div>
+      <p class="nav-label">관리</p>
+      <div class="nav-item"><span class="material-symbols-rounded">precision_manufacturing</span>장비관리</div>
+      <div class="nav-item"><span class="material-symbols-rounded">campaign</span>공지사항</div>
+    </aside>
+
+    <main class="main">
+      <div class="page">
+        <p class="kicker">업무현황 · 조작부 재배치 시안</p>
+        <h1 class="page-title">업무현황</h1>
+
+        <nav class="state-tabs" aria-label="업무 상태">
+          <button class="state-tab active" data-state="progress"><span class="state-dot"></span><b>진행중</b><strong>12</strong><small>건</small></button>
+          <button class="state-tab" data-state="hold"><span class="state-dot"></span><b>보류</b><strong>2</strong><small>건</small></button>
+          <button class="state-tab" data-state="done"><span class="state-dot"></span><b>완료</b><strong>31</strong><small>건</small></button>
+          <button class="state-tab" data-state="remind"><span class="state-dot"></span><b>Remind</b><strong>5</strong><small>건</small></button>
+        </nav>
+
+        <section class="work-shell">
+          <header class="list-head">
+            <div class="head-title" id="headTitle"><span class="title-icon" id="titleIcon"><span class="material-symbols-rounded" id="titleIconGlyph">timelapse</span></span><h2 id="listTitle">진행중 업무</h2><span class="list-count" id="visibleCount">4건</span><button class="new-btn" id="newTask" aria-label="새 업무"><span class="material-symbols-rounded">add</span></button></div>
+          </header>
+
+          <div class="compose" id="compose"><input aria-label="새 업무 제목" placeholder="새 업무 제목을 입력하세요" /><button id="closeCompose">닫기</button></div>
+
+          <div class="filters">
+            <div class="filter-stack">
+              <div class="filter-row category">
+                <span class="filter-label">구분</span>
+                <div class="chips" id="catChips"></div>
+                <span class="filter-help">일반 클릭: 하나만 선택 · 선택된 칩 재클릭: 전체 · Shift+클릭: 복수선택</span>
+              </div>
+              <div class="filter-row member">
+                <span class="filter-label">담당자</span>
+                <div class="chips" id="memberChips"></div>
+              </div>
+            </div>
+            <div class="filter-tools">
+              <div class="filter-tools-top">
+                <div class="icon-group" aria-label="실행 취소">
+                  <button class="icon-btn" title="실행 취소" aria-label="실행 취소" disabled><span class="material-symbols-rounded">undo</span></button>
+                  <button class="icon-btn" title="다시 실행" aria-label="다시 실행" disabled><span class="material-symbols-rounded">redo</span></button>
+                </div>
+                <div class="sort-group" aria-label="정렬">
+                  <button class="sort-btn active" data-sort="latest">최신순</button><button class="sort-btn" data-sort="oldest">오래된순</button>
+                </div>
+              </div>
+              <label class="search"><span class="material-symbols-rounded">search</span><input id="search" placeholder="업무명·담당자·부서·구분·장소 검색" /></label>
+            </div>
+          </div>
+
+          <div class="cards" id="cards">
+            <article class="task" draggable="true" data-id="1" data-status="progress" data-cat="장비" data-member="박세리" data-date="2026-07-03"><div class="task-top"><span class="cat">장비</span><span>박세리</span><span class="task-date">2026.07.03</span><button class="more" aria-label="업무 메뉴" aria-expanded="false"><span class="material-symbols-rounded">more_vert</span></button></div><h3>장비 반입 일정 및 설치 동선 최종 협의</h3><p>반입 순서와 클린룸 진입 동선을 업체와 확정합니다.</p><div class="card-menu"><button><span class="material-symbols-rounded">check_circle</span>완료</button><button><span class="material-symbols-rounded">edit</span>수정</button><button class="danger"><span class="material-symbols-rounded">delete</span>삭제</button></div></article>
+            <article class="task" draggable="true" data-id="2" data-status="progress" data-cat="행정" data-member="박주봉" data-date="2026-07-02"><div class="task-top"><span class="cat">행정</span><span>박주봉</span><span class="task-date">2026.07.02</span><button class="more" aria-label="업무 메뉴" aria-expanded="false"><span class="material-symbols-rounded">more_vert</span></button></div><h3>센터 운영규정 개정안 부서 검토</h3><p>의견을 취합하고 부서장 최종 확인을 준비합니다.</p><div class="card-menu"><button><span class="material-symbols-rounded">check_circle</span>완료</button><button><span class="material-symbols-rounded">edit</span>수정</button><button class="danger"><span class="material-symbols-rounded">delete</span>삭제</button></div></article>
+            <article class="task" draggable="true" data-id="3" data-status="progress" data-cat="교육세미나" data-member="센터" data-date="2026-06-30"><div class="task-top"><span class="cat">교육세미나</span><span>센터</span><span class="task-date">2026.06.30</span><button class="more" aria-label="업무 메뉴" aria-expanded="false"><span class="material-symbols-rounded">more_vert</span></button></div><h3>신규 장비 사용자 안전교육 준비</h3><p>교육자료와 참석자 명단을 확정합니다.</p><div class="card-menu"><button><span class="material-symbols-rounded">check_circle</span>완료</button><button><span class="material-symbols-rounded">edit</span>수정</button><button class="danger"><span class="material-symbols-rounded">delete</span>삭제</button></div></article>
+            <article class="task" draggable="true" data-id="4" data-status="progress" data-cat="예산" data-member="조성범" data-date="2026-06-27"><div class="task-top"><span class="cat">예산</span><span>조성범</span><span class="task-date">2026.06.27</span><button class="more" aria-label="업무 메뉴" aria-expanded="false"><span class="material-symbols-rounded">more_vert</span></button></div><h3>유지보수 계약 예산 항목 검토</h3><p>업체별 계약 조건과 예산 집행 범위를 비교합니다.</p><div class="card-menu"><button><span class="material-symbols-rounded">check_circle</span>완료</button><button><span class="material-symbols-rounded">edit</span>수정</button><button class="danger"><span class="material-symbols-rounded">delete</span>삭제</button></div></article>
+            <article class="task" draggable="true" data-id="5" data-status="hold" data-cat="장비" data-member="박세리" data-date="2026-06-25"><div class="task-top"><span class="cat">장비</span><span>박세리</span><span class="task-date">2026.06.25</span><button class="more" aria-label="업무 메뉴" aria-expanded="false"><span class="material-symbols-rounded">more_vert</span></button></div><h3>장비 사양 최종 승인 대기</h3><p>부서장 확인 후 구매 절차를 재개합니다.</p><div class="card-menu"><button><span class="material-symbols-rounded">play_arrow</span>진행중</button><button><span class="material-symbols-rounded">edit</span>수정</button><button class="danger"><span class="material-symbols-rounded">delete</span>삭제</button></div></article>
+            <article class="task" draggable="true" data-id="6" data-status="done" data-cat="인사" data-member="박주봉" data-date="2026-06-22"><div class="task-top"><span class="cat">인사</span><span>박주봉</span><span class="task-date">2026.06.22</span><button class="more" aria-label="업무 메뉴" aria-expanded="false"><span class="material-symbols-rounded">more_vert</span></button></div><h3>신규 인력 채용 서류 검토 완료</h3><p>지원자별 제출서류 확인을 완료했습니다.</p><div class="card-menu"><button><span class="material-symbols-rounded">play_arrow</span>진행중</button><button><span class="material-symbols-rounded">edit</span>수정</button><button class="danger"><span class="material-symbols-rounded">delete</span>삭제</button></div></article>
+            <article class="task" draggable="true" data-id="7" data-status="remind" data-cat="행정" data-member="센터" data-date="2026-06-18"><div class="task-top"><span class="cat">행정</span><span>센터</span><span class="task-date">2026.06.18</span><button class="more" aria-label="업무 메뉴" aria-expanded="false"><span class="material-symbols-rounded">more_vert</span></button></div><h3>분기별 운영자료 갱신 시점 확인</h3><p>다음 분기 시작 전에 자료를 다시 확인합니다.</p><div class="card-menu"><button><span class="material-symbols-rounded">play_arrow</span>진행중</button><button><span class="material-symbols-rounded">edit</span>수정</button><button class="danger"><span class="material-symbols-rounded">delete</span>삭제</button></div></article>
+            <div class="empty" id="empty">조건에 맞는 업무가 없습니다.</div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <aside class="trash" id="trash"><span class="material-symbols-rounded">delete_outline</span><span><b>휴지통으로 이동</b><small>페이지 본문 중앙에 고정</small></span></aside>
+  <dialog id="deleteDialog"><div class="dialog-body"><h3>이 업무를 삭제할까요?</h3><p>삭제를 누르면 카드가 휴지통으로 흡입된 뒤 삭제됩니다.</p></div><div class="dialog-actions"><button id="cancelDelete">취소</button><button class="danger" id="confirmDelete">삭제</button></div></dialog>
+  <div class="toast" id="toast">업무를 삭제했습니다.</div>
+
+  <script>
+    const stateMeta={progress:{name:'진행중',icon:'timelapse',color:'#72c78d'},hold:{name:'보류',icon:'pause',color:'#79a9e2'},done:{name:'완료',icon:'task_alt',color:'#c2cad5'},remind:{name:'Remind',icon:'tips_and_updates',color:'#e0bc74'}};
+    let allCards=[...document.querySelectorAll('.task')];
+    const catChips=document.getElementById('catChips'),memberChips=document.getElementById('memberChips');
+    const search=document.getElementById('search'),empty=document.getElementById('empty'),visibleCount=document.getElementById('visibleCount'),listTitle=document.getElementById('listTitle'),headTitle=document.getElementById('headTitle'),titleIconGlyph=document.getElementById('titleIconGlyph');
+    const trash=document.getElementById('trash'),dialog=document.getElementById('deleteDialog'),toast=document.getElementById('toast');
+    let state='progress',cats=new Set(),members=new Set(),sort='latest',dragged=null,pendingDelete=null;
+    const uniq=(key)=>[...new Set(allCards.filter(c=>c.dataset.status===state).map(c=>c.dataset[key]))];
+    const matches=(card,ignore='')=>card.dataset.status===state&&(ignore==='cat'||cats.size===0||cats.has(card.dataset.cat))&&(ignore==='member'||members.size===0||members.has(card.dataset.member))&&(!search.value.trim()||card.textContent.toLowerCase().includes(search.value.trim().toLowerCase()));
+    function toggleSet(set,value,additive){if(!additive){if(set.size===1&&set.has(value))set.clear();else{set.clear();set.add(value)}}else{set.has(value)?set.delete(value):set.add(value)}}
+    function renderChips(){
+      const catList=uniq('cat').map(v=>({value:v,count:allCards.filter(c=>c.dataset.status===state&&c.dataset.cat===v&&matches(c,'cat')).length})).filter(x=>x.count>0);
+      const memberList=uniq('member').map(v=>({value:v,count:allCards.filter(c=>c.dataset.status===state&&c.dataset.member===v&&matches(c,'member')).length})).filter(x=>x.count>0);
+      cats=new Set([...cats].filter(v=>catList.some(x=>x.value===v)));members=new Set([...members].filter(v=>memberList.some(x=>x.value===v)));
+      catChips.innerHTML=catList.map(x=>`<button class="filter-chip ${cats.size===0||cats.has(x.value)?'on':''}" data-value="${x.value}">${x.value}<span class="count">${x.count}</span></button>`).join('');
+      memberChips.innerHTML=memberList.map(x=>`<button class="filter-chip ${members.size===0||members.has(x.value)?'on':''}" data-value="${x.value}">${x.value}</button>`).join('');
+    }
+    function render(){allCards.sort((a,b)=>sort==='latest'?b.dataset.date.localeCompare(a.dataset.date):a.dataset.date.localeCompare(b.dataset.date)).forEach(c=>document.getElementById('cards').insertBefore(c,empty));let n=0;allCards.forEach(c=>{c.hidden=!matches(c);if(!c.hidden)n++});visibleCount.textContent=`${n}건`;empty.classList.toggle('show',n===0);renderChips()}
+    function syncStateTitle(){const meta=stateMeta[state];listTitle.textContent=`${meta.name} 업무`;titleIconGlyph.textContent=meta.icon;headTitle.style.setProperty('--accent',meta.color);document.getElementById('newTask').hidden=state!=='progress';if(state!=='progress')document.getElementById('compose').classList.remove('open')}
+    document.querySelectorAll('.state-tab').forEach(btn=>btn.addEventListener('click',()=>{state=btn.dataset.state;cats.clear();members.clear();document.querySelectorAll('.state-tab').forEach(x=>x.classList.toggle('active',x===btn));syncStateTitle();render()}));
+    catChips.addEventListener('click',e=>{const b=e.target.closest('.filter-chip');if(!b)return;toggleSet(cats,b.dataset.value,e.shiftKey);render()});
+    memberChips.addEventListener('click',e=>{const b=e.target.closest('.filter-chip');if(!b)return;toggleSet(members,b.dataset.value,e.shiftKey);render()});
+    [catChips,memberChips].forEach(el=>el.addEventListener('mousedown',e=>{if(e.shiftKey)e.preventDefault()}));
+    search.addEventListener('input',render);
+    document.querySelectorAll('.sort-btn').forEach(btn=>btn.addEventListener('click',()=>{sort=btn.dataset.sort;document.querySelectorAll('.sort-btn').forEach(x=>x.classList.toggle('active',x===btn));render()}));
+    document.getElementById('newTask').addEventListener('click',()=>{document.getElementById('compose').classList.add('open');document.querySelector('#compose input').focus()});
+    document.getElementById('closeCompose').addEventListener('click',()=>document.getElementById('compose').classList.remove('open'));
+    document.addEventListener('click',e=>{const more=e.target.closest('.more');const inMenu=e.target.closest('.card-menu');if(more){e.stopPropagation();const card=more.closest('.task'),menu=card.querySelector('.card-menu'),willOpen=!menu.classList.contains('open');document.querySelectorAll('.card-menu.open').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.more[aria-expanded="true"]').forEach(x=>x.setAttribute('aria-expanded','false'));if(willOpen){menu.classList.add('open');more.setAttribute('aria-expanded','true')}}else if(!inMenu){document.querySelectorAll('.card-menu.open').forEach(x=>x.classList.remove('open'));document.querySelectorAll('.more[aria-expanded="true"]').forEach(x=>x.setAttribute('aria-expanded','false'))}});
+    let pointerDrag=null;
+    allCards.forEach(card=>{card.draggable=false;card.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('.more,.card-menu'))return;pointerDrag={card,x:e.clientX,y:e.clientY,active:false};window.addEventListener('pointermove',movePointer);window.addEventListener('pointerup',endPointer,{once:true})})});
+    function movePointer(e){if(!pointerDrag)return;const distance=Math.hypot(e.clientX-pointerDrag.x,e.clientY-pointerDrag.y);if(!pointerDrag.active&&distance>8){pointerDrag.active=true;dragged=pointerDrag.card;dragged.classList.add('dragging');trash.classList.add('show')}if(!pointerDrag.active)return;e.preventDefault();const r=trash.getBoundingClientRect(),over=e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;trash.classList.toggle('over',over)}
+    function endPointer(e){window.removeEventListener('pointermove',movePointer);if(!pointerDrag)return;const r=trash.getBoundingClientRect(),over=pointerDrag.active&&e.clientX>=r.left&&e.clientX<=r.right&&e.clientY>=r.top&&e.clientY<=r.bottom;if(over){pendingDelete=pointerDrag.card;trash.classList.remove('over');dialog.showModal()}else{pointerDrag.card.classList.remove('dragging');trash.classList.remove('show','over')}pointerDrag=null}
+    document.getElementById('cancelDelete').addEventListener('click',()=>{dialog.close();pendingDelete?.classList.remove('dragging');pendingDelete=null;trash.classList.remove('show','over')});
+    document.getElementById('confirmDelete').addEventListener('click',()=>{dialog.close();if(pendingDelete){const doomed=pendingDelete;doomed.animate([{transform:'scale(1)',opacity:1},{transform:'scale(.2)',opacity:0}],{duration:280,easing:'ease-in',fill:'forwards'}).finished.then(()=>{allCards=allCards.filter(c=>c!==doomed);doomed.remove();pendingDelete=null;render()})}trash.classList.remove('show','over');toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1500)});
+    dialog.addEventListener('cancel',e=>{e.preventDefault();document.getElementById('cancelDelete').click()});
+    render();
+  </script>
+</body>
+</html>
