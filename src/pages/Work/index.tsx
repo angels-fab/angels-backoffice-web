@@ -16,11 +16,15 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import Collapse from '@mui/material/Collapse'
 import AssessmentIcon from '@mui/icons-material/Assessment'
-import ChecklistIcon from '@mui/icons-material/Checklist'
 import AddIcon from '@mui/icons-material/Add'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
+import TimelapseIcon from '@mui/icons-material/Timelapse'
+import PauseIcon from '@mui/icons-material/Pause'
+import TaskAltIcon from '@mui/icons-material/TaskAlt'
+import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates'
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
 import { alpha } from '@mui/material/styles'
 import {
   PageContainer,
@@ -60,6 +64,15 @@ type HistEntry =
 // STEP24 — 담당자 현황 섹션 임시 숨김(구조 보존, 추후 재노출 시 true)
 const SHOW_MANAGER_STATUS = false
 
+// 업무목록 헤더 — 상태별 제목·아이콘·색(시안 work-list-controls.html stateMeta). 아이콘은 박스 없이 색만.
+const VIEW_META: Record<WorkView, { title: string; Icon: React.ElementType; color: string }> = {
+  inProgress: { title: '진행중 업무', Icon: TimelapseIcon, color: 'accent.green' },
+  hold: { title: '보류 업무', Icon: PauseIcon, color: 'accent.blue' },
+  check: { title: '부서장 확인', Icon: FactCheckOutlinedIcon, color: 'accent.purple' },
+  done: { title: '완료 업무', Icon: TaskAltIcon, color: 'text.secondary' },
+  remind: { title: 'Remind 업무', Icon: TipsAndUpdatesIcon, color: 'accent.amber' },
+}
+
 // 발의일자 최신순 (최근 업무가 위)
 const cmp = (a: WorkItem, b: WorkItem) => dateSortValue(b.start) - dateSortValue(a.start)
 // 진행중: Check(chief) 선택 카드 우선, 그다음 최신순
@@ -83,28 +96,24 @@ function toForm(t: WorkItem): NewTaskForm {
   }
 }
 
-// 'Add 카드' — 미선택 카드 톤(점선) + 호버 시 채움 미리보기. 누르면 새 업무 작성.
-// height는 고정 높이(평균 카드 높이) — alignSelf:start로 그리드 행에 끌려 늘어나지 않음.
-function AddCard({ onClick, height = 120 }: { onClick: () => void; height?: number }) {
+// '+ 새 업무' 컴팩트 버튼(시안 .new-btn — 높이 38px) — 구분 필터 행 우측에 배치, 누르면 인라인 작성란.
+function NewTaskButton({ onClick }: { onClick: () => void }) {
   return (
-    <Box
-      role="button"
-      tabIndex={0}
-      aria-label="새 업무 등록"
+    <ButtonBase
       onClick={onClick}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+      aria-label="새 업무 등록"
       sx={(th) => ({
-        height, alignSelf: 'start',
-        border: '1.5px dashed', borderColor: alpha(th.palette.accent.green, 0.45), borderRadius: 1,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
-        color: th.palette.accent.green, fontWeight: 600, cursor: 'pointer',
+        height: 38, px: 1.75, flexShrink: 0, gap: 0.75,
+        border: '1px solid', borderColor: alpha(th.palette.accent.green, 0.5),
+        borderRadius: '9px', bgcolor: alpha(th.palette.accent.green, 0.12),
+        color: th.palette.accent.green, fontSize: 12.5, fontWeight: 800,
         transition: 'background-color .15s, border-color .15s',
-        '&:hover': { bgcolor: alpha(th.palette.accent.green, 0.08), borderColor: alpha(th.palette.accent.green, 0.6) },
+        '&:hover': { bgcolor: alpha(th.palette.accent.green, 0.2), borderColor: alpha(th.palette.accent.green, 0.7) },
         '&:focus-visible': { outline: 'none', borderColor: th.palette.accent.green },
       })}
     >
-      <AddIcon sx={{ fontSize: 22 }} /> 새 업무
-    </Box>
+      <AddIcon sx={{ fontSize: 18 }} /> 새 업무
+    </ButtonBase>
   )
 }
 
@@ -915,68 +924,74 @@ export default function Work() {
 
       {/* ② 업무 목록 — 4개 상태 뷰 공통 인터페이스(동일 헤더·필터·검색·새 업무) */}
       <ContentSection last={!SHOW_MANAGER_STATUS}>
-        {/* 헤더 1행: 아이콘+제목+건수+선택도구+Undo/Redo(+진행중 정렬) | 새 업무 */}
-        <CardGrid columns={2} sx={{ mb: 2 }}>
-          <Box sx={{ gridColumn: { sm: '1' }, gridRow: { sm: '1' }, display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-            <Box
-              sx={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                width: 40, height: 40, borderRadius: 2, bgcolor: 'background.elevated', color: 'primary.main',
-                '& svg': { fontSize: 22 },
-              }}
-            >
-              <ChecklistIcon />
-            </Box>
-            <Typography variant="h2" component="h2">업무 목록</Typography>
-            <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-              {view === 'inProgress' ? inProgressListed.length : listed.length}
-            </Typography>
-            {isAdmin && (
-              <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-                {selected.size > 0 && (
+        {/* 헤더 1행: 상태 아이콘(박스 없음)+상태별 제목+건수 | 선택도구+검색(md+)+Undo/Redo(+진행중 정렬) */}
+        {(() => {
+          const meta = VIEW_META[view]
+          const ViewIcon = meta.Icon
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25, mb: 2, minWidth: 0 }}>
+              <ViewIcon sx={{ fontSize: 22, color: meta.color, flexShrink: 0 }} />
+              <Typography variant="h2" component="h2" sx={{ color: meta.color }}>{meta.title}</Typography>
+              <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+                {view === 'inProgress' ? inProgressListed.length : listed.length}
+              </Typography>
+              <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 1, minWidth: 0 }}>
+                {isAdmin && selected.size > 0 && (
                   <>
                     <StatusChip status="info" label={`${selected.size}건 선택`} />
                     <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
                   </>
                 )}
-                <BtnGroup>
-                  <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: 16 }} />} disabled={!canUndo} onClick={doUndo} />
-                  <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
-                </BtnGroup>
-                {view === 'inProgress' && (
+                {/* 검색 — PC는 헤더 행, 좁은 화면(md 미만)은 아래 전체폭 행으로 이동 */}
+                <SearchBar
+                  value={query}
+                  onChange={setQuery}
+                  placeholder="업무명·담당자·부서·구분·장소 검색"
+                  sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+                />
+                {isAdmin && (
+                  <BtnGroup>
+                    <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: 16 }} />} disabled={!canUndo} onClick={doUndo} />
+                    <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
+                  </BtnGroup>
+                )}
+                {isAdmin && view === 'inProgress' && (
                   <BtnGroup>
                     <GroupBtn title="발의일 최신순 정렬" label="최신순" selected={dateSort === 'latest'} onClick={() => applyDateSort('latest')} />
                     <GroupBtn title="발의일 오래된순 정렬" label="오래된순" selected={dateSort === 'oldest'} onClick={() => applyDateSort('oldest')} />
                   </BtnGroup>
                 )}
               </Box>
-            )}
-          </Box>
-          {/* 새 업무 칸 — 모든 상태 뷰에서 노출. 작성은 진행중 뷰의 인라인 카드에서(startCompose가 전환). */}
-          <Box key="new" sx={{ gridColumn: { sm: '2' }, gridRow: { sm: '1' } }}>
-            {isAdmin && (
-              view === 'inProgress' ? (
-                <>
-                  {!composing && <AddCard height={64} onClick={startCompose} />}
-                  <Collapse in={composing} unmountOnExit>
-                    <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
-                  </Collapse>
-                </>
-              ) : (
-                <AddCard height={64} onClick={startCompose} />
-              )
-            )}
-          </Box>
-        </CardGrid>
+            </Box>
+          )
+        })()}
 
-        {/* 탭필터 + 검색 — 모든 상태 뷰 공통 */}
-        <FilterBar trailing={<SearchBar value={query} onChange={setQuery} placeholder="업무명·담당자·부서·구분·장소 검색" />}>
+        {/* 새 업무 인라인 작성란 — 기존 NewTaskCard 그대로(우측 절반 폭 유지). 버튼은 구분 필터 행 우측. */}
+        {isAdmin && (
+          <Collapse in={composing} unmountOnExit>
+            <CardGrid columns={2} sx={{ mb: 2 }}>
+              <Box sx={{ gridColumn: { sm: '2' } }}>
+                <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+              </Box>
+            </CardGrid>
+          </Collapse>
+        )}
+
+        {/* 좁은 화면 검색 — 별도 행 전체 너비 */}
+        <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 1.5 }}>
+          <SearchBar value={query} onChange={setQuery} width="100%" placeholder="업무명·담당자·부서·구분·장소 검색" />
+        </Box>
+
+        {/* 탭필터 — 구분 행 우측에 '+ 새 업무'(모든 상태 뷰, 작성은 진행중 화면 전환 후) */}
+        <FilterBar trailing={isAdmin ? <NewTaskButton onClick={startCompose} /> : undefined}>
+          <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', mr: 0.5, flexShrink: 0 }}>구분</Typography>
           {presentCats.map((c) => (
             <StatusChip key={c} status="neutral" label={c} selected={cat === c} onClick={() => setCat(c)} />
           ))}
         </FilterBar>
         {presentMgrs.length > 1 && (
           <FilterBar>
+            <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', mr: 0.5, flexShrink: 0 }}>담당자</Typography>
             {presentMgrs.map((m) => (
               <StatusChip key={m} status="info" label={m} selected={mgr === m} onClick={() => setMgr(m)} />
             ))}
