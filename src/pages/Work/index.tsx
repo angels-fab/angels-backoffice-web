@@ -189,7 +189,7 @@ type DeleteReq = {
 
 export default function Work() {
   const dispatch = useAppDispatch()
-  const { items, trashed, error, updatedAt } = useAppSelector((s) => s.work)
+  const { items, trashed, error, errorMsg, loading: workLoading, updatedAt } = useAppSelector((s) => s.work)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<WorkView>('inProgress') // KPI 버튼이 전환하는 메인 목록
@@ -236,6 +236,12 @@ export default function Work() {
   const saveChain = useRef<Promise<void>>(Promise.resolve()) // 배치 저장 직렬화(응답 역전 방지)
   const trashElRef = useRef<HTMLDivElement | null>(null) // 하단 중앙 휴지통(흡입 목적지 rect)
   const frozenTokenRef = useRef<HTMLDivElement | null>(null) // 휴지통 드롭 후 확인창 동안 고정된 토큰
+
+  // 실패 상태로 페이지 재진입 시 자동 재시도(마운트 1회) — 성공하면 배너 제거·updatedAt 갱신
+  useEffect(() => {
+    if (error && !workLoading) dispatch(loadWorkData())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 담당자 시트('이름' 열, 헤더 자동 인식)에서 명단 로드 — 새 담당자 추가 시 자동 반영
   useEffect(() => {
@@ -937,6 +943,24 @@ export default function Work() {
         title="업무현황"
         updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
       />
+
+      {/* 업무 목록 불러오기 최종 실패 — 빈 화면 대신 오류 안내 + 다시 시도. 기존 목록이 있으면 유지 표시 */}
+      {error && (
+        <Alert
+          severity={items.length > 0 ? 'warning' : 'error'}
+          sx={{ mb: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={() => dispatch(loadWorkData())} disabled={workLoading}>
+              {workLoading ? '불러오는 중…' : '다시 시도'}
+            </Button>
+          }
+        >
+          {items.length > 0
+            ? `업무 목록 새로고침에 실패했습니다. 마지막으로 불러온 목록(${updatedAt || '이전'})을 표시 중입니다.`
+            : '업무 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}
+          {errorMsg ? ` — ${errorMsg}` : ''}
+        </Alert>
+      )}
 
       {/* ① KPI — 2열. 명시적 버튼(링/Check 필/보관함/완료 박스/Remind 필)만 목록을 열고, 드래그 드롭존을 겸함 */}
       <KpiSection

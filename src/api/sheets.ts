@@ -2,6 +2,19 @@
 const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbxwvgPPyZDVTnWl6g7M_Y2vv1U-mrYitz0KUy9SBxfCtSWOzjX1w9oZp90b7don9Fmd/exec'
 
+// 타임아웃 fetch — Apps Script가 간헐적으로 응답 없이 매달리는 경우, 재시도 로직이 이어받을 수 있게 중단
+async function fetchT(url: string, ms = 20000): Promise<Response> {
+  const ctrl = new AbortController()
+  const timer = window.setTimeout(() => ctrl.abort(), ms)
+  try {
+    return await fetch(url, { signal: ctrl.signal })
+  } catch (err) {
+    throw new Error(ctrl.signal.aborted ? '요청 시간 초과' : String(err instanceof Error ? err.message : err))
+  } finally {
+    window.clearTimeout(timer)
+  }
+}
+
 export const SHEET_NAME_WORK = '센터 업무 현황'
 export const SHEET_NAME_EQ = '장비운영관리'
 export const SHEET_NAME_SCHEDULE = '장비도입관리'
@@ -68,7 +81,7 @@ export interface RawCalEvent {
 
 export async function fetchCalendarEvents(): Promise<RawCalEvent[]> {
   // cache-buster — 재시도 시 중간 캐시(브라우저·리다이렉트 경유)의 오래된 실패 응답 재사용 방지
-  const res = await fetch(`${SCRIPT_URL}?calendar=1&cb=${Date.now()}`)
+  const res = await fetchT(`${SCRIPT_URL}?calendar=1&cb=${Date.now()}`)
   if (!res.ok) throw new Error('HTTP ' + res.status)
   const json = (await res.json()) as { status: string; message?: string; data?: RawCalEvent[] }
   if (json.status !== 'ok') throw new Error(json.message || '오류')
@@ -177,7 +190,7 @@ export interface WorkRow {
 
 /** 업무 목록 읽기 — 백엔드가 헤더명으로 행을 객체로 변환해 반환 */
 export async function getWorks(): Promise<WorkRow[]> {
-  const res = await fetch(`${SCRIPT_URL}?action=getWorks`)
+  const res = await fetchT(`${SCRIPT_URL}?action=getWorks&cb=${Date.now()}`) // cache-buster + 20s 타임아웃
   if (!res.ok) throw new Error('HTTP ' + res.status)
   const json = (await res.json()) as { status: string; items?: WorkRow[]; message?: string }
   if (json.status !== 'ok') throw new Error(json.message || '오류')

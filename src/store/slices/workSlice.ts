@@ -5,9 +5,21 @@ import { nowStamp } from '@/utils/date'
 import type { WorkItem } from '@/types'
 
 // 읽기는 백엔드 getWorks(헤더명→객체)에 위임 — 열 위치에 비의존. 클라이언트는 id만 부여.
+// Apps Script는 간헐적으로 리다이렉트 404·지연을 반환하므로 짧은 간격 최대 2회 자동 재시도.
+// 원인은 콘솔에 남기고, 최종 실패 시에도 기존 목록은 리듀서가 유지(빈 화면 방지).
 export const loadWorkData = createAsyncThunk('work/load', async (): Promise<WorkItem[]> => {
-  const rows = await getWorks()
-  return rows.map((r, idx) => ({ id: idx + 1, ...r }))
+  let lastErr: unknown
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    try {
+      const rows = await getWorks()
+      return rows.map((r, idx) => ({ id: idx + 1, ...r }))
+    } catch (err) {
+      lastErr = err
+      console.error(`[work] 업무 목록 불러오기 실패 (시도 ${attempt + 1}/3)`, err)
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 700 * (attempt + 1)))
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('업무 목록 불러오기 실패')
 })
 
 interface WorkState {
@@ -19,6 +31,8 @@ interface WorkState {
   ready: boolean
   loading: boolean
   error: boolean
+  /** 마지막 실패 원인(진단용) */
+  errorMsg: string | null
   updatedAt: string | null
 }
 
@@ -28,6 +42,7 @@ const initialState: WorkState = {
   ready: false,
   loading: false,
   error: false,
+  errorMsg: null,
   updatedAt: null,
 }
 
@@ -81,15 +96,16 @@ const workSlice = createSlice({
         state.trashed = action.payload.filter((t) => (t.deletedAt || '').trim())
         state.ready = true
         state.loading = false
+        state.error = false
+        state.errorMsg = null
         state.updatedAt = nowStamp()
       })
-      .addCase(loadWorkData.rejected, state => {
-        state.items = []
-        state.trashed = []
+      .addCase(loadWorkData.rejected, (state, action) => {
+        // 기존에 정상적으로 불러온 목록은 지우지 않는다(빈 화면 방지) — 오류 상태만 표시
         state.ready = true
         state.loading = false
         state.error = true
-        state.updatedAt = null
+        state.errorMsg = action.error.message || '알 수 없는 오류'
       })
   },
 })
