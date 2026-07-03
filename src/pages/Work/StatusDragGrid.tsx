@@ -57,6 +57,9 @@ export default function StatusDragGrid({
   const [dragNum, setDragNum] = useState<string | null>(null)
   const [multiCount, setMultiCount] = useState(0)
   const [overTrash, setOverTrash] = useState(false) // 토큰 danger 톤
+  // 존 드롭 → 흡입 동안 숨길 카드(상태 기반 — 패치 후에도 같은 목록에 남는 카드에
+  // inline 스타일이 영구 잔존하는 유령 셀 방지. 흡입 후 패치와 함께 해제)
+  const [hidingNums, setHidingNums] = useState<Set<string>>(new Set())
 
   const itemsRef = useRef(items); itemsRef.current = items
   const canDragRef = useRef(canDrag); canDragRef.current = canDrag
@@ -171,8 +174,9 @@ export default function StatusDragGrid({
     const d = drag.current
     const zh = zoneRef.current
     // 휴지통 드롭 — 흡입 없이 부모에 확인 위임(단일·복수). 토큰 중심 = 포인터 좌표.
+    // 잡은 카드(d.num)를 맨 앞에 — 부모 고정 토큰이 드래그 토큰과 같은 카드 정보를 유지.
     if (d && !zh && trashHoverRef.current && onDeleteDropRef.current) {
-      const nums = [...d.nums]
+      const nums = [d.num, ...d.nums.filter((n) => n !== d.num)]
       const at = { ...lastPointer.current }
       endDrag()
       cleanupPending()
@@ -182,17 +186,20 @@ export default function StatusDragGrid({
     if (d && zh) {
       const res = onStatusDropRef.current(d.nums, zh.zone)
       if (res) {
-        // 변경 카드 즉시 숨김(흡입 중 중복 표시 방지) — 패치 후 목록에서 자연 제거
-        for (const n of res.changedNums) {
-          const el = cellRefs.current.get(n)
-          if (el) { el.style.opacity = '0'; el.style.pointerEvents = 'none' }
+        // 변경 카드 즉시 숨김(흡입 중 중복 표시 방지) — 상태 기반. 흡입 후 패치와 함께 해제:
+        // 목록에서 빠지는 카드는 언마운트, 같은 목록에 남는 카드(완료→Remind 등)는 다시 표시.
+        const changed = res.changedNums
+        setHidingNums((prev) => new Set([...prev, ...changed]))
+        const finalize = res.finalize
+        const done = () => {
+          finalize()
+          setHidingNums((prev) => { const n = new Set(prev); changed.forEach((c) => n.delete(c)); return n })
         }
         const lifted = liftedRef.current
-        const finalize = res.finalize
         if (lifted) {
-          void genieOverlayInto(lifted, zh.rect).then(finalize)
+          void genieOverlayInto(lifted, zh.rect).then(done)
         } else {
-          finalize()
+          done()
         }
       }
     }
@@ -294,6 +301,7 @@ export default function StatusDragGrid({
               } : {}),
               ...(isDragSource ? { opacity: 0.35 } : {}),
               ...(awaiting ? { opacity: awaitingHidden ? 0 : 0.32, pointerEvents: 'none' } : {}),
+              ...(hidingNums.has(t.num) ? { opacity: 0, pointerEvents: 'none' } : {}),
               transition: 'opacity .15s',
             })}
           >

@@ -745,6 +745,9 @@ export default function Work() {
   // 카드 주변 빈 공간 클릭 = 전체 선택 해제(카드·버튼·입력·드롭존·팝업 제외 — 카드 클릭은 캡처에서 전파 중단됨)
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
+      // 드래그 드롭·중단 직후 브라우저 합성 click(공통 조상 target) 무시 — 선택 유지.
+      // zoneClickSuppress는 onZoneChange(드래그 종료)에서 +350ms로 세팅됨.
+      if (Date.now() < zoneClickSuppress.current) return
       const t = e.target as HTMLElement | null
       if (t && t.closest('.reorder-cell, .sdg-cell, button, a, input, textarea, [data-dropzone], [data-trashzone], .MuiModal-root, .MuiPopover-root')) return
       clearSelection()
@@ -816,9 +819,14 @@ export default function Work() {
     if (t && editingId !== t.id) startEdit(t)
   }
   // 휴지통 드롭(단일·복수) — 흡입 없이 확인창부터. 토큰은 드롭 지점에 고정 표시, 취소 시 원상 복원.
+  // 진행 중 삭제 라이프사이클(확인창·흡입·API) 동안 새 요청은 무시 — deleteReq 덮어쓰기 방지.
+  // 수정모드(in-place 편집) 카드는 대상에서 제외(존 드롭과 동일 가드).
   const handleDeleteDrop = (nums: string[], at: { x: number; y: number }) => {
     if (!isAdmin || !user || !authKey) return
-    const targets = nums.map((n) => items.find((x) => x.num === n)).filter((t): t is WorkItem => !!t)
+    if (deleting || deleteReq) return
+    const targets = nums
+      .map((n) => items.find((x) => x.num === n))
+      .filter((t): t is WorkItem => !!t && editingId !== t.id)
     if (targets.length === 0) return
     setTrashHover(false)
     setDeleteReq({
@@ -827,8 +835,11 @@ export default function Work() {
       phase: 'confirm',
     })
   }
-  // 카드 메뉴·상세 Drawer의 삭제 — 확인창만(토큰·흡입 없음)
-  const requestDelete = (t: WorkItem) => setDeleteReq({ items: [t], phase: 'confirm' })
+  // 카드 메뉴·상세 Drawer의 삭제 — 확인창만(토큰·흡입 없음). 진행 중 라이프사이클 보호 동일.
+  const requestDelete = (t: WorkItem) => {
+    if (deleting || deleteReq) return
+    setDeleteReq({ items: [t], phase: 'confirm' })
+  }
   // 삭제 확인 대기 카드(휴지통 플로만) — 확인창 동안 흐림, 흡입 후 숨김
   const awaitingNums = useMemo(
     () => (deleteReq?.token ? new Set(deleteReq.items.map((i) => i.num)) : undefined),

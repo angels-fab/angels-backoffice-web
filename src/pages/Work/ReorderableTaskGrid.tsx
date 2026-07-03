@@ -78,6 +78,9 @@ export default function ReorderableTaskGrid({
   const [overIndex, setOverIndex] = useState(0)
   const [multiCount, setMultiCount] = useState(0)
   const [overTrash, setOverTrash] = useState(false) // 토큰 danger 톤
+  // 존 드롭 → 흡입 동안 숨길 카드(상태 기반 — 드래그 카드는 placeholder로 언마운트돼 있어
+  // cellRefs 명령형 숨김이 닿지 않고, 패치 후 목록에 남는 카드는 inline 스타일이 잔존하므로)
+  const [hidingNums, setHidingNums] = useState<Set<string>>(new Set())
 
   // 최신 props/상태를 이벤트 핸들러에서 읽기 위한 ref
   const itemsRef = useRef(items); itemsRef.current = items
@@ -272,8 +275,9 @@ export default function ReorderableTaskGrid({
     const d = drag.current
     const zh = zoneRef.current
     // 휴지통 드롭 — 흡입 없이 부모에 확인 위임(단일·복수). 토큰 중심 = 포인터 좌표.
+    // 잡은 카드(d.num)를 맨 앞에 — 부모 고정 토큰이 드래그 토큰과 같은 카드 정보를 유지.
     if (d && !zh && trashHoverRef.current && onDeleteDropRef.current) {
-      const nums = d.multiNums ?? [d.num]
+      const nums = d.multiNums ? [d.num, ...d.multiNums.filter((n) => n !== d.num)] : [d.num]
       const at = { ...lastPointer.current }
       finishDrag(false)
       cleanupPending()
@@ -285,17 +289,20 @@ export default function ReorderableTaskGrid({
       const res = onStatusDropRef.current(nums, zh.zone)
       zoneRef.current = null
       if (res) {
-        // 변경 카드 즉시 숨김(흡입 중 중복 표시 방지) — 패치 후 목록에서 자연 제거
-        for (const n of res.changedNums) {
-          const el = cellRefs.current.get(n)
-          if (el) { el.style.opacity = '0'; el.style.pointerEvents = 'none' }
+        // 변경 카드 즉시 숨김(흡입 중 중복 표시 방지) — 상태 기반이라 placeholder로 언마운트됐던
+        // 드래그 카드도 재마운트 즉시 투명. 흡입 후 패치와 함께 해제(목록에 남는 카드는 다시 표시).
+        const changed = res.changedNums
+        setHidingNums((prev) => new Set([...prev, ...changed]))
+        const finalize = res.finalize
+        const done = () => {
+          finalize()
+          setHidingNums((prev) => { const n = new Set(prev); changed.forEach((c) => n.delete(c)); return n })
         }
         const lifted = liftedRef.current
-        const finalize = res.finalize
         if (lifted) {
-          void genieOverlayInto(lifted, zh.rect).then(finalize)
+          void genieOverlayInto(lifted, zh.rect).then(done)
         } else {
-          finalize()
+          done()
         }
         finishDrag(false) // 순서변경 아님 — 존 드롭
         cleanupPending()
@@ -418,6 +425,7 @@ export default function ReorderableTaskGrid({
               } : {}),
               ...(isDragSource ? { opacity: 0.35 } : {}),
               ...(awaiting ? { opacity: awaitingHidden ? 0 : 0.32, pointerEvents: 'none' } : {}),
+              ...(hidingNums.has(num) ? { opacity: 0, pointerEvents: 'none' } : {}),
               transition: 'opacity .15s',
             })}
           >
