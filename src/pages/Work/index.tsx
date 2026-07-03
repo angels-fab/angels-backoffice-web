@@ -14,7 +14,6 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
-import Collapse from '@mui/material/Collapse'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import AddIcon from '@mui/icons-material/Add'
 import UndoIcon from '@mui/icons-material/Undo'
@@ -25,6 +24,8 @@ import PauseIcon from '@mui/icons-material/Pause'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates'
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import { alpha } from '@mui/material/styles'
 import {
   PageContainer,
@@ -32,7 +33,6 @@ import {
   ContentSection,
   AppCard,
   CardGrid,
-  FilterBar,
   SearchBar,
   StatusChip,
   EmptyState,
@@ -96,23 +96,23 @@ function toForm(t: WorkItem): NewTaskForm {
   }
 }
 
-// '+ 새 업무' 컴팩트 버튼(시안 .new-btn — 높이 38px) — 구분 필터 행 우측에 배치, 누르면 인라인 작성란.
-function NewTaskButton({ onClick }: { onClick: () => void }) {
+// '+' 새 업무 버튼(42×28) — 제목행 건수 옆, 진행중 뷰에서만. 누르면 카드 그리드 첫 칸에 인라인 작성란.
+function NewTaskPlusButton({ onClick }: { onClick: () => void }) {
   return (
     <ButtonBase
       onClick={onClick}
       aria-label="새 업무 등록"
       sx={(th) => ({
-        height: 38, px: 1.75, flexShrink: 0, gap: 0.75,
+        width: 42, height: 28, flexShrink: 0,
         border: '1px solid', borderColor: alpha(th.palette.accent.green, 0.5),
-        borderRadius: '9px', bgcolor: alpha(th.palette.accent.green, 0.12),
-        color: th.palette.accent.green, fontSize: 12.5, fontWeight: 800,
+        borderRadius: '8px', bgcolor: alpha(th.palette.accent.green, 0.12),
+        color: th.palette.accent.green,
         transition: 'background-color .15s, border-color .15s',
         '&:hover': { bgcolor: alpha(th.palette.accent.green, 0.2), borderColor: alpha(th.palette.accent.green, 0.7) },
         '&:focus-visible': { outline: 'none', borderColor: th.palette.accent.green },
       })}
     >
-      <AddIcon sx={{ fontSize: 18 }} /> 새 업무
+      <AddIcon sx={{ fontSize: 18 }} />
     </ButtonBase>
   )
 }
@@ -145,7 +145,7 @@ function GroupBtn({ label, icon, selected, disabled, onClick, title }: {
           disabled={disabled}
           onClick={onClick}
           sx={(th) => ({
-            px: icon ? 0 : 1.25, minWidth: icon ? 34 : 0,
+            px: label ? 1.25 : 0, minWidth: label ? 0 : 34, gap: 0.5,
             fontSize: 12.5, fontWeight: 600, lineHeight: 1,
             color: selected ? th.palette.primary.main : 'text.secondary',
             bgcolor: selected ? alpha(th.palette.primary.main, 0.14) : 'transparent',
@@ -154,7 +154,8 @@ function GroupBtn({ label, icon, selected, disabled, onClick, title }: {
             '&.Mui-disabled': { color: 'text.disabled' },
           })}
         >
-          {icon ?? label}
+          {label}
+          {icon}
         </ButtonBase>
       </Box>
     </Tooltip>
@@ -177,8 +178,9 @@ export default function Work() {
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<WorkView>('inProgress') // KPI 버튼이 전환하는 메인 목록
-  const [cat, setCat] = useState('전체')
-  const [mgr, setMgr] = useState('전체')
+  // 구분·담당자 필터 — 업무일정 규칙(전체 칩 없음·빈 Set=전체·일반클릭 단독/재클릭 해제·Shift 복수). 구분은 normCat 키.
+  const [selCats, setSelCats] = useState<Set<string>>(new Set())
+  const [selMgrs, setSelMgrs] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<WorkItem | null>(null)
   const [writeOpen, setWriteOpen] = useState(false)
@@ -204,7 +206,8 @@ export default function Work() {
   // 진행중 카드 수동 정렬(포털정렬순서) — 낙관적 오버레이(저장 후 재로딩 안 하므로 로컬 유지) + 디바운스 저장
   const [orderMap, setOrderMap] = useState<Record<string, number>>({})
   const [orderError, setOrderError] = useState(false)
-  const [dateSort, setDateSort] = useState<'none' | 'latest' | 'oldest'>('none') // 발의일 정렬 강조(직접 드래그 시 해제)
+  // 표시 전용 정렬 — 시트·포털정렬순서 미변경, Undo/Redo 이력 미포함. null=기본(진행중=수동순서, 그 외=최신순)
+  const [listSort, setListSort] = useState<{ key: 'date' | 'mgr' | 'cat'; dir: 'asc' | 'desc' } | null>(null)
   const orderTimer = useRef<number | null>(null)
   const pendingOrderRef = useRef<WorkOrderEntry[] | null>(null)
   const savingRef = useRef(false) // 저장 POST 진행 중 여부(동시 저장 방지)
@@ -271,7 +274,6 @@ export default function Work() {
   const busiest = managers.find((m) => m.mgr !== '미지정' && m.inProgress > 0) ?? managers[0]
 
   // ── 목록(상태 탭 + 검토필요 + 필터 + 검색) ──
-  const presentCats = useMemo(() => ['전체', ...[...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b))], [items])
 
   // 새 업무 폼 후보 — 구분은 고정 목록, 담당자는 담당자 시트 명단(실패 시 기본값), 부서/장소는 업무 히스토리
   const fieldOptions = useMemo(() => {
@@ -291,16 +293,58 @@ export default function Work() {
     return items.filter((t) => classify(t) === view)
   }, [items, view])
 
-  const presentMgrs = useMemo(() => ['전체', ...[...new Set(pool.map((t) => t.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))], [pool])
+  // 필터 술어 — 구분(normCat 키)·담당자·검색. 빈 선택 = 전체.
+  const q = query.trim().toLowerCase()
+  const matchCat = useCallback((t: WorkItem) => selCats.size === 0 || selCats.has(normCat(t.cat)), [selCats])
+  const matchMgr = useCallback((t: WorkItem) => selMgrs.size === 0 || selMgrs.has(t.mgr || ''), [selMgrs])
+  const matchQuery = useCallback(
+    (t: WorkItem) => !q || `${t.task} ${t.mgr} ${t.dept} ${t.cat} ${t.loc}`.toLowerCase().includes(q),
+    [q],
+  )
 
-  const listed = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return pool
-      .filter((t) => cat === '전체' || normCat(t.cat) === normCat(cat))
-      .filter((t) => mgr === '전체' || (t.mgr || '') === mgr)
-      .filter((t) => !q || `${t.task} ${t.mgr} ${t.dept} ${t.cat} ${t.loc}`.toLowerCase().includes(q))
-      .sort(cmpChief)
-  }, [pool, cat, mgr, query])
+  // 필터 후보 — 현재 상태 뷰 + 상대 필터 + 검색 조건에서 1건 이상만 노출(0건 숨김·조건 변경 시 자동 복귀).
+  // 자기 자신 필터는 무시하고 집계(선택 중에도 형제 후보 유지 — 업무일정과 동일).
+  const presentCats = useMemo(
+    () => [...new Set(pool.filter((t) => matchMgr(t) && matchQuery(t)).map((t) => t.cat).filter(Boolean))]
+      .sort((a, b) => workCatRank(a) - workCatRank(b)),
+    [pool, matchMgr, matchQuery],
+  )
+  const presentMgrs = useMemo(
+    () => [...new Set(pool.filter((t) => matchCat(t) && matchQuery(t)).map((t) => t.mgr).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'ko')),
+    [pool, matchCat, matchQuery],
+  )
+  // 조건 변화로 사라진 후보에 대한 선택 잔존 제거(보이지 않는 활성 필터 방지)
+  useEffect(() => {
+    setSelCats((prev) => {
+      const avail = new Set(presentCats.map((c) => normCat(c)))
+      const next = new Set([...prev].filter((c) => avail.has(c)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [presentCats])
+  useEffect(() => {
+    setSelMgrs((prev) => {
+      const avail = new Set(presentMgrs)
+      const next = new Set([...prev].filter((m) => avail.has(m)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [presentMgrs])
+
+  // 표시 전용 정렬 적용(안정 정렬 — 동률은 기존 순서 유지). 시트·포털정렬순서 미변경.
+  const applyListSort = useCallback((arr: WorkItem[]) => {
+    if (!listSort) return arr
+    const mul = listSort.dir === 'asc' ? 1 : -1
+    return [...arr].sort((a, b) => {
+      if (listSort.key === 'date') return (dateSortValue(a.start) - dateSortValue(b.start)) * mul
+      if (listSort.key === 'mgr') return (a.mgr || '').localeCompare(b.mgr || '', 'ko') * mul
+      return (workCatRank(a.cat) - workCatRank(b.cat)) * mul
+    })
+  }, [listSort])
+
+  const listed = useMemo(
+    () => applyListSort(pool.filter((t) => matchCat(t) && matchMgr(t) && matchQuery(t)).sort(cmpChief)),
+    [pool, matchCat, matchMgr, matchQuery, applyListSort],
+  )
 
   // 진행중 카드 표시 순서 = 포털정렬순서(낙관적 orderMap 우선) 오름차순, 미지정은 Check우선·최신순 뒤로.
   // (진행중 뷰는 필터를 숨기므로 전체 진행중 대상. 드래그 순서변경은 이 목록에만 적용.)
@@ -315,14 +359,11 @@ export default function Work() {
       .filter((t) => classify(t) === 'inProgress')
       .sort((a, b) => rank(a) - rank(b) || cmpChief(a, b))
   }, [items, orderMap])
-  // 진행중 표시 목록 — 탭필터·검색 적용(순서는 포털정렬순서 유지)
-  const inProgressListed = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return inProgressList
-      .filter((t) => cat === '전체' || normCat(t.cat) === normCat(cat))
-      .filter((t) => mgr === '전체' || (t.mgr || '') === mgr)
-      .filter((t) => !q || `${t.task} ${t.mgr} ${t.dept} ${t.cat} ${t.loc}`.toLowerCase().includes(q))
-  }, [inProgressList, cat, mgr, query])
+  // 진행중 표시 목록 — 탭필터·검색 적용 + 표시 전용 정렬(기본은 포털정렬순서 유지)
+  const inProgressListed = useMemo(
+    () => applyListSort(inProgressList.filter((t) => matchCat(t) && matchMgr(t) && matchQuery(t))),
+    [inProgressList, matchCat, matchMgr, matchQuery, applyListSort],
+  )
 
   // 통합 Undo/Redo — 순서변경·상태변경 히스토리(HistEntry) 스택
   const undoStack = useRef<HistEntry[]>([])
@@ -346,14 +387,13 @@ export default function Work() {
     // 인라인 작성 중 내용이 있으면 뷰 전환으로 사라지기 전에 확인
     if (composing && composeDirty && !window.confirm('작성 중인 새 업무가 있습니다. 이동하면 입력한 내용이 사라집니다. 이동할까요?')) return
     setView(v)
-    setMgr('전체')
+    setSelMgrs(new Set()) // 담당자 필터는 상태 뷰별 후보가 달라 전환 시 초기화
     setComposing(false)
     setEditingId(null)
   }
 
-  // '새 업무' 카드 클릭 → 진행중 뷰에서 인라인 편집 카드 펼침(별도 창 없음)
+  // '+' 버튼(진행중 뷰 전용) — 카드 그리드 첫 칸에 인라인 작성카드 표시
   const startCompose = () => {
-    setView('inProgress')
     setEditingId(null)
     setComposing(true)
   }
@@ -617,21 +657,39 @@ export default function Work() {
       finalOrder = full.map((n) => (inSet.has(n) ? orderedNums[i++] : n))
     }
     pushEntry({ kind: 'order', before: full, after: finalOrder })
-    setDateSort('none'); commitOrder(finalOrder); bumpHist()
+    // 드래그 = 수동 정렬 의도 — 표시 정렬을 해제하고 보이는 배치 그대로 포털정렬순서로 확정(시각적 점프 없음)
+    setListSort(null); commitOrder(finalOrder); bumpHist()
   }
 
-  // 발의일자 기준 정렬(최신순=내림차순 / 오래된순=오름차순). 같은 날짜는 stable sort로 현재 표시순서 유지.
-  // 결과를 새 사용자 지정 순서로 취급해 포털정렬순서를 재계산·저장(3초 디바운스).
-  const applyDateSort = (dir: 'latest' | 'oldest') => {
-    const sorted = [...inProgressList].sort((a, b) => {
-      const d = dateSortValue(a.start) - dateSortValue(b.start)
-      return dir === 'latest' ? -d : d
+  // 정렬 버튼 — 표시 전용(시트·포털정렬순서 미변경, 이력 미포함). 같은 키 재클릭 = 방향 전환.
+  // 날짜는 최신순(↓)부터, 담당자·구분은 오름차순(↑)부터 시작.
+  const toggleListSort = (key: 'date' | 'mgr' | 'cat') => {
+    setListSort((prev) => {
+      if (prev?.key === key) return { key, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
+      return { key, dir: key === 'date' ? 'desc' : 'asc' }
     })
-    pushEntry({ kind: 'order', before: currentOrderNums(), after: sorted.map((t) => t.num) })
-    setDateSort(dir)
-    commitOrder(sorted.map((t) => t.num))
-    bumpHist()
   }
+  // 정렬 버튼 라벨·화살표 — 활성 버튼에만 방향 화살표
+  const sortArrow = (key: 'date' | 'mgr' | 'cat') =>
+    listSort?.key === key
+      ? (listSort.dir === 'desc' ? <ArrowDownwardIcon sx={{ fontSize: 13 }} /> : <ArrowUpwardIcon sx={{ fontSize: 13 }} />)
+      : undefined
+
+  // 구분·담당자 필터 토글 — 일반클릭: 단독 선택/단독 재클릭 해제(전체) · Shift: 기존 유지 + 추가/해제
+  const toggleFilterValue = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) =>
+    (value: string, additive: boolean) =>
+      setter((prev) => {
+        if (!additive) {
+          if (prev.size === 1 && prev.has(value)) return new Set<string>()
+          return new Set([value])
+        }
+        const next = new Set(prev)
+        if (next.has(value)) next.delete(value)
+        else next.add(value)
+        return next
+      })
+  const toggleCat = toggleFilterValue(setSelCats)
+  const toggleMgr = toggleFilterValue(setSelMgrs)
 
   // ── 상태 배치 저장 — 직렬화 큐(연속 드롭·Undo/Redo 응답 역전 방지). 성공 무표시, 실패만 롤백+재시도 ──
   const enqueueStatusSave = (changes: WorkStatusChange[], onFail: () => void, retry: () => void) => {
@@ -669,14 +727,14 @@ export default function Work() {
     const e = undoStack.current.pop()
     if (!e) return
     redoStack.current.push(e)
-    if (e.kind === 'order') { setDateSort('none'); commitOrder(e.before) } else applyStatusEntry(e, 'back')
+    if (e.kind === 'order') { setListSort(null); commitOrder(e.before) } else applyStatusEntry(e, 'back')
     bumpHist()
   }
   const doRedo = () => {
     const e = redoStack.current.pop()
     if (!e) return
     undoStack.current.push(e)
-    if (e.kind === 'order') { setDateSort('none'); commitOrder(e.after) } else applyStatusEntry(e, 'forward')
+    if (e.kind === 'order') { setListSort(null); commitOrder(e.after) } else applyStatusEntry(e, 'forward')
     bumpHist()
   }
   // 키보드 단축키(Ctrl/Cmd+Z=실행취소, +Shift=다시실행). 입력란 포커스 중엔 가로채지 않음. 관리자만.
@@ -699,7 +757,7 @@ export default function Work() {
   // ── 복수선택 ──
   const clearSelection = useCallback(() => { setSelected(new Set()); setSelMode(false); selAnchor.current = null }, [])
   // 목록 이동·필터·검색 변경·로그아웃 시 해제
-  useEffect(() => { clearSelection() }, [view, cat, mgr, query, user, clearSelection])
+  useEffect(() => { clearSelection() }, [view, selCats, selMgrs, query, user, clearSelection])
   // ESC — 선택/선택모드 종료(입력란 포커스 제외)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -922,84 +980,97 @@ export default function Work() {
         pulse={pulse}
       />
 
-      {/* ② 업무 목록 — 4개 상태 뷰 공통 인터페이스(동일 헤더·필터·검색·새 업무) */}
+      {/* ② 업무 목록 — 4개 상태 뷰 공통 인터페이스(제목행 + 2열 필터·조작부) */}
       <ContentSection last={!SHOW_MANAGER_STATUS}>
-        {/* 헤더 1행: 상태 아이콘(박스 없음)+상태별 제목+건수 | 선택도구+검색(md+)+Undo/Redo(+진행중 정렬) */}
+        {/* 제목행: [상태 아이콘] 상태별 제목 N건 [+](진행중·관리자만) — 그 외 요소 없음 */}
         {(() => {
           const meta = VIEW_META[view]
           const ViewIcon = meta.Icon
           return (
-            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25, mb: 2, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5, minWidth: 0 }}>
               <ViewIcon sx={{ fontSize: 22, color: meta.color, flexShrink: 0 }} />
               <Typography variant="h2" component="h2" sx={{ color: meta.color }}>{meta.title}</Typography>
               <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-                {view === 'inProgress' ? inProgressListed.length : listed.length}
+                {view === 'inProgress' ? inProgressListed.length : listed.length}건
               </Typography>
-              <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 1, minWidth: 0 }}>
-                {isAdmin && selected.size > 0 && (
-                  <>
-                    <StatusChip status="info" label={`${selected.size}건 선택`} />
-                    <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
-                  </>
-                )}
-                {/* 검색 — PC는 헤더 행, 좁은 화면(md 미만)은 아래 전체폭 행으로 이동 */}
-                <SearchBar
-                  value={query}
-                  onChange={setQuery}
-                  placeholder="업무명·담당자·부서·구분·장소 검색"
-                  sx={{ display: { xs: 'none', md: 'inline-flex' } }}
-                />
-                {isAdmin && (
-                  <BtnGroup>
-                    <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: 16 }} />} disabled={!canUndo} onClick={doUndo} />
-                    <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
-                  </BtnGroup>
-                )}
-                {isAdmin && view === 'inProgress' && (
-                  <BtnGroup>
-                    <GroupBtn title="발의일 최신순 정렬" label="최신순" selected={dateSort === 'latest'} onClick={() => applyDateSort('latest')} />
-                    <GroupBtn title="발의일 오래된순 정렬" label="오래된순" selected={dateSort === 'oldest'} onClick={() => applyDateSort('oldest')} />
-                  </BtnGroup>
-                )}
-              </Box>
+              {view === 'inProgress' && isAdmin && <NewTaskPlusButton onClick={startCompose} />}
             </Box>
           )
         })()}
 
-        {/* 새 업무 인라인 작성란 — 기존 NewTaskCard 그대로(우측 절반 폭 유지). 버튼은 구분 필터 행 우측. */}
-        {isAdmin && (
-          <Collapse in={composing} unmountOnExit>
-            <CardGrid columns={2} sx={{ mb: 2 }}>
-              <Box sx={{ gridColumn: { sm: '2' } }}>
-                <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+        {/* 필터·조작부 — 얇은 위아래 구분선, PC 2열(좌: 구분/담당자 · 우: Undo/Redo+정렬 / 검색), 모바일 세로 스택 */}
+        <Box
+          sx={{
+            borderTop: '1px solid', borderBottom: '1px solid', borderColor: 'divider',
+            py: 1.5, mb: 2.5,
+            display: 'flex', gap: { xs: 1.5, md: 2.5 }, alignItems: 'flex-start',
+            flexDirection: { xs: 'column', md: 'row' },
+          }}
+        >
+          {/* 좌: 구분·담당자 필터(좁은 행 간격) */}
+          <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {presentCats.length > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44, pt: '6px' }}>구분</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
+                  {presentCats.map((c) => (
+                    <StatusChip
+                      key={c}
+                      status="neutral"
+                      label={c}
+                      selected={selCats.has(normCat(c))}
+                      onClick={(e) => toggleCat(normCat(c), e.shiftKey)}
+                      onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
+                    />
+                  ))}
+                </Box>
               </Box>
-            </CardGrid>
-          </Collapse>
-        )}
-
-        {/* 좁은 화면 검색 — 별도 행 전체 너비 */}
-        <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 1.5 }}>
-          <SearchBar value={query} onChange={setQuery} width="100%" placeholder="업무명·담당자·부서·구분·장소 검색" />
+            )}
+            {presentMgrs.length > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
+                <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44, pt: '6px' }}>담당자</Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
+                  {presentMgrs.map((m) => (
+                    <StatusChip
+                      key={m}
+                      status="info"
+                      label={m}
+                      selected={selMgrs.has(m)}
+                      onClick={(e) => toggleMgr(m, e.shiftKey)}
+                      onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
+                    />
+                  ))}
+                </Box>
+              </Box>
+            )}
+          </Box>
+          {/* 우: 윗줄 [Undo|Redo][날짜|담당자|구분] / 아랫줄 [검색창] */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: { xs: 'stretch', md: 'flex-end' }, width: { xs: '100%', md: 'auto' }, flexShrink: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+              {isAdmin && selected.size > 0 && (
+                <>
+                  <StatusChip status="info" label={`${selected.size}건 선택`} />
+                  <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
+                </>
+              )}
+              {isAdmin && (
+                <BtnGroup>
+                  <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: 16 }} />} disabled={!canUndo} onClick={doUndo} />
+                  <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
+                </BtnGroup>
+              )}
+              <BtnGroup>
+                <GroupBtn title="날짜 정렬(재클릭 시 방향 전환)" label="날짜" icon={sortArrow('date')} selected={listSort?.key === 'date'} onClick={() => toggleListSort('date')} />
+                <GroupBtn title="담당자 가나다 정렬(재클릭 시 방향 전환)" label="담당자" icon={sortArrow('mgr')} selected={listSort?.key === 'mgr'} onClick={() => toggleListSort('mgr')} />
+                <GroupBtn title="업무구분 정렬(재클릭 시 방향 전환)" label="구분" icon={sortArrow('cat')} selected={listSort?.key === 'cat'} onClick={() => toggleListSort('cat')} />
+              </BtnGroup>
+            </Box>
+            <SearchBar value={query} onChange={setQuery} width="100%" placeholder="업무명·담당자·부서·구분·장소 검색" sx={{ minWidth: { md: 290 } }} />
+          </Box>
         </Box>
 
-        {/* 탭필터 — 구분 행 우측에 '+ 새 업무'(모든 상태 뷰, 작성은 진행중 화면 전환 후) */}
-        <FilterBar trailing={isAdmin ? <NewTaskButton onClick={startCompose} /> : undefined}>
-          <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', mr: 0.5, flexShrink: 0 }}>구분</Typography>
-          {presentCats.map((c) => (
-            <StatusChip key={c} status="neutral" label={c} selected={cat === c} onClick={() => setCat(c)} />
-          ))}
-        </FilterBar>
-        {presentMgrs.length > 1 && (
-          <FilterBar>
-            <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', mr: 0.5, flexShrink: 0 }}>담당자</Typography>
-            {presentMgrs.map((m) => (
-              <StatusChip key={m} status="info" label={m} selected={mgr === m} onClick={() => setMgr(m)} />
-            ))}
-          </FilterBar>
-        )}
-
         {view === 'inProgress' ? (
-          inProgressListed.length === 0 ? (
+          inProgressListed.length === 0 && !composing ? (
             <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
           ) : (
             <ReorderableTaskGrid
@@ -1017,6 +1088,11 @@ export default function Work() {
               onTrashHover={setTrashHover}
               awaitingNums={awaitingNums}
               awaitingHidden={awaitingHidden}
+              leading={isAdmin && composing ? (
+                <Box sx={{ minWidth: 0 }}>
+                  <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
+                </Box>
+              ) : undefined}
             />
           )
         ) : listed.length === 0 ? (

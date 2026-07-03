@@ -13,7 +13,10 @@ export interface StatusChipProps {
   /** 선택형(클릭 토글) 칩일 때 선택 여부 — 채워진 스타일 */
   selected?: boolean
   icon?: ReactNode
-  onClick?: () => void
+  /** 클릭 — 이벤트를 전달(shiftKey 등 수정키 판별용) */
+  onClick?: (e: React.MouseEvent<HTMLDivElement>) => void
+  /** 마우스다운 — Shift+클릭 시 텍스트 선택 방지 등 */
+  onMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void
   size?: 'small' | 'medium'
 }
 
@@ -43,6 +46,7 @@ export default function StatusChip({
   selected,
   icon,
   onClick,
+  onMouseDown,
   size = 'small',
 }: StatusChipProps) {
   return (
@@ -50,6 +54,7 @@ export default function StatusChip({
       label={label}
       icon={icon as never}
       onClick={onClick}
+      onMouseDown={onMouseDown}
       size={size}
       variant="outlined"
       sx={(t) => {

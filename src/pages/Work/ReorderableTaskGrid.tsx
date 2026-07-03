@@ -46,6 +46,8 @@ interface Props {
   awaitingNums?: Set<string>
   /** 삭제 확정(흡입 후) — 대기 카드를 숨김 */
   awaitingHidden?: boolean
+  /** 그리드 첫 칸에 렌더할 요소(새 업무 인라인 작성카드) — 드래그·선택 대상 아님 */
+  leading?: React.ReactNode
 }
 
 const overlap = (a: Rect, b: DOMRect): number => {
@@ -67,7 +69,7 @@ const overlap = (a: Rect, b: DOMRect): number => {
 export default function ReorderableTaskGrid({
   items, renderCard, canDrag, onReorder,
   selectedNums, onSelectToggle, onDragStartCard, onStatusDrop, onZoneChange,
-  onCardDoubleClick, onDeleteDrop, onTrashHover, awaitingNums, awaitingHidden,
+  onCardDoubleClick, onDeleteDrop, onTrashHover, awaitingNums, awaitingHidden, leading,
 }: Props) {
   const gridRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef(new Map<string, HTMLElement>())
@@ -380,6 +382,7 @@ export default function ReorderableTaskGrid({
         ...(dragNum ? { '& .reorder-cell': { pointerEvents: 'none' }, userSelect: 'none', WebkitUserSelect: 'none' } : {}),
       }}
     >
+      {leading}
       {displayNums.map((num) => {
         if (dragNum && num === dragNum) {
           // 목적지 placeholder(점선) — 드래그 카드 높이만큼 공간 확보

@@ -103,13 +103,13 @@ export default function KpiSection({
           transition: 'background .14s ease, box-shadow .14s ease, transform .14s ease',
           '&:hover': { background: STRONG[zone] },
           '&:focus-visible': { outline: '2px solid #7db3ef', outlineOffset: '-3px' },
-          // 하단 인디케이터(호버·선택 시) — 장식이므로 pointer-events 없음(pseudo)
+          // 하단 인디케이터(선택 시) — 시안 state-tab처럼 타일 전체 폭의 긴 상태색 라인(장식, pointer-events 없음)
           '&::after': {
-            content: '""', position: 'absolute', left: '50%', bottom: 9, width: 30, height: 2,
-            borderRadius: '999px', bgcolor: 'currentColor', transform: 'translateX(-50%)',
-            opacity: selected ? 0.72 : 0, transition: 'opacity .14s', pointerEvents: 'none',
+            content: '""', position: 'absolute', left: 0, right: 0, bottom: 0, height: 3,
+            bgcolor: 'currentColor',
+            opacity: selected ? 0.9 : 0, transition: 'opacity .14s', pointerEvents: 'none',
           },
-          '&:hover::after': { opacity: 0.72 },
+          '&:hover::after': { opacity: selected ? 0.9 : 0.4 },
           // 드래그 중: 드롭 가능 영역 상태색 안쪽 링, 활성 존은 강조 배경 + 1.02 확대
           ...(dragging ? { boxShadow: `inset 0 0 0 1.5px ${ZONE_RING[zone]}` } : {}),
           ...(activeZone === zone ? { transform: 'scale(1.02)', zIndex: 1 } : {}),
