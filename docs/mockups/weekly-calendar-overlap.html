@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ANGELS PORTAL · 주간일정 겹침 개선 시안</title>
+  <style>
+    :root{color-scheme:dark;--ink:#0f1117;--ink2:#161b22;--ink3:#1d2635;--line:#293244;--line2:#232c3a;--text:#fff;--muted:#aab4c3;--dim:#7d8899;--blue:#5491da;--amber:#d6a23e;--purple:#a98ae0;--teal:#46b7be;--green:#4da167}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--ink);color:var(--text);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button{font:inherit;color:inherit}
+    .top{height:54px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 22px;background:#0f1117}.brand{font-weight:800;letter-spacing:.05em}.brand span{color:#87b3ef}.user{font-size:11px;color:#78c890;border:1px solid rgba(77,161,103,.4);border-radius:7px;padding:5px 9px}
+    .layout{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:calc(100vh - 54px)}.side{padding:20px 12px;border-right:1px solid var(--line);background:#10131a}.nav{display:block;width:100%;padding:12px 13px;border:0;border-radius:9px;background:transparent;color:var(--muted);text-align:left}.nav.active{background:rgba(84,145,218,.14);color:#79afea;font-weight:700}
+    main{padding:28px;min-width:0}.head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.head h1{margin:0 0 7px;font-size:24px}.head p{margin:0;color:var(--muted);font-size:12px}.controls{display:flex;gap:7px}.btn{min-height:34px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--ink2);color:var(--muted)}.btn.active{color:#fff;border-color:var(--blue);background:rgba(84,145,218,.15)}
+    .note{display:flex;align-items:center;gap:9px;margin-bottom:12px;padding:10px 12px;border:1px solid rgba(84,145,218,.35);border-radius:9px;background:rgba(84,145,218,.09);color:var(--muted);font-size:11px}.note b{color:#9bc5f2}
+    .week-wrap{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--ink2)}.week{min-width:920px}.week-head{display:grid;grid-template-columns:58px repeat(5,1fr);height:54px;border-bottom:1px solid var(--line);background:#131820}.week-head>div{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);font-size:12px;color:var(--muted)}.week-head>div:last-child{border-right:0}.week-head .today{color:#fff;font-weight:800;background:rgba(84,145,218,.08)}
+    .week-body{display:grid;grid-template-columns:58px repeat(5,1fr);height:520px}.times{position:relative;border-right:1px solid var(--line)}.time{position:absolute;left:0;right:0;transform:translateY(-7px);text-align:center;color:var(--dim);font-size:10px}.day{position:relative;border-right:1px solid var(--line);background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 64px,var(--line2) 64px,var(--line2) 65px)}.day:last-child{border-right:0}.day.today{background-color:rgba(84,145,218,.025)}
+    .event{position:absolute;top:var(--top);height:var(--height);left:var(--left);width:var(--width);padding:7px 8px;border:1px solid rgba(214,162,62,.48);border-left:3px solid var(--amber);border-radius:8px;background:rgba(89,75,45,.9);overflow:hidden;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.18)}.event:hover{border-color:#e6bd63;z-index:3}.event.blue{border-color:rgba(84,145,218,.5);border-left-color:var(--blue);background:rgba(38,63,92,.92)}.event.green{border-color:rgba(77,161,103,.5);border-left-color:var(--green);background:rgba(41,75,53,.92)}
+    .event-time{color:#d8dee8;font-size:11px;font-weight:700}.event-title{margin-top:3px;color:#fff;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.people{display:flex;justify-content:flex-end;gap:4px;margin-top:7px}.person{padding:2px 6px;border-radius:5px;background:var(--purple);color:white;font-size:9px;font-weight:700}.person.teal{background:var(--teal)}
+    .collision-label{position:absolute;top:5px;left:6px;padding:2px 6px;border-radius:5px;background:#26364d;color:#9bc5f2;font-size:9px;font-weight:700;z-index:4}
+    @media(max-width:720px){.layout{grid-template-columns:1fr}.side{display:none}main{padding:18px 12px}.head{flex-direction:column}.controls{width:100%}.controls .btn{flex:1}.week{min-width:760px}.week-body{height:480px}.note{line-height:1.5}}
+  </style>
+</head>
+<body>
+  <header class="top"><div class="brand"><span>ANGELS</span> PORTAL</div><div class="user">관리자 · 조성범</div></header>
+  <div class="layout">
+    <aside class="side"><button class="nav">홈</button><button class="nav">공지사항</button><button class="nav active">업무일정</button><button class="nav">업무현황</button><button class="nav">장비관리</button></aside>
+    <main>
+      <div class="head"><div><h1>업무일정</h1><p>같은 날 같은 시간에 시작하거나 시간이 겹치는 일정은 자동으로 나란히 배치합니다.</p></div><div class="controls"><button class="btn">월간</button><button class="btn active">주간</button><button class="btn">주말보기</button></div></div>
+      <div class="note"><b>겹침 개선</b><span>6월 30일 08:00 일정 2건을 같은 폭으로 분할했습니다. 제목과 해당자 칩이 서로 침범하지 않습니다.</span></div>
+      <div class="week-wrap">
+        <div class="week">
+          <div class="week-head"><div></div><div>6.29 월</div><div class="today">6.30 화</div><div>7.1 수</div><div>7.2 목</div><div>7.3 금</div></div>
+          <div class="week-body">
+            <div class="times"><span class="time" style="top:0">08:00</span><span class="time" style="top:65px">09:00</span><span class="time" style="top:130px">10:00</span><span class="time" style="top:195px">11:00</span><span class="time" style="top:260px">12:00</span><span class="time" style="top:325px">13:00</span><span class="time" style="top:390px">14:00</span><span class="time" style="top:455px">15:00</span></div>
+            <div class="day"><div class="event blue" style="--top:132px;--height:58px;--left:5px;--width:calc(100% - 10px)"><div class="event-time">10:00</div><div class="event-title">센터 주간 업무 협의</div><div class="people"><span class="person teal">센터</span></div></div></div>
+            <div class="day today">
+              <span class="collision-label">동시 일정 2건</span>
+              <div class="event" style="--top:22px;--height:120px;--left:5px;--width:calc(50% - 7px)"><div class="event-time">08:00</div><div class="event-title">동탄 ZEISS-FIB 데모</div><div class="people"><span class="person">세리</span></div></div>
+              <div class="event" style="--top:22px;--height:120px;--left:calc(50% + 2px);--width:calc(50% - 7px)"><div class="event-time">08:00</div><div class="event-title">국내(세종) 업무 협의</div><div class="people"><span class="person">주봉</span></div></div>
+              <div class="event green" style="--top:198px;--height:58px;--left:5px;--width:calc(100% - 10px)"><div class="event-time">11:00</div><div class="event-title">장비 도입 검토</div><div class="people"><span class="person teal">센터</span></div></div>
+            </div>
+            <div class="day"></div><div class="day"></div><div class="day"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

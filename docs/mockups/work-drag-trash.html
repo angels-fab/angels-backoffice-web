@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>업무카드 드래그 · 휴지통 UX 시안</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}
+    :root{--bg:#0f1117;--card:#171c25;--raised:#1d2531;--line:#2b3545;--text:#f7f9fc;--sub:#9aa6b8;--blue:#65a5ef;--red:#e66761;--green:#69bd84}
+    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{padding:32px 26px 120px;user-select:none}
+    button{font:inherit}
+    .wrap{width:min(1040px,100%);margin:0 auto}
+    .head{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px}
+    .eyebrow{margin:0 0 7px;color:#718096;font-size:12px;font-weight:800;letter-spacing:.04em}
+    h1{margin:0;font-size:25px;letter-spacing:-.035em}
+    .help{margin:9px 0 0;color:var(--sub);font-size:13px;line-height:1.65}
+    .drag-rule{padding:8px 12px;border:1px solid #30415a;border-radius:10px;background:#182231;color:#a9d2ff;font-size:12px;font-weight:850;white-space:nowrap}
+    .status-strip{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:24px;background:#151a22}
+    .status{position:relative;min-height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border-right:1px solid rgba(170,180,195,.18);cursor:pointer;transition:filter .14s,box-shadow .14s,transform .14s}
+    .status.drop-active{z-index:2;filter:brightness(1.65);box-shadow:inset 0 0 0 2px currentColor,0 0 0 6px rgba(101,165,239,.1);transform:scale(1.035)}
+    .status:last-child{border-right:0}.status b{font-size:14px}.status small{color:var(--sub);font-size:11px}.status:nth-child(1){color:#72c78d;background:rgba(77,161,103,.1)}.status:nth-child(2){color:#79a9e2;background:rgba(84,145,218,.09)}.status:nth-child(3){color:#c2cad5;background:rgba(141,152,169,.075)}.status:nth-child(4){color:#e0bc74;background:rgba(214,162,62,.065)}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}.section-head h2{margin:0;font-size:16px}.selection{color:var(--sub);font-size:12px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .task-card{position:relative;min-width:0;min-height:126px;padding:17px 18px;border:1px solid var(--line);border-radius:13px;background:var(--card);cursor:grab;transition:border-color .14s,background .14s,box-shadow .14s,opacity .16s,transform .2s,height .2s,padding .2s,margin .2s}
+    .task-card:hover{border-color:#3b4b61;background:#1a202b}.task-card:active{cursor:grabbing}
+    .task-card.selected{border-color:rgba(101,165,239,.95);background:linear-gradient(rgba(101,165,239,.08),rgba(101,165,239,.08)),var(--card);box-shadow:inset 0 0 0 1px rgba(101,165,239,.38)}
+    .task-card.drag-source{opacity:.22}.task-card.awaiting{opacity:.32}
+    .task-card.removing{opacity:0;transform:scale(.94);min-height:0;height:0;padding-top:0;padding-bottom:0;margin:0;border-width:0;overflow:hidden}
+    .meta{display:flex;align-items:center;gap:7px;margin-bottom:10px;color:#8fa0b6;font-size:11px}.chip{padding:4px 8px;border-radius:999px;background:rgba(101,165,239,.12);color:#8fc3ff;font-weight:800}.date{margin-left:auto}
+    .title{margin:0 0 8px;font-size:15px;line-height:1.45;letter-spacing:-.02em}.body{margin:0;color:#aab4c3;font-size:12px;line-height:1.55}
+    .drag-ghost{position:fixed;z-index:1600;width:180px;height:180px;pointer-events:none;transform-origin:50% 50%;opacity:0;will-change:left,top,transform,opacity,clip-path;filter:drop-shadow(0 20px 28px rgba(0,0,0,.48));transition:opacity .14s}
+    .drag-ghost.ready{opacity:.96}
+    .drag-ghost .ghost-card,.drag-ghost .ghost-back{position:absolute;inset:0;border:1px solid #405169;border-radius:25px;background:#1c2430}
+    .drag-ghost .ghost-back.two{transform:translate(28px,28px) rotate(5deg);opacity:.46}.drag-ghost .ghost-back.one{transform:translate(14px,14px) rotate(2.5deg);opacity:.72}
+    .drag-ghost .ghost-card{position:relative;height:100%;overflow:hidden;background:linear-gradient(145deg,#202b39,#18202b)}
+    .token-content{height:100%;padding:25px 22px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:12px}.token-chip{padding:5px 10px;border-radius:999px;background:rgba(101,165,239,.15);color:#9bcaff;font-size:18px;font-weight:850}.token-content strong{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:23px;line-height:1.28;letter-spacing:-.03em}.token-content small{color:#9eabbc;font-size:17px}
+    .drag-count{position:absolute;z-index:3;right:-14px;top:-14px;min-width:44px;height:30px;padding:0 10px;border-radius:999px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:850;box-shadow:0 7px 18px rgba(0,0,0,.32)}
+    .drag-ghost.danger .ghost-card,.drag-ghost.danger .ghost-back{border-color:rgba(230,103,97,.95);background:#302024}
+    .gather-clone{position:fixed;z-index:1590;pointer-events:none;margin:0;transform-origin:50% 50%;filter:drop-shadow(0 10px 18px rgba(0,0,0,.32));will-change:left,top,width,height,transform,opacity,border-radius}
+    .trash-zone{position:fixed;z-index:1500;left:0;right:0;bottom:24px;width:min(244px,calc(100vw - 32px));height:66px;margin-inline:auto;transform:translateY(24px);opacity:0;pointer-events:none;border:1.5px dashed rgba(230,103,97,.56);border-radius:17px;background:rgba(26,21,25,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 18px 50px rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;gap:11px;color:#ef9995;transition:opacity .16s,transform .18s,background .14s,border-color .14s,box-shadow .14s}
+    .trash-zone.visible{opacity:1;transform:translateY(0)}
+    .trash-zone.active{border-style:solid;border-color:#f07a74;background:rgba(148,43,43,.82);color:#fff;box-shadow:0 0 0 7px rgba(230,103,97,.12),0 18px 50px rgba(0,0,0,.5);transform:translateY(0)}
+    .trash-zone .material-icons-outlined{font-size:28px}.trash-copy{display:flex;flex-direction:column;gap:2px}.trash-copy b{font-size:13px}.trash-copy small{font-size:10.5px;opacity:.75}
+    dialog{width:min(390px,calc(100vw - 32px));padding:0;border:1px solid #354257;border-radius:17px;background:#171d27;color:var(--text);box-shadow:0 26px 80px rgba(0,0,0,.62)}dialog::backdrop{background:rgba(4,7,11,.7);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+    .dialog-body{padding:22px}.dialog-icon{width:42px;height:42px;margin-bottom:15px;border-radius:12px;background:rgba(230,103,97,.12);color:#ee8580;display:grid;place-items:center}.dialog-icon span{font-size:24px}.dialog-body h3{margin:0 0 8px;font-size:17px}.dialog-body p{margin:0;color:var(--sub);font-size:12.5px;line-height:1.6}.dialog-actions{display:flex;justify-content:flex-end;gap:8px;padding:13px 16px;border-top:1px solid var(--line)}.dialog-actions button{height:36px;padding:0 15px;border-radius:9px;border:1px solid var(--line);background:#202734;color:var(--text);cursor:pointer;font-weight:800}.dialog-actions .danger{border-color:#cb5853;background:#b94a46;color:#fff}
+    .toast{position:fixed;z-index:1700;left:50%;bottom:30px;transform:translate(-50%,20px);padding:11px 15px;border:1px solid #354257;border-radius:11px;background:#202733;color:#dce5ef;font-size:12px;opacity:0;pointer-events:none;transition:.18s}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:720px){body{padding:22px 13px 130px}.head{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.status-strip{grid-template-columns:repeat(2,1fr)}.status:nth-child(2){border-right:0}.status:nth-child(-n+2){border-bottom:1px solid rgba(170,180,195,.18)}.trash-zone{bottom:78px}.task-card{min-height:116px}}
+  </style>
+</head>
+<body>
+  <main class="wrap" id="surface">
+    <header class="head">
+      <div><p class="eyebrow">업무현황 · 드래그 이동 UX</p><h1>정사각형 토큰 · 지니 흡입 시안</h1><p class="help">카드를 8px 이상 움직이면 50% 크기의 정사각형 토큰으로 바뀝니다.<br>여러 장을 선택하면 카드들이 포인터로 모인 뒤 하나의 스택으로 이동합니다.</p></div>
+      <div class="drag-rule">고정 축소율 50%</div>
+    </header>
+    <section class="status-strip" aria-label="업무 상태 목표영역">
+      <div class="status" data-zone="진행중"><b>진행중</b><small>12건</small></div><div class="status" data-zone="보류"><b>보류</b><small>2건</small></div><div class="status" data-zone="완료"><b>완료</b><small>31건</small></div><div class="status" data-zone="Remind"><b>Remind</b><small>5건</small></div>
+    </section>
+    <div class="section-head"><h2>진행중 업무</h2><span class="selection" id="selectionText">선택 없음</span></div>
+    <section class="grid" id="grid">
+      <article class="task-card" data-id="1"><div class="meta"><span class="chip">구축</span><span>조성범</span><span class="date">2026.06.30</span></div><h3 class="title">팹 장비 반입 일정 및 설치 동선 협의</h3><p class="body">장비별 반입 순서와 클린룸 진입 동선을 최종 확인합니다.</p></article>
+      <article class="task-card" data-id="2"><div class="meta"><span class="chip">행정</span><span>박주봉</span><span class="date">2026.06.29</span></div><h3 class="title">센터 운영규정 개정안 부서 검토</h3><p class="body">의견 취합 후 부서장 최종 확인이 필요한 업무입니다.</p></article>
+      <article class="task-card" data-id="3"><div class="meta"><span class="chip">시설</span><span>김현진</span><span class="date">2026.06.27</span></div><h3 class="title">유틸리티 설비 시운전 체크리스트 작성</h3><p class="body">전기·가스·냉각수 항목별 담당자와 점검 기준을 정리합니다.</p></article>
+      <article class="task-card" data-id="4"><div class="meta"><span class="chip">교육</span><span>권세리</span><span class="date">2026.06.25</span></div><h3 class="title">신규 장비 사용자 안전교육 준비</h3><p class="body">교육자료와 참석자 명단을 확정하고 장소를 예약합니다.</p></article>
+      <article class="task-card" data-id="5"><div class="meta"><span class="chip">구매</span><span>박성범</span><span class="date">2026.06.23</span></div><h3 class="title">장비 유지보수 계약 조건 검토</h3><p class="body">무상보증 기간과 정기점검 범위를 업체별로 비교합니다.</p></article>
+      <article class="task-card" data-id="6"><div class="meta"><span class="chip">회의</span><span>센터</span><span class="date">2026.06.22</span></div><h3 class="title">주간 구축 현황 공유자료 업데이트</h3><p class="body">공정별 진척도와 이번 주 주요 이슈를 반영합니다.</p></article>
+    </section>
+  </main>
+
+  <aside class="trash-zone" id="trash" aria-hidden="true"><span class="material-icons-outlined">delete_outline</span><span class="trash-copy"><b id="trashTitle">휴지통으로 이동</b><small id="trashHint">여기에 놓으면 삭제 확인</small></span></aside>
+  <dialog id="confirmDialog"><div class="dialog-body"><div class="dialog-icon"><span class="material-icons-outlined">delete_outline</span></div><h3 id="dialogTitle">업무를 삭제할까요?</h3><p>삭제를 누르면 카드가 휴지통으로 흡입된 뒤 삭제됩니다.<br>취소하면 모든 카드가 원래 위치로 돌아옵니다.</p></div><div class="dialog-actions"><button id="cancelDelete">취소</button><button class="danger" id="confirmDelete">삭제</button></div></dialog>
+  <div class="toast" id="toast">업무를 삭제했습니다.</div>
+
+  <script>
+    const grid=document.getElementById('grid');
+    const surface=document.getElementById('surface');
+    const trash=document.getElementById('trash');
+    const trashTitle=document.getElementById('trashTitle');
+    const trashHint=document.getElementById('trashHint');
+    const selectionText=document.getElementById('selectionText');
+    const dialog=document.getElementById('confirmDialog');
+    const dialogTitle=document.getElementById('dialogTitle');
+    const toast=document.getElementById('toast');
+    const statuses=[...document.querySelectorAll('.status[data-zone]')];
+    const DRAG_SCALE=.5;
+    const TOKEN_SIZE=180;
+    let selected=new Set(),anchor=null,pending=null,drag=null,ghost=null,activeTarget=null,pendingDelete=[],pendingDeleteRect=null,suppressClick=false;
+
+    const cards=()=>[...grid.querySelectorAll(':scope > .task-card')];
+    const center=r=>({x:r.left+r.width/2,y:r.top+r.height/2});
+    const inside=(r,x,y,pad=8)=>x>=r.left-pad&&x<=r.right+pad&&y>=r.top-pad&&y<=r.bottom+pad;
+    function renderSelection(){cards().forEach(c=>c.classList.toggle('selected',selected.has(c.dataset.id)));selectionText.textContent=selected.size?`${selected.size}건 선택`:'선택 없음'}
+    function selectCard(card,e){const id=card.dataset.id,all=cards().map(c=>c.dataset.id);if(e.shiftKey&&anchor){const a=all.indexOf(anchor),b=all.indexOf(id),range=a<b?all.slice(a,b+1):all.slice(b,a+1);selected=(e.metaKey||e.ctrlKey)?new Set([...selected,...range]):new Set(range)}else if(e.metaKey||e.ctrlKey){selected.has(id)?selected.delete(id):selected.add(id);anchor=id}else{selected=new Set([id]);anchor=id}renderSelection()}
+    function showToast(message){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1700)}
+
+    grid.addEventListener('click',e=>{const card=e.target.closest('.task-card');if(!card||suppressClick)return;selectCard(card,e);e.stopPropagation()});
+    surface.addEventListener('click',e=>{if(e.target.closest('.task-card,button,.status-strip'))return;selected.clear();anchor=null;renderSelection()});
+    grid.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('button,a'))return;const card=e.target.closest('.task-card');if(!card)return;pending={card,id:card.dataset.id,x:e.clientX,y:e.clientY,rect:card.getBoundingClientRect()};window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',up,{once:true})});
+
+    function gatherCard(card,x,y,index){const r=card.getBoundingClientRect(),clone=card.cloneNode(true);clone.className='task-card gather-clone';clone.style.left=`${r.left}px`;clone.style.top=`${r.top}px`;clone.style.width=`${r.width}px`;clone.style.height=`${r.height}px`;clone.style.minHeight='0';document.body.appendChild(clone);const offset=Math.min(index,2)*7;const anim=clone.animate([{left:`${r.left}px`,top:`${r.top}px`,width:`${r.width}px`,height:`${r.height}px`,transform:'scale(1)',opacity:.9,borderRadius:'13px'},{offset:.72,left:`${x-TOKEN_SIZE/2+offset}px`,top:`${y-TOKEN_SIZE/2+offset}px`,width:`${TOKEN_SIZE}px`,height:`${TOKEN_SIZE}px`,transform:`scale(${DRAG_SCALE+.08})`,opacity:.62,borderRadius:'22px'},{left:`${x-TOKEN_SIZE/2+offset}px`,top:`${y-TOKEN_SIZE/2+offset}px`,width:`${TOKEN_SIZE}px`,height:`${TOKEN_SIZE}px`,transform:`scale(${DRAG_SCALE})`,opacity:0,borderRadius:'25px'}],{duration:240+index*25,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'});anim.finished.finally(()=>clone.remove())}
+    function buildGhost(ids,x,y){const title=pending.card.querySelector('.title')?.textContent||'업무';const chip=pending.card.querySelector('.chip')?.textContent||'업무';ghost=document.createElement('div');ghost.className='drag-ghost';ghost.innerHTML=`${ids.length>2?'<div class="ghost-back two"></div>':''}${ids.length>1?'<div class="ghost-back one"></div>':''}<div class="ghost-card"><div class="token-content"><span class="token-chip">${chip}</span><strong>${title}</strong><small>${ids.length>1?'선택 업무 묶음':'업무카드'}</small></div></div>${ids.length>1?`<div class="drag-count">${ids.length}건</div>`:''}`;document.body.appendChild(ghost);moveGhost(x,y);setTimeout(()=>ghost?.classList.add('ready'),125)}
+    function startDrag(x,y){if(!pending||drag)return;if(!selected.has(pending.id)){selected=new Set([pending.id]);anchor=pending.id;renderSelection()}const ids=selected.size>1?cards().filter(c=>selected.has(c.dataset.id)).map(c=>c.dataset.id):[pending.id];const sources=cards().filter(c=>ids.includes(c.dataset.id));sources.forEach(c=>c.classList.add('drag-source'));sources.forEach((c,i)=>gatherCard(c,x,y,i));drag={ids,origin:pending.rect};buildGhost(ids,x,y);trash.classList.add('visible');trash.setAttribute('aria-hidden','false');trashTitle.textContent=ids.length>1?`선택한 업무 ${ids.length}건 삭제`:'휴지통으로 이동';trashHint.textContent='상태 카드 또는 휴지통에 놓기'}
+    function moveGhost(x,y){if(!ghost)return;ghost.style.left=`${x}px`;ghost.style.top=`${y}px`;ghost.style.transform=`translate(-50%,-50%) scale(${DRAG_SCALE})`}
+    function findTarget(x,y){const tr=trash.getBoundingClientRect();if(inside(tr,x,y,8))return{type:'trash',el:trash,rect:tr};for(const el of statuses){const rect=el.getBoundingClientRect();if(inside(rect,x,y,8))return{type:'status',el,rect,zone:el.dataset.zone}}return null}
+    function markTarget(target){trash.classList.remove('active');statuses.forEach(s=>s.classList.remove('drop-active'));ghost?.classList.remove('danger');activeTarget=target;if(!target){trashHint.textContent='상태 카드 또는 휴지통에 놓기';return}if(target.type==='trash'){trash.classList.add('active');ghost?.classList.add('danger');trashHint.textContent='놓아서 삭제 확인'}else{target.el.classList.add('drop-active');trashHint.textContent=`${target.zone}(으)로 이동`}}
+    function move(e){if(!pending)return;const d=Math.hypot(e.clientX-pending.x,e.clientY-pending.y);if(!drag&&d>=8)startDrag(e.clientX,e.clientY);if(!drag)return;e.preventDefault();moveGhost(e.clientX,e.clientY);markTarget(findTarget(e.clientX,e.clientY))}
+    function clearTarget(){trash.classList.remove('active');statuses.forEach(s=>s.classList.remove('drop-active'));activeTarget=null}
+    function cleanupGhost(){ghost?.remove();ghost=null;trash.classList.remove('visible','active');trash.setAttribute('aria-hidden','true');clearTarget();cards().forEach(c=>c.classList.remove('drag-source'));drag=null;pending=null;window.removeEventListener('pointermove',move);setTimeout(()=>suppressClick=false,80)}
+    function genieInto(rect){if(!ghost)return Promise.resolve();const sx=parseFloat(ghost.style.left),sy=parseFloat(ghost.style.top),target=center(rect),upward=target.y<sy;const wide=upward?'polygon(42% 0,58% 0,100% 100%,0 100%)':'polygon(0 0,100% 0,58% 100%,42% 100%)';const narrow=upward?'polygon(48% 0,52% 0,72% 100%,28% 100%)':'polygon(28% 0,72% 0,52% 100%,48% 100%)';const anim=ghost.animate([{left:`${sx}px`,top:`${sy}px`,transform:`translate(-50%,-50%) scale(${DRAG_SCALE})`,clipPath:'polygon(0 0,100% 0,100% 100%,0 100%)',opacity:.96},{offset:.48,left:`${sx+(target.x-sx)*.5}px`,top:`${sy+(target.y-sy)*.45}px`,transform:'translate(-50%,-50%) scale(.42,.5)',clipPath:wide,opacity:.92},{offset:.78,left:`${sx+(target.x-sx)*.82}px`,top:`${sy+(target.y-sy)*.8}px`,transform:'translate(-50%,-50%) scale(.18,.32)',clipPath:narrow,opacity:.72},{left:`${target.x}px`,top:`${target.y}px`,transform:'translate(-50%,-50%) scale(.025,.1)',clipPath:narrow,opacity:0}],{duration:470,easing:'cubic-bezier(.45,0,.7,.25)',fill:'forwards'});const targetFrames=activeTarget?.type==='trash'?[{filter:'brightness(1)'},{filter:'brightness(2)'},{filter:'brightness(1)'}]:[{filter:'brightness(1)'},{filter:'brightness(2)',transform:'scale(1.06)'},{filter:'brightness(1)',transform:'scale(1)'}];activeTarget?.el.animate(targetFrames,{duration:470,easing:'ease-out'});return anim.finished.catch(()=>{})}
+    async function up(){window.removeEventListener('pointermove',move);if(!drag){pending=null;return}suppressClick=true;const target=activeTarget;if(!target){returnGhost();return}const ids=[...drag.ids];if(target.type==='trash'){pendingDelete=ids;pendingDeleteRect=target.rect;cards().filter(c=>ids.includes(c.dataset.id)).forEach(c=>c.classList.add('awaiting'));dialogTitle.textContent=ids.length>1?`선택한 업무 ${ids.length}건을 삭제할까요?`:'이 업무를 삭제할까요?';dialog.showModal();return}const zone=target.zone;const moved=cards().filter(c=>ids.includes(c.dataset.id));await genieInto(target.rect);moved.forEach(c=>c.classList.add('removing'));cleanupGhost();setTimeout(()=>{moved.forEach(c=>c.remove());selected.clear();anchor=null;renderSelection();showToast(`${zone}(으)로 이동했습니다.`)},220)}
+    function returnGhost(){const r=drag.origin,c=center(r),anim=ghost.animate([{left:ghost.style.left,top:ghost.style.top,transform:`translate(-50%,-50%) scale(${DRAG_SCALE})`,opacity:.96},{left:`${c.x}px`,top:`${c.y}px`,transform:'translate(-50%,-50%) scale(.2)',opacity:0}],{duration:210,easing:'ease-out',fill:'forwards'});anim.finished.finally(cleanupGhost)}
+    document.getElementById('cancelDelete').addEventListener('click',()=>{dialog.close();cards().forEach(c=>c.classList.remove('awaiting'));pendingDelete=[];pendingDeleteRect=null;cleanupGhost()});
+    document.getElementById('confirmDelete').addEventListener('click',async()=>{dialog.close();const doomed=cards().filter(c=>pendingDelete.includes(c.dataset.id));await genieInto(pendingDeleteRect||trash.getBoundingClientRect());doomed.forEach(c=>{c.classList.remove('awaiting');c.classList.add('removing')});cleanupGhost();setTimeout(()=>{doomed.forEach(c=>c.remove());selected.clear();anchor=null;pendingDelete=[];pendingDeleteRect=null;renderSelection();showToast('업무를 삭제했습니다.')},220)});
+    dialog.addEventListener('cancel',e=>{e.preventDefault();document.getElementById('cancelDelete').click()});
+  </script>
+</body>
+</html>

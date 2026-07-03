@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>업무현황 KPI 4열 중첩 시안</title>
+  <style>
+    *{box-sizing:border-box}
+    :root{
+      --bg:#0f1117;--card:#161b22;--raised:#1d2531;--line:#2a3444;
+      --text:#fff;--sub:#aab4c3;--dim:#778396;
+      --green:#4da167;--green-soft:rgba(77,161,103,.11);
+      --amber:#d6a23e;--amber-soft:rgba(214,162,62,.11);
+      --gray:#8d98a9;--gray-soft:rgba(141,152,169,.09);--blue:#5491da;--purple:#a98ae0;
+    }
+    body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;align-items:center;justify-content:center;padding:30px}
+    .wrap{width:100%;max-width:1120px}
+    .caption{font-size:12px;font-weight:800;color:var(--dim);margin:0 0 11px 2px;letter-spacing:.02em}
+    .strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:15px}
+    .family{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0;padding:8px;border:1px solid var(--line);border-radius:18px;background:var(--card)}
+    .family.active{border-color:rgba(77,161,103,.33);background:var(--card)}
+    .family.closed{border-color:rgba(141,152,169,.29);background:var(--card)}
+    .tile{position:relative;min-width:0;min-height:132px;border:0;border-radius:13px;padding:18px;display:flex;align-items:center;gap:15px;color:inherit;font:inherit;text-align:left;cursor:pointer;transition:transform .14s ease,background-color .14s ease,box-shadow .14s ease}
+    .tile:hover{transform:translateY(-1px)}
+    .tile:focus-visible{outline:2px solid #7db3ef;outline-offset:2px}
+    .primary{background:transparent}
+    .primary:hover{background:rgba(255,255,255,.025)}
+    .nested{min-height:116px;margin:8px 0;background:var(--raised);border:1px solid var(--line);box-shadow:0 8px 22px rgba(0,0,0,.18)}
+    .nested.hold{border-color:rgba(84,145,218,.28);background:rgba(84,145,218,.1)}
+    .nested.remind{border-color:rgba(214,162,62,.21);background:rgba(214,162,62,.075)}
+    .copy{min-width:0;flex:1;display:flex;flex-direction:column;gap:10px}
+    .top{display:flex;align-items:center;gap:8px;width:100%}
+    .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+    .ongoing .dot{background:var(--green);box-shadow:0 0 0 4px rgba(77,161,103,.12)}
+    .hold .dot{background:var(--blue);box-shadow:0 0 0 4px rgba(84,145,218,.1)}
+    .remind .dot{background:var(--amber);box-shadow:0 0 0 4px rgba(214,162,62,.1)}
+    .completed .dot{background:var(--gray);box-shadow:0 0 0 4px rgba(141,152,169,.1)}
+    .label{font-size:14px;font-weight:850;letter-spacing:-.02em}
+    .ongoing .label{color:#72c78d}.hold .label{color:#79a9e2}.remind .label{color:#e0bc74}.completed .label{color:#c2cad5}
+    .value{display:flex;align-items:baseline;gap:4px}
+    .num{font-size:43px;font-weight:870;line-height:.95;letter-spacing:-.05em}
+    .nested .num{font-size:35px}.unit{font-size:13px;color:var(--sub);font-weight:700}
+    .desc{font-size:10.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    /* 선택은 배경만 바꾼다. 외곽 그룹 테두리와 겹치는 두 번째 테두리는 만들지 않는다. */
+    .primary.ongoing.selected{background:rgba(77,161,103,.08)}
+    .primary.completed.selected{background:rgba(141,152,169,.07)}
+    .nested.hold.selected{background:rgba(84,145,218,.14)}
+    .nested.remind.selected{background:rgba(214,162,62,.13)}
+    /* 진행중·보류는 하나의 큰 KPI 표면을 공유한다. 개별 카드의 테두리·채움·그림자는 제거. */
+    .family.active .tile,
+    .family.active .tile:hover,
+    .family.active .tile.selected{
+      margin:0;
+      min-height:132px;
+      border:0;
+      background:transparent;
+      box-shadow:none;
+    }
+    /* 표준형 connected status group: 같은 크기의 가상 세그먼트 + 중앙의 흐린 divider */
+    .family::after{content:'';position:absolute;z-index:2;left:50%;top:19px;bottom:19px;width:1px;pointer-events:none;background:rgba(170,180,195,.2)}
+    .family .tile,
+    .family .tile:hover,
+    .family .tile.selected{
+      min-height:132px;
+      margin:0;
+      border:0;
+      background:transparent;
+      box-shadow:none;
+      flex-direction:row;
+      justify-content:center;
+      align-items:center;
+      gap:13px;
+      text-align:center;
+    }
+    .family .tile:hover{background:rgba(255,255,255,.022)}
+    .family .tile:hover::after,.family .tile.selected::after{content:'';position:absolute;left:50%;bottom:9px;width:30px;height:2px;border-radius:999px;background:currentColor;transform:translateX(-50%);opacity:.72}
+    .family .copy{flex:0 1 auto;align-items:baseline;justify-content:center;flex-direction:row;gap:10px;width:auto}
+    .family .top,.family .value{justify-content:center;width:auto}
+    .family .top .dot{display:none}
+    .family .desc{display:none}
+    .family .nested .num{font-size:43px}
+    .family .nested .status-icon{width:48px;height:48px;flex-basis:48px;border-radius:13px}
+    /* 상태별 동일한 임시 채우기 hover. 외곽선은 추가하지 않는다. */
+    .family .tile.ongoing:hover{background:rgba(77,161,103,.105)}
+    .family .tile.hold:hover{background:rgba(84,145,218,.105)}
+    .family .tile.completed:hover{background:rgba(141,152,169,.095)}
+    .family .tile.remind:hover{background:rgba(214,162,62,.09)}
+    /* Check는 상태가 아니라 진행중·보류 양쪽에 걸친 플래그 — 두 세그먼트 경계에 걸쳐 표시 */
+    .check-bridge{position:absolute;z-index:4;left:50%;bottom:-15px;transform:translateX(-50%);height:30px;padding:0 11px;border:1px solid rgba(169,138,224,.42);border-radius:999px;background:#1b202b;color:#c5adf0;display:flex;align-items:center;gap:7px;font:inherit;font-size:11px;font-weight:800;white-space:nowrap;cursor:pointer;box-shadow:0 5px 14px rgba(0,0,0,.28);transition:background-color .14s ease,transform .14s ease,border-color .14s ease}
+    .check-bridge:hover{background:rgba(169,138,224,.18);border-color:rgba(169,138,224,.65);transform:translateX(-50%) translateY(-1px)}
+    .check-bridge:focus-visible{outline:2px solid #bfa7ef;outline-offset:2px}
+    .check-icon{width:14px;height:14px;display:block;flex:0 0 14px;fill:currentColor}
+    .check-bridge strong{font-size:13px;color:#d7c6f6}
+
+    /* 상태 도형 — 실제 구현에서는 동일 의미의 MUI 아이콘으로 교체 */
+    .status-icon{position:relative;width:48px;height:48px;flex:0 0 48px;border-radius:13px;background:rgba(255,255,255,.035)}
+    .nested .status-icon{width:42px;height:42px;flex-basis:42px;border-radius:11px}
+    .ongoing .status-icon{color:var(--green);background:rgba(77,161,103,.1)}
+    .hold .status-icon,.remind .status-icon{color:var(--amber);background:rgba(214,162,62,.09)}
+    .completed .status-icon{color:var(--gray);background:rgba(141,152,169,.09)}
+    /* 진행중: 앞으로 커지는 3개의 작업 단계 */
+    .icon-progress i{position:absolute;bottom:13px;width:7px;border-radius:3px;background:currentColor}
+    .icon-progress i:nth-child(1){left:11px;height:12px;opacity:.48}.icon-progress i:nth-child(2){left:21px;height:18px;opacity:.72}.icon-progress i:nth-child(3){left:31px;height:25px}
+    /* 보류: 보관함 속 일시정지 */
+    .icon-hold::before{content:'';position:absolute;left:9px;right:9px;bottom:10px;height:20px;border:2px solid currentColor;border-radius:4px}
+    .icon-hold::after{content:'';position:absolute;left:14px;right:14px;top:9px;height:5px;border:2px solid currentColor;border-radius:3px;background:var(--raised);box-shadow:7px 11px 0 -5px currentColor,-1px 11px 0 -5px currentColor}
+    /* 완료: 체크가 들어간 닫힌 원 */
+    .icon-done::before{content:'';position:absolute;inset:10px;border:2px solid currentColor;border-radius:50%}
+    .icon-done::after{content:'';position:absolute;left:17px;top:20px;width:13px;height:7px;border-left:3px solid currentColor;border-bottom:3px solid currentColor;transform:rotate(-45deg)}
+    /* Remind: 다시 돌아오는 열린 고리와 기준점 */
+    .icon-remind::before{content:'';position:absolute;inset:9px;border:2px solid currentColor;border-left-color:transparent;border-radius:50%;transform:rotate(-28deg)}
+    .icon-remind::after{content:'';position:absolute;left:8px;top:14px;width:7px;height:7px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(25deg)}
+
+    /* 최종 데스크톱 구조: 하나의 긴 카드에 4개 상태. 보류/완료 사이에만 큰 구분선. */
+    .status-icon{display:none}
+    .strip{position:relative;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;border:1px solid var(--line);border-radius:18px;background:var(--card);overflow:visible}
+    .strip::after{content:'';position:absolute;z-index:5;left:50%;top:17px;bottom:17px;width:1px;pointer-events:none;background:rgba(170,180,195,.22)}
+    .family{border:0;border-radius:0;padding:0;gap:0;background:transparent}
+    .family::after{display:block;content:'';position:absolute;z-index:5;left:50%;top:17px;bottom:17px;width:1px;pointer-events:none;background:rgba(170,180,195,.22)}
+    .family.active{border:0;border-radius:17px 0 0 17px;background:transparent}
+    .family.closed{border:0;border-radius:0 17px 17px 0;background:transparent}
+    .family .tile,.family .tile:hover,.family .tile.selected{flex-direction:column;gap:7px;text-align:center;border-radius:0}
+    .family .copy{display:grid;grid-template-columns:auto;grid-template-rows:auto auto;align-items:center;justify-content:center;row-gap:7px;width:auto}
+    .family .top,.family .value{width:auto;justify-content:flex-start;justify-self:start}
+    .family .top .dot{display:none}
+    .family .top{position:relative;grid-column:1;grid-row:1;gap:0;justify-self:center}
+    .family .value{grid-column:1;grid-row:2;justify-self:center;align-self:center}
+    .kpi-icon{display:none}
+    .family .label{font-size:18px;font-weight:850;line-height:1}
+    .family .num,.family .nested .num{font-size:34px}
+    .ongoing .kpi-icon{color:#72c78d}.hold .kpi-icon{color:#79a9e2}.completed .kpi-icon{color:#c2cad5}.remind .kpi-icon{color:#e0bc74}
+    .family .top{order:1}
+    .family .value{order:2}
+    /* 투명하게 꺼지는 홈 없이, 경계 2%에서 양쪽 상태색의 중간색으로 직접 연결한다. */
+    .family.active .tile.ongoing{background:linear-gradient(to right,rgba(77,161,103,.1) 0 98%,rgba(81,153,161,.098) 100%)}
+    .family.active .tile.hold{background:linear-gradient(to right,rgba(81,153,161,.098) 0%,rgba(84,145,218,.095) 2% 98%,rgba(113,149,194,.09) 100%)}
+    .family .tile.completed{background:linear-gradient(to right,rgba(113,149,194,.09) 0%,rgba(141,152,169,.085) 2% 98%,rgba(178,157,116,.078) 100%)}
+    .family .tile.remind{background:linear-gradient(to right,rgba(178,157,116,.078) 0%,rgba(214,162,62,.07) 2% 100%)}
+    /* 호버와 선택도 같은 색상 연결 규칙과 같은 강조 강도를 사용한다. */
+    .family.active .tile.ongoing:hover,.family.active .tile.ongoing.selected{background:linear-gradient(to right,rgba(77,161,103,.34) 0 98%,rgba(81,153,161,.34) 100%);box-shadow:none}
+    .family.active .tile.hold:hover,.family.active .tile.hold.selected{background:linear-gradient(to right,rgba(81,153,161,.34) 0%,rgba(84,145,218,.34) 2% 98%,rgba(113,149,194,.34) 100%);box-shadow:none}
+    .family .tile.completed:hover,.family .tile.completed.selected{background:linear-gradient(to right,rgba(113,149,194,.28) 0%,rgba(141,152,169,.28) 2% 98%,rgba(178,157,116,.28) 100%);box-shadow:none}
+    .family .tile.remind:hover,.family .tile.remind.selected{background:linear-gradient(to right,rgba(178,157,116,.25) 0%,rgba(214,162,62,.25) 2% 100%);box-shadow:none}
+    .family.active .ongoing{border-radius:17px 0 0 17px}
+    .family.closed .remind{border-radius:0 17px 17px 0}
+    .family .value{position:relative;width:auto}
+    .check-count{position:absolute;z-index:6;left:calc(100% + 7px);top:50%;transform:translateY(-50%);width:23px;height:23px;border:1px solid rgba(169,138,224,.52);border-radius:999px;background:#29233a;color:#d7c6f6;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:850;line-height:1;box-shadow:0 3px 9px rgba(0,0,0,.2);pointer-events:none}
+    .result{margin-top:13px;min-height:42px;border:1px solid var(--line);border-radius:11px;padding:0 13px;display:flex;align-items:center;color:var(--sub);font-size:12px;background:rgba(255,255,255,.016)}
+    .note{margin:10px 2px 0;font-size:10.5px;color:var(--dim);line-height:1.55}
+    .icon-gallery{margin-top:18px;padding:15px;border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.012)}
+    .icon-gallery-title{margin:0 0 12px;font-size:13px;font-weight:850;color:var(--text)}
+    .icon-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .icon-group{padding:11px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.014)}
+    .icon-group h3{margin:0 0 9px;font-size:11.5px;color:var(--accent)}
+    .icon-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+    .icon-option{min-width:0;padding:9px 3px 7px;border-radius:9px;background:rgba(255,255,255,.025);display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--accent)}
+    .icon-option.recommended{background:color-mix(in srgb,var(--accent) 11%,transparent)}
+    .icon-option svg{width:27px;height:27px;fill:currentColor;display:block}
+    .icon-option span{max-width:100%;overflow:hidden;text-overflow:ellipsis;font-size:8px;color:var(--sub);white-space:nowrap}
+    .icon-option small{font-size:7.5px;color:var(--accent);font-weight:800}
+    .icon-group.ongoing-icons{--accent:#72c78d}.icon-group.hold-icons{--accent:#79a9e2}.icon-group.done-icons{--accent:#c2cad5}.icon-group.remind-icons{--accent:#e0bc74}
+    @media(max-width:720px){
+      body{padding:18px 12px}.strip{grid-template-columns:1fr;gap:24px;margin-bottom:15px;border:0;border-radius:0;background:transparent}.strip::after{display:none}.family{border:1px solid var(--line);border-radius:15px;padding:0;gap:0;background:var(--card);overflow:visible}.family.active,.family.closed{border:1px solid var(--line);border-radius:15px;background:var(--card)}.tile{min-height:104px;padding:11px;gap:9px}.family.active .tile,.family .tile{min-height:104px}.nested{min-height:104px;margin:0}.family .num,.family .nested .num{font-size:28px}.family .label{font-size:16px}.family .copy{grid-template-columns:auto;row-gap:6px}.kpi-icon{display:none}.check-count{width:22px;height:22px;font-size:12.5px}.check-bridge{height:28px;bottom:-14px;font-size:10.5px}.family.active .ongoing,.family.closed .completed{border-radius:14px 0 0 14px}.family.active .hold,.family.closed .remind{border-radius:0 14px 14px 0}.icon-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(max-width:390px){.tile{padding:12px}.num{font-size:33px}.nested .num{font-size:28px}.desc{font-size:9.5px}.icon-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <p class="caption">업무현황 · 심플 KPI 제안</p>
+    <section class="strip" aria-label="업무현황 KPI">
+      <div class="family active" aria-label="진행 업무 그룹">
+        <button class="tile primary ongoing selected" type="button" data-view="진행중 업무 12건">
+          <span class="copy"><svg class="kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.24 7.76C15.07 6.59 13.54 6 12 6v6l-4.24 4.24c2.34 2.34 6.14 2.34 8.49 0 2.34-2.34 2.34-6.14-.01-8.48M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8"/></svg><span class="top"><span class="label">진행중</span></span><span class="value"><span class="num">12</span><span class="unit">건</span><span class="check-count" title="진행중의 부서장 확인 업무 3건" aria-label="진행중 부서장 확인 3건">3</span></span><span class="desc">현재 처리 중인 업무</span></span>
+        </button>
+        <button class="tile nested hold" type="button" data-view="보류 업무 2건">
+          <span class="copy"><svg class="kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2m6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2"/></svg><span class="top"><span class="label">보류</span></span><span class="value"><span class="num">2</span><span class="unit">건</span><span class="check-count" title="보류의 부서장 확인 업무 1건" aria-label="보류 부서장 확인 1건">1</span></span><span class="desc">잠시 보관한 업무</span></span>
+        </button>
+        <button class="check-bridge" type="button" data-view="부서장 확인 업무 4건" title="진행중 3건 · 보류 1건"><svg class="check-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg><span>부서장 확인</span><strong>4</strong></button>
+      </div>
+
+      <div class="family closed" aria-label="완료 업무 그룹">
+        <button class="tile primary completed" type="button" data-view="완료 업무 31건">
+          <span class="copy"><svg class="kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.29 5.89-10 10c-.39.39-1.02.39-1.41 0l-2.83-2.83a.996.996 0 0 1 0-1.41c.39-.39 1.02-.39 1.41 0l2.12 2.12 9.29-9.29c.39-.39 1.02-.39 1.41 0 .4.39.4 1.02.01 1.41m-5.52-3.15c-1.69-.69-3.61-.93-5.61-.57-4.07.73-7.32 4.01-8.01 8.08C1.01 17 6.63 22.78 13.34 21.91c3.96-.51 7.28-3.46 8.32-7.31.4-1.47.44-2.89.21-4.22-.13-.8-1.12-1.11-1.7-.54-.23.23-.33.57-.27.89.22 1.33.12 2.75-.52 4.26-1.16 2.71-3.68 4.7-6.61 4.97-5.1.47-9.33-3.85-8.7-8.98.43-3.54 3.28-6.42 6.81-6.91 1.73-.24 3.37.09 4.77.81.39.2.86.13 1.17-.18.48-.48.36-1.29-.24-1.6-.27-.12-.54-.25-.81-.36"/></svg><span class="top"><span class="label">완료</span></span><span class="value"><span class="num">31</span><span class="unit">건</span></span><span class="desc">처리가 끝난 업무</span></span>
+        </button>
+        <button class="tile nested remind" type="button" data-view="Remind 업무 5건">
+          <span class="copy"><svg class="kpi-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20h4c0 1.1-.9 2-2 2s-2-.9-2-2m-2-2c0 .55.45 1 1 1h6c.55 0 1-.45 1-1s-.45-1-1-1H6c-.55 0-1 .45-1 1m11.5-8.5c0 3.82-2.66 5.86-3.77 6.5H5.27c-1.11-.64-3.77-2.68-3.77-6.5C1.5 5.36 4.86 2 9 2s7.5 3.36 7.5 7.5m4.87-2.13L20 8l1.37.63L22 10l.63-1.37L24 8l-1.37-.63L22 6zM19 6l.94-2.06L22 3l-2.06-.94L19 0l-.94 2.06L16 3l2.06.94z"/></svg><span class="top"><span class="label">Remind</span></span><span class="value"><span class="num">5</span><span class="unit">건</span></span><span class="desc">완료 후 다시 볼 업무</span></span>
+        </button>
+      </div>
+    </section>
+    <div class="result" id="result">현재 선택: 진행중 업무 12건</div>
+    <p class="note">경계 2%는 투명하게 꺼지지 않고 양쪽 상태색이 직접 섞입니다. 상태명을 위쪽의 핵심 정보로 키우고, 건수는 아래쪽 보조 정보로 줄였습니다.</p>
+    <section class="icon-gallery" aria-label="업무 상태 아이콘 후보">
+      <h2 class="icon-gallery-title">업무 상태별 MUI 아이콘 후보</h2>
+      <div class="icon-grid">
+        <article class="icon-group ongoing-icons">
+          <h3>진행중</h3>
+          <div class="icon-options">
+            <div class="icon-option recommended"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.24 7.76C15.07 6.59 13.54 6 12 6v6l-4.24 4.24c2.34 2.34 6.14 2.34 8.49 0 2.34-2.34 2.34-6.14-.01-8.48M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8"/></svg><span>Timelapse</span><small>추천</small></div>
+            <div class="icon-option"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v1.79c0 .45.54.67.85.35l2.79-2.79c.2-.2.2-.51 0-.71l-2.79-2.79c-.31-.31-.85-.09-.85.36V4c-4.42 0-8 3.58-8 8 0 1.04.2 2.04.57 2.95.27.67 1.13.85 1.64.34.27-.27.38-.68.23-1.04C6.15 13.56 6 12.79 6 12c0-3.31 2.69-6 6-6m5.79 2.71c-.27.27-.38.69-.23 1.04.28.7.44 1.46.44 2.25 0 3.31-2.69 6-6 6v-1.79c0-.45-.54-.67-.85-.35l-2.79 2.79c-.2.2-.2.51 0 .71l2.79 2.79c.31.31.85.09.85-.35V20c4.42 0 8-3.58 8-8 0-1.04-.2-2.04-.57-2.95-.27-.67-1.13-.85-1.64-.34"/></svg><span>Autorenew</span></div>
+            <div class="icon-option"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6.82v10.36c0 .79.87 1.27 1.54.84l8.14-5.18c.62-.39.62-1.29 0-1.69L9.54 5.98C8.87 5.55 8 6.03 8 6.82"/></svg><span>PlayArrow</span></div>
+          </div>
+        </article>
+        <article class="icon-group hold-icons">
+          <h3>보류</h3>
+          <div class="icon-options">
+            <div class="icon-option recommended"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 19c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2v10c0 1.1.9 2 2 2m6-12v10c0 1.1.9 2 2 2s2-.9 2-2V7c0-1.1-.9-2-2-2s-2 .9-2 2"/></svg><span>Pause</span><small>추천</small></div>
+            <div class="icon-option"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2m-1 18H5V9h14zm1-13H4V4h16z"/><path d="M9 12h6v2H9z"/></svg><span>Inventory2</span></div>
+            <div class="icon-option"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 16c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1s-1 .45-1 1v6c0 .55.45 1 1 1m2-14C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8m2-4c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1s-1 .45-1 1v6c0 .55.45 1 1 1"/></svg><span>PauseCircle</span></div>
+          </div>
+        </article>
+        <article class="icon-group done-icons">
+          <h3>완료</h3>
+          <div class="icon-options">
+            <div class="icon-option recommended"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.29 5.89-10 10c-.39.39-1.02.39-1.41 0l-2.83-2.83a.996.996 0 0 1 0-1.41c.39-.39 1.02-.39 1.41 0l2.12 2.12 9.29-9.29c.39-.39 1.02-.39 1.41 0 .4.39.4 1.02.01 1.41m-5.52-3.15c-1.69-.69-3.61-.93-5.61-.57-4.07.73-7.32 4.01-8.01 8.08C1.01 17 6.63 22.78 13.34 21.91c3.96-.51 7.28-3.46 8.32-7.31.4-1.47.44-2.89.21-4.22-.13-.8-1.12-1.11-1.7-.54-.23.23-.33.57-.27.89.22 1.33.12 2.75-.52 4.26-1.16 2.71-3.68 4.7-6.61 4.97-5.1.47-9.33-3.85-8.7-8.98.43-3.54 3.28-6.42 6.81-6.91 1.73-.24 3.37.09 4.77.81.39.2.86.13 1.17-.18.48-.48.36-1.29-.24-1.6-.27-.12-.54-.25-.81-.36"/></svg><span>TaskAlt</span><small>추천</small></div>
+            <div class="icon-option"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.17 5.53 12.7a.996.996 0 0 0-1.41 0c-.39.39-.39 1.02 0 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L20.29 7.71c.39-.39.39-1.02 0-1.41a.996.996 0 0 0-1.41 0z"/></svg><span>Check</span></div>
+            <div class="icon-option"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.3 6.3a.996.996 0 0 0-1.41 0l-5.64 5.64 1.41 1.41L17.3 7.7c.38-.38.38-1.02 0-1.4m4.24-.01-9.88 9.88-3.48-3.47a.996.996 0 0 0-1.41 0c-.39.39-.39 1.02 0 1.41l4.18 4.18c.39.39 1.02.39 1.41 0L22.95 7.71c.39-.39.39-1.02 0-1.41h-.01c-.38-.4-1.01-.4-1.4-.01M1.12 14.12 5.3 18.3c.39.39 1.02.39 1.41 0l.7-.7-4.88-4.9a.996.996 0 0 0-1.41 0c-.39.39-.39 1.03 0 1.42"/></svg><span>DoneAll</span></div>
+          </div>
+        </article>
+        <article class="icon-group remind-icons">
+          <h3>Remind</h3>
+          <div class="icon-options">
+            <div class="icon-option recommended"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 20h4c0 1.1-.9 2-2 2s-2-.9-2-2m-2-2c0 .55.45 1 1 1h6c.55 0 1-.45 1-1s-.45-1-1-1H6c-.55 0-1 .45-1 1m11.5-8.5c0 3.82-2.66 5.86-3.77 6.5H5.27c-1.11-.64-3.77-2.68-3.77-6.5C1.5 5.36 4.86 2 9 2s7.5 3.36 7.5 7.5m4.87-2.13L20 8l1.37.63L22 10l.63-1.37L24 8l-1.37-.63L22 6zM19 6l.94-2.06L22 3l-2.06-.94L19 0l-.94 2.06L16 3l2.06.94z"/></svg><span>TipsAndUpdates</span><small>추천</small></div>
+            <div class="icon-option"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2m6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5zM7.58 4.08 6.15 2.65C3.75 4.48 2.17 7.3 2.03 10.5h2c.15-2.65 1.51-4.97 3.55-6.42m12.39 6.42h2c-.15-3.2-1.73-6.02-4.12-7.85l-1.42 1.43c2.02 1.45 3.39 3.77 3.54 6.42"/></svg><span>Notifications</span></div>
+            <div class="icon-option"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12V6c0-1.1-.9-2-2-2h-1V3c0-.55-.45-1-1-1s-1 .45-1 1v1H8V3c0-.55-.45-1-1-1s-1 .45-1 1v1H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h7v-2H5V10h14v2zm-5.87 8c-.55 0-.91.56-.68 1.06C15.23 22.79 16.97 24 19 24c2.76 0 5-2.24 5-5s-2.24-5-5-5c-1.36 0-2.6.55-3.5 1.43v-.68c0-.41-.34-.75-.75-.75s-.75.34-.75.75V17c0 .55.45 1 1 1h2.25c.41 0 .75-.34.75-.75s-.34-.75-.75-.75h-.7c.63-.62 1.5-1 2.45-1 1.93 0 3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5c-1.42 0-2.64-.85-3.19-2.06-.12-.27-.39-.44-.68-.44"/></svg><span>EventRepeat</span></div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+  <script>
+    const result=document.querySelector('#result');
+    document.querySelectorAll('[data-view]').forEach((tile)=>tile.addEventListener('click',()=>{
+      document.querySelectorAll('.tile').forEach((item)=>item.classList.remove('selected'));
+      if(tile.classList.contains('tile')) tile.classList.add('selected');
+      result.textContent='현재 선택: '+tile.dataset.view;
+    }));
+  </script>
+</body>
+</html>

@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ANGELS PORTAL · 업무현황 카드 UX 시안</title>
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --panel: #151922;
+      --panel-2: #11151d;
+      --line: #29303d;
+      --text: #f1f4f8;
+      --muted: #98a1b2;
+      --green: #69c67c;
+      --green-soft: rgba(73, 166, 94, .14);
+      --green-head: rgba(73, 166, 94, .18);
+      --blue: #6aa6ed;
+      --purple: #b897f7;
+      --amber: #d6a83d;
+      --sidebar: 206px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button { font: inherit; }
+
+    .topbar {
+      height: 54px; border-bottom: 1px solid var(--line); background: #0b0d12;
+      display: flex; align-items: center; justify-content: space-between; padding: 0 22px;
+      position: sticky; top: 0; z-index: 20;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: .04em; }
+    .brand-mark { width: 28px; height: 28px; position: relative; }
+    .brand-mark::before, .brand-mark::after {
+      content: ""; position: absolute; inset: 4px 0; border-top: 2px solid #dce6f6; border-bottom: 2px solid #dce6f6; transform: skewY(-22deg);
+    }
+    .brand-mark::after { transform: skewY(22deg); }
+    .brand-sub { color: #d8dce5; font-size: 15px; font-weight: 650; padding-left: 12px; border-left: 1px solid #39404d; letter-spacing: 0; }
+    .user { display: flex; gap: 16px; align-items: center; color: #aeb6c4; font-size: 13px; }
+    .admin { border: 1px solid rgba(105,198,124,.35); color: var(--green); background: rgba(105,198,124,.1); border-radius: 6px; padding: 5px 9px; }
+
+    .shell { display: grid; grid-template-columns: var(--sidebar) 1fr; min-height: calc(100vh - 54px); }
+    aside { border-right: 1px solid var(--line); background: #0e1117; padding: 22px 10px; }
+    .nav-group { margin: 18px 11px 8px; color: #687285; font-size: 11px; }
+    .nav { width: 100%; height: 40px; border: 0; border-radius: 8px; padding: 0 13px; display: flex; align-items: center; gap: 11px; background: transparent; color: #aab3c3; cursor: default; }
+    .nav-dot { width: 8px; height: 8px; border-radius: 3px; background: #7d8797; }
+    .nav.active { color: #75b3fa; background: rgba(86,145,218,.16); font-weight: 700; }
+    .nav.active .nav-dot { background: #67a8f4; box-shadow: 0 0 0 4px rgba(103,168,244,.12); }
+
+    main { padding: 30px 24px 64px; max-width: 1240px; width: 100%; margin: 0 auto; }
+    .page-title { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .title-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; color: var(--blue); background: rgba(83,139,210,.15); }
+    .bars { width: 18px; height: 17px; display: grid; gap: 3px; align-content: center; }
+    .bars i { height: 3px; border-radius: 2px; background: currentColor; display: block; }
+    h1 { margin: 0; font-size: 23px; }
+
+    .workflow-scroll { overflow-x: auto; padding: 1px 1px 5px; margin: -1px -1px 15px; }
+    .workflow-map { min-width: 820px; }
+    .workflow-stages { display: grid; grid-template-columns: minmax(0,1fr) 84px minmax(0,1fr) 84px minmax(0,1fr); align-items: center; }
+    .kpis { display: contents; }
+    .kpi { height: 132px; border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 18px; display: flex; align-items: center; gap: 19px; }
+    .kpi.active { border-color: rgba(105,198,124,.7); }
+    .kpi-label { width: 98px; align-self: stretch; border-radius: 17px; display: grid; place-items: center; font-size: 22px; font-weight: 850; }
+    .kpi.active .kpi-label { color: var(--green); background: rgba(81,166,98,.16); }
+    .kpi.pending .kpi-label { color: #e0b85e; background: rgba(188,137,40,.14); }
+    .kpi.done .kpi-label { color: #c3c7d2; background: rgba(151,160,176,.14); }
+    .kpi-count { font-size: 42px; font-weight: 850; letter-spacing: -.04em; }
+    .kpi-count small { font-size: 15px; margin-left: 4px; color: var(--muted); font-weight: 500; }
+    .kpi-side { margin-left: auto; color: var(--muted); font-size: 13px; }
+    .stage-role { display: inline-flex; align-items: center; min-height: 24px; margin-left: auto; border: 1px solid #394251; border-radius: 7px; padding: 0 8px; color: #9ca7b8; background: rgba(255,255,255,.025); font-size: 11px; font-weight: 750; }
+    .kpi.active .stage-role { color: #aee0b8; border-color: rgba(105,198,124,.32); background: rgba(105,198,124,.08); }
+    .kpi.pending .stage-role { color: #e2c47f; border-color: rgba(214,168,61,.3); background: rgba(214,168,61,.08); }
+    .stage-connector { align-self: stretch; position: relative; display: grid; place-items: center; color: #7f8999; }
+    .connector-label { position: absolute; left: 50%; width: 112px; transform: translateX(-50%); color: #8994a4; font-size: 10px; line-height: 1.25; text-align: center; }
+    .connector-label.top { top: 31px; }
+    .connector-label.bottom { bottom: 28px; }
+    .connector-line { width: 62px; height: 2px; position: relative; background: #4a5566; }
+    .connector-line::after { content: ""; position: absolute; right: -1px; top: -4px; width: 8px; height: 8px; border-top: 2px solid #697589; border-right: 2px solid #697589; transform: rotate(45deg); }
+    .connector-line.two-way::before { content: ""; position: absolute; left: -1px; top: -4px; width: 8px; height: 8px; border-left: 2px solid #697589; border-bottom: 2px solid #697589; transform: rotate(45deg); }
+
+    .quick-kpis { display: grid; grid-template-columns: minmax(0,1fr) 84px minmax(0,1fr) 84px minmax(0,1fr); margin-top: 12px; }
+    .quick-kpi {
+      min-height: 82px; border: 1px solid var(--line); border-radius: 12px; padding: 13px 16px; background: var(--panel);
+      display: flex; align-items: center; gap: 14px; text-align: left; cursor: pointer; transition: border-color .15s, background-color .15s, transform .15s;
+    }
+    .quick-kpi:hover { transform: translateY(-1px); }
+    .quick-kpi.check-view { border-color: rgba(184,151,247,.42); background: rgba(184,151,247,.085); color: #dbcafa; }
+    .quick-kpi.check-view:hover { border-color: rgba(184,151,247,.78); background: rgba(184,151,247,.13); }
+    .quick-kpi.remind-view { border-color: rgba(214,168,61,.34); background: rgba(214,168,61,.07); color: #e7c77f; }
+    .quick-kpi.remind-view:hover { border-color: rgba(214,168,61,.68); background: rgba(214,168,61,.11); }
+    .quick-name { min-width: 105px; font-size: 20px; font-weight: 850; }
+    .quick-count { font-size: 30px; font-weight: 850; }
+    .quick-count small { margin-left: 3px; color: var(--muted); font-size: 13px; font-weight: 500; }
+    .quick-breakdown { margin-left: auto; color: #9ca7b7; font-size: 12px; line-height: 1.55; text-align: right; }
+    .quick-kpi.check-view { grid-column: 1 / 4; }
+    .quick-kpi.remind-view { grid-column: 5; }
+
+    .section-head { min-height: 64px; display: flex; align-items: center; gap: 11px; margin: 4px 0 13px; flex-wrap: wrap; }
+    .section-icon { width: 40px; height: 40px; border-radius: 12px; background: rgba(83,139,210,.14); color: var(--blue); display: grid; place-items: center; }
+    .checklist { width: 19px; display: grid; gap: 4px; }
+    .checklist span { display: block; height: 3px; border-radius: 2px; background: currentColor; position: relative; margin-left: 6px; }
+    .checklist span::before { content: ""; position: absolute; width: 3px; height: 3px; border: 1px solid currentColor; left: -7px; top: -1px; border-radius: 1px; }
+    h2 { margin: 0; font-size: 21px; }
+    .count { color: #697386; font-size: 14px; }
+    .guide { margin-left: auto; color: #93a0b3; font-size: 13px; }
+
+    .sort-wrap { display: flex; align-items: center; gap: 7px; margin-left: 4px; }
+    .sort-label { color: var(--muted); font-size: 12px; }
+    .sort-group { display: inline-flex; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: #10141b; }
+    .sort-button { min-height: 30px; border: 0; border-radius: 6px; padding: 0 11px; background: transparent; color: #98a2b2; font-size: 12px; cursor: pointer; }
+    .sort-button:hover { color: #dbe2ec; background: rgba(255,255,255,.05); }
+    .sort-button.active { color: #dff3e4; background: rgba(105,198,124,.18); }
+    .compose-toggle { min-height: 34px; border: 1px solid rgba(105,198,124,.42); border-radius: 8px; padding: 0 12px; color: #a9e0b4; background: rgba(105,198,124,.1); cursor: pointer; font-size: 12px; font-weight: 750; }
+    .compose-toggle:hover, .compose-toggle.active { color: #fff; background: rgba(105,198,124,.62); }
+
+    .editor-card { display: none; margin: 0 0 14px; border: 1px solid rgba(105,198,124,.45); border-radius: 10px; background: var(--green-soft); overflow: visible; }
+    .editor-card.open { display: block; }
+    .editor-title { padding: 10px 13px; border-bottom: 1px solid rgba(87,173,104,.23); background: var(--green-head); font-size: 13px; font-weight: 800; }
+    .editor-fields { display: grid; grid-template-columns: minmax(150px,.7fr) minmax(220px,1.5fr) minmax(170px,.8fr); gap: 11px; padding: 13px; }
+    .editor-fields.secondary { grid-template-columns: minmax(180px,.8fr) minmax(180px,.8fr) minmax(260px,1.5fr); padding-top: 0; }
+    .form-field { min-width: 0; position: relative; }
+    .form-field label { display: block; margin: 0 0 5px; color: #aeb7c5; font-size: 11px; font-weight: 700; }
+    .form-field input, .form-field textarea {
+      width: 100%; min-height: 36px; border: 1px solid #3b4555; border-radius: 8px; outline: 0; padding: 8px 10px;
+      background: #171c25; color: var(--text); font: inherit; font-size: 13px; resize: vertical;
+    }
+    .form-field input:focus, .form-field textarea:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(105,198,124,.12); }
+    .suggestions { display: none; position: absolute; z-index: 35; top: calc(100% + 5px); left: 0; right: 0; padding: 5px; border: 1px solid #3b4555; border-radius: 8px; background: #1a202a; box-shadow: 0 12px 26px rgba(0,0,0,.42); }
+    .autocomplete.open .suggestions { display: grid; gap: 2px; }
+    .suggestions button { border: 0; border-radius: 6px; padding: 7px 8px; color: #cbd2dc; background: transparent; text-align: left; cursor: pointer; font-size: 12px; }
+    .suggestions button:hover { color: #fff; background: rgba(105,198,124,.16); }
+    .suggestions .empty { padding: 7px 8px; color: #778296; font-size: 12px; }
+    .editor-actions { display: flex; justify-content: flex-end; gap: 7px; padding: 0 13px 13px; }
+    .editor-actions button { min-height: 32px; border-radius: 7px; padding: 0 12px; cursor: pointer; font-size: 12px; }
+    .cancel-button { color: #aab3c2; border: 1px solid #3a4351; background: transparent; }
+    .save-button { color: #08120b; border: 1px solid var(--green); background: var(--green); font-weight: 800; }
+
+    .task-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: stretch; }
+    .task {
+      border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--green-soft);
+      transition: border-color .15s, box-shadow .15s, transform .15s, opacity .15s;
+      cursor: grab; user-select: none; -webkit-user-select: none; touch-action: pan-y; height: 100%;
+    }
+    .task:active { cursor: grabbing; }
+    .task:hover { border-color: rgba(105,198,124,.7); }
+    .task-grid.drag-active .task:hover { border-color: var(--line); }
+    .task-grid.drag-active, .task-grid.drag-active * { user-select: none !important; -webkit-user-select: none !important; }
+    .task.dragging { opacity: .32; transform: scale(.985); }
+    .task.saved-flash { animation: flash .8s ease; }
+    @keyframes flash { 0%,100% { box-shadow: none; } 45% { box-shadow: 0 0 0 2px rgba(105,198,124,.75); } }
+    .placeholder { min-height: 164px; border: 2px dashed rgba(105,198,124,.72); border-radius: 9px; background: rgba(105,198,124,.06); }
+
+    .task-head { min-height: 48px; padding: 9px 11px; background: var(--green-head); border-bottom: 1px solid rgba(87,173,104,.23); display: flex; align-items: center; gap: 8px; }
+    .chip { height: 24px; padding: 0 9px; border-radius: 8px; display: inline-flex; align-items: center; white-space: nowrap; font-size: 12px; font-weight: 750; }
+    .chip.blue { color: #80b8f3; background: rgba(68,125,194,.18); border: 1px solid rgba(99,158,227,.34); }
+    .chip.gray { color: #b7bdc9; background: rgba(150,159,175,.12); border: 1px solid rgba(150,159,175,.25); }
+    .task-title { min-width: 80px; flex: 1; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .new { width: 16px; height: 16px; border-radius: 4px; background: #ec5d5d; display: grid; place-items: center; color: #fff; font-size: 9px; font-weight: 800; }
+    .mgr { background: #448f7e; color: #fff; }
+    .date { color: #aeb6c3; background: rgba(150,159,175,.13); border: 1px solid rgba(150,159,175,.22); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .more { border: 0; background: transparent; color: #8d98a9; font-size: 21px; line-height: 1; padding: 2px 5px; cursor: pointer; }
+    .task-body { min-height: 112px; padding: 14px 17px; display: flex; gap: 15px; }
+    .body-copy { min-width: 0; flex: 1; }
+    .meta { display: flex; gap: 18px; color: var(--muted); font-size: 12px; margin-bottom: 10px; }
+    .meta b { color: #d5dae3; margin-left: 5px; font-weight: 600; }
+    .lines { display: grid; gap: 7px; color: #c9ced7; font-size: 13px; line-height: 1.45; }
+    .lines div::before { content: ""; display: inline-block; width: 4px; height: 4px; margin: 0 8px 2px 0; border-radius: 50%; background: #748094; }
+    .check { width: 72px; height: 72px; align-self: center; display: grid; place-items: center; color: var(--purple); border: 1px solid rgba(184,151,247,.5); background: rgba(184,151,247,.13); border-radius: 13px; font-weight: 800; }
+
+    .toast { position: fixed; left: 50%; bottom: 30px; transform: translate(-50%, 18px); opacity: 0; pointer-events: none; z-index: 40; background: #1d242d; border: 1px solid rgba(105,198,124,.55); color: #dff3e4; border-radius: 9px; padding: 11px 16px; font-size: 13px; box-shadow: 0 12px 35px rgba(0,0,0,.35); transition: .2s ease; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    .drawer-backdrop { display: none; position: fixed; z-index: 70; inset: 54px 0 0; background: rgba(0,0,0,.48); }
+    .drawer-backdrop.open { display: block; }
+    .review-drawer {
+      position: fixed; z-index: 80; top: 54px; right: 0; bottom: 0; width: min(440px, 94vw); padding: 19px;
+      border-left: 1px solid #343b49; background: #121720; box-shadow: -18px 0 45px rgba(0,0,0,.46);
+      transform: translateX(104%); transition: transform .22s ease; overflow-y: auto;
+    }
+    .review-drawer.open { transform: translateX(0); }
+    .drawer-head { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+    .drawer-head h3 { margin: 0; font-size: 20px; }
+    .drawer-count { color: var(--purple); font-size: 13px; font-weight: 800; }
+    .drawer-close { margin-left: auto; border: 1px solid #394251; border-radius: 7px; padding: 6px 10px; color: #aeb7c5; background: transparent; cursor: pointer; }
+    .drawer-desc { margin: 0 0 17px; color: #8490a2; font-size: 12px; line-height: 1.55; }
+    .review-list { display: grid; gap: 10px; }
+    .review-card { border: 1px solid rgba(184,151,247,.28); border-radius: 10px; padding: 13px; background: rgba(184,151,247,.075); }
+    .review-meta { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; }
+    .review-status { border-radius: 7px; padding: 4px 7px; color: #efc56d; background: rgba(214,168,61,.14); font-size: 11px; font-weight: 800; }
+    .review-status.progress { color: #95d5a2; background: rgba(105,198,124,.13); }
+    .check-inline { border-radius: 7px; padding: 4px 7px; color: #d8c4fb; background: rgba(184,151,247,.14); font-size: 11px; font-weight: 800; }
+    .review-age { margin-left: auto; color: #8893a4; font-size: 11px; }
+    .review-card h4 { margin: 0 0 8px; font-size: 14px; line-height: 1.45; }
+    .review-info { display: flex; flex-wrap: wrap; gap: 7px 15px; color: #929dad; font-size: 12px; }
+    .owner-now { color: #d2d8e1; font-weight: 700; }
+    .review-actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 12px; }
+    .review-actions button { border-radius: 7px; padding: 6px 9px; cursor: pointer; font-size: 11px; }
+    .revise-button { border: 1px solid #465164; color: #b8c1ce; background: transparent; }
+    .approve-button { border: 1px solid rgba(105,198,124,.42); color: #b9e9c2; background: rgba(105,198,124,.13); }
+
+    @media (max-width: 900px) {
+      :root { --sidebar: 0px; }
+      aside { display: none; }
+      .shell { display: block; }
+      .brand-sub { display: none; }
+      main { padding: 22px 14px 80px; }
+      .workflow-map { min-width: 720px; }
+      .workflow-stages, .quick-kpis { grid-template-columns: minmax(0,1fr) 58px minmax(0,1fr) 58px minmax(0,1fr); }
+      .kpi { height: 104px; padding: 13px; gap: 11px; }
+      .kpi-label { width: 78px; font-size: 17px; }
+      .kpi-count { font-size: 30px; }
+      .quick-kpi { min-height: 72px; padding: 11px; gap: 8px; }
+      .quick-name { min-width: auto; font-size: 16px; }
+      .quick-count { font-size: 24px; }
+      .quick-breakdown { display: none; }
+      .task-grid { grid-template-columns: 1fr; }
+      .guide span { display: none; }
+      .guide { margin-left: 0; width: 100%; }
+      .sort-wrap { margin-left: auto; }
+      .editor-fields, .editor-fields.secondary { grid-template-columns: 1fr; padding: 11px; }
+      .editor-fields.secondary { padding-top: 0; }
+      .chip.gray, .date { display: none; }
+      .task-head { gap: 6px; }
+      .task-title { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span><span>ANGELS</span><span class="brand-sub">FAB 구축 포털 시스템</span></div>
+    <div class="user"><span class="admin">관리자 · 조성범</span><span>로그아웃</span></div>
+  </header>
+
+  <div class="shell">
+    <aside>
+      <button class="nav"><span class="nav-dot"></span>홈</button>
+      <div class="nav-group">업무</div>
+      <button class="nav"><span class="nav-dot"></span>공지사항</button>
+      <button class="nav"><span class="nav-dot"></span>업무일정</button>
+      <button class="nav active"><span class="nav-dot"></span>업무현황</button>
+      <button class="nav"><span class="nav-dot"></span>장비관리</button>
+      <div class="nav-group">정보</div>
+      <button class="nav"><span class="nav-dot"></span>학술·교육·전시</button>
+      <button class="nav"><span class="nav-dot"></span>포털개선요청</button>
+      <button class="nav"><span class="nav-dot"></span>바로가기</button>
+      <button class="nav"><span class="nav-dot"></span>설정</button>
+    </aside>
+
+    <main>
+      <div class="page-title">
+        <span class="title-icon"><span class="bars"><i></i><i></i><i></i></span></span>
+        <h1>업무현황</h1>
+      </div>
+
+      <div class="workflow-scroll">
+        <div class="workflow-map">
+          <section class="workflow-stages" aria-label="업무 상태 흐름">
+            <article class="kpi active">
+              <div class="kpi-label">진행중</div><div class="kpi-count"><span id="progressCount">4</span><small>건</small></div>
+              <div class="kpi-side"><span class="stage-role">팀 전체</span><br />실무 처리 중</div>
+            </article>
+            <div class="stage-connector" aria-label="진행중과 Pending 사이에서 업무를 서로 이동할 수 있음">
+              <span class="connector-label top">부서장에게 넘기기</span><span class="connector-line two-way"></span><span class="connector-label bottom">팀에 되돌리기</span>
+            </div>
+            <article class="kpi pending">
+              <div class="kpi-label">Pending</div><div class="kpi-count"><span id="pendingCount">1</span><small>건</small></div>
+              <div class="kpi-side"><span class="stage-role">부서장</span><br />최종처리 대기</div>
+            </article>
+            <div class="stage-connector" aria-label="Pending 업무를 완료할 수 있음">
+              <span class="connector-label top">최종 처리</span><span class="connector-line"></span><span class="connector-label bottom">완료 시 Check 해제</span>
+            </div>
+            <article class="kpi done">
+              <div class="kpi-label">완료</div><div class="kpi-count"><span id="doneCount">18</span><small>건</small></div>
+              <div class="kpi-side"><span class="stage-role">전체</span><br />처리 완료</div>
+            </article>
+          </section>
+
+          <section class="quick-kpis" aria-label="업무 빠른 모아보기">
+            <button class="quick-kpi check-view" id="reviewEntry" type="button" aria-haspopup="dialog" aria-expanded="false">
+              <span class="quick-name">Check</span><span class="quick-count"><span id="checkCount">2</span><small>건</small></span>
+              <span class="quick-breakdown">진행중 <b id="checkProgressCount">1</b> · Pending <b id="checkPendingCount">1</b><br />두 상태를 함께 모아보기</span>
+            </button>
+            <button class="quick-kpi remind-view" type="button">
+              <span class="quick-name">Remind</span><span class="quick-count">2<small>건</small></span>
+              <span class="quick-breakdown">완료업무 중<br />선택한 업무</span>
+            </button>
+          </section>
+        </div>
+      </div>
+
+      <div class="section-head">
+        <span class="section-icon"><span class="checklist"><span></span><span></span><span></span></span></span>
+        <h2>업무 목록</h2><span class="count">4</span>
+        <div class="guide">카드를 원하는 위치로 끌어 우선순서를 변경하세요</div>
+        <div class="sort-wrap" aria-label="발의일 기준 정렬">
+          <span class="sort-label">발의일</span>
+          <div class="sort-group">
+            <button class="sort-button" type="button" data-sort="newest">최신순</button>
+            <button class="sort-button" type="button" data-sort="oldest">오래된순</button>
+          </div>
+        </div>
+        <button class="compose-toggle" id="composeToggle" type="button" aria-expanded="false">새 업무 작성</button>
+      </div>
+
+      <section class="editor-card" id="editorCard" aria-label="새 업무 작성 예시">
+        <div class="editor-title">새 업무 작성 · 자동완성 입력 예시</div>
+        <div class="editor-fields">
+          <div class="form-field autocomplete" data-values="장비|인사|예산|행정|교육세미나|설계적정성">
+            <label for="categoryInput">업무구분</label>
+            <input id="categoryInput" placeholder="직접 입력 또는 선택" autocomplete="off" />
+            <div class="suggestions"></div>
+          </div>
+          <div class="form-field"><label for="taskTitleInput">업무 제목</label><input id="taskTitleInput" placeholder="업무 제목 입력" /></div>
+          <div class="form-field autocomplete" data-values="센터|신현진|박주봉|박세리|조성범">
+            <label for="managerInput">담당자</label>
+            <input id="managerInput" placeholder="직접 입력 또는 선택" autocomplete="off" />
+            <div class="suggestions"></div>
+          </div>
+        </div>
+        <div class="editor-fields secondary">
+          <div class="form-field autocomplete" data-values="팹센터|GIST|사업단|시설운영팀|장비구축팀">
+            <label for="departmentInput">관련부서</label>
+            <input id="departmentInput" placeholder="직접 입력 또는 선택" autocomplete="off" />
+            <div class="suggestions"></div>
+          </div>
+          <div class="form-field"><label for="planInput">예정일</label><input id="planInput" type="date" /></div>
+          <div class="form-field"><label for="bodyInput">업무내용</label><textarea id="bodyInput" rows="2" placeholder="업무내용 입력"></textarea></div>
+        </div>
+        <div class="editor-actions"><button class="cancel-button" id="composeCancel" type="button">취소</button><button class="save-button" id="composeSave" type="button">작성 예시 적용</button></div>
+      </section>
+
+      <section class="task-grid" id="taskGrid" aria-label="진행중 업무 순서변경">
+        <article class="task" data-order="10" data-date="2026-06-26">
+          <div class="task-head">
+            <span class="chip blue">장비</span><span class="chip gray">팹센터</span><span class="new">N</span>
+            <span class="task-title">장비 구매규격서 및 도입 일정 검토</span><span class="chip mgr">현진</span><span class="chip date">06.26</span><button class="more" aria-label="더보기">⋮</button>
+          </div>
+          <div class="task-body"><div class="body-copy"><div class="meta">예정 <b>2026.07.03</b></div><div class="lines"><div>구매규격서 최종 검토</div><div>도입 일정 및 담당자 협의</div><div>계약 요청 전 검토사항 정리</div></div></div><div class="check">Check</div></div>
+        </article>
+
+        <article class="task" data-order="20" data-date="2026-06-21">
+          <div class="task-head">
+            <span class="chip blue">행정</span><span class="chip gray">GIST</span>
+            <span class="task-title">센터 정기점검 운영계획 수립</span><span class="chip mgr" style="background:#4f91c7">성범</span><span class="chip date">06.21</span><button class="more" aria-label="더보기">⋮</button>
+          </div>
+          <div class="task-body"><div class="body-copy"><div class="meta">예정 <b>2026.07.08</b></div><div class="lines"><div>점검 항목과 담당 부서 일정 정리</div></div></div></div>
+        </article>
+
+        <article class="task" data-order="30" data-date="2026-06-18">
+          <div class="task-head">
+            <span class="chip blue">교육세미나</span><span class="chip gray">팹센터</span>
+            <span class="task-title">반도체 공정교육 운영계획 수립</span><span class="chip mgr" style="background:#8f65b9">주봉</span><span class="chip date">06.18</span><button class="more" aria-label="더보기">⋮</button>
+          </div>
+          <div class="task-body"><div class="body-copy"><div class="meta">예정 <b>2026.07.15</b></div><div class="lines"><div>교육과정 및 강사 일정 확인</div><div>참가자 모집 안내 준비</div></div></div></div>
+        </article>
+
+        <article class="task" data-order="40" data-date="2026-06-12">
+          <div class="task-head">
+            <span class="chip blue">예산</span><span class="chip gray">사업단</span>
+            <span class="task-title">2026년 하반기 예산 집행계획 정리</span><span class="chip mgr" style="background:#b6843f">세리</span><span class="chip date">06.12</span><button class="more" aria-label="더보기">⋮</button>
+          </div>
+          <div class="task-body"><div class="body-copy"><div class="meta">예정 <b>2026.07.20</b></div><div class="lines"><div>항목별 집행예정액 확인</div><div>잔여 예산 및 변경사항 정리</div></div></div></div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <section class="review-drawer" id="reviewDrawer" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+    <div class="drawer-head"><h3 id="reviewTitle">Check 업무</h3><span class="drawer-count" id="drawerCount">2건</span><button class="drawer-close" id="drawerClose" type="button">닫기</button></div>
+    <p class="drawer-desc">진행중과 Pending 업무 중 Check가 표시된 업무를 함께 모았습니다. Pending에서도 Check 표시는 계속 유지됩니다.</p>
+    <div class="review-list">
+      <article class="review-card" data-state="pending">
+        <div class="review-meta"><span class="review-status">Pending</span><span class="check-inline">Check</span><span class="chip blue">행정</span><span class="review-age">대기 6일</span></div>
+        <h4>센터 운영규정 개정안 최종 확인</h4>
+        <div class="review-info"><span class="owner-now">현재 처리: 부서장</span><span>실무 담당: 조성범</span><span>발의 2026.06.21</span></div>
+        <div class="review-actions"><button class="revise-button" type="button" data-action="toggle-state">팀에 되돌리기</button><button class="approve-button" type="button" data-action="complete">완료</button></div>
+      </article>
+      <article class="review-card" data-state="progress">
+        <div class="review-meta"><span class="review-status progress">진행중</span><span class="check-inline">Check</span><span class="chip blue">장비</span><span class="review-age">발의 2일 전</span></div>
+        <h4>장비 구매규격서 및 도입 일정 검토</h4>
+        <div class="review-info"><span class="owner-now">현재 처리: 팀 전체</span><span>담당: 신현진</span><span>발의 2026.06.26</span></div>
+        <div class="review-actions"><button class="revise-button" type="button" data-action="toggle-state">부서장에게 넘기기</button><button class="approve-button" type="button" data-action="complete">완료</button></div>
+      </article>
+    </div>
+    <div class="drawer-desc" id="checkEmpty" hidden style="margin-top:24px;text-align:center">현재 Check 업무가 없습니다.</div>
+  </section>
+
+  <div class="toast" id="errorToast">순서 저장에 실패했습니다 · 다시 시도</div>
+
+  <script>
+    const grid = document.getElementById('taskGrid');
+    const errorToast = document.getElementById('errorToast');
+    const sortButtons = Array.from(document.querySelectorAll('.sort-button'));
+    const composeToggle = document.getElementById('composeToggle');
+    const editorCard = document.getElementById('editorCard');
+    const composeCancel = document.getElementById('composeCancel');
+    const composeSave = document.getElementById('composeSave');
+    const reviewEntry = document.getElementById('reviewEntry');
+    const reviewDrawer = document.getElementById('reviewDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+    const drawerClose = document.getElementById('drawerClose');
+    const progressCount = document.getElementById('progressCount');
+    const pendingCount = document.getElementById('pendingCount');
+    const doneCount = document.getElementById('doneCount');
+    const checkCount = document.getElementById('checkCount');
+    const checkProgressCount = document.getElementById('checkProgressCount');
+    const checkPendingCount = document.getElementById('checkPendingCount');
+    const drawerCount = document.getElementById('drawerCount');
+    const checkEmpty = document.getElementById('checkEmpty');
+    const ACTIVATION_DISTANCE = 8;
+    const TOUCH_HOLD_MS = 250;
+    const SLOT_OVERLAP = 0.28;
+    const RETURN_OVERLAP = 0.20;
+    const MOVE_DURATION = 180;
+    const SAVE_DELAY = 3000;
+
+    let pending = null;
+    let drag = null;
+    let longPressTimer = null;
+    let saveTimer = null;
+    let pendingSaveOrder = null;
+    let suppressClickUntil = 0;
+    const workflowCounts = { progress: 4, pending: 1, done: 18, checkProgress: 1, checkPending: 1 };
+
+    const cards = () => Array.from(grid.querySelectorAll('.task'));
+    const cardKey = (card) => card.querySelector('.task-title')?.textContent?.trim() || '';
+    const currentOrder = () => cards().map(cardKey);
+
+    const cleanupListeners = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onEnd);
+      document.removeEventListener('pointercancel', onCancel);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onEnd);
+      document.removeEventListener('keydown', onKeyDown);
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    };
+
+    const intersectionRatio = (a, b) => {
+      const width = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+      const height = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+      return (width * height) / Math.max(1, a.width * a.height);
+    };
+
+    const capturePositions = (list) => new Map(list.map((card) => [card, card.getBoundingClientRect()]));
+
+    const animateShift = (before, list) => {
+      requestAnimationFrame(() => {
+        list.forEach((card) => {
+          const oldRect = before.get(card);
+          const newRect = card.getBoundingClientRect();
+          if (!oldRect || (oldRect.left === newRect.left && oldRect.top === newRect.top)) return;
+          card.getAnimations?.().forEach((animation) => animation.cancel());
+          card.animate([
+            { transform: `translate(${oldRect.left - newRect.left}px, ${oldRect.top - newRect.top}px)` },
+            { transform: 'translate(0, 0)' },
+          ], { duration: MOVE_DURATION, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        });
+      });
+    };
+
+    const placePreviewAt = (nextIndex) => {
+      if (!drag || nextIndex === drag.targetIndex) return;
+      const stableCards = drag.originalCards.filter((card) => card !== drag.card);
+      const before = capturePositions(stableCards);
+      const anchor = stableCards[nextIndex] || null;
+      grid.insertBefore(drag.placeholder, anchor);
+      drag.targetIndex = nextIndex;
+      animateShift(before, stableCards);
+    };
+
+    const detectTargetIndex = (movingRect) => {
+      if (!drag) return null;
+      let bestIndex = drag.targetIndex;
+      let bestScore = 0;
+      drag.slotRects.forEach((slot, index) => {
+        const score = intersectionRatio(movingRect, slot);
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      });
+
+      if (bestIndex === drag.originIndex && bestScore >= RETURN_OVERLAP) return bestIndex;
+      if (bestIndex !== drag.targetIndex && bestScore >= SLOT_OVERLAP) return bestIndex;
+      return drag.targetIndex;
+    };
+
+    const beginDrag = (clientX, clientY) => {
+      if (!pending || drag) return;
+      const card = pending.card;
+      const rect = pending.rect;
+      const originalCards = cards();
+      const originIndex = originalCards.indexOf(card);
+      const slotRects = originalCards.map((item) => item.getBoundingClientRect());
+      const placeholder = document.createElement('article');
+      placeholder.className = 'placeholder';
+      placeholder.style.height = `${rect.height}px`;
+      placeholder.setAttribute('aria-hidden', 'true');
+      grid.insertBefore(placeholder, card.nextSibling);
+
+      drag = {
+        card,
+        placeholder,
+        originalCards,
+        originalOrder: originalCards.map(cardKey),
+        originIndex,
+        targetIndex: originIndex,
+        slotRects,
+        offsetX: pending.startX - rect.left,
+        offsetY: pending.startY - rect.top,
+        originalStyle: card.getAttribute('style') || '',
+      };
+
+      grid.classList.add('drag-active');
+      document.getSelection()?.removeAllRanges();
+      card.classList.add('dragging');
+      Object.assign(card.style, {
+        position: 'fixed',
+        left: `${clientX - drag.offsetX}px`,
+        top: `${clientY - drag.offsetY}px`,
+        width: `${rect.width}px`,
+        height: `${rect.height}px`,
+        zIndex: '50',
+        pointerEvents: 'none',
+        opacity: '.88',
+        boxShadow: '0 20px 50px rgba(0,0,0,.48)',
+      });
+      document.body.style.cursor = 'grabbing';
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    };
+
+    const onMove = (event) => {
+      if (!pending) return;
+      pending.lastX = event.clientX;
+      pending.lastY = event.clientY;
+      const distance = Math.hypot(event.clientX - pending.startX, event.clientY - pending.startY);
+
+      if (!drag) {
+        if (pending.pointerType === 'touch') {
+          if (distance > ACTIVATION_DISTANCE) {
+            cleanupPending();
+          }
+          return;
+        }
+        if (distance < ACTIVATION_DISTANCE) return;
+        beginDrag(event.clientX, event.clientY);
+      }
+
+      if (!drag) return;
+      event.preventDefault();
+      const left = event.clientX - drag.offsetX;
+      const top = event.clientY - drag.offsetY;
+      drag.card.style.left = `${left}px`;
+      drag.card.style.top = `${top}px`;
+      const movingRect = {
+        left,
+        top,
+        right: left + drag.slotRects[drag.originIndex].width,
+        bottom: top + drag.slotRects[drag.originIndex].height,
+        width: drag.slotRects[drag.originIndex].width,
+        height: drag.slotRects[drag.originIndex].height,
+      };
+      placePreviewAt(detectTargetIndex(movingRect));
+    };
+
+    const scheduleSave = () => {
+      pendingSaveOrder = currentOrder();
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(flushSave, SAVE_DELAY);
+    };
+
+    const flushSave = () => {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      if (!pendingSaveOrder) return;
+      // 실제 구현에서는 여기서 Apps Script에 ID + 포털정렬순서를 한 번에 전송한다.
+      document.body.dataset.lastSavedOrder = JSON.stringify(pendingSaveOrder);
+      pendingSaveOrder = null;
+      // 정상 저장은 사용자에게 아무 문구도 표시하지 않는다.
+    };
+
+    const finishDrag = (commit) => {
+      if (!drag) return;
+      if (!commit) placePreviewAt(drag.originIndex);
+      const moved = drag.card;
+      grid.insertBefore(moved, drag.placeholder);
+      drag.placeholder.remove();
+      moved.setAttribute('style', drag.originalStyle);
+      moved.classList.remove('dragging');
+      grid.classList.remove('drag-active');
+      document.body.style.cursor = '';
+
+      const changed = commit && drag.originIndex !== drag.targetIndex;
+      cards().forEach((card, index) => card.dataset.order = String((index + 1) * 10));
+      if (changed) {
+        sortButtons.forEach((button) => button.classList.remove('active'));
+        scheduleSave();
+      }
+      suppressClickUntil = Date.now() + 350;
+      drag = null;
+    };
+
+    const cleanupPending = () => {
+      pending = null;
+      cleanupListeners();
+    };
+
+    const onEnd = () => {
+      if (!pending) return;
+      if (drag) finishDrag(true);
+      cleanupPending();
+    };
+
+    const onCancel = () => {
+      if (drag) finishDrag(false);
+      cleanupPending();
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onCancel();
+    };
+
+    const prepareDrag = (event, card) => {
+      if (pending || event.button !== 0 || event.target.closest('button, a')) return;
+      pending = {
+        card,
+        pointerType: event.pointerType || 'mouse',
+        startX: event.clientX,
+        startY: event.clientY,
+        lastX: event.clientX,
+        lastY: event.clientY,
+        rect: card.getBoundingClientRect(),
+      };
+
+      document.addEventListener('pointermove', onMove, { passive: false });
+      document.addEventListener('pointerup', onEnd);
+      document.addEventListener('pointercancel', onCancel);
+      document.addEventListener('mousemove', onMove, { passive: false });
+      document.addEventListener('mouseup', onEnd);
+      document.addEventListener('keydown', onKeyDown);
+
+      if (pending.pointerType === 'touch') {
+        longPressTimer = setTimeout(() => {
+          if (pending) beginDrag(pending.lastX, pending.lastY);
+        }, TOUCH_HOLD_MS);
+      }
+    };
+
+    cards().forEach((card) => {
+      card.addEventListener('pointerdown', (event) => prepareDrag(event, card));
+      card.addEventListener('mousedown', (event) => prepareDrag(event, card));
+      card.addEventListener('click', (event) => {
+        if (Date.now() < suppressClickUntil) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }, true);
+    });
+
+    grid.addEventListener('selectstart', (event) => {
+      if (pending || drag) event.preventDefault();
+    });
+    grid.addEventListener('dragstart', (event) => event.preventDefault());
+
+    const applyDateSort = (direction) => {
+      const list = cards();
+      const before = capturePositions(list);
+      const sorted = [...list].sort((a, b) => {
+        const left = a.dataset.date || '';
+        const right = b.dataset.date || '';
+        return direction === 'newest' ? right.localeCompare(left) : left.localeCompare(right);
+      });
+      const changed = sorted.some((card, index) => card !== list[index]);
+      sorted.forEach((card, index) => {
+        card.dataset.order = String((index + 1) * 10);
+        grid.appendChild(card);
+      });
+      sortButtons.forEach((button) => button.classList.toggle('active', button.dataset.sort === direction));
+      animateShift(before, sorted);
+      if (changed) scheduleSave();
+    };
+
+    sortButtons.forEach((button) => {
+      button.addEventListener('click', () => applyDateSort(button.dataset.sort));
+    });
+
+    const setComposeOpen = (open) => {
+      editorCard.classList.toggle('open', open);
+      composeToggle.classList.toggle('active', open);
+      composeToggle.setAttribute('aria-expanded', String(open));
+      if (open) document.getElementById('categoryInput').focus();
+    };
+    composeToggle.addEventListener('click', () => setComposeOpen(!editorCard.classList.contains('open')));
+    composeCancel.addEventListener('click', () => setComposeOpen(false));
+    composeSave.addEventListener('click', () => setComposeOpen(false));
+
+    const closeAutocomplete = (except = null) => {
+      document.querySelectorAll('.autocomplete.open').forEach((el) => {
+        if (el !== except) el.classList.remove('open');
+      });
+    };
+    document.querySelectorAll('.autocomplete').forEach((field) => {
+      const input = field.querySelector('input');
+      const menu = field.querySelector('.suggestions');
+      const values = (field.dataset.values || '').split('|').filter(Boolean);
+      const render = () => {
+        const query = input.value.trim().toLowerCase();
+        const matches = values.filter((value) => value.toLowerCase().includes(query));
+        menu.replaceChildren();
+        if (!matches.length) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = input.value.trim() ? `“${input.value.trim()}”을 새 값으로 직접 입력` : '추천 항목 없음';
+          menu.appendChild(empty);
+          return;
+        }
+        matches.forEach((value) => {
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.textContent = value;
+          option.addEventListener('mousedown', (event) => event.preventDefault());
+          option.addEventListener('click', () => {
+            input.value = value;
+            field.classList.remove('open');
+            input.focus();
+          });
+          menu.appendChild(option);
+        });
+      };
+      const open = () => { closeAutocomplete(field); render(); field.classList.add('open'); };
+      input.addEventListener('focus', open);
+      input.addEventListener('input', open);
+    });
+    document.addEventListener('pointerdown', (event) => {
+      if (!event.target.closest('.autocomplete')) closeAutocomplete();
+    });
+
+    const setReviewOpen = (open) => {
+      reviewDrawer.classList.toggle('open', open);
+      drawerBackdrop.classList.toggle('open', open);
+      reviewEntry.setAttribute('aria-expanded', String(open));
+      document.body.style.overflow = open ? 'hidden' : '';
+      if (open) drawerClose.focus();
+      else reviewEntry.focus();
+    };
+    reviewEntry.addEventListener('click', () => setReviewOpen(true));
+    drawerClose.addEventListener('click', () => setReviewOpen(false));
+    drawerBackdrop.addEventListener('click', () => setReviewOpen(false));
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && reviewDrawer.classList.contains('open')) setReviewOpen(false);
+    });
+
+    const updateWorkflowCounts = () => {
+      const totalCheck = workflowCounts.checkProgress + workflowCounts.checkPending;
+      progressCount.textContent = String(workflowCounts.progress);
+      pendingCount.textContent = String(workflowCounts.pending);
+      doneCount.textContent = String(workflowCounts.done);
+      checkCount.textContent = String(totalCheck);
+      checkProgressCount.textContent = String(workflowCounts.checkProgress);
+      checkPendingCount.textContent = String(workflowCounts.checkPending);
+      drawerCount.textContent = `${totalCheck}건`;
+      checkEmpty.hidden = totalCheck !== 0;
+    };
+
+    reviewDrawer.querySelectorAll('.review-card').forEach((card) => {
+      const status = card.querySelector('.review-status');
+      const ownerNow = card.querySelector('.owner-now');
+      const toggleButton = card.querySelector('[data-action="toggle-state"]');
+      const completeButton = card.querySelector('[data-action="complete"]');
+
+      toggleButton.addEventListener('click', () => {
+        if (card.dataset.state === 'pending') {
+          card.dataset.state = 'progress';
+          status.textContent = '진행중';
+          status.classList.add('progress');
+          ownerNow.textContent = '현재 처리: 팀 전체';
+          toggleButton.textContent = '부서장에게 넘기기';
+          workflowCounts.pending -= 1;
+          workflowCounts.progress += 1;
+          workflowCounts.checkPending -= 1;
+          workflowCounts.checkProgress += 1;
+        } else {
+          card.dataset.state = 'pending';
+          status.textContent = 'Pending';
+          status.classList.remove('progress');
+          ownerNow.textContent = '현재 처리: 부서장';
+          toggleButton.textContent = '팀에 되돌리기';
+          workflowCounts.progress -= 1;
+          workflowCounts.pending += 1;
+          workflowCounts.checkProgress -= 1;
+          workflowCounts.checkPending += 1;
+        }
+        updateWorkflowCounts();
+      });
+
+      completeButton.addEventListener('click', () => {
+        if (card.dataset.state === 'pending') {
+          workflowCounts.pending -= 1;
+          workflowCounts.checkPending -= 1;
+        } else {
+          workflowCounts.progress -= 1;
+          workflowCounts.checkProgress -= 1;
+        }
+        workflowCounts.done += 1;
+        card.remove();
+        updateWorkflowCounts();
+      });
+    });
+    updateWorkflowCounts();
+
+    window.addEventListener('pagehide', flushSave);
+  </script>
+</body>
+</html>

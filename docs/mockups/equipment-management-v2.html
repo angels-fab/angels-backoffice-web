@@ -108,23 +108,22 @@
     .search:focus { border-color: var(--blue); }
     .select { min-height: 33px; padding: 0 28px 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #10141b; color: var(--muted); }
 
-    .timeline { overflow: auto; max-height: 630px; }
-    .tl-grid { min-width: 1160px; }
-    .tl-header, .tl-row { display: grid; grid-template-columns: 250px 1fr; }
+    .timeline { overflow-x: hidden; overflow-y: auto; max-height: 630px; }
+    .tl-grid { min-width: 0; width:100%; }
+    .tl-header, .tl-row { display: grid; grid-template-columns: 170px minmax(0,1fr); }
     .tl-header { position: sticky; top: 0; z-index: 5; background: #131820; border-bottom: 1px solid var(--line); }
     .name-head { padding: 8px 14px; color: var(--dim); font-size: 10px; font-weight: 700; letter-spacing: .04em; border-right: 1px solid var(--line); display:flex; align-items:center; justify-content:space-between; gap:8px; }
     .today-key { display:inline-flex; align-items:center; gap:5px; color:#83b4ec; font-size:9px; font-weight:600; letter-spacing:0; white-space:nowrap; }
     .today-key::before { content:''; width:2px; height:12px; border-radius:2px; background:var(--blue); }
-    .months { display: grid; grid-template-columns: repeat(12, minmax(68px, 1fr)); }
+    .months { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); }
     .month { padding: 10px 4px; text-align: center; color: var(--dim); font-size: 10px; border-right: 1px solid var(--line-soft); }
-    .tl-row { min-height: 48px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
+    .tl-row { min-height: 36px; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
     .tl-row:hover { background: rgba(255,255,255,.018); }
-    .equipment-name { position: sticky; left: 0; z-index: 3; padding: 7px 14px; background: var(--ink-2); border-right: 1px solid var(--line); }
+    .equipment-name { position: sticky; left: 0; z-index: 3; padding: 6px 10px; background: var(--ink-2); border-right: 1px solid var(--line); display:flex; align-items:center; }
     .tl-row:hover .equipment-name { background: #1a202a; }
     .eq-title-line { display:flex; align-items:center; gap:7px; min-width:0; }
-    .eq-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; font-size: 12px; }
-    .qty-badge { display:inline-flex; align-items:center; min-height:18px; padding:0 6px; border-radius:5px; border:1px solid rgba(84,145,218,.4); background:var(--blue-soft); color:#9bc5f2; font-size:9px; font-weight:700; white-space:nowrap; }
-    .eq-meta { display: flex; gap: 6px; margin-top: 3px; color: var(--dim); font-size: 9.5px; }
+    .eq-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; font-size: 11.5px; }
+    .qty-text { color:#8fbbed; font-size:10.5px; font-weight:800; white-space:nowrap; }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
     .status-dot.plan { background: var(--dim); }
     .status-dot.progress { background: var(--amber); }
@@ -134,7 +133,7 @@
       background-image: repeating-linear-gradient(to right, transparent 0, transparent calc(4.1666% - 1px), var(--line-soft) calc(4.1666% - 1px), var(--line-soft) 4.1666%);
     }
     .today-line { position: absolute; left: 1.2%; top: 0; bottom: 0; width: 1px; background: var(--blue); opacity: .8; }
-    .bar { grid-column: var(--start) / span var(--span); height: 26px; border-radius: 5px; display: flex; align-items: center; padding: 0 8px; overflow: hidden; white-space: nowrap; font-size: 10px; font-weight: 700; }
+    .bar { grid-column: var(--start) / span var(--span); height: 22px; border-radius: 4px; display: flex; align-items: center; padding: 0 5px; overflow: hidden; white-space: nowrap; font-size: 9px; font-weight: 700; }
     .bar.plan { color: #c8d0dc; background: #354154; border: 1px solid #495970; }
     .bar.progress { color: #f6d486; background: rgba(214,162,62,.22); border: 1px solid rgba(214,162,62,.56); }
     .bar.done { color: #99d9ad; background: rgba(77,161,103,.2); border: 1px solid rgba(77,161,103,.5); }
@@ -148,7 +147,12 @@
     .data-table tbody tr { cursor: pointer; }
     .data-table tbody tr:hover { background: var(--ink-3); }
     .data-table .primary-cell { color: white; font-weight: 700; }
+    .primary-cell-inner { display:flex; align-items:center; gap:7px; }
     .code { color: var(--dim); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+    .sort-head { display:inline-flex; align-items:center; gap:5px; width:100%; padding:0; border:0; background:transparent; color:inherit; font:inherit; font-weight:inherit; text-align:left; cursor:pointer; white-space:nowrap; }
+    .sort-head::after { min-width:22px; color:#718098; font-size:8px; font-weight:500; }
+    .sort-head.asc::after { content:'오름'; color:#8fbbed; }
+    .sort-head.desc::after { content:'내림'; color:#8fbbed; }
     .chip { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; color: var(--muted); background: var(--ink-3); font-size: 10px; white-space: nowrap; }
     .chip.blue { color: #96c1f1; border-color: rgba(84,145,218,.42); background: var(--blue-soft); }
     .chip.amber { color: #edc671; border-color: rgba(214,162,62,.42); background: var(--amber-soft); }
@@ -203,6 +207,8 @@
     .next-action.danger strong { color: #f0a09a; }
     .next-action.ok { border-color: rgba(77,161,103,.42); background: var(--green-soft); }
     .next-action.ok strong { color: #90d1a4; }
+    .next-action.neutral { border-color:rgba(84,145,218,.4); background:var(--blue-soft); }
+    .next-action.neutral strong { color:#9bc5f2; }
     .info-value.missing { color: #e7bd63; }
     .history-list { display: flex; flex-direction: column; gap: 7px; color: var(--muted); font-size: 12px; }
     .history-list small { color: var(--dim); margin-right: 7px; }
@@ -234,9 +240,13 @@
       .filters { justify-content: flex-start; flex-wrap:nowrap; overflow-x:auto; padding-bottom:3px; }
       .filters > * { flex:0 0 auto; }
       .search { width:220px; order:0; }
-      .tl-grid { min-width:940px; }
-      .tl-header, .tl-row { grid-template-columns:190px 1fr; }
+      .tl-grid { min-width:0; }
+      .tl-header, .tl-row { grid-template-columns:112px minmax(0,1fr); }
       .equipment-name { padding-left:10px; padding-right:10px; }
+      .name-head { padding-left:8px; padding-right:8px; }
+      .name-head > span:first-child { display:none; }
+      .month { font-size:8px; padding-left:0; padding-right:0; }
+      .bar-stage { display:none; }
       .data-table { min-width:920px; }
       .workspace { overflow-x: auto; }
       .drawer { width:100vw; padding:18px; }
@@ -308,7 +318,7 @@
 
           <div id="introTimeline" class="intro-view timeline">
             <div class="tl-grid">
-              <div class="tl-header"><div class="name-head"><span>장비 · 단계 · 담당자</span><span class="today-key">오늘</span></div><div class="months"><span class="month">26.7</span><span class="month">8월</span><span class="month">9월</span><span class="month">10월</span><span class="month">11월</span><span class="month">12월</span><span class="month">27.1</span><span class="month">2월</span><span class="month">3월</span><span class="month">4월</span><span class="month">5월</span><span class="month">6월</span></div></div>
+              <div class="tl-header"><div class="name-head"><span>장비명</span><span class="today-key">오늘</span></div><div class="months"><span class="month">26.7</span><span class="month">8월</span><span class="month">9월</span><span class="month">10월</span><span class="month">11월</span><span class="month">12월</span><span class="month">27.1</span><span class="month">2월</span><span class="month">3월</span><span class="month">4월</span><span class="month">5월</span><span class="month">6월</span></div></div>
               <div id="timelineRows"></div>
             </div>
           </div>
@@ -324,7 +334,7 @@
 
           <div id="introList" class="intro-view hidden">
             <table class="data-table">
-              <thead><tr><th>관리번호</th><th>장비명</th><th>수량</th><th>담당자</th><th>종류</th><th>현재 단계</th><th>다음 일정</th><th>총 도입금액</th></tr></thead>
+              <thead><tr><th><button class="sort-head" data-sort-table="intro" data-sort-key="code">관리번호</button></th><th><button class="sort-head" data-sort-table="intro" data-sort-key="name">장비명</button></th><th><button class="sort-head" data-sort-table="intro" data-sort-key="mgr">담당자</button></th><th><button class="sort-head" data-sort-table="intro" data-sort-key="type">종류</button></th><th><button class="sort-head" data-sort-table="intro" data-sort-key="stage">현재 단계</button></th><th><button class="sort-head" data-sort-table="intro" data-sort-key="due">다음 일정</button></th><th><button class="sort-head" data-sort-table="intro" data-sort-key="price">총 도입금액</button></th></tr></thead>
               <tbody id="introTableBody"></tbody>
             </table>
           </div>
@@ -337,7 +347,7 @@
         <div class="ops-overview">
           <article class="ops-card"><h3>전체 장비</h3><div class="ops-number">29<small>대 · 20종</small></div><div class="ops-breakdown"><span>공정 <b>22</b></span><span>분석 <b>7</b></span><span>담당자 <b>3명</b></span></div></article>
           <article class="ops-card"><h3>상태</h3><div class="ops-number">28<small>대 도입예정</small></div><div class="ops-breakdown"><span>운영 <b>0</b></span><span>비가동 <b>0</b></span><span>미분류 <b>1</b></span></div></article>
-          <article class="ops-card"><h3>필수정보 누락</h3><div class="ops-number">12<small>종 · 17대</small></div><div class="warning-line">제조사·모델명·설치장소 등 확인 필요</div></article>
+          <article class="ops-card"><h3>운영장비 정보누락</h3><div class="ops-number">0<small>종</small></div><div class="warning-line">도입예정 장비는 누락 집계에서 제외</div></article>
         </div>
 
         <div class="workspace">
@@ -353,7 +363,7 @@
           </div>
           <div style="overflow:auto">
             <table class="data-table" style="min-width: 1040px">
-              <thead><tr><th>관리번호</th><th>장비명</th><th>수량</th><th>분류</th><th>담당자</th><th>운영상태</th><th>설치장소</th><th>누락정보</th><th>최근 이력</th></tr></thead>
+              <thead><tr><th><button class="sort-head" data-sort-table="ops" data-sort-key="code">관리번호</button></th><th><button class="sort-head" data-sort-table="ops" data-sort-key="name">장비명</button></th><th><button class="sort-head" data-sort-table="ops" data-sort-key="cat">분류</button></th><th><button class="sort-head" data-sort-table="ops" data-sort-key="mgr">담당자</button></th><th><button class="sort-head" data-sort-table="ops" data-sort-key="opStatus">운영상태</button></th><th><button class="sort-head" data-sort-table="ops" data-sort-key="room">설치장소</button></th><th><button class="sort-head" data-sort-table="ops" data-sort-key="missing">누락정보</button></th><th><button class="sort-head" data-sort-table="ops" data-sort-key="recent">최근 이력</button></th></tr></thead>
               <tbody id="opsTableBody"></tbody>
             </table>
           </div>
@@ -388,48 +398,96 @@
 
     const stateChip = (item) => item.status === 'late' ? 'red' : item.status === 'progress' ? 'amber' : item.status === 'done' ? 'green' : 'blue';
     const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));
-    const missingFields = (item) => [
+    const registrationGaps = (item) => [
       ['제조사', item.maker],
       ['모델명', item.model],
       ['설치장소', item.room],
       ['NFEC', item.nfec]
     ].filter(([, value]) => value === '미등록').map(([label]) => label);
+    const operationStatus = (item) => item.opStatus || (item.status === 'done' ? '운영중' : '도입예정');
+    const operationMissingFields = (item) => operationStatus(item) === '도입예정' ? [] : registrationGaps(item);
     const itemAttributes = (item) => {
       const search = [item.name, item.codes.join(' '), item.mgr, item.maker, item.model].join(' ').toLowerCase();
       return `data-name="${escapeHtml(item.name.toLowerCase())}" data-code="${escapeHtml(item.code)}" data-search="${escapeHtml(search)}" data-mgr="${escapeHtml(item.mgr)}" data-type="${escapeHtml(item.type)}" data-stage="${escapeHtml(item.stage)}" data-cat="${escapeHtml(item.cat)}"`;
     };
     const codeSummary = (item) => item.count > 1 ? `${item.codes[0]} 외 ${item.count - 1}` : item.codes[0];
+    const quantityText = (item) => item.count > 1 ? `<span class="qty-text">${item.count}대</span>` : '';
 
     function timelineRow(item) {
       return `<div class="tl-row equipment-item" ${itemAttributes(item)}>
-        <div class="equipment-name"><div class="eq-title-line"><div class="eq-title">${escapeHtml(item.name)}</div><span class="qty-badge">${item.count}대</span></div><div class="eq-meta"><span><i class="status-dot ${item.status}"></i>${escapeHtml(item.stage)}</span><span>${escapeHtml(item.mgr)}</span><span>${escapeHtml(codeSummary(item))}</span></div></div>
+        <div class="equipment-name"><div class="eq-title-line"><div class="eq-title">${escapeHtml(item.name)}</div>${quantityText(item)}</div></div>
         <div class="tl-track"><span class="today-line"></span><span class="bar ${item.status}" style="--start:${item.start};--span:${item.span}">${item.status === 'late' ? '일정 지연' : '도입 예정'}<span class="bar-stage">${escapeHtml(item.due)}</span></span></div>
       </div>`;
     }
 
     function stageCard(item) {
-      return `<div class="stage-card equipment-item" ${itemAttributes(item)}><strong>${escapeHtml(item.name)} <span class="qty-badge">${item.count}대</span></strong><small>${escapeHtml(item.mgr)} · ${escapeHtml(item.due)}</small></div>`;
+      return `<div class="stage-card equipment-item" ${itemAttributes(item)}><strong>${escapeHtml(item.name)} ${quantityText(item)}</strong><small>${escapeHtml(item.mgr)} · ${escapeHtml(item.due)}</small></div>`;
     }
 
     function introRow(item) {
-      return `<tr class="equipment-item" ${itemAttributes(item)}><td class="code">${escapeHtml(codeSummary(item))}</td><td class="primary-cell">${escapeHtml(item.name)}</td><td><span class="qty-badge">${item.count}대</span></td><td>${escapeHtml(item.mgr)}</td><td>${escapeHtml(item.type)}</td><td><span class="chip ${stateChip(item)}">${escapeHtml(item.stage)}</span></td><td>${escapeHtml(item.due)}</td><td>${escapeHtml(item.price)}</td></tr>`;
+      return `<tr class="equipment-item" ${itemAttributes(item)}><td class="code">${escapeHtml(codeSummary(item))}</td><td class="primary-cell"><div class="primary-cell-inner">${escapeHtml(item.name)} ${quantityText(item)}</div></td><td>${escapeHtml(item.mgr)}</td><td>${escapeHtml(item.type)}</td><td><span class="chip ${stateChip(item)}">${escapeHtml(item.stage)}</span></td><td>${escapeHtml(item.due)}</td><td>${escapeHtml(item.price)}</td></tr>`;
     }
 
     function opsRow(item) {
-      const opStatus = item.status === 'done' ? '운영중' : '도입예정';
-      const missing = missingFields(item);
-      const missingMarkup = missing.length
+      const opStatus = operationStatus(item);
+      const missing = operationMissingFields(item);
+      const missingMarkup = opStatus === '도입예정'
+        ? '<span class="muted">—</span>'
+        : missing.length
         ? `<div class="missing-chips">${missing.slice(0, 2).map(x => `<span class="chip amber">${escapeHtml(x)}</span>`).join('')}${missing.length > 2 ? `<span class="muted">+${missing.length - 2}</span>` : ''}</div>`
         : '<span class="muted">없음</span>';
-      return `<tr class="equipment-item" ${itemAttributes(item)} data-op-status="${opStatus}" data-missing="${missing.length ? 'true' : 'false'}"><td class="code">${escapeHtml(codeSummary(item))}</td><td class="primary-cell">${escapeHtml(item.name)}</td><td><span class="qty-badge">${item.count}대</span></td><td>${escapeHtml(item.cat)}</td><td>${escapeHtml(item.mgr)}</td><td><span class="chip ${item.status === 'done' ? 'green' : 'blue'}">${opStatus}</span></td><td>${escapeHtml(item.room)}</td><td>${missingMarkup}</td><td>${escapeHtml(item.recent)}</td></tr>`;
+      return `<tr class="equipment-item" ${itemAttributes(item)} data-op-status="${opStatus}" data-missing="${missing.length ? 'true' : 'false'}"><td class="code">${escapeHtml(codeSummary(item))}</td><td class="primary-cell"><div class="primary-cell-inner">${escapeHtml(item.name)} ${quantityText(item)}</div></td><td>${escapeHtml(item.cat)}</td><td>${escapeHtml(item.mgr)}</td><td><span class="chip ${opStatus === '운영중' ? 'green' : opStatus === '비가동' ? 'red' : 'blue'}">${opStatus}</span></td><td>${escapeHtml(item.room)}</td><td>${missingMarkup}</td><td>${escapeHtml(item.recent)}</td></tr>`;
     }
 
     document.getElementById('timelineRows').innerHTML = equipment.map(timelineRow).join('');
-    document.getElementById('introTableBody').innerHTML = equipment.map(introRow).join('');
-    document.getElementById('opsTableBody').innerHTML = equipment.map(opsRow).join('');
     document.getElementById('stagePlan').innerHTML = equipment.filter(x => x.stage === '착수 전').map(stageCard).join('');
     document.getElementById('stageRequest').innerHTML = equipment.filter(x => x.stage === '구매요청').map(stageCard).join('');
     document.getElementById('stageBid').innerHTML = equipment.filter(x => x.stage === '입찰').map(stageCard).join('');
+
+    const sortState = {
+      intro: { key: 'code', direction: 'asc' },
+      ops: { key: 'code', direction: 'asc' }
+    };
+    function sortValue(item, key) {
+      if (key === 'code') return codeSummary(item);
+      if (key === 'price') return Number(item.price.replace(/[^0-9]/g, '')) || 0;
+      if (key === 'due') {
+        const match = item.due.match(/(\d{4})년\s*(\d{1,2})월/);
+        return match ? Number(match[1]) * 100 + Number(match[2]) : 0;
+      }
+      if (key === 'missing') return operationMissingFields(item).length;
+      if (key === 'opStatus') return operationStatus(item);
+      return item[key] || '';
+    }
+    function renderTable(tableName) {
+      const state = sortState[tableName];
+      const ordered = [...equipment].sort((a, b) => {
+        const av = sortValue(a, state.key);
+        const bv = sortValue(b, state.key);
+        const result = typeof av === 'number' && typeof bv === 'number'
+          ? av - bv
+          : String(av).localeCompare(String(bv), 'ko', { numeric: true });
+        return state.direction === 'asc' ? result : -result;
+      });
+      document.getElementById(tableName === 'intro' ? 'introTableBody' : 'opsTableBody').innerHTML = ordered.map(tableName === 'intro' ? introRow : opsRow).join('');
+      document.querySelectorAll(`[data-sort-table="${tableName}"]`).forEach(button => {
+        const active = button.dataset.sortKey === state.key;
+        button.classList.toggle('asc', active && state.direction === 'asc');
+        button.classList.toggle('desc', active && state.direction === 'desc');
+        button.parentElement.setAttribute('aria-sort', active ? (state.direction === 'asc' ? 'ascending' : 'descending') : 'none');
+      });
+    }
+    document.querySelectorAll('.sort-head').forEach(button => button.addEventListener('click', event => {
+      const tableName = event.currentTarget.dataset.sortTable;
+      const key = event.currentTarget.dataset.sortKey;
+      const state = sortState[tableName];
+      state.direction = state.key === key && state.direction === 'asc' ? 'desc' : 'asc';
+      state.key = key;
+      renderTable(tableName);
+      applyVisibleFilters(document.getElementById(tableName === 'intro' ? 'introPage' : 'opsPage'));
+    }));
+    renderTable('intro');
+    renderTable('ops');
 
     const pageDesc = document.getElementById('pageDesc');
     const addButton = document.getElementById('addButton');
@@ -464,30 +522,32 @@
       event.currentTarget.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
 
-    function bindItems() {
-      document.querySelectorAll('.equipment-item').forEach(el => el.addEventListener('click', () => openDrawer(el.dataset.code)));
-    }
-    bindItems();
+    document.addEventListener('click', event => {
+      const item = event.target.closest('.equipment-item');
+      if (item) openDrawer(item.dataset.code);
+    });
 
     function openDrawer(code) {
       const item = equipment.find(x => x.code === code) || equipment[0];
-      const missing = missingFields(item);
+      const opStatus = operationStatus(item);
+      const missing = operationMissingFields(item);
       const opsMode = currentPage === 'ops';
       const action = document.getElementById('drawerAction');
       document.getElementById('drawerTitle').textContent = item.name;
       document.getElementById('drawerSub').textContent = `${item.count}대 · ${codeSummary(item)} · ${item.cat} · ${item.type}`;
       document.getElementById('drawerActionTitle').textContent = opsMode
-        ? (missing.length ? `확인 필요 · 필수정보 ${missing.length}개 누락` : '등록정보 확인 완료')
+        ? (opStatus === '도입예정' ? '도입예정 장비' : missing.length ? `확인 필요 · 필수정보 ${missing.length}개 누락` : '등록정보 확인 완료')
         : `다음 조치 · ${item.status === 'late' ? '지연 일정 재조정' : item.stage === '착수 전' ? '도입 일정 확인' : item.stage + ' 진행'}`;
       document.getElementById('drawerActionText').textContent = opsMode
-        ? (missing.length ? missing.join(' · ') : '현재 누락된 필수정보가 없습니다.')
+        ? (opStatus === '도입예정' ? '운영 전에는 필수정보 누락으로 집계하지 않습니다.' : missing.length ? missing.join(' · ') : '현재 누락된 필수정보가 없습니다.')
         : `담당자 ${item.mgr} · ${item.due} 예정`;
       action.classList.toggle('danger', !opsMode && item.status === 'late');
-      action.classList.toggle('ok', opsMode && missing.length === 0);
+      action.classList.toggle('ok', opsMode && opStatus !== '도입예정' && missing.length === 0);
+      action.classList.toggle('neutral', opsMode && opStatus === '도입예정');
       document.getElementById('drawerInfo').innerHTML = opsMode ? `
         <div><div class="info-label">담당자</div><div class="info-value">${escapeHtml(item.mgr)}</div></div>
         <div><div class="info-label">장비 수량</div><div class="info-value">${item.count}대</div></div>
-        <div><div class="info-label">운영상태</div><div class="info-value">도입예정</div></div>
+        <div><div class="info-label">운영상태</div><div class="info-value">${escapeHtml(opStatus)}</div></div>
         <div><div class="info-label">관리번호</div><div class="info-value">${escapeHtml(codeSummary(item))}</div></div>
         <div><div class="info-label">설치장소</div><div class="info-value">${escapeHtml(item.room)}</div></div>
         <div><div class="info-label">최근 이력</div><div class="info-value">${escapeHtml(item.recent)}</div></div>` : `
@@ -498,10 +558,10 @@
         <div><div class="info-label">총 도입금액</div><div class="info-value">${escapeHtml(item.price)}</div></div>
         <div><div class="info-label">예정 시점</div><div class="info-value">${escapeHtml(item.due)}</div></div>`;
       document.getElementById('drawerRegistry').innerHTML = `
-        <div><div class="info-label">제조사</div><div class="info-value ${item.maker === '미등록' ? 'missing' : ''}">${escapeHtml(item.maker)}</div></div>
-        <div><div class="info-label">모델명</div><div class="info-value ${item.model === '미등록' ? 'missing' : ''}">${escapeHtml(item.model)}</div></div>
-        <div><div class="info-label">설치장소</div><div class="info-value ${item.room === '미등록' ? 'missing' : ''}">${escapeHtml(item.room)}</div></div>
-        <div><div class="info-label">NFEC 번호</div><div class="info-value ${item.nfec === '미등록' ? 'missing' : ''}">${escapeHtml(item.nfec)}</div></div>`;
+        <div><div class="info-label">제조사</div><div class="info-value ${opsMode && opStatus !== '도입예정' && item.maker === '미등록' ? 'missing' : ''}">${escapeHtml(item.maker)}</div></div>
+        <div><div class="info-label">모델명</div><div class="info-value ${opsMode && opStatus !== '도입예정' && item.model === '미등록' ? 'missing' : ''}">${escapeHtml(item.model)}</div></div>
+        <div><div class="info-label">설치장소</div><div class="info-value ${opsMode && opStatus !== '도입예정' && item.room === '미등록' ? 'missing' : ''}">${escapeHtml(item.room)}</div></div>
+        <div><div class="info-label">NFEC 번호</div><div class="info-value ${opsMode && opStatus !== '도입예정' && item.nfec === '미등록' ? 'missing' : ''}">${escapeHtml(item.nfec)}</div></div>`;
       document.getElementById('drawerHistory').innerHTML = `
         <div><small>2026.${escapeHtml(item.recent.slice(0, 5).replace('/', '.'))}</small>${escapeHtml(item.recent.slice(5).trim())}</div>
         <div><small>2026.06.19</small>담당자 지정</div>

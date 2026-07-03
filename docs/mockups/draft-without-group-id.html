@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>작성묶음ID가 없는 임시저장 예시</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0e14;
+      --panel: #121720;
+      --panel2: #171e29;
+      --line: #2b3545;
+      --text: #f2f5f9;
+      --muted: #8f9bae;
+      --blue: #5ba4ff;
+      --blue2: #19385f;
+      --yellow: #efb74d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      width: 1440px;
+      height: 900px;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% -30%, #202b3d 0%, var(--bg) 45%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Noto Sans KR", sans-serif;
+    }
+
+    .canvas { padding: 44px 48px 36px; }
+    .eyebrow { color: var(--blue); font-size: 15px; font-weight: 750; letter-spacing: .04em; }
+    h1 { margin: 10px 0 7px; font-size: 30px; letter-spacing: -.04em; }
+    .lead { margin: 0; color: var(--muted); font-size: 17px; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr 72px 1fr;
+      align-items: center;
+      margin-top: 30px;
+    }
+
+    .screen {
+      height: 640px;
+      overflow: hidden;
+      border: 1px solid #344155;
+      border-radius: 18px;
+      background: #0e131b;
+      box-shadow: 0 18px 50px rgba(0,0,0,.32);
+    }
+
+    .topbar {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--line);
+      background: #0c1017;
+      font-weight: 760;
+    }
+    .brand { color: #dce8f8; letter-spacing: .03em; }
+    .user { color: var(--muted); font-size: 13px; }
+    .content { padding: 22px; }
+    .section-title { font-size: 20px; font-weight: 780; }
+    .section-desc { margin-top: 6px; color: var(--muted); font-size: 13px; }
+
+    .draft-list { display: grid; gap: 11px; margin-top: 18px; }
+    .draft {
+      display: grid;
+      grid-template-columns: 54px 1fr auto;
+      align-items: center;
+      min-height: 112px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+    }
+    .num {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--blue2);
+      color: #b8d8ff;
+      font-weight: 800;
+    }
+    .draft-title { font-size: 16px; font-weight: 760; }
+    .draft-meta { margin-top: 9px; color: var(--muted); font-size: 12px; }
+    .button {
+      padding: 9px 13px;
+      border: 1px solid #426d9f;
+      border-radius: 8px;
+      background: #162a43;
+      color: #c8e1ff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .note {
+      margin-top: 16px;
+      padding: 13px 15px;
+      border: 1px solid #5b4826;
+      border-radius: 10px;
+      background: #2a2113;
+      color: #f2ca7c;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .arrow {
+      display: grid;
+      place-items: center;
+      color: var(--blue);
+      font-size: 36px;
+      font-weight: 300;
+    }
+
+    .editor-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+    .chip {
+      padding: 6px 9px;
+      border-radius: 7px;
+      background: var(--blue2);
+      color: #b9d9ff;
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .field { margin-top: 18px; }
+    .label { margin-bottom: 8px; color: #c8d0dc; font-size: 13px; font-weight: 700; }
+    .input {
+      min-height: 45px;
+      padding: 12px 13px;
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: var(--panel2);
+      color: var(--text);
+      font-size: 14px;
+    }
+    .textarea { min-height: 126px; line-height: 1.6; }
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 22px;
+      padding-top: 17px;
+      border-top: 1px solid var(--line);
+    }
+    .remaining { color: var(--muted); font-size: 13px; }
+    .actions { display: flex; gap: 9px; }
+    .ghost, .primary { padding: 10px 15px; border-radius: 8px; font-weight: 750; font-size: 13px; }
+    .ghost { border: 1px solid var(--line); color: #b9c3d1; }
+    .primary { background: #377cc9; color: white; }
+
+    .caption {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 15px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .caption strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <main class="canvas">
+    <div class="eyebrow">임시저장 동작 예시</div>
+    <h1>작성묶음ID 없이 저장하면, 각 요청은 별개의 임시글이 됩니다</h1>
+    <p class="lead">한 번에 3개를 작성해 저장했더라도 서로 연결된 정보가 없으므로 하나씩 따로 불러옵니다.</p>
+
+    <section class="flow">
+      <article class="screen">
+        <header class="topbar"><span class="brand">ANGELS PORTAL</span><span class="user">관리자 · 조성범</span></header>
+        <div class="content">
+          <div class="section-title">임시저장 글 3개</div>
+          <div class="section-desc">같은 시각에 저장했지만 시스템에서는 서로 독립된 글입니다.</div>
+          <div class="draft-list">
+            <div class="draft">
+              <div class="num">1</div>
+              <div><div class="draft-title">업무일정 검색 기능 개선</div><div class="draft-meta">캘린더 · 2026. 7. 1. 14:32 저장</div></div>
+              <div class="button">이어서 작성</div>
+            </div>
+            <div class="draft">
+              <div class="num">2</div>
+              <div><div class="draft-title">장비현황 필터 추가</div><div class="draft-meta">장비관리 · 2026. 7. 1. 14:32 저장</div></div>
+              <div class="button">이어서 작성</div>
+            </div>
+            <div class="draft">
+              <div class="num">3</div>
+              <div><div class="draft-title">홈 화면 카드 순서 조정</div><div class="draft-meta">홈 · 2026. 7. 1. 14:32 저장</div></div>
+              <div class="button">이어서 작성</div>
+            </div>
+          </div>
+          <div class="note">세 글의 저장 시각이 같아도 서로 같은 작성 묶음이라는 사실을 시스템은 알 수 없습니다.</div>
+        </div>
+      </article>
+
+      <div class="arrow">→</div>
+
+      <article class="screen">
+        <header class="topbar"><span class="brand">ANGELS PORTAL</span><span class="user">임시저장 불러오기</span></header>
+        <div class="content">
+          <div class="editor-head">
+            <div><div class="section-title">요청 작성</div><div class="section-desc">1번 임시글만 불러온 상태</div></div>
+            <span class="chip">임시저장</span>
+          </div>
+          <div class="field"><div class="label">개선 위치</div><div class="input">업무일정 · 캘린더</div></div>
+          <div class="field"><div class="label">제목</div><div class="input">업무일정 검색 기능 개선</div></div>
+          <div class="field"><div class="label">요청 내용</div><div class="input textarea">검색 결과에서 일정 종류와 담당자를 함께 확인할 수 있도록 개선해주세요.</div></div>
+          <div class="footer">
+            <div class="remaining">2번·3번 글은 임시저장 목록에 그대로 남아 있음</div>
+            <div class="actions"><span class="ghost">목록</span><span class="primary">등록</span></div>
+          </div>
+          <div class="note">이 화면에는 1번만 복원됩니다. 2번과 3번을 수정하려면 목록으로 돌아가 각각 다시 열어야 합니다.</div>
+        </div>
+      </article>
+    </section>
+    <div class="caption"><strong>결론</strong><span>개별 관리가 편하면 작성묶음ID가 없어도 괜찮고, 한 작성 화면으로 함께 복원하려면 작성묶음ID가 필요합니다.</span></div>
+  </main>
+</body>
+</html>
