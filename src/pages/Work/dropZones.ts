@@ -11,9 +11,10 @@ export type DropZone = 'inProgress' | 'hold' | 'done' | 'remind'
 /** onStatusDrop 반환 — null=변경 없음(카드 원위치). changedNums=실제 변경 카드, finalize=흡입 후 확정(패치·저장·펄스) */
 export type StatusDropResult = null | { changedNums: string[]; finalize: () => void }
 
-const ZONE_PAD = 10 // 존 판정 여유(px)
-const APPROACH = 220 // 대상 접근 축소 시작 거리(px)
-const FIT_INSET = 12 // 대상 내부 완전 진입 시 상하좌우 여백(px)
+const ZONE_PAD = 10 // 존 판정 여유(px, 클릭·포인터 보조용)
+const FIT_INSET = 12 // KPI 내부 완전 진입 시 상하좌우 여백(px)
+const TRASH_PAD = 16 // 휴지통 탭 실제 드롭 판정 확장(px)
+const ZONE_SWITCH_RATIO = 1.15 // 존 전환 히스테리시스 — 새 존 교차면적이 이만큼 커야 전환
 
 export function zoneRects(): { zone: DropZone; el: HTMLElement; rect: DOMRect }[] {
   return [...document.querySelectorAll<HTMLElement>('[data-dropzone]')].map((el) => ({
@@ -34,13 +35,62 @@ export function zoneAt(x: number, y: number): { zone: DropZone; rect: DOMRect } 
   return null
 }
 
-/** 포인터가 휴지통(드래그 중에만 렌더되는 [data-trashzone]) 위인지 — 있으면 rect */
-export function trashAt(x: number, y: number): DOMRect | null {
+export interface CardRect { left: number; top: number; right: number; bottom: number; width: number; height: number }
+
+const intersectArea = (a: CardRect, b: DOMRect, pad = 0): number => {
+  const w = Math.min(a.right, b.right + pad) - Math.max(a.left, b.left - pad)
+  const h = Math.min(a.bottom, b.bottom + pad) - Math.max(a.top, b.top - pad)
+  return w > 0 && h > 0 ? w * h : 0
+}
+
+/**
+ * 카드 실영역이 휴지통 탭([data-trashzone])의 드롭 판정영역(상하좌우 +16px)과 접촉했는지.
+ * 포인터 위치는 사용하지 않는다. 접촉 시 탭 rect 반환(축소 fit·흡입 목적지 계산용).
+ */
+export function trashHitByCard(card: CardRect): DOMRect | null {
   const el = document.querySelector<HTMLElement>('[data-trashzone]')
   if (!el) return null
   const r = el.getBoundingClientRect()
-  const pad = 8
-  return x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad ? r : null
+  return intersectArea(card, r, TRASH_PAD) > 0 ? r : null
+}
+
+/**
+ * 카드 실영역 기준 대상 KPI 존 — 각 존과의 실제 교차면적이 가장 큰 존.
+ * 두 존 경계에 걸치면 면적이 큰 쪽. 현재 존이 있으면 새 존 면적이 15% 이상 커야 전환(왕복 방지).
+ */
+export function zoneByCardRect(card: CardRect, current: DropZone | null): { zone: DropZone; rect: DOMRect } | null {
+  let best: { zone: DropZone; rect: DOMRect; area: number } | null = null
+  let cur: { zone: DropZone; rect: DOMRect; area: number } | null = null
+  for (const z of zoneRects()) {
+    const area = intersectArea(card, z.rect)
+    if (area <= 0) continue
+    if (!best || area > best.area) best = { zone: z.zone, rect: z.rect, area }
+    if (z.zone === current) cur = { zone: z.zone, rect: z.rect, area }
+  }
+  if (!best) return null
+  if (cur && best.zone !== current && best.area < cur.area * ZONE_SWITCH_RATIO) {
+    return { zone: cur.zone, rect: cur.rect } // 히스테리시스 — 명확히 커질 때만 전환
+  }
+  return { zone: best.zone, rect: best.rect }
+}
+
+/**
+ * KPI 접근 축소율 — 포인터가 아니라 '이동 카드의 실제 영역' 기준.
+ * 카드 상단이 KPI 스트립 하단에 맞닿는 순간부터 시작해, 스트립 안으로 깊이 들어갈수록
+ * 해당 존 안쪽(여백 12px)에 비율 유지로 맞는 크기까지 smoothstep으로 축소.
+ * 빠져나오면 같은 곡선으로 복원. 진행도 = 침투 깊이 / 스트립 높이.
+ */
+export function kpiShrinkByCard(card: CardRect, zoneRect: DOMRect): number {
+  // 스트립 세로 범위 = 존들의 최소 top ~ 최대 bottom (연결형 스트립이라 사실상 동일)
+  let top = Infinity, bottom = -Infinity
+  for (const z of zoneRects()) { top = Math.min(top, z.rect.top); bottom = Math.max(bottom, z.rect.bottom) }
+  if (!isFinite(top)) return 1
+  const penetration = bottom - card.top // 카드 상단이 스트립 하단에 닿기 전 ≤ 0
+  if (penetration <= 0) return 1
+  const travel = Math.max(1, bottom - top)
+  const t = smoothstep(Math.min(1, penetration / travel))
+  const fit = fitScaleInto(zoneRect, card.width, card.height)
+  return 1 + (fit - 1) * t
 }
 
 const smoothstep = (t: number) => t * t * (3 - 2 * t)
@@ -52,28 +102,6 @@ export function fitScaleInto(rect: DOMRect, cardW: number, cardH: number): numbe
     Math.min((rect.width - FIT_INSET * 2) / cardW, (rect.height - FIT_INSET * 2) / cardH, 1),
     0.05,
   )
-}
-
-/**
- * 드래그 카드 축소율 — 원래 직사각형 비율·크기를 유지하다가, 가장 가까운 **KPI 존**에
- * 220px 이내로 접근하면 거리 비례(smoothstep 보간)로 부드럽게 축소. 존 내부에 완전히
- * 들어가면 존 안쪽(상하좌우 12px 여백)에 비율 유지로 맞는 크기. 멀어지면 같은 곡선으로 복원.
- * ※ 휴지통은 거리 기반 축소 대상이 아님 — 실제 드롭영역에 닿았을 때만 그리드가
- *   fitScaleInto(휴지통 rect)로 축소(CSS transition이 진입/이탈을 부드럽게 이어줌).
- */
-export function dragShrinkScale(x: number, y: number, cardW: number, cardH: number): number {
-  let best: { d: number; rect: DOMRect } | null = null
-  for (const z of zoneRects()) {
-    const r = z.rect
-    const dx = Math.max(r.left - x, 0, x - r.right)
-    const dy = Math.max(r.top - y, 0, y - r.bottom)
-    const d = Math.hypot(dx, dy) // 내부면 0
-    if (!best || d < best.d) best = { d, rect: r }
-  }
-  if (!best || best.d >= APPROACH || cardW <= 0 || cardH <= 0) return 1
-  const fit = fitScaleInto(best.rect, cardW, cardH)
-  const t = smoothstep(1 - best.d / APPROACH)
-  return 1 + (fit - 1) * t
 }
 
 export function prefersReducedMotion(): boolean {

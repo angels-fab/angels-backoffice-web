@@ -3,11 +3,14 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
-import { dragShrinkScale, fitScaleInto, genieOverlayInto, trashAt, zoneAt, type DropZone, type StatusDropResult } from './dropZones'
+import { fitScaleInto, genieOverlayInto, kpiShrinkByCard, trashHitByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 
 const ACTIVATION_DISTANCE = 8 // px 이상 이동해야 드래그 시작(마우스)
 const LONG_PRESS_MS = 480 // 터치 롱프레스 = 복수선택 모드 진입
 const CLICK_SUPPRESS_MS = 350
+const SCROLL_EDGE = 72 // 화면 상/하단 자동 스크롤 시작 영역(px)
+const SCROLL_MIN = 3
+const SCROLL_MAX = 16
 
 interface Props {
   items: WorkItem[]
@@ -78,6 +81,7 @@ export default function StatusDragGrid({
   const zoneRef = useRef<null | { zone: DropZone; rect: DOMRect }>(null)
   const longPress = useRef<number | null>(null)
   const lastPointer = useRef({ x: 0, y: 0 })
+  const autoScrollRaf = useRef<number | null>(null) // 드래그 중 상/하단 자동 스크롤 루프
   const suppressClickUntil = useRef(0)
 
   const onSelectStart = (e: Event) => e.preventDefault()
@@ -118,6 +122,7 @@ export default function StatusDragGrid({
     setOverTrash(false)
     setMultiCount(nums.length)
     setDragNum(p.num)
+    if (autoScrollRaf.current == null) autoScrollRaf.current = requestAnimationFrame(scrollTick)
   }
 
   const onMove = (e: PointerEvent) => {
@@ -134,36 +139,57 @@ export default function StatusDragGrid({
       if (dist < ACTIVATION_DISTANCE) return
       beginDrag(e.clientX, e.clientY)
     }
+    if (!drag.current) return
+    e.preventDefault()
+    updateDrag(e.clientX, e.clientY)
+  }
+
+  // 드래그 갱신(포인터·자동 스크롤 공용) — 이동 카드의 '실제 영역' 기준(포인터 위치 미사용)
+  const updateDrag = (x: number, y: number) => {
     const d = drag.current
     if (!d) return
-    e.preventDefault()
-    const zh = zoneAt(e.clientX, e.clientY)
+    const left = x - d.offsetX
+    const top = y - d.offsetY
+    const cardRect: CardRect = { left, top, right: left + d.width, bottom: top + d.height, width: d.width, height: d.height }
+    const zh = zoneByCardRect(cardRect, zoneRef.current?.zone ?? null)
     const prev = zoneRef.current?.zone ?? null
     zoneRef.current = zh
     if ((zh?.zone ?? null) !== prev) onZoneChangeRef.current(true, zh?.zone ?? null)
-    const tr = onDeleteDropRef.current && !zh ? trashAt(e.clientX, e.clientY) : null
+    const tr = onDeleteDropRef.current && !zh ? trashHitByCard(cardRect) : null
     if (!!tr !== trashHoverRef.current) {
       trashHoverRef.current = !!tr
       setOverTrash(!!tr)
       onTrashHoverRef.current?.(!!tr)
     }
-    // 오버레이 = 원본 직사각형 카드가 그랩 지점을 따라 이동.
-    // KPI 존은 220px 거리 비례 축소, 휴지통은 드롭영역 접촉 시에만 내부 크기(전이는 CSS transition)
-    const left = e.clientX - d.offsetX
-    const top = e.clientY - d.offsetY
-    const s = tr ? fitScaleInto(tr, d.width, d.height) : dragShrinkScale(e.clientX, e.clientY, d.width, d.height)
-    d.scale = s
+    const sc = tr ? fitScaleInto(tr, d.width, d.height) : (zh ? kpiShrinkByCard(cardRect, zh.rect) : 1)
+    d.scale = sc
     if (liftedRef.current) {
       liftedRef.current.style.left = `${left}px`
       liftedRef.current.style.top = `${top}px`
-      liftedRef.current.style.transform = s === 1 ? '' : `scale(${s})`
-      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * s).toFixed(1)}px`)
+      liftedRef.current.style.transform = sc === 1 ? '' : `scale(${sc})`
+      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * sc).toFixed(1)}px`)
     }
+  }
+
+  // 자동 스크롤 — 상/하단 72px 영역에서 가장자리에 가까울수록 3~16px/frame(세로만)
+  const scrollTick = () => {
+    if (!drag.current) { autoScrollRaf.current = null; return }
+    const y = lastPointer.current.y
+    let v = 0
+    if (y < SCROLL_EDGE) v = -(SCROLL_MIN + (SCROLL_MAX - SCROLL_MIN) * Math.min(1, (SCROLL_EDGE - y) / SCROLL_EDGE))
+    else if (y > window.innerHeight - SCROLL_EDGE) v = SCROLL_MIN + (SCROLL_MAX - SCROLL_MIN) * Math.min(1, (y - (window.innerHeight - SCROLL_EDGE)) / SCROLL_EDGE)
+    if (v !== 0) {
+      const before = window.scrollY
+      window.scrollBy(0, v)
+      if (window.scrollY !== before) updateDrag(lastPointer.current.x, lastPointer.current.y)
+    }
+    autoScrollRaf.current = requestAnimationFrame(scrollTick)
   }
 
   const endDrag = () => {
     document.body.style.cursor = ''
     drag.current = null
+    if (autoScrollRaf.current != null) { cancelAnimationFrame(autoScrollRaf.current); autoScrollRaf.current = null }
     suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS
     trashHoverRef.current = false
     onZoneChangeRef.current(false, null)
@@ -327,6 +353,7 @@ export default function StatusDragGrid({
             if (el && d) {
               el.style.left = `${lastPointer.current.x - d.offsetX}px`
               el.style.top = `${lastPointer.current.y - d.offsetY}px`
+              el.style.transformOrigin = `${d.offsetX}px ${d.offsetY}px` // 잡은 지점 기준 축소
               if (d.scale !== 1) el.style.transform = `scale(${d.scale})`
             }
           }}

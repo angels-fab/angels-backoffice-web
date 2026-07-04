@@ -48,9 +48,6 @@ const STRONG: Record<DropZone, string> = {
   done: 'linear-gradient(to right, rgba(113,149,194,.28) 0%, rgba(141,152,169,.28) 2% 98%, rgba(178,157,116,.28) 100%)',
   remind: 'linear-gradient(to right, rgba(178,157,116,.25) 0%, rgba(214,162,62,.25) 2% 100%)',
 }
-const ZONE_RING: Record<DropZone, string> = {
-  inProgress: 'rgba(77,161,103,.55)', hold: 'rgba(84,145,218,.55)', done: 'rgba(141,152,169,.55)', remind: 'rgba(214,162,62,.55)',
-}
 const LABEL_KO: Record<DropZone, string> = { inProgress: '진행중', hold: '보류', done: '완료', remind: 'Remind' }
 const DIVIDER = 'rgba(170,180,195,.22)'
 
@@ -61,7 +58,7 @@ const keyActivate = (fn: () => void) => (e: KeyboardEvent) => {
 export default function KpiSection({
   inProgressCount, holdCount, checkInProgCount, checkHoldCount,
   doneCount, remindCount,
-  view, onOpenView, dragging, activeZone, pulse,
+  view, onOpenView, activeZone, pulse,
 }: KpiSectionProps) {
   const checkTotal = checkInProgCount + checkHoldCount
 
@@ -95,9 +92,10 @@ export default function KpiSection({
         onClick={() => onOpenView(zone)}
         onKeyDown={keyActivate(() => onOpenView(zone))}
         sx={{
-          position: 'relative', minWidth: 0, minHeight: { xs: 104, md: 132 },
+          // 컴팩트 시안(work-kpi-compact-preview) — 가로폭·드롭영역 폭은 유지, 세로만 축소
+          position: 'relative', minWidth: 0, minHeight: { xs: 82, md: 90 },
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          gap: '7px', textAlign: 'center', cursor: 'pointer', color: LABEL[zone],
+          gap: '4px', textAlign: 'center', cursor: 'pointer', color: LABEL[zone],
           borderRadius: { xs: radius.xs, md: radius.md },
           // 하단 인디케이터가 타일 곡률 밖으로 삐져나오지 않게 타일 단위로만 클리핑
           // (컨테이너 overflow:hidden 금지 — '부서장 확인' 칩은 family에 붙어 있어 영향 없음.
@@ -111,12 +109,11 @@ export default function KpiSection({
           '&::after': {
             content: '""', position: 'absolute', left: 0, right: 0, bottom: 0, height: 3,
             bgcolor: 'currentColor',
-            opacity: selected ? 0.9 : 0, transition: 'opacity .14s', pointerEvents: 'none',
+            opacity: highlighted ? 0.9 : 0, transition: 'opacity .14s', pointerEvents: 'none',
           },
-          '&:hover::after': { opacity: selected ? 0.9 : 0.4 },
-          // 드래그 중: 드롭 가능 영역 상태색 안쪽 링, 활성 존은 강조 배경 + 1.02 확대
-          ...(dragging ? { boxShadow: `inset 0 0 0 1.5px ${ZONE_RING[zone]}` } : {}),
-          ...(activeZone === zone ? { transform: 'scale(1.02)', zIndex: 1 } : {}),
+          '&:hover::after': { opacity: highlighted ? 0.9 : 0.4 },
+          // 드래그 표시 규칙 — 드래그 시작만으로는 아무 변화 없음(링·확대·테두리 금지).
+          // 카드가 실제로 겹친 존(activeZone)만 클릭 선택과 동일한 효과(강조 배경 + 하단 상태색 선).
         }}
       >
         {/* 건수(위) — Check 배지는 레이아웃 폭에 미포함(absolute)이라 중앙축 불변 */}
@@ -124,7 +121,7 @@ export default function KpiSection({
           <Typography
             key={pulseKey(zone)}
             component="span"
-            sx={{ fontSize: { xs: 31, md: 43 }, fontWeight: 800, lineHeight: 0.95, letterSpacing: '-0.04em', color: '#fff', ...pulseSx(zone) }}
+            sx={{ fontSize: { xs: 26, md: 30 }, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.04em', color: '#fff', ...pulseSx(zone) }}
           >
             {count}
           </Typography>
@@ -135,11 +132,11 @@ export default function KpiSection({
               aria-hidden
               sx={{
                 position: 'absolute', left: 'calc(100% + 7px)', top: '50%', transform: 'translateY(-50%)',
-                width: { xs: 22, md: 23 }, height: { xs: 22, md: 23 },
+                width: { xs: 20, md: 21 }, height: { xs: 20, md: 21 },
                 border: '1px solid rgba(169,138,224,.52)', borderRadius: '999px',
                 bgcolor: '#29233a', color: '#d7c6f6',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: { xs: 12.5, md: 13 }, fontWeight: 800, lineHeight: 1,
+                fontSize: { xs: 11.5, md: 12 }, fontWeight: 800, lineHeight: 1,
                 boxShadow: '0 3px 9px rgba(0,0,0,.2)', pointerEvents: 'none',
               }}
             >
@@ -148,7 +145,7 @@ export default function KpiSection({
           )}
         </Box>
         {/* 상태명(아래) — 상태 대표색 */}
-        <Typography component="span" sx={{ fontSize: { xs: 14, md: 16 }, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em', color: LABEL[zone] }}>
+        <Typography component="span" sx={{ fontSize: { xs: 13.5, md: 15 }, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em', color: LABEL[zone] }}>
           {LABEL_KO[zone]}
         </Typography>
       </Box>
@@ -168,7 +165,7 @@ export default function KpiSection({
     bgcolor: { xs: 'background.paper', md: 'transparent' },
     overflow: 'visible',
     '&::after': {
-      content: '""', position: 'absolute', zIndex: 2, left: '50%', top: 17, bottom: 17, width: '1px',
+      content: '""', position: 'absolute', zIndex: 2, left: '50%', top: 10, bottom: 10, width: '1px',
       bgcolor: DIVIDER, pointerEvents: 'none',
     },
   }
@@ -183,7 +180,7 @@ export default function KpiSection({
         zIndex: 30,
         bgcolor: { md: 'background.default' },
         pt: { md: '6px' },
-        pb: { md: '18px' },
+        pb: { md: '15px' },
       }}
     >
       {/* 스트립 — PC(md+)에서는 외곽 테두리 1개의 긴 카드, 좁은 폭에서는 두 그룹 카드 상하 배치 */}
@@ -201,7 +198,7 @@ export default function KpiSection({
           '& > *': { minWidth: 0 },
           // 보류/완료 사이 중앙 구분선(PC 연결형에서만)
           '&::after': {
-            content: '""', position: 'absolute', zIndex: 2, left: '50%', top: 17, bottom: 17, width: '1px',
+            content: '""', position: 'absolute', zIndex: 2, left: '50%', top: 10, bottom: 10, width: '1px',
             bgcolor: DIVIDER, pointerEvents: 'none', display: { xs: 'none', md: 'block' },
           },
         }}
@@ -221,9 +218,9 @@ export default function KpiSection({
                 onClick={(e) => { e.stopPropagation(); onOpenView('check') }}
                 onKeyDown={keyActivate(() => onOpenView('check'))}
                 sx={{
-                  position: 'absolute', zIndex: 4, left: '50%', bottom: { xs: -14, md: -15 },
+                  position: 'absolute', zIndex: 4, left: '50%', bottom: { xs: -12, md: -13 },
                   transform: 'translateX(-50%)',
-                  height: { xs: 28, md: 30 }, px: '11px',
+                  height: { xs: 24, md: 26 }, px: '10px',
                   border: '1px solid rgba(169,138,224,.42)', borderRadius: '999px',
                   // 배경은 항상 완전 불투명(반투명 rgba 금지) — 뒤 KPI 테두리·구분선이 비치지 않게
                   // 기본 표면색(#1b202b)에 보라(#a98ae0)를 섞은 불투명 혼합색: 호버 ≈18%, 선택 ≈26%

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>업무현황 컴팩트 KPI 시안</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d1016;--panel:#151a23;--line:#2b3442;--text:#eef2f7;--muted:#8f9bad;--green:#6dcc84;--blue:#69a9ef;--gray:#aab4c3;--amber:#e1b354;--purple:#c5adf0}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Pretendard,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(1120px,calc(100% - 40px));margin:0 auto;padding:44px 0 60px}
+    .eyebrow{color:#6f7b8d;font-size:12px;font-weight:800;letter-spacing:.04em;margin-bottom:8px}.title-row{display:flex;align-items:center;gap:11px;margin-bottom:19px}h1{font-size:23px;margin:0}.count-all{font-size:13px;color:#697587}
+    .kpi-wrap{position:relative;margin-bottom:31px}
+    .kpi{height:90px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:visible}
+    .state{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-width:0;cursor:pointer}
+    .state:not(:last-child)::before{content:"";position:absolute;right:0;top:15px;bottom:15px;width:1px;background:#303947}
+    .state.selected::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:currentColor}.state:first-child.selected::after{border-bottom-left-radius:15px}
+    .numline{display:flex;align-items:center;gap:4px;line-height:1}.num{font-size:30px;font-weight:850;letter-spacing:-.04em;color:#fff}.unit{font-size:12px;color:#aab4c3;font-weight:700}
+    .name{font-size:15px;font-weight:850;line-height:1}.progress{color:var(--green);background:#18231e;border-radius:15px 0 0 15px}.hold{color:var(--blue);background:#171f2a}.done{color:var(--gray);background:#191e26}.remind{color:var(--amber);background:#242117;border-radius:0 15px 15px 0}
+    .check-badge{position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);height:25px;padding:0 10px;border:1px solid #66577f;border-radius:999px;background:#2d283d;color:var(--purple);display:flex;align-items:center;gap:7px;font-size:10.5px;font-weight:850;white-space:nowrap;box-shadow:0 5px 12px rgba(0,0,0,.34)}.check-badge b{font-size:12px}
+    .controls{height:46px;display:flex;align-items:center;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:14px;color:#95a0b1;font-size:12px}.filter{display:flex;align-items:center;gap:7px}.filter-label{font-weight:800;color:#697587;margin-right:3px}.pill{height:25px;padding:0 9px;border:1px solid #384354;border-radius:8px;display:flex;align-items:center}.pill.active{border-color:#4b78a8;background:#18283b;color:#8fc1f5}.tools{margin-left:auto;display:flex;gap:6px}.tool{height:28px;padding:0 10px;border:1px solid #354050;border-radius:7px;display:flex;align-items:center}
+    .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{min-height:102px;border:1px solid #2a3440;border-radius:10px;background:rgba(109,204,132,.055);padding:13px 15px}.card-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}.cat{height:22px;padding:0 8px;border-radius:7px;background:#18283b;color:#8fc1f5;display:flex;align-items:center;font-size:10px;font-weight:800}.card-title{font-size:13px;font-weight:750}.owner{margin-left:auto;font-size:11px;color:#9ed9ab}.copy{color:#8f9bad;font-size:11px;line-height:1.55}
+    .note{margin-top:14px;color:#707c8e;font-size:11px;text-align:right}
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">업무현황 · 컴팩트 KPI 제안</div>
+  <div class="title-row"><h1>진행중 업무</h1><span class="count-all">12건</span></div>
+  <div class="kpi-wrap">
+    <section class="kpi" aria-label="업무상태 KPI">
+      <div class="state progress selected"><div class="numline"><span class="num">12</span><span class="unit">건</span></div><span class="name">진행중</span></div>
+      <div class="state hold"><div class="numline"><span class="num">2</span><span class="unit">건</span></div><span class="name">보류</span></div>
+      <div class="state done"><div class="numline"><span class="num">31</span><span class="unit">건</span></div><span class="name">완료</span></div>
+      <div class="state remind"><div class="numline"><span class="num">5</span><span class="unit">건</span></div><span class="name">Remind</span></div>
+      <div class="check-badge">부서장 확인 <b>4</b></div>
+    </section>
+  </div>
+  <div class="controls"><div class="filter"><span class="filter-label">구분</span><span class="pill active">장비 4</span><span class="pill">행정 3</span><span class="pill">예산 2</span></div><div class="tools"><span class="tool">날짜순</span><span class="tool">담당자순</span><span class="tool">휴지통 2</span></div></div>
+  <section class="cards"><article class="card"><div class="card-head"><span class="cat">장비</span><span class="card-title">ZEISS 장비 도입 일정 검토</span><span class="owner">박세리</span></div><div class="copy">입찰 일정과 설치 조건을 확인하고 관련 부서 의견을 정리합니다.</div></article><article class="card"><div class="card-head"><span class="cat">행정</span><span class="card-title">센터 운영규정 개정안 작성</span><span class="owner">조성범</span></div><div class="copy">운영규정 변경사항과 내부 검토 의견을 반영합니다.</div></article></section>
+  <div class="note">기존 132px → 제안 90px · 가로 드롭영역은 유지</div>
+</main>
+</body>
+</html>

@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
-import { dragShrinkScale, fitScaleInto, genieOverlayInto, trashAt, zoneAt, type DropZone, type StatusDropResult } from './dropZones'
+import { fitScaleInto, genieOverlayInto, kpiShrinkByCard, trashHitByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 
 // 시안(docs/mockups/work-card-motion-only.html · work-drag-trash.html) 물리값
 const ACTIVATION_DISTANCE = 8 // px 이상 움직여야 드래그 시작(마우스)
@@ -14,6 +14,9 @@ const MOVE_DURATION = 240 // 주변 카드 자리 이동 애니메이션(ms)
 const SETTLE_DURATION = 180 // 드롭 후 최종 정착 애니메이션(ms)
 const MOVE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)' // 부드러운 감속곡선
 const CLICK_SUPPRESS_MS = 350 // 드롭 직후 클릭(카드 선택) 억제
+const SCROLL_EDGE = 72 // 화면 상/하단 자동 스크롤 시작 영역(px)
+const SCROLL_MIN = 3 // 프레임당 최소 스크롤(px)
+const SCROLL_MAX = 16 // 프레임당 최대 스크롤(px)
 
 interface Rect { left: number; top: number; right: number; bottom: number; width: number; height: number }
 
@@ -50,9 +53,6 @@ interface Props {
   leading?: React.ReactNode
 }
 
-const centerDist = (a: Rect, b: DOMRect): number =>
-  Math.hypot(a.left + a.width / 2 - (b.left + b.width / 2), a.top + a.height / 2 - (b.top + b.height / 2))
-
 /**
  * 진행중 업무카드 삽입정렬 드래그 그리드 + KPI 상태변경 드롭 + 휴지통 삭제.
  * - 핸들 없이 카드 전체를 잡아 이동(버튼·링크 제외). 짧은 클릭은 카드 선택.
@@ -71,7 +71,7 @@ export default function ReorderableTaskGrid({
   const gridRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef(new Map<string, HTMLElement>())
   const liftedRef = useRef<HTMLDivElement | null>(null)
-  const flipRects = useRef(new Map<string, DOMRect>())
+  const flipRects = useRef(new Map<string, { left: number; top: number }>()) // 문서좌표(left/top)
 
   const [dragNum, setDragNum] = useState<string | null>(null)
   const [overIndex, setOverIndex] = useState(0)
@@ -97,9 +97,10 @@ export default function ReorderableTaskGrid({
   const overIndexRef = useRef(0)
 
   const pending = useRef<null | { num: string; pointerType: string; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
-  const drag = useRef<null | { num: string; multiNums: string[] | null; baseOrder: string[]; slotRects: DOMRect[]; originIndex: number; width: number; height: number; offsetX: number; offsetY: number; scale: number }>(null)
+  const drag = useRef<null | { num: string; multiNums: string[] | null; baseOrder: string[]; slotRects: DOMRect[]; scrollY0: number; originIndex: number; width: number; height: number; offsetX: number; offsetY: number; scale: number }>(null)
   const switchLockUntil = useRef(0) // 재배치 직후 추가 판정 잠금 시각
   const settleFrom = useRef<null | { num: string; rect: DOMRect }>(null) // 드롭 정착 애니메이션 시작 위치
+  const autoScrollRaf = useRef<number | null>(null) // 드래그 중 상/하단 자동 스크롤 루프
   const zoneRef = useRef<null | { zone: DropZone; rect: DOMRect }>(null)
   const longPress = useRef<number | null>(null)
   const lastPointer = useRef({ x: 0, y: 0 })
@@ -145,7 +146,9 @@ export default function ReorderableTaskGrid({
     const dragging = !!drag.current
     cellRefs.current.forEach((el, num) => {
       if (num === dragNum) return
-      const now = el.getBoundingClientRect()
+      const r = el.getBoundingClientRect()
+      // 문서좌표로 비교 — 자동 스크롤로 뷰포트가 움직여도 실제 레이아웃 이동만 FLIP
+      const now = { left: r.left + window.scrollX, top: r.top + window.scrollY }
       const prev = flipRects.current.get(num)
       if (dragging && prev && (Math.abs(prev.left - now.left) > 0.5 || Math.abs(prev.top - now.top) > 0.5)) {
         el.getAnimations?.().forEach((a) => a.cancel())
@@ -177,16 +180,19 @@ export default function ReorderableTaskGrid({
     const d = drag.current
     if (!d) return overIndexRef.current
     if (Date.now() < switchLockUntil.current) return overIndexRef.current
+    // 고정 슬롯(드래그 시작 시 저장)을 현재 스크롤로 보정해 같은 뷰포트 좌표계에서 비교
+    const dy = window.scrollY - d.scrollY0
+    const dist = (slot: DOMRect) =>
+      Math.hypot(moving.left + moving.width / 2 - (slot.left + slot.width / 2), moving.top + moving.height / 2 - (slot.top - dy + slot.height / 2))
     let best = 0
     let bestD = Infinity
     d.slotRects.forEach((slot, i) => {
-      const dist = centerDist(moving, slot)
-      if (dist < bestD) { bestD = dist; best = i }
+      const di = dist(slot)
+      if (di < bestD) { bestD = di; best = i }
     })
     const cur = overIndexRef.current
     if (best === cur) return cur
-    const curD = centerDist(moving, d.slotRects[cur])
-    if (curD - bestD < SWITCH_MARGIN) return cur
+    if (dist(d.slotRects[cur]) - bestD < SWITCH_MARGIN) return cur
     switchLockUntil.current = Date.now() + SWITCH_LOCK_MS
     return best
   }
@@ -212,11 +218,14 @@ export default function ReorderableTaskGrid({
       onDragStartCardRef.current?.(p.num)
     }
     drag.current = {
-      num: p.num, multiNums, baseOrder: nums, slotRects, originIndex,
+      num: p.num, multiNums, baseOrder: nums, slotRects, scrollY0: window.scrollY, originIndex,
       width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY, scale: 1,
     }
     flipRects.current.clear()
-    nums.forEach((n) => { const el = cellRefs.current.get(n); if (el) flipRects.current.set(n, el.getBoundingClientRect()) })
+    nums.forEach((n) => {
+      const el = cellRefs.current.get(n)
+      if (el) { const r = el.getBoundingClientRect(); flipRects.current.set(n, { left: r.left + window.scrollX, top: r.top + window.scrollY }) }
+    })
     overIndexRef.current = originIndex
     switchLockUntil.current = 0
     if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
@@ -232,6 +241,62 @@ export default function ReorderableTaskGrid({
     setMultiCount(multiNums ? multiNums.length : 1)
     setOverIndex(originIndex)
     setDragNum(p.num)
+    if (autoScrollRaf.current == null) autoScrollRaf.current = requestAnimationFrame(scrollTick)
+  }
+
+  // 드래그 갱신(포인터 이벤트·자동 스크롤 공용) — 이동 카드의 '실제 영역' 기준으로
+  // 존/휴지통/축소/삽입정렬을 모두 재계산한다(마우스 포인터 위치는 판정에 사용하지 않음).
+  const updateDrag = (x: number, y: number) => {
+    const d = drag.current
+    if (!d) return
+    const left = x - d.offsetX
+    const top = y - d.offsetY
+    const cardRect: CardRect = { left, top, right: left + d.width, bottom: top + d.height, width: d.width, height: d.height }
+    // KPI — 카드 교차면적 최대 존(+히스테리시스). 카드가 닿기 전엔 null → 강조·축소 없음
+    const zh = onStatusDropRef.current ? zoneByCardRect(cardRect, zoneRef.current?.zone ?? null) : null
+    const prevZone = zoneRef.current?.zone ?? null
+    zoneRef.current = zh
+    if ((zh?.zone ?? null) !== prevZone) onZoneChangeRef.current?.(true, zh?.zone ?? null)
+    // 휴지통 탭 — 카드가 확장 판정영역(+16px)과 실제 접촉했을 때만
+    const tr = onDeleteDropRef.current && !zh ? trashHitByCard(cardRect) : null
+    if (!!tr !== trashHoverRef.current) {
+      trashHoverRef.current = !!tr
+      setOverTrash(!!tr)
+      onTrashHoverRef.current?.(!!tr)
+    }
+    // 축소 — KPI: 카드 상단이 스트립 하단에 닿는 순간부터 침투 깊이 비례(smoothstep),
+    // 휴지통: 접촉 시에만 탭 내부 크기. 그 외 원본 크기. 원점=잡은 지점(포인터-카드 어긋남 방지).
+    const sc = tr ? fitScaleInto(tr, d.width, d.height) : (zh ? kpiShrinkByCard(cardRect, zh.rect) : 1)
+    d.scale = sc
+    if (liftedRef.current) {
+      liftedRef.current.style.left = `${left}px`
+      liftedRef.current.style.top = `${top}px`
+      liftedRef.current.style.transform = sc === 1 ? '' : `scale(${sc})`
+      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * sc).toFixed(1)}px`)
+    }
+    // 존·휴지통 위이거나 복수 드래그면 삽입정렬 이동 없음(원위치 placeholder 유지)
+    if (zh || tr || d.multiNums) {
+      if (overIndexRef.current !== d.originIndex) { overIndexRef.current = d.originIndex; setOverIndex(d.originIndex) }
+      return
+    }
+    const next = detectTargetIndex(cardRect)
+    if (next !== overIndexRef.current) { overIndexRef.current = next; setOverIndex(next) }
+  }
+
+  // 자동 스크롤 — 카드(포인터)가 화면 상/하단 72px 영역에 들어가면 가장자리에 가까울수록 빠르게(3~16px/frame).
+  // 스크롤 후 updateDrag를 다시 돌려 슬롯·KPI·휴지통 위치를 재계산(그랩 오프셋은 그대로 유지).
+  const scrollTick = () => {
+    if (!drag.current) { autoScrollRaf.current = null; return }
+    const y = lastPointer.current.y
+    let v = 0
+    if (y < SCROLL_EDGE) v = -(SCROLL_MIN + (SCROLL_MAX - SCROLL_MIN) * Math.min(1, (SCROLL_EDGE - y) / SCROLL_EDGE))
+    else if (y > window.innerHeight - SCROLL_EDGE) v = SCROLL_MIN + (SCROLL_MAX - SCROLL_MIN) * Math.min(1, (y - (window.innerHeight - SCROLL_EDGE)) / SCROLL_EDGE)
+    if (v !== 0) {
+      const before = window.scrollY
+      window.scrollBy(0, v) // 세로만 — 가로 스크롤 없음
+      if (window.scrollY !== before) updateDrag(lastPointer.current.x, lastPointer.current.y)
+    }
+    autoScrollRaf.current = requestAnimationFrame(scrollTick)
   }
 
   const onMove = (e: PointerEvent) => {
@@ -247,42 +312,9 @@ export default function ReorderableTaskGrid({
       if (dist < ACTIVATION_DISTANCE) return
       beginDrag(e.clientX, e.clientY)
     }
-    const d = drag.current
-    if (!d) return
+    if (!drag.current) return
     e.preventDefault()
-    // KPI 드롭존 + 휴지통 히트테스트
-    const zh = onStatusDropRef.current ? zoneAt(e.clientX, e.clientY) : null
-    const prevZone = zoneRef.current?.zone ?? null
-    zoneRef.current = zh
-    if ((zh?.zone ?? null) !== prevZone) onZoneChangeRef.current?.(true, zh?.zone ?? null)
-    const tr = onDeleteDropRef.current && !zh ? trashAt(e.clientX, e.clientY) : null
-    if (!!tr !== trashHoverRef.current) {
-      trashHoverRef.current = !!tr
-      setOverTrash(!!tr)
-      onTrashHoverRef.current?.(!!tr)
-    }
-    // 오버레이 = 원본 직사각형 카드가 잡은 지점(그랩 오프셋)을 따라 이동.
-    // 축소 규칙: KPI 존은 220px 거리 비례(smoothstep), 휴지통은 드롭영역에 '닿았을 때만'
-    // 내부 크기로(전환은 오버레이 CSS transition이 부드럽게 이어줌 — 주변 통과 시 원본 유지).
-    const left = e.clientX - d.offsetX
-    const top = e.clientY - d.offsetY
-    const s = tr ? fitScaleInto(tr, d.width, d.height) : dragShrinkScale(e.clientX, e.clientY, d.width, d.height)
-    d.scale = s
-    if (liftedRef.current) {
-      liftedRef.current.style.left = `${left}px`
-      liftedRef.current.style.top = `${top}px`
-      liftedRef.current.style.transform = s === 1 ? '' : `scale(${s})`
-      liftedRef.current.style.setProperty('--stack-gap', `${Math.max(2, 10 * s).toFixed(1)}px`)
-    }
-    // 존·휴지통 위이거나 복수 드래그면 삽입정렬 이동 없음(원위치 placeholder 유지)
-    if (zh || tr || d.multiNums) {
-      if (overIndexRef.current !== d.originIndex) { overIndexRef.current = d.originIndex; setOverIndex(d.originIndex) }
-      return
-    }
-    // 삽입정렬 판정은 원본 카드 크기의 가상 사각형으로(축소 시각과 무관 — 기존 동작 보존)
-    const moving: Rect = { left, top, right: left + d.width, bottom: top + d.height, width: d.width, height: d.height }
-    const next = detectTargetIndex(moving)
-    if (next !== overIndexRef.current) { overIndexRef.current = next; setOverIndex(next) }
+    updateDrag(e.clientX, e.clientY)
   }
 
   const finishDrag = (commit: boolean) => {
@@ -295,6 +327,7 @@ export default function ReorderableTaskGrid({
     const finalOrder = [...rest.slice(0, idx), d.num, ...rest.slice(idx)]
     const changed = commit && d.originIndex !== finalOver && !d.multiNums
     drag.current = null
+    if (autoScrollRaf.current != null) { cancelAnimationFrame(autoScrollRaf.current); autoScrollRaf.current = null }
     flipRects.current.clear()
     suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS
     trashHoverRef.current = false
@@ -491,6 +524,7 @@ export default function ReorderableTaskGrid({
             if (el && d) {
               el.style.left = `${lastPointer.current.x - d.offsetX}px`
               el.style.top = `${lastPointer.current.y - d.offsetY}px`
+              el.style.transformOrigin = `${d.offsetX}px ${d.offsetY}px` // 잡은 지점 기준 축소
               if (d.scale !== 1) el.style.transform = `scale(${d.scale})`
             }
           }}

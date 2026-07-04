@@ -202,7 +202,9 @@ export default function Work() {
   const [editTarget, setEditTarget] = useState<WorkItem | null>(null)
   const [deleteReq, setDeleteReq] = useState<DeleteReq | null>(null) // 삭제 확인·흡입·처리 라이프사이클
   const [deleting, setDeleting] = useState(false)
-  const [trashHover, setTrashHover] = useState(false) // 드래그 토큰이 휴지통 위
+  const [trashHover, setTrashHover] = useState(false) // 드래그 카드가 휴지통 드롭영역 접촉
+  // 드래그 중 콘텐츠 우상단에 고정되는 휴지통 드롭탭 위치(드래그 시작 시 KPI 우측 기준으로 측정)
+  const [trashTabPos, setTrashTabPos] = useState<{ top: number; right: number }>({ top: 76, right: 20 })
   const [undoSnack, setUndoSnack] = useState<{ nums: string[]; count: number } | null>(null) // 삭제 직후 10초 실행 취소
   const [trashOpen, setTrashOpen] = useState(false) // 휴지통 드로어
   const [trashSel, setTrashSel] = useState<Set<string>>(new Set()) // 휴지통 복수선택(선택 복원)
@@ -320,17 +322,9 @@ export default function Work() {
     [q],
   )
 
-  // 필터 후보 — 전체(비삭제) 업무 기준으로 고정: 검색·필터 조작 중 칩의 존재·위치·순서가 바뀌지 않는다.
-  // 건수는 '현재 선택된 KPI 상태의 전체 업무'(pool) 기준 — 담당자·구분·검색어와 무관, KPI 변경 시에만 재계산.
-  // 0건도 숨기지 않고 `장비 0`처럼 표시. 삭제일시가 있는 업무는 items에서 이미 제외되어 집계에 안 들어감.
-  const presentCats = useMemo(
-    () => [...new Set(items.map((t) => t.cat).filter(Boolean))].sort((a, b) => workCatRank(a) - workCatRank(b)),
-    [items],
-  )
-  const presentMgrs = useMemo(
-    () => [...new Set(items.map((t) => t.mgr).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko')),
-    [items],
-  )
+  // 필터 후보·건수 — '현재 선택된 KPI 상태의 전체 업무'(pool) 기준. 구분·담당자 필터나 검색어를
+  // 바꿔도 변하지 않고, KPI 상태 변경·데이터 변화(신규/삭제/복원)일 때만 재계산.
+  // 0건 칩은 숨기고 1건 이상이 되면 다시 표시. 삭제 업무는 items에서 이미 제외되어 집계에 안 들어감.
   const catCounts = useMemo(() => {
     const m: Record<string, number> = {}
     for (const t of pool) { const k = normCat(t.cat); if (k) m[k] = (m[k] || 0) + 1 }
@@ -341,6 +335,33 @@ export default function Work() {
     for (const t of pool) { const k = t.mgr || ''; if (k) m[k] = (m[k] || 0) + 1 }
     return m
   }, [pool])
+  const presentCats = useMemo(
+    () => [...new Set(items.map((t) => t.cat).filter(Boolean))]
+      .filter((c) => (catCounts[normCat(c)] || 0) > 0)
+      .sort((a, b) => workCatRank(a) - workCatRank(b)),
+    [items, catCounts],
+  )
+  const presentMgrs = useMemo(
+    () => [...new Set(items.map((t) => t.mgr).filter(Boolean))]
+      .filter((m) => (mgrCounts[m] || 0) > 0)
+      .sort((a, b) => a.localeCompare(b, 'ko')),
+    [items, mgrCounts],
+  )
+  // 숨겨진(0건) 후보에 남은 선택 정리 — 보이지 않는 활성 필터 방지
+  useEffect(() => {
+    setSelCats((prev) => {
+      const avail = new Set(presentCats.map((c) => normCat(c)))
+      const next = new Set([...prev].filter((c) => avail.has(c)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [presentCats])
+  useEffect(() => {
+    setSelMgrs((prev) => {
+      const avail = new Set(presentMgrs)
+      const next = new Set([...prev].filter((m) => avail.has(m)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [presentMgrs])
 
   // 표시 전용 정렬 적용(안정 정렬 — 동률은 기존 순서 유지). 시트·포털정렬순서 미변경.
   const applyListSort = useCallback((arr: WorkItem[]) => {
@@ -818,6 +839,13 @@ export default function Work() {
   // ── KPI 드롭존 ──
   const onZoneChange = useCallback((dragging: boolean, zone: DropZone | null) => {
     if (!dragging) zoneClickSuppress.current = Date.now() + 350
+    if (dragging) {
+      // 고정 드롭탭 위치 — KPI 스트립(Remind 타일) 우측 하단에 맞춤. 화면 밖이면 상단으로 클램프.
+      const r = document.querySelector('[data-dropzone="remind"]')?.getBoundingClientRect()
+      const top = r && r.bottom > 0 ? r.bottom + 10 : 76
+      const right = r ? Math.max(12, window.innerWidth - r.right) : 20
+      setTrashTabPos({ top: Math.max(66, top), right })
+    }
     setDragUi((p) => (p.dragging === dragging && p.zone === zone ? p : { dragging, zone }))
   }, [])
 
@@ -1055,25 +1083,6 @@ export default function Work() {
               </>
             )}
             {isAdmin && (
-              <ButtonBase
-                aria-label={`휴지통 열기 (삭제 업무 ${trashed.length}건)`}
-                disabled={trashed.length === 0}
-                onClick={() => setTrashOpen(true)}
-                sx={(th) => ({
-                  height: 30, px: 1.25, gap: 0.5, flexShrink: 0,
-                  border: '1px solid', borderColor: 'divider', borderRadius: '8px',
-                  bgcolor: alpha(th.palette.text.primary, 0.03),
-                  color: trashed.length > 0 ? th.palette.accent.red : 'text.disabled',
-                  fontSize: 12.5, fontWeight: 600, lineHeight: 1,
-                  '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.06) },
-                  '&.Mui-disabled': { color: 'text.disabled' },
-                })}
-              >
-                <DeleteOutlineIcon sx={{ fontSize: 15 }} />
-                휴지통 {trashed.length}
-              </ButtonBase>
-            )}
-            {isAdmin && (
               <BtnGroup>
                 <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: 16 }} />} disabled={!canUndo} onClick={doUndo} />
                 <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
@@ -1084,6 +1093,28 @@ export default function Work() {
               <GroupBtn title="담당자 가나다 정렬(재클릭 시 방향 전환)" label="담당자" icon={sortArrow('mgr')} selected={listSort?.key === 'mgr'} onClick={() => toggleListSort('mgr')} />
               <GroupBtn title="업무구분 정렬(재클릭 시 방향 전환)" label="구분" icon={sortArrow('cat')} selected={listSort?.key === 'cat'} onClick={() => toggleListSort('cat')} />
             </BtnGroup>
+            {/* 휴지통 탭 — 정렬 버튼그룹 바로 오른쪽(관리자 전용, 0건 비활성). 클릭 시에만 드로어.
+                드래그 중에는 우상단 고정 드롭탭이 대신 표시되므로 자리만 유지(visibility). */}
+            {isAdmin && (
+              <ButtonBase
+                aria-label={`휴지통 열기 (삭제 업무 ${trashed.length}건)`}
+                disabled={trashed.length === 0}
+                onClick={() => setTrashOpen(true)}
+                sx={(th) => ({
+                  height: 30, px: 1.25, gap: 0.5, flexShrink: 0,
+                  border: '1px solid', borderColor: 'divider', borderRadius: '8px',
+                  bgcolor: alpha(th.palette.text.primary, 0.03),
+                  color: trashed.length > 0 ? th.palette.accent.red : 'text.disabled',
+                  fontSize: 12.5, fontWeight: 600, lineHeight: 1,
+                  visibility: dragUi.dragging ? 'hidden' : 'visible',
+                  '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.06) },
+                  '&.Mui-disabled': { color: 'text.disabled' },
+                })}
+              >
+                <DeleteOutlineIcon sx={{ fontSize: 15 }} />
+                휴지통 {trashed.length}
+              </ButtonBase>
+            )}
           </Box>
           {/* 2행 우: 검색창 — 우측 열 전체 폭 사용(윗줄 컨트롤과 좌우 기준선 일치) */}
           <Box sx={{ gridArea: 'search', minWidth: 0 }}>
@@ -1243,7 +1274,9 @@ export default function Work() {
         </Alert>
       </Snackbar>
 
-      {/* 휴지통 — 드래그 중·삭제 확인 동안만 하단 중앙 고정. 활성화는 색·밝기만(위치·크기 불변) */}
+      {/* 드래그 중 휴지통 드롭탭 — 콘텐츠 우상단(KPI 우측 하단) 고정. 문구 '휴지통에 놓기'로 확장,
+          실제 드롭 판정은 이 탭 rect의 상하좌우 +16px(trashHitByCard). 접촉 시 색만 강조(위치·크기 불변).
+          드로어는 클릭할 때만 열림 — 드래그 호버로는 열지 않음. 흡입(지니) 목적지도 이 탭. */}
       {isAdmin && (dragUi.dragging || (deleteReq?.token && deleteReq.phase !== 'clearing')) && (
         <Box
           data-trashzone
@@ -1253,31 +1286,26 @@ export default function Work() {
             const active = trashHover || (!!deleteReq?.token && deleteReq.phase !== 'clearing')
             return {
               position: 'fixed', zIndex: th.zIndex.modal - 1,
-              left: 0, right: 0, mx: 'auto', bottom: { xs: 86, md: 28 },
-              width: 'min(244px, calc(100vw - 32px))', height: 64,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1.25,
-              borderRadius: '17px',
+              top: trashTabPos.top, right: trashTabPos.right,
+              height: 34, px: 1.5,
+              display: 'flex', alignItems: 'center', gap: 0.75,
+              borderRadius: '9px',
               border: active ? '1.5px solid #f07a74' : `1.5px dashed ${alpha(th.palette.error.main, 0.56)}`,
-              bgcolor: active ? 'rgba(148,43,43,.82)' : 'rgba(26,21,25,.94)',
+              bgcolor: active ? 'rgba(148,43,43,.9)' : 'rgba(26,21,25,.96)',
               color: active ? '#fff' : '#ef9995',
-              backdropFilter: 'blur(14px)',
+              fontSize: 12.5, fontWeight: 800, whiteSpace: 'nowrap',
               boxShadow: active
-                ? '0 0 0 7px rgba(230,103,97,.12), 0 18px 50px rgba(0,0,0,.5)'
-                : '0 18px 50px rgba(0,0,0,.42)',
+                ? '0 0 0 6px rgba(230,103,97,.12), 0 12px 34px rgba(0,0,0,.5)'
+                : '0 12px 34px rgba(0,0,0,.42)',
               transition: 'background-color .14s, border-color .14s, box-shadow .14s, color .14s',
-              animation: 'workTrashIn .18s ease both',
-              '@keyframes workTrashIn': { from: { opacity: 0, transform: 'translateY(24px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+              animation: 'workTrashIn .16s ease both',
+              '@keyframes workTrashIn': { from: { opacity: 0, transform: 'translateY(-8px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
               '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
             }
           }}
         >
-          <DeleteOutlineIcon sx={{ fontSize: 27 }} />
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-            <Box sx={{ fontSize: 13, fontWeight: 800, lineHeight: 1.2 }}>휴지통으로 이동</Box>
-            <Box sx={{ fontSize: 10.5, opacity: 0.75, lineHeight: 1.2 }}>
-              {trashHover || deleteReq?.token ? '놓아서 삭제 확인' : '여기에 놓으면 삭제 확인'}
-            </Box>
-          </Box>
+          <DeleteOutlineIcon sx={{ fontSize: 18 }} />
+          휴지통에 놓기
         </Box>
       )}
 
