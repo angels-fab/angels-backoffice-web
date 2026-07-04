@@ -51,14 +51,13 @@ export function CatFilterChip({ label, count, on, kind, onToggle }: ChipBaseProp
         }
       }}
     >
-      <Box component="span" sx={(t) => ({ width: 7, height: 7, borderRadius: '50%', bgcolor: kindHex(t, kind), flex: 'none' })} />
       <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary' }}>{label}</Box>
       <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>{count}</Box>
     </Box>
   )
 }
 
-/** 담당자 필터 칩 — 업무일정 팀원 알약(MemberPill) 스타일 + 건수 */
+/** 담당자 필터 칩 — 업무일정 팀원 알약(MemberPill) 스타일. 건수는 표시하지 않음(aria에만 유지) */
 export function MgrFilterChip({ label, count, on, color, onToggle }: ChipBaseProps & { color: string }) {
   return (
     <Box
@@ -95,7 +94,6 @@ export function MgrFilterChip({ label, count, on, color, onToggle }: ChipBasePro
       }}
     >
       {label}
-      <Box component="span" sx={{ fontSize: 11, fontWeight: 700, opacity: on ? 0.85 : 0.6 }}>{count}</Box>
     </Box>
   )
 }

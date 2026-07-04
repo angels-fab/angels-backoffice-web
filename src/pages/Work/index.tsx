@@ -208,6 +208,8 @@ export default function Work() {
   // 우측 드웰 휴지통 — 드래그 중 포인터가 화면 오른쪽 공간에 일정시간(500ms) 머물면 무장(armed)되어
   // 우측 중앙에 휴지통이 등장하고, 카드를 놓으면 확인창 없이 소프트삭제(10초 실행취소로 복구).
   const [trashArmed, setTrashArmed] = useState(false)
+  // 무장 시 패널 세로 범위 — 업무카드 영역(보이는 셀들의 상하 union)을 뷰포트·KPI 하단으로 클램프
+  const [trashPanelBox, setTrashPanelBox] = useState<{ top: number; height: number }>({ top: 180, height: 320 })
   const trashDwellTimer = useRef<number | null>(null)
   const [undoSnack, setUndoSnack] = useState<{ nums: string[]; count: number } | null>(null) // 삭제 직후 10초 실행 취소
   const [trashOpen, setTrashOpen] = useState(false) // 휴지통 드로어
@@ -880,12 +882,24 @@ export default function Work() {
     setDragUi((p) => (p.dragging === dragging && p.zone === zone ? p : { dragging, zone }))
   }, [])
 
-  // 우측 드웰 존 알림(그리드) — 진입 유지 500ms 후 휴지통 무장, 이탈·드래그 종료 시 즉시 해제
+  // 우측 드웰 존 알림(그리드) — 진입 유지 500ms 후 휴지통 무장, 이탈·드래그 종료 시 즉시 해제.
+  // 무장 시 패널 세로 범위 = 업무카드가 차지하는 영역(보이는 카드 셀들의 상하 union, KPI 하단~뷰포트로 클램프)
   const onRightEdge = useCallback((inZone: boolean) => {
     if (inZone) {
       if (trashDwellTimer.current == null) {
         trashDwellTimer.current = window.setTimeout(() => {
           trashDwellTimer.current = null
+          let top = Infinity
+          let bottom = -Infinity
+          document.querySelectorAll('.reorder-cell, .sdg-cell').forEach((el) => {
+            const r = el.getBoundingClientRect()
+            top = Math.min(top, r.top)
+            bottom = Math.max(bottom, r.bottom)
+          })
+          const kpiBottom = document.querySelector('[data-dropzone="remind"]')?.getBoundingClientRect().bottom ?? 80
+          const vTop = Math.max(isFinite(top) ? top : 180, kpiBottom + 12, 80)
+          const vBottom = Math.min(isFinite(bottom) ? bottom : window.innerHeight - 14, window.innerHeight - 14)
+          setTrashPanelBox({ top: vTop, height: Math.max(180, vBottom - vTop) })
           setTrashArmed(true)
         }, 500)
       }
@@ -1076,39 +1090,27 @@ export default function Work() {
           )
         })()}
 
-        {/* 필터·조작부 — 얇은 위아래 구분선. PC 2행 그리드: [구분|Undo·정렬] / [담당자|검색] (수평·수직 기준선 정렬),
-            모바일 단일 열: 구분 → 담당자 → Undo·정렬 → 검색. 우측 열 폭은 두 행이 공유(grid auto column)해 일정. */}
+        {/* 필터·조작부 카드(A안 — 업무일정 필터바와 동일한 테두리 카드 문법).
+            PC 2행 그리드: [담당자|Undo·정렬·휴지통] / [구분|검색], 모바일 단일 열: 담당자 → 구분 → 정렬 → 검색.
+            우측 열 폭은 두 행이 공유(grid auto column)해 오른쪽 끝선 일정. */}
         <Box
-          sx={{
-            borderTop: '1px solid', borderBottom: '1px solid', borderColor: 'divider',
-            py: 1.25, mb: 2.5,
+          sx={(th) => ({
+            bgcolor: 'background.paper',
+            border: `1px solid ${th.palette.divider}`,
+            borderRadius: '12px',
+            p: '10px 14px',
+            mb: 2.5,
             display: 'grid',
             gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) auto' },
             gridTemplateAreas: {
-              xs: '"cats" "mgrs" "controls" "search"',
-              md: presentMgrs.length > 0 ? '"cats controls" "mgrs search"' : '"cats controls" ". search"',
+              xs: '"mgrs" "cats" "controls" "search"',
+              md: presentMgrs.length > 0 ? '"mgrs controls" "cats search"' : '"cats controls" "cats search"',
             },
             columnGap: { md: 2.5 }, rowGap: 1,
             alignItems: 'center',
-          }}
+          })}
         >
-          {/* 1행 좌: 구분 필터 — 업무일정 종류 칩과 동일(빈 선택=전체가 선택된 모습, 해제=dim) */}
-          <Box sx={{ gridArea: 'cats', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44 }}>구분</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
-              {presentCats.map((c) => (
-                <CatFilterChip
-                  key={c}
-                  kind={catKind(c)}
-                  label={c}
-                  count={catCounts[normCat(c)] || 0}
-                  on={selCats.size === 0 || selCats.has(normCat(c))}
-                  onToggle={(additive) => toggleCat(normCat(c), additive)}
-                />
-              ))}
-            </Box>
-          </Box>
-          {/* 2행 좌: 담당자 필터 — 업무일정 팀원 알약과 동일(선택=고유색 솔리드, 호버에도 선택 모습 유지) */}
+          {/* 1행 좌: 담당자 필터 — 업무일정 팀원 알약과 동일(선택=고유색 솔리드, 호버에도 선택 모습 유지, 건수 미표시) */}
           {presentMgrs.length > 0 && (
             <Box sx={{ gridArea: 'mgrs', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
               <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44 }}>담당자</Typography>
@@ -1126,6 +1128,22 @@ export default function Work() {
               </Box>
             </Box>
           )}
+          {/* 2행 좌: 구분 필터 — 업무일정 종류 칩과 동일(빈 선택=전체가 선택된 모습, 해제=dim) */}
+          <Box sx={{ gridArea: 'cats', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+            <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44 }}>구분</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
+              {presentCats.map((c) => (
+                <CatFilterChip
+                  key={c}
+                  kind={catKind(c)}
+                  label={c}
+                  count={catCounts[normCat(c)] || 0}
+                  on={selCats.size === 0 || selCats.has(normCat(c))}
+                  onToggle={(additive) => toggleCat(normCat(c), additive)}
+                />
+              ))}
+            </Box>
+          </Box>
           {/* 1행 우: 선택 도구 + Undo/Redo + 정렬 */}
           <Box sx={{ gridArea: 'controls', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
             {isAdmin && selected.size > 0 && (
@@ -1337,14 +1355,15 @@ export default function Work() {
             const contact = trashHover || (!!deleteReq?.token && deleteReq.phase !== 'clearing')
             return {
               position: 'fixed', zIndex: th.zIndex.modal - 1,
-              right: 14, top: '50%',
-              width: 74, height: 104, borderRadius: '16px',
+              right: 14, top: trashPanelBox.top,
+              width: 74, height: trashPanelBox.height, borderRadius: '16px',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75,
               border: '1.5px solid #f07a74',
               bgcolor: 'rgba(148,43,43,.92)',
               color: '#fff',
               fontSize: 11, fontWeight: 800, textAlign: 'center', lineHeight: 1.25,
-              transform: contact ? 'translateY(-50%) scale(1.07)' : 'translateY(-50%)',
+              transform: contact ? 'scale(1.02)' : 'none',
+              transformOrigin: 'right center',
               boxShadow: contact
                 ? '0 0 0 7px rgba(230,103,97,.16), 0 14px 38px rgba(0,0,0,.5)'
                 : '0 12px 32px rgba(0,0,0,.45)',
