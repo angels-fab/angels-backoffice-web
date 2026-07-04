@@ -3,6 +3,9 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
+import interactionPlugin from '@fullcalendar/interaction'
+import type { EventDropArg } from '@fullcalendar/core'
+import type { EventResizeDoneArg } from '@fullcalendar/interaction'
 import koLocale from '@fullcalendar/core/locales/ko'
 import type { EventContentArg } from '@fullcalendar/core'
 import Box from '@mui/material/Box'
@@ -26,6 +29,7 @@ import CalFilterBar from './CalFilterBar'
 import ChipContent, { type ChipContentProps } from './ChipContent'
 import EventPopover, { type EventDetail } from './EventPopover'
 import CalEventWrite from './CalEventWrite'
+import { updateCalEvent } from '@/api/calendar'
 import AddIcon from '@mui/icons-material/Add'
 import Snackbar from '@mui/material/Snackbar'
 import { useRole } from '@/auth/role'
@@ -106,6 +110,47 @@ export default function Calendar() {
   const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string } | null>(null)
   const [writeSnack, setWriteSnack] = useState<string | null>(null)
   const idMap = useRef(new WeakMap<HTMLElement, string>()) // segment → 일정 id (수정 진입용)
+  const dragClickSuppress = useRef(0) // 드래그 드롭 직후 합성 click이 팝오버를 고정하는 것 방지
+
+  // 일정 문자열('yyyy-MM-dd' 또는 'yyyy-MM-ddTHH:mm')을 delta(년/월/일/ms)만큼 이동 — KST 문자열 산술(타임존 무관)
+  const shiftDt = (v: string, d: { years?: number; months?: number; days?: number; milliseconds?: number }) => {
+    const hasTime = v.length > 10
+    const dt = new Date(
+      Number(v.slice(0, 4)), Number(v.slice(5, 7)) - 1, Number(v.slice(8, 10)),
+      hasTime ? Number(v.slice(11, 13)) : 0, hasTime ? Number(v.slice(14, 16)) : 0,
+    )
+    dt.setFullYear(dt.getFullYear() + (d.years || 0))
+    dt.setMonth(dt.getMonth() + (d.months || 0))
+    dt.setDate(dt.getDate() + (d.days || 0))
+    dt.setTime(dt.getTime() + (d.milliseconds || 0))
+    const base = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`
+    return hasTime ? `${base}T${pad(dt.getHours())}:${pad(dt.getMinutes())}` : base
+  }
+
+  // 드래그 이동/리사이즈 공용 저장 — 실패 시 revert. 종일 end는 FC(미포함)→DB(포함) 변환
+  const commitEventChange = async (
+    ev: CalEvent,
+    newStart: string,
+    newEndRaw: string,
+    revert: () => void,
+  ) => {
+    try {
+      const allDay = ev.allDay
+      await updateCalEvent({
+        id: ev.id,
+        title: ev.title, // 제목·장소는 원본 그대로 유지(이동은 날짜/시간만 변경)
+        loc: ev.loc && ev.loc !== '-' ? ev.loc : '',
+        allDay,
+        start: allDay ? newStart.slice(0, 10) : newStart.slice(0, 16),
+        end: allDay ? shiftDt(newEndRaw.slice(0, 10), { days: -1 }) : newEndRaw.slice(0, 16),
+      })
+      setWriteSnack('일정을 이동했어요')
+      dispatch(loadCalEvents())
+    } catch (err) {
+      revert()
+      setWriteSnack(err instanceof Error ? err.message : '이동에 실패했어요')
+    }
+  }
   const lockedEl = useRef<HTMLElement | null>(null) // 클릭 고정된 .fc-event segment
   // segment(.fc-event element) → 원본 일정 상세. eventDidMount에서 채우고 eventWillUnmount에서 제거.
   const detailMap = useRef(new WeakMap<HTMLElement, EventDetail>())
@@ -275,6 +320,8 @@ export default function Calendar() {
         allDay: ev.allDay,
         backgroundColor: rgba(catColor, 0.18),
         borderColor: catColor,
+        // 반복 일정 인스턴스는 드래그/리사이즈 제외 — 시리즈 전체가 움직이면 위험(개별 예외 미지원)
+        editable: !ev.recurring,
         extendedProps: { ...props, detail },
       }
     })
@@ -478,12 +525,26 @@ export default function Calendar() {
           }}
           onClick={(e) => {
             const el = findEvAt(e.clientX, e.clientY)
-            if (!el) return // 빈 곳 클릭은 바깥-클릭 닫기 핸들러로
+            if (!el) {
+              // 빈 날짜 칸 클릭(관리자) = 그 날짜로 작성 모달 — 일정·링크·팝오버 열림 상태는 제외
+              if (
+                isAdmin &&
+                !lockedEl.current &&
+                Date.now() >= dragClickSuppress.current &&
+                !(e.target as HTMLElement).closest('a, button, .fc-more-link, .fc-popover')
+              ) {
+                const dayEl = (e.target as HTMLElement).closest('[data-date]')
+                const date = dayEl?.getAttribute('data-date')
+                if (date) setWrite({ mode: 'add', event: null, initialDate: date.slice(0, 10) })
+              }
+              return // 팝오버 닫기는 바깥-클릭 핸들러가 담당
+            }
             e.stopPropagation() // 바깥-클릭 닫기로 전파 방지(하나의 클릭 경로)
             const detail = detailMap.current.get(el)
             if (lockedEl.current === el) {
               closePop() // 같은 segment 재클릭 = 닫기
             } else if (detail) {
+              if (Date.now() < dragClickSuppress.current) return // 드래그 드롭 직후 클릭 무시
               lockedEl.current = el
               setPop({ detail, x: e.clientX, y: e.clientY, locked: true, evId: idMap.current.get(el) })
             }
@@ -491,7 +552,7 @@ export default function Calendar() {
         >
           <FullCalendar
             ref={calRef}
-            plugins={[dayGridPlugin, timeGridPlugin]}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
             initialDate={keyOf(anchor)}
             locale={koLocale}
@@ -508,6 +569,34 @@ export default function Calendar() {
             slotEventOverlap={false}
             allDaySlot
             events={fcEvents}
+            // ── 구글캘린더식 상호작용(관리자만): 날짜 클릭=작성, 일정 드래그=이동, 끝단 드래그=기간 변경 ──
+            editable={isAdmin}
+            eventStartEditable={isAdmin}
+            eventDurationEditable={isAdmin}
+            eventDragStop={() => { dragClickSuppress.current = Date.now() + 400 }}
+            eventDrop={(info: EventDropArg) => {
+              dragClickSuppress.current = Date.now() + 400
+              const ev = allEvents.find((e2) => e2.id === info.event.id)
+              if (!ev) return info.revert()
+              const d = info.delta
+              void commitEventChange(
+                ev,
+                shiftDt(ev.start, d),
+                shiftDt(ev.end, d),
+                () => info.revert(),
+              )
+            }}
+            eventResize={(info: EventResizeDoneArg) => {
+              dragClickSuppress.current = Date.now() + 400
+              const ev = allEvents.find((e2) => e2.id === info.event.id)
+              if (!ev) return info.revert()
+              void commitEventChange(
+                ev,
+                shiftDt(ev.start, info.startDelta),
+                shiftDt(ev.end, info.endDelta),
+                () => info.revert(),
+              )
+            }}
             eventDisplay="block"
             eventContent={renderEventContent}
             // 실제 보이는 날짜 범위(activeStart/activeEnd) → 종류별 건수 집계 기준. 이동·뷰전환 시 즉시 갱신.
