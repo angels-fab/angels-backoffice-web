@@ -11,8 +11,10 @@ interface Props {
   mode: 'add' | 'edit'
   /** edit 모드의 대상 일정 */
   event: CalEvent | null
-  /** add 모드에서 미리 채울 날짜 (선택한 날) */
+  /** add 모드에서 미리 채울 시작일 (선택한 날) */
   initialDate: string
+  /** add 모드 종료일 프리필 — 범위 드래그 선택 시. 없으면 시작일과 동일 */
+  initialEndDate?: string
   onClose: () => void
   /** 추가/수정/삭제 성공 → 부모가 새로고침 (안내 메시지 전달) */
   onSaved: (msg: string) => void
@@ -40,7 +42,7 @@ function inclusiveEndDate(endDt: string): string {
  * 이름·비밀번호 재입력 없음(로그인 관리자만 진입). 반복 = 없음/매일/매주/매월 + 종료일(lite).
  * 반복 일정의 수정·삭제는 시리즈 전체에 반영된다(개별 예외 미지원 — 폼에 안내).
  */
-export default function CalEventWrite({ open, mode, event, initialDate, onClose, onSaved }: Props) {
+export default function CalEventWrite({ open, mode, event, initialDate, initialEndDate, onClose, onSaved }: Props) {
   const { user, isAdmin } = useRole()
   const [title, setTitle] = useState('')
   const [allDay, setAllDay] = useState(false)
@@ -95,7 +97,8 @@ export default function CalEventWrite({ open, mode, event, initialDate, onClose,
       setTitle('')
       setAllDay(false)
       setDate(initialDate || '')
-      setEndDate('')
+      setEndDate(initialEndDate || initialDate || '')
+      if (initialEndDate && initialEndDate !== initialDate) setAllDay(true) // 범위 드래그 = 종일 구간 일정
       setStartTime('09:00')
       setEndTime('10:00')
       setLoc('')

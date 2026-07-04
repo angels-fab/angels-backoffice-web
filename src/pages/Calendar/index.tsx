@@ -107,7 +107,7 @@ export default function Calendar() {
   const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number; locked: boolean; evId?: string } | null>(null)
   // 일정 작성/수정 모달(관리자) + 저장 안내 스낵바 — 5단계: 캘린더 쓰기 UI 연결(Supabase·세션 인증)
   const { isAdmin } = useRole()
-  const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string } | null>(null)
+  const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string; initialEndDate?: string } | null>(null)
   const [writeSnack, setWriteSnack] = useState<string | null>(null)
   const idMap = useRef(new WeakMap<HTMLElement, string>()) // segment → 일정 id (수정 진입용)
   const dragClickSuppress = useRef(0) // 드래그 드롭 직후 합성 click이 팝오버를 고정하는 것 방지
@@ -127,25 +127,49 @@ export default function Calendar() {
     return hasTime ? `${base}T${pad(dt.getHours())}:${pad(dt.getMinutes())}` : base
   }
 
-  // 드래그 이동/리사이즈 공용 저장 — 실패 시 revert. 종일 end는 FC(미포함)→DB(포함) 변환
+  // 재조회 디바운스 — 연속 드래그 시 이동마다 재조회하면 응답 순서 역전으로 이전 이동이
+  // 화면에서 되돌아가 보일 수 있음. 마지막 이동 후 한 번만 조회(FC 화면은 이미 새 위치).
+  const calReloadTimer = useRef<number | null>(null)
+  const scheduleReload = () => {
+    if (calReloadTimer.current) window.clearTimeout(calReloadTimer.current)
+    calReloadTimer.current = window.setTimeout(() => {
+      calReloadTimer.current = null
+      dispatch(loadCalEvents())
+    }, 900)
+  }
+
+  // 드래그 이동/리사이즈 공용 저장 — FC가 확정한 '이동 결과' 좌표(fcStart/fcEnd)를 그대로 저장.
+  // (리덕스의 옛 시작값 + delta 방식은 재조회 지연 중 연속 이동 시 한 단계씩 어긋남)
+  const fmtFc = (d: Date, withTime: boolean) => {
+    const base = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    return withTime ? `${base}T${pad(d.getHours())}:${pad(d.getMinutes())}` : base
+  }
   const commitEventChange = async (
     ev: CalEvent,
-    newStart: string,
-    newEndRaw: string,
+    fcStart: Date,
+    fcEnd: Date | null,
     revert: () => void,
   ) => {
     try {
       const allDay = ev.allDay
+      const startStr = fmtFc(fcStart, !allDay)
+      let endStr: string
+      if (allDay) {
+        // FC end는 '미포함'(다음 날 0시), null이면 하루짜리 — DB에는 마지막 날(포함)로 저장
+        endStr = fcEnd ? shiftDt(fmtFc(fcEnd, false), { days: -1 }) : startStr
+      } else {
+        endStr = fcEnd ? fmtFc(fcEnd, true) : startStr
+      }
       await updateCalEvent({
         id: ev.id,
         title: ev.title, // 제목·장소는 원본 그대로 유지(이동은 날짜/시간만 변경)
         loc: ev.loc && ev.loc !== '-' ? ev.loc : '',
         allDay,
-        start: allDay ? newStart.slice(0, 10) : newStart.slice(0, 16),
-        end: allDay ? shiftDt(newEndRaw.slice(0, 10), { days: -1 }) : newEndRaw.slice(0, 16),
+        start: startStr,
+        end: endStr,
       })
       setWriteSnack('일정을 이동했어요')
-      dispatch(loadCalEvents())
+      scheduleReload()
     } catch (err) {
       revert()
       setWriteSnack(err instanceof Error ? err.message : '이동에 실패했어요')
@@ -577,25 +601,25 @@ export default function Calendar() {
             eventDrop={(info: EventDropArg) => {
               dragClickSuppress.current = Date.now() + 400
               const ev = allEvents.find((e2) => e2.id === info.event.id)
-              if (!ev) return info.revert()
-              const d = info.delta
-              void commitEventChange(
-                ev,
-                shiftDt(ev.start, d),
-                shiftDt(ev.end, d),
-                () => info.revert(),
-              )
+              if (!ev || !info.event.start) return info.revert()
+              void commitEventChange(ev, info.event.start, info.event.end, () => info.revert())
             }}
             eventResize={(info: EventResizeDoneArg) => {
               dragClickSuppress.current = Date.now() + 400
               const ev = allEvents.find((e2) => e2.id === info.event.id)
-              if (!ev) return info.revert()
-              void commitEventChange(
-                ev,
-                shiftDt(ev.start, info.startDelta),
-                shiftDt(ev.end, info.endDelta),
-                () => info.revert(),
-              )
+              if (!ev || !info.event.start) return info.revert()
+              void commitEventChange(ev, info.event.start, info.event.end, () => info.revert())
+            }}
+            // 범위 드래그 선택 — 하이라이트 미리보기(FC 기본) 후 놓으면 그 구간으로 작성 모달.
+            // 하루짜리 선택(단일 클릭)은 위임 클릭 경로가 담당하므로 무시(이중 오픈 방지).
+            selectable={isAdmin}
+            select={(info) => {
+              const spanDays = Math.round((info.end.getTime() - info.start.getTime()) / 86400000)
+              if (!info.allDay || spanDays <= 1) return
+              dragClickSuppress.current = Date.now() + 400
+              const startStr = fmtFc(info.start, false)
+              const endStr = shiftDt(fmtFc(info.end, false), { days: -1 })
+              setWrite({ mode: 'add', event: null, initialDate: startStr, initialEndDate: endStr })
             }}
             eventDisplay="block"
             eventContent={renderEventContent}
@@ -643,6 +667,7 @@ export default function Calendar() {
         mode={write?.mode || 'add'}
         event={write?.event || null}
         initialDate={write?.initialDate || todayKey}
+        initialEndDate={write?.initialEndDate}
         onClose={() => setWrite(null)}
         onSaved={(msg) => {
           setWrite(null)
