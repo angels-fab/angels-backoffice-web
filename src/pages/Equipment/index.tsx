@@ -25,7 +25,7 @@ import { PageContainer, PageHeader, StatTile, EmptyState } from '@/components/ds
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
-import { deleteSchedule, updateSchedule } from '@/api/sheets'
+import { deleteSchedule, updateSchedule } from '@/api/eq'
 import { useRole } from '@/auth/role'
 import type { EqGroup, ScheduleItem } from '@/types'
 import { STAGE, STAGE_ORDER, groupStage, phaseChip, todayHalfIndex, type StageCode, type StageInfo } from './stageMeta'
