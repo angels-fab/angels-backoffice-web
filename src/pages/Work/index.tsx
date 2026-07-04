@@ -46,6 +46,7 @@ import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
 import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS, catKind, mgrColor } from './workMeta'
 import type { CardTone } from './workMeta'
+import { CatFilterChip, MgrFilterChip } from './FilterChips'
 import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import WorkWrite from './WorkWrite'
@@ -204,6 +205,10 @@ export default function Work() {
   const [deleteReq, setDeleteReq] = useState<DeleteReq | null>(null) // 삭제 확인·흡입·처리 라이프사이클
   const [deleting, setDeleting] = useState(false)
   const [trashHover, setTrashHover] = useState(false) // 드래그 카드가 휴지통 드롭영역 접촉
+  // 우측 드웰 휴지통 — 드래그 중 포인터가 화면 오른쪽 공간에 일정시간(500ms) 머물면 무장(armed)되어
+  // 우측 중앙에 휴지통이 등장하고, 카드를 놓으면 확인창 없이 소프트삭제(10초 실행취소로 복구).
+  const [trashArmed, setTrashArmed] = useState(false)
+  const trashDwellTimer = useRef<number | null>(null)
   const [undoSnack, setUndoSnack] = useState<{ nums: string[]; count: number } | null>(null) // 삭제 직후 10초 실행 취소
   const [trashOpen, setTrashOpen] = useState(false) // 휴지통 드로어
   const [trashSel, setTrashSel] = useState<Set<string>>(new Set()) // 휴지통 복수선택(선택 복원)
@@ -563,26 +568,32 @@ export default function Work() {
     }
   }
 
-  // 삭제 동의 — 소프트 삭제: 시트 행을 지우지 않고 '삭제일시' 기록. 휴지통 플로(token)는 확인창을
-  // 먼저 닫고 카드가 휴지통으로 지니 흡입된 뒤, 화면에서 즉시 제거(낙관) → API 기록.
-  // 실패 시 화면 상태 롤백 + 오류 안내. 성공 시 10초 '실행 취소' 스낵바.
-  const confirmDelete = async () => {
-    const req = deleteReq
-    if (!req || deleting || req.phase !== 'confirm') return
+  // 소프트 삭제 실행(공용) — 시트 행을 지우지 않고 '삭제일시' 기록. token이 있으면(드웰 휴지통 드롭)
+  // 고정 카드가 휴지통으로 지니 흡입된 뒤 낙관 제거 → API 기록. 실패 시 롤백, 성공 시 10초 '실행 취소'.
+  const executeDelete = async (targets: WorkItem[], token?: DeleteReq['token']) => {
     if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    if (deleting) return
     setDeleting(true)
-    const nums = req.items.map((t) => t.num)
+    const nums = targets.map((t) => t.num)
     try {
-      if (req.token) {
-        setDeleteReq({ ...req, phase: 'suck' }) // 확인창 닫힘 — 고정 카드·휴지통은 유지
+      if (token) {
+        setDeleteReq({ items: targets, token, phase: 'suck' })
+        // 고정 카드·휴지통 패널이 마운트될 프레임 대기(백그라운드 탭 대비 타이머 안전망 포함)
+        await new Promise<void>((res) => {
+          let done = false
+          const fin = () => { if (!done) { done = true; res() } }
+          requestAnimationFrame(() => requestAnimationFrame(fin))
+          window.setTimeout(fin, 150)
+        })
         const rect = trashElRef.current?.getBoundingClientRect()
         if (frozenTokenRef.current && rect) await genieOverlayInto(frozenTokenRef.current, rect, trashElRef.current)
       }
       // 낙관 반영 — 화면에서 즉시 제거(items → 휴지통). 스탬프는 백엔드와 같은 형식(KST yyyy-MM-dd HH:mm)
       const stamp = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 16)
       dispatch(softDeleteWorkItems({ nums, deletedAt: stamp }))
-      if (picked && req.items.some((i) => i.num === picked.num)) setPicked(null)
+      if (picked && targets.some((i) => i.num === picked.num)) setPicked(null)
       setDeleteReq(null)
+      setTrashArmed(false)
       clearSelection()
       try {
         await deleteWork({ nums, author: user, key: authKey })
@@ -595,7 +606,15 @@ export default function Work() {
     } finally {
       setDeleting(false)
       setDeleteReq(null)
+      setTrashArmed(false)
     }
+  }
+
+  // 삭제 확인창 동의(상세 Drawer 등 비드래그 경로 전용 — 드웰 휴지통 드롭은 확인창 없이 executeDelete 직행)
+  const confirmDelete = async () => {
+    const req = deleteReq
+    if (!req || deleting || req.phase !== 'confirm') return
+    await executeDelete(req.items, req.token)
   }
 
   // 삭제 실행 취소(10초 스낵바) — 삭제일시를 비우고 원래 상태로 복원. 실패 시 휴지통에 유지.
@@ -861,6 +880,24 @@ export default function Work() {
     setDragUi((p) => (p.dragging === dragging && p.zone === zone ? p : { dragging, zone }))
   }, [])
 
+  // 우측 드웰 존 알림(그리드) — 진입 유지 500ms 후 휴지통 무장, 이탈·드래그 종료 시 즉시 해제
+  const onRightEdge = useCallback((inZone: boolean) => {
+    if (inZone) {
+      if (trashDwellTimer.current == null) {
+        trashDwellTimer.current = window.setTimeout(() => {
+          trashDwellTimer.current = null
+          setTrashArmed(true)
+        }, 500)
+      }
+    } else {
+      if (trashDwellTimer.current != null) {
+        window.clearTimeout(trashDwellTimer.current)
+        trashDwellTimer.current = null
+      }
+      setTrashArmed(false)
+    }
+  }, [])
+
   // 존별 목표 필드 — 진행중↔보류는 Check 유지 / 완료·Remind는 Check 해제 / 복귀는 완료일자 비움(자동 규칙)
   const zoneFields = (t: WorkItem, zone: DropZone): FieldSnap => {
     const c = classify(t)
@@ -928,7 +965,9 @@ export default function Work() {
       .filter((t): t is WorkItem => !!t && editingId !== t.id)
     if (targets.length === 0) return
     setTrashHover(false)
-    setDeleteReq({ items: targets, token: at, phase: 'confirm' })
+    // 드웰 휴지통 드롭 = 확인창 없이 즉시 소프트삭제 — 드웰 500ms가 의도 게이트,
+    // 10초 실행 취소 스낵바 + 휴지통 드로어 복원이 안전망.
+    void executeDelete(targets, at)
   }
   // 카드 메뉴·상세 Drawer의 삭제 — 확인창만(토큰·흡입 없음). 진행 중 라이프사이클 보호 동일.
   const requestDelete = (t: WorkItem) => {
@@ -1017,13 +1056,6 @@ export default function Work() {
         dragging={dragUi.dragging}
         activeZone={dragUi.zone}
         pulse={pulse}
-        trash={isAdmin ? {
-          count: trashed.length,
-          show: dragUi.dragging || (!!deleteReq?.token && deleteReq.phase !== 'clearing'),
-          active: trashHover || (!!deleteReq?.token && deleteReq.phase !== 'clearing'),
-          onOpen: () => setTrashOpen(true),
-          btnRef: trashElRef,
-        } : undefined}
       />
 
       {/* ② 업무 목록 — 4개 상태 뷰 공통 인터페이스(제목행 + 2열 필터·조작부) */}
@@ -1060,36 +1092,35 @@ export default function Work() {
             alignItems: 'center',
           }}
         >
-          {/* 1행 좌: 구분 필터 */}
+          {/* 1행 좌: 구분 필터 — 업무일정 종류 칩과 동일(빈 선택=전체가 선택된 모습, 해제=dim) */}
           <Box sx={{ gridArea: 'cats', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
             <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44 }}>구분</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
               {presentCats.map((c) => (
-                <StatusChip
+                <CatFilterChip
                   key={c}
-                  status={catKind(c)}
-                  label={`${c} ${catCounts[normCat(c)] || 0}`}
-                  selected={selCats.has(normCat(c))}
-                  onClick={(e) => toggleCat(normCat(c), e.shiftKey)}
-                  onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
+                  kind={catKind(c)}
+                  label={c}
+                  count={catCounts[normCat(c)] || 0}
+                  on={selCats.size === 0 || selCats.has(normCat(c))}
+                  onToggle={(additive) => toggleCat(normCat(c), additive)}
                 />
               ))}
             </Box>
           </Box>
-          {/* 2행 좌: 담당자 필터 — 라벨 폭(44px)·칩 높이·수직 중앙 기준을 구분 행과 공유 */}
+          {/* 2행 좌: 담당자 필터 — 업무일정 팀원 알약과 동일(선택=고유색 솔리드, 호버에도 선택 모습 유지) */}
           {presentMgrs.length > 0 && (
             <Box sx={{ gridArea: 'mgrs', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
               <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44 }}>담당자</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
                 {presentMgrs.map((m) => (
-                  <StatusChip
+                  <MgrFilterChip
                     key={m}
-                    status="neutral"
-                    customColor={mgrColor(m)}
-                    label={`${m} ${mgrCounts[m] || 0}`}
-                    selected={selMgrs.has(m)}
-                    onClick={(e) => toggleMgr(m, e.shiftKey)}
-                    onMouseDown={(e) => { if (e.shiftKey) e.preventDefault() }}
+                    color={mgrColor(m)}
+                    label={m}
+                    count={mgrCounts[m] || 0}
+                    on={selMgrs.size === 0 || selMgrs.has(m)}
+                    onToggle={(additive) => toggleMgr(m, additive)}
                   />
                 ))}
               </Box>
@@ -1114,7 +1145,24 @@ export default function Work() {
               <GroupBtn title="담당자 가나다 정렬(재클릭 시 방향 전환)" label="담당자" icon={sortArrow('mgr')} selected={listSort?.key === 'mgr'} onClick={() => toggleListSort('mgr')} />
               <GroupBtn title="업무구분 정렬(재클릭 시 방향 전환)" label="구분" icon={sortArrow('cat')} selected={listSort?.key === 'cat'} onClick={() => toggleListSort('cat')} />
             </BtnGroup>
-            {/* 휴지통은 KPI 스트립 위 정사각 오버레이 버튼(KpiSection)으로 이동 — 조작부에는 없음 */}
+            {/* 휴지통 드로어 열기 — 복원용(삭제 건이 있을 때만). 삭제 드롭은 우측 드웰 휴지통이 담당 */}
+            {isAdmin && trashed.length > 0 && (
+              <ButtonBase
+                aria-label={`휴지통 열기 (삭제 업무 ${trashed.length}건)`}
+                onClick={() => setTrashOpen(true)}
+                sx={(th) => ({
+                  height: 30, px: 1.25, gap: 0.5, flexShrink: 0,
+                  border: '1px solid', borderColor: 'divider', borderRadius: '8px',
+                  bgcolor: alpha(th.palette.text.primary, 0.03),
+                  color: th.palette.accent.red,
+                  fontSize: 12.5, fontWeight: 600, lineHeight: 1,
+                  '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.06) },
+                })}
+              >
+                <DeleteOutlineIcon sx={{ fontSize: 15 }} />
+                휴지통 {trashed.length}
+              </ButtonBase>
+            )}
           </Box>
           {/* 2행 우: 검색창 — 위 조작행과 같은 grid 열을 공유해 전체 폭·오른쪽 끝선이 자동 일치
               (고정 px 강제 없음 — 열 폭은 조작행 내용이 결정, 휴지통 제거만큼 자연 축소) */}
@@ -1140,6 +1188,7 @@ export default function Work() {
               onCardDoubleClick={handleCardDoubleClick}
               onDeleteDrop={handleDeleteDrop}
               onTrashHover={setTrashHover}
+              onRightEdge={onRightEdge}
               awaitingNums={awaitingNums}
               awaitingHidden={awaitingHidden}
               leading={isAdmin && composing ? (
@@ -1166,6 +1215,7 @@ export default function Work() {
             onCardDoubleClick={handleCardDoubleClick}
             onDeleteDrop={handleDeleteDrop}
             onTrashHover={setTrashHover}
+            onRightEdge={onRightEdge}
             awaitingNums={awaitingNums}
             awaitingHidden={awaitingHidden}
           />
@@ -1274,6 +1324,41 @@ export default function Work() {
           {snack.msg}
         </Alert>
       </Snackbar>
+
+      {/* 우측 드웰 휴지통 — 드래그 중 포인터가 화면 오른쪽 공간에 500ms 머물면 '선택된(무장)' 모습으로 등장.
+          카드 실영역 접촉 시 접촉 강조 + 카드 축소(trashShrinkByCard), 놓으면 확인창 없이 소프트삭제
+          (10초 실행 취소·드로어 복원이 안전망). 삭제 흡입(suck) 동안 지니 목적지로 유지. */}
+      {isAdmin && (trashArmed || (!!deleteReq?.token && deleteReq.phase !== 'clearing')) && (
+        <Box
+          data-trashzone
+          ref={trashElRef}
+          aria-hidden
+          sx={(th) => {
+            const contact = trashHover || (!!deleteReq?.token && deleteReq.phase !== 'clearing')
+            return {
+              position: 'fixed', zIndex: th.zIndex.modal - 1,
+              right: 14, top: '50%',
+              width: 74, height: 104, borderRadius: '16px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75,
+              border: '1.5px solid #f07a74',
+              bgcolor: 'rgba(148,43,43,.92)',
+              color: '#fff',
+              fontSize: 11, fontWeight: 800, textAlign: 'center', lineHeight: 1.25,
+              transform: contact ? 'translateY(-50%) scale(1.07)' : 'translateY(-50%)',
+              boxShadow: contact
+                ? '0 0 0 7px rgba(230,103,97,.16), 0 14px 38px rgba(0,0,0,.5)'
+                : '0 12px 32px rgba(0,0,0,.45)',
+              transition: 'box-shadow .14s, transform .14s',
+              animation: 'workTrashFade .18s ease',
+              '@keyframes workTrashFade': { from: { opacity: 0 }, to: { opacity: 1 } },
+              '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+            }
+          }}
+        >
+          <DeleteOutlineIcon sx={{ fontSize: 26 }} />
+          놓으면 삭제
+        </Box>
+      )}
 
       {/* 휴지통 드롭 후 고정 카드 — 드래그하던 카드가 드롭 자리·축소 크기 그대로 확인창 동안 유지, 동의 시 지니 흡입의 원본 */}
       {deleteReq?.token && deleteReq.phase !== 'clearing' && (() => {

@@ -45,6 +45,8 @@ interface Props {
   onDeleteDrop?: (nums: string[], at: { cx: number; cy: number; w: number; h: number; scale: number }) => void
   /** 휴지통 위 진입/이탈(부모 휴지통 강조용) */
   onTrashHover?: (hover: boolean) => void
+  /** 드래그 중 포인터가 화면 우측 드웰 존(오른쪽 공간)에 있는지 — 부모가 500ms 드웰 후 휴지통 무장 */
+  onRightEdge?: (inZone: boolean) => void
   /** 삭제 확인 대기 카드(흐림) — 부모의 확인창 라이프사이클 동안 유지 */
   awaitingNums?: Set<string>
   /** 삭제 확정(흡입 후) — 대기 카드를 숨김 */
@@ -66,7 +68,7 @@ interface Props {
 export default function ReorderableTaskGrid({
   items, renderCard, canDrag, onReorder,
   selectedNums, onSelectToggle, onDragStartCard, onStatusDrop, onZoneChange,
-  onCardDoubleClick, onDeleteDrop, onTrashHover, awaitingNums, awaitingHidden, leading,
+  onCardDoubleClick, onDeleteDrop, onTrashHover, onRightEdge, awaitingNums, awaitingHidden, leading,
 }: Props) {
   const gridRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef(new Map<string, HTMLElement>())
@@ -93,6 +95,8 @@ export default function ReorderableTaskGrid({
   const onCardDoubleClickRef = useRef(onCardDoubleClick); onCardDoubleClickRef.current = onCardDoubleClick
   const onDeleteDropRef = useRef(onDeleteDrop); onDeleteDropRef.current = onDeleteDrop
   const onTrashHoverRef = useRef(onTrashHover); onTrashHoverRef.current = onTrashHover
+  const onRightEdgeRef = useRef(onRightEdge); onRightEdgeRef.current = onRightEdge
+  const rightEdgeRef = useRef(false)
   const trashHoverRef = useRef(false) // 휴지통 위 여부
   const overIndexRef = useRef(0)
 
@@ -266,6 +270,12 @@ export default function ReorderableTaskGrid({
       setOverTrash(!!tr)
       onTrashHoverRef.current?.(!!tr)
     }
+    // 우측 드웰 존 — 포인터 x가 화면 오른쪽 88px 안이면 진입(카드가 아니라 손 위치 기준: 넓은 카드 오폭 방지)
+    const inEdge = x >= window.innerWidth - 88
+    if (inEdge !== rightEdgeRef.current) {
+      rightEdgeRef.current = inEdge
+      onRightEdgeRef.current?.(inEdge)
+    }
     // 축소 — KPI·휴지통 동일 방식: 카드 외곽이 대상에 맞닿는 순간부터 침투 깊이 비례(smoothstep),
     // 그 외 원본 크기. 원점=잡은 지점(포인터-카드 어긋남 방지).
     const sc = tr ? trashShrinkByCard(cardRect, tr) : (zh ? kpiShrinkByCard(cardRect, zh.rect) : 1)
@@ -335,6 +345,7 @@ export default function ReorderableTaskGrid({
     trashHoverRef.current = false
     onZoneChangeRef.current?.(false, null)
     onTrashHoverRef.current?.(false)
+    if (rightEdgeRef.current) { rightEdgeRef.current = false; onRightEdgeRef.current?.(false) }
     setOverTrash(false)
     setDragNum(null)
     setOverIndex(0)
