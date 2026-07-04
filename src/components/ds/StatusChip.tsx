@@ -18,6 +18,8 @@ export interface StatusChipProps {
   /** 마우스다운 — Shift+클릭 시 텍스트 선택 방지 등 */
   onMouseDown?: (e: React.MouseEvent<HTMLDivElement>) => void
   size?: 'small' | 'medium'
+  /** status 매핑 대신 쓸 고정 색(담당자 고유색 등) — 알파 공식(약한 채움→호버→선택 솔리드)은 동일 적용 */
+  customColor?: string
 }
 
 const COLOR: Record<StatusKind, (t: import('@mui/material/styles').Theme) => string> = {
@@ -48,6 +50,7 @@ export default function StatusChip({
   onClick,
   onMouseDown,
   size = 'small',
+  customColor,
 }: StatusChipProps) {
   return (
     <Chip
@@ -58,7 +61,7 @@ export default function StatusChip({
       size={size}
       variant="outlined"
       sx={(t) => {
-        const c = COLOR[status](t)
+        const c = customColor ?? COLOR[status](t)
         return {
           color: selected ? t.palette.common.white : c,
           bgcolor: selected ? c : alpha(c, 0.12),
@@ -66,7 +69,8 @@ export default function StatusChip({
           '& .MuiChip-icon': { color: 'inherit', fontSize: 16 },
           ...(onClick && {
             cursor: 'pointer',
-            '&:hover': { bgcolor: selected ? c : alpha(c, 0.2) },
+            // 선택 > 호버 — 선택 칩은 호버에도 솔리드 유지, 미선택 칩만 같은 색으로 조금 더 선명하게
+            '&:hover': { bgcolor: selected ? c : alpha(c, 0.2), borderColor: selected ? c : alpha(c, 0.5) },
           }),
         }
       }}

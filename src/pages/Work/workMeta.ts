@@ -2,6 +2,18 @@ import type { StatusKind } from '@/components/ds'
 import type { WorkItem } from '@/types'
 import { normCat } from '@/utils/workCat'
 
+// ── 카드 상태 계층 대표색 — KPI 스트립과 동일 계열(밝은 변형) ──────────────────
+// r g b 트리플릿. rgb(R G B / a) 알파 사다리로 카드 기본→호버→선택 강도를 표현
+// (시안 docs/mockups/work-status-color-effects.html). 카드 배경·테두리·선택 효과 전용 —
+// 카드 내부 구분/담당자/부서/Check 칩(메타정보 계층)은 이 색을 상속하지 않는다.
+export type CardTone = 'green' | 'blue' | 'gray' | 'amber'
+export const TONE_RGB: Record<CardTone, string> = {
+  green: '114 199 141', // 진행중 (#72c78d)
+  blue: '121 169 226', // 보류 (#79a9e2)
+  gray: '194 202 213', // 완료 (#c2cad5)
+  amber: '224 188 116', // Remind (#e0bc74)
+}
+
 // 업무구분 → 칩 색(캡처 기준): 설계적정성=초록·예산=빨강·인사=노랑·행정=파랑·장비=회색·교육세미나=보라
 const CAT_KIND: { key: string; kind: StatusKind }[] = [
   { key: '설계적정성', kind: 'success' },

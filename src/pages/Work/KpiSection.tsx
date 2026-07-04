@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import type { KeyboardEvent } from 'react'
+import type { KeyboardEvent, RefObject } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { ContentSection } from '@/components/ds'
 import type { DropZone, WorkView } from './dropZones'
 
@@ -32,6 +33,17 @@ export interface KpiSectionProps {
   activeZone: DropZone | null
   /** 드롭 반영 직후 KPI 숫자 펄스 */
   pulse: { zone: DropZone; tick: number } | null
+  /** 휴지통 오버레이(관리자 전용) — Remind KPI 위 예약 밴드의 정사각 버튼.
+   *  클릭=드로어, 드래그 드롭존(data-trashzone)·지니 흡입 목적지 겸용. 평상시 비노출(호버·포커스 시 표시). */
+  trash?: {
+    count: number
+    /** 드래그 중·삭제 확인/흡입 중 강제 표시(그 외엔 영역 호버·키보드 포커스 시만) */
+    show: boolean
+    /** 카드 접촉·드롭 확인 중 강조 */
+    active: boolean
+    onOpen: () => void
+    btnRef: RefObject<HTMLDivElement | null>
+  }
 }
 
 // 시안 고정 색상(다크 전용 포털) — 상태명/워시/강조는 경계 2% 혼합 규칙을 그대로 사용
@@ -58,7 +70,7 @@ const keyActivate = (fn: () => void) => (e: KeyboardEvent) => {
 export default function KpiSection({
   inProgressCount, holdCount, checkInProgCount, checkHoldCount,
   doneCount, remindCount,
-  view, onOpenView, activeZone, pulse,
+  view, onOpenView, activeZone, pulse, trash,
 }: KpiSectionProps) {
   const checkTotal = checkInProgCount + checkHoldCount
 
@@ -175,14 +187,69 @@ export default function KpiSection({
       sx={{
         mb: '10px',
         // PC(md+): topbar 아래 sticky. 칩 돌출(-15px)을 배경으로 받치는 하단 패딩 포함.
-        position: { xs: 'static', md: 'sticky' },
+        // 관리자는 상단에 휴지통 예약 밴드(pt) — 버튼이 sticky 영역 안에 있어 스크롤 고정 시에도 접근 가능.
+        position: { xs: 'relative', md: 'sticky' },
         top: { md: `${stickyTop}px` },
         zIndex: 30,
         bgcolor: { md: 'background.default' },
-        pt: { md: '6px' },
+        pt: trash ? { xs: '40px', md: '42px' } : { md: '6px' },
         pb: { md: '15px' },
       }}
     >
+      {/* 휴지통 — Remind KPI 위 빈 공간의 정사각 버튼(overlay, 레이아웃 미침범·sticky 동행).
+          평상시 투명(영역은 상시 히트) → 영역 호버·키보드 포커스·드래그/삭제 플로 중 표시.
+          클릭=우측 드로어(드래그 호버로는 안 열림), 카드 드롭=기존 삭제 확인→소프트삭제 플로. */}
+      {trash && (
+        <Box
+          ref={trash.btnRef}
+          data-trashzone
+          role="button"
+          tabIndex={0}
+          aria-label={`휴지통 열기 (삭제 업무 ${trash.count}건)`}
+          onClick={() => { if (trash.count > 0) trash.onOpen() }}
+          onKeyDown={keyActivate(() => { if (trash.count > 0) trash.onOpen() })}
+          sx={{
+            position: 'absolute', zIndex: 5, top: { xs: '2px', md: '4px' }, right: 0,
+            width: 34, height: 34,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: '9px',
+            cursor: trash.count > 0 ? 'pointer' : 'default',
+            border: trash.active ? '1.5px solid #f07a74' : '1.5px dashed rgba(224,91,84,.56)',
+            bgcolor: trash.active ? 'rgba(148,43,43,.9)' : 'rgba(26,21,25,.96)',
+            color: trash.active ? '#fff' : '#ef9995',
+            boxShadow: trash.active
+              ? '0 0 0 6px rgba(230,103,97,.12), 0 10px 28px rgba(0,0,0,.5)'
+              : '0 8px 22px rgba(0,0,0,.35)',
+            opacity: trash.show ? 1 : 0,
+            transition: 'opacity .14s ease, background-color .14s ease, border-color .14s ease, box-shadow .14s ease',
+            '&:hover': { opacity: 1 },
+            '&:focus-visible': { opacity: 1, outline: '2px solid #7db3ef', outlineOffset: '2px' },
+            ...(trash.show
+              ? {
+                  animation: 'workTrashIn .16s ease both',
+                  '@keyframes workTrashIn': { from: { opacity: 0, transform: 'translateY(-6px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
+                  '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+                }
+              : {}),
+          }}
+        >
+          <DeleteOutlineIcon sx={{ fontSize: 19 }} />
+          {trash.count > 0 && (
+            <Box
+              component="span"
+              aria-hidden
+              sx={{
+                position: 'absolute', top: -7, right: -8, minWidth: 17, height: 17, px: '4px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '999px', bgcolor: '#a03d37', color: '#fff',
+                fontSize: 10.5, fontWeight: 800, lineHeight: 1, border: '1.5px solid #0f131b',
+              }}
+            >
+              {trash.count}
+            </Box>
+          )}
+        </Box>
+      )}
       {/* 스트립 — PC(md+)에서는 외곽 테두리 1개의 긴 카드, 좁은 폭에서는 두 그룹 카드 상하 배치 */}
       <Box
         sx={{

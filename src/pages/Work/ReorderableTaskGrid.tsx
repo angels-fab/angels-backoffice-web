@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
-import { fitScaleInto, genieOverlayInto, kpiShrinkByCard, trashHitByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
+import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 
 // 시안(docs/mockups/work-card-motion-only.html · work-drag-trash.html) 물리값
 const ACTIVATION_DISTANCE = 8 // px 이상 움직여야 드래그 시작(마우스)
@@ -252,21 +252,23 @@ export default function ReorderableTaskGrid({
     const left = x - d.offsetX
     const top = y - d.offsetY
     const cardRect: CardRect = { left, top, right: left + d.width, bottom: top + d.height, width: d.width, height: d.height }
-    // KPI — 카드 교차면적 최대 존(+히스테리시스). 카드가 닿기 전엔 null → 강조·축소 없음
-    const zh = onStatusDropRef.current ? zoneByCardRect(cardRect, zoneRef.current?.zone ?? null) : null
+    // 휴지통·KPI — 카드 실영역 기준. 휴지통 버튼이 KPI 위에 있어 큰 카드는 둘을 동시에 덮을 수 있는데,
+    // 그때는 포인터가 휴지통 판정영역(+16px) 안일 때만 휴지통 우선(Remind 존 드롭이 휴지통으로 오폭 방지).
+    const trRaw = onDeleteDropRef.current ? trashHitByCard(cardRect) : null
+    const zhRaw = onStatusDropRef.current ? zoneByCardRect(cardRect, zoneRef.current?.zone ?? null) : null
+    const tr = trRaw && (!zhRaw || trashContains(trRaw, x, y)) ? trRaw : null
+    const zh = tr ? null : zhRaw
     const prevZone = zoneRef.current?.zone ?? null
     zoneRef.current = zh
     if ((zh?.zone ?? null) !== prevZone) onZoneChangeRef.current?.(true, zh?.zone ?? null)
-    // 휴지통 탭 — 카드가 확장 판정영역(+16px)과 실제 접촉했을 때만
-    const tr = onDeleteDropRef.current && !zh ? trashHitByCard(cardRect) : null
     if (!!tr !== trashHoverRef.current) {
       trashHoverRef.current = !!tr
       setOverTrash(!!tr)
       onTrashHoverRef.current?.(!!tr)
     }
-    // 축소 — KPI: 카드 상단이 스트립 하단에 닿는 순간부터 침투 깊이 비례(smoothstep),
-    // 휴지통: 접촉 시에만 탭 내부 크기. 그 외 원본 크기. 원점=잡은 지점(포인터-카드 어긋남 방지).
-    const sc = tr ? fitScaleInto(tr, d.width, d.height) : (zh ? kpiShrinkByCard(cardRect, zh.rect) : 1)
+    // 축소 — KPI·휴지통 동일 방식: 카드 외곽이 대상에 맞닿는 순간부터 침투 깊이 비례(smoothstep),
+    // 그 외 원본 크기. 원점=잡은 지점(포인터-카드 어긋남 방지).
+    const sc = tr ? trashShrinkByCard(cardRect, tr) : (zh ? kpiShrinkByCard(cardRect, zh.rect) : 1)
     d.scale = sc
     if (liftedRef.current) {
       liftedRef.current.style.left = `${left}px`
@@ -494,20 +496,16 @@ export default function ReorderableTaskGrid({
               onCardDoubleClickRef.current?.(num)
             }}
             // 카드가 늘어난 셀 높이를 채우도록(높이 통일 시 하단 여백이 카드 내부로) — 자식(카드) height:100%
-            sx={(th) => ({
+            // 선택 표시는 카드(TaskAccordion)가 상태 대표색으로 직접 그림 — 셀 래퍼의 공통 파란 outline 제거
+            sx={{
               position: 'relative', minWidth: 0, touchAction: 'pan-y',
               '& > *:first-of-type': { height: '100%' },
               borderRadius: 1,
-              // 선택 = 테두리 + 은은한 배경 워시(체크·배지 없음)
-              ...(selected ? {
-                outline: `2px solid ${alpha(th.palette.accent.blue, 0.9)}`, outlineOffset: '-1px',
-                '&::after': { content: '""', position: 'absolute', inset: 0, borderRadius: 1, bgcolor: alpha(th.palette.accent.blue, 0.09), pointerEvents: 'none', zIndex: 1 },
-              } : {}),
               ...(isDragSource ? { opacity: 0.35 } : {}),
               ...(awaiting ? { opacity: awaitingHidden ? 0 : 0.32, pointerEvents: 'none' } : {}),
               ...(hidingNums.has(num) ? { opacity: 0, pointerEvents: 'none' } : {}),
               transition: 'opacity .15s',
-            })}
+            }}
           >
             {renderCard(item)}
           </Box>

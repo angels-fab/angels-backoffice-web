@@ -44,7 +44,8 @@ import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS } from './workMeta'
+import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS, catKind, mgrColor } from './workMeta'
+import type { CardTone } from './workMeta'
 import TaskAccordion from './TaskAccordion'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import WorkWrite from './WorkWrite'
@@ -203,8 +204,6 @@ export default function Work() {
   const [deleteReq, setDeleteReq] = useState<DeleteReq | null>(null) // 삭제 확인·흡입·처리 라이프사이클
   const [deleting, setDeleting] = useState(false)
   const [trashHover, setTrashHover] = useState(false) // 드래그 카드가 휴지통 드롭영역 접촉
-  // 드래그 중 콘텐츠 우상단에 고정되는 휴지통 드롭탭 위치(드래그 시작 시 KPI 우측 기준으로 측정)
-  const [trashTabPos, setTrashTabPos] = useState<{ top: number; right: number }>({ top: 76, right: 20 })
   const [undoSnack, setUndoSnack] = useState<{ nums: string[]; count: number } | null>(null) // 삭제 직후 10초 실행 취소
   const [trashOpen, setTrashOpen] = useState(false) // 휴지통 드로어
   const [trashSel, setTrashSel] = useState<Set<string>>(new Set()) // 휴지통 복수선택(선택 복원)
@@ -236,7 +235,7 @@ export default function Work() {
   const [pulse, setPulse] = useState<{ zone: DropZone; tick: number } | null>(null)
   const zoneClickSuppress = useRef(0) // 드롭 직후 존 클릭(목록 열림) 억제
   const saveChain = useRef<Promise<void>>(Promise.resolve()) // 배치 저장 직렬화(응답 역전 방지)
-  const trashElRef = useRef<HTMLDivElement | null>(null) // 하단 중앙 휴지통(흡입 목적지 rect)
+  const trashElRef = useRef<HTMLDivElement | null>(null) // KPI 위 휴지통 정사각 버튼(드롭 판정·흡입 목적지 rect)
   const frozenTokenRef = useRef<HTMLDivElement | null>(null) // 휴지통 드롭 후 확인창 동안 고정된 토큰
 
   // 실패 상태로 페이지 재진입 시 자동 재시도(마운트 1회) — 성공하면 배너 제거·updatedAt 갱신
@@ -322,30 +321,50 @@ export default function Work() {
     [q],
   )
 
-  // 필터 후보·건수 — '현재 선택된 KPI 상태의 전체 업무'(pool) 기준. 구분·담당자 필터나 검색어를
-  // 바꿔도 변하지 않고, KPI 상태 변경·데이터 변화(신규/삭제/복원)일 때만 재계산.
-  // 0건 칩은 숨기고 1건 이상이 되면 다시 표시. 삭제 업무는 items에서 이미 제외되어 집계에 안 들어감.
-  const catCounts = useMemo(() => {
+  // 필터 후보(칩 표시 여부) — '현재 KPI 상태의 전체 업무'(pool) 기준. 처음부터 0건인 구분·담당자만
+  // 숨기고, KPI 상태 변경·데이터 변화(신규/삭제/복원) 때만 재계산 — 필터·검색 변경으로는 불변이라
+  // 실시간 건수가 0이 된 칩도 그대로 남는다(선택·해제 가능). 삭제 업무는 items에서 이미 제외.
+  const poolCatCounts = useMemo(() => {
     const m: Record<string, number> = {}
     for (const t of pool) { const k = normCat(t.cat); if (k) m[k] = (m[k] || 0) + 1 }
     return m
   }, [pool])
-  const mgrCounts = useMemo(() => {
+  const poolMgrCounts = useMemo(() => {
     const m: Record<string, number> = {}
     for (const t of pool) { const k = t.mgr || ''; if (k) m[k] = (m[k] || 0) + 1 }
     return m
   }, [pool])
+  // 칩 옆 건수 — 실시간 교차 집계(자기 그룹 선택은 제외): 구분 = KPI+담당자+검색 반영,
+  // 담당자 = KPI+구분+검색 반영. '이 칩을 선택하면 몇 건이 보일지'를 나타낸다.
+  const catCounts = useMemo(() => {
+    const m: Record<string, number> = {}
+    for (const t of pool) {
+      if (!matchMgr(t) || !matchQuery(t)) continue
+      const k = normCat(t.cat)
+      if (k) m[k] = (m[k] || 0) + 1
+    }
+    return m
+  }, [pool, matchMgr, matchQuery])
+  const mgrCounts = useMemo(() => {
+    const m: Record<string, number> = {}
+    for (const t of pool) {
+      if (!matchCat(t) || !matchQuery(t)) continue
+      const k = t.mgr || ''
+      if (k) m[k] = (m[k] || 0) + 1
+    }
+    return m
+  }, [pool, matchCat, matchQuery])
   const presentCats = useMemo(
     () => [...new Set(items.map((t) => t.cat).filter(Boolean))]
-      .filter((c) => (catCounts[normCat(c)] || 0) > 0)
+      .filter((c) => (poolCatCounts[normCat(c)] || 0) > 0)
       .sort((a, b) => workCatRank(a) - workCatRank(b)),
-    [items, catCounts],
+    [items, poolCatCounts],
   )
   const presentMgrs = useMemo(
     () => [...new Set(items.map((t) => t.mgr).filter(Boolean))]
-      .filter((m) => (mgrCounts[m] || 0) > 0)
+      .filter((m) => (poolMgrCounts[m] || 0) > 0)
       .sort((a, b) => a.localeCompare(b, 'ko')),
-    [items, mgrCounts],
+    [items, poolMgrCounts],
   )
   // 숨겨진(0건) 후보에 남은 선택 정리 — 보이지 않는 활성 필터 방지
   useEffect(() => {
@@ -839,13 +858,6 @@ export default function Work() {
   // ── KPI 드롭존 ──
   const onZoneChange = useCallback((dragging: boolean, zone: DropZone | null) => {
     if (!dragging) zoneClickSuppress.current = Date.now() + 350
-    if (dragging) {
-      // 고정 드롭탭 위치 — KPI 스트립(Remind 타일) 우측 하단에 맞춤. 화면 밖이면 상단으로 클램프.
-      const r = document.querySelector('[data-dropzone="remind"]')?.getBoundingClientRect()
-      const top = r && r.bottom > 0 ? r.bottom + 10 : 76
-      const right = r ? Math.max(12, window.innerWidth - r.right) : 20
-      setTrashTabPos({ top: Math.max(66, top), right })
-    }
     setDragUi((p) => (p.dragging === dragging && p.zone === zone ? p : { dragging, zone }))
   }, [])
 
@@ -949,8 +961,9 @@ export default function Work() {
     }
   }, [])
 
-  // 업무 행 — 수정 중이면 그 자리에서 인라인 편집(전폭), 아니면 카드
-  const renderTask = (t: WorkItem, tone: 'green' | 'amber' | 'gray') =>
+  // 업무 행 — 수정 중이면 그 자리에서 인라인 편집(전폭), 아니면 카드.
+  // tone = 상태 계층 색(KPI 대표색), selected = 카드가 직접 상태색으로 선택 효과를 그림(셀 outline 없음)
+  const renderTask = (t: WorkItem, tone: CardTone) =>
     editingId === t.id ? (
       <NewTaskCard
         key={t.id}
@@ -961,7 +974,7 @@ export default function Work() {
         onSave={(form) => handleSaveEdit(t, form)}
       />
     ) : (
-      <TaskAccordion key={t.id} t={t} tone={tone} />
+      <TaskAccordion key={t.id} t={t} tone={tone} selected={selected.has(t.num)} />
     )
 
   return (
@@ -1004,6 +1017,13 @@ export default function Work() {
         dragging={dragUi.dragging}
         activeZone={dragUi.zone}
         pulse={pulse}
+        trash={isAdmin ? {
+          count: trashed.length,
+          show: dragUi.dragging || (!!deleteReq?.token && deleteReq.phase !== 'clearing'),
+          active: trashHover || (!!deleteReq?.token && deleteReq.phase !== 'clearing'),
+          onOpen: () => setTrashOpen(true),
+          btnRef: trashElRef,
+        } : undefined}
       />
 
       {/* ② 업무 목록 — 4개 상태 뷰 공통 인터페이스(제목행 + 2열 필터·조작부) */}
@@ -1047,7 +1067,7 @@ export default function Work() {
               {presentCats.map((c) => (
                 <StatusChip
                   key={c}
-                  status="neutral"
+                  status={catKind(c)}
                   label={`${c} ${catCounts[normCat(c)] || 0}`}
                   selected={selCats.has(normCat(c))}
                   onClick={(e) => toggleCat(normCat(c), e.shiftKey)}
@@ -1064,7 +1084,8 @@ export default function Work() {
                 {presentMgrs.map((m) => (
                   <StatusChip
                     key={m}
-                    status="info"
+                    status="neutral"
+                    customColor={mgrColor(m)}
                     label={`${m} ${mgrCounts[m] || 0}`}
                     selected={selMgrs.has(m)}
                     onClick={(e) => toggleMgr(m, e.shiftKey)}
@@ -1093,32 +1114,12 @@ export default function Work() {
               <GroupBtn title="담당자 가나다 정렬(재클릭 시 방향 전환)" label="담당자" icon={sortArrow('mgr')} selected={listSort?.key === 'mgr'} onClick={() => toggleListSort('mgr')} />
               <GroupBtn title="업무구분 정렬(재클릭 시 방향 전환)" label="구분" icon={sortArrow('cat')} selected={listSort?.key === 'cat'} onClick={() => toggleListSort('cat')} />
             </BtnGroup>
-            {/* 휴지통 탭 — 정렬 버튼그룹 바로 오른쪽(관리자 전용, 0건 비활성). 클릭 시에만 드로어.
-                드래그 중에는 우상단 고정 드롭탭이 대신 표시되므로 자리만 유지(visibility). */}
-            {isAdmin && (
-              <ButtonBase
-                aria-label={`휴지통 열기 (삭제 업무 ${trashed.length}건)`}
-                disabled={trashed.length === 0}
-                onClick={() => setTrashOpen(true)}
-                sx={(th) => ({
-                  height: 30, px: 1.25, gap: 0.5, flexShrink: 0,
-                  border: '1px solid', borderColor: 'divider', borderRadius: '8px',
-                  bgcolor: alpha(th.palette.text.primary, 0.03),
-                  color: trashed.length > 0 ? th.palette.accent.red : 'text.disabled',
-                  fontSize: 12.5, fontWeight: 600, lineHeight: 1,
-                  visibility: dragUi.dragging ? 'hidden' : 'visible',
-                  '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.06) },
-                  '&.Mui-disabled': { color: 'text.disabled' },
-                })}
-              >
-                <DeleteOutlineIcon sx={{ fontSize: 15 }} />
-                휴지통 {trashed.length}
-              </ButtonBase>
-            )}
+            {/* 휴지통은 KPI 스트립 위 정사각 오버레이 버튼(KpiSection)으로 이동 — 조작부에는 없음 */}
           </Box>
-          {/* 2행 우: 검색창 — 우측 열 전체 폭 사용(윗줄 컨트롤과 좌우 기준선 일치) */}
+          {/* 2행 우: 검색창 — 위 조작행과 같은 grid 열을 공유해 전체 폭·오른쪽 끝선이 자동 일치
+              (고정 px 강제 없음 — 열 폭은 조작행 내용이 결정, 휴지통 제거만큼 자연 축소) */}
           <Box sx={{ gridArea: 'search', minWidth: 0 }}>
-            <SearchBar value={query} onChange={setQuery} width="100%" placeholder="업무명·담당자·부서·구분·장소 검색" sx={{ minWidth: { md: 290 } }} />
+            <SearchBar value={query} onChange={setQuery} width="100%" placeholder="업무명·담당자·부서·구분·장소 검색" sx={{ minWidth: { md: 230 } }} />
           </Box>
         </Box>
 
@@ -1153,7 +1154,7 @@ export default function Work() {
         ) : (
           <StatusDragGrid
             items={listed}
-            renderCard={(t) => renderTask(t, classify(t) === 'done' ? 'gray' : classify(t) === 'hold' ? 'amber' : 'green')}
+            renderCard={(t) => renderTask(t, view === 'remind' ? 'amber' : classify(t) === 'done' ? 'gray' : classify(t) === 'hold' ? 'blue' : 'green')}
             canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
             selectedNums={selected}
             selMode={selMode}
@@ -1274,45 +1275,10 @@ export default function Work() {
         </Alert>
       </Snackbar>
 
-      {/* 드래그 중 휴지통 드롭탭 — 콘텐츠 우상단(KPI 우측 하단) 고정. 문구 '휴지통에 놓기'로 확장,
-          실제 드롭 판정은 이 탭 rect의 상하좌우 +16px(trashHitByCard). 접촉 시 색만 강조(위치·크기 불변).
-          드로어는 클릭할 때만 열림 — 드래그 호버로는 열지 않음. 흡입(지니) 목적지도 이 탭. */}
-      {isAdmin && (dragUi.dragging || (deleteReq?.token && deleteReq.phase !== 'clearing')) && (
-        <Box
-          data-trashzone
-          ref={trashElRef}
-          aria-hidden
-          sx={(th) => {
-            const active = trashHover || (!!deleteReq?.token && deleteReq.phase !== 'clearing')
-            return {
-              position: 'fixed', zIndex: th.zIndex.modal - 1,
-              top: trashTabPos.top, right: trashTabPos.right,
-              height: 34, px: 1.5,
-              display: 'flex', alignItems: 'center', gap: 0.75,
-              borderRadius: '9px',
-              border: active ? '1.5px solid #f07a74' : `1.5px dashed ${alpha(th.palette.error.main, 0.56)}`,
-              bgcolor: active ? 'rgba(148,43,43,.9)' : 'rgba(26,21,25,.96)',
-              color: active ? '#fff' : '#ef9995',
-              fontSize: 12.5, fontWeight: 800, whiteSpace: 'nowrap',
-              boxShadow: active
-                ? '0 0 0 6px rgba(230,103,97,.12), 0 12px 34px rgba(0,0,0,.5)'
-                : '0 12px 34px rgba(0,0,0,.42)',
-              transition: 'background-color .14s, border-color .14s, box-shadow .14s, color .14s',
-              animation: 'workTrashIn .16s ease both',
-              '@keyframes workTrashIn': { from: { opacity: 0, transform: 'translateY(-8px)' }, to: { opacity: 1, transform: 'translateY(0)' } },
-              '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-            }
-          }}
-        >
-          <DeleteOutlineIcon sx={{ fontSize: 18 }} />
-          휴지통에 놓기
-        </Box>
-      )}
-
       {/* 휴지통 드롭 후 고정 카드 — 드래그하던 카드가 드롭 자리·축소 크기 그대로 확인창 동안 유지, 동의 시 지니 흡입의 원본 */}
       {deleteReq?.token && deleteReq.phase !== 'clearing' && (() => {
         const t0 = deleteReq.items[0]
-        const tone = classify(t0) === 'done' ? 'gray' as const : classify(t0) === 'hold' ? 'amber' as const : 'green' as const
+        const tone: CardTone = view === 'remind' ? 'amber' : classify(t0) === 'done' ? 'gray' : classify(t0) === 'hold' ? 'blue' : 'green'
         const n = deleteReq.items.length
         const tk = deleteReq.token
         return (

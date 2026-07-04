@@ -55,6 +55,32 @@ export function trashHitByCard(card: CardRect): DOMRect | null {
 }
 
 /**
+ * 포인터가 휴지통 판정영역(+16px) 안인지 — 큰 카드가 KPI 존과 휴지통을 동시에 덮을 때
+ * 어느 쪽 의도인지 가르는 용도(축소·접촉 판정은 여전히 카드 실영역 기준).
+ */
+export function trashContains(rect: DOMRect, x: number, y: number): boolean {
+  return (
+    x >= rect.left - TRASH_PAD && x <= rect.right + TRASH_PAD &&
+    y >= rect.top - TRASH_PAD && y <= rect.bottom + TRASH_PAD
+  )
+}
+
+/**
+ * 휴지통 접근 축소 — KPI(kpiShrinkByCard)와 동일한 계산방식.
+ * 카드 외곽이 휴지통 정사각형과 맞닿기 전엔 1(원본), 맞닿는 순간부터 겹침 깊이에 비례해
+ * 버튼 안에 들어가는 크기까지 smoothstep 축소(비율 유지). 이탈 시 같은 곡선으로 복원.
+ * 진행도 = 겹침 폭/높이 중 작은 비율(버튼이 카드에 완전히 덮이면 1).
+ */
+export function trashShrinkByCard(card: CardRect, trashRect: DOMRect): number {
+  const ow = Math.min(card.right, trashRect.right) - Math.max(card.left, trashRect.left)
+  const oh = Math.min(card.bottom, trashRect.bottom) - Math.max(card.top, trashRect.top)
+  if (ow <= 0 || oh <= 0) return 1
+  const t = smoothstep(Math.min(1, Math.min(ow / trashRect.width, oh / trashRect.height)))
+  const fit = fitScaleInto(trashRect, card.width, card.height)
+  return 1 + (fit - 1) * t
+}
+
+/**
  * 카드 실영역 기준 대상 KPI 존 — 각 존과의 실제 교차면적이 가장 큰 존.
  * 두 존 경계에 걸치면 면적이 큰 쪽. 현재 존이 있으면 새 존 면적이 15% 이상 커야 전환(왕복 방지).
  */

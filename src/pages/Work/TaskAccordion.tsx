@@ -3,24 +3,22 @@ import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { alpha } from '@mui/material/styles'
-import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import { isWorkNew } from '@/utils/newPost'
 import type { WorkItem } from '@/types'
-import { taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
+import { taskTitle, taskLink, mgrColor, catKind, deptKind, TONE_RGB } from './workMeta'
+import type { CardTone } from './workMeta'
 import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
 
-export type CardTone = 'green' | 'amber' | 'gray'
-const toneOf = (th: Theme, tone: CardTone) =>
-  tone === 'amber' ? th.palette.accent.amber : tone === 'gray' ? th.palette.text.secondary : th.palette.accent.green
+export type { CardTone } from './workMeta'
 
 export interface TaskAccordionProps {
   t: WorkItem
-  /** 카드 채움 색 (선택된 KPI 색) */
+  /** 카드 상태 계층 색 — 업무 상태의 KPI 대표색(진행중 초록·보류 파랑·완료 회색·Remind 앰버) */
   tone: CardTone
-  /** 선택 여부 — 선택된 카드만 초록 테두리 + 진한 채움 */
+  /** 선택 여부 — 같은 대표색의 강한 테두리·배경·링(호버보다 우선) */
   selected?: boolean
   /** 클릭 시 이 카드를 선택 */
   onSelect?: () => void
@@ -53,27 +51,49 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
           onSelect?.()
         }
       }}
-      sx={(th) => ({
-        bgcolor: alpha(toneOf(th, tone), selected ? 0.22 : 0.1),
-        border: 1,
-        borderColor: selected ? th.palette.accent.green : th.palette.divider,
-        boxShadow: selected ? `inset 0 0 0 1px ${th.palette.accent.green}` : 'none',
-        borderRadius: 1,
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'border-color .15s',
-        '&:hover': { borderColor: th.palette.accent.green },
-        '&:focus-visible': { outline: 'none', borderColor: th.palette.accent.green, boxShadow: (t2: Theme) => `inset 0 0 0 1px ${t2.palette.accent.green}` },
-      })}
+      sx={() => {
+        // 상태 대표색 알파 사다리(시안 work-status-color-effects.html): 기본 .055/.24 → 호버 .09/.78+1px 링 → 선택 .15/.92+2px 링
+        const c = (a: number) => `rgb(${TONE_RGB[tone]} / ${a})`
+        const sel = {
+          borderColor: c(0.92),
+          bgcolor: c(0.15),
+          boxShadow: `0 0 0 2px ${c(0.22)}, 0 10px 26px rgba(0,0,0,.2)`,
+        }
+        return {
+          border: 1,
+          borderRadius: 1,
+          overflow: 'hidden',
+          cursor: 'pointer',
+          transition: 'border-color .16s ease, background-color .16s ease, box-shadow .16s ease',
+          // 선택 > 호버 — 선택 시 :hover에도 선택 스타일을 재선언해 유지(.selected:hover에서 호버로 안 돌아감)
+          ...(selected
+            ? {
+                ...sel,
+                '& .task-head': { bgcolor: c(0.21), borderBottomColor: c(0.14) },
+                '&:hover': sel,
+                '&:hover .task-head': { bgcolor: c(0.21) },
+              }
+            : {
+                borderColor: c(0.24),
+                bgcolor: c(0.055),
+                '& .task-head': { bgcolor: c(0.09), borderBottomColor: c(0.14) },
+                '&:hover': { borderColor: c(0.78), bgcolor: c(0.09), boxShadow: `0 0 0 1px ${c(0.14)}` },
+                '&:hover .task-head': { bgcolor: c(0.14) },
+              }),
+          // 키보드 포커스 — 선택 상태와 충돌하지 않는 별도 접근성 outline(상태색과 무관한 파랑)
+          '&:focus-visible': { outline: '2px solid #7db3ef', outlineOffset: '1px' },
+        }
+      }}
     >
-      {/* 제목 줄 (③ 띠 채움) */}
+      {/* 제목 줄 (③ 띠 채움) — 배경·경계색은 루트 sx의 .task-head 규칙(상태 대표색 사다리)이 결정 */}
       <Box
-        sx={(th) => ({
+        className="task-head"
+        sx={{
           display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap',
           px: 1.75, py: 1.25,
-          bgcolor: alpha(toneOf(th, tone), selected ? 0.36 : 0.18),
-          borderBottom: 1, borderColor: alpha(toneOf(th, tone), 0.3),
-        })}
+          borderBottom: '1px solid transparent',
+          transition: 'background-color .16s ease',
+        }}
       >
         {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
         {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}

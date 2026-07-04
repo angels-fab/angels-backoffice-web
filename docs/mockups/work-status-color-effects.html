@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>업무현황 상태색·카드 효과 시안</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d1016;--panel:#151a23;--line:#2b3442;--text:#eef2f7;--muted:#8f9bad;--green:109 204 132;--blue:105 169 239;--gray:170 180 195;--amber:225 179 84;--tone:var(--green)}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Pretendard,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button{font:inherit}main{width:min(1120px,calc(100% - 32px));margin:0 auto;padding:42px 0 70px}
+    .eyebrow{color:#6f7b8d;font-size:12px;font-weight:800;letter-spacing:.04em;margin-bottom:8px}.title-row{display:flex;align-items:baseline;gap:9px;margin-bottom:18px}h1{font-size:23px;margin:0}.count{font-size:13px;color:#6f7b8d}
+    .kpi{height:90px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--line);border-radius:16px;background:var(--panel);overflow:hidden;margin-bottom:28px}
+    .state{position:relative;border:0;background:transparent;color:rgb(var(--state));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:background-color .15s ease}
+    .state:not(:last-child)::before{content:"";position:absolute;right:0;top:15px;bottom:15px;width:1px;background:#303947}.state:hover{background:rgb(var(--state)/.10)}.state.active{background:rgb(var(--state)/.14)}.state.active::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:rgb(var(--state))}
+    .state:first-child.active::after{border-bottom-left-radius:15px}.state:last-child.active::after{border-bottom-right-radius:15px}.state-num{display:flex;align-items:baseline;gap:4px}.state-num b{font-size:30px;line-height:1;font-weight:850;letter-spacing:-.04em;color:#fff}.state-num span{font-size:12px;font-weight:700;color:#aab4c3}.state-name{font-size:15px;line-height:1;font-weight:850}
+    .progress{--state:var(--green)}.hold{--state:var(--blue)}.done{--state:var(--gray)}.remind{--state:var(--amber)}
+    .section-head{display:flex;align-items:center;gap:9px;margin-bottom:12px}.section-head h2{margin:0;font-size:18px}.theme-chip{height:24px;padding:0 9px;border-radius:7px;background:rgb(var(--tone)/.13);border:1px solid rgb(var(--tone)/.32);color:rgb(var(--tone));display:flex;align-items:center;font-size:11px;font-weight:800}.guide{margin-left:auto;color:#6f7b8d;font-size:11px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .card{min-height:132px;padding:0;border:1px solid rgb(var(--tone)/.24);border-radius:11px;background:rgb(var(--tone)/.055);color:var(--text);text-align:left;overflow:hidden;cursor:pointer;transition:border-color .16s ease,background-color .16s ease,box-shadow .16s ease,transform .16s ease;outline:none}
+    .card-head{height:45px;padding:0 13px;display:flex;align-items:center;gap:8px;background:rgb(var(--tone)/.09);border-bottom:1px solid rgb(var(--tone)/.14);transition:background-color .16s ease}.cat{height:22px;padding:0 8px;border:1px solid rgb(var(--tone)/.34);border-radius:7px;background:rgb(var(--tone)/.12);color:rgb(var(--tone));display:flex;align-items:center;font-size:10px;font-weight:850}.card-title{font-size:13px;font-weight:750}.owner{margin-left:auto;color:rgb(var(--tone));font-size:11px;font-weight:750}.card-body{padding:14px;color:#aeb7c4;font-size:12px;line-height:1.55}.meta{color:#727e90;font-size:10.5px;margin-bottom:7px}
+    .card:hover{border-color:rgb(var(--tone)/.78);background:rgb(var(--tone)/.09);box-shadow:0 0 0 1px rgb(var(--tone)/.14)}.card:hover .card-head{background:rgb(var(--tone)/.14)}
+    .card.selected{border-color:rgb(var(--tone)/.92);background:rgb(var(--tone)/.15);box-shadow:0 0 0 2px rgb(var(--tone)/.22),0 10px 26px rgba(0,0,0,.20)}.card.selected .card-head{background:rgb(var(--tone)/.21)}
+    .legend{display:flex;gap:18px;margin-top:15px;color:#778396;font-size:11px}.sample{display:flex;align-items:center;gap:6px}.swatch{width:13px;height:13px;border-radius:4px;border:1px solid rgb(var(--tone)/.28);background:rgb(var(--tone)/.055)}.swatch.hover{border-color:rgb(var(--tone)/.78);background:rgb(var(--tone)/.09)}.swatch.selected{border-color:rgb(var(--tone)/.92);background:rgb(var(--tone)/.15);box-shadow:0 0 0 2px rgb(var(--tone)/.22)}
+    @media(max-width:700px){main{padding-top:26px}.kpi{height:auto;grid-template-columns:repeat(2,1fr)}.state{min-height:78px}.state:nth-child(2)::before{display:none}.grid{grid-template-columns:1fr}.guide{display:none}}
+  </style>
+</head>
+<body>
+<main id="app" data-theme="progress">
+  <div class="eyebrow">업무현황 · 상태색 체계</div>
+  <div class="title-row"><h1 id="pageTitle">진행중 업무</h1><span class="count">4건</span></div>
+  <section class="kpi" aria-label="업무 상태">
+    <button class="state progress active" data-theme="progress"><span class="state-num"><b>12</b><span>건</span></span><span class="state-name">진행중</span></button>
+    <button class="state hold" data-theme="hold"><span class="state-num"><b>2</b><span>건</span></span><span class="state-name">보류</span></button>
+    <button class="state done" data-theme="done"><span class="state-num"><b>31</b><span>건</span></span><span class="state-name">완료</span></button>
+    <button class="state remind" data-theme="remind"><span class="state-num"><b>5</b><span>건</span></span><span class="state-name">Remind</span></button>
+  </section>
+  <div class="section-head"><h2 id="listTitle">진행중 업무</h2><span class="theme-chip" id="themeChip">초록 테마</span><span class="guide">KPI를 눌러 상태색을 비교하고, 업무카드를 호버·클릭해 보세요.</span></div>
+  <section class="grid">
+    <button class="card selected"><div class="card-head"><span class="cat">장비</span><span class="card-title">ZEISS 장비 도입 일정 검토</span><span class="owner">박세리</span></div><div class="card-body"><div class="meta">발의일 2026.06.30</div>입찰 일정과 설치 조건을 확인하고 관련 부서 의견을 정리합니다.</div></button>
+    <button class="card"><div class="card-head"><span class="cat">행정</span><span class="card-title">센터 운영규정 개정안 작성</span><span class="owner">조성범</span></div><div class="card-body"><div class="meta">발의일 2026.06.27</div>운영규정 변경사항과 내부 검토 의견을 반영합니다.</div></button>
+    <button class="card"><div class="card-head"><span class="cat">예산</span><span class="card-title">하반기 예산 집행계획 수립</span><span class="owner">신현진</span></div><div class="card-body"><div class="meta">발의일 2026.06.24</div>세부 사업별 집행시기와 예산 잔액을 점검합니다.</div></button>
+    <button class="card"><div class="card-head"><span class="cat">교육</span><span class="card-title">신규 사용자 안전교육 준비</span><span class="owner">박주봉</span></div><div class="card-body"><div class="meta">발의일 2026.06.21</div>교육자료와 참석대상자 명단을 최종 확인합니다.</div></button>
+  </section>
+  <div class="legend"><span class="sample"><i class="swatch"></i>기본</span><span class="sample"><i class="swatch hover"></i>호버</span><span class="sample"><i class="swatch selected"></i>선택</span></div>
+</main>
+<script>
+  const themes={progress:{tone:'var(--green)',title:'진행중 업무',chip:'초록 테마'},hold:{tone:'var(--blue)',title:'보류 업무',chip:'파랑 테마'},done:{tone:'var(--gray)',title:'완료 업무',chip:'회색 테마'},remind:{tone:'var(--amber)',title:'Remind 업무',chip:'앰버 테마'}};
+  const app=document.querySelector('#app');
+  document.querySelectorAll('.state').forEach(btn=>btn.addEventListener('click',()=>{const key=btn.dataset.theme,t=themes[key];document.documentElement.style.setProperty('--tone',t.tone);document.querySelectorAll('.state').forEach(x=>x.classList.toggle('active',x===btn));document.querySelector('#pageTitle').textContent=t.title;document.querySelector('#listTitle').textContent=t.title;document.querySelector('#themeChip').textContent=t.chip;document.querySelectorAll('.card').forEach(x=>x.classList.remove('selected'));document.querySelector('.card').classList.add('selected');app.dataset.theme=key}));
+  document.querySelectorAll('.card').forEach(card=>card.addEventListener('click',()=>{document.querySelectorAll('.card').forEach(x=>x.classList.remove('selected'));card.classList.add('selected')}));
+</script>
+</body>
+</html>

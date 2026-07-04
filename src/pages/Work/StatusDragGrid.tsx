@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react'
 import Box from '@mui/material/Box'
-import { alpha } from '@mui/material/styles'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
-import { fitScaleInto, genieOverlayInto, kpiShrinkByCard, trashHitByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
+import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 
 const ACTIVATION_DISTANCE = 8 // px 이상 이동해야 드래그 시작(마우스)
 const LONG_PRESS_MS = 480 // 터치 롱프레스 = 복수선택 모드 진입
@@ -151,17 +150,20 @@ export default function StatusDragGrid({
     const left = x - d.offsetX
     const top = y - d.offsetY
     const cardRect: CardRect = { left, top, right: left + d.width, bottom: top + d.height, width: d.width, height: d.height }
-    const zh = zoneByCardRect(cardRect, zoneRef.current?.zone ?? null)
+    // 휴지통·KPI 동시 겹침 시 포인터가 휴지통 판정영역 안일 때만 휴지통 우선(RTG와 동일 규칙)
+    const trRaw = onDeleteDropRef.current ? trashHitByCard(cardRect) : null
+    const zhRaw = zoneByCardRect(cardRect, zoneRef.current?.zone ?? null)
+    const tr = trRaw && (!zhRaw || trashContains(trRaw, x, y)) ? trRaw : null
+    const zh = tr ? null : zhRaw
     const prev = zoneRef.current?.zone ?? null
     zoneRef.current = zh
     if ((zh?.zone ?? null) !== prev) onZoneChangeRef.current(true, zh?.zone ?? null)
-    const tr = onDeleteDropRef.current && !zh ? trashHitByCard(cardRect) : null
     if (!!tr !== trashHoverRef.current) {
       trashHoverRef.current = !!tr
       setOverTrash(!!tr)
       onTrashHoverRef.current?.(!!tr)
     }
-    const sc = tr ? fitScaleInto(tr, d.width, d.height) : (zh ? kpiShrinkByCard(cardRect, zh.rect) : 1)
+    const sc = tr ? trashShrinkByCard(cardRect, tr) : (zh ? kpiShrinkByCard(cardRect, zh.rect) : 1)
     d.scale = sc
     if (liftedRef.current) {
       liftedRef.current.style.left = `${left}px`
@@ -323,20 +325,16 @@ export default function StatusDragGrid({
               if ((e.target as HTMLElement).closest('button, a')) return
               onCardDoubleClickRef.current?.(t.num)
             }}
-            sx={(th) => ({
+            // 선택 표시는 카드(TaskAccordion)가 상태 대표색으로 직접 그림 — 셀 래퍼의 공통 파란 outline 제거
+            sx={{
               position: 'relative', minWidth: 0, touchAction: 'pan-y',
               '& > *:first-of-type': { height: '100%' },
               borderRadius: 1,
-              // 선택 = 테두리 + 은은한 배경 워시(체크·배지 없음)
-              ...(selected ? {
-                outline: `2px solid ${alpha(th.palette.accent.blue, 0.9)}`, outlineOffset: '-1px',
-                '&::after': { content: '""', position: 'absolute', inset: 0, borderRadius: 1, bgcolor: alpha(th.palette.accent.blue, 0.09), pointerEvents: 'none', zIndex: 1 },
-              } : {}),
               ...(isDragSource ? { opacity: 0.35 } : {}),
               ...(awaiting ? { opacity: awaitingHidden ? 0 : 0.32, pointerEvents: 'none' } : {}),
               ...(hidingNums.has(t.num) ? { opacity: 0, pointerEvents: 'none' } : {}),
               transition: 'opacity .15s',
-            })}
+            }}
           >
             {renderCard(t)}
           </Box>
