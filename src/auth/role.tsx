@@ -1,23 +1,27 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
-import { verifyAdmin } from '@/api/sheets'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { supabase, empEmail, padPassword } from '@/api/supabase'
 
 /**
- * 권한 모드(내부용 UI 게이트 — 보안 인증 아님).
- * Guest: 조회 전용 / Admin: 작성·관리 기능.
- * 인증: '담당자' 시트의 사번(=ID)+비밀번호를 백엔드에서 대조(열 위치 헤더 자동 인식, 비번 미노출).
- * 로그인 성공 시 담당자 이름·비번을 보관 → 공지 작성 시 재입력 없이 게시.
- * 유지: localStorage(role / adminUser / adminKey).
+ * 권한 컨텍스트 — Supabase Auth 세션 기반(1단계 전환).
+ * 역할 3단계: guest(비로그인) / member(일반) / admin(관리자) — 역할은 profiles.role에서 읽음.
+ * 로그인 UX는 기존과 동일(사번+비밀번호). 내부적으로 사번→내부 이메일, 비밀번호→패딩 변환.
+ *
+ * 전환기 이중 인증: 아직 Supabase로 이관되지 않은 도메인의 쓰기는 Apps Script(이름+시트 비밀번호
+ * 대조)로 가므로, 로그인 시 입력한 원문 비밀번호를 authKey로 보관(localStorage adminUser/adminKey —
+ * 기존과 동일한 키·동작). 도메인 이관이 끝나면 authKey 경로는 제거 예정.
  */
-export type Role = 'guest' | 'admin'
+export type Role = 'guest' | 'member' | 'admin'
 
 interface RoleContextValue {
   role: Role
   isAdmin: boolean
-  /** 로그인한 담당자 이름(공지 게시자명) */
+  /** 세션 복원 완료 여부 — 라우트 가드는 이 값이 true일 때만 판정(새로고침 리다이렉트 방지) */
+  ready: boolean
+  /** 로그인한 담당자 이름(게시자명) — profiles.name */
   user: string | null
-  /** 공지 작성용 게시자 비밀번호(로그인 시 검증된 값) — 재입력 생략용 */
+  /** 전환기 레거시(Apps Script) 쓰기용 원문 비밀번호 — 이관 완료 후 제거 */
   authKey: string | null
-  /** 사번+비밀번호를 '담당자' 시트와 대조. 일치 시 admin 저장하고 true 반환. */
+  /** 사번+비밀번호 로그인(Supabase Auth). 성공 시 true. */
   login: (empNo: string, password: string) => Promise<boolean>
   logout: () => void
 }
@@ -25,35 +29,83 @@ interface RoleContextValue {
 const RoleContext = createContext<RoleContextValue>({
   role: 'guest',
   isAdmin: false,
+  ready: false,
   user: null,
   authKey: null,
   login: async () => false,
   logout: () => {},
 })
 
-const isAdminStored = () => localStorage.getItem('role') === 'admin'
+/** auth 사용자 → 이름·역할. profiles 우선, 없으면 메타데이터 이름 + member */
+async function fetchProfile(authUserId: string, metaName: string | undefined) {
+  const { data } = await supabase
+    .from('profiles')
+    .select('name, role')
+    .eq('auth_user_id', authUserId)
+    .maybeSingle()
+  return {
+    name: data?.name || metaName || '',
+    role: (data?.role === 'admin' ? 'admin' : 'member') as Role,
+  }
+}
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<Role>(() => (isAdminStored() ? 'admin' : 'guest'))
-  const [user, setUser] = useState<string | null>(() => (isAdminStored() ? localStorage.getItem('adminUser') : null))
-  const [authKey, setAuthKey] = useState<string | null>(() => (isAdminStored() ? localStorage.getItem('adminKey') : null))
+  const [role, setRole] = useState<Role>('guest')
+  const [ready, setReady] = useState(false)
+  const [user, setUser] = useState<string | null>(null)
+  const [authKey, setAuthKey] = useState<string | null>(null)
+
+  // 세션 복원 — supabase-js가 저장한 세션에서 이름·역할 재구성(authKey는 기존 localStorage 유지분)
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const { data } = await supabase.auth.getSession()
+        const session = data.session
+        if (session && alive) {
+          const p = await fetchProfile(session.user.id, session.user.user_metadata?.name)
+          if (!alive) return
+          setUser(p.name)
+          setRole(p.role)
+          setAuthKey(localStorage.getItem('adminKey'))
+        }
+      } finally {
+        if (alive) setReady(true)
+      }
+    })()
+    // 다른 탭 로그아웃 등 외부 세션 종료 반영
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setRole('guest')
+        setUser(null)
+        setAuthKey(null)
+      }
+    })
+    return () => {
+      alive = false
+      sub.subscription.unsubscribe()
+    }
+  }, [])
 
   const login = useCallback(async (empNo: string, password: string) => {
-    const { valid, name } = await verifyAdmin(empNo.trim(), password)
-    if (valid) {
-      localStorage.setItem('role', 'admin')
-      localStorage.setItem('adminUser', name)
-      localStorage.setItem('adminKey', password)
-      setRole('admin')
-      setUser(name)
-      setAuthKey(password)
-      return true
-    }
-    return false
-    // verifyAdmin은 모듈 스코프 import(불변)이라 deps 불필요
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: empEmail(empNo),
+      password: padPassword(password),
+    })
+    if (error || !data.user) return false
+    const p = await fetchProfile(data.user.id, data.user.user_metadata?.name)
+    // 전환기 레거시 쓰기용(기존 키 그대로) — 이름 + 원문 비밀번호
+    localStorage.setItem('adminUser', p.name)
+    localStorage.setItem('adminKey', password)
+    localStorage.removeItem('role') // 구버전 UI 게이트 키 정리
+    setUser(p.name)
+    setRole(p.role)
+    setAuthKey(password)
+    return true
   }, [])
 
   const logout = useCallback(() => {
+    void supabase.auth.signOut()
     localStorage.removeItem('role')
     localStorage.removeItem('adminUser')
     localStorage.removeItem('adminKey')
@@ -62,7 +114,11 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     setAuthKey(null)
   }, [])
 
-  return <RoleContext.Provider value={{ role, isAdmin: role === 'admin', user, authKey, login, logout }}>{children}</RoleContext.Provider>
+  return (
+    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', ready, user, authKey, login, logout }}>
+      {children}
+    </RoleContext.Provider>
+  )
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
