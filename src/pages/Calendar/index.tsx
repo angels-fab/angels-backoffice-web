@@ -25,6 +25,10 @@ import { MEMBERS, memberById, membersForEvent, given, eventContent, eventMembers
 import CalFilterBar from './CalFilterBar'
 import ChipContent, { type ChipContentProps } from './ChipContent'
 import EventPopover, { type EventDetail } from './EventPopover'
+import CalEventWrite from './CalEventWrite'
+import AddIcon from '@mui/icons-material/Add'
+import Snackbar from '@mui/material/Snackbar'
+import { useRole } from '@/auth/role'
 
 
 const pad = (n: number) => String(n).padStart(2, '0')
@@ -96,7 +100,12 @@ export default function Calendar() {
   const calRef = useRef<FullCalendar>(null)
 
   // 호버·클릭 상세 — 마우스 위치 기준. 호버(locked=false)는 포인터를 따라다니고, 클릭(locked=true)은 그 자리 고정.
-  const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number; locked: boolean } | null>(null)
+  const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number; locked: boolean; evId?: string } | null>(null)
+  // 일정 작성/수정 모달(관리자) + 저장 안내 스낵바 — 5단계: 캘린더 쓰기 UI 연결(Supabase·세션 인증)
+  const { isAdmin } = useRole()
+  const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string } | null>(null)
+  const [writeSnack, setWriteSnack] = useState<string | null>(null)
+  const idMap = useRef(new WeakMap<HTMLElement, string>()) // segment → 일정 id (수정 진입용)
   const lockedEl = useRef<HTMLElement | null>(null) // 클릭 고정된 .fc-event segment
   // segment(.fc-event element) → 원본 일정 상세. eventDidMount에서 채우고 eventWillUnmount에서 제거.
   const detailMap = useRef(new WeakMap<HTMLElement, EventDetail>())
@@ -299,15 +308,31 @@ export default function Calendar() {
         title="업무 일정"
         updatedAt={updatedAt || undefined}
         actions={
-          <IconButton
-            aria-label="새로고침"
-            onClick={() => dispatch(loadCalEvents())}
-            disabled={loading}
-            size="small"
-            sx={{ color: 'text.secondary' }}
-          >
-            <RefreshIcon sx={{ fontSize: 20 }} />
-          </IconButton>
+          <>
+            {isAdmin && (
+              <Button
+                size="small"
+                startIcon={<AddIcon sx={{ fontSize: 17 }} />}
+                onClick={() => setWrite({ mode: 'add', event: null, initialDate: todayKey })}
+                sx={(th) => ({
+                  height: 30, px: 1.25, fontSize: 12.5, fontWeight: 700, borderRadius: '8px',
+                  color: th.palette.accent.green, border: `1px solid ${th.palette.accent.green}66`,
+                  '&:hover': { bgcolor: `${th.palette.accent.green}1f` },
+                })}
+              >
+                일정 추가
+              </Button>
+            )}
+            <IconButton
+              aria-label="새로고침"
+              onClick={() => dispatch(loadCalEvents())}
+              disabled={loading}
+              size="small"
+              sx={{ color: 'text.secondary' }}
+            >
+              <RefreshIcon sx={{ fontSize: 20 }} />
+            </IconButton>
+          </>
         }
       />
 
@@ -460,7 +485,7 @@ export default function Calendar() {
               closePop() // 같은 segment 재클릭 = 닫기
             } else if (detail) {
               lockedEl.current = el
-              setPop({ detail, x: e.clientX, y: e.clientY, locked: true })
+              setPop({ detail, x: e.clientX, y: e.clientY, locked: true, evId: idMap.current.get(el) })
             }
           }}
         >
@@ -490,9 +515,11 @@ export default function Calendar() {
             // 각 segment(.fc-event) → 원본 상세 매핑만 등록. 실제 hit 판정은 컨테이너 위임이 담당.
             eventDidMount={(info) => {
               detailMap.current.set(info.el, info.event.extendedProps.detail as EventDetail)
+              idMap.current.set(info.el, String(info.event.id))
             }}
             eventWillUnmount={(info) => {
               detailMap.current.delete(info.el)
+              idMap.current.delete(info.el)
               if (lockedEl.current === info.el) closePop()
             }}
             dayMaxEvents={view === 'month' ? 3 : false}
@@ -503,7 +530,44 @@ export default function Calendar() {
         </Box>
       </Box>
 
-      {pop && <EventPopover detail={pop.detail} x={pop.x} y={pop.y} locked={pop.locked} />}
+      {pop && (
+        <EventPopover
+          detail={pop.detail}
+          x={pop.x}
+          y={pop.y}
+          locked={pop.locked}
+          onEdit={
+            isAdmin && pop.evId
+              ? () => {
+                  const ev = allEvents.find((e2) => e2.id === pop.evId) || null
+                  closePop()
+                  if (ev) setWrite({ mode: 'edit', event: ev, initialDate: ev.start.slice(0, 10) })
+                }
+              : undefined
+          }
+        />
+      )}
+
+      {/* 일정 작성/수정 — 구글캘린더식 폼(세션 인증·반복 lite). 저장 후 재조회 + 안내 */}
+      <CalEventWrite
+        open={!!write}
+        mode={write?.mode || 'add'}
+        event={write?.event || null}
+        initialDate={write?.initialDate || todayKey}
+        onClose={() => setWrite(null)}
+        onSaved={(msg) => {
+          setWrite(null)
+          setWriteSnack(msg)
+          dispatch(loadCalEvents())
+        }}
+      />
+      <Snackbar
+        open={!!writeSnack}
+        autoHideDuration={3500}
+        onClose={() => setWriteSnack(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        message={writeSnack || ''}
+      />
     </PageContainer>
   )
 }

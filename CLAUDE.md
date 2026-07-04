@@ -8,7 +8,7 @@ GIST ANGELS FAB(반도체 팹) 구축 프로젝트의 사내 관리 대시보드
 - React 18 + TypeScript + Vite, Redux Toolkit, react-router-dom(HashRouter), @mui/icons-material (+@mui/material, emotion)
 - `npm run dev` — 개발 서버 (`.claude/launch.json`에 port 3600 등록, preview_start로 실행)
 - `npm run type-check` — tsc 타입 체크 (수정 후 항상 실행할 것)
-- 데이터: Google Apps Script API(업무/장비 시트) + 하드코딩 상수(공지, 캘린더, 로드맵, 바로가기)
+- **데이터: Supabase(프로젝트 ref `rmvutlhdcfkqubzrckqf`, 서울)** — 2026-07-05 전체 이관 완료(업무·공지·개선요청·답글·임시저장·장비·캘린더 전부 테이블+RLS+RPC). API 레이어 `src/api/{supabase,works,notices,improve,eq,calendar}.ts`, 인증 = Supabase Auth(사번 로그인 `{사번}@angels.local` + 비밀번호 패딩 `.angels`, `src/auth/role.tsx`), 역할 guest/member/admin(profiles.role). 구글시트·Apps Script(Code.gs)·clasp는 **읽기전용 백업**(더 이상 호출 안 함 — sheets.ts는 타입 재사용용 잔존). 하드코딩 상수: 행사·로드맵·바로가기. 상세는 메모리 supabase-project.md
 
 ## 구조 요약
 

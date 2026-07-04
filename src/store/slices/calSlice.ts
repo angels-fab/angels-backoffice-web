@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import { fetchCalendarEvents } from '@/api/sheets'
+import { fetchCalendarEvents } from '@/api/calendar'
 import { nowStamp } from '@/utils/date'
 import type { CalEvent } from '@/types'
 

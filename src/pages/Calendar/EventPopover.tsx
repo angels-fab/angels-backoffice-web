@@ -20,6 +20,8 @@ interface Props {
   y: number
   /** 클릭으로 고정된 상태 — true면 포인터 이벤트 받음, false(호버)면 포인터 통과(hover 깜빡임 방지) */
   locked?: boolean
+  /** 수정 진입(관리자·고정 상태에서만 버튼 노출) — 부모가 작성 모달을 연다 */
+  onEdit?: () => void
 }
 
 /**
@@ -28,7 +30,7 @@ interface Props {
  * 호버 상태에서는 pointer-events:none 으로 포인터를 가리지 않아 hover가 반복 해제되지 않는다.
  * 닫기는 부모가 담당(호버 leave / 바깥 클릭 / Esc / 같은 일정 재클릭).
  */
-export default function EventPopover({ detail, x, y, locked }: Props) {
+export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
   const ref = useRef<HTMLDivElement | null>(null)
   const [pos, setPos] = useState<{ left: number; top: number; ready: boolean }>({ left: x + 14, top: y + 16, ready: false })
 
@@ -87,6 +89,23 @@ export default function EventPopover({ detail, x, y, locked }: Props) {
         <Box sx={{ color: 'rgba(255,255,255,.5)', fontWeight: 600 }}>해당자</Box>
         <Box sx={{ color: 'rgba(255,255,255,.9)' }}>{detail.members.length ? detail.members.join(' · ') : '센터'}</Box>
       </Box>
+      {locked && onEdit && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.25 }}>
+          <Box
+            component="button"
+            type="button"
+            onClick={onEdit}
+            sx={{
+              font: 'inherit', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
+              px: 1.25, py: '5px', borderRadius: '8px',
+              color: '#9ec4f2', bgcolor: 'rgba(84,145,218,.14)', border: '1px solid rgba(84,145,218,.4)',
+              '&:hover': { bgcolor: 'rgba(84,145,218,.24)' },
+            }}
+          >
+            수정
+          </Box>
+        </Box>
+      )}
     </Box>
   )
 }
