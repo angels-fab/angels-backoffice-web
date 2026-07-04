@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
-import { fetchImprovements } from '@/api/sheets'
+import { fetchImprovements } from '@/api/improve'
 import { nowStamp } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 

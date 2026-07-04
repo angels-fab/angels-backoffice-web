@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
-import { fetchReplies, type ReplyRow } from '@/api/sheets'
+import { fetchReplies } from '@/api/improve'
+import type { ReplyRow } from '@/api/sheets'
 import { nowStamp } from '@/utils/date'
 
 /** 포털개선요청 답글 — 전체 한 번 로드 후 요청번호별 그룹화는 컴포넌트에서. 삭제(삭제여부=TRUE)는 서버에서 제외됨. */

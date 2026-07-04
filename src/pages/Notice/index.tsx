@@ -44,7 +44,7 @@ import {
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
-import { addNotice, updateNotice, deleteNotice } from '@/api/sheets'
+import { addNotice, updateNotice, deleteNotice } from '@/api/notices'
 import { useRole } from '@/auth/role'
 import { todaySeoul } from '@/utils/date'
 import type { Notice as NoticeItem } from '@/types'
