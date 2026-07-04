@@ -29,6 +29,28 @@ const DAY = 24 * 3600 * 1000
 const dstr = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
+/** 원본 일정 1건 → 날짜별 칸 전개(로더·드래그 이동 패치 공용 — 규칙 단일화) */
+function expandRawEvent(ev: { id: string; title: string; start: string; end: string; allDay: boolean; loc: string; recurring: boolean }): CalEvent[] {
+  const out: CalEvent[] = []
+  const s = new Date(ev.start)
+  if (isNaN(s.getTime())) return out
+  // 종일 일정의 끝은 '다음 날 0시'(미포함)라서 하루 빼면 실제 마지막 날
+  const e = new Date(new Date(ev.end).getTime() - (ev.allDay ? DAY : 0))
+  const sTime = ev.start.slice(11)
+  const eTime = ev.end.slice(11)
+  const time = ev.allDay ? '종일' : sTime + (eTime !== sTime ? '-' + eTime : '')
+  const cat = classify(ev.title)
+  let t = new Date(s.getFullYear(), s.getMonth(), s.getDate())
+  for (let i = 0; i < 60 && t <= e; i++) {
+    out.push({
+      date: dstr(t), title: ev.title, cat, time, loc: ev.loc,
+      id: ev.id, start: ev.start, end: ev.end, allDay: ev.allDay, recurring: ev.recurring,
+    })
+    t = new Date(t.getTime() + DAY)
+  }
+  return out
+}
+
 export const loadCalEvents = createAsyncThunk('cal/load', async (): Promise<CalEvent[]> => {
   // 일시 오류(네트워크·리다이렉트·5xx·파싱) 대비 — 짧은 간격으로 최대 2회 자동 재시도.
   // 원인은 콘솔에 남겨 진단 가능하게 하고, 최종 실패만 rejected로 전달(기존 일정은 리듀서가 유지).
@@ -36,28 +58,9 @@ export const loadCalEvents = createAsyncThunk('cal/load', async (): Promise<CalE
   for (let attempt = 0; attempt <= 2; attempt++) {
     try {
       const raw = await fetchCalendarEvents()
-      const out: CalEvent[] = []
-      raw.forEach(ev => {
-        const s = new Date(ev.start)
-        if (isNaN(s.getTime())) return
-        // 종일 일정의 끝은 '다음 날 0시'(미포함)라서 하루 빼면 실제 마지막 날
-        const e = new Date(new Date(ev.end).getTime() - (ev.allDay ? DAY : 0))
-        const sTime = ev.start.slice(11)
-        const eTime = ev.end.slice(11)
-        const time = ev.allDay ? '종일' : sTime + (eTime !== sTime ? '-' + eTime : '')
-        const cat = classify(ev.title)
-        // 여러 날짜에 걸친 일정은 날짜마다 한 칸씩 (최대 60일 안전장치).
-        // 수정/삭제는 원본 이벤트 기준이라 id·start·end·allDay·recurring을 모든 칸에 그대로 싣는다.
-        let t = new Date(s.getFullYear(), s.getMonth(), s.getDate())
-        for (let i = 0; i < 60 && t <= e; i++) {
-          out.push({
-            date: dstr(t), title: ev.title, cat, time, loc: ev.loc,
-            id: ev.id, start: ev.start, end: ev.end, allDay: ev.allDay, recurring: ev.recurring,
-          })
-          t = new Date(t.getTime() + DAY)
-        }
-      })
-      return out
+      // 여러 날짜에 걸친 일정은 날짜마다 한 칸씩. 수정/삭제는 원본 이벤트 기준이라
+      // id·start·end·allDay·recurring을 모든 칸에 그대로 싣는다(expandRawEvent 공용 규칙).
+      return raw.flatMap(expandRawEvent)
     } catch (err) {
       lastErr = err
       console.error(`[calendar] 일정 불러오기 실패 (시도 ${attempt + 1}/3)`, err)
@@ -89,7 +92,21 @@ const initialState: CalState = {
 const calSlice = createSlice({
   name: 'cal',
   initialState,
-  reducers: {},
+  reducers: {
+    // 드래그 이동/리사이즈 낙관 반영 — 서버 저장 성공 후 그 일정의 칸들만 새 날짜로 재전개.
+    // 이동 직후 전체 재조회가 다음 이동과 경쟁해 화면이 과거 스냅샷으로 되돌아가던 문제의 근본 제거.
+    // start/end 계약은 로더 원본(RawCalEvent)과 동일: 종일 end = 다음 날(미포함).
+    moveCalEvent(state, action: { payload: { id: string; start: string; end: string } }) {
+      const { id, start, end } = action.payload
+      const first = state.events.find(e => e.id === id)
+      if (!first) return
+      state.events = state.events
+        .filter(e => e.id !== id)
+        .concat(expandRawEvent({
+          id, title: first.title, loc: first.loc, allDay: first.allDay, recurring: first.recurring, start, end,
+        }))
+    },
+  },
   extraReducers: builder => {
     builder
       .addCase(loadCalEvents.pending, state => {
@@ -114,4 +131,5 @@ const calSlice = createSlice({
   },
 })
 
+export const { moveCalEvent } = calSlice.actions
 export default calSlice.reducer

@@ -1120,3 +1120,7 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .cal-fb__teamlbl,.cal-fb__catlbl{position:absolute;left:0;top:6px;margin:0}
 .cal-fb__chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
 .cal-fb__sep{display:none}
+
+/* 업무일정 범위 드래그 미리보기 — 셀 채움 대신 실제로 만들어질 일정 바 모양('(제목 없음)' 바, 월간 한정) */
+.fc-team .fc-daygrid-bg-harness .fc-highlight{background:rgba(84,145,218,.88);border:1px solid #5491DA;border-radius:6px;height:23px;margin-top:29px;position:relative;overflow:hidden}
+.fc-team .fc-daygrid-bg-harness .fc-highlight::after{content:'(제목 없음)';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11.5px;font-weight:700;color:#fff;white-space:nowrap}

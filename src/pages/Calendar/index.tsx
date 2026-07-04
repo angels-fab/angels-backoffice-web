@@ -20,7 +20,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SearchIcon from '@mui/icons-material/Search'
 import { PageContainer, PageHeader } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { loadCalEvents } from '@/store/slices/calSlice'
+import { loadCalEvents, moveCalEvent } from '@/store/slices/calSlice'
 import type { CalEvent } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
@@ -127,19 +127,9 @@ export default function Calendar() {
     return hasTime ? `${base}T${pad(dt.getHours())}:${pad(dt.getMinutes())}` : base
   }
 
-  // 재조회 디바운스 — 연속 드래그 시 이동마다 재조회하면 응답 순서 역전으로 이전 이동이
-  // 화면에서 되돌아가 보일 수 있음. 마지막 이동 후 한 번만 조회(FC 화면은 이미 새 위치).
-  const calReloadTimer = useRef<number | null>(null)
-  const scheduleReload = () => {
-    if (calReloadTimer.current) window.clearTimeout(calReloadTimer.current)
-    calReloadTimer.current = window.setTimeout(() => {
-      calReloadTimer.current = null
-      dispatch(loadCalEvents())
-    }, 900)
-  }
-
-  // 드래그 이동/리사이즈 공용 저장 — FC가 확정한 '이동 결과' 좌표(fcStart/fcEnd)를 그대로 저장.
-  // (리덕스의 옛 시작값 + delta 방식은 재조회 지연 중 연속 이동 시 한 단계씩 어긋남)
+  // 드래그 이동/리사이즈 공용 저장 — FC가 확정한 '이동 결과' 좌표(fcStart/fcEnd)를 그대로 저장하고,
+  // 성공 시 리덕스를 낙관 패치(moveCalEvent — 해당 일정만 재전개). 전체 재조회는 하지 않는다:
+  // 이동마다 재조회하면 응답이 다음 이동과 경쟁해 이전 이동이 화면에서 원위치로 되돌아가 보였음.
   const fmtFc = (d: Date, withTime: boolean) => {
     const base = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
     return withTime ? `${base}T${pad(d.getHours())}:${pad(d.getMinutes())}` : base
@@ -168,8 +158,13 @@ export default function Calendar() {
         start: startStr,
         end: endStr,
       })
+      // 낙관 패치 — 원본(RawCalEvent) 계약으로: 종일 end는 '다음 날'(미포함)
+      dispatch(moveCalEvent({
+        id: ev.id,
+        start: startStr,
+        end: allDay ? shiftDt(endStr, { days: 1 }) : endStr,
+      }))
       setWriteSnack('일정을 이동했어요')
-      scheduleReload()
     } catch (err) {
       revert()
       setWriteSnack(err instanceof Error ? err.message : '이동에 실패했어요')
