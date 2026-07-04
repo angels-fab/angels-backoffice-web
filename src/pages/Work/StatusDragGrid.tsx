@@ -191,10 +191,10 @@ export default function StatusDragGrid({
     if (y < SCROLL_EDGE) v = -(SCROLL_MIN + (SCROLL_MAX - SCROLL_MIN) * Math.min(1, (SCROLL_EDGE - y) / SCROLL_EDGE))
     else if (y > window.innerHeight - SCROLL_EDGE) v = SCROLL_MIN + (SCROLL_MAX - SCROLL_MIN) * Math.min(1, (y - (window.innerHeight - SCROLL_EDGE)) / SCROLL_EDGE)
     if (v !== 0) {
-      const before = window.scrollY
       window.scrollBy(0, v)
-      if (window.scrollY !== before) updateDrag(lastPointer.current.x, lastPointer.current.y)
     }
+    // 포인터가 멈춰 있어도 매 프레임 재판정 — 드웰 휴지통 무장 직후(이동 없이 릴리즈)에도 접촉 반영
+    updateDrag(lastPointer.current.x, lastPointer.current.y)
     autoScrollRaf.current = requestAnimationFrame(scrollTick)
   }
 

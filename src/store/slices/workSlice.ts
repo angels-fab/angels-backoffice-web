@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import type { PayloadAction } from '@reduxjs/toolkit'
-import { getWorks } from '@/api/sheets'
+import { getWorks } from '@/api/works'
 import { nowStamp } from '@/utils/date'
 import type { WorkItem } from '@/types'
 

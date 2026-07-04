@@ -10,6 +10,15 @@ export const SUPABASE_ANON_KEY =
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
+// 페이지 이탈 직전 keepalive 전송(beacon 대체)처럼 동기 접근이 필요한 곳을 위한 최신 액세스 토큰
+export let currentAccessToken: string | null = null
+void supabase.auth.getSession().then(({ data }) => {
+  currentAccessToken = data.session?.access_token ?? null
+})
+supabase.auth.onAuthStateChange((_event, session) => {
+  currentAccessToken = session?.access_token ?? null
+})
+
 /** 로그인 이메일 — 사번을 내부 도메인 계정으로 매핑(사번 UX 유지) */
 export const empEmail = (empNo: string) => `${empNo.trim()}@angels.local`
 
