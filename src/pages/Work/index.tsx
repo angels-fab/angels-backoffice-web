@@ -57,6 +57,7 @@ import type { NewTaskForm } from './NewTaskCard'
 import ReorderableTaskGrid from './ReorderableTaskGrid'
 import KpiSection from './KpiSection'
 import StatusDragGrid from './StatusDragGrid'
+import WorkActionSheet from './WorkActionSheet'
 import { genieOverlayInto, type DropZone, type StatusDropResult, type WorkView } from './dropZones'
 
 // 통합 Undo/Redo 히스토리 — 순서변경·상태변경을 시간순 하나의 스택으로
@@ -238,6 +239,8 @@ export default function Work() {
   // 복수선택(Cmd/Ctrl·Shift·모바일 롱프레스) + KPI 드롭존 드래그 상태 + 상태 저장 직렬화 큐
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [selMode, setSelMode] = useState(false) // 모바일 선택모드
+  const [sheet, setSheet] = useState<WorkItem | null>(null) // 모바일 카드 액션 시트(롱프레스로 열림)
+  const [reorderMode, setReorderMode] = useState(false) // 진행중 순서 편집(흔들림) 모드 — 모바일 액션 시트에서 진입
   const selAnchor = useRef<string | null>(null)
   const [dragUi, setDragUi] = useState<{ dragging: boolean; zone: DropZone | null }>({ dragging: false, zone: null })
   const [pulse, setPulse] = useState<{ zone: DropZone; tick: number } | null>(null)
@@ -851,12 +854,6 @@ export default function Work() {
       return new Set([num]) // 일반 클릭 — 단일 선택
     })
   }
-  // 모바일 롱프레스 — 선택모드 진입 + 해당 카드 선택
-  const enterSelMode = (num: string) => {
-    setSelMode(true)
-    selAnchor.current = num
-    setSelected((prev) => { const n = new Set(prev); n.add(num); return n })
-  }
   // 선택 안 된 카드를 드래그로 잡음 — 그 카드만 선택(기존 복수선택 해제)
   const selectOnly = useCallback((num: string) => {
     selAnchor.current = num
@@ -995,6 +992,22 @@ export default function Work() {
     [deleteReq],
   )
   const awaitingHidden = deleteReq?.phase === 'clearing'
+
+  // ── 모바일 카드 액션 시트(터치 롱프레스) — PC 드래그 3종을 터치에서 한 입구로 ──
+  const openActionSheet = (num: string) => {
+    if (!isAdmin || !user || !authKey) return
+    const t = items.find((x) => x.num === num)
+    if (t && editingId !== t.id) setSheet(t)
+  }
+  const sheetStatus = (zone: DropZone) => {
+    if (sheet) handleStatusDrop([sheet.num], zone)?.finalize()
+    setSheet(null)
+  }
+  const sheetReorder = () => { setReorderMode(true); setSheet(null) }
+  const sheetEdit = () => { const num = sheet?.num; setSheet(null); if (num) handleCardDoubleClick(num) }
+  const sheetDelete = () => { const t = sheet; setSheet(null); if (t) requestDelete(t) }
+  // KPI 뷰가 바뀌면 순서 편집 모드 해제(진행중 전용)
+  useEffect(() => { setReorderMode(false) }, [view])
 
   // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
   useEffect(() => {
@@ -1197,6 +1210,8 @@ export default function Work() {
             <ReorderableTaskGrid
               items={inProgressListed}
               canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
+              reorderMode={reorderMode}
+              onLongPress={openActionSheet}
               onReorder={handleReorder}
               renderCard={(t) => renderTask(t, 'green')}
               selectedNums={selected}
@@ -1227,7 +1242,7 @@ export default function Work() {
             selectedNums={selected}
             selMode={selMode}
             onSelectToggle={toggleSelect}
-            onLongPress={enterSelMode}
+            onLongPress={openActionSheet}
             onDragStartCard={selectOnly}
             onStatusDrop={handleStatusDrop}
             onZoneChange={onZoneChange}
@@ -1284,6 +1299,35 @@ export default function Work() {
           onClose={() => { setWriteOpen(false); setEditTarget(null) }}
           onSaved={handleSaved}
         />
+      )}
+
+      {/* 모바일 카드 액션 시트(터치 롱프레스) — 상태변경/순서변경/수정/삭제 */}
+      <WorkActionSheet
+        task={sheet}
+        canReorder={view === 'inProgress'}
+        onClose={() => setSheet(null)}
+        onStatus={sheetStatus}
+        onReorder={sheetReorder}
+        onEdit={sheetEdit}
+        onDelete={sheetDelete}
+      />
+
+      {/* 순서 편집(흔들림) 모드 배너 — 진행중 뷰, 액션 시트의 '순서 변경'으로 진입 */}
+      {reorderMode && view === 'inProgress' && (
+        <Box
+          sx={{
+            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60,
+            bgcolor: 'primary.main', color: 'primary.contrastText',
+            px: 2, py: 1.25, display: 'flex', alignItems: 'center', gap: 1.5,
+            boxShadow: '0 -2px 12px rgba(0,0,0,.3)',
+            pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
+          <Typography sx={{ flex: 1, fontSize: 13.5 }}>카드를 길게 눌러 끌면 순서가 바뀝니다</Typography>
+          <Button size="small" variant="contained" onClick={() => setReorderMode(false)} sx={{ bgcolor: '#fff', color: 'primary.main', '&:hover': { bgcolor: '#f0f0f0' } }}>
+            완료
+          </Button>
+        </Box>
       )}
 
       {/* 삭제 확인 Dialog — 휴지통 드롭은 흡입 전에 이 확인창부터. 취소 시 토큰·카드 원상 복원 */}

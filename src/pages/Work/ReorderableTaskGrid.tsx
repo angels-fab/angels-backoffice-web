@@ -53,6 +53,10 @@ interface Props {
   awaitingHidden?: boolean
   /** 그리드 첫 칸에 렌더할 요소(새 업무 인라인 작성카드) — 드래그·선택 대상 아님 */
   leading?: React.ReactNode
+  /** 순서 편집(흔들림) 모드 — true일 때만 터치 롱프레스가 순서변경 드래그를 시작. false면 롱프레스=액션 시트 */
+  reorderMode?: boolean
+  /** 터치 롱프레스(순서모드 아님) — 부모가 카드 액션 시트를 연다 */
+  onLongPress?: (num: string) => void
 }
 
 /**
@@ -69,6 +73,7 @@ export default function ReorderableTaskGrid({
   items, renderCard, canDrag, onReorder,
   selectedNums, onSelectToggle, onDragStartCard, onStatusDrop, onZoneChange,
   onCardDoubleClick, onDeleteDrop, onTrashHover, onRightEdge, awaitingNums, awaitingHidden, leading,
+  reorderMode, onLongPress,
 }: Props) {
   const gridRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef(new Map<string, HTMLElement>())
@@ -96,6 +101,8 @@ export default function ReorderableTaskGrid({
   const onDeleteDropRef = useRef(onDeleteDrop); onDeleteDropRef.current = onDeleteDrop
   const onTrashHoverRef = useRef(onTrashHover); onTrashHoverRef.current = onTrashHover
   const onRightEdgeRef = useRef(onRightEdge); onRightEdgeRef.current = onRightEdge
+  const reorderModeRef = useRef(reorderMode); reorderModeRef.current = reorderMode
+  const onLongPressRef = useRef(onLongPress); onLongPressRef.current = onLongPress
   const rightEdgeRef = useRef(false)
   const trashHoverRef = useRef(false) // 휴지통 위 여부
   const overIndexRef = useRef(0)
@@ -435,7 +442,10 @@ export default function ReorderableTaskGrid({
     document.addEventListener('keydown', onKeyDown)
     if (pending.current.pointerType === 'touch') {
       longPress.current = window.setTimeout(() => {
-        if (pending.current) beginDrag(lastPointer.current.x, lastPointer.current.y)
+        if (!pending.current) return
+        // 순서 편집 모드(또는 롱프레스 콜백 미제공=기존 동작): 드래그로 순서변경 / 그 외: 액션 시트 열기
+        if (reorderModeRef.current || !onLongPressRef.current) beginDrag(lastPointer.current.x, lastPointer.current.y)
+        else { onLongPressRef.current(num); cleanupPending() }
       }, TOUCH_HOLD_MS)
     }
   }
