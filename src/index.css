@@ -1099,7 +1099,9 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
   .d-only{display:none !important}
   .topbar{position:fixed;left:0;right:0;top:0}
   body{padding-top:53px}
-  .topbar-inner{justify-content:flex-start}
+  /* 로고 좌측·컨트롤 우측(space-between) + 로고 폭 상한으로 우측 버튼 잘림 방지 */
+  .topbar-inner{justify-content:space-between;padding-left:14px;padding-right:10px}
+  .topbar-logo{height:30px;max-width:52vw}
   .home-greeting{display:flex}
   .eq-summary{display:block}
   .stat-board{display:grid}

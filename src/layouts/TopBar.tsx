@@ -67,18 +67,21 @@ export default function TopBar() {
               <SearchIcon sx={{ fontSize: 20 }} />
             </IconButton>
           </Tooltip>
-          {isAdmin ? (
-            <>
-              <StatusChip status="success" label={user ? `관리자 · ${user}` : '관리자'} />
-              <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: 16 }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
-                로그아웃
+          {/* 계정 컨트롤(칩·로그아웃·로그인)은 PC 전용 — 모바일은 하단 탭바/메뉴 드로어가 담당(상단바 잘림 방지) */}
+          <Box className="d-only" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {isAdmin ? (
+              <>
+                <StatusChip status="success" label={user ? `관리자 · ${user}` : '관리자'} />
+                <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: 16 }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
+                  로그아웃
+                </Button>
+              </>
+            ) : (
+              <Button size="small" variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: 16 }} />} onClick={() => setLoginOpen(true)}>
+                관리자 모드
               </Button>
-            </>
-          ) : (
-            <Button size="small" variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: 16 }} />} onClick={() => setLoginOpen(true)}>
-              관리자 모드
-            </Button>
-          )}
+            )}
+          </Box>
         </Box>
       </div>
 
