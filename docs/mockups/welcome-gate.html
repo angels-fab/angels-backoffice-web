@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ANGELS FAB — 웰컴 대문 시안</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d1016;--panel:#151a23;--line:#2b3442;--text:#eef2f7;--muted:#8f9bad;--blue:#5491DA;--green:#4DA167;--teal:#46B7BE}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);font-family:Pretendard,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:flex;flex-direction:column}
+    /* 배경 — 은은한 웨이퍼 그리드 + 상단 글로우 (반도체 무드, 과하지 않게) */
+    .bgwrap{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+    .bgwrap::before{content:"";position:absolute;inset:0;background:
+      radial-gradient(900px 420px at 50% -8%, rgba(84,145,218,.16), transparent 62%),
+      radial-gradient(700px 380px at 82% 108%, rgba(70,183,190,.09), transparent 60%)}
+    .grid{position:absolute;inset:0;background-image:
+      linear-gradient(rgba(143,155,173,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(143,155,173,.05) 1px, transparent 1px);
+      background-size:44px 44px;mask-image:radial-gradient(720px 480px at 50% 34%, #000 30%, transparent 78%)}
+    .trace{position:absolute;stroke:rgba(84,145,218,.2);fill:none;stroke-width:1.5}
+
+    main{position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 20px 34px;text-align:center}
+    .mark{display:flex;align-items:center;gap:13px;margin-bottom:22px}
+    .chiplogo{width:52px;height:52px;border-radius:13px;border:1px solid rgba(84,145,218,.45);background:linear-gradient(160deg,rgba(84,145,218,.2),rgba(70,183,190,.1));display:flex;align-items:center;justify-content:center}
+    .chiplogo svg{width:29px;height:29px;stroke:#8db9ec;fill:none;stroke-width:1.6}
+    .word{font-size:26px;font-weight:850;letter-spacing:.14em}
+    .word small{display:block;font-size:11px;font-weight:700;letter-spacing:.34em;color:var(--muted);margin-top:3px}
+
+    h1{margin:0 0 12px;font-size:clamp(26px,4.4vw,40px);font-weight:850;letter-spacing:-.02em;line-height:1.28}
+    h1 .accent{background:linear-gradient(92deg,#8db9ec,#67cfc0);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .sub{margin:0 0 42px;color:var(--muted);font-size:clamp(13.5px,1.7vw,15.5px);line-height:1.75;max-width:560px}
+
+    .gates{display:grid;grid-template-columns:repeat(2,minmax(0,300px));gap:16px;width:100%;max-width:640px}
+    .gate{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:24px 24px 20px;border-radius:16px;border:1px solid var(--line);background:rgba(21,26,35,.82);backdrop-filter:blur(4px);color:var(--text);text-align:left;cursor:pointer;transition:transform .16s ease,border-color .16s ease,background .16s ease;text-decoration:none}
+    .gate:hover{transform:translateY(-3px)}
+    .gate .ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+    .gate .ic svg{width:21px;height:21px;fill:none;stroke-width:1.8}
+    .gate h2{margin:0;font-size:17.5px;font-weight:800}
+    .gate p{margin:0;font-size:12.5px;color:var(--muted);line-height:1.65}
+    .gate .go{margin-top:8px;font-size:12.5px;font-weight:800;display:flex;align-items:center;gap:5px}
+    .gate .go svg{width:14px;height:14px;stroke-width:2.2;fill:none;transition:transform .16s}
+    .gate:hover .go svg{transform:translateX(3px)}
+    .gate.visitor{border-color:rgba(70,183,190,.4)}
+    .gate.visitor:hover{border-color:rgba(70,183,190,.8);background:rgba(70,183,190,.07)}
+    .gate.visitor .ic{background:rgba(70,183,190,.13);border:1px solid rgba(70,183,190,.4)}
+    .gate.visitor .ic svg,.gate.visitor .go{color:#67cfc0;stroke:#67cfc0}
+    .gate.portal{border-color:rgba(84,145,218,.4)}
+    .gate.portal:hover{border-color:rgba(84,145,218,.85);background:rgba(84,145,218,.08)}
+    .gate.portal .ic{background:rgba(84,145,218,.14);border:1px solid rgba(84,145,218,.42)}
+    .gate.portal .ic svg,.gate.portal .go{color:#8db9ec;stroke:#8db9ec}
+    .hint{margin-top:20px;font-size:11.5px;color:#6f7b8d;display:flex;align-items:center;gap:6px}
+    .hint svg{width:13px;height:13px;stroke:#6f7b8d;fill:none;stroke-width:1.8}
+
+    footer{position:relative;padding:18px 20px 24px;text-align:center;color:#5d6878;font-size:11.5px;border-top:1px solid rgba(43,52,66,.5)}
+    footer b{color:#8f9bad;font-weight:700}
+    @media(max-width:620px){.gates{grid-template-columns:1fr;max-width:340px}}
+  </style>
+</head>
+<body>
+  <div class="bgwrap">
+    <div class="grid"></div>
+    <svg class="trace" width="100%" height="100%" preserveAspectRatio="none">
+      <path d="M -20 180 H 240 L 300 240 H 460" />
+      <path d="M 110% 70% H 78% L 74% 64% H 60%" />
+      <circle cx="460" cy="240" r="3.5" fill="rgba(84,145,218,.4)" stroke="none"/>
+    </svg>
+  </div>
+
+  <main>
+    <div class="mark">
+      <div class="chiplogo">
+        <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 7V4M15 7V4M9 20v-3M15 20v-3M7 9H4M7 15H4M20 9h-3M20 15h-3"/></svg>
+      </div>
+      <div class="word">ANGELS<small>SEMICONDUCTOR FAB · GIST</small></div>
+    </div>
+
+    <h1>반도체의 내일을 만드는<br/><span class="accent">GIST ANGELS 팹센터</span></h1>
+    <p class="sub">광주과학기술원 첨단 반도체 공정 인프라. 연구와 교육, 산학협력을 위한
+      팹 구축 현황과 센터 소식을 만나보세요.</p>
+
+    <div class="gates">
+      <a class="gate visitor" href="#about">
+        <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" stroke="currentColor"/></svg></span>
+        <h2>센터 소개</h2>
+        <p>센터 비전과 구축 로드맵, 도입 장비, 학술 행사 소식 — 누구나 열람할 수 있습니다.</p>
+        <span class="go">둘러보기 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor"/></svg></span>
+      </a>
+      <a class="gate portal" href="#login">
+        <span class="ic"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor"/><path d="M4 9.5h16M8.5 14h4" stroke="currentColor"/></svg></span>
+        <h2>업무포털</h2>
+        <p>팀원 전용 — 업무현황·일정·장비관리. 사번과 비밀번호로 로그인합니다.</p>
+        <span class="go">로그인 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor"/></svg></span>
+      </a>
+    </div>
+
+    <div class="hint">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16v.5"/></svg>
+      이미 로그인된 팀원은 이 화면을 거치지 않고 바로 업무포털로 이동합니다
+    </div>
+  </main>
+
+  <footer>
+    <b>GIST 반도체 첨단공정 팹센터(ANGELS FAB)</b> · 광주광역시 북구 첨단과기로 123 · angels@gist.ac.kr
+  </footer>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ANGELS FAB — 센터 소개 페이지 시안</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0d1016;--panel:#151a23;--line:#2b3442;--text:#eef2f7;--muted:#8f9bad;--blue:#5491DA;--green:#4DA167;--teal:#46B7BE;--amber:#D6A23E;--purple:#A855F7}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    .wrap{width:min(1080px,calc(100% - 40px));margin:0 auto}
+    svg{fill:none}
+
+    /* 상단 미니 네비 */
+    nav{position:sticky;top:0;z-index:10;background:rgba(13,16,22,.86);backdrop-filter:blur(8px);border-bottom:1px solid rgba(43,52,66,.6)}
+    .nav-in{display:flex;align-items:center;gap:10px;height:56px}
+    .chip-sm{width:30px;height:30px;border-radius:8px;border:1px solid rgba(84,145,218,.45);background:rgba(84,145,218,.12);display:flex;align-items:center;justify-content:center}
+    .chip-sm svg{width:17px;height:17px;stroke:#8db9ec;stroke-width:1.7}
+    .brand{font-size:15px;font-weight:850;letter-spacing:.1em}
+    .navlinks{margin-left:auto;display:flex;align-items:center;gap:18px;font-size:12.5px;color:var(--muted)}
+    .navlinks a{color:var(--muted);text-decoration:none}
+    .navlinks a:hover{color:var(--text)}
+    .btn-portal{display:flex;align-items:center;gap:6px;height:33px;padding:0 14px;border-radius:9px;border:1px solid rgba(84,145,218,.5);color:#8db9ec;font-size:12.5px;font-weight:800;text-decoration:none;background:rgba(84,145,218,.1)}
+    .btn-portal:hover{background:rgba(84,145,218,.2)}
+    .btn-portal svg{width:14px;height:14px;stroke:#8db9ec;stroke-width:2}
+
+    /* 히어로 */
+    .hero{position:relative;padding:72px 0 56px;overflow:hidden}
+    .hero::before{content:"";position:absolute;inset:0;background:radial-gradient(760px 340px at 22% 0%, rgba(84,145,218,.15), transparent 60%)}
+    .hero .wrap{position:relative}
+    .eyebrow{font-size:12px;font-weight:800;letter-spacing:.22em;color:#67cfc0;margin-bottom:14px}
+    .hero h1{margin:0 0 16px;font-size:clamp(28px,4.6vw,42px);font-weight:850;letter-spacing:-.02em;line-height:1.3}
+    .hero p{margin:0;max-width:640px;color:var(--muted);font-size:15px;line-height:1.85}
+    .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:38px;max-width:640px}
+    .stat{border:1px solid var(--line);border-radius:14px;background:rgba(21,26,35,.7);padding:16px 18px}
+    .stat b{display:block;font-size:26px;font-weight:850;letter-spacing:-.03em}
+    .stat b i{font-style:normal;font-size:14px;color:var(--muted);font-weight:700;margin-left:2px}
+    .stat span{font-size:12px;color:var(--muted)}
+    .stat:nth-child(1) b{color:#8db9ec}.stat:nth-child(2) b{color:#67cfc0}.stat:nth-child(3) b{color:#e0bc74}
+
+    section{padding:52px 0}
+    .sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:24px}
+    .sec-head h2{margin:0;font-size:22px;font-weight:850;letter-spacing:-.01em}
+    .sec-head span{font-size:12px;color:#6f7b8d;font-weight:700;letter-spacing:.12em}
+
+    /* 로드맵 — 포털 7단계 재활용 형태 */
+    .steps{display:grid;grid-template-columns:repeat(7,1fr);gap:0;position:relative;padding:8px 0 2px}
+    .steps::before{content:"";position:absolute;top:29px;left:7%;right:7%;height:2px;background:var(--line)}
+    .step{position:relative;text-align:center;padding:0 4px}
+    .dot{width:44px;height:44px;margin:0 auto 10px;border-radius:12px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;position:relative;z-index:1}
+    .dot svg{width:20px;height:20px;stroke:var(--muted);stroke-width:1.7}
+    .step.done .dot{border-color:rgba(77,161,103,.55);background:rgba(77,161,103,.13)}
+    .step.done .dot svg{stroke:#72c78d}
+    .step.now .dot{border-color:rgba(84,145,218,.75);background:rgba(84,145,218,.16);box-shadow:0 0 0 4px rgba(84,145,218,.12)}
+    .step.now .dot svg{stroke:#8db9ec}
+    .step small{display:block;font-size:11.5px;font-weight:700;color:var(--muted)}
+    .step.now small{color:#8db9ec}
+    .step.done small{color:#72c78d}
+    .step .yr{font-size:10px;color:#5d6878;margin-top:2px;display:block}
+
+    /* 장비 카드 */
+    .eqgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+    .eq{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:18px;transition:border-color .15s,transform .15s}
+    .eq:hover{border-color:rgba(84,145,218,.5);transform:translateY(-2px)}
+    .eq .tag{display:inline-flex;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:999px;margin-bottom:11px}
+    .tag.t1{color:#8db9ec;background:rgba(84,145,218,.13)}
+    .tag.t2{color:#67cfc0;background:rgba(70,183,190,.12)}
+    .tag.t3{color:#e0bc74;background:rgba(214,162,62,.12)}
+    .eq h3{margin:0 0 6px;font-size:15.5px;font-weight:800}
+    .eq p{margin:0;font-size:12px;color:var(--muted);line-height:1.65}
+
+    /* 행사 */
+    .evgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+    .ev{display:flex;gap:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:16px}
+    .ev .date{flex:none;width:52px;text-align:center;border-radius:10px;background:rgba(84,145,218,.12);border:1px solid rgba(84,145,218,.3);padding:8px 0}
+    .ev .date b{display:block;font-size:18px;color:#8db9ec}
+    .ev .date span{font-size:10px;color:var(--muted)}
+    .ev h3{margin:0 0 4px;font-size:14px;font-weight:800}
+    .ev p{margin:0;font-size:11.5px;color:var(--muted);line-height:1.6}
+
+    /* 오시는 길 */
+    .visit{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+    .map{border:1px dashed var(--line);border-radius:14px;min-height:220px;display:flex;align-items:center;justify-content:center;color:#5d6878;font-size:12.5px;background:repeating-linear-gradient(45deg,rgba(143,155,173,.03) 0 12px,transparent 12px 24px)}
+    .vinfo{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:20px;font-size:13px;line-height:2;color:var(--muted)}
+    .vinfo b{color:var(--text);display:block;margin-bottom:2px;font-size:13.5px}
+    .vinfo .row{margin-bottom:12px}
+
+    footer{border-top:1px solid rgba(43,52,66,.6);padding:26px 0 34px;color:#5d6878;font-size:11.5px;text-align:center}
+    @media(max-width:760px){.steps{grid-template-columns:repeat(4,1fr);row-gap:22px}.steps::before{display:none}.visit{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+  <nav><div class="wrap nav-in">
+    <div class="chip-sm"><svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 7V4M15 7V4M9 20v-3M15 20v-3M7 9H4M7 15H4M20 9h-3M20 15h-3"/></svg></div>
+    <span class="brand">ANGELS FAB</span>
+    <div class="navlinks">
+      <a href="#intro">센터 소개</a><a href="#roadmap">구축 로드맵</a><a href="#equip">주요 장비</a><a href="#events">학술 행사</a><a href="#visit">오시는 길</a>
+      <a class="btn-portal" href="#login">업무포털 <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor"/></svg></a>
+    </div>
+  </div></nav>
+
+  <header class="hero"><div class="wrap">
+    <div class="eyebrow">GIST ANGELS SEMICONDUCTOR FAB</div>
+    <h1>연구·교육·산학이 만나는<br/>첨단 반도체 공정 팹</h1>
+    <p>광주과학기술원 ANGELS 팹센터는 반도체 소자 연구와 전문 인력 양성을 위한
+      첨단 공정 인프라를 구축하고 있습니다. 노광·증착·식각·측정에 이르는 일관 공정 장비를 갖추고,
+      학내 연구실과 지역 산업체에 개방형 공정 서비스를 제공할 예정입니다.</p>
+    <div class="stats">
+      <div class="stat"><b>29<i>종</i></b><span>도입 공정 장비</span></div>
+      <div class="stat"><b>7<i>단계</i></b><span>구축 로드맵 진행 중</span></div>
+      <div class="stat"><b>2028<i>년</i></b><span>정식 가동 목표</span></div>
+    </div>
+  </div></header>
+
+  <section id="roadmap"><div class="wrap">
+    <div class="sec-head"><h2>구축 로드맵</h2><span>ROADMAP</span></div>
+    <div class="steps">
+      <div class="step done"><div class="dot"><svg viewBox="0 0 24 24"><path d="M9 12l2.2 2.2L15.5 9.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg></div><small>사업 기획</small><span class="yr">2024</span></div>
+      <div class="step done"><div class="dot"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V9l6-5 6 5v11M10 20v-6h4v6"/></svg></div><small>설계</small><span class="yr">2025</span></div>
+      <div class="step now"><div class="dot"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h.5M9 14h.5M14.5 10h.5M14.5 14h.5"/></svg></div><small>클린룸 구축</small><span class="yr">2026</span></div>
+      <div class="step"><div class="dot"><svg viewBox="0 0 24 24"><path d="M3 16V8h11v8M14 10h4l3 3v3h-7M6 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM17 19a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg></div><small>장비 반입</small><span class="yr">2027</span></div>
+      <div class="step"><div class="dot"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.5M3.5 12h.5M3.5 18h.5"/></svg></div><small>설치·검수</small><span class="yr">2027</span></div>
+      <div class="step"><div class="dot"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 5V3M12 21v-2M5 12H3M21 12h-2M6.4 6.4 5 5M19 19l-1.4-1.4M6.4 17.6 5 19M19 5l-1.4 1.4"/></svg></div><small>시운전</small><span class="yr">2028</span></div>
+      <div class="step"><div class="dot"><svg viewBox="0 0 24 24"><path d="M12 3c3 3 4 6.5 4 9.5 0 2-1 4.5-4 8.5-3-4-4-6.5-4-8.5C8 9.5 9 6 12 3zM12 12h.5M8 14l-3 4 3.5-.5M16 14l3 4-3.5-.5"/></svg></div><small>정식 가동</small><span class="yr">2028</span></div>
+    </div>
+  </div></section>
+
+  <section id="equip"><div class="wrap">
+    <div class="sec-head"><h2>주요 도입 장비</h2><span>EQUIPMENT</span></div>
+    <div class="eqgrid">
+      <div class="eq"><span class="tag t1">패터닝</span><h3>Laser Machine</h3><p>레이저 직접 노광 — 마스크 없이 미세 패턴을 형성하는 차세대 패터닝 장비</p></div>
+      <div class="eq"><span class="tag t2">증착</span><h3>El-Plating</h3><p>전해 도금 시스템 — 금속 배선·범프 형성을 위한 균일 도금 공정</p></div>
+      <div class="eq"><span class="tag t1">코팅</span><h3>Spin Coater</h3><p>감광액 균일 도포 — 웨이퍼 표면 처리의 첫 공정</p></div>
+      <div class="eq"><span class="tag t3">측정</span><h3>FIB / SEM</h3><p>집속 이온빔·전자현미경 — 나노 단위 단면 분석과 불량 해석</p></div>
+      <div class="eq"><span class="tag t2">증착</span><h3>E-Beam Evaporator</h3><p>전자빔 증착 — 고순도 금속 박막 형성</p></div>
+      <div class="eq"><span class="tag t1">식각</span><h3>PECVD / Etcher</h3><p>플라즈마 화학 증착·건식 식각 일관 공정 라인</p></div>
+    </div>
+  </div></section>
+
+  <section id="events"><div class="wrap">
+    <div class="sec-head"><h2>학술·교육 행사</h2><span>EVENTS</span></div>
+    <div class="evgrid">
+      <div class="ev"><div class="date"><b>28</b><span>6월</span></div><div><h3>ISPSA 2026</h3><p>제22회 반도체 물리·응용 국제심포지엄 — 제주 해비치 호텔, 한국물리학회 주최</p></div></div>
+      <div class="ev"><div class="date"><b>14</b><span>7월</span></div><div><h3>반도체 공정 실습 교육</h3><p>학부·대학원생 대상 클린룸 기초 공정 실습 — 팹센터 교육장</p></div></div>
+      <div class="ev"><div class="date"><b>09</b><span>9월</span></div><div><h3>SEDEX 2026 참관</h3><p>한국반도체산업협회 반도체대전 — 코엑스 산업 동향 탐방</p></div></div>
+    </div>
+  </div></section>
+
+  <section id="visit"><div class="wrap">
+    <div class="sec-head"><h2>오시는 길</h2><span>VISIT</span></div>
+    <div class="visit">
+      <div class="map">지도 영역 (카카오맵/구글맵 임베드 자리)</div>
+      <div class="vinfo">
+        <div class="row"><b>주소</b>광주광역시 북구 첨단과기로 123<br/>광주과학기술원 ANGELS 팹센터</div>
+        <div class="row"><b>문의</b>angels@gist.ac.kr · 062-000-0000</div>
+        <div class="row"><b>견학 신청</b>단체 견학은 최소 2주 전 이메일 신청</div>
+      </div>
+    </div>
+  </div></section>
+
+  <footer>© GIST ANGELS FAB — 반도체 첨단공정 팹센터 · 본 페이지의 문구·수치는 시안용 예시입니다</footer>
+</body>
+</html>
