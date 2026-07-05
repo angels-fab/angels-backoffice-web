@@ -997,7 +997,11 @@ export default function Work() {
   const openActionSheet = (num: string) => {
     if (!isAdmin || !user || !authKey) return
     const t = items.find((x) => x.num === num)
-    if (t && editingId !== t.id) setSheet(t)
+    if (t && editingId !== t.id) {
+      try { navigator.vibrate?.(12) } catch { /* iOS 웹 등 미지원은 무시 */ }
+      clearSelection()
+      setSheet(t)
+    }
   }
   const sheetStatus = (zone: DropZone) => {
     if (sheet) handleStatusDrop([sheet.num], zone)?.finalize()
@@ -1022,6 +1026,8 @@ export default function Work() {
   useEffect(() => { if (editingId != null) setReorderMode(false) }, [editingId])
   // 열린 시트의 대상이 목록에서 사라지면(외부 삭제·재로딩) 시트 닫기(stale 방지)
   useEffect(() => { if (sheet && !items.some((i) => i.num === sheet.num)) setSheet(null) }, [items, sheet])
+  // 시트가 열린 동안엔 카드 선택을 비워 둔다 — 롱프레스 직후 잔여 클릭이 카드를 선택하는 오염을 타이밍 무관하게 차단
+  useEffect(() => { if (sheet && selected.size > 0) setSelected(new Set()) }, [sheet, selected])
 
   // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
   useEffect(() => {

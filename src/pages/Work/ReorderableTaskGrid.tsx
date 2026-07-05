@@ -144,7 +144,7 @@ export default function ReorderableTaskGrid({
           const dx = st.rect.left + st.rect.width / 2 - (now.left + now.width / 2)
           const dy = st.rect.top + st.rect.height / 2 - (now.top + now.height / 2)
           const sc = Math.max(0.05, st.rect.width / now.width)
-          el.getAnimations?.().forEach((a) => a.cancel())
+          el.getAnimations?.().forEach((a) => { if (!(a as { animationName?: string }).animationName) a.cancel() }) // jiggle(CSS 애니메이션)은 유지, WAAPI만 취소
           el.animate(
             [
               { transform: `translate(${dx}px, ${dy}px) scale(${sc})`, opacity: 0.92 },
