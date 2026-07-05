@@ -15,7 +15,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import type { WorkItem } from '@/types'
 import type { DropZone } from './dropZones'
-import { classify, taskTitle } from './workMeta'
+import { taskTitle } from './workMeta'
 
 /**
  * 모바일 업무 카드 액션 시트(바텀시트) — 터치 롱프레스로 열린다.
@@ -25,6 +25,8 @@ import { classify, taskTitle } from './workMeta'
  */
 interface Props {
   task: WorkItem | null
+  /** 실제 상태 변화가 생기는 대상 존만(부모가 계산) — 비었으면 '상태 변경' 자체를 숨김 */
+  zones: DropZone[]
   /** 순서 변경 노출 여부 — 진행중 뷰에서만 true */
   canReorder: boolean
   onClose: () => void
@@ -41,17 +43,7 @@ const ZONE_LABEL: { zone: DropZone; label: string }[] = [
   { zone: 'remind', label: 'Remind로' },
 ]
 
-/** 현재 카드가 이미 해당 존 상태인지 — 같은 상태는 목록에서 제외 */
-function currentZone(t: WorkItem): DropZone | null {
-  if (t.remind) return 'remind'
-  const c = classify(t)
-  if (c === 'inProgress') return 'inProgress'
-  if (c === 'hold') return 'hold'
-  if (c === 'done') return 'done'
-  return null
-}
-
-export default function WorkActionSheet({ task, canReorder, onClose, onStatus, onReorder, onEdit, onDelete }: Props) {
+export default function WorkActionSheet({ task, zones, canReorder, onClose, onStatus, onReorder, onEdit, onDelete }: Props) {
   const [mode, setMode] = useState<'menu' | 'status'>('menu')
 
   // 열릴 때마다 메뉴 모드로 초기화
@@ -60,8 +52,7 @@ export default function WorkActionSheet({ task, canReorder, onClose, onStatus, o
   }, [task])
 
   const open = !!task
-  const cur = task ? currentZone(task) : null
-  const statusOptions = ZONE_LABEL.filter((z) => z.zone !== cur)
+  const statusOptions = ZONE_LABEL.filter((z) => zones.includes(z.zone))
 
   return (
     <Drawer
@@ -96,11 +87,13 @@ export default function WorkActionSheet({ task, canReorder, onClose, onStatus, o
 
           {mode === 'menu' ? (
             <List dense sx={{ pt: 0.5 }}>
-              <ListItemButton onClick={() => setMode('status')} sx={{ py: 1.1 }}>
-                <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}><SwapHorizIcon /></ListItemIcon>
-                <ListItemText slotProps={{ primary: { sx: { fontSize: 14.5 } } }} primary="상태 변경" />
-                <ChevronRightIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
-              </ListItemButton>
+              {statusOptions.length > 0 && (
+                <ListItemButton onClick={() => setMode('status')} sx={{ py: 1.1 }}>
+                  <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}><SwapHorizIcon /></ListItemIcon>
+                  <ListItemText slotProps={{ primary: { sx: { fontSize: 14.5 } } }} primary="상태 변경" />
+                  <ChevronRightIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+                </ListItemButton>
+              )}
               {canReorder && (
                 <ListItemButton onClick={onReorder} sx={{ py: 1.1 }}>
                   <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}><SwapVertIcon /></ListItemIcon>

@@ -1003,11 +1003,25 @@ export default function Work() {
     if (sheet) handleStatusDrop([sheet.num], zone)?.finalize()
     setSheet(null)
   }
-  const sheetReorder = () => { setReorderMode(true); setSheet(null) }
-  const sheetEdit = () => { const num = sheet?.num; setSheet(null); if (num) handleCardDoubleClick(num) }
+  const sheetReorder = () => { clearSelection(); setReorderMode(true); setSheet(null) }
+  const sheetEdit = () => { const num = sheet?.num; clearSelection(); setSheet(null); if (num) handleCardDoubleClick(num) }
   const sheetDelete = () => { const t = sheet; setSheet(null); if (t) requestDelete(t) }
-  // KPI 뷰가 바뀌면 순서 편집 모드 해제(진행중 전용)
+  // 시트에 노출할 '상태 변경' 대상 — 실제로 변화가 생기는 존만(무반응 옵션·취소 카드의 죽은 액션 방지)
+  const sheetZones = useMemo<DropZone[]>(() => {
+    if (!sheet) return []
+    if (!['inProgress', 'hold', 'done'].includes(classify(sheet))) return [] // 취소·기타는 상태변경 불가(무반응)
+    const before = { status: (sheet.status || '').trim(), remind: !!sheet.remind }
+    return (['inProgress', 'hold', 'done', 'remind'] as DropZone[]).filter((z) => {
+      const after = zoneFields(sheet, z)
+      return before.status !== after.status || before.remind !== after.remind
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet])
+  // KPI 뷰가 바뀌면 순서 편집 모드 해제(진행중 전용). 수정 진입 시에도 해제(편집 셀 touch-action 충돌 방지).
   useEffect(() => { setReorderMode(false) }, [view])
+  useEffect(() => { if (editingId != null) setReorderMode(false) }, [editingId])
+  // 열린 시트의 대상이 목록에서 사라지면(외부 삭제·재로딩) 시트 닫기(stale 방지)
+  useEffect(() => { if (sheet && !items.some((i) => i.num === sheet.num)) setSheet(null) }, [items, sheet])
 
   // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
   useEffect(() => {
@@ -1304,6 +1318,7 @@ export default function Work() {
       {/* 모바일 카드 액션 시트(터치 롱프레스) — 상태변경/순서변경/수정/삭제 */}
       <WorkActionSheet
         task={sheet}
+        zones={sheetZones}
         canReorder={view === 'inProgress'}
         onClose={() => setSheet(null)}
         onStatus={sheetStatus}

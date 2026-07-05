@@ -86,6 +86,7 @@ export default function StatusDragGrid({
   const lastPointer = useRef({ x: 0, y: 0 })
   const autoScrollRaf = useRef<number | null>(null) // 드래그 중 상/하단 자동 스크롤 루프
   const suppressClickUntil = useRef(0)
+  const suppressNextClick = useRef(false) // 롱프레스로 시트를 연 뒤 다음 클릭 1회 무조건 억제(시간 만료 무관·오선택 방지)
 
   const onSelectStart = (e: Event) => e.preventDefault()
   const cleanupListeners = () => {
@@ -259,6 +260,7 @@ export default function StatusDragGrid({
   const onPointerDown = (e: React.PointerEvent, num: string) => {
     if (pending.current || drag.current) return
     if (e.button !== 0) return
+    suppressNextClick.current = false // 새 상호작용 시작 — 억제 플래그 초기화
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
     if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
@@ -277,10 +279,10 @@ export default function StatusDragGrid({
     document.addEventListener('pointercancel', onCancel)
     document.addEventListener('keydown', onKeyDown)
     if (pending.current.pointerType === 'touch') {
-      // 터치 롱프레스 = 복수선택 모드 진입(+해당 카드 선택)
+      // 터치 롱프레스 = 카드 액션 시트 열기(상태변경·수정·삭제)
       longPress.current = window.setTimeout(() => {
         if (pending.current) {
-          suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS
+          suppressNextClick.current = true // 손을 늦게 떼도 다음 클릭 1회 억제(오선택 방지)
           onLongPressRef.current(num)
           cleanupPending()
         }
@@ -290,6 +292,7 @@ export default function StatusDragGrid({
 
   // 클릭 선택(캡처 단계) — 일반=그 카드만 / Cmd·Ctrl·선택모드 탭=토글 / Shift=범위
   const onClickCapture = (e: React.MouseEvent, num: string) => {
+    if (suppressNextClick.current) { suppressNextClick.current = false; e.preventDefault(); e.stopPropagation(); return }
     if (Date.now() < suppressClickUntil.current) { e.preventDefault(); e.stopPropagation(); return }
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) return // 메뉴·링크는 통과
     const item = itemsRef.current.find((i) => i.num === num)

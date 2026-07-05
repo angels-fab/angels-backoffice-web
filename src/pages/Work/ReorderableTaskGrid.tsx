@@ -116,6 +116,7 @@ export default function ReorderableTaskGrid({
   const longPress = useRef<number | null>(null)
   const lastPointer = useRef({ x: 0, y: 0 })
   const suppressClickUntil = useRef(0)
+  const suppressNextClick = useRef(false) // 롱프레스로 시트를 연 뒤 다음 클릭 1회를 시각과 무관하게 무조건 억제(오선택 방지)
 
   const baseNums = items.map((i) => i.num)
 
@@ -430,6 +431,7 @@ export default function ReorderableTaskGrid({
   const onPointerDown = (e: React.PointerEvent, num: string) => {
     if (pending.current || drag.current) return
     if (e.button !== 0) return // 주 버튼만
+    suppressNextClick.current = false // 새 상호작용 시작 — 억제 플래그 초기화
     if ((e.target as HTMLElement).closest('button, a')) return // 버튼·링크는 드래그 제외
     if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
@@ -452,7 +454,7 @@ export default function ReorderableTaskGrid({
       longPress.current = window.setTimeout(() => {
         if (!pending.current) return
         if (onLongPressRef.current) {
-          suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS // 롱프레스 직후 클릭=선택 억제(오선택 방지)
+          suppressNextClick.current = true // 손을 늦게 떼도 다음 클릭 1회 억제(시간 만료 허점 제거)
           onLongPressRef.current(num)
           cleanupPending()
         } else {
@@ -464,6 +466,7 @@ export default function ReorderableTaskGrid({
 
   // 클릭 선택(캡처 단계) — 일반=그 카드만 / Cmd·Ctrl=토글 / Shift=범위. 드롭 직후 클릭은 억제.
   const onClickCapture = (e: React.MouseEvent, num: string) => {
+    if (suppressNextClick.current) { suppressNextClick.current = false; e.preventDefault(); e.stopPropagation(); return }
     if (Date.now() < suppressClickUntil.current) { e.preventDefault(); e.stopPropagation(); return }
     if (!onSelectToggleRef.current) return
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
@@ -533,7 +536,8 @@ export default function ReorderableTaskGrid({
             // 카드가 늘어난 셀 높이를 채우도록(높이 통일 시 하단 여백이 카드 내부로) — 자식(카드) height:100%
             // 선택 표시는 카드(TaskAccordion)가 상태 대표색으로 직접 그림 — 셀 래퍼의 공통 파란 outline 제거
             sx={{
-              position: 'relative', minWidth: 0, touchAction: 'pan-y',
+              // 순서 편집 모드: touch-action none → 터치 이동이 페이지 스크롤 대신 카드 드래그로 감(핵심)
+              position: 'relative', minWidth: 0, touchAction: reorderMode ? 'none' : 'pan-y',
               '& > *:first-of-type': { height: '100%' },
               borderRadius: 1,
               ...(isDragSource ? { opacity: 0.35 } : {}),
