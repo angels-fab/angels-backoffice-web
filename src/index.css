@@ -1092,6 +1092,10 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .links-sheet a .ls-ico{font-size:21px;width:26px;text-align:center;flex-shrink:0}
 .page-body{background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:32px;flex:1;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:13px;line-height:2;text-align:center}
 
+/* 순서 편집(흔들림) 모드 — 모바일에서 카드를 끌어 재정렬 중임을 알리는 미세 wobble */
+@keyframes work-jiggle{0%,100%{transform:rotate(-0.7deg)}50%{transform:rotate(0.7deg)}}
+.reorder-cell.jiggle{animation:work-jiggle .28s ease-in-out infinite}
+
 /* 반응형 레이아웃: PC(기본) / 모바일(<=768px) */
 /* .home-greeting은 웹/모바일 모두 노출 (아래 그룹에서 제외) */
 .eq-summary,.stat-board,.menu-stack,.topbar-title,.topbar-bell,.bottom-nav{display:none}

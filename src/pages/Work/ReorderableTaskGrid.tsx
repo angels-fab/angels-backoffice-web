@@ -6,8 +6,8 @@ import type { WorkItem } from '@/types'
 import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 
 // 시안(docs/mockups/work-card-motion-only.html · work-drag-trash.html) 물리값
-const ACTIVATION_DISTANCE = 8 // px 이상 움직여야 드래그 시작(마우스)
-const TOUCH_HOLD_MS = 250 // 터치는 길게 눌러야 시작(스크롤과 구분)
+const ACTIVATION_DISTANCE = 8 // px 이상 움직여야 드래그 시작(마우스·순서편집 터치)
+const SHEET_HOLD_MS = 500 // 터치 롱프레스 → 액션 시트(스크롤·오터치와 확실히 구분되게 길게)
 const SWITCH_MARGIN = 28 // 새 슬롯이 현재 슬롯보다 이만큼 명확히 가까울 때만 재배치(중심거리, px)
 const SWITCH_LOCK_MS = 240 // 재배치 시작 후 추가 재배치 판정 잠금(왕복 방지)
 const MOVE_DURATION = 240 // 주변 카드 자리 이동 애니메이션(ms)
@@ -325,12 +325,19 @@ export default function ReorderableTaskGrid({
     const dist = Math.hypot(e.clientX - pending.current.startX, e.clientY - pending.current.startY)
     if (!drag.current) {
       if (pending.current.pointerType === 'touch') {
-        // 롱프레스 전 이동 = 스크롤로 간주하고 취소(스크롤과 충돌 방지)
-        if (dist > ACTIVATION_DISTANCE) cleanupPending()
-        return
+        if (reorderModeRef.current) {
+          // 순서 편집 모드: 이동하면 바로 드래그(홀드 불필요) — 흔들리는 카드를 끌어 재정렬
+          if (dist > ACTIVATION_DISTANCE) beginDrag(e.clientX, e.clientY)
+          else return
+        } else {
+          // 평소: 롱프레스 전 이동 = 스크롤로 간주해 시트 대기 취소(스크롤과 충돌 방지)
+          if (dist > ACTIVATION_DISTANCE) cleanupPending()
+          return
+        }
+      } else {
+        if (dist < ACTIVATION_DISTANCE) return
+        beginDrag(e.clientX, e.clientY)
       }
-      if (dist < ACTIVATION_DISTANCE) return
-      beginDrag(e.clientX, e.clientY)
     }
     if (!drag.current) return
     e.preventDefault()
@@ -440,13 +447,18 @@ export default function ReorderableTaskGrid({
     document.addEventListener('pointerup', onEnd)
     document.addEventListener('pointercancel', onCancel)
     document.addEventListener('keydown', onKeyDown)
-    if (pending.current.pointerType === 'touch') {
+    // 평소(터치): 길게 눌러 액션 시트. 순서 편집 모드는 타이머 없이 onMove에서 바로 드래그(홀드 불필요).
+    if (pending.current.pointerType === 'touch' && !reorderModeRef.current) {
       longPress.current = window.setTimeout(() => {
         if (!pending.current) return
-        // 순서 편집 모드(또는 롱프레스 콜백 미제공=기존 동작): 드래그로 순서변경 / 그 외: 액션 시트 열기
-        if (reorderModeRef.current || !onLongPressRef.current) beginDrag(lastPointer.current.x, lastPointer.current.y)
-        else { onLongPressRef.current(num); cleanupPending() }
-      }, TOUCH_HOLD_MS)
+        if (onLongPressRef.current) {
+          suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS // 롱프레스 직후 클릭=선택 억제(오선택 방지)
+          onLongPressRef.current(num)
+          cleanupPending()
+        } else {
+          beginDrag(lastPointer.current.x, lastPointer.current.y) // 폴백: 롱프레스 콜백 미제공 시 기존 드래그
+        }
+      }, SHEET_HOLD_MS)
     }
   }
 
@@ -484,7 +496,7 @@ export default function ReorderableTaskGrid({
       }}
     >
       {leading}
-      {displayNums.map((num) => {
+      {displayNums.map((num, i) => {
         if (dragNum && num === dragNum) {
           // 목적지 placeholder(점선) — 드래그 카드 높이만큼 공간 확보
           return (
@@ -507,9 +519,10 @@ export default function ReorderableTaskGrid({
         return (
           <Box
             key={num}
-            className="reorder-cell"
+            className={`reorder-cell${reorderMode && !dragNum ? ' jiggle' : ''}`}
             ref={setCellRef(num)}
             aria-selected={selected}
+            style={reorderMode ? { animationDelay: `${(i % 4) * 70}ms` } : undefined}
             onPointerDown={(e) => onPointerDown(e, num)}
             onClickCapture={(e) => onClickCapture(e, num)}
             onDoubleClick={(e) => {
