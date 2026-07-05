@@ -87,6 +87,7 @@ export default function StatusDragGrid({
   const autoScrollRaf = useRef<number | null>(null) // 드래그 중 상/하단 자동 스크롤 루프
   const suppressClickUntil = useRef(0)
   const suppressNextClick = useRef(false) // 롱프레스로 시트를 연 뒤 다음 클릭 1회 무조건 억제(시간 만료 무관·오선택 방지)
+  const lastPointerType = useRef<string>('mouse') // 터치에선 탭 선택 비활성(선택은 PC 마우스 전용)
 
   const onSelectStart = (e: Event) => e.preventDefault()
   const cleanupListeners = () => {
@@ -261,6 +262,7 @@ export default function StatusDragGrid({
     if (pending.current || drag.current) return
     if (e.button !== 0) return
     suppressNextClick.current = false // 새 상호작용 시작 — 억제 플래그 초기화
+    lastPointerType.current = e.pointerType || 'mouse'
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
     if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
@@ -292,6 +294,7 @@ export default function StatusDragGrid({
 
   // 클릭 선택(캡처 단계) — 일반=그 카드만 / Cmd·Ctrl·선택모드 탭=토글 / Shift=범위
   const onClickCapture = (e: React.MouseEvent, num: string) => {
+    if (lastPointerType.current === 'touch') return // 터치: 탭 선택 안 함(선택은 PC 전용)
     if (suppressNextClick.current) { suppressNextClick.current = false; e.preventDefault(); e.stopPropagation(); return }
     if (Date.now() < suppressClickUntil.current) { e.preventDefault(); e.stopPropagation(); return }
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) return // 메뉴·링크는 통과

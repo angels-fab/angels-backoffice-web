@@ -117,6 +117,7 @@ export default function ReorderableTaskGrid({
   const lastPointer = useRef({ x: 0, y: 0 })
   const suppressClickUntil = useRef(0)
   const suppressNextClick = useRef(false) // 롱프레스로 시트를 연 뒤 다음 클릭 1회를 시각과 무관하게 무조건 억제(오선택 방지)
+  const lastPointerType = useRef<string>('mouse') // 터치에선 탭 선택 비활성(선택은 PC 마우스 전용)
 
   const baseNums = items.map((i) => i.num)
 
@@ -432,6 +433,7 @@ export default function ReorderableTaskGrid({
     if (pending.current || drag.current) return
     if (e.button !== 0) return // 주 버튼만
     suppressNextClick.current = false // 새 상호작용 시작 — 억제 플래그 초기화
+    lastPointerType.current = e.pointerType || 'mouse'
     if ((e.target as HTMLElement).closest('button, a')) return // 버튼·링크는 드래그 제외
     if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
@@ -466,6 +468,7 @@ export default function ReorderableTaskGrid({
 
   // 클릭 선택(캡처 단계) — 일반=그 카드만 / Cmd·Ctrl=토글 / Shift=범위. 드롭 직후 클릭은 억제.
   const onClickCapture = (e: React.MouseEvent, num: string) => {
+    if (lastPointerType.current === 'touch') return // 터치: 탭 선택 안 함(선택은 PC 전용) — 상세는 탭으로 안 열림
     if (suppressNextClick.current) { suppressNextClick.current = false; e.preventDefault(); e.stopPropagation(); return }
     if (Date.now() < suppressClickUntil.current) { e.preventDefault(); e.stopPropagation(); return }
     if (!onSelectToggleRef.current) return

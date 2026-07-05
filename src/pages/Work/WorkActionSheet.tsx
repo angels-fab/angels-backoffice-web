@@ -59,6 +59,10 @@ export default function WorkActionSheet({ task, zones, canReorder, onClose, onSt
       anchor="bottom"
       open={open}
       onClose={onClose}
+      // 포커스 트랩·자동/복원 포커스 비활성 — iOS에서 닫을 때 포커스 복원으로 화면이 최상단으로 튀는 문제 방지
+      disableAutoFocus
+      disableEnforceFocus
+      disableRestoreFocus
       slotProps={{
         paper: {
           sx: {
