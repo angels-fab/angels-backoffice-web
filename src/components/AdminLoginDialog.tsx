@@ -55,7 +55,7 @@ export default function AdminLoginDialog({ open, onClose }: AdminLoginDialogProp
       </DialogTitle>
       <DialogContent>
         <Typography variant="body2" sx={{ mb: 2 }}>
-          사번과 비밀번호를 입력하세요. (내부용 — 보안 인증이 아닙니다)
+          사번과 비밀번호를 입력하세요. 로그인해야 업무·공지·일정 등 사내 정보를 볼 수 있습니다.
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           <TextField

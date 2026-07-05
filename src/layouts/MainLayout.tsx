@@ -14,7 +14,8 @@ import { loadReplies } from '@/store/slices/replySlice'
 
 export default function MainLayout() {
   const { pathname } = useLocation()
-  const { isAdmin } = useRole()
+  const { role, isAdmin } = useRole()
+  const loggedIn = role !== 'guest'
   const dispatch = useAppDispatch()
   const eqReady = useAppSelector(s => s.eq.ready)
   const workReady = useAppSelector(s => s.work.ready)
@@ -23,9 +24,10 @@ export default function MainLayout() {
   const improveReady = useAppSelector(s => s.improve.ready)
   const replyReady = useAppSelector(s => s.reply.ready)
 
-  // 앱 진입 시 데이터 미리 로드. 장비 데이터는 로그인(관리자) 전용이라 게스트일 땐 요청하지 않음.
-  // isAdmin 의존 → 로그인 시 effect 재실행으로 장비 데이터 로드(새로고침 불필요).
+  // 앱 진입 시 데이터 미리 로드. 사내 데이터는 로그인해야 읽히므로(RLS: authenticated) 게스트일 땐 요청하지 않음.
+  // 장비 데이터는 관리자 전용. loggedIn/isAdmin 의존 → 로그인 시 effect 재실행으로 로드(새로고침 불필요).
   useEffect(() => {
+    if (!loggedIn) return // 게스트: 사내 데이터 미로드(홈은 공개 로드맵만 노출)
     if (isAdmin && !eqReady) dispatch(loadEqData())
     if (!workReady) dispatch(loadWorkData())
     if (!noticeReady) dispatch(loadNoticeData())
@@ -33,7 +35,7 @@ export default function MainLayout() {
     if (!improveReady) dispatch(loadImproveData())
     if (!replyReady) dispatch(loadReplies())
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin])
+  }, [loggedIn, isAdmin])
 
   // 원본의 body 클래스 토글: 페이지 진입 시 in-page, 장비현황은 eq-wide(넓은 레이아웃)
   useEffect(() => {

@@ -2,14 +2,16 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { supabase, empEmail, padPassword } from '@/api/supabase'
 
 /**
- * 권한 컨텍스트 — Supabase Auth 세션 기반(1단계 전환).
+ * 권한 컨텍스트 — Supabase Auth 세션 기반.
  * 역할 3단계: guest(비로그인) / member(일반) / admin(관리자) — 역할은 profiles.role에서 읽음.
  * 로그인 UX는 기존과 동일(사번+비밀번호). 내부적으로 사번→내부 이메일, 비밀번호→패딩 변환.
  *
- * 전환기 이중 인증: 아직 Supabase로 이관되지 않은 도메인의 쓰기는 Apps Script(이름+시트 비밀번호
- * 대조)로 가므로, 로그인 시 입력한 원문 비밀번호를 authKey로 보관(localStorage adminUser/adminKey —
- * 기존과 동일한 키·동작). 도메인 이관이 끝나면 authKey 경로는 제거 예정.
+ * 인증은 전적으로 Supabase 세션(JWT)+RLS로 처리한다. authKey는 과거 Apps Script 대조용 원문
+ * 비밀번호였으나, 전 도메인이 Supabase로 이관되어 그 값은 더 이상 쓰이지 않는다. 평문 비밀번호를
+ * localStorage에 보관하던 방식을 폐지하고, authKey는 '로그인됨'을 뜻하는 비밀 아닌 표식으로만 남긴다
+ * (쓰기 게이트의 truthy 판정용). 기존 브라우저에 남은 평문 비밀번호는 마운트 시 제거한다.
  */
+const SESSION_MARK = 'session' // authKey 표식 — 비밀 아님(값 미사용, 존재 여부만 로그인 판정에 씀)
 export type Role = 'guest' | 'member' | 'admin'
 
 interface RoleContextValue {
@@ -19,7 +21,7 @@ interface RoleContextValue {
   ready: boolean
   /** 로그인한 담당자 이름(게시자명) — profiles.name */
   user: string | null
-  /** 전환기 레거시(Apps Script) 쓰기용 원문 비밀번호 — 이관 완료 후 제거 */
+  /** '로그인됨' 표식(비밀 아님) — 쓰기 게이트 truthy 판정용. 값은 서버로 안 감(인증=세션+RLS). */
   authKey: string | null
   /** 사번+비밀번호 로그인(Supabase Auth). 성공 시 true. */
   login: (empNo: string, password: string) => Promise<boolean>
@@ -59,6 +61,9 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let alive = true
     ;(async () => {
+      // 기존 브라우저에 남은 평문 비밀번호(레거시 adminKey/adminUser) 제거 — 로그인 여부와 무관하게 정리
+      localStorage.removeItem('adminKey')
+      localStorage.removeItem('adminUser')
       try {
         const { data } = await supabase.auth.getSession()
         const session = data.session
@@ -67,7 +72,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
           if (!alive) return
           setUser(p.name)
           setRole(p.role)
-          setAuthKey(localStorage.getItem('adminKey'))
+          setAuthKey(SESSION_MARK)
         }
       } finally {
         if (alive) setReady(true)
@@ -94,13 +99,13 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     })
     if (error || !data.user) return false
     const p = await fetchProfile(data.user.id, data.user.user_metadata?.name)
-    // 전환기 레거시 쓰기용(기존 키 그대로) — 이름 + 원문 비밀번호
-    localStorage.setItem('adminUser', p.name)
-    localStorage.setItem('adminKey', password)
-    localStorage.removeItem('role') // 구버전 UI 게이트 키 정리
+    // 평문 비밀번호는 저장하지 않는다(인증=세션 JWT). 구버전 게이트 키·잔재 정리만.
+    localStorage.removeItem('role')
+    localStorage.removeItem('adminUser')
+    localStorage.removeItem('adminKey')
     setUser(p.name)
     setRole(p.role)
-    setAuthKey(password)
+    setAuthKey(SESSION_MARK)
     return true
   }, [])
 

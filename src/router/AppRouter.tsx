@@ -11,6 +11,7 @@ import Events from '@/pages/Events'
 import Settings from '@/pages/Settings'
 import Improve from '@/pages/Improve'
 import RequireAdmin from '@/auth/RequireAdmin'
+import RequireAuth from '@/auth/RequireAuth'
 import DesignSystemShowcase from '@/pages/_DesignSystem'
 import LayoutSystemShowcase from '@/pages/_LayoutSystem'
 
@@ -21,19 +22,20 @@ export function AppRouter() {
       <Route path="/design-system" element={<DesignSystemShowcase />} />
       <Route path="/layout-system" element={<LayoutSystemShowcase />} />
       <Route element={<MainLayout />}>
+        {/* 홈 = 공개 랜딩(로드맵 + 로그인 진입). 그 외 사내 데이터 페이지는 전부 로그인 필수 */}
         <Route path="/" element={<Home />} />
-        <Route path="/notice" element={<Notice />} />
+        <Route path="/notice" element={<RequireAuth><Notice /></RequireAuth>} />
         {/* 연번 딥링크(/notice/12) — 해당 공지를 아코디언으로 펼친 채 진입 */}
-        <Route path="/notice/:num" element={<Notice />} />
-        <Route path="/calendar" element={<Calendar />} />
-        <Route path="/work" element={<Work />} />
+        <Route path="/notice/:num" element={<RequireAuth><Notice /></RequireAuth>} />
+        <Route path="/calendar" element={<RequireAuth><Calendar /></RequireAuth>} />
+        <Route path="/work" element={<RequireAuth><Work /></RequireAuth>} />
         {/* 장비관리 — 로그인(관리자) 전용. 게스트는 홈으로 리다이렉트 */}
         <Route path="/equipment" element={<RequireAdmin><Equipment /></RequireAdmin>} />
         <Route path="/equipment-ops" element={<RequireAdmin><EquipmentOps /></RequireAdmin>} />
-        <Route path="/links" element={<Links />} />
-        <Route path="/improve" element={<Improve />} />
+        <Route path="/links" element={<RequireAuth><Links /></RequireAuth>} />
+        <Route path="/improve" element={<RequireAuth><Improve /></RequireAuth>} />
         {/* 구축 로드맵 전용 페이지 제거 — 콘텐츠는 홈으로 이관. /roadmap 접근은 전역 규칙(홈 리다이렉트) */}
-        <Route path="/events" element={<Events />} />
+        <Route path="/events" element={<RequireAuth><Events /></RequireAuth>} />
         {/* 설정 — 로그인(관리자) 전용. 게스트는 홈으로 (로그인은 상단바 '관리자 모드' 버튼) */}
         <Route path="/settings" element={<RequireAdmin><Settings /></RequireAdmin>} />
         {/* 원본 한글 페이지명 별칭 ('회의'는 캘린더로 — goPage alias 대응) */}
