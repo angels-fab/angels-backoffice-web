@@ -943,5 +943,5 @@ function PendingConfirm({ p, onApply, onCancel }: { p: PendingChange; onApply: (
 function STAGE_DOT(info: StageInfo): string {
   if (info.phase === 'done') return STAGE.설.color
   if (info.phase === 'progress' && info.code) return STAGE[info.code].color
-  return '#7d8899'
+  return 'var(--text3)'
 }

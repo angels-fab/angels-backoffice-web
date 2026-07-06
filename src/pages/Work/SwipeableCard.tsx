@@ -180,7 +180,7 @@ export default function SwipeableCard({
         }}
       >
         {hasStatus && (
-          <TrayButton label="상태" color="#5491DA" onClick={() => setStatusExpanded(true)}>
+          <TrayButton label="상태" color="var(--blue)" onClick={() => setStatusExpanded(true)}>
             <SwapHorizIcon sx={{ fontSize: 20 }} />
           </TrayButton>
         )}

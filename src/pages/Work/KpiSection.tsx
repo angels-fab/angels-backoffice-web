@@ -125,7 +125,7 @@ export default function KpiSection({
           >
             {count}
           </Typography>
-          <Typography component="span" sx={{ fontSize: 13, fontWeight: 700, color: '#aab4c3', lineHeight: 1 }}>건</Typography>
+          <Typography component="span" sx={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', lineHeight: 1 }}>건</Typography>
           {checkCount > 0 && (
             <Box
               component="span"

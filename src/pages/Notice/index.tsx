@@ -341,7 +341,7 @@ export default function Notice() {
                   aria-label={`${c} ${catCounts[c] || 0}건${on ? '' : ' (해제됨)'}`}
                   onClick={() => toggleCat(c)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCat(c) } }}
-                  style={{ backgroundColor: alpha(color, on ? 0.18 : 0.06), color, opacity: on ? 1 : 0.45 }}
+                  style={{ backgroundColor: alpha(color, on ? 0.16 : 0.06), color, opacity: on ? 1 : 0.45 }}
                   sx={{
                     display: 'inline-flex', alignItems: 'center', gap: '5px', p: '5px 11px', borderRadius: '999px',
                     cursor: 'pointer', transition: 'opacity .15s, background-color .15s',

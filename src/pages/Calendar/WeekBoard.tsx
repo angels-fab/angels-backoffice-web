@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
+import { accent } from '@/theme/tokens'
 import type { CalEvent } from '@/types'
 import { CAT_META } from './catMeta'
 import { given, memberById, membersForEvent, eventContent, eventParticipants, splitPlacePurpose, type TeamMember } from './members'
@@ -233,7 +234,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '3px',
-                    bgcolor: isToday ? alpha('#5491DA', 0.06) : 'transparent',
+                    bgcolor: isToday ? alpha(accent.blue, 0.06) : 'transparent',
                   }}
                 >
                   {cellEvents.map((ev) => (

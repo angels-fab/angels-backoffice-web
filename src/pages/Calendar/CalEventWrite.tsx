@@ -13,7 +13,7 @@ const baseTitle = (t: string): string => {
   const at = (t || '').indexOf('@')
   return (at >= 0 ? t.slice(0, at) : t).trim()
 }
-const memberColor = (name: string): string => MEMBERS.find((m) => m.name === name)?.color ?? '#7D8899'
+const memberColor = (name: string): string => MEMBERS.find((m) => m.name === name)?.color ?? 'var(--text3)'
 
 interface Props {
   open: boolean
