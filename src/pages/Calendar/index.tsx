@@ -3,6 +3,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
+import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { EventDropArg } from '@fullcalendar/core'
 import type { EventResizeDoneArg } from '@fullcalendar/interaction'
@@ -51,6 +52,11 @@ function gridRange(view: ViewKey, anchor: Date): { start: Date; end: Date } {
     const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0)
     return { start: startOfWeek(first), end: addDays(startOfWeek(last), 7) }
   }
+  if (view === 'agenda') {
+    // 목록(listMonth) = 해당 달 1일~말일(그리드 오버플로 없음)
+    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
+    return { start: first, end: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1) }
+  }
   const start = startOfWeek(anchor)
   return { start, end: addDays(start, 7) }
 }
@@ -63,7 +69,7 @@ function rgba(hex: string, a: number) {
   return `rgba(${r},${g},${b},${a})`
 }
 
-type ViewKey = 'month' | 'timeweek'
+type ViewKey = 'month' | 'timeweek' | 'agenda'
 
 function renderEventContent(arg: EventContentArg) {
   const chip = arg.event.extendedProps as unknown as ChipContentProps
@@ -72,13 +78,16 @@ function renderEventContent(arg: EventContentArg) {
   // 멀티데이 = 1일 초과 span (FullCalendar가 정규화한 start/end 기준). 주 단위로 나뉜 구간도 동일 적용.
   const ms = (arg.event.end?.getTime() ?? 0) - (arg.event.start?.getTime() ?? 0)
   const multiDay = ms > 24 * 3600 * 1000 + 60000
+  // 목록(listMonth) 뷰는 FullCalendar가 왼쪽 .fc-list-event-time 셀에 시간을 이미 렌더하므로
+  // 칩(제목 셀) 안에서 시간을 또 표시하면 중복 노출됨 → 목록에서는 칩 시간 생략.
+  const time = arg.view.type === 'listMonth' ? '' : chip.time
   return (
     <Box sx={{ display: 'flex', width: '100%', minWidth: 0 }}>
       <ChipContent
         participants={chip.participants}
         catKey={chip.catKey}
         catColor={chip.catColor}
-        time={chip.time}
+        time={time}
         title={chip.title}
         variant={variant}
         multiDay={multiDay}
@@ -91,16 +100,17 @@ export default function Calendar() {
   const dispatch = useAppDispatch()
   const { events: allEvents, loading, error, errorMsg, updatedAt } = useAppSelector((s) => s.cal)
 
-  const [view, setView] = useState<ViewKey>('month')
+  // 복수선택 버튼·모바일 기본뷰 판정. 폰(≤768px)은 월 그리드 대신 목록(아젠다) 뷰가 기본.
+  const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true })
+  const [view, setView] = useState<ViewKey>(() => (isMobile ? 'agenda' : 'month'))
   const [anchor, setAnchor] = useState<Date>(() => parseKey(todaySeoul()))
   const [search, setSearch] = useState('')
   const [selMembers, setSelMembers] = useState<string[]>([]) // 빈 배열 = 전체 선택
   const [selCats, setSelCats] = useState<RealCat[]>([]) // 빈 배열 = 전체(종류 필터 없음)
   const [multiSel, setMultiSel] = useState(false) // 모바일 복수선택 모드(Shift 대체)
-  const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true }) // 복수선택 버튼은 모바일에서만
   const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
   // 화면에 실제로 보이는 날짜 범위(FC activeStart/activeEnd). 종류별 건수 집계에 사용. datesSet에서 실제값 주입.
-  const [visRange, setVisRange] = useState<{ start: Date; end: Date }>(() => gridRange('month', parseKey(todaySeoul())))
+  const [visRange, setVisRange] = useState<{ start: Date; end: Date }>(() => gridRange(isMobile ? 'agenda' : 'month', parseKey(todaySeoul())))
   const calRef = useRef<FullCalendar>(null)
 
   // 호버·클릭 상세 — 마우스 위치 기준. 호버(locked=false)는 포인터를 따라다니고, 클릭(locked=true)은 그 자리 고정.
@@ -182,7 +192,8 @@ export default function Calendar() {
   const findEvAt = (x: number, y: number): HTMLElement | null => {
     const stack = document.elementsFromPoint(x, y) as HTMLElement[]
     for (const el of stack) {
-      const fe = el.closest('.fc-event') as HTMLElement | null
+      // 월/주=.fc-event, 목록(listMonth)=.fc-list-event 행
+      const fe = el.closest('.fc-event, .fc-list-event') as HTMLElement | null
       if (fe && detailMap.current.has(fe)) return fe
     }
     return null
@@ -215,7 +226,7 @@ export default function Calendar() {
   // 뷰/기준일 변경 시 FullCalendar 동기화 (월=dayGridMonth / 주(시간표)=timeGridWeek).
   // changeView는 flushSync를 유발하므로 렌더 단계 밖(setTimeout)에서 호출.
   useEffect(() => {
-    const fcView = view === 'month' ? 'dayGridMonth' : 'timeGridWeek'
+    const fcView = view === 'month' ? 'dayGridMonth' : view === 'agenda' ? 'listMonth' : 'timeGridWeek'
     const id = setTimeout(() => {
       calRef.current?.getApi().changeView(fcView, keyOf(anchor))
     }, 0)
@@ -353,13 +364,13 @@ export default function Calendar() {
   // ── 네비게이션 ──
   const shift = (dir: number) => {
     setAnchor((a) =>
-      view === 'month' ? new Date(a.getFullYear(), a.getMonth() + dir, 1) : addDays(a, dir * 7),
+      view === 'timeweek' ? addDays(a, dir * 7) : new Date(a.getFullYear(), a.getMonth() + dir, 1),
     )
   }
   const goToday = () => setAnchor(parseKey(todayKey))
 
   const periodLabel = useMemo(() => {
-    if (view === 'month') return `${anchor.getFullYear()}년 ${anchor.getMonth() + 1}월`
+    if (view !== 'timeweek') return `${anchor.getFullYear()}년 ${anchor.getMonth() + 1}월`
     const ws = weekStart
     const we = addDays(ws, 6)
     return we.getMonth() === ws.getMonth()
@@ -427,7 +438,7 @@ export default function Calendar() {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', order: 1 }}>
           {/* 월/주 토글 */}
           <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: '9px' }}>
-            {([{ k: 'month', l: '월' }, { k: 'timeweek', l: '주' }] as const).map((t) => (
+            {([{ k: 'agenda', l: '목록' }, { k: 'month', l: '월' }, { k: 'timeweek', l: '주' }] as const).map((t) => (
               <Box
                 key={t.k}
                 component="button"
@@ -571,8 +582,8 @@ export default function Calendar() {
         >
           <FullCalendar
             ref={calRef}
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
+            plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+            initialView={isMobile ? 'listMonth' : 'dayGridMonth'}
             initialDate={keyOf(anchor)}
             locale={koLocale}
             headerToolbar={false}
