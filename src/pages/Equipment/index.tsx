@@ -814,7 +814,7 @@ export default function Equipment() {
         ) : (
           /* ── 목록 (수량 열 없음·헤더 정렬) ── */
           <Box sx={{ overflowX: 'auto' }}>
-            <Box component="table" className="eq-ledger" sx={{ width: '100%', minWidth: 720 }}>
+            <Box component="table" className="eq-ledger rtable" sx={{ width: '100%', minWidth: { xs: 0, md: 720 } }}>
               <Box component="thead">
                 <Box component="tr">
                   {PROJ_COLS.map((col) => (
@@ -827,18 +827,18 @@ export default function Equipment() {
                   const chip = phaseChip(info)
                   return (
                     <Box component="tr" key={g.repCode || idx} onClick={() => setPicked({ g, info })} sx={{ cursor: 'pointer' }}>
-                      <Box component="td" className="lg-code">{codeRange(g)}</Box>
-                      <Box component="td" className="lg-primary">
+                      <Box component="td" className="lg-code" data-label="관리번호">{codeRange(g)}</Box>
+                      <Box component="td" className="lg-primary rtable-title" data-label="장비명">
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                           <NameWithQty name={g.name} count={g.count} fontSize={11.5} />
                           {g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400, fontSize: 11, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
                       </Box>
-                      <Box component="td">{g.mgr || '-'}</Box>
-                      <Box component="td">{g.type || '-'}</Box>
-                      <Box component="td"><Box component="span" className="lg-chip" sx={{ color: STAGE_DOT(info) }}>{chip.label}</Box></Box>
-                      <Box component="td">{info.dueMonth || '-'}</Box>
-                      <Box component="td" sx={{ textAlign: 'right' }}>{g.price ? `${k(g.price)} 천원` : '-'}</Box>
+                      <Box component="td" data-label="담당자">{g.mgr || '-'}</Box>
+                      <Box component="td" data-label="구분">{g.type || '-'}</Box>
+                      <Box component="td" data-label="현재 단계"><Box component="span" className="lg-chip" sx={{ color: STAGE_DOT(info) }}>{chip.label}</Box></Box>
+                      <Box component="td" data-label="다음 일정">{info.dueMonth || '-'}</Box>
+                      <Box component="td" data-label="총 도입금액" sx={{ textAlign: 'right' }}>{g.price ? `${k(g.price)} 천원` : '-'}</Box>
                     </Box>
                   )
                 })}

@@ -670,6 +670,21 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .lg-chip{display:inline-flex;align-items:center;min-height:21px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--ink3);font-size:10.5px;white-space:nowrap}
 .lg-miss{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
 
+/* ── 반응형 표 → 카드 (재사용) ──
+   넓은 표를 모바일(<=768px)에서 세로 카드로 스택. 적용법: <table className="rtable">에
+   각 <td data-label="열이름">, 대표(제목) 셀엔 className="rtable-title" 부여. thead는 모바일에서 숨김. */
+@media(max-width:768px){
+  .rtable{display:block;min-width:0 !important}
+  .rtable thead{display:none}
+  .rtable tbody{display:block}
+  .rtable tbody tr{display:flex;flex-direction:column;gap:5px;background:var(--ink2);border:1px solid var(--border2);border-radius:12px;padding:11px 14px;margin-bottom:10px}
+  .rtable tbody tr:hover{background:var(--ink2)}
+  .rtable tbody td{display:flex;align-items:baseline;justify-content:space-between;gap:14px;border:none !important;padding:2px 0 !important;font-size:12.5px;text-align:left !important;white-space:normal !important}
+  .rtable tbody td::before{content:attr(data-label);color:var(--text3);font-weight:600;font-size:11px;flex:none}
+  .rtable tbody td.rtable-title{order:-1;justify-content:flex-start;font-size:14px;font-weight:700;padding:0 0 6px 0 !important;margin-bottom:3px;border-bottom:1px solid var(--border2) !important}
+  .rtable tbody td.rtable-title::before{display:none}
+}
+
 /* 모바일(<=768px): 요약·필터 가로 스와이프, 테이블 가로 스크롤(스크롤바 숨김·터치 가능).
    sx(emotion) 특이도를 넘기 위해 레이아웃만 !important로 덮음(스크롤바 숨김은 sx 미적용 속성). */
 @media (max-width:768px){
