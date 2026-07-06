@@ -274,7 +274,7 @@ export default function Notice() {
           <TableCell sx={{ color: 'text.primary' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
               {isExpired(n) && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="neutral" label="종료" /></Box>}
-              <Typography variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+              <Typography variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
               </Typography>
               {n.isNew && (
@@ -287,10 +287,10 @@ export default function Notice() {
               )}
             </Box>
           </TableCell>
-          <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textAlign: 'center' }}>{n.author || '-'}</TableCell>
+          <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textAlign: 'center', display: { xs: 'none', sm: 'table-cell' } }}>{n.author || '-'}</TableCell>
           <TableCell sx={{ whiteSpace: 'nowrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-              <Box component="span" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{n.date}</Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'flex-end', md: 'space-between' }, gap: 1 }}>
+              <Box component="span" sx={{ color: 'text.disabled', fontFamily: 'monospace', display: { xs: 'none', md: 'inline' } }}>{n.date}</Box>
               <ExpandMoreIcon sx={{ fontSize: 18, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
             </Box>
           </TableCell>
@@ -368,14 +368,14 @@ export default function Notice() {
         ) : (
           <AppCard padding={0}>
             <Box sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: 640, '& td, & th': { borderColor: 'divider' } }}>
+              <Table size="small" sx={{ minWidth: { xs: 0, md: 640 }, '& td, & th': { borderColor: 'divider' } }}>
                 <TableHead>
                   <TableRow sx={{ '& th': { color: 'text.secondary', fontWeight: 600, whiteSpace: 'nowrap' } }}>
                     <TableCell sx={{ width: 48, textAlign: 'center' }}>번호</TableCell>
                     <TableCell sx={{ width: 68 }}>분류</TableCell>
                     <TableCell>제목</TableCell>
-                    <TableCell sx={{ width: 100, textAlign: 'center' }}>작성자</TableCell>
-                    <TableCell sx={{ width: 120 }}>작성일</TableCell>
+                    <TableCell sx={{ width: 100, textAlign: 'center', display: { xs: 'none', sm: 'table-cell' } }}>작성자</TableCell>
+                    <TableCell sx={{ width: { xs: 44, md: 120 }, textAlign: { xs: 'right', md: 'left' } }}>작성일</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
