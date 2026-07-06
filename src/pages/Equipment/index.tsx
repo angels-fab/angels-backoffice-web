@@ -814,7 +814,9 @@ export default function Equipment() {
         ) : (
           /* ── 목록 (수량 열 없음·헤더 정렬) ── */
           <Box sx={{ overflowX: 'auto' }}>
-            <Box component="table" className="eq-ledger rtable" sx={{ width: '100%', minWidth: { xs: 0, md: 720 } }}>
+            {/* sm(≥600)부터 minWidth 720 — 카드화 경계(≤768) 위 구간(769~899)에서도 표 최소폭 유지.
+                ≤768은 .rtable가 min-width:0 !important로 덮어 카드로 스택(md=900이라 md 쓰면 769~899 공백 발생). */}
+            <Box component="table" className="eq-ledger rtable" sx={{ width: '100%', minWidth: { xs: 0, sm: 720 } }}>
               <Box component="thead">
                 <Box component="tr">
                   {PROJ_COLS.map((col) => (
