@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import type { ChangeEvent, MouseEvent } from 'react'
+import type { MouseEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -26,7 +26,6 @@ import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import PushPinIcon from '@mui/icons-material/PushPin'
-import SearchIcon from '@mui/icons-material/Search'
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
 import SecurityIcon from '@mui/icons-material/Security'
 import ApartmentIcon from '@mui/icons-material/Apartment'
@@ -40,6 +39,7 @@ import {
   AppCard,
   StatusChip,
   EmptyState,
+  SearchBar,
 } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -356,20 +356,7 @@ export default function Notice() {
           </Box>
 
           <Box sx={{ ml: { sm: 'auto' }, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Box sx={{ position: 'relative' }}>
-              <SearchIcon sx={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 15, color: 'text.disabled' }} />
-              <Box
-                component="input"
-                value={query}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-                placeholder="제목·작성자·분류 검색"
-                sx={(t) => ({
-                  width: 180, height: 32, border: `1px solid ${t.palette.divider}`, borderRadius: '8px',
-                  p: '0 10px 0 28px', fontSize: 12, fontFamily: 'inherit', color: 'text.primary', bgcolor: 'background.default',
-                  outline: 'none', '&::placeholder': { color: t.palette.text.disabled }, '&:focus': { borderColor: t.palette.primary.main },
-                })}
-              />
-            </Box>
+            <SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" width={200} />
             {isAdmin && (
               <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: 18 }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap' }}>
                 새 공지

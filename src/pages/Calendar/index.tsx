@@ -18,8 +18,7 @@ import EventNoteIcon from '@mui/icons-material/EventNote'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import SearchIcon from '@mui/icons-material/Search'
-import { PageContainer, PageHeader } from '@/components/ds'
+import { PageContainer, PageHeader, SearchBar } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadCalEvents, moveCalEvent } from '@/store/slices/calSlice'
 import type { CalEvent } from '@/types'
@@ -485,20 +484,8 @@ export default function Calendar() {
         </Box>
 
         {/* 검색 — 우측(주말 보기 왼쪽). 좁은 화면에서는 한 줄 전체로 내려감(order 3 + basis 100%) */}
-        <Box sx={{ position: 'relative', order: { xs: 3, sm: 2 }, ml: { sm: 'auto' }, flex: { xs: '1 1 100%', sm: '0 1 240px' }, maxWidth: { sm: 260 } }}>
-          <SearchIcon sx={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: 'text.disabled' }} />
-          <Box
-            component="input"
-            value={search}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-            placeholder="검색 (팀원·구분·내용)"
-            sx={(th) => ({
-              width: '100%', height: 34, border: `1px solid ${th.palette.divider}`, borderRadius: '9px',
-              p: '0 10px 0 30px', fontSize: 13, fontFamily: 'inherit', color: 'text.primary', bgcolor: 'background.paper', outline: 'none',
-              '&::placeholder': { color: th.palette.text.disabled },
-              '&:focus': { borderColor: th.palette.primary.main },
-            })}
-          />
+        <Box sx={{ order: { xs: 3, sm: 2 }, ml: { sm: 'auto' }, flex: { xs: '1 1 100%', sm: '0 1 240px' }, maxWidth: { sm: 260 } }}>
+          <SearchBar value={search} onChange={setSearch} placeholder="검색 (팀원·구분·내용)" width="100%" />
         </Box>
 
         {/* 주말 보기 — 검색 오른쪽 */}
