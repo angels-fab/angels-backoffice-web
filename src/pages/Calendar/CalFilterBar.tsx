@@ -13,6 +13,7 @@ import LibraryAddCheckIcon from '@mui/icons-material/LibraryAddCheck'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { type TeamMember } from './members'
 import type { RealCat } from './catMeta'
+import { TintChip, PillChip } from '@/components/FilterChip'
 
 export interface FilterMember {
   member: TeamMember
@@ -51,78 +52,37 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
 
 const LABEL = { fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none' } as const
 
-// Shift+클릭(또는 모바일 복수모드)이면 추가선택. Shift+클릭 시 텍스트가 선택되지 않도록 mousedown에서 기본동작 차단.
-const preventShiftSelect = (e: React.MouseEvent) => { if (e.shiftKey) e.preventDefault() }
-
-// 팀원 선택 칩 — 알약형 둥근 사각형(이름 표시). 선택=색 배경+흰 글자 / 미선택=옅은 배경+테두리.
+// 팀원 선택 칩 — 공용 PillChip. 선택=색 배경+흰 글자 / 미선택=옅은 배경+테두리.
 function MemberPill({ m, on, multi, onToggle }: { m: TeamMember; on: boolean; multi: boolean; onToggle: (additive: boolean) => void }) {
   return (
-    <Box
-      role="button"
-      tabIndex={0}
-      aria-label={`${m.name}${on ? '' : ' (해제됨)'}`}
-      aria-pressed={on}
-      title={m.name}
-      onMouseDown={preventShiftSelect}
-      onClick={(e) => onToggle(!!e.shiftKey || multi)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onToggle(!!e.shiftKey || multi)
-        }
-      }}
-      sx={{
-        height: 26,
-        display: 'inline-flex',
-        alignItems: 'center',
-        px: '8px',
-        borderRadius: '10px',
-        fontSize: 12,
-        fontWeight: 700,
-        letterSpacing: '-0.01em',
-        lineHeight: 1,
-        whiteSpace: 'nowrap',
-        cursor: 'pointer',
-        userSelect: 'none',
-        border: '1px solid',
-        transition: 'background .15s, color .15s, border-color .15s',
-        ...(on
-          ? { bgcolor: m.color, color: '#fff', borderColor: m.color }
-          : { bgcolor: alpha(m.color, 0.1), color: 'text.secondary', borderColor: alpha(m.color, 0.3) }),
-        '&:hover': on ? { filter: 'brightness(1.08)' } : { bgcolor: alpha(m.color, 0.2), borderColor: alpha(m.color, 0.5) },
-        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
-      }}
-    >
-      {m.name}
-    </Box>
+    <PillChip
+      label={m.name}
+      color={m.color}
+      on={on}
+      multi={multi}
+      ariaLabel={`${m.name}${on ? '' : ' (해제됨)'}`}
+      onToggle={onToggle}
+    />
   )
 }
 
-// 종류 칩 (아이콘+이름+건수) — on이면 강조, 아니면 dim
-function CatChip({ icon: Icon, label, color, count, on, rotate, onClick }: {
+// 종류 칩 (아이콘+이름+건수) — 공용 TintChip. on이면 강조, 아니면 dim. (호버 피드백 없음: 현행 유지)
+function CatChip({ icon: Icon, label, color, count, on, rotate, onToggle }: {
   icon: SvgIconComponent; label: string; color: string; count: number; on: boolean; rotate?: boolean
-  onClick: (e: { shiftKey?: boolean }) => void
+  onToggle: (additive: boolean) => void
 }) {
   return (
-    <Box
-      role="button"
-      tabIndex={0}
-      aria-label={`${label} ${count}건${on ? '' : ' (해제됨)'}`}
-      aria-pressed={on}
-      onMouseDown={preventShiftSelect}
-      onClick={onClick}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(e) } }}
-      sx={{
-        display: 'inline-flex', alignItems: 'center', gap: '5px', p: '4px 9px', borderRadius: '999px',
-        bgcolor: alpha(color, on ? 0.16 : 0.06), cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none',
-        opacity: on ? 1 : 0.45, transition: 'opacity .15s, background .15s',
-        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
-      }}
+    <TintChip
+      on={on}
+      color={color}
+      ariaLabel={`${label} ${count}건${on ? '' : ' (해제됨)'}`}
+      onToggle={onToggle}
+      sx={{ p: '4px 9px' }}
     >
       <Icon sx={{ fontSize: 13, color, ...(rotate ? { transform: 'rotate(45deg)' } : {}) }} />
       <Box component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>{label.split('/')[0]}</Box>
       <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>{count}</Box>
-    </Box>
+    </TintChip>
   )
 }
 
@@ -191,7 +151,7 @@ export default function CalFilterBar({
               key={c.id}
               icon={CAT_ICON[c.id]} label={c.label} color={c.color} count={c.count} on={c.on}
               rotate={c.id === 'trip_intl'}
-              onClick={(e) => onToggleCat(c.id, !!e.shiftKey || effMulti)}
+              onToggle={(add) => onToggleCat(c.id, add || effMulti)}
             />
           ))}
         </Box>

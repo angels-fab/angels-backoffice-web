@@ -20,6 +20,7 @@ import TableCell from '@mui/material/TableCell'
 import Collapse from '@mui/material/Collapse'
 import { alpha, useTheme } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
+import { TintChip } from '@/components/FilterChip'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
@@ -334,23 +335,18 @@ export default function Notice() {
               const color = catColor(theme, c)
               const Icon = CAT_ICON[c]
               return (
-                <Box
+                <TintChip
                   key={c}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`${c} ${catCounts[c] || 0}건${on ? '' : ' (해제됨)'}`}
-                  onClick={() => toggleCat(c)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCat(c) } }}
-                  style={{ backgroundColor: alpha(color, on ? 0.16 : 0.06), color, opacity: on ? 1 : 0.45 }}
-                  sx={{
-                    display: 'inline-flex', alignItems: 'center', gap: '5px', p: '5px 11px', borderRadius: '999px',
-                    cursor: 'pointer', transition: 'opacity .15s, background-color .15s',
-                  }}
+                  on={on}
+                  color={color}
+                  ariaLabel={`${c} ${catCounts[c] || 0}건${on ? '' : ' (해제됨)'}`}
+                  onToggle={() => toggleCat(c)}
+                  sx={{ p: '5px 11px', color }}
                 >
                   {Icon && <Icon sx={{ fontSize: 15, flex: 'none' }} />}
                   <Box component="span" sx={{ fontSize: 12.5, fontWeight: 600 }}>{c}</Box>
                   <Box component="span" sx={{ fontSize: 11, opacity: 0.7 }}>{catCounts[c] || 0}</Box>
-                </Box>
+                </TintChip>
               )
             })}
           </Box>
