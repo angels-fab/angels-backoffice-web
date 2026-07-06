@@ -14,6 +14,7 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import Drawer from '@mui/material/Drawer'
 import Checkbox from '@mui/material/Checkbox'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import AddIcon from '@mui/icons-material/Add'
 import UndoIcon from '@mui/icons-material/Undo'
@@ -26,6 +27,7 @@ import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates'
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
+import SwapVertIcon from '@mui/icons-material/SwapVert'
 import { alpha } from '@mui/material/styles'
 import {
   PageContainer,
@@ -57,7 +59,7 @@ import type { NewTaskForm } from './NewTaskCard'
 import ReorderableTaskGrid from './ReorderableTaskGrid'
 import KpiSection from './KpiSection'
 import StatusDragGrid from './StatusDragGrid'
-import WorkActionSheet from './WorkActionSheet'
+import type { WorkSwipeConfig } from './SwipeableCard'
 import { genieOverlayInto, type DropZone, type StatusDropResult, type WorkView } from './dropZones'
 
 // 통합 Undo/Redo 히스토리 — 순서변경·상태변경을 시간순 하나의 스택으로
@@ -76,6 +78,9 @@ const VIEW_META: Record<WorkView, { title: string; Icon: React.ElementType; colo
   done: { title: '완료 업무', Icon: TaskAltIcon, color: 'text.secondary' },
   remind: { title: 'Remind 업무', Icon: TipsAndUpdatesIcon, color: 'accent.amber' },
 }
+
+// 스와이프 [상태] 피커의 존별 라벨(목표 상태 표시)
+const ZONE_LABELS: Record<DropZone, string> = { inProgress: '진행중으로', hold: '보류로', done: '완료로', remind: 'Remind로' }
 
 // 발의일자 최신순 (최근 업무가 위)
 const cmp = (a: WorkItem, b: WorkItem) => dateSortValue(b.start) - dateSortValue(a.start)
@@ -239,7 +244,7 @@ export default function Work() {
   // 복수선택(Cmd/Ctrl·Shift·모바일 롱프레스) + KPI 드롭존 드래그 상태 + 상태 저장 직렬화 큐
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [selMode, setSelMode] = useState(false) // 모바일 선택모드
-  const [sheet, setSheet] = useState<WorkItem | null>(null) // 모바일 카드 액션 시트(롱프레스로 열림)
+  const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true }) // 모바일=카드 스와이프 액션 활성
   const [reorderMode, setReorderMode] = useState(false) // 진행중 순서 편집(흔들림) 모드 — 모바일 액션 시트에서 진입
   const selAnchor = useRef<string | null>(null)
   const [dragUi, setDragUi] = useState<{ dragging: boolean; zone: DropZone | null }>({ dragging: false, zone: null })
@@ -993,41 +998,36 @@ export default function Work() {
   )
   const awaitingHidden = deleteReq?.phase === 'clearing'
 
-  // ── 모바일 카드 액션 시트(터치 롱프레스) — PC 드래그 3종을 터치에서 한 입구로 ──
-  const openActionSheet = (num: string) => {
-    if (!isAdmin || !user || !authKey) return
-    const t = items.find((x) => x.num === num)
-    if (t && editingId !== t.id) {
-      try { navigator.vibrate?.(12) } catch { /* iOS 웹 등 미지원은 무시 */ }
-      clearSelection()
-      setSheet(t)
-    }
-  }
-  const sheetStatus = (zone: DropZone) => {
-    if (sheet) handleStatusDrop([sheet.num], zone)?.finalize()
-    setSheet(null)
-  }
-  const sheetReorder = () => { clearSelection(); setReorderMode(true); setSheet(null) }
-  const sheetEdit = () => { const num = sheet?.num; clearSelection(); setSheet(null); if (num) handleCardDoubleClick(num) }
-  const sheetDelete = () => { const t = sheet; setSheet(null); if (t) requestDelete(t) }
-  // 시트에 노출할 '상태 변경' 대상 — 실제로 변화가 생기는 존만(무반응 옵션·취소 카드의 죽은 액션 방지)
-  const sheetZones = useMemo<DropZone[]>(() => {
-    if (!sheet) return []
-    if (!['inProgress', 'hold', 'done'].includes(classify(sheet))) return [] // 취소·기타는 상태변경 불가(무반응)
-    const before = { status: (sheet.status || '').trim(), remind: !!sheet.remind }
+  // ── 모바일 카드 왼쪽 스와이프 액션(상태·수정·삭제) — PC 드래그 3종을 터치에서 대체 ──
+  // 그 카드에서 실제로 변화가 생기는 상태 존만(무반응 옵션·취소 카드의 죽은 액션 방지)
+  const zonesForTask = (t: WorkItem): DropZone[] => {
+    if (!['inProgress', 'hold', 'done'].includes(classify(t))) return [] // 취소·기타는 상태변경 불가(무반응)
+    const before = { status: (t.status || '').trim(), remind: !!t.remind }
     return (['inProgress', 'hold', 'done', 'remind'] as DropZone[]).filter((z) => {
-      const after = zoneFields(sheet, z)
+      const after = zoneFields(t, z)
       return before.status !== after.status || before.remind !== after.remind
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sheet])
+  }
+  // 모바일에서만 스와이프 래핑(PC는 undefined → 그리드가 카드 직접 렌더, 무회귀)
+  const swipeConfig: WorkSwipeConfig | undefined = isMobile
+    ? {
+        enabled: isAdmin,
+        buildActions: (num: string) => {
+          const t = items.find((x) => x.num === num)
+          const statusOptions = t
+            ? zonesForTask(t).map((z) => ({ key: z, label: ZONE_LABELS[z], onPress: () => handleStatusDrop([num], z)?.finalize() }))
+            : []
+          return {
+            statusOptions,
+            onEdit: () => handleCardDoubleClick(num),
+            onDelete: () => { if (t) requestDelete(t) },
+          }
+        },
+      }
+    : undefined
   // KPI 뷰가 바뀌면 순서 편집 모드 해제(진행중 전용). 수정 진입 시에도 해제(편집 셀 touch-action 충돌 방지).
   useEffect(() => { setReorderMode(false) }, [view])
   useEffect(() => { if (editingId != null) setReorderMode(false) }, [editingId])
-  // 열린 시트의 대상이 목록에서 사라지면(외부 삭제·재로딩) 시트 닫기(stale 방지)
-  useEffect(() => { if (sheet && !items.some((i) => i.num === sheet.num)) setSheet(null) }, [items, sheet])
-  // 시트가 열린 동안엔 카드 선택을 비워 둔다 — 롱프레스 직후 잔여 클릭이 카드를 선택하는 오염을 타이밍 무관하게 차단
-  useEffect(() => { if (sheet && selected.size > 0) setSelected(new Set()) }, [sheet, selected])
 
   // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
   useEffect(() => {
@@ -1192,6 +1192,12 @@ export default function Work() {
                 <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
               </BtnGroup>
             )}
+            {/* 순서 편집 토글 — 모바일 진행중 뷰 전용. 켜면 카드를 끌어 순서변경(그동안 스와이프 비활성) */}
+            {isAdmin && isMobile && view === 'inProgress' && (
+              <BtnGroup>
+                <GroupBtn title="순서 편집 (카드를 끌어 순서변경)" label="순서" icon={<SwapVertIcon sx={{ fontSize: 16 }} />} selected={reorderMode} onClick={() => { clearSelection(); setReorderMode((v) => !v) }} />
+              </BtnGroup>
+            )}
             <BtnGroup>
               <GroupBtn title="날짜 정렬(재클릭 시 방향 전환)" label="날짜" icon={sortArrow('date')} selected={listSort?.key === 'date'} onClick={() => toggleListSort('date')} />
               <GroupBtn title="담당자 가나다 정렬(재클릭 시 방향 전환)" label="담당자" icon={sortArrow('mgr')} selected={listSort?.key === 'mgr'} onClick={() => toggleListSort('mgr')} />
@@ -1231,7 +1237,7 @@ export default function Work() {
               items={inProgressListed}
               canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
               reorderMode={reorderMode}
-              onLongPress={openActionSheet}
+              swipe={swipeConfig}
               onReorder={handleReorder}
               renderCard={(t) => renderTask(t, 'green')}
               selectedNums={selected}
@@ -1256,13 +1262,14 @@ export default function Work() {
           <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
         ) : (
           <StatusDragGrid
+            key={view}
             items={listed}
             renderCard={(t) => renderTask(t, view === 'remind' ? 'amber' : classify(t) === 'done' ? 'gray' : classify(t) === 'hold' ? 'blue' : 'green')}
             canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
             selectedNums={selected}
             selMode={selMode}
             onSelectToggle={toggleSelect}
-            onLongPress={openActionSheet}
+            swipe={swipeConfig}
             onDragStartCard={selectOnly}
             onStatusDrop={handleStatusDrop}
             onZoneChange={onZoneChange}
@@ -1321,19 +1328,7 @@ export default function Work() {
         />
       )}
 
-      {/* 모바일 카드 액션 시트(터치 롱프레스) — 상태변경/순서변경/수정/삭제 */}
-      <WorkActionSheet
-        task={sheet}
-        zones={sheetZones}
-        canReorder={view === 'inProgress'}
-        onClose={() => setSheet(null)}
-        onStatus={sheetStatus}
-        onReorder={sheetReorder}
-        onEdit={sheetEdit}
-        onDelete={sheetDelete}
-      />
-
-      {/* 순서 편집(흔들림) 모드 배너 — 진행중 뷰, 액션 시트의 '순서 변경'으로 진입 */}
+      {/* 순서 편집(흔들림) 모드 배너 — 진행중 뷰, 툴바의 '순서' 토글로 진입 */}
       {reorderMode && view === 'inProgress' && (
         <Box
           sx={{
@@ -1344,7 +1339,7 @@ export default function Work() {
             pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
           }}
         >
-          <Typography sx={{ flex: 1, fontSize: 13.5 }}>카드를 길게 눌러 끌면 순서가 바뀝니다</Typography>
+          <Typography sx={{ flex: 1, fontSize: 13.5 }}>카드를 끌어 순서를 바꾸세요</Typography>
           <Button size="small" variant="contained" onClick={() => setReorderMode(false)} sx={{ bgcolor: '#fff', color: 'primary.main', '&:hover': { bgcolor: '#f0f0f0' } }}>
             완료
           </Button>

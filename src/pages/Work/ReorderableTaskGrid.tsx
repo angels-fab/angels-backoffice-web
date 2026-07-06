@@ -1,13 +1,13 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
 import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
+import SwipeableCard, { type WorkSwipeConfig } from './SwipeableCard'
 
 // 시안(docs/mockups/work-card-motion-only.html · work-drag-trash.html) 물리값
 const ACTIVATION_DISTANCE = 8 // px 이상 움직여야 드래그 시작(마우스·순서편집 터치)
-const SHEET_HOLD_MS = 500 // 터치 롱프레스 → 액션 시트(스크롤·오터치와 확실히 구분되게 길게)
 const SWITCH_MARGIN = 28 // 새 슬롯이 현재 슬롯보다 이만큼 명확히 가까울 때만 재배치(중심거리, px)
 const SWITCH_LOCK_MS = 240 // 재배치 시작 후 추가 재배치 판정 잠금(왕복 방지)
 const MOVE_DURATION = 240 // 주변 카드 자리 이동 애니메이션(ms)
@@ -53,10 +53,10 @@ interface Props {
   awaitingHidden?: boolean
   /** 그리드 첫 칸에 렌더할 요소(새 업무 인라인 작성카드) — 드래그·선택 대상 아님 */
   leading?: React.ReactNode
-  /** 순서 편집(흔들림) 모드 — true일 때만 터치 롱프레스가 순서변경 드래그를 시작. false면 롱프레스=액션 시트 */
+  /** 순서 편집(흔들림) 모드 — true면 터치 이동이 순서변경 드래그. false면 터치는 스와이프 액션 */
   reorderMode?: boolean
-  /** 터치 롱프레스(순서모드 아님) — 부모가 카드 액션 시트를 연다 */
-  onLongPress?: (num: string) => void
+  /** 모바일 카드 왼쪽 스와이프 액션(상태·수정·삭제). 순서모드 아닐 때 터치를 담당 */
+  swipe?: WorkSwipeConfig
 }
 
 /**
@@ -73,7 +73,7 @@ export default function ReorderableTaskGrid({
   items, renderCard, canDrag, onReorder,
   selectedNums, onSelectToggle, onDragStartCard, onStatusDrop, onZoneChange,
   onCardDoubleClick, onDeleteDrop, onTrashHover, onRightEdge, awaitingNums, awaitingHidden, leading,
-  reorderMode, onLongPress,
+  reorderMode, swipe,
 }: Props) {
   const gridRef = useRef<HTMLDivElement>(null)
   const cellRefs = useRef(new Map<string, HTMLElement>())
@@ -84,6 +84,7 @@ export default function ReorderableTaskGrid({
   const [overIndex, setOverIndex] = useState(0)
   const [multiCount, setMultiCount] = useState(0)
   const [overTrash, setOverTrash] = useState(false) // 토큰 danger 톤
+  const [swipeOpen, setSwipeOpen] = useState<string | null>(null) // 왼쪽 스와이프로 트레이 열린 카드(한 번에 하나)
   // 존 드롭 → 흡입 동안 숨길 카드(상태 기반 — 드래그 카드는 placeholder로 언마운트돼 있어
   // cellRefs 명령형 숨김이 닿지 않고, 패치 후 목록에 남는 카드는 inline 스타일이 잔존하므로)
   const [hidingNums, setHidingNums] = useState<Set<string>>(new Set())
@@ -102,7 +103,9 @@ export default function ReorderableTaskGrid({
   const onTrashHoverRef = useRef(onTrashHover); onTrashHoverRef.current = onTrashHover
   const onRightEdgeRef = useRef(onRightEdge); onRightEdgeRef.current = onRightEdge
   const reorderModeRef = useRef(reorderMode); reorderModeRef.current = reorderMode
-  const onLongPressRef = useRef(onLongPress); onLongPressRef.current = onLongPress
+  const swipeRef = useRef(swipe); swipeRef.current = swipe
+  // 순서 편집 진입 시 열린 스와이프 트레이 닫기(스와이프↔순서드래그 충돌 방지)
+  useEffect(() => { if (reorderMode) setSwipeOpen(null) }, [reorderMode])
   const rightEdgeRef = useRef(false)
   const trashHoverRef = useRef(false) // 휴지통 위 여부
   const overIndexRef = useRef(0)
@@ -113,7 +116,6 @@ export default function ReorderableTaskGrid({
   const settleFrom = useRef<null | { num: string; rect: DOMRect }>(null) // 드롭 정착 애니메이션 시작 위치
   const autoScrollRaf = useRef<number | null>(null) // 드래그 중 상/하단 자동 스크롤 루프
   const zoneRef = useRef<null | { zone: DropZone; rect: DOMRect }>(null)
-  const longPress = useRef<number | null>(null)
   const lastPointer = useRef({ x: 0, y: 0 })
   const suppressClickUntil = useRef(0)
   const suppressNextClick = useRef(false) // 롱프레스로 시트를 연 뒤 다음 클릭 1회를 시각과 무관하게 무조건 억제(오선택 방지)
@@ -181,7 +183,6 @@ export default function ReorderableTaskGrid({
     document.removeEventListener('pointercancel', onCancel)
     document.removeEventListener('keydown', onKeyDown)
     document.removeEventListener('selectstart', onSelectStart)
-    if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
   }
   const cleanupPending = () => { pending.current = null; cleanupListeners() }
 
@@ -241,7 +242,6 @@ export default function ReorderableTaskGrid({
     })
     overIndexRef.current = originIndex
     switchLockUntil.current = 0
-    if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
     // 텍스트 선택 방지: 기존 선택 해제 + 드래그 동안 selectstart 차단
     try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
     document.addEventListener('selectstart', onSelectStart)
@@ -434,6 +434,8 @@ export default function ReorderableTaskGrid({
     if (e.button !== 0) return // 주 버튼만
     suppressNextClick.current = false // 새 상호작용 시작 — 억제 플래그 초기화
     lastPointerType.current = e.pointerType || 'mouse'
+    // 순서모드 아닐 때 터치는 SwipeableCard(왼쪽 스와이프)가 담당. 순서모드 터치·마우스는 그리드가 처리
+    if (e.pointerType === 'touch' && swipeRef.current && !reorderModeRef.current) return
     if ((e.target as HTMLElement).closest('button, a')) return // 버튼·링크는 드래그 제외
     if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
@@ -451,19 +453,6 @@ export default function ReorderableTaskGrid({
     document.addEventListener('pointerup', onEnd)
     document.addEventListener('pointercancel', onCancel)
     document.addEventListener('keydown', onKeyDown)
-    // 평소(터치): 길게 눌러 액션 시트. 순서 편집 모드는 타이머 없이 onMove에서 바로 드래그(홀드 불필요).
-    if (pending.current.pointerType === 'touch' && !reorderModeRef.current) {
-      longPress.current = window.setTimeout(() => {
-        if (!pending.current) return
-        if (onLongPressRef.current) {
-          suppressNextClick.current = true // 손을 늦게 떼도 다음 클릭 1회 억제(시간 만료 허점 제거)
-          onLongPressRef.current(num)
-          cleanupPending()
-        } else {
-          beginDrag(lastPointer.current.x, lastPointer.current.y) // 폴백: 롱프레스 콜백 미제공 시 기존 드래그
-        }
-      }, SHEET_HOLD_MS)
-    }
   }
 
   // 클릭 선택(캡처 단계) — 일반=그 카드만 / Cmd·Ctrl=토글 / Shift=범위. 드롭 직후 클릭은 억제.
@@ -549,7 +538,18 @@ export default function ReorderableTaskGrid({
               transition: 'opacity .15s',
             }}
           >
-            {renderCard(item)}
+            {swipe ? (
+              <SwipeableCard
+                enabled={swipe.enabled && !reorderMode && canDragRef.current(item)}
+                open={swipeOpen === num}
+                onOpenChange={(o) => setSwipeOpen(o ? num : null)}
+                {...swipe.buildActions(num)}
+              >
+                {renderCard(item)}
+              </SwipeableCard>
+            ) : (
+              renderCard(item)
+            )}
           </Box>
         )
       })}

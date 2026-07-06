@@ -3,9 +3,9 @@ import Box from '@mui/material/Box'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
 import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
+import SwipeableCard, { type WorkSwipeConfig } from './SwipeableCard'
 
 const ACTIVATION_DISTANCE = 8 // px 이상 이동해야 드래그 시작(마우스)
-const LONG_PRESS_MS = 480 // 터치 롱프레스 = 복수선택 모드 진입
 const CLICK_SUPPRESS_MS = 350
 const SCROLL_EDGE = 72 // 화면 상/하단 자동 스크롤 시작 영역(px)
 const SCROLL_MIN = 3
@@ -21,8 +21,8 @@ interface Props {
   selMode: boolean
   /** 일반=단일선택 / toggle(Cmd·Ctrl·선택모드 탭)=추가·해제 / shift=범위 */
   onSelectToggle: (num: string, mods: { shift: boolean; toggle: boolean }) => void
-  /** 터치 롱프레스 — 선택모드 진입+선택 */
-  onLongPress: (num: string) => void
+  /** 모바일 카드 왼쪽 스와이프 액션(상태·수정·삭제). 있으면 터치는 스와이프가 담당 */
+  swipe?: WorkSwipeConfig
   /** 선택 안 된 카드를 잡음 — 부모가 그 카드만 선택 */
   onDragStartCard: (num: string) => void
   /** 드롭존에 놓음 — null=변경 없음(원위치) */
@@ -50,7 +50,7 @@ interface Props {
  */
 export default function StatusDragGrid({
   items, renderCard, canDrag, selectedNums, selMode,
-  onSelectToggle, onLongPress, onDragStartCard, onStatusDrop, onZoneChange,
+  onSelectToggle, swipe, onDragStartCard, onStatusDrop, onZoneChange,
   onCardDoubleClick, onDeleteDrop, onTrashHover, onRightEdge, awaitingNums, awaitingHidden,
 }: Props) {
   const rootRef = useRef<HTMLDivElement>(null)
@@ -59,6 +59,7 @@ export default function StatusDragGrid({
   const [dragNum, setDragNum] = useState<string | null>(null)
   const [multiCount, setMultiCount] = useState(0)
   const [overTrash, setOverTrash] = useState(false) // 토큰 danger 톤
+  const [swipeOpen, setSwipeOpen] = useState<string | null>(null) // 왼쪽 스와이프로 트레이 열린 카드(한 번에 하나)
   // 존 드롭 → 흡입 동안 숨길 카드(상태 기반 — 패치 후에도 같은 목록에 남는 카드에
   // inline 스타일이 영구 잔존하는 유령 셀 방지. 흡입 후 패치와 함께 해제)
   const [hidingNums, setHidingNums] = useState<Set<string>>(new Set())
@@ -68,7 +69,7 @@ export default function StatusDragGrid({
   const selectedRef = useRef(selectedNums); selectedRef.current = selectedNums
   const selModeRef = useRef(selMode); selModeRef.current = selMode
   const onSelectToggleRef = useRef(onSelectToggle); onSelectToggleRef.current = onSelectToggle
-  const onLongPressRef = useRef(onLongPress); onLongPressRef.current = onLongPress
+  const swipeRef = useRef(swipe); swipeRef.current = swipe
   const onDragStartCardRef = useRef(onDragStartCard); onDragStartCardRef.current = onDragStartCard
   const onStatusDropRef = useRef(onStatusDrop); onStatusDropRef.current = onStatusDrop
   const onZoneChangeRef = useRef(onZoneChange); onZoneChangeRef.current = onZoneChange
@@ -82,7 +83,6 @@ export default function StatusDragGrid({
   const pending = useRef<null | { num: string; pointerType: string; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
   const drag = useRef<null | { num: string; nums: string[]; width: number; height: number; offsetX: number; offsetY: number; scale: number }>(null)
   const zoneRef = useRef<null | { zone: DropZone; rect: DOMRect }>(null)
-  const longPress = useRef<number | null>(null)
   const lastPointer = useRef({ x: 0, y: 0 })
   const autoScrollRaf = useRef<number | null>(null) // 드래그 중 상/하단 자동 스크롤 루프
   const suppressClickUntil = useRef(0)
@@ -96,7 +96,6 @@ export default function StatusDragGrid({
     document.removeEventListener('pointercancel', onCancel)
     document.removeEventListener('keydown', onKeyDown)
     document.removeEventListener('selectstart', onSelectStart)
-    if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
   }
   const cleanupPending = () => { pending.current = null; cleanupListeners() }
 
@@ -116,7 +115,6 @@ export default function StatusDragGrid({
       num: p.num, nums,
       width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY, scale: 1,
     }
-    if (longPress.current) { clearTimeout(longPress.current); longPress.current = null }
     try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
     document.addEventListener('selectstart', onSelectStart)
     document.body.style.cursor = 'grabbing'
@@ -263,6 +261,8 @@ export default function StatusDragGrid({
     if (e.button !== 0) return
     suppressNextClick.current = false // 새 상호작용 시작 — 억제 플래그 초기화
     lastPointerType.current = e.pointerType || 'mouse'
+    // 터치는 SwipeableCard(왼쪽 스와이프 액션)가 담당 — 그리드는 마우스 경로만. (상태보드는 터치 드래그 없음)
+    if (e.pointerType === 'touch' && swipeRef.current) return
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
     if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
@@ -280,16 +280,6 @@ export default function StatusDragGrid({
     document.addEventListener('pointerup', onEnd)
     document.addEventListener('pointercancel', onCancel)
     document.addEventListener('keydown', onKeyDown)
-    if (pending.current.pointerType === 'touch') {
-      // 터치 롱프레스 = 카드 액션 시트 열기(상태변경·수정·삭제)
-      longPress.current = window.setTimeout(() => {
-        if (pending.current) {
-          suppressNextClick.current = true // 손을 늦게 떼도 다음 클릭 1회 억제(오선택 방지)
-          onLongPressRef.current(num)
-          cleanupPending()
-        }
-      }, LONG_PRESS_MS)
-    }
   }
 
   // 클릭 선택(캡처 단계) — 일반=그 카드만 / Cmd·Ctrl·선택모드 탭=토글 / Shift=범위
@@ -353,7 +343,18 @@ export default function StatusDragGrid({
               transition: 'opacity .15s',
             }}
           >
-            {renderCard(t)}
+            {swipe ? (
+              <SwipeableCard
+                enabled={swipe.enabled && canDragRef.current(t)}
+                open={swipeOpen === t.num}
+                onOpenChange={(o) => setSwipeOpen(o ? t.num : null)}
+                {...swipe.buildActions(t.num)}
+              >
+                {renderCard(t)}
+              </SwipeableCard>
+            ) : (
+              renderCard(t)
+            )}
           </Box>
         )
       })}
