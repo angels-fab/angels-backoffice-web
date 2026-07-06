@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import Box from '@mui/material/Box'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import { ROADMAP_STEPS, type RoadmapStatus } from '@/constants/roadmap'
@@ -73,6 +74,16 @@ function LegendDot({ color, ring, border }: { color: string; ring?: string; bord
 }
 
 export default function RoadmapCard({ pulse = true, showLegend = true }: RoadmapCardProps) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const currentRef = useRef<HTMLDivElement>(null)
+  // 모바일 등 가로 스크롤 시, 마운트 때 '진행중' 단계를 가운데로 스크롤(안 그러면 화면 밖이라 안 보임).
+  // 데스크톱은 전체가 다 보여 overflow가 없으므로 scrollLeft가 0으로 유지돼 무영향.
+  useEffect(() => {
+    const c = scrollRef.current, n = currentRef.current
+    if (!c || !n) return
+    const target = n.offsetLeft - (c.clientWidth - n.offsetWidth) / 2
+    if (target > 1) c.scrollLeft = target
+  }, [])
   return (
     <Box
       sx={{
@@ -133,7 +144,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
       </Box>
 
       {/* 타임라인 (overflow-x:auto는 overflow-y도 auto로 계산되므로, 펄스 링이 위로 안 잘리게 위쪽 패딩 확보) */}
-      <Box sx={{ overflowX: 'auto', p: '16px 4px 12px' }}>
+      <Box ref={scrollRef} sx={{ overflowX: 'auto', p: '16px 4px 12px' }}>
         <Box sx={{ position: 'relative', minWidth: 780 }}>
           {/* 진행 커넥터 */}
           <Box
@@ -158,6 +169,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
               return (
                 <Box
                   key={step.label}
+                  ref={isCurrent ? currentRef : undefined}
                   sx={{
                     flex: step.wide ? '1.2 1 0' : '1 1 0',
                     minWidth: 0,
