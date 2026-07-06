@@ -37,10 +37,9 @@ export default function MainLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn, isAdmin])
 
-  // 원본의 body 클래스 토글: 페이지 진입 시 in-page, 장비현황은 eq-wide(넓은 레이아웃)
+  // 원본의 body 클래스 토글: 페이지 진입 시 in-page
   useEffect(() => {
     document.body.classList.toggle('in-page', pathname !== '/')
-    document.body.classList.toggle('eq-wide', pathname === '/equipment')
     window.scrollTo(0, 0)
   }, [pathname])
 
