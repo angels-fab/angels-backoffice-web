@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import { layout } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
 import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
@@ -436,6 +437,8 @@ export default function ReorderableTaskGrid({
     lastPointerType.current = e.pointerType || 'mouse'
     // 순서모드 아닐 때 터치는 SwipeableCard(왼쪽 스와이프)가 담당. 순서모드 터치·마우스는 그리드가 처리
     if (e.pointerType === 'touch' && swipeRef.current && !reorderModeRef.current) return
+    // 순서모드 터치 드래그는 손잡이(≡)에서만 시작 — 카드 본문 터치는 페이지 세로 스크롤에 양보(카드 많아도 훑기 가능)
+    if (e.pointerType === 'touch' && reorderModeRef.current && !(e.target as HTMLElement).closest('[data-reorder-handle]')) return
     if ((e.target as HTMLElement).closest('button, a')) return // 버튼·링크는 드래그 제외
     if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
@@ -528,8 +531,8 @@ export default function ReorderableTaskGrid({
             // 카드가 늘어난 셀 높이를 채우도록(높이 통일 시 하단 여백이 카드 내부로) — 자식(카드) height:100%
             // 선택 표시는 카드(TaskAccordion)가 상태 대표색으로 직접 그림 — 셀 래퍼의 공통 파란 outline 제거
             sx={{
-              // 순서 편집 모드: touch-action none → 터치 이동이 페이지 스크롤 대신 카드 드래그로 감(핵심)
-              position: 'relative', minWidth: 0, touchAction: reorderMode ? 'none' : 'pan-y',
+              // 카드 본문은 항상 세로 스크롤 허용(pan-y). 순서 드래그는 손잡이(≡)만 touch-action:none으로 잡음.
+              position: 'relative', minWidth: 0, touchAction: 'pan-y',
               '& > *:first-of-type': { height: '100%' },
               borderRadius: 1,
               ...(isDragSource ? { opacity: 0.35 } : {}),
@@ -538,6 +541,23 @@ export default function ReorderableTaskGrid({
               transition: 'opacity .15s',
             }}
           >
+            {reorderMode && (
+              <Box
+                data-reorder-handle
+                aria-label="순서 이동 손잡이"
+                sx={{
+                  position: 'absolute', top: 6, left: 6, zIndex: 4,
+                  width: 32, height: 32, borderRadius: 1.5,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  bgcolor: 'rgba(15,17,23,.74)', color: '#fff',
+                  border: '1px solid', borderColor: 'divider',
+                  cursor: 'grab', touchAction: 'none',
+                  '&:active': { cursor: 'grabbing' },
+                }}
+              >
+                <DragIndicatorIcon sx={{ fontSize: 20 }} />
+              </Box>
+            )}
             {swipe ? (
               <SwipeableCard
                 enabled={swipe.enabled && !reorderMode && canDragRef.current(item)}

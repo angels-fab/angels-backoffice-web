@@ -1339,7 +1339,7 @@ export default function Work() {
             pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
           }}
         >
-          <Typography sx={{ flex: 1, fontSize: 13.5 }}>카드를 끌어 순서를 바꾸세요</Typography>
+          <Typography sx={{ flex: 1, fontSize: 13.5 }}>왼쪽 손잡이(≡)를 끌어 순서를 바꾸세요 · 목록은 그대로 스크롤됩니다</Typography>
           <Button size="small" variant="contained" onClick={() => setReorderMode(false)} sx={{ bgcolor: '#fff', color: 'primary.main', '&:hover': { bgcolor: '#f0f0f0' } }}>
             완료
           </Button>
