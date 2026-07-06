@@ -1,10 +1,19 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
+import Box from '@mui/material/Box'
 import CloseIcon from '@mui/icons-material/Close'
 import EventIcon from '@mui/icons-material/Event'
 import { addCalEvent, updateCalEvent, deleteCalEvent, fetchCalSeries } from '@/api/calendar'
 import { useRole } from '@/auth/role'
 import type { CalEvent } from '@/types'
+import { MEMBERS, given, eventParticipants } from './members'
+
+// 제목에서 '@참석자' 부분을 뗀 기본 제목([구분]·내용) — 참석자는 별도 피커가 관리
+const baseTitle = (t: string): string => {
+  const at = (t || '').indexOf('@')
+  return (at >= 0 ? t.slice(0, at) : t).trim()
+}
+const memberColor = (name: string): string => MEMBERS.find((m) => m.name === name)?.color ?? '#7D8899'
 
 interface Props {
   open: boolean
@@ -44,7 +53,8 @@ function inclusiveEndDate(endDt: string): string {
  */
 export default function CalEventWrite({ open, mode, event, initialDate, initialEndDate, onClose, onSaved }: Props) {
   const { user, isAdmin } = useRole()
-  const [title, setTitle] = useState('')
+  const [title, setTitle] = useState('') // 기본 제목([구분]·내용) — @참석자 제외
+  const [attendees, setAttendees] = useState<string[]>([]) // 참석자 이름들(제목 @뒤로 합쳐 저장)
   const [allDay, setAllDay] = useState(false)
   const [date, setDate] = useState('') // 시작일
   const [endDate, setEndDate] = useState('') // 종료일(선택 — 비우면 시작일)
@@ -66,7 +76,8 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     setRepeat('none')
     setRepeatUntil('')
     if (mode === 'edit' && event) {
-      setTitle(event.title)
+      setTitle(baseTitle(event.title))
+      setAttendees(eventParticipants(event.title))
       setAllDay(event.allDay)
       setDate(dateOnly(event.start))
       setLoc(event.loc && event.loc !== '-' ? event.loc : '')
@@ -95,6 +106,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       }
     } else {
       setTitle('')
+      setAttendees([])
       setAllDay(false)
       setDate(initialDate || '')
       setEndDate(initialEndDate || initialDate || '')
@@ -111,8 +123,10 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   const buildInput = () => {
     const s = date
     const e = repeat !== 'none' ? date : (endDate || date) // 반복 일정은 단일 날짜 기준
+    // 기본 제목 + '@참석자1, 참석자2'(있을 때만) — 표시/파싱 규칙과 동일 포맷
+    const fullTitle = title.trim() + (attendees.length ? ` @${attendees.join(', ')}` : '')
     return {
-      title: title.trim(),
+      title: fullTitle,
       loc: loc.trim(),
       allDay,
       start: allDay ? s : `${s}T${startTime}`,
@@ -182,8 +196,36 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         <div className="mform">
           <label className="mfield">
             <span className="mlabel">제목 *</span>
-            <input className="minput" value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목" />
+            <input className="minput" value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목 (참석자는 아래에서 선택)" />
           </label>
+
+          <div className="mfield">
+            <span className="mlabel">참석자</span>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, pt: 0.25 }}>
+              {[...new Set([...MEMBERS.filter((m) => m.id !== '센터').map((m) => m.name), ...attendees])].map((name) => {
+                const on = attendees.includes(name)
+                const c = memberColor(name)
+                return (
+                  <Box
+                    key={name}
+                    component="button"
+                    type="button"
+                    onClick={() => setAttendees((a) => (on ? a.filter((n) => n !== name) : [...a, name]))}
+                    sx={{
+                      px: 1.25, height: 28, borderRadius: '999px', cursor: 'pointer',
+                      fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', lineHeight: 1,
+                      border: '1.5px solid', transition: 'all .12s',
+                      borderColor: on ? c : 'divider',
+                      bgcolor: on ? c : 'transparent',
+                      color: on ? '#fff' : 'text.secondary',
+                    }}
+                  >
+                    {given(name)}
+                  </Box>
+                )
+              })}
+            </Box>
+          </div>
 
           <div className="mfield">
             <span className="mlabel">기간</span>
