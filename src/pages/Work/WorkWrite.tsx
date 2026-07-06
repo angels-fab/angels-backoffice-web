@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { createPortal } from 'react-dom'
+import Dialog from '@mui/material/Dialog'
 import CloseIcon from '@mui/icons-material/Close'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import { createWork, updateWork } from '@/api/works'
@@ -58,8 +58,6 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
     setChief(e?.chief ?? false)
   }, [open, editing])
 
-  if (!open) return null
-
   const submit = async (ev: FormEvent) => {
     ev.preventDefault()
     if (saving) return
@@ -90,21 +88,28 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
     }
   }
 
-  return createPortal(
-    <div
-      className="modal-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !saving) onClose()
+  return (
+    <Dialog
+      open={open}
+      onClose={() => { if (!saving) onClose() }}
+      slotProps={{
+        paper: {
+          sx: {
+            width: 560, maxWidth: '100%', m: 2,
+            bgcolor: 'background.paper', backgroundImage: 'none',
+            border: 1, borderColor: 'divider', borderRadius: '16px', p: '22px 24px',
+          },
+        },
       }}
     >
-      <form className="modal-card" onSubmit={submit}>
-        <div className="modal-title">
-          <EditNoteIcon /> {isEdit ? '업무 수정' : '업무 등록'}
-          <button type="button" className="modal-x" onClick={onClose} disabled={saving} aria-label="닫기">
-            <CloseIcon sx={{ fontSize: 18 }} />
-          </button>
-        </div>
-        <div className="mform">
+      <form onSubmit={submit}>
+      <div className="modal-title">
+        <EditNoteIcon /> {isEdit ? '업무 수정' : '업무 등록'}
+        <button type="button" className="modal-x" onClick={onClose} disabled={saving} aria-label="닫기">
+          <CloseIcon sx={{ fontSize: 18 }} />
+        </button>
+      </div>
+      <div className="mform">
           <div className="mrow">
             <label className="mfield">
               <span className="mlabel">구분</span>
@@ -199,7 +204,6 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
           </div>
         </div>
       </form>
-    </div>,
-    document.body,
+    </Dialog>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import Box from '@mui/material/Box'
+import Dialog from '@mui/material/Dialog'
 import CloseIcon from '@mui/icons-material/Close'
 import EventIcon from '@mui/icons-material/Event'
 import { addCalEvent, updateCalEvent, deleteCalEvent, fetchCalSeries } from '@/api/calendar'
@@ -118,8 +119,6 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, event])
 
-  if (!open) return null
-
   const buildInput = () => {
     const s = date
     const e = repeat !== 'none' ? date : (endDate || date) // 반복 일정은 단일 날짜 기준
@@ -180,13 +179,20 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   }
 
   return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={e => {
-        if (e.target === e.currentTarget && !busy) onClose()
+    <Dialog
+      open={open}
+      onClose={() => { if (!busy) onClose() }}
+      slotProps={{
+        paper: {
+          sx: {
+            width: 560, maxWidth: '100%', m: 2,
+            bgcolor: 'background.paper', backgroundImage: 'none',
+            border: 1, borderColor: 'divider', borderRadius: '16px', p: '22px 24px',
+          },
+        },
       }}
     >
-      <form className="modal-card" onSubmit={submit}>
+      <form onSubmit={submit}>
         <div className="modal-title">
           <EventIcon /> {mode === 'add' ? '일정 추가' : '일정 수정'}
           <button type="button" className="modal-x" onClick={onClose} disabled={busy} aria-label="닫기">
@@ -316,6 +322,6 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           </div>
         </div>
       </form>
-    </div>
+    </Dialog>
   )
 }
