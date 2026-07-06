@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import Dialog from '@mui/material/Dialog'
+import Box from '@mui/material/Box'
+import TextField from '@mui/material/TextField'
+import MenuItem from '@mui/material/MenuItem'
+import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import IconButton from '@mui/material/IconButton'
+import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import { createWork, updateWork } from '@/api/works'
@@ -102,108 +110,52 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
         },
       }}
     >
-      <form onSubmit={submit}>
-      <div className="modal-title">
-        <EditNoteIcon /> {isEdit ? '업무 수정' : '업무 등록'}
-        <button type="button" className="modal-x" onClick={onClose} disabled={saving} aria-label="닫기">
-          <CloseIcon sx={{ fontSize: 18 }} />
-        </button>
-      </div>
-      <div className="mform">
-          <div className="mrow">
-            <label className="mfield">
-              <span className="mlabel">구분</span>
-              <input className="minput" value={cat} onChange={(e) => setCat(e.target.value)} placeholder="예: 회의, 채용, 예산" />
-            </label>
-            <label className="mfield">
-              <span className="mlabel">상태</span>
-              <select
-                className="minput"
-                value={status}
-                onChange={(e) => {
-                  const v = e.target.value
-                  setStatus(v)
-                  if (v === '완료') setChief(false) // 완료 시 검토 필요 자동 해제
-                }}
-              >
-                {WORK_STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-          <label className="mfield">
-            <span className="mlabel">업무 *</span>
-            <textarea
-              className="minput mtextarea"
-              value={task}
-              onChange={(e) => setTask(e.target.value)}
-              placeholder="업무 내용 (첫 줄이 제목으로 표시됩니다)"
-            />
-          </label>
-          <div className="mrow">
-            <label className="mfield">
-              <span className="mlabel">관련부서</span>
-              <input className="minput" value={dept} onChange={(e) => setDept(e.target.value)} />
-            </label>
-            <label className="mfield">
-              <span className="mlabel">담당자</span>
-              <input className="minput" value={mgr} onChange={(e) => setMgr(e.target.value)} />
-            </label>
-          </div>
-          <div className="mrow">
-            <label className="mfield">
-              <span className="mlabel">발의일자</span>
-              <input className="minput" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
-            </label>
-            <label className="mfield">
-              <span className="mlabel">예정일</span>
-              <input className="minput" type="date" value={plan} onChange={(e) => setPlan(e.target.value)} />
-            </label>
-          </div>
-          <div className="mrow">
-            <label className="mfield">
-              <span className="mlabel">시간</span>
-              <input className="minput" value={time} onChange={(e) => setTime(e.target.value)} placeholder="예: 14:00" />
-            </label>
-            <label className="mfield">
-              <span className="mlabel">장소</span>
-              <input className="minput" value={loc} onChange={(e) => setLoc(e.target.value)} />
-            </label>
-          </div>
-          <label className="mfield">
-            <span className="mlabel">관련자료</span>
-            <input className="minput" value={mat} onChange={(e) => setMat(e.target.value)} />
-          </label>
-          <label className="mfield">
-            <span className="mlabel">링크</span>
-            <input className="minput" value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://" />
-          </label>
-          <div className="mrow">
-            <div className="mfield">
-              <span className="mlabel">Remind</span>
-              <label className="mcheck">
-                <input type="checkbox" checked={remind} onChange={(e) => setRemind(e.target.checked)} />
-                긴급 업무로 표시
-              </label>
-            </div>
-            <div className="mfield">
-              <span className="mlabel">검토 필요</span>
-              <label className="mcheck">
-                <input type="checkbox" checked={chief} disabled={status === '완료'} onChange={(e) => setChief(e.target.checked)} />
-                {status === '완료' ? '완료 시 자동 해제됨' : '검토 필요 표시'}
-              </label>
-            </div>
-          </div>
-          {error && <div className="merror">{error}</div>}
-          <div className="mactions">
-            <button type="button" className="mbtn" onClick={onClose} disabled={saving}>취소</button>
-            <button type="submit" className="mbtn mbtn-primary" disabled={saving}>
-              {saving ? '저장 중...' : isEdit ? '수정' : '등록'}
-            </button>
-          </div>
-        </div>
-      </form>
+      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <EditNoteIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+          <Typography component="span" sx={{ fontSize: 16, fontWeight: 600 }}>{isEdit ? '업무 수정' : '업무 등록'}</Typography>
+          <IconButton onClick={onClose} disabled={saving} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+        </Box>
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <TextField label="구분" size="small" fullWidth value={cat} onChange={(e) => setCat(e.target.value)} placeholder="예: 회의, 채용, 예산" />
+          <TextField
+            label="상태" size="small" fullWidth select value={status}
+            onChange={(e) => { const v = e.target.value; setStatus(v); if (v === '완료') setChief(false) }}
+          >
+            {WORK_STATUS_OPTIONS.map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}
+          </TextField>
+        </Box>
+
+        <TextField label="업무" size="small" fullWidth required multiline minRows={4} value={task} onChange={(e) => setTask(e.target.value)} placeholder="업무 내용 (첫 줄이 제목으로 표시됩니다)" />
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <TextField label="관련부서" size="small" fullWidth value={dept} onChange={(e) => setDept(e.target.value)} />
+          <TextField label="담당자" size="small" fullWidth value={mgr} onChange={(e) => setMgr(e.target.value)} />
+        </Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <TextField label="발의일자" size="small" fullWidth type="date" value={start} onChange={(e) => setStart(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField label="예정일" size="small" fullWidth type="date" value={plan} onChange={(e) => setPlan(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        </Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <TextField label="시간" size="small" fullWidth value={time} onChange={(e) => setTime(e.target.value)} placeholder="예: 14:00" />
+          <TextField label="장소" size="small" fullWidth value={loc} onChange={(e) => setLoc(e.target.value)} />
+        </Box>
+        <TextField label="관련자료" size="small" fullWidth value={mat} onChange={(e) => setMat(e.target.value)} />
+        <TextField label="링크" size="small" fullWidth value={link} onChange={(e) => setLink(e.target.value)} placeholder="https://" />
+
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 0.5 }}>
+          <FormControlLabel control={<Checkbox size="small" checked={remind} onChange={(e) => setRemind(e.target.checked)} />} label="긴급 업무로 표시 (Remind)" />
+          <FormControlLabel control={<Checkbox size="small" checked={chief} disabled={status === '완료'} onChange={(e) => setChief(e.target.checked)} />} label={status === '완료' ? '검토 필요 (완료 시 자동 해제)' : '검토 필요 표시'} />
+        </Box>
+
+        {error && <Typography color="error" variant="body2">{error}</Typography>}
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 0.5 }}>
+          <Button onClick={onClose} disabled={saving} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button type="submit" variant="contained" disabled={saving}>{saving ? '저장 중...' : isEdit ? '수정' : '등록'}</Button>
+        </Box>
+      </Box>
     </Dialog>
   )
 }

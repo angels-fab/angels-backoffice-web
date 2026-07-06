@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import Box from '@mui/material/Box'
 import Dialog from '@mui/material/Dialog'
+import TextField from '@mui/material/TextField'
+import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
+import Typography from '@mui/material/Typography'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import CloseIcon from '@mui/icons-material/Close'
 import EventIcon from '@mui/icons-material/Event'
 import { addCalEvent, updateCalEvent, deleteCalEvent, fetchCalSeries } from '@/api/calendar'
@@ -192,22 +200,18 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         },
       }}
     >
-      <form onSubmit={submit}>
-        <div className="modal-title">
-          <EventIcon /> {mode === 'add' ? '일정 추가' : '일정 수정'}
-          <button type="button" className="modal-x" onClick={onClose} disabled={busy} aria-label="닫기">
-            <CloseIcon sx={{ fontSize: 18 }} />
-          </button>
-        </div>
-        <div className="mform">
-          <label className="mfield">
-            <span className="mlabel">제목 *</span>
-            <input className="minput" value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목 (참석자는 아래에서 선택)" />
-          </label>
+      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <EventIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+          <Typography component="span" sx={{ fontSize: 16, fontWeight: 600 }}>{mode === 'add' ? '일정 추가' : '일정 수정'}</Typography>
+          <IconButton onClick={onClose} disabled={busy} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+        </Box>
 
-          <div className="mfield">
-            <span className="mlabel">참석자</span>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, pt: 0.25 }}>
+        <TextField label="제목" size="small" fullWidth required value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목 (참석자는 아래에서 선택)" />
+
+        <Box>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>참석자</Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
               {[...new Set([...MEMBERS.filter((m) => m.id !== '센터').map((m) => m.name), ...attendees])].map((name) => {
                 const on = attendees.includes(name)
                 const c = memberColor(name)
@@ -231,97 +235,56 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 )
               })}
             </Box>
-          </div>
+          </Box>
 
-          <div className="mfield">
-            <span className="mlabel">기간</span>
-            <label className="mcheck">
-              <input type="checkbox" checked={allDay} onChange={e => setAllDay(e.target.checked)} />
-              종일
-            </label>
-          </div>
+          <FormControlLabel
+            control={<Checkbox size="small" checked={allDay} onChange={e => setAllDay(e.target.checked)} />}
+            label="종일"
+          />
 
-          <div className="mrow">
-            <label className="mfield">
-              <span className="mlabel">시작일 *</span>
-              <input className="minput" type="date" value={date} onChange={e => setDate(e.target.value)} />
-            </label>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+            <TextField label="시작일" size="small" fullWidth required type="date" value={date} onChange={e => setDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             {repeat === 'none' && (
-              <label className="mfield">
-                <span className="mlabel">종료일 (선택)</span>
-                <input className="minput" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
-              </label>
+              <TextField label="종료일 (선택)" size="small" fullWidth type="date" value={endDate} onChange={e => setEndDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
             )}
-          </div>
+          </Box>
 
           {!allDay && (
-            <div className="mrow">
-              <label className="mfield">
-                <span className="mlabel">시작 시간</span>
-                <input className="minput" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
-              </label>
-              <label className="mfield">
-                <span className="mlabel">종료 시간</span>
-                <input className="minput" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
-              </label>
-            </div>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+              <TextField label="시작 시간" size="small" fullWidth type="time" value={startTime} onChange={e => setStartTime(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+              <TextField label="종료 시간" size="small" fullWidth type="time" value={endTime} onChange={e => setEndTime(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            </Box>
           )}
 
-          <div className="mfield">
-            <span className="mlabel">반복</span>
-            <div className="mchip-row">
+          <Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>반복</Typography>
+            <ToggleButtonGroup exclusive size="small" value={repeat} onChange={(_, v) => { if (v !== null) setRepeat(v) }}>
               {REPEAT_LABEL.map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={`mchip${repeat === value ? ' active' : ''}`}
-                  onClick={() => setRepeat(value)}
-                >
-                  {label}
-                </button>
+                <ToggleButton key={value} value={value} sx={{ textTransform: 'none', px: 1.5 }}>{label}</ToggleButton>
               ))}
-            </div>
+            </ToggleButtonGroup>
             {repeat !== 'none' && (
               <>
-                <label className="mfield" style={{ marginTop: 8 }}>
-                  <span className="mlabel">반복 종료일 (비우면 6개월)</span>
-                  <input className="minput" type="date" value={repeatUntil} onChange={e => setRepeatUntil(e.target.value)} />
-                </label>
+                <TextField label="반복 종료일 (비우면 6개월)" size="small" fullWidth type="date" value={repeatUntil} onChange={e => setRepeatUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ mt: 1.5 }} />
                 {mode === 'edit' && recurring && (
-                  <span className="mhint">반복 일정의 수정·삭제는 시리즈 전체에 반영돼요.</span>
+                  <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 0.75 }}>반복 일정의 수정·삭제는 시리즈 전체에 반영돼요.</Typography>
                 )}
               </>
             )}
-          </div>
+          </Box>
 
-          <label className="mfield">
-            <span className="mlabel">장소 (선택)</span>
-            <input className="minput" value={loc} onChange={e => setLoc(e.target.value)} placeholder="예: 본관 3층 회의실" />
-          </label>
+          <TextField label="장소 (선택)" size="small" fullWidth value={loc} onChange={e => setLoc(e.target.value)} placeholder="예: 본관 3층 회의실" />
 
-          {error && <div className="merror">{error}</div>}
+          {error && <Typography color="error" variant="body2">{error}</Typography>}
 
-          <div className="mactions">
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 0.5 }}>
             {mode === 'edit' && (
-              <button
-                type="button"
-                className="mbtn"
-                onClick={remove}
-                disabled={busy}
-                style={{ marginRight: 'auto', color: '#E05B54', borderColor: '#E05B5455' }}
-              >
-                삭제
-              </button>
+              <Button color="error" onClick={remove} disabled={busy} sx={{ mr: 'auto' }}>삭제</Button>
             )}
-            <button type="button" className="mbtn" onClick={onClose} disabled={busy}>
-              취소
-            </button>
-            <button type="submit" className="mbtn mbtn-primary" disabled={busy}>
-              {busy ? '처리 중...' : mode === 'add' ? '추가' : '수정'}
-            </button>
-          </div>
-        </div>
-      </form>
+            <Button onClick={onClose} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
+            <Button type="submit" variant="contained" disabled={busy}>{busy ? '처리 중...' : mode === 'add' ? '추가' : '수정'}</Button>
+          </Box>
+        </Box>
     </Dialog>
   )
 }

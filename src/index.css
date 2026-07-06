@@ -831,39 +831,11 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   .ntc-panel-inner{padding:2px 14px 16px}
 }
 
-/* ── 공지 새 글쓰기 버튼 + 모달 ── */
+/* ── 공지 새 글쓰기 버튼 ── */
 .write-btn{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:1px solid var(--amber);background:var(--amber);color:#000;font-size:12.5px;font-weight:600;font-family:inherit;cursor:pointer;transition:filter .15s}
 .write-btn:hover{filter:brightness(1.08)}
 .write-btn svg{font-size:17px}
-/* 모달 컨테이너는 MUI Dialog로 통일(WorkWrite·ScheduleWrite·CalEventWrite). 아래는 그 내부 폼 요소 스타일. */
-.modal-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:16px}
-.modal-title svg{font-size:20px;color:var(--text2)}
-.modal-x{margin-left:auto;background:none;border:none;color:var(--text2);cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center}
-.modal-x:hover{color:var(--text);background:var(--ink3)}
-.mform{display:flex;flex-direction:column;gap:12px}
-.mrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:480px){.mrow{grid-template-columns:1fr}}
-.mfield{display:flex;flex-direction:column;gap:5px}
-.mlabel{font-size:11.5px;font-weight:600;color:var(--text2)}
-.minput{background:var(--ink);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;padding:9px 12px;outline:none;transition:border-color .15s;width:100%;color-scheme:dark}
-.minput:focus{border-color:var(--blue)}
-.minput::placeholder{color:var(--text3)}
-.mtextarea{min-height:150px;resize:vertical;line-height:1.7}
-.merror{font-size:12px;color:var(--red)}
-.mactions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
-.mbtn{padding:8px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .15s}
-.mbtn:hover{color:var(--text);border-color:var(--text3)}
-.mbtn-primary{background:var(--amber);border-color:var(--amber);color:#000;font-weight:600}
-.mbtn-primary:hover{filter:brightness(1.08);color:#000}
-.mbtn-primary:disabled{opacity:.6;cursor:default}
-.mbtn:disabled,.modal-x:disabled{opacity:.5;cursor:default}
-.mchip-row{display:flex;flex-wrap:wrap;gap:6px}
-.mchip{padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text2);font-size:12px;font-family:inherit;cursor:pointer;transition:all .12s}
-.mchip:hover{color:var(--text);border-color:var(--text3)}
-.mchip.active{background:rgba(84,145,218,.14);border-color:var(--blue);color:var(--blue);font-weight:600}
-.mcheck{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;user-select:none;padding:8px 0}
-.mcheck input{width:16px;height:16px;accent-color:var(--amber);cursor:pointer}
-.mhint{font-size:12px;color:var(--text3);padding:6px 0}
+/* 작성 폼 3종(WorkWrite·ScheduleWrite·CalEventWrite)은 MUI Dialog + TextField로 통일 — 커스텀 .modal-*/.m* CSS 전부 제거됨 */
 
 /* ── Post detail ── */
 .post-wrap{background:var(--ink2);border:0.5px solid var(--border);border-radius:10px;overflow:hidden}

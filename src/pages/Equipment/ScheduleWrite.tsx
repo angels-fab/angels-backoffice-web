@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import Dialog from '@mui/material/Dialog'
+import Box from '@mui/material/Box'
+import TextField from '@mui/material/TextField'
+import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
+import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import { createSchedule, updateSchedule } from '@/api/eq'
@@ -112,82 +117,49 @@ export default function ScheduleWrite({ open, onClose, editing, batchCodes, onSa
         },
       }}
     >
-      <form onSubmit={submit}>
-        <div className="modal-title">
-          <LocalShippingIcon /> {isEdit ? '장비 도입 수정' : '장비 추가'}
-          <button type="button" className="modal-x" onClick={onClose} disabled={saving} aria-label="닫기">
-            <CloseIcon sx={{ fontSize: 18 }} />
-          </button>
-        </div>
-        <div className="mform">
-          <div className="mrow">
-            <label className="mfield">
-              <span className="mlabel">관리번호</span>
-              <input className="minput" value={code} onChange={(e) => setCode(e.target.value)} placeholder="예: PR-001" />
-            </label>
-            <label className="mfield">
-              <span className="mlabel">진행상태</span>
-              <input className="minput" value={status} onChange={(e) => setStatus(e.target.value)} placeholder="예: 도입예정" />
-            </label>
-          </div>
-          <label className="mfield">
-            <span className="mlabel">장비명</span>
-            <input className="minput" value={name} onChange={(e) => setName(e.target.value)} />
-          </label>
-          <div className="mrow">
-            <label className="mfield">
-              <span className="mlabel">담당자</span>
-              <input className="minput" value={mgr} onChange={(e) => setMgr(e.target.value)} />
-            </label>
-            <label className="mfield">
-              <span className="mlabel">시작년월</span>
-              <input className="minput" type="date" value={start} onChange={(e) => setStart(e.target.value)} />
-            </label>
-          </div>
+      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <LocalShippingIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
+          <Typography component="span" sx={{ fontSize: 16, fontWeight: 600 }}>{isEdit ? '장비 도입 수정' : '장비 추가'}</Typography>
+          <IconButton onClick={onClose} disabled={saving} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+        </Box>
 
-          <div className="mfield">
-            <span className="mlabel">단계별 소요기간 (개월, 0.5 단위)</span>
-            <div className="mrow" style={{ flexWrap: 'wrap', gap: 8 }}>
-              {STAGE_LABELS.map((label) => (
-                <label key={label} className="mfield" style={{ minWidth: 96, flex: '1 1 96px' }}>
-                  <span className="mlabel" style={{ fontSize: 12 }}>{label}</span>
-                  <input
-                    className="minput"
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    value={stages[label] ?? ''}
-                    onChange={(e) => setStage(label, e.target.value)}
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <TextField label="관리번호" size="small" fullWidth value={code} onChange={(e) => setCode(e.target.value)} placeholder="예: PR-001" />
+          <TextField label="진행상태" size="small" fullWidth value={status} onChange={(e) => setStatus(e.target.value)} placeholder="예: 도입예정" />
+        </Box>
+        <TextField label="장비명" size="small" fullWidth value={name} onChange={(e) => setName(e.target.value)} />
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <TextField label="담당자" size="small" fullWidth value={mgr} onChange={(e) => setMgr(e.target.value)} />
+          <TextField label="시작년월" size="small" fullWidth type="date" value={start} onChange={(e) => setStart(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        </Box>
 
-          <div className="mrow">
-            <label className="mfield">
-              <span className="mlabel">구분</span>
-              <input className="minput" value={cat} onChange={(e) => setCat(e.target.value)} placeholder="예: 외자/내자" />
-            </label>
-            <label className="mfield">
-              <span className="mlabel">도입방법</span>
-              <input className="minput" value={method} onChange={(e) => setMethod(e.target.value)} />
-            </label>
-          </div>
-          <label className="mfield">
-            <span className="mlabel">도입금액 (원)</span>
-            <input className="minput" type="number" min="0" value={price} onChange={(e) => setPrice(e.target.value)} />
-          </label>
+        <Box>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 1 }}>단계별 소요기간 (개월, 0.5 단위)</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 1 }}>
+            {STAGE_LABELS.map((label) => (
+              <TextField
+                key={label} label={label} size="small" type="number"
+                value={stages[label] ?? ''}
+                onChange={(e) => setStage(label, e.target.value)}
+                slotProps={{ htmlInput: { step: 0.5, min: 0 }, inputLabel: { shrink: true } }}
+              />
+            ))}
+          </Box>
+        </Box>
 
-          {error && <div className="merror">{error}</div>}
-          <div className="mactions">
-            <button type="button" className="mbtn" onClick={onClose} disabled={saving}>취소</button>
-            <button type="submit" className="mbtn mbtn-primary" disabled={saving}>
-              {saving ? '저장 중...' : isEdit ? '수정' : '등록'}
-            </button>
-          </div>
-        </div>
-      </form>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <TextField label="구분" size="small" fullWidth value={cat} onChange={(e) => setCat(e.target.value)} placeholder="예: 외자/내자" />
+          <TextField label="도입방법" size="small" fullWidth value={method} onChange={(e) => setMethod(e.target.value)} />
+        </Box>
+        <TextField label="도입금액 (원)" size="small" fullWidth type="number" value={price} onChange={(e) => setPrice(e.target.value)} slotProps={{ htmlInput: { min: 0 } }} />
+
+        {error && <Typography color="error" variant="body2">{error}</Typography>}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 0.5 }}>
+          <Button onClick={onClose} disabled={saving} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button type="submit" variant="contained" disabled={saving}>{saving ? '저장 중...' : isEdit ? '수정' : '등록'}</Button>
+        </Box>
+      </Box>
     </Dialog>
   )
 }
