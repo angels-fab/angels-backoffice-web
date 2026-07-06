@@ -29,9 +29,9 @@ interface CalTableRow {
   repeat_until: string
 }
 
-/** 조회 창 — 기존 백엔드와 동일(-92일 ~ +187일) */
-const WINDOW_PAST_DAYS = 92
-const WINDOW_FUTURE_DAYS = 187
+// 비반복 일정은 과거·미래 전부 로드(DB에서 이미 전체 행을 받음 — 과거 일정 소실 방지).
+// 반복 일정만 미래 전개 상한이 필요(무한 반복 방지). 과거는 반복 시작일(s0)이 자연 하한.
+const WINDOW_FUTURE_DAYS = 366
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
@@ -66,36 +66,32 @@ export async function fetchCalendarEvents(): Promise<CalRawEvent[]> {
   const { data, error } = await supabase.from('calendar_events').select('*').order('start_at', { ascending: true })
   if (error) throw new Error(error.message || '일정을 불러오지 못했습니다')
   const today = iso(new Date())
-  const winStart = addDays(today, -WINDOW_PAST_DAYS)
   const winEnd = addDays(today, WINDOW_FUTURE_DAYS)
   const out: CalRawEvent[] = []
   for (const r of (data || []) as CalTableRow[]) {
     const s0 = r.start_at.slice(0, 10)
     if (r.repeat === 'none') {
-      const e0 = (r.end_at || r.start_at).slice(0, 10)
-      if (e0 >= winStart && s0 <= winEnd) out.push(toRaw(r, s0))
+      out.push(toRaw(r, s0)) // 비반복 = 과거·미래 전부 포함(창 필터 없음)
       continue
     }
-    // 반복 전개 — 시작일부터 종료일(또는 창 끝)까지 발생일 나열
+    // 반복 전개 — 시작일(s0)부터 종료일(또는 미래 상한 winEnd)까지 발생일 나열(과거 게이트 없음)
     const until = r.repeat_until && r.repeat_until < winEnd ? r.repeat_until : winEnd
     if (r.repeat === 'monthly') {
       const day = Number(s0.slice(8, 10))
       let [y, m] = [Number(s0.slice(0, 4)), Number(s0.slice(5, 7))]
-      for (let i = 0; i < 400; i++) {
+      for (let i = 0; i < 600; i++) {
         const probe = new Date(y, m - 1, day)
         const occ = iso(probe)
         if (occ > until) break
         // 그 달에 해당 일자가 없으면(31일 등) 건너뜀
-        if (probe.getDate() === day && occ >= s0) {
-          if (occ >= winStart) out.push(toRaw(r, occ, occ))
-        }
+        if (probe.getDate() === day && occ >= s0) out.push(toRaw(r, occ, occ))
         m += 1
         if (m > 12) { m = 1; y += 1 }
       }
     } else {
       const step = r.repeat === 'daily' ? 1 : 7
-      for (let occ = s0, i = 0; occ <= until && i < 2000; occ = addDays(occ, step), i++) {
-        if (occ >= winStart) out.push(toRaw(r, occ, occ))
+      for (let occ = s0, i = 0; occ <= until && i < 4000; occ = addDays(occ, step), i++) {
+        out.push(toRaw(r, occ, occ))
       }
     }
   }
