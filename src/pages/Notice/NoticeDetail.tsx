@@ -53,7 +53,18 @@ export default function NoticeDetail({ notice, isAdmin, onEdit, onDelete }: Noti
       )}
 
       <Box
-        sx={{ fontSize: 14, lineHeight: 1.7, color: 'text.secondary', borderTop: 1, borderColor: 'divider', pt: 2, '& a': { color: 'primary.main' }, '& img': { maxWidth: '100%', borderRadius: 1 }, '& p': { m: 0, mb: 1 } }}
+        sx={{
+          fontSize: 14, lineHeight: 1.7, color: 'text.secondary', borderTop: 1, borderColor: 'divider', pt: 2,
+          '& a': { color: 'primary.main' },
+          '& img': { maxWidth: '100%', borderRadius: 1 },
+          '& p': { m: 0, mb: 1 },
+          '& ul, & ol': { pl: 3, m: 0, mb: 1 },
+          '& ul': { listStyle: 'disc' },
+          '& ol': { listStyle: 'decimal' },
+          '& li': { mb: 0.5 },
+          '& li p': { m: 0 },
+          '& strong, & b': { color: 'text.primary', fontWeight: 700 },
+        }}
         dangerouslySetInnerHTML={{ __html: noticeBodyHTML(notice.body) }}
       />
 

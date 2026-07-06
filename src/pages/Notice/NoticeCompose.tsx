@@ -18,6 +18,7 @@ import type { Notice } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { ComboField } from '@/pages/Work/inlineFields'
 import { MEMBERS, given } from '@/pages/Calendar/members'
+import NoticeBodyEditor from './NoticeBodyEditor'
 
 // 분류 항목(드롭다운) — 안전/보안/시설/교육/일반
 export const NOTICE_CATS = ['안전', '보안', '시설', '교육', '일반']
@@ -224,7 +225,9 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                 )
               })}
             </Box>
-            <InputBase value={body} onChange={(e) => setBody(e.target.value)} placeholder="내용" multiline minRows={2} inputProps={{ 'aria-label': '내용' }} sx={(th) => ({ ...inputSx(th), width: '100%', minHeight: 44, py: '6px' })} />
+            <Box sx={(th) => ({ ...inputSx(th), width: '100%', py: '8px', px: '10px' })}>
+              <NoticeBodyEditor value={body} onChange={setBody} placeholder="내용 (굵게·목록 등 서식 지원)" />
+            </Box>
           </Box>
         </TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'center', verticalAlign: 'top', pt: 1 }}>
