@@ -25,7 +25,7 @@ export default function EqSummaryInner({ showSeeAll }: { showSeeAll: boolean }) 
 
   const segs = [
     { k: '도입예정', t: c.typesBy['도입예정'], u: c.units['도입예정'], color: '#4d9fff' },
-    { k: '도입중', t: c.typesBy['도입중'], u: c.units['도입중'], color: '#39d0d8' },
+    { k: '도입중', t: c.typesBy['도입중'], u: c.units['도입중'], color: '#46B7BE' },
     { k: '운영중', t: c.typesBy['운영중'], u: c.units['운영중'], color: '#34d36b' },
     { k: '비가동', t: c.typesBy['비가동'], u: c.units['비가동'], color: '#f87171' },
   ]

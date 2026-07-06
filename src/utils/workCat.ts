@@ -2,12 +2,12 @@ import type { CSSProperties } from 'react'
 
 // 구분(카테고리)별 색상 — 값이 무엇이든 해시로 일관된 색 부여
 const WORK_CAT_PALETTE: CSSProperties[] = [
-  { background: 'rgba(88,166,255,.15)', color: '#58A6FF', borderColor: 'rgba(88,166,255,.3)' },
-  { background: 'rgba(240,180,41,.15)', color: '#F0B429', borderColor: 'rgba(240,180,41,.3)' },
-  { background: 'rgba(57,208,216,.15)', color: '#39D0D8', borderColor: 'rgba(57,208,216,.3)' },
-  { background: 'rgba(188,140,255,.15)', color: '#BC8CFF', borderColor: 'rgba(188,140,255,.3)' },
-  { background: 'rgba(63,185,80,.15)', color: '#3FB950', borderColor: 'rgba(63,185,80,.3)' },
-  { background: 'rgba(248,81,73,.15)', color: '#F85149', borderColor: 'rgba(248,81,73,.3)' },
+  { background: 'rgba(84,145,218,.15)', color: '#5491DA', borderColor: 'rgba(84,145,218,.3)' },
+  { background: 'rgba(214,162,62,.15)', color: '#D6A23E', borderColor: 'rgba(214,162,62,.3)' },
+  { background: 'rgba(70,183,190,.15)', color: '#46B7BE', borderColor: 'rgba(70,183,190,.3)' },
+  { background: 'rgba(169,138,224,.15)', color: '#A98AE0', borderColor: 'rgba(169,138,224,.3)' },
+  { background: 'rgba(77,161,103,.15)', color: '#4DA167', borderColor: 'rgba(77,161,103,.3)' },
+  { background: 'rgba(224,91,84,.15)', color: '#E05B54', borderColor: 'rgba(224,91,84,.3)' },
 ]
 
 export function workCatStyle(cat?: string): CSSProperties {

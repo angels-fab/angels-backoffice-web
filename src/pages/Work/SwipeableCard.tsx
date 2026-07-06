@@ -40,7 +40,7 @@ const BTN_W = 72 // 트레이 버튼 하나 폭(px)
 const AXIS_LOCK = 6 // 축(가로/세로) 판정 임계 이동(px)
 const OPEN_RATIO = 0.4 // 이 비율 이상 열면 스냅 오픈
 const TRANSITION = 'transform .22s cubic-bezier(.22, 1, 0.36, 1)'
-const DANGER = '#F85149'
+const DANGER = '#E05B54'
 
 /**
  * 모바일 업무 카드 왼쪽 스와이프 → 오른쪽에 [상태][수정][삭제] 액션 트레이.

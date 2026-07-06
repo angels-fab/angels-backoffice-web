@@ -35,7 +35,7 @@ export default function Greeting() {
       <div className="greet-text">
         <div className="greet-sub">
           {sub}{' '}
-          <WavingHandIcon htmlColor="#f0b429" sx={{ fontSize: 15, verticalAlign: 'text-bottom' }} />
+          <WavingHandIcon htmlColor="#D6A23E" sx={{ fontSize: 15, verticalAlign: 'text-bottom' }} />
         </div>
         <div className="greet-main">{main}</div>
         <div className="greet-date">{date}</div>

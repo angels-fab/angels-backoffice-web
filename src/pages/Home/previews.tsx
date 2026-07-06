@@ -78,7 +78,7 @@ export function CalPreview() {
   return (
     <ul className="card-notice-list">
       {upcoming.map((e, i) => {
-        const col = CAL_CAT_MAP[e.cat]?.color || '#58A6FF'
+        const col = CAL_CAT_MAP[e.cat]?.color || '#5491DA'
         const ddayCls = e.diff <= 1 ? 'dday-urgent' : e.diff <= 3 ? 'dday-soon' : 'dday-far'
         return (
           <li key={`${e.date}-${i}`}>
@@ -103,10 +103,10 @@ export function CalPreview() {
 
 // ── 공지사항 미리보기: 최신 3건 + 카테고리 배지 ──
 const NOTICE_BADGE_STYLE: Record<string, { bg: string; c: string; bd: string }> = {
-  긴급: { bg: 'rgba(248,81,73,.14)', c: '#f87171', bd: 'rgba(248,81,73,.32)' },
-  공지: { bg: 'rgba(88,166,255,.12)', c: '#58A6FF', bd: 'rgba(88,166,255,.3)' },
+  긴급: { bg: 'rgba(224,91,84,.14)', c: '#f87171', bd: 'rgba(224,91,84,.32)' },
+  공지: { bg: 'rgba(84,145,218,.12)', c: '#5491DA', bd: 'rgba(84,145,218,.3)' },
   일반: { bg: 'rgba(139,148,158,.14)', c: 'var(--text2)', bd: 'var(--border)' },
-  행사: { bg: 'rgba(63,185,80,.14)', c: '#3FB950', bd: 'rgba(63,185,80,.3)' },
+  행사: { bg: 'rgba(77,161,103,.14)', c: '#4DA167', bd: 'rgba(77,161,103,.3)' },
 }
 
 export function NoticePreview() {

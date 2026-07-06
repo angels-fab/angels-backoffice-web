@@ -308,7 +308,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 className="mbtn"
                 onClick={remove}
                 disabled={busy}
-                style={{ marginRight: 'auto', color: '#F85149', borderColor: '#F8514955' }}
+                style={{ marginRight: 'auto', color: '#E05B54', borderColor: '#E05B5455' }}
               >
                 삭제
               </button>
