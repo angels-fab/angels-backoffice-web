@@ -91,11 +91,16 @@ export async function updateSchedule(p: ScheduleInput & { origCode: string }): P
   for (const [label, col] of Object.entries(dbStage)) patch[col] = p.stages?.[label] || ''
   const { error } = await supabase.from('schedules').update(patch).eq('code', p.origCode || p.code)
   if (error) fail(error, '수정에 실패했습니다')
+  // 관리번호(code)가 바뀌면 짝 운영관리 행의 code도 함께 이동해 짝을 유지(도입↔운영 연결 보존)
+  if (p.code && p.origCode && p.code !== p.origCode) {
+    const { error: eqErr } = await supabase.from('equipments').update({ code: p.code }).eq('code', p.origCode)
+    if (eqErr) fail(eqErr, '수정에 실패했습니다')
+  }
 }
 
-/** 도입일정 삭제(하드 — 기존 동작 유지) */
+/** 도입일정 삭제 — 짝 운영관리 행도 함께 삭제(RPC 원자 처리). */
 export async function deleteSchedule(p: { code: string; author: string; key: string }): Promise<void> {
-  const { error } = await supabase.from('schedules').delete().eq('code', p.code)
+  const { error } = await supabase.rpc('sched_delete', { p_code: p.code })
   if (error) fail(error, '삭제에 실패했습니다')
 }
 

@@ -127,6 +127,7 @@ export default function Equipment() {
   const [picked, setPicked] = useState<Batch | null>(null)
   const [writeOpen, setWriteOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<ScheduleItem | null>(null)
+  const [editBatchCodes, setEditBatchCodes] = useState<string[]>([]) // 편집 대상 배치의 전체 관리번호(공통필드 일괄적용용)
   const [deleteTarget, setDeleteTarget] = useState<EqGroup | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
@@ -195,11 +196,13 @@ export default function Equipment() {
   // ── CRUD ──
   const showSnack = (msg: string, severity: Snack['severity'] = 'success') => setSnack({ open: true, msg, severity })
 
-  const handleSaved = async (code: string, isEdit: boolean) => {
+  const handleSaved = async (code: string, isEdit: boolean, warning?: string) => {
     setWriteOpen(false)
     setEditTarget(null)
+    setEditBatchCodes([])
     setPicked(null) // 배치 구성이 바뀔 수 있어 상세는 닫고 재조회
-    showSnack(isEdit ? '장비 도입 정보를 수정했습니다.' : '장비를 추가했습니다.', 'success')
+    if (warning) showSnack(warning, 'error') // 부분실패 안내(성공분은 이미 반영)
+    else showSnack(isEdit ? '장비 도입 정보를 수정했습니다.' : '장비를 추가했습니다.', 'success')
     void code
     await dispatch(loadEqData()).unwrap().catch(() => null)
   }
@@ -210,22 +213,25 @@ export default function Equipment() {
     const codes = deleteTarget.codes.filter(Boolean)
     if (!codes.length) return showSnack('관리번호가 없어 삭제할 수 없습니다.', 'error')
     setDeleting(true)
-    try {
-      await Promise.all(codes.map((code) => deleteSchedule({ code, author: user, key: authKey })))
-      setDeleting(false)
-      setDeleteTarget(null)
-      setPicked(null)
-      showSnack(`장비 ${codes.length}대를 삭제했습니다.`, 'success')
-      dispatch(loadEqData())
-    } catch (err) {
-      setDeleting(false)
-      showSnack(err instanceof Error ? err.message : '삭제 실패', 'error')
+    // allSettled — 일부 실패해도 성공분은 이미 삭제됨. 성공/실패 구분해 안내하고 성공분 있으면 재조회.
+    const results = await Promise.allSettled(codes.map((code) => deleteSchedule({ code, author: user, key: authKey })))
+    const failed = results.filter((r) => r.status === 'rejected').length
+    setDeleting(false)
+    if (failed === codes.length) {
+      // 전부 실패 = 아무것도 안 지워짐 → 확인창 유지해 재시도 가능
+      showSnack('삭제에 실패했습니다.', 'error')
+      return
     }
+    setDeleteTarget(null)
+    setPicked(null)
+    if (failed === 0) showSnack(`장비 ${codes.length}대를 삭제했습니다.`, 'success')
+    else showSnack(`${codes.length}대 중 ${failed}대 삭제 실패 — 나머지는 삭제됨`, 'error')
+    await dispatch(loadEqData()).unwrap().catch(() => null)
   }
 
   // 배치 내 각 code의 스케줄을 변형해 저장 (start/stages 공통 적용)
   const persistBatch = async (codes: string[], mut: (it: ScheduleItem) => { start: string; stages: Record<string, string> }) => {
-    await Promise.all(
+    const results = await Promise.allSettled(
       codes.map((code) => {
         const it = schedule.find((s) => s.code === code)
         if (!it) return Promise.resolve()
@@ -236,6 +242,8 @@ export default function Equipment() {
         })
       }),
     )
+    const failed = results.filter((r) => r.status === 'rejected').length
+    if (failed > 0) throw new Error(`${results.length}건 중 ${failed}건 저장 실패 — 나머지는 저장됨`)
   }
 
   // ── 드래그(전체 이동) ── 배치 내 모든 code에 동일 delta
@@ -578,6 +586,9 @@ export default function Equipment() {
     } catch (err) {
       setSavingEdit(false)
       showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+      // 부분실패라도 성공분이 DB에 반영됐으므로 재조회해 로컬↔DB 동기화(불일치 방지)
+      closeEditSession()
+      await dispatch(loadEqData()).unwrap().catch(() => {})
     }
   }
   // 취소 — 이번 편집의 모든 변경을 편집 시작 전 상태로 되돌림(로컬만, 시트 호출 없음)
@@ -636,7 +647,7 @@ export default function Equipment() {
 
   const openEdit = (g: EqGroup) => {
     const rep = schedule.find((s) => s.code === g.repCode) ?? schedule.find((s) => g.codes.includes(s.code)) ?? null
-    if (rep) setEditTarget(rep)
+    if (rep) { setEditBatchCodes(g.codes.filter(Boolean)); setEditTarget(rep) } // 배치 전체 code를 폼에 전달(대표 1행만 반영되던 버그 방지)
     else showSnack('도입 일정 정보를 찾을 수 없습니다.', 'error')
   }
 
@@ -657,7 +668,7 @@ export default function Equipment() {
                 <IconButton aria-label="다시실행" title="다시실행 (Ctrl+Shift+Z)" onClick={redo} disabled={!redoStack.length} size="small" sx={{ color: 'text.secondary' }}>
                   <RedoIcon sx={{ fontSize: 20 }} />
                 </IconButton>
-                <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => { setEditTarget(null); setWriteOpen(true) }}>
+                <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => { setEditBatchCodes([]); setEditTarget(null); setWriteOpen(true) }}>
                   장비 추가
                 </Button>
               </>
@@ -850,7 +861,8 @@ export default function Equipment() {
         <ScheduleWrite
           open={writeOpen || !!editTarget}
           editing={editTarget}
-          onClose={() => { setWriteOpen(false); setEditTarget(null) }}
+          batchCodes={editBatchCodes}
+          onClose={() => { setWriteOpen(false); setEditTarget(null); setEditBatchCodes([]) }}
           onSaved={handleSaved}
         />
       )}

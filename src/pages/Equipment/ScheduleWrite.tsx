@@ -15,12 +15,14 @@ interface Props {
   onClose: () => void
   /** 수정 대상 — 있으면 수정 모드(자동 로드), 없으면 신규 등록 */
   editing?: ScheduleItem | null
-  /** 저장/수정 성공 시: (관리번호, 수정여부) */
-  onSaved: (code: string, isEdit: boolean) => void
+  /** 배치(도입일정 그룹) 전체 관리번호 — 여러 대면 공통필드를 전부에 적용(대표 1행만 바뀌던 버그 방지) */
+  batchCodes?: string[]
+  /** 저장/수정 성공 시: (관리번호, 수정여부, 경고=부분실패 안내) */
+  onSaved: (code: string, isEdit: boolean, warning?: string) => void
 }
 
 // 장비 도입 등록/수정 모달 — 상세 Drawer(포털) 위에 뜨도록 body로 포털. 오류는 모달 내(.merror) 표시.
-export default function ScheduleWrite({ open, onClose, editing, onSaved }: Props) {
+export default function ScheduleWrite({ open, onClose, editing, batchCodes, onSaved }: Props) {
   const { user, authKey } = useRole()
   const isEdit = !!editing
   const [code, setCode] = useState('')
@@ -69,9 +71,24 @@ export default function ScheduleWrite({ open, onClose, editing, onSaved }: Props
     }
     try {
       if (editing) {
-        await updateSchedule({ origCode: editing.code, ...payload })
+        // 배치 전체(여러 대)면 공통필드를 각 code에 적용. 대표는 폼의 관리번호(변경 가능),
+        // 나머지는 각자 관리번호 유지. 부분실패는 allSettled로 분리해 안내(성공분은 이미 저장됨).
+        const others = (batchCodes || []).filter((c) => c && c !== editing.code)
+        const saves = [
+          updateSchedule({ origCode: editing.code, ...payload }),
+          ...others.map((c) => updateSchedule({ ...payload, origCode: c, code: c })),
+        ]
+        const results = await Promise.allSettled(saves)
+        const failed = results.filter((r) => r.status === 'rejected').length
         setSaving(false)
-        onSaved(code.trim() || editing.code, true)
+        if (failed === saves.length) {
+          // 전부 실패 — 모달 유지하고 에러 표시(아무것도 저장 안 됨)
+          const first = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined
+          setError(first?.reason instanceof Error ? first.reason.message : '수정 실패')
+          return
+        }
+        // 성공(전부 or 부분) — 재조회로 반영. 부분실패면 경고 전달.
+        onSaved(code.trim() || editing.code, true, failed > 0 ? `${saves.length}건 중 ${failed}건 저장 실패 — 나머지는 저장됨` : undefined)
       } else {
         const newCode = await createSchedule(payload)
         setSaving(false)
