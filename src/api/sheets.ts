@@ -1,3 +1,5 @@
+import type { NoticeFile } from '@/types'
+
 // Google Apps Script 웹앱 — 구글시트를 JSON 행배열로 반환
 const SCRIPT_URL =
   'https://script.google.com/macros/s/AKfycbxwvgPPyZDVTnWl6g7M_Y2vv1U-mrYitz0KUy9SBxfCtSWOzjX1w9oZp90b7don9Fmd/exec'
@@ -106,6 +108,8 @@ export interface AddNoticePayload {
   ref?: string
   /** 게시일(작성일자) yyyy-MM-dd — 비우면 서버가 오늘로 기록 */
   date?: string
+  /** 첨부파일 목록 — Storage 비공개 버킷(notice-files)에 이미 업로드된 파일 메타데이터 */
+  attachments?: NoticeFile[]
 }
 
 /** 담당자 이름 목록 (해당자 선택 버튼용 — 비밀번호는 서버가 내보내지 않음) */

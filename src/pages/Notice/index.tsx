@@ -45,7 +45,7 @@ import {
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
-import { addNotice, updateNotice, deleteNotice } from '@/api/notices'
+import { addNotice, updateNotice, deleteNotice, removeNoticeFiles } from '@/api/notices'
 import { useRole } from '@/auth/role'
 import { todaySeoul } from '@/utils/date'
 import type { Notice as NoticeItem } from '@/types'
@@ -155,7 +155,7 @@ export default function Notice() {
     if (!v.body) return showSnack('내용을 입력해주세요.', 'error')
     setSaving(true)
     try {
-      const newNum = await addNotice({ key: authKey, author: user, cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref, date: todaySeoul() })
+      const newNum = await addNotice({ key: authKey, author: user, cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref, attachments: v.attachments, date: todaySeoul() })
       setSaving(false); setComposing(false)
       dispatch(loadNoticeData())
       showSnack('공지를 등록했습니다.', 'success')
@@ -176,8 +176,12 @@ export default function Notice() {
       await updateNotice({
         num: n.num, key: authKey, author: user,
         cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref,
-        end: n.end, date: n.date,
+        attachments: v.attachments, end: n.end, date: n.date,
       })
+      // 수정 성공 후: 기존 첨부 중 제거된 파일을 스토리지에서 정리(best-effort)
+      const keptPaths = new Set(v.attachments.map((a) => a.path))
+      const removedPaths = (n.attachments || []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path)
+      if (removedPaths.length) void removeNoticeFiles(removedPaths).catch(() => {})
       setSaving(false); setEditingId(null)
       dispatch(loadNoticeData())
       showSnack('공지를 수정했습니다.', 'success')
@@ -193,6 +197,9 @@ export default function Notice() {
     setDeleting(true)
     try {
       await deleteNotice({ num: deleteTarget.num, author: user, key: authKey })
+      // 삭제 성공 후: 해당 공지의 첨부파일도 스토리지에서 정리(best-effort)
+      const attachPaths = (deleteTarget.attachments || []).map((a) => a.path)
+      if (attachPaths.length) void removeNoticeFiles(attachPaths).catch(() => {})
       const deletedNum = deleteTarget.num
       setDeleteTarget(null); setDeleting(false)
       dispatch(loadNoticeData())

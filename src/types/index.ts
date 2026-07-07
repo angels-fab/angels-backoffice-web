@@ -209,6 +209,19 @@ export interface CalEvent {
 // ── 공지사항 ('공지사항' 시트 1행 = Notice) ──
 // 시트 열: A연번 B상단체크 C업무(분류) D부서 E부서담당자 F제목 G내용
 //         H관련자료 I시작일자 J작성일자 K작성시간 L종료일자 M게시자 N해당자
+
+/** 공지 첨부파일 1건 — Supabase Storage(비공개 버킷 notice-files)에 저장, path로 서명URL 발급 */
+export interface NoticeFile {
+  /** 원본 파일명(다운로드 시 노출) */
+  name: string
+  /** 버킷 내 저장 경로(키) — 서명URL 발급·삭제 기준 */
+  path: string
+  /** 바이트 크기 */
+  size: number
+  /** MIME 타입 */
+  type: string
+}
+
 export interface Notice {
   id: number
   /** A열 연번 — 정렬·딥링크(/notice/연번) 기준 */
@@ -235,6 +248,8 @@ export interface Notice {
   target: string
   views: number
   isNew: boolean
+  /** 첨부파일 목록 — Storage 비공개 버킷 저장(관리자 업로드, 인증 사용자 열람) */
+  attachments?: NoticeFile[]
 }
 
 // ── 바로가기 ──
