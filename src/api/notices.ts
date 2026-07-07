@@ -14,7 +14,25 @@ export const NOTICE_BUCKET = 'notice-files'
 /** 파일당 최대 크기(10MB) — 버킷 file_size_limit과 일치. 초과 시 업로드 전 클라이언트 차단 */
 export const NOTICE_FILE_MAX = 10 * 1024 * 1024
 /** 업로드 1건 타임아웃(ms) — 스톨 시 무한 대기 방지(에러로 전환) */
-const UPLOAD_TIMEOUT = 60_000
+const UPLOAD_TIMEOUT = 30_000
+/** DB 요청 타임아웃(ms) — 응답 없이 매달릴 때 무한로딩 대신 에러로 전환 */
+const DB_TIMEOUT = 20_000
+
+/**
+ * 네트워크 요청에 타임아웃을 씌운다(Supabase 쿼리빌더는 thenable → Promise.resolve로 실행 트리거).
+ * 스톨 시 무한로딩 대신 재시도 가능한 에러를 던진다. (사무실망 프록시/토큰 갱신 지연 등 대비)
+ */
+async function withTimeout<T>(work: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} 응답이 지연됩니다 — 네트워크를 확인하고 다시 시도해주세요.`)), ms)
+  })
+  try {
+    return await Promise.race([Promise.resolve(work), timeout])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
 
 interface NoticesTableRow {
   num: number
@@ -28,7 +46,10 @@ interface NoticesTableRow {
 
 /** 공지 목록 — 연번 내림차순 + isNew 판정(기존 slice 파싱 로직과 동일 결과) */
 export async function getNotices(): Promise<Notice[]> {
-  const { data, error } = await supabase.from('notices').select('*').order('num', { ascending: false })
+  const { data, error } = await withTimeout(
+    supabase.from('notices').select('*').order('num', { ascending: false }),
+    DB_TIMEOUT, '공지 목록 불러오기',
+  )
   if (error) throw new Error(error.message || '공지 목록을 불러오지 못했습니다')
   return ((data || []) as NoticesTableRow[]).map((r, idx): Notice => {
     const createdDate = fmtDate(r.posted_date)
@@ -65,17 +86,20 @@ const nowTimeKst = () =>
 /** 공지 등록 → 새 연번(자동 채번). 게시일 미지정 시 오늘(KST), 작성시간 자동 */
 export async function addNotice(p: AddNoticePayload): Promise<number> {
   if (!p.title.trim() || !p.body.trim()) throw new Error('제목과 내용을 입력해주세요')
-  const { data, error } = await supabase
-    .from('notices')
-    .insert({
-      pinned: !!p.pinned, cat: p.cat, dept: p.dept || '', dept_mgr: p.deptMgr || '',
-      title: p.title, body: p.body, ref: p.ref || '',
-      posted_date: p.date || todayKst(), posted_time: nowTimeKst(),
-      end_date: p.end || '', author: p.author, target: p.target || '',
-      attachments: p.attachments || [],
-    })
-    .select('num')
-    .single()
+  const { data, error } = await withTimeout(
+    supabase
+      .from('notices')
+      .insert({
+        pinned: !!p.pinned, cat: p.cat, dept: p.dept || '', dept_mgr: p.deptMgr || '',
+        title: p.title, body: p.body, ref: p.ref || '',
+        posted_date: p.date || todayKst(), posted_time: nowTimeKst(),
+        end_date: p.end || '', author: p.author, target: p.target || '',
+        attachments: p.attachments || [],
+      })
+      .select('num')
+      .single(),
+    DB_TIMEOUT, '공지 등록',
+  )
   if (error) throw new Error(error.message || '저장 실패')
   return Number(data!.num)
 }
@@ -90,7 +114,10 @@ export async function updateNotice(p: AddNoticePayload & { num: string | number 
   if (p.ref !== undefined) patch.ref = p.ref
   if (p.attachments !== undefined) patch.attachments = p.attachments
   if (p.date) patch.posted_date = p.date
-  const { error } = await supabase.from('notices').update(patch).eq('num', Number(p.num))
+  const { error } = await withTimeout(
+    supabase.from('notices').update(patch).eq('num', Number(p.num)),
+    DB_TIMEOUT, '공지 수정',
+  )
   if (error) throw new Error(error.message || '수정 실패')
 }
 
@@ -110,20 +137,19 @@ const fileExt = (name: string) => {
 
 /**
  * 첨부파일 1건 업로드 → 메타데이터 반환. 저장 키는 충돌 방지용 UUID(원본 파일명은 name에 보존).
- * 10MB 초과는 업로드 전에 차단, 60초 스톨 시 타임아웃. 업로드 권한은 RLS(is_member)가 최종 검증.
+ * 10MB 초과는 업로드 전에 차단, 30초 스톨 시 타임아웃. 업로드 권한은 RLS(is_member)가 최종 검증.
  */
 export async function uploadNoticeFile(file: File): Promise<NoticeFile> {
   if (file.size > NOTICE_FILE_MAX) {
     throw new Error(`파일이 너무 큽니다(최대 10MB): ${file.name}`)
   }
   const path = `notice/${crypto.randomUUID()}${fileExt(file.name)}`
-  const upload = supabase.storage
-    .from(NOTICE_BUCKET)
-    .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false })
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error(`업로드 시간 초과: ${file.name}`)), UPLOAD_TIMEOUT),
+  const { error } = await withTimeout(
+    supabase.storage
+      .from(NOTICE_BUCKET)
+      .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false }),
+    UPLOAD_TIMEOUT, `업로드(${file.name})`,
   )
-  const { error } = await Promise.race([upload, timeout])
   if (error) throw new Error(error.message || `업로드 실패: ${file.name}`)
   return { name: file.name, path, size: file.size, type: file.type || 'application/octet-stream' }
 }

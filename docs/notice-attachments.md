@@ -12,6 +12,12 @@
 - **확장자 대표 아이콘 강화** — `attachmentUI.tsx` 매핑 확장(이미지·PDF·엑셀·PPT=Slideshow·워드=Article·한글·압축·텍스트=TextSnippet). ※ 이 icons 버전엔 `ErrorOutline`이 없어 `ErrorOutlineOutlined` 사용.
 - 검증: type-check 통과·앱 런타임/서버 오류 0·Notice 모듈 트랜스폼 정상. 팀원/관리자 로그인 실경로(업로드 상태·저장·모두 다운로드·행 표시)는 배포 후 실측.
 
+### 5차 — 무한로딩 방지 + 아이콘 세트 조정 (2026-07-08)
+
+- **저장 무한로딩 수정**: `withTimeout` 도입, 모든 네트워크 요청에 타임아웃(DB 조회·등록·수정 20초, 업로드 30초). 사무실망 프록시/토큰갱신 지연으로 요청이 응답 없이 매달리면 **무한로딩 대신 "응답 지연 — 다시 시도" 에러**로 전환(재시도 가능). (근본 원인 미확정이나 무한 대기 자체를 차단)
+- **아이콘 조정**: docx·xlsx·pptx = vscode-icons(MIT) SVG로 (사용자 요청). txt·이미지 = 사용자 캡처 PNG(배경 투명 처리, jimp). hwp·zip·pdf = 기존 사용자 캡처 유지. office용 docx/xlsx/pptx.png 제거. `fileTypeIcons.tsx` 매핑 재구성.
+- **미완**: 새 PDF(플랫 레드)·Windows 사진앱(둥근사각) 아이콘은 클립보드 붙여넣기라 디스크에 파일이 없어 미적용 → 사용자가 파일로 저장해 주면 교체 예정. 이미지는 캡처(문서형 사진 아이콘) 임시 적용.
+
 ### 4차 — 실제 파일 아이콘 적용 (2026-07-08)
 
 - 파일 유형 아이콘을 **사용자가 캡처해 제공한 실제 아이콘**(pdf·docx·xlsx·pptx·hwp·zip)으로 교체. 캡처 PNG의 흰 배경을 **가장자리 플러드필로 투명 처리**(내부 흰 글자·페이지 보존, jimp 스크립트), `src/pages/Notice/filetypes/*.png`로 번들(import → base 안전). `fileTypeIcons.tsx`가 확장자/MIME→PNG 매핑, 이미지·txt 등 미제공 유형은 인라인 SVG 대체. csv→xlsx, doc→docx 등 연관 확장자 매핑. (미제공 이미지/txt 아이콘은 추후 제공 시 추가) 검증: type-check·PNG 200 서빙·img 로드 확인.
