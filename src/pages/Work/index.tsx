@@ -42,6 +42,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadWorkData, patchWorkItems, softDeleteWorkItems, restoreWorkItems } from '@/store/slices/workSlice'
 import { createWork, deleteWork, restoreWorks, updateWork, fetchAuthors, updateWorkOrder, beaconWorkOrder, updateWorkStatuses } from '@/api/works'
+import { putSetting } from '@/store/slices/userSettingsSlice'
 import type { WorkOrderEntry, WorkStatusChange } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
@@ -206,7 +207,20 @@ export default function Work() {
     const s = localStorage.getItem('work:view')
     return s === 'inProgress' || s === 'hold' || s === 'check' || s === 'done' || s === 'remind' ? s : 'inProgress'
   })
-  useEffect(() => { try { localStorage.setItem('work:view', view) } catch { /* 저장 불가 무시 */ } }, [view])
+  // 계정 개인화 뷰 — 설정 로드되면 서버 저장값으로 1회 동기화(기기 넘나들며 유지)
+  const usReady = useAppSelector((s) => s.userSettings.ready)
+  const svWorkView = useAppSelector((s) => s.userSettings.settings['work.view'] as string | undefined)
+  const svViewApplied = useRef(false)
+  useEffect(() => {
+    if (!usReady || svViewApplied.current) return
+    svViewApplied.current = true
+    if (svWorkView === 'inProgress' || svWorkView === 'hold' || svWorkView === 'check' || svWorkView === 'done' || svWorkView === 'remind') setView(svWorkView)
+  }, [usReady, svWorkView])
+  // 뷰 변경 시 저장 — 로컬 캐시(즉시) + 계정 서버(디바운스, 기기 동기화)
+  useEffect(() => {
+    try { localStorage.setItem('work:view', view) } catch { /* 저장 불가 무시 */ }
+    dispatch(putSetting({ key: 'work.view', value: view }))
+  }, [view, dispatch])
   // 구분·담당자 필터 — 업무일정 규칙(전체 칩 없음·빈 Set=전체·일반클릭 단독/재클릭 해제·Shift 복수). 구분은 normCat 키.
   const [selCats, setSelCats] = useState<Set<string>>(new Set())
   const [selMgrs, setSelMgrs] = useState<Set<string>>(new Set())

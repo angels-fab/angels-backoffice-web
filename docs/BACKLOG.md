@@ -57,7 +57,10 @@ GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vit
   - **🔶 Phase 3**: 설정 "사용자 관리"에 **회원 목록 + 권한 변경(Select) + 강퇴** ✅ 완료(관리자만·본인계정 잠금방지·관리자승격은 팀원에게만). **⏸️ 보류(나중에)**: 가입/승인/거절/권한변경/강퇴 **이력**(`account_events` 테이블). (auth.users 완전 삭제는 service_role 필요 → 강퇴=프로필 삭제 소프트킥.)
   - **🐞 버그픽스(2026-07-07)**: ① `profiles_role_check` CHECK에 'associate' 없어 **유관자 승인 무반응** → 제약을 `guest/associate/member/admin/pending`으로 교체. ② `signUp()`이 기본 supabase 클라이언트로 실행돼 **가입 시 현재(관리자) 세션을 덮어써 로그아웃** → `makeSignupClient()`(persistSession:false) 격리 클라이언트로 변경, signOut 제거.
   - **⏳ 기타**: 유관자·팀원은 `/settings`(RequireAdmin) 못 들어가 **본인 비밀번호 변경 불가** — 필요 시 Settings를 RequireAuth로 열고 승인섹션만 isAdmin.
-- **C. 개인화 1차 (진행 2026-07-07)**: ✅ **보던 화면 기억 일부** — 캘린더 뷰(월/주/목록, `localStorage 'cal:view'`) + 업무 KPI 뷰(inProgress 등, `localStorage 'work:view'`) 복원. **⏳ 남음**: 내 기준 새 글 배지(메뉴별 마지막 확인시각 — `user_settings` 서버 상태 필요, 앱 전역 로드 배선) + 필터(구분·담당자) 기억. (view 기억은 per-device localStorage로 시작 — 추후 cross-device면 user_settings로 이전.)
+- **C. 개인화 1차 (진행 2026-07-07)**: 사용자 결정 = **캘린더 뷰·업무 뷰·업무 카드 순서 = 계정별(로그인 사람별) / 카드 이동·삭제 = 팀 전체 공유**.
+  - **✅ Stage 1 — user_settings 서버 배선 + 뷰 계정별**: `user_settings`(user_name PK·settings jsonb) RLS 정책 추가(`user_settings_own`: `user_name=my_name()` self read/write, 마이그레이션 적용·member 컨텍스트 sim 검증). `api/userSettings.ts`(fetch/save upsert) + `userSettingsSlice`(load·setSetting·putSetting 디바운스 저장·resetUserSettings) + store 등록 + MainLayout 로그인 시 로드/로그아웃 시 리셋. 캘린더 뷰·업무 KPI 뷰를 **계정별**로 전환(로컬 캐시 즉시 + 설정 로드 시 서버값 1회 동기화 = 기기 넘나들며 유지).
+  - **⏳ Stage 2 — 내 기준 새 글 배지**: 메뉴별 마지막 확인시각을 `user_settings`에 저장 → useNavBadges가 안 본 것만 카운트 + 페이지 진입 시 markSeen. + 필터(구분·담당자) 기억.
+  - **⏳ Stage 3 — 업무 카드 순서 계정별**: 현재 순서는 works 레코드에 저장=팀 공유. 개인별로 하려면 순서를 `user_settings`(사용자별 num 순서 리스트)로 이동, Work가 그 순서로 정렬·저장. (이동/삭제 상태변경은 계속 서버=팀 공유.)
 - **D. 개인화 2차**: 홈 섹션 순서/숨김 + 관심 업무 핀. **⏳ 결정 대기: 업무카드 정렬 = 팀 공유 vs 개인별.**
 - 참고: `user_settings` 테이블 준비돼 있음.
 

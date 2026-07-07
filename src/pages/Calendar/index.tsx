@@ -21,6 +21,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { PageContainer, PageHeader, SearchBar } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadCalEvents, moveCalEvent } from '@/store/slices/calSlice'
+import { putSetting } from '@/store/slices/userSettingsSlice'
 import type { CalEvent } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
@@ -242,10 +243,20 @@ export default function Calendar() {
     setPop(null)
   }, [view, anchor, searchTrim, selCats, selMembers])
 
-  // 마지막으로 보던 뷰 기억 — 재접속 시 복원(개인화)
+  // 계정 개인화 뷰 — 설정 로드되면 서버 저장값으로 1회 동기화(기기 넘나들며 유지)
+  const usReady = useAppSelector((s) => s.userSettings.ready)
+  const svCalView = useAppSelector((s) => s.userSettings.settings['cal.view'] as string | undefined)
+  const svViewApplied = useRef(false)
+  useEffect(() => {
+    if (!usReady || svViewApplied.current) return
+    svViewApplied.current = true
+    if (svCalView === 'month' || svCalView === 'timeweek' || svCalView === 'agenda') setView(svCalView)
+  }, [usReady, svCalView])
+  // 뷰 변경 시 저장 — 로컬 캐시(즉시) + 계정 서버(디바운스, 기기 동기화)
   useEffect(() => {
     try { localStorage.setItem('cal:view', view) } catch { /* 저장 불가 무시 */ }
-  }, [view])
+    dispatch(putSetting({ key: 'cal.view', value: view }))
+  }, [view, dispatch])
 
   // ── 필터 술어 (빈 선택 = 전체) ──
   const catSelected = (cat: RealCat) => selCats.length === 0 || selCats.includes(cat)

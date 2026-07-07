@@ -5,6 +5,7 @@ import noticeReducer from './slices/noticeSlice'
 import calReducer from './slices/calSlice'
 import improveReducer from './slices/improveSlice'
 import replyReducer from './slices/replySlice'
+import userSettingsReducer from './slices/userSettingsSlice'
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     cal: calReducer,
     improve: improveReducer,
     reply: replyReducer,
+    userSettings: userSettingsReducer,
   },
 })
 

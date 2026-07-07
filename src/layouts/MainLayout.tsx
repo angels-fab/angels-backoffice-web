@@ -11,10 +11,11 @@ import { loadNoticeData } from '@/store/slices/noticeSlice'
 import { loadCalEvents } from '@/store/slices/calSlice'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { loadReplies } from '@/store/slices/replySlice'
+import { loadUserSettings, setUserName, resetUserSettings } from '@/store/slices/userSettingsSlice'
 
 export default function MainLayout() {
   const { pathname } = useLocation()
-  const { isMember } = useRole()
+  const { loggedIn, isMember, user } = useRole()
   const dispatch = useAppDispatch()
   const eqReady = useAppSelector(s => s.eq.ready)
   const workReady = useAppSelector(s => s.work.ready)
@@ -35,6 +36,17 @@ export default function MainLayout() {
     if (!replyReady) dispatch(loadReplies())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMember])
+
+  // 로그인 사용자별 개인화 설정(캘린더·업무 뷰 등) 로드 — 로그아웃 시 초기화(계정 전환 대비)
+  useEffect(() => {
+    if (loggedIn && user) {
+      dispatch(setUserName(user))
+      dispatch(loadUserSettings())
+    } else {
+      dispatch(resetUserSettings())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn, user])
 
   // 원본의 body 클래스 토글: 페이지 진입 시 in-page
   useEffect(() => {
