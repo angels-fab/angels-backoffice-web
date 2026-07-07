@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -13,6 +13,7 @@ import JSZip from 'jszip'
 import type { Notice, NoticeFile } from '@/types'
 import { downloadNoticeBlob } from '@/api/notices'
 import { AttachmentIcon, formatBytes } from './attachmentUI'
+import { fileTypeRank } from './fileTypeIcons'
 import { noticeBodyHTML } from './noticeMeta'
 
 const refUrl = (n: Notice) => String(n.ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
@@ -40,6 +41,11 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
   const dept = (notice.dept || '').trim()
   const target = (notice.target || '').trim()
   const attachments = notice.attachments || []
+  // 유형별 정렬(pdf→hwp→docx→xlsx→pptx→txt→image→zip→기타). 같은 유형은 기존 순서 유지(안정정렬)
+  const sortedAttachments = useMemo(
+    () => [...attachments].sort((a, b) => fileTypeRank(a.type, a.name) - fileTypeRank(b.type, b.name)),
+    [attachments],
+  )
   const [busyPath, setBusyPath] = useState<string | null>(null)
   const [zipping, setZipping] = useState(false)
   const [dlErr, setDlErr] = useState('')
@@ -70,7 +76,7 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
     try {
       const zip = new JSZip()
       const used = new Set<string>()
-      for (const a of attachments) {
+      for (const a of sortedAttachments) {
         const blob = await downloadNoticeBlob(a.path)
         let fname = a.name || 'file'
         if (used.has(fname)) {
@@ -150,7 +156,7 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
           </Box>
           {/* 반응형 그리드 — 창 폭/모바일 회전에 따라 열 수 자동, 각 셀은 동일 폭으로 정렬. 긴 이름은 말줄임 */}
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))', gap: 0.75 }}>
-            {attachments.map((a) => (
+            {sortedAttachments.map((a) => (
               <Box
                 key={a.path}
                 role="button"

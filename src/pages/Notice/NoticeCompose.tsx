@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
@@ -23,6 +23,7 @@ import { ComboField } from '@/pages/Work/inlineFields'
 import { MEMBERS, given } from '@/pages/Calendar/members'
 import { uploadNoticeFile, removeNoticeFiles } from '@/api/notices'
 import { AttachmentIcon, formatBytes } from './attachmentUI'
+import { fileTypeRank } from './fileTypeIcons'
 import NoticeBodyEditor from './NoticeBodyEditor'
 
 // 분류 항목(드롭다운) — 안전/보안/시설/교육/일반
@@ -163,6 +164,11 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
     (notice?.attachments || []).map((a) => ({ key: a.path, name: a.name, size: a.size, type: a.type, status: 'done' as const, path: a.path })),
   )
   const uploading = uploads.some((u) => u.status === 'uploading')
+  // 유형별 정렬(pdf→hwp→docx→xlsx→pptx→txt→image→zip→기타) — 표시용. 같은 유형은 기존 순서 유지
+  const sortedUploads = useMemo(
+    () => [...uploads].sort((a, b) => fileTypeRank(a.type, a.name) - fileTypeRank(b.type, b.name)),
+    [uploads],
+  )
   const sessionPaths = useRef<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const dateStr = mode === 'new' ? todaySeoul() : (notice?.date || '')
@@ -201,6 +207,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
     const attachments: NoticeFile[] = uploads
       .filter((u) => u.status === 'done' && u.path)
       .map((u) => ({ name: u.name, path: u.path as string, size: u.size, type: u.type }))
+      .sort((a, b) => fileTypeRank(a.type, a.name) - fileTypeRank(b.type, b.name))
     const finalPaths = new Set(attachments.map((a) => a.path))
     const orphans = Array.from(sessionPaths.current).filter((p) => !finalPaths.has(p))
     if (orphans.length) void removeNoticeFiles(orphans).catch(() => {})
@@ -311,7 +318,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
               </Box>
               {uploads.length > 0 && (
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 0.75 }}>
-                  {uploads.map((u) => {
+                  {sortedUploads.map((u) => {
                     const err = u.status === 'error'
                     return (
                       <Tooltip key={u.key} title={err ? (u.error || '업로드 실패') : u.name} disableHoverListener={false}>

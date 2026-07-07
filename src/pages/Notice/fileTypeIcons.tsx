@@ -26,6 +26,22 @@ const PNG: Record<string, string> = {
   txt: txtUrl, log: txtUrl, md: txtUrl,
 }
 
+/** 유형별 정렬 우선순위(작을수록 먼저): pdf < hwp < docx < xlsx < pptx < txt < image < zip < 기타 */
+export function fileTypeRank(type?: string, name?: string): number {
+  const t = (type || '').toLowerCase()
+  const i = (name || '').lastIndexOf('.')
+  const ext = i > 0 ? (name || '').slice(i + 1).toLowerCase() : ''
+  if (ext === 'pdf' || t === 'application/pdf') return 0
+  if (ext === 'hwp' || ext === 'hwpx') return 1
+  if (DOC.includes(ext) || t.includes('word')) return 2
+  if (XLS.includes(ext) || t.includes('spreadsheet') || t === 'text/csv') return 3
+  if (PPT.includes(ext) || t.includes('presentation')) return 4
+  if (['txt', 'log', 'md'].includes(ext) || (t.startsWith('text/') && t !== 'text/csv')) return 5
+  if (IMG_EXT.includes(ext) || t.startsWith('image/')) return 6
+  if (['zip', '7z', 'rar', 'tar', 'gz'].includes(ext) || t.includes('zip') || t.includes('compressed')) return 7
+  return 8
+}
+
 export function FileTypeIcon({ type, name, size = 18 }: { type?: string; name?: string; size?: number }) {
   const t = (type || '').toLowerCase()
   const i = (name || '').lastIndexOf('.')
