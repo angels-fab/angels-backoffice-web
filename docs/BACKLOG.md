@@ -49,12 +49,12 @@ GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vit
 
 ### 계정·개인화 로드맵 (A→B→C→D, A 완료)
 - **A. 계정 기본 — ✅ 완료**(위 2번).
-- **B. 권한 4단계(게스트/유관자/팀원/관리자) — 진행 중 (2026-07-07)**: 사용자 확정 모델.
+- **B. 권한 4단계(게스트/유관자/팀원/관리자) — Phase 1 완료·배포 / 나머지 보류 (2026-07-07)**: 사용자 확정 모델. **Phase 2·3은 사용자 요청으로 나중에**(필요해질 때).
   - **모델**: `role` 단일 필드 `guest < associate(유관자) < member(팀원) < admin`. **admin은 member의 상위 집합**(관리자=팀원+관리). 명칭 맵 `ROLE_LABEL`(role.tsx). 게이트: `isAdmin`(관리)·`isMember`(팀원 이상=열람+작성)·`isAssociate`·`loggedIn`.
     - **게스트**: 홈 로드맵·행사·바로가기. **유관자**: 로그인 + 행사·바로가기(+장비 제한열람=Phase 2). **팀원**: 팀 콘텐츠 전체 열람+**작성**(공지·업무일정·업무현황·개선·장비). **관리자**: +사용자 승인/관리·포털관리. 승격=현 관리자가 **팀원에게만** admin 부여(Phase 3 화면).
   - **✅ Phase 1 완료·배포**: 프런트 4단계 골격 — role.tsx(associate 추가·isMember·ROLE_LABEL), `RequireMember` 가드(+ /notice·/calendar·/work·/improve·/equipment 적용), SideNav·BottomNav·MobileMenuDrawer 4단계 메뉴, TopBar·설정 표시명, 홈 대시보드=팀원+, 승인 버튼 **유관자/팀원**. **DB**: `is_member()` 함수 + 장비 3테이블(`equipments`·`equipment_history`·`schedules`) SELECT `is_member()` 정책 추가 → **팀원 장비 열람**(sim 확인: is_member=true·eq 29건). 쓰기 정책 무변경(팀원 아직 열람만).
-  - **⏳ Phase 2**: 팀원 **작성** 권한 — 공지·업무·일정·개선 write RLS(is_admin()→is_member) + 프런트 write 버튼 게이트(isAdmin→isMember). + 유관자 **장비 제한열람**(예산 price·제조사 maker·모델 제외한 뷰 `equipments_public` + 컬럼 숨김).
-  - **🔶 Phase 3(진행)**: 설정 "사용자 관리"에 **회원 목록 + 권한 변경(Select) + 강퇴** 구현(관리자만·본인계정 잠금방지·관리자승격은 팀원에게만). **남음**: 가입/승인/거절/권한변경/강퇴 **이력**(`account_events` 테이블) · 팀원→관리자 승격을 이력에 남기기. (auth.users 완전 삭제는 service_role 필요 → 강퇴=프로필 삭제 소프트킥.)
+  - **⏸️ Phase 2 (보류 — 나중에)**: 팀원 **작성** 권한 — 공지·업무·일정·개선 write RLS(is_admin()→is_member) + 프런트 write 버튼 게이트(isAdmin→isMember). + 유관자 **장비 제한열람**(예산 price·제조사 maker·모델 제외한 뷰 `equipments_public` + 컬럼 숨김). ※ 팀원이 실제로 글을 쓸 때 / 유관자를 실제로 초대할 때 착수.
+  - **🔶 Phase 3**: 설정 "사용자 관리"에 **회원 목록 + 권한 변경(Select) + 강퇴** ✅ 완료(관리자만·본인계정 잠금방지·관리자승격은 팀원에게만). **⏸️ 보류(나중에)**: 가입/승인/거절/권한변경/강퇴 **이력**(`account_events` 테이블). (auth.users 완전 삭제는 service_role 필요 → 강퇴=프로필 삭제 소프트킥.)
   - **🐞 버그픽스(2026-07-07)**: ① `profiles_role_check` CHECK에 'associate' 없어 **유관자 승인 무반응** → 제약을 `guest/associate/member/admin/pending`으로 교체. ② `signUp()`이 기본 supabase 클라이언트로 실행돼 **가입 시 현재(관리자) 세션을 덮어써 로그아웃** → `makeSignupClient()`(persistSession:false) 격리 클라이언트로 변경, signOut 제거.
   - **⏳ 기타**: 유관자·팀원은 `/settings`(RequireAdmin) 못 들어가 **본인 비밀번호 변경 불가** — 필요 시 Settings를 RequireAuth로 열고 승인섹션만 isAdmin.
 - **C. 개인화 1차**: 내 기준 새 글 배지(메뉴별 마지막 확인시각, `user_settings`) + 보던 화면 기억(업무 KPI 탭·필터, 캘린더 뷰).
