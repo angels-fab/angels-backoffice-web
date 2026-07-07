@@ -167,7 +167,7 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
               >
                 {busyPath === a.path
                   ? <CircularProgress size={16} thickness={5} sx={{ flex: 'none' }} />
-                  : <AttachmentIcon type={a.type} name={a.name} sx={{ fontSize: 18, flex: 'none' }} />}
+                  : <AttachmentIcon type={a.type} name={a.name} size={20} />}
                 <Box component="span" sx={{ fontSize: 12.5, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</Box>
                 <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', flex: 'none' }}>{formatBytes(a.size)}</Box>
                 <DownloadIcon sx={{ fontSize: 15, color: 'text.disabled', flex: 'none' }} />
