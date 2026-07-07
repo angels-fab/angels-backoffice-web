@@ -39,11 +39,9 @@ GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vit
 2. **W4 반복**: 매주/매월 시리즈 생성 → 그 중 하나 "이 일정만/이후/전체" 수정·삭제.
 3. **가입/승인 흐름**: 사번 가입 신청 → 설정 "가입 승인 대기"에 뜸 → 일반/관리자 승인 → 그 계정 로그인.
 
-### 🚧 현재 블로커 — 가입 기능
-**Supabase 대시보드에서 "Confirm email"을 꺼야** 사번 가입이 됩니다.
-- 증상: 가입 시 `email address invalid` 또는 `email 전송 한도 초과`. → GoTrue가 확인 메일을 보내려 하는데 사번 계정은 받을 메일함이 없어 막힘.
-- 조치: 대시보드 → **Authentication → Sign In / Providers → Email → "Confirm email" OFF → Save**.
-- 껐어도 최근 전송 시도로 최대 1시간 rate limit 남을 수 있음(이후 메일 안 보내니 해소).
+### ✅ 해결됨 — 가입 이메일 블로커 (2026-07-07)
+`email address invalid` 원인 = GoTrue가 확인 메일을 보내려다 막힘(사번 계정은 받을 메일함 없음). **대시보드 Authentication → Sign In / Providers → Email → "Confirm email" OFF 완료.** GoTrue `/auth/v1/settings`에서 `mailer_autoconfirm: true` 확인 = 자동 확인(메일 안 보냄). 이제 사번 가입 통과.
+- (직전 전송 시도로 최대 1시간 rate limit 잔존 가능 → 이후 메일 안 보내니 자연 해소.)
 
 ---
 
@@ -51,7 +49,8 @@ GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vit
 
 ### 계정·개인화 로드맵 (A→B→C→D, A 완료)
 - **A. 계정 기본 — ✅ 완료**(위 2번).
-- **B. member 역할 분리 (다음 진행)**: 제안 = 일반사용자는 전체 열람 + 캘린더 일정 작성 + 개선요청·답글 작성 / 업무·공지·장비 편집은 admin만. RLS(is_member 추가)+프런트 게이팅. **⏳ 결정 대기: member 쓰기 범위 이대로?** (member/admin 구분 기반은 A에서 이미 깔림)
+- **B. member 역할 분리 — Phase 1(읽기 전용) ✅ 완료 (2026-07-07)**: 사용자 결정 = **member는 읽기 전용**(추가 쓰기·장비열람 없음). 프런트만 수정, **DB 변경 0**. 원인 = 앱 전체가 "로그인됨"을 `isAdmin`으로만 판단해 member가 로그아웃처럼 보였음(RLS 아님 — profiles SELECT는 `true`). 수정: `role.tsx`에 `loggedIn`(=role!=='guest') 추가 → TopBar(파랑 "일반·이름" 칩+로그아웃)·SideNav·BottomNav·MobileMenuDrawer·Home·Greeting을 `loggedIn` 기준으로. member = 장비·설정 제외 전 페이지 열람, 모든 쓰기는 admin 유지. **RLS 현황(확인됨)**: 읽기 SELECT는 대부분 `true`(공지·업무·일정·개선·답글·프로필), **장비(equipments·equipment_history·schedules)만 is_admin()**; 쓰기는 전부 is_admin()(개선 draft만 본인). 
+  - **⏳ 미결/후속**: ① member는 `/settings`(RequireAdmin)에 못 들어가 **본인 비밀번호 변경 불가** — 필요 시 Settings를 RequireAuth로 열고 승인섹션만 isAdmin 유지. ② Phase 2(원하면): 캘린더 일정 작성 + 개선요청·답글 작성 허용(RLS를 is_admin()→is_member 포함으로).
 - **C. 개인화 1차**: 내 기준 새 글 배지(메뉴별 마지막 확인시각, `user_settings`) + 보던 화면 기억(업무 KPI 탭·필터, 캘린더 뷰).
 - **D. 개인화 2차**: 홈 섹션 순서/숨김 + 관심 업무 핀. **⏳ 결정 대기: 업무카드 정렬 = 팀 공유 vs 개인별.**
 - 참고: `user_settings` 테이블 준비돼 있음.

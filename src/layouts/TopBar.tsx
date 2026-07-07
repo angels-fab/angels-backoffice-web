@@ -18,7 +18,7 @@ import topbarLogo from '@/assets/topbar-logo.jpg'
 
 export default function TopBar() {
   const navigate = useNavigate()
-  const { isAdmin, user, logout } = useRole()
+  const { loggedIn, isAdmin, user, logout } = useRole()
   const [loginOpen, setLoginOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   // 모바일에서 데스크톱(PC) 레이아웃 보기 토글 (터치 기기에서만 노출)
@@ -69,16 +69,19 @@ export default function TopBar() {
           </Tooltip>
           {/* 계정 컨트롤(칩·로그아웃·로그인)은 PC 전용 — 모바일은 하단 탭바/메뉴 드로어가 담당(상단바 잘림 방지) */}
           <Box className="d-only" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {isAdmin ? (
+            {loggedIn ? (
               <>
-                <StatusChip status="success" label={user ? `관리자 · ${user}` : '관리자'} />
+                <StatusChip
+                  status={isAdmin ? 'success' : 'info'}
+                  label={user ? `${isAdmin ? '관리자' : '일반'} · ${user}` : isAdmin ? '관리자' : '일반'}
+                />
                 <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: 16 }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
                   로그아웃
                 </Button>
               </>
             ) : (
               <Button size="small" variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: 16 }} />} onClick={() => setLoginOpen(true)}>
-                관리자 모드
+                로그인
               </Button>
             )}
           </Box>

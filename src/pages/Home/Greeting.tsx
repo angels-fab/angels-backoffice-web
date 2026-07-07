@@ -12,9 +12,9 @@ const GREET_SETS = [
 ]
 
 export default function Greeting() {
-  const { isAdmin, user } = useRole()
-  // 로그인 주체별 인사말 — 관리자는 이름, 게스트는 팀 인사말
-  const sub = isAdmin && user ? `${user}님, 안녕하세요` : '안녕하세요, FAB 구축팀입니다'
+  const { loggedIn, user } = useRole()
+  // 로그인 주체별 인사말 — 로그인 사용자(일반·관리자)는 이름, 게스트는 팀 인사말
+  const sub = loggedIn && user ? `${user}님, 안녕하세요` : '안녕하세요, FAB 구축팀입니다'
   const { main, date } = useMemo(() => {
     const now = new Date()
     let h = parseInt(

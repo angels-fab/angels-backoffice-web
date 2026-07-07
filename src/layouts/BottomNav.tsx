@@ -18,14 +18,14 @@ function Badge({ n }: { n: number }) {
 
 /**
  * 모바일 하단 탭바 — 하이브리드 내비게이션.
- * 로그인(관리자): 홈 · 업무현황 · 업무일정 · 공지 + 「메뉴」(나머지 목적지·계정은 바텀시트).
+ * 로그인(일반·관리자): 홈 · 업무현황 · 업무일정 · 공지 + 「메뉴」(나머지 목적지·계정은 바텀시트).
  * 게스트: 홈 + 로그인. (사내 데이터는 로그인 필수 — 게스트는 홈만 접근)
  * PC는 SideNav가 담당(.bottom-nav는 ≤768px에서만 노출).
  */
 export default function BottomNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { isAdmin } = useRole()
+  const { loggedIn } = useRole()
   const { notice: noticeCnt, work: workCnt, improve: improveCnt } = useNavBadges()
   const [menuOpen, setMenuOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
@@ -57,7 +57,7 @@ export default function BottomNav() {
     <>
       <nav className="bottom-nav" id="bottom-nav">
         {navItem('/', '홈', <HomeIcon />)}
-        {isAdmin ? (
+        {loggedIn ? (
           <>
             {navItem('/work', '업무현황', <AssessmentIcon />, workCnt)}
             {navItem('/calendar', '일정', <CalendarMonthIcon />)}
@@ -70,7 +70,7 @@ export default function BottomNav() {
         )}
       </nav>
 
-      {isAdmin ? (
+      {loggedIn ? (
         <MobileMenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
       ) : (
         <AdminLoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />

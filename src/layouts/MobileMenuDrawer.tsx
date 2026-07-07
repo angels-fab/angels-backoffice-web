@@ -38,7 +38,7 @@ interface NavRow {
 export default function MobileMenuDrawer({ open, onClose }: Props) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { isAdmin, user, logout } = useRole()
+  const { loggedIn, isAdmin, user, logout } = useRole()
   const badges = useNavBadges()
   const improveItems = useAppSelector((s) => s.improve.items)
   const memoCounts = memoCountByPath(improveItems)
@@ -119,19 +119,22 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
         })}
       </List>
 
-      {isAdmin && (
+      {loggedIn && (
         <>
           <Divider sx={{ my: 0.5 }} />
           <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>
-            계정{user ? ` · ${user}` : ''}
+            계정{user ? ` · ${user}` : ''}{isAdmin ? '' : ' · 일반'}
           </Typography>
           <List dense sx={{ pt: 0.5 }}>
-            <ListItemButton selected={isActive('/settings')} onClick={() => go('/settings')} sx={{ py: 1 }}>
-              <ListItemIcon sx={{ minWidth: 40, color: isActive('/settings') ? 'primary.main' : 'text.secondary' }}>
-                <SettingsIcon />
-              </ListItemIcon>
-              <ListItemText slotProps={{ primary: { sx: { fontSize: 14.5 } } }} primary="설정" />
-            </ListItemButton>
+            {/* 설정 = 관리자 전용(가입 승인 등). 일반 사용자에겐 숨김. */}
+            {isAdmin && (
+              <ListItemButton selected={isActive('/settings')} onClick={() => go('/settings')} sx={{ py: 1 }}>
+                <ListItemIcon sx={{ minWidth: 40, color: isActive('/settings') ? 'primary.main' : 'text.secondary' }}>
+                  <SettingsIcon />
+                </ListItemIcon>
+                <ListItemText slotProps={{ primary: { sx: { fontSize: 14.5 } } }} primary="설정" />
+              </ListItemButton>
+            )}
             <ListItemButton
               onClick={() => {
                 onClose()

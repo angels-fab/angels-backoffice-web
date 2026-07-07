@@ -19,6 +19,8 @@ export type LoginResult = 'ok' | 'fail' | 'pending'
 interface RoleContextValue {
   role: Role
   isAdmin: boolean
+  /** 로그인 여부(member 또는 admin) — 화면 표시·메뉴 노출은 이 값 기준(isAdmin은 관리 기능 전용) */
+  loggedIn: boolean
   /** 세션 복원 완료 여부 — 라우트 가드는 이 값이 true일 때만 판정(새로고침 리다이렉트 방지) */
   ready: boolean
   /** 로그인한 담당자 이름(게시자명) — profiles.name */
@@ -35,6 +37,7 @@ interface RoleContextValue {
 const RoleContext = createContext<RoleContextValue>({
   role: 'guest',
   isAdmin: false,
+  loggedIn: false,
   ready: false,
   user: null,
   authKey: null,
@@ -153,7 +156,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', ready, user, authKey, login, signUp, logout }}>
+    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', loggedIn: role !== 'guest', ready, user, authKey, login, signUp, logout }}>
       {children}
     </RoleContext.Provider>
   )
