@@ -283,7 +283,7 @@ export default function Notice() {
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
             sx={{ color: 'text.primary', cursor: 'pointer', '&:hover .notice-title': { textDecoration: 'underline' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 } }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, width: 'fit-content', maxWidth: '100%' }}>
               {isExpired(n) && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="neutral" label="종료" /></Box>}
               <Typography className="notice-title" variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
@@ -309,7 +309,18 @@ export default function Notice() {
           <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
             {!!n.attachments?.length && (
               <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
-                <Box component="img" src={floppyIcon} alt={`첨부파일 ${n.attachments.length}개`} sx={{ width: 18, height: 18, objectFit: 'contain', verticalAlign: 'middle' }} />
+                {/* 라인아트 아이콘을 알파 마스크로 렌더 → 테마색(라이트/다크 모두 보임) */}
+                <Box
+                  role="img"
+                  aria-label={`첨부파일 ${n.attachments.length}개`}
+                  sx={{
+                    display: 'inline-block', verticalAlign: 'middle', width: 19, height: 19, bgcolor: 'text.secondary',
+                    maskImage: `url(${floppyIcon})`, WebkitMaskImage: `url(${floppyIcon})`,
+                    maskSize: 'contain', WebkitMaskSize: 'contain',
+                    maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat',
+                    maskPosition: 'center', WebkitMaskPosition: 'center',
+                  }}
+                />
               </Tooltip>
             )}
           </TableCell>
