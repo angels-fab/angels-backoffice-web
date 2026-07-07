@@ -1,0 +1,89 @@
+# 프로젝트 진행상황 · 백로그 (인수인계)
+
+> 다른 컴퓨터/새 세션에서 이어받을 때 **이 문서를 먼저 읽으세요.** Claude 작업 메모는 각 컴퓨터
+> 로컬(`~/.claude`)에만 있어 git으로 안 넘어가서, 핵심 진행상황·백로그·결정사항을 여기에 옮겨 둡니다.
+> (비밀키·비밀번호 미포함. Supabase anon key는 원래 공개 키로 `src/api/supabase.ts`에 있음.)
+>
+> 최종 갱신: 2026-07-07. 배포 브랜치 = **main** (main에 push → GitHub Actions가 빌드→`angels-fab.github.io` 배포).
+> **feat/work-hold-archive 등 다른 브랜치에서 작업 금지**(배포 안 됨). `git checkout main && git pull` 후 작업.
+
+---
+
+## 0. 프로젝트 한 줄 요약
+GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vite+MUI+Redux, HashRouter.
+데이터·인증 = **Supabase**(프로젝트 ref `rmvutlhdcfkqubzrckqf`, 서울). 구글시트/Apps Script는 읽기전용 백업. 상세 규칙 [CLAUDE.md](../CLAUDE.md).
+
+**디자인 규칙(필수)**: ① 이모지 아이콘 금지 — `@mui/icons-material`만. ② 카드 왼쪽 컬러 보더 금지. ③ 홈 대시보드는 크게(작아 보이는 디자인 지양).
+
+---
+
+## 1. 인증·역할 구조 (현재)
+- Supabase Auth. **사번 로그인** — 앱이 내부적으로 `사번 → {사번}@도메인` + 비밀번호 `.angels` 패딩(`padPassword`)으로 변환. 사용자는 이메일 안 봄/안 씀.
+- 역할 3단계: **guest / member / admin** (`profiles.role`). `src/auth/role.tsx`. `is_admin()` DB 함수로 RLS 게이트.
+- **auth 이메일 도메인 = `angels-fab.com`**(신규). 기존 4계정은 `@angels.local`이라 login이 신규→레거시 순 폴백(`empEmailLegacy`). 이유: `.local`은 예약 TLD라 GoTrue 신규 가입에서 거부.
+- DB 현황: `profiles` 4건 전부 admin, pending 0. `calendar_events` 278건 전부 단독(series_id='').
+
+---
+
+## 2. 이번(2026-07-07) 세션에 완료 (전부 배포됨, 상세는 커밋 메시지)
+- **W3 UI 통일 마무리**: 필터칩 공용화(`components/FilterChip.tsx` TintChip/PillChip), 모달 3종 MUI Dialog+TextField 전환(커스텀 `.m*/.modal-*` CSS 전부 제거), 색 팔레트 토큰 통합, 장비대장 표→모바일 카드(`.rtable` 재사용 패턴), 공지 표 모바일 가독성, 죽은 CSS 대량 제거.
+- **W2b① 순서편집 손잡이(≡)**: 카드 본문 스크롤 유지, 손잡이만 드래그.
+- **W4 반복 일정 개별 예외**(materialize): 반복=발생일별 개별 행+`series_id`, 수정/삭제 시 **이 일정만/이후/전체** 3-범위. 적대적 리뷰 반영(월말 앵커·경계·방어).
+- **계정·개인화 A(계정 기본)**: ①비밀번호 변경(설정) ②가입 신청→관리자 승인(설정) ③잔재 정리.
+- 적대적 리뷰(멀티에이전트) 결론: 기능 회귀 0.
+
+---
+
+## 3. ⚠️ 라이브 확인 대기 (운영 DB 쓰기라 사람이 실제로 눌러 확인해야 함)
+1. **모달 3종 실제 저장**: 업무 등록/수정·장비 추가·일정 추가/수정. (필드 바인딩은 preview 확인, 실제 create/update 미실행)
+2. **W4 반복**: 매주/매월 시리즈 생성 → 그 중 하나 "이 일정만/이후/전체" 수정·삭제.
+3. **가입/승인 흐름**: 사번 가입 신청 → 설정 "가입 승인 대기"에 뜸 → 일반/관리자 승인 → 그 계정 로그인.
+
+### 🚧 현재 블로커 — 가입 기능
+**Supabase 대시보드에서 "Confirm email"을 꺼야** 사번 가입이 됩니다.
+- 증상: 가입 시 `email address invalid` 또는 `email 전송 한도 초과`. → GoTrue가 확인 메일을 보내려 하는데 사번 계정은 받을 메일함이 없어 막힘.
+- 조치: 대시보드 → **Authentication → Sign In / Providers → Email → "Confirm email" OFF → Save**.
+- 껐어도 최근 전송 시도로 최대 1시간 rate limit 남을 수 있음(이후 메일 안 보내니 해소).
+
+---
+
+## 4. 남은 작업 백로그
+
+### 계정·개인화 로드맵 (A→B→C→D, A 완료)
+- **A. 계정 기본 — ✅ 완료**(위 2번).
+- **B. member 역할 분리 (다음 진행)**: 제안 = 일반사용자는 전체 열람 + 캘린더 일정 작성 + 개선요청·답글 작성 / 업무·공지·장비 편집은 admin만. RLS(is_member 추가)+프런트 게이팅. **⏳ 결정 대기: member 쓰기 범위 이대로?** (member/admin 구분 기반은 A에서 이미 깔림)
+- **C. 개인화 1차**: 내 기준 새 글 배지(메뉴별 마지막 확인시각, `user_settings`) + 보던 화면 기억(업무 KPI 탭·필터, 캘린더 뷰).
+- **D. 개인화 2차**: 홈 섹션 순서/숨김 + 관심 업무 핀. **⏳ 결정 대기: 업무카드 정렬 = 팀 공유 vs 개인별.**
+- 참고: `user_settings` 테이블 준비돼 있음.
+
+### 캘린더 UX (비치명)
+1. 일정 클릭 → 상세 팝오버(수정 버튼) 대신 **일정 수정 모달 바로 열기**.
+2. 반복 일정 **발생일 드래그 이동** (현재 시리즈 발생행은 `editable:!ev.recurring`이라 비활성). ※ 폼 "이 일정만" 날짜 변경은 W4로 이미 됨.
+3~4. 특정/범위 삭제 → **W4에서 이미 커버**. 라이브 확인만.
+
+### 캘린더 후속 다듬기 (난이도/제약 커 보류)
+- 무한 스크롤(FC 커스텀 큼) · 멀티데이 세로줄(데이터 구조) · 월/주 자동 가로회전(**iOS 사파리가 웹 화면회전 잠금 막음** — 안내만) · 상세 팝오버→아코디언.
+
+### 표 → 카드 (남은 것)
+- 개선요청 표(관리자 전용 인라인 편집) 모바일 카드화 = 손 많이 가고 가치 낮아 **보류**. 필요 시 `.rtable` 재사용.
+
+### 사진 갤러리 메뉴 (승인 대기)
+- Supabase Storage 1GB(현재 0 사용). 웹 최적화면 ~2,000-3,000장, 포스터급(800px·200KB)이면 ~5,000장. 실병목=1GB 스토리지(egress 5GB/월은 내부 팀이라 여유).
+- 접근: Storage 버킷 + 업로드 시 리사이즈/썸네일 + 그리드(썸네일)·상세(원본). 이벤트 포스터 리사이즈 파이프라인 재사용 가능.
+
+### 안 하기로 함
+- **W5 공개 소개페이지** — 사용자가 안 함 결정.
+
+---
+
+## 5. 개발 참고
+- `npm run dev`(port 3600) / `npm run type-check`(수정 후 항상). 스타일 = `src/index.css` 단일 파일(CSS 변수).
+- 배포: main push → GitHub Actions → `angels-fab.github.io`(1~2분). 반응형 분기 768px.
+- Supabase 마이그레이션 최근: `calendar_events_add_series_id`(W4), `profiles_signup_approval`(가입승인).
+
+---
+
+## 6. 다음 세션 시작 가이드
+1. `git checkout main && git pull origin main`.
+2. **3번 라이브 확인 먼저**(특히 가입 블로커 = Confirm email OFF).
+3. **계정·개인화 B(member 역할 분리)** 진행. 진입 전 "member 쓰기 범위" 결정 확인.
