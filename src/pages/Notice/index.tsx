@@ -27,7 +27,6 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
-import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -54,6 +53,7 @@ import type { Notice as NoticeItem } from '@/types'
 import { noticeCatStatus } from './noticeMeta'
 import NoticeDetail from './NoticeDetail'
 import NoticeCompose, { NOTICE_CATS, type NoticeFormValues } from './NoticeCompose'
+import floppyIcon from './filetypes/floppy.png'
 
 const refUrl = (ref: string) => String(ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
 
@@ -242,14 +242,7 @@ export default function Notice() {
     return (
       <Fragment key={rowKey}>
         <TableRow
-          hover
-          tabIndex={0}
-          aria-label={`공지: ${n.title}`}
-          aria-expanded={open}
-          onClick={toggle}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
           sx={(th) => ({
-            cursor: 'pointer',
             // 종료글은 더 흐리게(0.3) · 진행중은 그대로(상대 대비로 더 또렷)
             opacity: isExpired(n) ? 0.3 : 1,
             '& > td': {
@@ -257,7 +250,6 @@ export default function Notice() {
               bgcolor: open ? 'action.hover' : isCopy ? th.palette.background.elevated : th.palette.background.default,
               borderBottom: open ? 0 : undefined,
             },
-            '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },
           })}
         >
           <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -281,10 +273,19 @@ export default function Notice() {
               )}
           </TableCell>
           <TableCell><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
-          <TableCell sx={{ color: 'text.primary' }}>
+          {/* 아코디언 활성 영역 = 제목 셀만(행 전체 아님) */}
+          <TableCell
+            role="button"
+            tabIndex={0}
+            aria-label={`공지: ${n.title}`}
+            aria-expanded={open}
+            onClick={toggle}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
+            sx={{ color: 'text.primary', cursor: 'pointer', '&:hover .notice-title': { textDecoration: 'underline' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 } }}
+          >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
               {isExpired(n) && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="neutral" label="종료" /></Box>}
-              <Typography variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
+              <Typography className="notice-title" variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
               </Typography>
               {n.isNew && (
@@ -308,7 +309,7 @@ export default function Notice() {
           <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
             {!!n.attachments?.length && (
               <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
-                <SaveOutlinedIcon aria-label={`첨부파일 ${n.attachments.length}개`} sx={{ fontSize: 18, color: 'text.secondary', verticalAlign: 'middle' }} />
+                <Box component="img" src={floppyIcon} alt={`첨부파일 ${n.attachments.length}개`} sx={{ width: 18, height: 18, objectFit: 'contain', verticalAlign: 'middle' }} />
               </Tooltip>
             )}
           </TableCell>
