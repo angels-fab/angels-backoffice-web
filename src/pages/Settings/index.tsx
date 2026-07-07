@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -79,7 +79,62 @@ function PasswordChangeCard() {
   )
 }
 
-/** 설정 — 권한 · 비밀번호 변경 · 포털 정보. */
+interface PendingUser { id: string; name: string; emp_no: string | null; created_at: string }
+
+/** 가입 승인 대기 목록 — 관리자만. 승인(member/admin) / 거절(프로필 삭제). RLS: profiles_admin_update/delete. */
+function PendingApprovals() {
+  const [rows, setRows] = useState<PendingUser[] | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  const load = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, name, emp_no, created_at')
+      .eq('role', 'pending')
+      .order('created_at', { ascending: true })
+    setRows((data || []) as PendingUser[])
+  }
+  useEffect(() => { void load() }, [])
+
+  const approve = async (id: string, role: 'member' | 'admin') => {
+    setBusyId(id)
+    await supabase.from('profiles').update({ role }).eq('id', id)
+    setBusyId(null)
+    void load()
+  }
+  const reject = async (id: string) => {
+    if (!window.confirm('이 가입 신청을 거절할까요? (프로필이 삭제됩니다)')) return
+    setBusyId(id)
+    await supabase.from('profiles').delete().eq('id', id)
+    setBusyId(null)
+    void load()
+  }
+
+  if (rows === null) return <AppCard padding={18}><Typography variant="body2">불러오는 중…</Typography></AppCard>
+  if (rows.length === 0) return <AppCard padding={18}><Typography variant="body2" sx={{ color: 'text.secondary' }}>대기 중인 가입 신청이 없습니다.</Typography></AppCard>
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      {rows.map((r) => (
+        <AppCard key={r.id} padding={16}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle1">{r.name || '(이름 없음)'}</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>사번 {r.emp_no || '-'} · 신청 {r.created_at?.slice(0, 10)}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+              <Button size="small" variant="contained" disabled={busyId === r.id} onClick={() => approve(r.id, 'member')}>일반 승인</Button>
+              <Button size="small" variant="outlined" disabled={busyId === r.id} onClick={() => approve(r.id, 'admin')}>관리자 승인</Button>
+              <Button size="small" color="error" disabled={busyId === r.id} onClick={() => reject(r.id)}>거절</Button>
+            </Box>
+          </Box>
+        </AppCard>
+      ))}
+    </Box>
+  )
+}
+
+/** 설정 — 권한 · 비밀번호 변경 · 가입 승인 · 포털 정보. */
 export default function Settings() {
   const { isAdmin, role, user, logout } = useRole()
   const [loginOpen, setLoginOpen] = useState(false)
@@ -115,6 +170,12 @@ export default function Settings() {
       {loggedIn && (
         <ContentSection title="비밀번호 변경" description="로그인에 사용하는 비밀번호를 변경합니다">
           <PasswordChangeCard />
+        </ContentSection>
+      )}
+
+      {isAdmin && (
+        <ContentSection title="가입 승인 대기" description="가입 신청을 승인(일반/관리자)하거나 거절합니다">
+          <PendingApprovals />
         </ContentSection>
       )}
 

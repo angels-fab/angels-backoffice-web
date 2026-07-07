@@ -13,6 +13,8 @@ import { supabase, empEmail, padPassword } from '@/api/supabase'
  */
 const SESSION_MARK = 'session' // authKey 표식 — 비밀 아님(값 미사용, 존재 여부만 로그인 판정에 씀)
 export type Role = 'guest' | 'member' | 'admin'
+/** 로그인 결과 — ok=성공 / fail=사번·비번 불일치 / pending=가입 승인 대기(로그인 불가) */
+export type LoginResult = 'ok' | 'fail' | 'pending'
 
 interface RoleContextValue {
   role: Role
@@ -23,8 +25,10 @@ interface RoleContextValue {
   user: string | null
   /** '로그인됨' 표식(비밀 아님) — 쓰기 게이트 truthy 판정용. 값은 서버로 안 감(인증=세션+RLS). */
   authKey: string | null
-  /** 사번+비밀번호 로그인(Supabase Auth). 성공 시 true. */
-  login: (empNo: string, password: string) => Promise<boolean>
+  /** 사번+비밀번호 로그인(Supabase Auth). 'ok'/'fail'/'pending'(승인 대기) */
+  login: (empNo: string, password: string) => Promise<LoginResult>
+  /** 가입 신청 — pending 프로필 생성(DB 트리거). 관리자 승인 후에 로그인 가능. */
+  signUp: (empNo: string, name: string, password: string) => Promise<{ ok: boolean; error?: string }>
   logout: () => void
 }
 
@@ -34,7 +38,8 @@ const RoleContext = createContext<RoleContextValue>({
   ready: false,
   user: null,
   authKey: null,
-  login: async () => false,
+  login: async () => 'fail',
+  signUp: async () => ({ ok: false }),
   logout: () => {},
 })
 
@@ -45,9 +50,12 @@ async function fetchProfile(authUserId: string, metaName: string | undefined) {
     .select('name, role')
     .eq('auth_user_id', authUserId)
     .maybeSingle()
+  const raw = String(data?.role || '')
   return {
     name: data?.name || metaName || '',
-    role: (data?.role === 'admin' ? 'admin' : 'member') as Role,
+    // member/admin만 권한 부여 — pending·프로필없음은 접근 없음(guest)
+    role: (raw === 'admin' ? 'admin' : raw === 'member' ? 'member' : 'guest') as Role,
+    pending: raw === 'pending',
   }
 }
 
@@ -70,9 +78,13 @@ export function RoleProvider({ children }: { children: ReactNode }) {
         if (session && alive) {
           const p = await fetchProfile(session.user.id, session.user.user_metadata?.name)
           if (!alive) return
-          setUser(p.name)
-          setRole(p.role)
-          setAuthKey(SESSION_MARK)
+          if (p.pending) {
+            await supabase.auth.signOut() // 승인 대기 계정 — 세션 있어도 접근 없음(게스트 취급)
+          } else {
+            setUser(p.name)
+            setRole(p.role)
+            setAuthKey(SESSION_MARK)
+          }
         }
       } finally {
         if (alive) setReady(true)
@@ -92,13 +104,14 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(async (empNo: string, password: string) => {
+  const login = useCallback(async (empNo: string, password: string): Promise<LoginResult> => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: empEmail(empNo),
       password: padPassword(password),
     })
-    if (error || !data.user) return false
+    if (error || !data.user) return 'fail'
     const p = await fetchProfile(data.user.id, data.user.user_metadata?.name)
+    if (p.pending) { await supabase.auth.signOut(); return 'pending' } // 승인 대기 — 로그인 불가
     // 평문 비밀번호는 저장하지 않는다(인증=세션 JWT). 구버전 게이트 키·잔재 정리만.
     localStorage.removeItem('role')
     localStorage.removeItem('adminUser')
@@ -106,7 +119,25 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     setUser(p.name)
     setRole(p.role)
     setAuthKey(SESSION_MARK)
-    return true
+    return 'ok'
+  }, [])
+
+  const signUp = useCallback(async (empNo: string, name: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+    const { error } = await supabase.auth.signUp({
+      email: empEmail(empNo),
+      password: padPassword(password),
+      options: { data: { name: name.trim() } },
+    })
+    if (error) {
+      const dup = /registered|already/i.test(error.message || '')
+      return { ok: false, error: dup ? '이미 등록된 사번입니다.' : error.message || '가입 신청에 실패했습니다.' }
+    }
+    // 가입 직후 세션이 생겨도 pending이라 접근 불가 — 자동 로그인하지 않고 정리
+    await supabase.auth.signOut()
+    setRole('guest')
+    setUser(null)
+    setAuthKey(null)
+    return { ok: true }
   }, [])
 
   const logout = useCallback(() => {
@@ -120,7 +151,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', ready, user, authKey, login, logout }}>
+    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', ready, user, authKey, login, signUp, logout }}>
       {children}
     </RoleContext.Provider>
   )
