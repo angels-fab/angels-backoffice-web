@@ -27,7 +27,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
-import AttachFileIcon from '@mui/icons-material/AttachFile'
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -295,14 +295,6 @@ export default function Notice() {
                   <OpenInNewIcon sx={{ fontSize: 15 }} />
                 </IconButton>
               )}
-              {!!n.attachments?.length && (
-                <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
-                  <Box component="span" aria-label={`첨부파일 ${n.attachments.length}개`} sx={{ display: 'inline-flex', alignItems: 'center', gap: '1px', flexShrink: 0, color: 'text.secondary' }}>
-                    <AttachFileIcon sx={{ fontSize: 14 }} />
-                    <Box component="span" sx={{ fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>{n.attachments.length}</Box>
-                  </Box>
-                </Tooltip>
-              )}
             </Box>
           </TableCell>
           <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textAlign: 'center', display: { xs: 'none', sm: 'table-cell' } }}>{n.author || '-'}</TableCell>
@@ -312,9 +304,17 @@ export default function Notice() {
               <ExpandMoreIcon sx={{ fontSize: 18, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
             </Box>
           </TableCell>
+          {/* 첨부 유무 — 있으면 플로피 아이콘(아코디언 안 열어도 확인), 없으면 공란 */}
+          <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+            {!!n.attachments?.length && (
+              <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
+                <SaveOutlinedIcon aria-label={`첨부파일 ${n.attachments.length}개`} sx={{ fontSize: 18, color: 'text.secondary', verticalAlign: 'middle' }} />
+              </Tooltip>
+            )}
+          </TableCell>
         </TableRow>
         <TableRow>
-          <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
+          <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
             <Collapse in={open} timeout="auto" unmountOnExit>
               <NoticeDetail notice={n} canEdit={isMember} onEdit={startEdit} onDelete={setDeleteTarget} />
             </Collapse>
@@ -394,6 +394,7 @@ export default function Notice() {
                     <TableCell>제목</TableCell>
                     <TableCell sx={{ width: 100, textAlign: 'center', display: { xs: 'none', sm: 'table-cell' } }}>작성자</TableCell>
                     <TableCell sx={{ width: { xs: 44, md: 120 }, textAlign: { xs: 'right', md: 'left' } }}>작성일</TableCell>
+                    <TableCell sx={{ width: 52, textAlign: 'center' }}>첨부</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -409,7 +410,7 @@ export default function Notice() {
                   )}
                   {filtered.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>공지사항이 없습니다</TableCell>
+                      <TableCell colSpan={6} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>공지사항이 없습니다</TableCell>
                     </TableRow>
                   )}
                   {/* 전체 최신순(원본) */}

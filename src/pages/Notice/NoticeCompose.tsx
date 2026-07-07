@@ -256,6 +256,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
         </TableCell>
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{mode === 'new' ? author : (notice?.author || '-')}</TableCell>
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
+        <TableCell />
       </TableRow>
       <TableRow sx={{ '& td': { borderTop: 0, bgcolor: amber, py: 0.75, verticalAlign: 'top' } }}>
         <TableCell />
@@ -368,6 +369,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
             </Tooltip>
           </Box>
         </TableCell>
+        <TableCell />
       </TableRow>
     </>
   )
