@@ -10,9 +10,13 @@ import Checkbox from '@mui/material/Checkbox'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogActions from '@mui/material/DialogActions'
 import CloseIcon from '@mui/icons-material/Close'
 import EventIcon from '@mui/icons-material/Event'
-import { addCalEvent, updateCalEvent, deleteCalEvent, fetchCalSeries } from '@/api/calendar'
+import { addCalEvent, updateCalEvent, deleteCalEvent, type CalScope } from '@/api/calendar'
 import { useRole } from '@/auth/role'
 import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
@@ -74,14 +78,16 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   const [repeatUntil, setRepeatUntil] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [scopeAsk, setScopeAsk] = useState<null | 'save' | 'delete'>(null) // 반복 시리즈 범위 선택 대기
 
-  const recurring = !!(event && event.recurring)
+  const isSeries = !!(event && event.seriesId) // 반복 시리즈의 한 발생일(materialize) — 수정/삭제 시 범위 선택
 
   // 열릴 때마다 폼 초기화 (add: 선택일 / edit: 대상 일정 값 — 반복 일정은 시리즈 원본을 불러 프리필)
   useEffect(() => {
     if (!open) return
     setError(null)
     setBusy(false)
+    setScopeAsk(null)
     setRepeat('none')
     setRepeatUntil('')
     if (mode === 'edit' && event) {
@@ -98,20 +104,6 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         setEndTime(timeOnly(event.end) || '10:00')
         const e0 = dateOnly(event.end)
         setEndDate(e0 && e0 !== dateOnly(event.start) ? e0 : '')
-      }
-      if (event.recurring) {
-        // 시리즈 원본의 반복 설정·기준 날짜로 교체(인스턴스 날짜가 아니라 시리즈 시작 기준)
-        void fetchCalSeries(event.id).then((s) => {
-          if (!s) return
-          setRepeat((s.repeat as Repeat) || 'none')
-          setRepeatUntil(s.repeatUntil || '')
-          setDate(dateOnly(s.start))
-          if (!event.allDay) {
-            setStartTime(timeOnly(s.start) || '09:00')
-            setEndTime(timeOnly(s.end) || '10:00')
-          }
-          setEndDate('')
-        })
       }
     } else {
       setTitle('')
@@ -144,7 +136,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     }
   }
 
-  const submit = async (e: FormEvent) => {
+  const submit = (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
     if (!isAdmin || !user) return setError('관리자 로그인이 필요합니다')
@@ -155,29 +147,41 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     if (endDate && endDate < date) return setError('종료일이 시작일보다 빨라요')
     if (repeat !== 'none' && repeatUntil && repeatUntil < date) return setError('반복 종료일이 시작일보다 빨라요')
     setError(null)
+    // 반복 시리즈 수정은 범위(이 일정만/이후/전체) 선택을 먼저 물음
+    if (mode === 'edit' && isSeries) { setScopeAsk('save'); return }
+    void doSave('one')
+  }
+
+  const doSave = async (scope: CalScope) => {
+    setScopeAsk(null)
     setBusy(true)
     try {
-      const res =
-        mode === 'add'
-          ? await addCalEvent(buildInput())
-          : await updateCalEvent({ ...buildInput(), id: event!.id })
+      const input = buildInput()
+      const res = mode === 'add'
+        ? await addCalEvent(input)
+        : await updateCalEvent({ ...input, id: event!.id, scope, seriesId: event!.seriesId, occDate: dateOnly(event!.start) })
       setBusy(false)
-      onSaved(res.note || (mode === 'add' ? '일정을 추가했어요' : recurring ? '반복 일정 전체에 반영했어요' : '일정을 수정했어요'))
+      onSaved(res.note || (mode === 'add' ? '일정을 추가했어요' : '일정을 수정했어요'))
     } catch (err) {
       setError(err instanceof Error ? err.message : '처리 실패')
       setBusy(false)
     }
   }
 
-  const remove = async () => {
+  const remove = () => {
     if (busy || !event) return
     if (!isAdmin || !user) return setError('관리자 로그인이 필요합니다')
-    const what = recurring ? '반복 일정 전체를' : '이 일정을'
-    if (!window.confirm(`${what} 삭제할까요? 되돌릴 수 없습니다.`)) return
+    if (isSeries) { setScopeAsk('delete'); return }
+    if (!window.confirm('이 일정을 삭제할까요? 되돌릴 수 없습니다.')) return
+    void doDelete('one')
+  }
+
+  const doDelete = async (scope: CalScope) => {
+    setScopeAsk(null)
     setError(null)
     setBusy(true)
     try {
-      const res = await deleteCalEvent({ id: event.id })
+      const res = await deleteCalEvent({ id: event!.id, scope, seriesId: event!.seriesId, occDate: dateOnly(event!.start) })
       setBusy(false)
       onSaved(res.note || '일정을 삭제했어요')
     } catch (err) {
@@ -187,6 +191,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   }
 
   return (
+    <>
     <Dialog
       open={open}
       onClose={() => { if (!busy) onClose() }}
@@ -256,22 +261,24 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
             </Box>
           )}
 
-          <Box>
-            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>반복</Typography>
-            <ToggleButtonGroup exclusive size="small" value={repeat} onChange={(_, v) => { if (v !== null) setRepeat(v) }}>
-              {REPEAT_LABEL.map(([value, label]) => (
-                <ToggleButton key={value} value={value} sx={{ textTransform: 'none', px: 1.5 }}>{label}</ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-            {repeat !== 'none' && (
-              <>
+          {mode === 'add' && (
+            <Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>반복</Typography>
+              <ToggleButtonGroup exclusive size="small" value={repeat} onChange={(_, v) => { if (v !== null) setRepeat(v) }}>
+                {REPEAT_LABEL.map(([value, label]) => (
+                  <ToggleButton key={value} value={value} sx={{ textTransform: 'none', px: 1.5 }}>{label}</ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+              {repeat !== 'none' && (
                 <TextField label="반복 종료일 (비우면 6개월)" size="small" fullWidth type="date" value={repeatUntil} onChange={e => setRepeatUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ mt: 1.5 }} />
-                {mode === 'edit' && recurring && (
-                  <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 0.75 }}>반복 일정의 수정·삭제는 시리즈 전체에 반영돼요.</Typography>
-                )}
-              </>
-            )}
-          </Box>
+              )}
+            </Box>
+          )}
+          {mode === 'edit' && isSeries && (
+            <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
+              반복 일정입니다 — 저장·삭제 시 적용 범위(이 일정만 / 이후 / 전체)를 선택합니다.
+            </Typography>
+          )}
 
           <TextField label="장소 (선택)" size="small" fullWidth value={loc} onChange={e => setLoc(e.target.value)} placeholder="예: 본관 3층 회의실" />
 
@@ -286,5 +293,20 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           </Box>
         </Box>
     </Dialog>
+
+    {/* 반복 시리즈 범위 선택 — 저장·삭제 시 이 일정만 / 이후 / 전체 */}
+    <Dialog open={!!scopeAsk} onClose={() => !busy && setScopeAsk(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 340 } } } }}>
+      <DialogTitle>{scopeAsk === 'delete' ? '반복 일정 삭제' : '반복 일정 수정'}</DialogTitle>
+      <DialogContent>
+        <DialogContentText sx={{ color: 'text.secondary' }}>어느 범위에 적용할까요?</DialogContentText>
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2, gap: 0.75, flexDirection: 'column', alignItems: 'stretch' }}>
+        <Button fullWidth variant="outlined" disabled={busy} onClick={() => (scopeAsk === 'delete' ? doDelete('one') : doSave('one'))}>이 일정만</Button>
+        <Button fullWidth variant="outlined" disabled={busy} onClick={() => (scopeAsk === 'delete' ? doDelete('following') : doSave('following'))}>이 일정 및 이후</Button>
+        <Button fullWidth variant="outlined" color={scopeAsk === 'delete' ? 'error' : 'primary'} disabled={busy} onClick={() => (scopeAsk === 'delete' ? doDelete('all') : doSave('all'))}>모든 일정</Button>
+        <Button fullWidth disabled={busy} onClick={() => setScopeAsk(null)} sx={{ color: 'text.secondary', mt: 0.5 }}>취소</Button>
+      </DialogActions>
+    </Dialog>
+    </>
   )
 }

@@ -30,7 +30,7 @@ const dstr = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
 /** 원본 일정 1건 → 날짜별 칸 전개(로더·드래그 이동 패치 공용 — 규칙 단일화) */
-function expandRawEvent(ev: { id: string; title: string; start: string; end: string; allDay: boolean; loc: string; recurring: boolean }): CalEvent[] {
+function expandRawEvent(ev: { id: string; title: string; start: string; end: string; allDay: boolean; loc: string; recurring: boolean; seriesId?: string }): CalEvent[] {
   const out: CalEvent[] = []
   const s = new Date(ev.start)
   if (isNaN(s.getTime())) return out
@@ -44,7 +44,7 @@ function expandRawEvent(ev: { id: string; title: string; start: string; end: str
   for (let i = 0; i < 60 && t <= e; i++) {
     out.push({
       date: dstr(t), title: ev.title, cat, time, loc: ev.loc,
-      id: ev.id, start: ev.start, end: ev.end, allDay: ev.allDay, recurring: ev.recurring,
+      id: ev.id, start: ev.start, end: ev.end, allDay: ev.allDay, recurring: ev.recurring, seriesId: ev.seriesId || '',
     })
     t = new Date(t.getTime() + DAY)
   }
@@ -103,7 +103,7 @@ const calSlice = createSlice({
       state.events = state.events
         .filter(e => e.id !== id)
         .concat(expandRawEvent({
-          id, title: first.title, loc: first.loc, allDay: first.allDay, recurring: first.recurring, start, end,
+          id, title: first.title, loc: first.loc, allDay: first.allDay, recurring: first.recurring, seriesId: first.seriesId, start, end,
         }))
     },
   },

@@ -200,8 +200,10 @@ export interface CalEvent {
   /** 원본 종료 'yyyy-MM-ddTHH:mm' (KST) */
   end: string
   allDay: boolean
-  /** 반복 일정 여부 — 수정/삭제 시 '이 일정만/전체 시리즈' 선택 */
+  /** 반복 일정 여부 — 수정/삭제 시 '이 일정만/이후/전체' 선택 */
   recurring: boolean
+  /** 반복 시리즈 그룹 id(빈 문자열=단독). 있으면 수정/삭제 시 범위 선택 */
+  seriesId: string
 }
 
 // ── 공지사항 ('공지사항' 시트 1행 = Notice) ──
