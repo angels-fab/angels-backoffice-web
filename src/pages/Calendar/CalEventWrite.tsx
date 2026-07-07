@@ -276,7 +276,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           )}
           {mode === 'edit' && isSeries && (
             <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
-              반복 일정입니다 — 저장·삭제 시 적용 범위(이 일정만 / 이후 / 전체)를 선택합니다.
+              반복 일정입니다 — 저장·삭제 시 범위(이 일정만 / 이후 / 전체)를 선택합니다. 날짜 변경은 '이 일정만'에서만 반영돼요.
             </Typography>
           )}
 

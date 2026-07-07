@@ -73,10 +73,11 @@ function occurrenceDates(s0: string, repeat: 'daily' | 'weekly' | 'monthly', unt
     const day = Number(s0.slice(8, 10))
     let [y, m] = [Number(s0.slice(0, 4)), Number(s0.slice(5, 7))]
     for (let i = 0; i < 600 && out.length < cap; i++) {
-      const probe = new Date(y, m - 1, day)
-      const occ = iso(probe)
+      // 그 달에 해당 일자가 없으면(2/30·2/31·4/31 등) 말일로 앵커 — '매월 31일/말일'도 달마다 1건씩 생성
+      const lastDay = new Date(y, m, 0).getDate()
+      const occ = iso(new Date(y, m - 1, Math.min(day, lastDay)))
       if (occ > until) break
-      if (probe.getDate() === day && occ >= s0) out.push(occ)
+      if (occ >= s0) out.push(occ)
       m += 1
       if (m > 12) { m = 1; y += 1 }
     }
@@ -87,10 +88,11 @@ function occurrenceDates(s0: string, repeat: 'daily' | 'weekly' | 'monthly', unt
   return out
 }
 
-/** 시작일 기준 n개월 후(같은 일자, 없으면 말일로 밀림은 Date가 자동 처리) */
+/** 시작일 기준 n개월 후 — 목표 월에 그 일자가 없으면 말일로 클램프(Date 오버플로로 다음 달로 넘어가지 않게) */
 const monthsLater = (s: string, n: number): string => {
   const [y, m, d] = s.slice(0, 10).split('-').map(Number)
-  return iso(new Date(y, m - 1 + n, d))
+  const last = new Date(y, m - 1 + n + 1, 0).getDate()
+  return iso(new Date(y, m - 1 + n, Math.min(d, last)))
 }
 
 export async function fetchCalendarEvents(): Promise<CalRawEvent[]> {
@@ -161,7 +163,12 @@ export async function addCalEvent(p: CalWriteInput): Promise<{ note?: string }> 
   }))
   const { error } = await supabase.from('calendar_events').insert(rows)
   if (error) throw new Error(error.message || '반복 일정 추가에 실패했습니다')
-  return { note: `반복 일정 ${rows.length}건을 만들었어요` }
+  const truncated = dates.length >= 400 && dates[dates.length - 1] < until
+  return {
+    note: truncated
+      ? `반복 일정 ${rows.length}건 생성 — 상한(400건)에 걸려 ${dates[dates.length - 1]}까지만 만들었어요. 이후 기간은 추가로 등록해주세요`
+      : `반복 일정 ${rows.length}건을 만들었어요`,
+  }
 }
 
 /** 인스턴스 id에서 행 id 추출(레거시 `행id:발생일` 대응 — materialize 행은 숫자 id 그대로) */
@@ -186,14 +193,17 @@ export async function updateCalEvent(
     if (error) throw new Error(error.message || '일정 수정에 실패했습니다')
     return {}
   }
+  if (scope === 'following' && !p.occDate) throw new Error('기준 발생일이 없어 이후 수정을 진행할 수 없습니다')
   const rows = await seriesRows(p.seriesId, scope === 'following' ? p.occDate : undefined)
   const st = p.start.slice(10)
   const et = p.end.slice(10)
+  const dayDelta = diffDays(p.start.slice(0, 10), p.end.slice(0, 10)) // 다중일 스팬(종료-시작 일수) 보존
   const results = await Promise.allSettled(rows.map((row) => {
     const d = row.start_at.slice(0, 10) // 각 발생일 보존
+    const endD = dayDelta > 0 ? addDays(d, dayDelta) : d
     return supabase.from('calendar_events').update({
       title: p.title, loc: p.loc || '', all_day: p.allDay,
-      start_at: `${d}${st}`, end_at: `${d}${et}`,
+      start_at: `${d}${st}`, end_at: `${endD}${et}`,
     }).eq('id', row.id).then((r) => { if (r.error) throw new Error(r.error.message) })
   }))
   const failed = results.filter((r) => r.status === 'rejected').length
@@ -212,8 +222,9 @@ export async function deleteCalEvent(
     if (error) throw new Error(error.message || '일정 삭제에 실패했습니다')
     return {}
   }
+  if (scope === 'following' && !p.occDate) throw new Error('기준 발생일이 없어 이후 삭제를 진행할 수 없습니다')
   let q = supabase.from('calendar_events').delete().eq('series_id', p.seriesId)
-  if (scope === 'following' && p.occDate) q = q.gte('start_at', p.occDate)
+  if (scope === 'following') q = q.gte('start_at', p.occDate as string)
   const { error } = await q
   if (error) throw new Error(error.message || '반복 일정 삭제에 실패했습니다')
   return { note: scope === 'all' ? '반복 일정 전체를 삭제했어요' : '이 일정 및 이후를 삭제했어요' }
