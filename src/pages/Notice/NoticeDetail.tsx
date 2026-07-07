@@ -9,8 +9,9 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import DownloadIcon from '@mui/icons-material/Download'
+import JSZip from 'jszip'
 import type { Notice, NoticeFile } from '@/types'
-import { noticeFileSignedUrl } from '@/api/notices'
+import { noticeFileSignedUrl, downloadNoticeBlob } from '@/api/notices'
 import { AttachmentIcon, formatBytes } from './attachmentUI'
 import { noticeBodyHTML } from './noticeMeta'
 
@@ -27,19 +28,20 @@ function MetaItem({ label, value }: { label: string; value: string }) {
 
 export interface NoticeDetailProps {
   notice: Notice
-  /** 관리자 모드 — 수정/삭제 액션 노출 */
-  isAdmin?: boolean
+  /** 팀원+ 모드 — 수정/삭제 액션 노출 */
+  canEdit?: boolean
   onEdit?: (notice: Notice) => void
   onDelete?: (notice: Notice) => void
 }
 
 /** 공지 상세 — 목록 행 아래 아코디언으로 펼쳐지는 내용(구 NoticeDrawer 대체). */
-export default function NoticeDetail({ notice, isAdmin, onEdit, onDelete }: NoticeDetailProps) {
+export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: NoticeDetailProps) {
   const url = refUrl(notice)
   const dept = (notice.dept || '').trim()
   const target = (notice.target || '').trim()
   const attachments = notice.attachments || []
   const [busyPath, setBusyPath] = useState<string | null>(null)
+  const [zipping, setZipping] = useState(false)
   const [dlErr, setDlErr] = useState('')
 
   // 첨부 다운로드 — 비공개 버킷 서명URL(원본 파일명) 발급 후 앵커 클릭으로 저장
@@ -57,17 +59,52 @@ export default function NoticeDetail({ notice, isAdmin, onEdit, onDelete }: Noti
       setBusyPath(null)
     }
   }
+
+  // 모두 다운로드 — 첨부 전부를 원본 Blob으로 받아 ZIP 1개로 묶어 저장(동명 파일은 번호 부여)
+  const downloadAll = async () => {
+    if (zipping) return
+    setDlErr(''); setZipping(true)
+    try {
+      const zip = new JSZip()
+      const used = new Set<string>()
+      for (const a of attachments) {
+        const blob = await downloadNoticeBlob(a.path)
+        let fname = a.name || 'file'
+        if (used.has(fname)) {
+          const dot = fname.lastIndexOf('.')
+          const base = dot > 0 ? fname.slice(0, dot) : fname
+          const ext = dot > 0 ? fname.slice(dot) : ''
+          let i = 2
+          while (used.has(`${base} (${i})${ext}`)) i += 1
+          fname = `${base} (${i})${ext}`
+        }
+        used.add(fname)
+        zip.file(fname, blob)
+      }
+      const out = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(out)
+      const el = document.createElement('a')
+      el.href = url
+      el.download = `${(notice.title || '공지').replace(/[\\/:*?"<>|]/g, '_')}_첨부.zip`
+      document.body.appendChild(el); el.click(); el.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setDlErr(e instanceof Error ? e.message : '모두 다운로드에 실패했습니다')
+    } finally {
+      setZipping(false)
+    }
+  }
   // 내용 왼쪽을 분류열(번호열 폭 뒤) 왼쪽에 정렬 — 번호열 48px + 셀 좌패딩 ≈ 64px 들여쓰기
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: '16px 18px 20px 64px', bgcolor: 'background.default', borderBottom: 1, borderColor: 'divider' }}>
       {/* 상단: (좌) 부서·해당자 / (우) 수정·삭제 아이콘. 분류칩·작성자·작성일은 제거(제목행에 분류칩 존재) */}
-      {(dept || target || isAdmin) && (
+      {(dept || target || canEdit) && (
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap', minWidth: 0 }}>
             {dept && <MetaItem label="부서" value={dept} />}
             {target && <MetaItem label="해당자" value={target} />}
           </Box>
-          {isAdmin && (
+          {canEdit && (
             <Box sx={{ display: 'flex', gap: 0.25, flexShrink: 0 }}>
               <Tooltip title="수정"><IconButton size="small" aria-label="수정" onClick={() => onEdit?.(notice)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
               <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="삭제" onClick={() => onDelete?.(notice)}><DeleteOutlineIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
@@ -94,9 +131,20 @@ export default function NoticeDetail({ notice, isAdmin, onEdit, onDelete }: Noti
 
       {attachments.length > 0 && (
         <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, letterSpacing: '0.04em' }}>
-            첨부파일 {attachments.length}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, letterSpacing: '0.04em' }}>
+              첨부파일 {attachments.length}
+            </Typography>
+            {attachments.length > 1 && (
+              <Button
+                size="small" variant="text" onClick={downloadAll} disabled={zipping}
+                startIcon={zipping ? <CircularProgress size={14} thickness={5} /> : <DownloadIcon sx={{ fontSize: 16 }} />}
+                sx={{ fontSize: 11.5, py: 0.25, minWidth: 0 }}
+              >
+                {zipping ? '압축 중…' : '모두 다운로드'}
+              </Button>
+            )}
+          </Box>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
             {attachments.map((a) => (
               <Box

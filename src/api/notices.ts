@@ -9,10 +9,12 @@ import type { Notice, NoticeFile } from '@/types'
  * author/key는 전환기 계약 유지를 위해 받되 미사용(인증 = 세션 + RLS).
  */
 
-/** 첨부파일 저장 버킷(비공개) — 업로드=관리자, 열람=인증 사용자 서명URL. 마이그레이션 notice_attachments */
+/** 첨부파일 저장 버킷(비공개) — 업로드=팀원(member)+, 열람=인증 사용자 서명URL. 마이그레이션 notice_attachments */
 export const NOTICE_BUCKET = 'notice-files'
-/** 파일당 최대 크기(20MB) — 버킷 file_size_limit과 일치. 초과 시 업로드 전 클라이언트 차단 */
-export const NOTICE_FILE_MAX = 20 * 1024 * 1024
+/** 파일당 최대 크기(10MB) — 버킷 file_size_limit과 일치. 초과 시 업로드 전 클라이언트 차단 */
+export const NOTICE_FILE_MAX = 10 * 1024 * 1024
+/** 업로드 1건 타임아웃(ms) — 스톨 시 무한 대기 방지(에러로 전환) */
+const UPLOAD_TIMEOUT = 60_000
 
 interface NoticesTableRow {
   num: number
@@ -108,18 +110,29 @@ const fileExt = (name: string) => {
 
 /**
  * 첨부파일 1건 업로드 → 메타데이터 반환. 저장 키는 충돌 방지용 UUID(원본 파일명은 name에 보존).
- * 20MB 초과는 업로드 전에 차단. 업로드 권한은 RLS(is_admin)가 최종 검증.
+ * 10MB 초과는 업로드 전에 차단, 60초 스톨 시 타임아웃. 업로드 권한은 RLS(is_member)가 최종 검증.
  */
 export async function uploadNoticeFile(file: File): Promise<NoticeFile> {
   if (file.size > NOTICE_FILE_MAX) {
-    throw new Error(`파일이 너무 큽니다(최대 20MB): ${file.name}`)
+    throw new Error(`파일이 너무 큽니다(최대 10MB): ${file.name}`)
   }
   const path = `notice/${crypto.randomUUID()}${fileExt(file.name)}`
-  const { error } = await supabase.storage
+  const upload = supabase.storage
     .from(NOTICE_BUCKET)
     .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false })
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error(`업로드 시간 초과: ${file.name}`)), UPLOAD_TIMEOUT),
+  )
+  const { error } = await Promise.race([upload, timeout])
   if (error) throw new Error(error.message || `업로드 실패: ${file.name}`)
   return { name: file.name, path, size: file.size, type: file.type || 'application/octet-stream' }
+}
+
+/** 첨부파일 원본 Blob 다운로드 — '모두 다운로드'(ZIP 묶기)용 */
+export async function downloadNoticeBlob(path: string): Promise<Blob> {
+  const { data, error } = await supabase.storage.from(NOTICE_BUCKET).download(path)
+  if (error || !data) throw new Error(error?.message || '파일 다운로드 실패')
+  return data
 }
 
 /** 첨부파일 다운로드용 서명 URL(1시간 유효) — 원본 파일명으로 저장되도록 download 지정 */

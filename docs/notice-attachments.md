@@ -2,6 +2,19 @@
 
 > 2026-07-07 · 요청자 박세리("공지사항 내 첨부파일 등록 기능 추가", 개선요청 #6 검토중) · 프런트+백엔드(Supabase Storage)
 
+## 2차 개선 (2026-07-08, 사용자 피드백 반영)
+
+- **권한: 팀원(member)+로 개방** — 공지 작성/수정/삭제 + 첨부 업로드를 `is_admin()`→`is_member()`로. (마이그레이션 `notice_write_member_and_10mb`) Notice UI 게이팅도 `isAdmin`→`isMember`(새 공지 버튼·작성/수정 폼·상세 수정/삭제). NoticeDetail prop `isAdmin`→`canEdit`.
+- **파일 제한 20MB→10MB** — 버킷 `file_size_limit` 및 `NOTICE_FILE_MAX`.
+- **저장 멈춤 수정** — 첨부를 파일별 상태 모델(`Upload{status:'uploading'|'done'|'error'}`)로 재작성. 업로드 60초 타임아웃(스톨→에러), 파일별 스피너/실패 표시, 저장 버튼 스피너("저장 중"). 완료(done) 파일만 저장 대상.
+- **첨부 유무 목록 표시** — 아코디언 안 열어도 목록 제목 옆에 클립 아이콘 + 개수(`AttachFile`).
+- **모두 다운로드(ZIP)** — 첨부 2개↑일 때 상세에 "모두 다운로드" 버튼. `downloadNoticeBlob`로 원본 Blob 수집 → JSZip으로 `{제목}_첨부.zip`(동명파일 번호부여). 의존성 `jszip` 추가.
+- **확장자 대표 아이콘 강화** — `attachmentUI.tsx` 매핑 확장(이미지·PDF·엑셀·PPT=Slideshow·워드=Article·한글·압축·텍스트=TextSnippet). ※ 이 icons 버전엔 `ErrorOutline`이 없어 `ErrorOutlineOutlined` 사용.
+- 검증: type-check 통과·앱 런타임/서버 오류 0·Notice 모듈 트랜스폼 정상. 팀원/관리자 로그인 실경로(업로드 상태·저장·모두 다운로드·행 표시)는 배포 후 실측.
+
+---
+
+
 ## 개요
 
 공지 작성/수정 시 파일을 첨부하고, 상세에서 다운로드할 수 있게 함. 기존 `ref`(단일 URL 링크)는 그대로 두고, **실제 파일 업로드**를 별도로 추가.

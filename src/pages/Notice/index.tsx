@@ -5,6 +5,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import Dialog from '@mui/material/Dialog'
@@ -26,6 +27,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import AttachFileIcon from '@mui/icons-material/AttachFile'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -91,7 +93,8 @@ export default function Notice() {
   const navigate = useNavigate()
   const { num } = useParams()
   const { items, ready, loading, error, updatedAt } = useAppSelector((s) => s.notice)
-  const { isAdmin, user, authKey } = useRole()
+  // 공지 작성/수정/삭제 = 팀원(member)+관리자. (게스트·유관자는 열람만)
+  const { isMember, user, authKey } = useRole()
   const theme = useTheme()
   const [selCats, setSelCats] = useState<string[]>([]) // 빈 배열 = 전체
   const [query, setQuery] = useState('')
@@ -292,6 +295,14 @@ export default function Notice() {
                   <OpenInNewIcon sx={{ fontSize: 15 }} />
                 </IconButton>
               )}
+              {!!n.attachments?.length && (
+                <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
+                  <Box component="span" aria-label={`첨부파일 ${n.attachments.length}개`} sx={{ display: 'inline-flex', alignItems: 'center', gap: '1px', flexShrink: 0, color: 'text.secondary' }}>
+                    <AttachFileIcon sx={{ fontSize: 14 }} />
+                    <Box component="span" sx={{ fontSize: 11, fontVariantNumeric: 'tabular-nums' }}>{n.attachments.length}</Box>
+                  </Box>
+                </Tooltip>
+              )}
             </Box>
           </TableCell>
           <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textAlign: 'center', display: { xs: 'none', sm: 'table-cell' } }}>{n.author || '-'}</TableCell>
@@ -305,7 +316,7 @@ export default function Notice() {
         <TableRow>
           <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
             <Collapse in={open} timeout="auto" unmountOnExit>
-              <NoticeDetail notice={n} isAdmin={isAdmin} onEdit={startEdit} onDelete={setDeleteTarget} />
+              <NoticeDetail notice={n} canEdit={isMember} onEdit={startEdit} onDelete={setDeleteTarget} />
             </Collapse>
           </TableCell>
         </TableRow>
@@ -360,7 +371,7 @@ export default function Notice() {
 
           <Box sx={{ ml: { sm: 'auto' }, display: 'flex', alignItems: 'center', gap: 1 }}>
             <SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" width={200} />
-            {isAdmin && (
+            {isMember && (
               <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: 18 }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap' }}>
                 새 공지
               </Button>
@@ -386,7 +397,7 @@ export default function Notice() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {isAdmin && composing && (
+                  {isMember && composing && (
                     <NoticeCompose mode="new" author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={handleSaveNew} onCancel={() => setComposing(false)} />
                   )}
                   {/* 상단고정 그룹(종료 공지는 자동 해제) + 구분선. 원본은 아래 최신순 목록에 그대로 남음 */}
@@ -403,7 +414,7 @@ export default function Notice() {
                   )}
                   {/* 전체 최신순(원본) */}
                   {filtered.map((n) =>
-                    isAdmin && editingId === n.id
+                    isMember && editingId === n.id
                       ? <NoticeCompose key={n.id} mode="edit" notice={n} author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={(v) => handleSaveEdit(n, v)} onCancel={() => setEditingId(null)} />
                       : renderRow(n, false),
                   )}

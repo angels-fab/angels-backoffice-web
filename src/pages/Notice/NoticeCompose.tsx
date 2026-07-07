@@ -14,6 +14,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import type { Notice, NoticeFile } from '@/types'
@@ -70,6 +71,17 @@ export interface NoticeFormValues {
   target: string
   pinned: boolean
   attachments: NoticeFile[]
+}
+
+/** 작성 중 첨부 1건의 로컬 상태 — 완료(done)만 저장 대상, 업로드중/실패는 UI 표시용 */
+type Upload = {
+  key: string
+  name: string
+  size: number
+  type: string
+  status: 'uploading' | 'done' | 'error'
+  path?: string
+  error?: string
 }
 
 const inputSx = (th: Theme) => ({
@@ -145,10 +157,12 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
   const [targets, setTargets] = useState<string[]>(
     mode === 'new' ? TARGET_MEMBERS.map((m) => m.name) : parseTargets(notice?.target || ''),
   )
-  // 첨부파일 — 편집 시 기존 목록 복원. sessionPaths = 이번 작성세션에 새로 업로드한 경로(취소·저장 시 정리)
-  const [attachments, setAttachments] = useState<NoticeFile[]>(notice?.attachments || [])
-  const [uploading, setUploading] = useState(false)
-  const [uploadErr, setUploadErr] = useState('')
+  // 첨부파일 — 파일별 업로드 상태 추적(업로드중/완료/실패). 완료 항목만 저장.
+  // sessionPaths = 이번 작성세션에 새로 업로드한 경로(취소·저장 시 스토리지 정리)
+  const [uploads, setUploads] = useState<Upload[]>(
+    (notice?.attachments || []).map((a) => ({ key: a.path, name: a.name, size: a.size, type: a.type, status: 'done' as const, path: a.path })),
+  )
+  const uploading = uploads.some((u) => u.status === 'uploading')
   const sessionPaths = useRef<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const dateStr = mode === 'new' ? todaySeoul() : (notice?.date || '')
@@ -160,31 +174,33 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
   const isAllTargets = TARGET_MEMBERS.every((m) => targets.includes(m.name))
   const isStaffTargets = targets.length === STAFF_MEMBERS.length && STAFF_MEMBERS.every((m) => targets.includes(m.name))
 
-  // 파일 선택 → 즉시 업로드(선택한 순서대로). 실패 시 메시지, 나머지는 계속
+  // 파일 선택 → 파일별 자리 표시 후 순차 업로드(성공=done+경로, 실패=error). 한 건 실패해도 나머지 진행.
   const onPickFiles = async (list: FileList | null) => {
     if (!list || list.length === 0) return
-    setUploadErr('')
-    setUploading(true)
-    try {
-      for (const f of Array.from(list)) {
-        try {
-          const meta = await uploadNoticeFile(f)
-          sessionPaths.current.add(meta.path)
-          setAttachments((prev) => [...prev, meta])
-        } catch (e) {
-          setUploadErr(e instanceof Error ? e.message : `업로드 실패: ${f.name}`)
-        }
+    const picked = Array.from(list).map((file) => ({ file, key: crypto.randomUUID() }))
+    setUploads((prev) => [
+      ...prev,
+      ...picked.map(({ file, key }) => ({ key, name: file.name, size: file.size, type: file.type || '', status: 'uploading' as const })),
+    ])
+    for (const { file, key } of picked) {
+      try {
+        const meta = await uploadNoticeFile(file)
+        sessionPaths.current.add(meta.path)
+        setUploads((prev) => prev.map((u) => (u.key === key ? { ...u, status: 'done', path: meta.path } : u)))
+      } catch (e) {
+        setUploads((prev) => prev.map((u) => (u.key === key ? { ...u, status: 'error', error: e instanceof Error ? e.message : '업로드 실패' } : u)))
       }
-    } finally {
-      setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
     }
+    if (fileInputRef.current) fileInputRef.current.value = ''
   }
-  // 목록에서 제거(저장/취소 시 스토리지 정리) — 화면에서만 즉시 제외
-  const removeAttachment = (path: string) => setAttachments((prev) => prev.filter((a) => a.path !== path))
+  // 목록에서 제거(스토리지 정리는 저장/취소 시) — 화면에서 즉시 제외
+  const removeUpload = (key: string) => setUploads((prev) => prev.filter((u) => u.key !== key))
 
-  // 라벨로 저장(빈 선택 = 빈값 = 해당자 미표기) + 이번 세션에 올렸다 뺀 파일은 orphan 정리
+  // 완료 파일만 저장(빈 선택 = 빈값 = 해당자 미표기) + 이번 세션에 올렸다 뺀 파일은 orphan 정리
   const save = () => {
+    const attachments: NoticeFile[] = uploads
+      .filter((u) => u.status === 'done' && u.path)
+      .map((u) => ({ name: u.name, path: u.path as string, size: u.size, type: u.type }))
     const finalPaths = new Set(attachments.map((a) => a.path))
     const orphans = Array.from(sessionPaths.current).filter((p) => !finalPaths.has(p))
     if (orphans.length) void removeNoticeFiles(orphans).catch(() => {})
@@ -275,7 +291,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
             <Box sx={(th) => ({ ...inputSx(th), width: '100%', py: '8px', px: '10px' })}>
               <NoticeBodyEditor value={body} onChange={setBody} placeholder="내용 (굵게·목록 등 서식 지원)" />
             </Box>
-            {/* 첨부파일 — 파일 선택 버튼 + 업로드된 목록(칩). 업로드는 즉시(관리자만, RLS 검증) */}
+            {/* 첨부파일 — 파일 선택 버튼 + 파일별 상태 칩(업로드중/완료/실패). 업로드는 즉시(팀원+, RLS 검증) */}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75 }}>
               <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => onPickFiles(e.target.files)} />
               <Box
@@ -291,37 +307,48 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
               >
                 <AttachFileIcon sx={{ fontSize: 15 }} />파일 첨부
               </Box>
-              {uploading && (
-                <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, color: 'text.disabled', fontSize: 11.5 }}>
-                  <CircularProgress size={13} thickness={5} />업로드 중…
-                </Box>
-              )}
-              {attachments.map((a) => (
-                <Box
-                  key={a.path}
-                  sx={(th) => ({
-                    display: 'inline-flex', alignItems: 'center', gap: 0.5, maxWidth: 240, pl: 0.85, pr: 0.25, py: '3px',
-                    borderRadius: '8px', bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`,
-                  })}
-                >
-                  <AttachmentIcon type={a.type} name={a.name} sx={{ fontSize: 15, color: 'text.secondary', flex: 'none' }} />
-                  <Box component="span" sx={{ fontSize: 11.5, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</Box>
-                  <Box component="span" sx={{ fontSize: 10.5, color: 'text.disabled', flex: 'none' }}>{formatBytes(a.size)}</Box>
-                  <Tooltip title="첨부 제거">
-                    <IconButton size="small" aria-label={`${a.name} 제거`} onClick={() => removeAttachment(a.path)} sx={{ p: 0.25, color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                      <CloseIcon sx={{ fontSize: 14 }} />
-                    </IconButton>
+              {uploads.map((u) => {
+                const err = u.status === 'error'
+                return (
+                  <Tooltip key={u.key} title={err ? (u.error || '업로드 실패') : ''} disableHoverListener={!err}>
+                    <Box
+                      sx={(th) => ({
+                        display: 'inline-flex', alignItems: 'center', gap: 0.5, maxWidth: 240, pl: 0.85, pr: 0.25, py: '3px',
+                        borderRadius: '8px', bgcolor: err ? alpha(th.palette.error.main, 0.08) : alpha(th.palette.text.primary, 0.05),
+                        border: `1px solid ${err ? alpha(th.palette.error.main, 0.5) : th.palette.divider}`,
+                        opacity: u.status === 'uploading' ? 0.7 : 1,
+                      })}
+                    >
+                      {u.status === 'uploading'
+                        ? <CircularProgress size={13} thickness={5} sx={{ flex: 'none' }} />
+                        : err
+                          ? <ErrorOutlineIcon sx={{ fontSize: 15, color: 'error.main', flex: 'none' }} />
+                          : <AttachmentIcon type={u.type} name={u.name} sx={{ fontSize: 15, color: 'text.secondary', flex: 'none' }} />}
+                      <Box component="span" sx={{ fontSize: 11.5, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
+                      <Box component="span" sx={{ fontSize: 10.5, color: 'text.disabled', flex: 'none' }}>
+                        {u.status === 'uploading' ? '업로드 중' : err ? '실패' : formatBytes(u.size)}
+                      </Box>
+                      {u.status !== 'uploading' && (
+                        <Tooltip title="첨부 제거">
+                          <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => removeUpload(u.key)} sx={{ p: 0.25, color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
+                            <CloseIcon sx={{ fontSize: 14 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
                   </Tooltip>
-                </Box>
-              ))}
+                )
+              })}
             </Box>
-            {uploadErr && <Box sx={{ fontSize: 11, color: 'error.main', mt: -0.25 }}>{uploadErr}</Box>}
+            {uploading && <Box sx={{ fontSize: 11, color: 'text.disabled', mt: -0.25 }}>파일 업로드 중… 완료 후 저장하세요.</Box>}
           </Box>
         </TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'center', verticalAlign: 'top', pt: 1 }}>
           <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', justifyContent: 'center' }}>
-            <Tooltip title={uploading ? '업로드 중…' : mode === 'edit' ? '수정 저장' : '등록'}>
-              <span><IconButton size="small" color="success" aria-label="저장" onClick={save} disabled={saving || uploading}><CheckIcon sx={{ fontSize: 19 }} /></IconButton></span>
+            <Tooltip title={saving ? '저장 중…' : uploading ? '업로드 중…' : mode === 'edit' ? '수정 저장' : '등록'}>
+              <span><IconButton size="small" color="success" aria-label="저장" onClick={save} disabled={saving || uploading}>
+                {saving ? <CircularProgress size={17} thickness={5} color="success" /> : <CheckIcon sx={{ fontSize: 19 }} />}
+              </IconButton></span>
             </Tooltip>
             <Tooltip title="취소">
               <span><IconButton size="small" color="error" aria-label="취소" onClick={cancel} disabled={saving || uploading}><CloseIcon sx={{ fontSize: 19 }} /></IconButton></span>
