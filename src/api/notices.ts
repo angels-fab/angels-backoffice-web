@@ -135,15 +135,6 @@ export async function downloadNoticeBlob(path: string): Promise<Blob> {
   return data
 }
 
-/** 첨부파일 다운로드용 서명 URL(1시간 유효) — 원본 파일명으로 저장되도록 download 지정 */
-export async function noticeFileSignedUrl(path: string, downloadName?: string): Promise<string> {
-  const { data, error } = await supabase.storage
-    .from(NOTICE_BUCKET)
-    .createSignedUrl(path, 60 * 60, downloadName ? { download: downloadName } : {})
-  if (error || !data?.signedUrl) throw new Error(error?.message || '파일 링크 생성 실패')
-  return data.signedUrl
-}
-
 /** 첨부파일 삭제 — 정리(orphan 제거)용. 실패해도 상위 작업을 막지 않도록 best-effort */
 export async function removeNoticeFiles(paths: string[]): Promise<void> {
   const list = paths.filter(Boolean)

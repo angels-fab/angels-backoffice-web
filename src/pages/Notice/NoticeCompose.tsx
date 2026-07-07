@@ -323,7 +323,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                         ? <CircularProgress size={13} thickness={5} sx={{ flex: 'none' }} />
                         : err
                           ? <ErrorOutlineIcon sx={{ fontSize: 15, color: 'error.main', flex: 'none' }} />
-                          : <AttachmentIcon type={u.type} name={u.name} sx={{ fontSize: 15, color: 'text.secondary', flex: 'none' }} />}
+                          : <AttachmentIcon type={u.type} name={u.name} sx={{ fontSize: 15, flex: 'none' }} />}
                       <Box component="span" sx={{ fontSize: 11.5, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
                       <Box component="span" sx={{ fontSize: 10.5, color: 'text.disabled', flex: 'none' }}>
                         {u.status === 'uploading' ? '업로드 중' : err ? '실패' : formatBytes(u.size)}

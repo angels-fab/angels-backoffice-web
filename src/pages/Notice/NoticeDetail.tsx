@@ -11,7 +11,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import DownloadIcon from '@mui/icons-material/Download'
 import JSZip from 'jszip'
 import type { Notice, NoticeFile } from '@/types'
-import { noticeFileSignedUrl, downloadNoticeBlob } from '@/api/notices'
+import { downloadNoticeBlob } from '@/api/notices'
 import { AttachmentIcon, formatBytes } from './attachmentUI'
 import { noticeBodyHTML } from './noticeMeta'
 
@@ -44,15 +44,18 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
   const [zipping, setZipping] = useState(false)
   const [dlErr, setDlErr] = useState('')
 
-  // 첨부 다운로드 — 비공개 버킷 서명URL(원본 파일명) 발급 후 앵커 클릭으로 저장
+  // 첨부 다운로드 — 원본 Blob을 받아 앵커 download 속성으로 저장(한글 파일명 그대로 유지).
+  // 서명URL의 download 파라미터는 한글을 퍼센트 인코딩해 파일명이 깨져 blob 방식으로 처리.
   const download = async (a: NoticeFile) => {
     if (busyPath) return
     setDlErr(''); setBusyPath(a.path)
     try {
-      const link = await noticeFileSignedUrl(a.path, a.name)
+      const blob = await downloadNoticeBlob(a.path)
+      const url = URL.createObjectURL(blob)
       const el = document.createElement('a')
-      el.href = link; el.rel = 'noopener'
+      el.href = url; el.download = a.name || 'file'
       document.body.appendChild(el); el.click(); el.remove()
+      URL.revokeObjectURL(url)
     } catch (e) {
       setDlErr(e instanceof Error ? e.message : '다운로드에 실패했습니다')
     } finally {
@@ -164,7 +167,7 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
               >
                 {busyPath === a.path
                   ? <CircularProgress size={16} thickness={5} sx={{ flex: 'none' }} />
-                  : <AttachmentIcon type={a.type} name={a.name} sx={{ fontSize: 18, color: 'primary.main', flex: 'none' }} />}
+                  : <AttachmentIcon type={a.type} name={a.name} sx={{ fontSize: 18, flex: 'none' }} />}
                 <Box component="span" sx={{ fontSize: 12.5, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</Box>
                 <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', flex: 'none' }}>{formatBytes(a.size)}</Box>
                 <DownloadIcon sx={{ fontSize: 15, color: 'text.disabled', flex: 'none' }} />

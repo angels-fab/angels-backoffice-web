@@ -12,6 +12,11 @@
 - **확장자 대표 아이콘 강화** — `attachmentUI.tsx` 매핑 확장(이미지·PDF·엑셀·PPT=Slideshow·워드=Article·한글·압축·텍스트=TextSnippet). ※ 이 icons 버전엔 `ErrorOutline`이 없어 `ErrorOutlineOutlined` 사용.
 - 검증: type-check 통과·앱 런타임/서버 오류 0·Notice 모듈 트랜스폼 정상. 팀원/관리자 로그인 실경로(업로드 상태·저장·모두 다운로드·행 표시)는 배포 후 실측.
 
+### 3차 보정 (2026-07-08, 실사용 피드백)
+
+- **개별 다운로드 한글 파일명 깨짐 수정** — 서명URL의 `download` 파라미터가 한글을 퍼센트 인코딩(`260227_%EC%B9%B4...`)해서, ZIP처럼 **원본 Blob(`downloadNoticeBlob`) → `URL.createObjectURL` → 앵커 `download=원본명`** 방식으로 변경(한글 그대로 유지). `noticeFileSignedUrl` 제거(미사용).
+- **유형별 아이콘 색상** — 모양만 나뉘고 전부 단색이라 구분이 약했음 → `iconTone()`로 **유형별 색까지** 매핑(이미지/워드=파랑·PDF=빨강·엑셀=초록·PPT/압축=앰버·한글=teal·텍스트=purple). `AttachmentIcon`이 기본 색을 적용(호출부 sx에서 color 제거).
+
 ---
 
 
