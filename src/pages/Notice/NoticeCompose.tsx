@@ -291,54 +291,60 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
             <Box sx={(th) => ({ ...inputSx(th), width: '100%', py: '8px', px: '10px' })}>
               <NoticeBodyEditor value={body} onChange={setBody} placeholder="내용 (굵게·목록 등 서식 지원)" />
             </Box>
-            {/* 첨부파일 — 파일 선택 버튼 + 파일별 상태 칩(업로드중/완료/실패). 업로드는 즉시(팀원+, RLS 검증) */}
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75 }}>
-              <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => onPickFiles(e.target.files)} />
-              <Box
-                role="button" tabIndex={0} aria-label="파일 첨부"
-                onClick={() => fileInputRef.current?.click()}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
-                sx={(th) => ({
-                  display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 1, py: '5px', borderRadius: '999px',
-                  border: '1px dashed', borderColor: th.palette.divider, color: 'text.secondary', cursor: 'pointer',
-                  fontSize: 11.5, fontWeight: 600, flex: 'none', transition: 'color .15s, border-color .15s',
-                  '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main },
-                })}
-              >
-                <AttachFileIcon sx={{ fontSize: 15 }} />파일 첨부
+            {/* 첨부파일 — 파일 선택 버튼(한 줄) + 파일별 상태 칩(그리드 정렬·말줄임·반응형). 업로드는 즉시(팀원+, RLS 검증) */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+              <Box sx={{ display: 'flex' }}>
+                <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => onPickFiles(e.target.files)} />
+                <Box
+                  role="button" tabIndex={0} aria-label="파일 첨부"
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
+                  sx={(th) => ({
+                    display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 1, py: '5px', borderRadius: '999px',
+                    border: '1px dashed', borderColor: th.palette.divider, color: 'text.secondary', cursor: 'pointer',
+                    fontSize: 11.5, fontWeight: 600, flex: 'none', transition: 'color .15s, border-color .15s',
+                    '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main },
+                  })}
+                >
+                  <AttachFileIcon sx={{ fontSize: 15 }} />파일 첨부
+                </Box>
               </Box>
-              {uploads.map((u) => {
-                const err = u.status === 'error'
-                return (
-                  <Tooltip key={u.key} title={err ? (u.error || '업로드 실패') : ''} disableHoverListener={!err}>
-                    <Box
-                      sx={(th) => ({
-                        display: 'inline-flex', alignItems: 'center', gap: 0.5, maxWidth: 240, pl: 0.85, pr: 0.25, py: '3px',
-                        borderRadius: '8px', bgcolor: err ? alpha(th.palette.error.main, 0.08) : alpha(th.palette.text.primary, 0.05),
-                        border: `1px solid ${err ? alpha(th.palette.error.main, 0.5) : th.palette.divider}`,
-                        opacity: u.status === 'uploading' ? 0.7 : 1,
-                      })}
-                    >
-                      {u.status === 'uploading'
-                        ? <CircularProgress size={13} thickness={5} sx={{ flex: 'none' }} />
-                        : err
-                          ? <ErrorOutlineIcon sx={{ fontSize: 15, color: 'error.main', flex: 'none' }} />
-                          : <AttachmentIcon type={u.type} name={u.name} size={17} />}
-                      <Box component="span" sx={{ fontSize: 11.5, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
-                      <Box component="span" sx={{ fontSize: 10.5, color: 'text.disabled', flex: 'none' }}>
-                        {u.status === 'uploading' ? '업로드 중' : err ? '실패' : formatBytes(u.size)}
-                      </Box>
-                      {u.status !== 'uploading' && (
-                        <Tooltip title="첨부 제거">
-                          <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => removeUpload(u.key)} sx={{ p: 0.25, color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                            <CloseIcon sx={{ fontSize: 14 }} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Box>
-                  </Tooltip>
-                )
-              })}
+              {uploads.length > 0 && (
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 0.75 }}>
+                  {uploads.map((u) => {
+                    const err = u.status === 'error'
+                    return (
+                      <Tooltip key={u.key} title={err ? (u.error || '업로드 실패') : u.name} disableHoverListener={false}>
+                        <Box
+                          sx={(th) => ({
+                            display: 'flex', alignItems: 'center', gap: 0.5, width: '100%', minWidth: 0, pl: 0.85, pr: 0.25, py: '3px',
+                            borderRadius: '8px', bgcolor: err ? alpha(th.palette.error.main, 0.08) : alpha(th.palette.text.primary, 0.05),
+                            border: `1px solid ${err ? alpha(th.palette.error.main, 0.5) : th.palette.divider}`,
+                            opacity: u.status === 'uploading' ? 0.7 : 1,
+                          })}
+                        >
+                          {u.status === 'uploading'
+                            ? <CircularProgress size={13} thickness={5} sx={{ flex: 'none' }} />
+                            : err
+                              ? <ErrorOutlineIcon sx={{ fontSize: 15, color: 'error.main', flex: 'none' }} />
+                              : <AttachmentIcon type={u.type} name={u.name} size={17} />}
+                          <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: 11.5, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
+                          <Box component="span" sx={{ fontSize: 10.5, color: 'text.disabled', flex: 'none' }}>
+                            {u.status === 'uploading' ? '업로드 중' : err ? '실패' : formatBytes(u.size)}
+                          </Box>
+                          {u.status !== 'uploading' && (
+                            <Tooltip title="첨부 제거">
+                              <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => removeUpload(u.key)} sx={{ p: 0.25, flex: 'none', color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
+                                <CloseIcon sx={{ fontSize: 14 }} />
+                              </IconButton>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      </Tooltip>
+                    )
+                  })}
+                </Box>
+              )}
             </Box>
             {uploading && <Box sx={{ fontSize: 11, color: 'text.disabled', mt: -0.25 }}>파일 업로드 중… 완료 후 저장하세요.</Box>}
           </Box>

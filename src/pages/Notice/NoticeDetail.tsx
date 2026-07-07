@@ -148,17 +148,19 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
               </Button>
             )}
           </Box>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+          {/* 반응형 그리드 — 창 폭/모바일 회전에 따라 열 수 자동, 각 셀은 동일 폭으로 정렬. 긴 이름은 말줄임 */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 240px), 1fr))', gap: 0.75 }}>
             {attachments.map((a) => (
               <Box
                 key={a.path}
                 role="button"
                 tabIndex={0}
                 aria-label={`${a.name} 다운로드`}
+                title={a.name}
                 onClick={() => download(a)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); download(a) } }}
                 sx={(th) => ({
-                  display: 'inline-flex', alignItems: 'center', gap: 0.6, maxWidth: '100%', pl: 1, pr: 1.1, py: '6px',
+                  display: 'flex', alignItems: 'center', gap: 0.6, width: '100%', minWidth: 0, pl: 1, pr: 1.1, py: '6px',
                   borderRadius: '8px', border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper', cursor: 'pointer',
                   transition: 'border-color .15s, background-color .15s',
                   '&:hover': { borderColor: th.palette.primary.main, bgcolor: 'action.hover' },
@@ -168,7 +170,7 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
                 {busyPath === a.path
                   ? <CircularProgress size={16} thickness={5} sx={{ flex: 'none' }} />
                   : <AttachmentIcon type={a.type} name={a.name} size={20} />}
-                <Box component="span" sx={{ fontSize: 12.5, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</Box>
+                <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</Box>
                 <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', flex: 'none' }}>{formatBytes(a.size)}</Box>
                 <DownloadIcon sx={{ fontSize: 15, color: 'text.disabled', flex: 'none' }} />
               </Box>
