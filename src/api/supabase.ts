@@ -19,8 +19,16 @@ supabase.auth.onAuthStateChange((_event, session) => {
   currentAccessToken = session?.access_token ?? null
 })
 
-/** 로그인 이메일 — 사번을 내부 도메인 계정으로 매핑(사번 UX 유지) */
-export const empEmail = (empNo: string) => `${empNo.trim()}@angels.local`
+/**
+ * 로그인 이메일 — 사번을 내부 도메인 계정으로 매핑(사번 UX 유지).
+ * 신규 도메인 = angels-fab.com. (기존 @angels.local은 예약 TLD라 GoTrue 신규 가입에서 거부됨 →
+ * 유효 도메인으로 전환. 기존 4계정은 @angels.local 그대로 두고 login에서 폴백으로 처리.)
+ */
+export const AUTH_EMAIL_DOMAIN = 'angels-fab.com'
+const LEGACY_EMAIL_DOMAIN = 'angels.local'
+export const empEmail = (empNo: string) => `${empNo.trim()}@${AUTH_EMAIL_DOMAIN}`
+/** 레거시 계정(@angels.local) 로그인 폴백용 — 도메인 이관 전 만들어진 기존 계정 */
+export const empEmailLegacy = (empNo: string) => `${empNo.trim()}@${LEGACY_EMAIL_DOMAIN}`
 
 /**
  * Supabase 비밀번호 패딩 — Auth 최소 6자 정책 충족용 고정 접미사.

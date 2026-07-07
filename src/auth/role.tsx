@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { supabase, empEmail, padPassword } from '@/api/supabase'
+import { supabase, empEmail, empEmailLegacy, padPassword } from '@/api/supabase'
 
 /**
  * 권한 컨텍스트 — Supabase Auth 세션 기반.
@@ -105,12 +105,14 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = useCallback(async (empNo: string, password: string): Promise<LoginResult> => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: empEmail(empNo),
-      password: padPassword(password),
-    })
-    if (error || !data.user) return 'fail'
-    const p = await fetchProfile(data.user.id, data.user.user_metadata?.name)
+    const pw = padPassword(password)
+    // 신규 도메인(angels-fab.com) 먼저, 실패 시 레거시 @angels.local 폴백(기존 4계정)
+    let res = await supabase.auth.signInWithPassword({ email: empEmail(empNo), password: pw })
+    if (res.error || !res.data.user) {
+      res = await supabase.auth.signInWithPassword({ email: empEmailLegacy(empNo), password: pw })
+    }
+    if (res.error || !res.data.user) return 'fail'
+    const p = await fetchProfile(res.data.user.id, res.data.user.user_metadata?.name)
     if (p.pending) { await supabase.auth.signOut(); return 'pending' } // 승인 대기 — 로그인 불가
     // 평문 비밀번호는 저장하지 않는다(인증=세션 JWT). 구버전 게이트 키·잔재 정리만.
     localStorage.removeItem('role')
