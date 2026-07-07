@@ -49,8 +49,13 @@ GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vit
 
 ### 계정·개인화 로드맵 (A→B→C→D, A 완료)
 - **A. 계정 기본 — ✅ 완료**(위 2번).
-- **B. member 역할 분리 — Phase 1(읽기 전용) ✅ 완료 (2026-07-07)**: 사용자 결정 = **member는 읽기 전용**(추가 쓰기·장비열람 없음). 프런트만 수정, **DB 변경 0**. 원인 = 앱 전체가 "로그인됨"을 `isAdmin`으로만 판단해 member가 로그아웃처럼 보였음(RLS 아님 — profiles SELECT는 `true`). 수정: `role.tsx`에 `loggedIn`(=role!=='guest') 추가 → TopBar(파랑 "일반·이름" 칩+로그아웃)·SideNav·BottomNav·MobileMenuDrawer·Home·Greeting을 `loggedIn` 기준으로. member = 장비·설정 제외 전 페이지 열람, 모든 쓰기는 admin 유지. **RLS 현황(확인됨)**: 읽기 SELECT는 대부분 `true`(공지·업무·일정·개선·답글·프로필), **장비(equipments·equipment_history·schedules)만 is_admin()**; 쓰기는 전부 is_admin()(개선 draft만 본인). 
-  - **⏳ 미결/후속**: ① member는 `/settings`(RequireAdmin)에 못 들어가 **본인 비밀번호 변경 불가** — 필요 시 Settings를 RequireAuth로 열고 승인섹션만 isAdmin 유지. ② Phase 2(원하면): 캘린더 일정 작성 + 개선요청·답글 작성 허용(RLS를 is_admin()→is_member 포함으로).
+- **B. 권한 4단계(게스트/유관자/팀원/관리자) — 진행 중 (2026-07-07)**: 사용자 확정 모델.
+  - **모델**: `role` 단일 필드 `guest < associate(유관자) < member(팀원) < admin`. **admin은 member의 상위 집합**(관리자=팀원+관리). 명칭 맵 `ROLE_LABEL`(role.tsx). 게이트: `isAdmin`(관리)·`isMember`(팀원 이상=열람+작성)·`isAssociate`·`loggedIn`.
+    - **게스트**: 홈 로드맵·행사·바로가기. **유관자**: 로그인 + 행사·바로가기(+장비 제한열람=Phase 2). **팀원**: 팀 콘텐츠 전체 열람+**작성**(공지·업무일정·업무현황·개선·장비). **관리자**: +사용자 승인/관리·포털관리. 승격=현 관리자가 **팀원에게만** admin 부여(Phase 3 화면).
+  - **✅ Phase 1 완료·배포**: 프런트 4단계 골격 — role.tsx(associate 추가·isMember·ROLE_LABEL), `RequireMember` 가드(+ /notice·/calendar·/work·/improve·/equipment 적용), SideNav·BottomNav·MobileMenuDrawer 4단계 메뉴, TopBar·설정 표시명, 홈 대시보드=팀원+, 승인 버튼 **유관자/팀원**. **DB**: `is_member()` 함수 + 장비 3테이블(`equipments`·`equipment_history`·`schedules`) SELECT `is_member()` 정책 추가 → **팀원 장비 열람**(sim 확인: is_member=true·eq 29건). 쓰기 정책 무변경(팀원 아직 열람만).
+  - **⏳ Phase 2**: 팀원 **작성** 권한 — 공지·업무·일정·개선 write RLS(is_admin()→is_member) + 프런트 write 버튼 게이트(isAdmin→isMember). + 유관자 **장비 제한열람**(예산 price·제조사 maker·모델 제외한 뷰 `equipments_public` + 컬럼 숨김).
+  - **⏳ Phase 3**: 포털관리 페이지(가입 이력·인원 현황·강퇴·권한 조정, `account_events` 이력 테이블) + 팀원→관리자 승격 UI.
+  - **⏳ 기타**: 유관자·팀원은 `/settings`(RequireAdmin) 못 들어가 **본인 비밀번호 변경 불가** — 필요 시 Settings를 RequireAuth로 열고 승인섹션만 isAdmin.
 - **C. 개인화 1차**: 내 기준 새 글 배지(메뉴별 마지막 확인시각, `user_settings`) + 보던 화면 기억(업무 KPI 탭·필터, 캘린더 뷰).
 - **D. 개인화 2차**: 홈 섹션 순서/숨김 + 관심 업무 핀. **⏳ 결정 대기: 업무카드 정렬 = 팀 공유 vs 개인별.**
 - 참고: `user_settings` 테이블 준비돼 있음.

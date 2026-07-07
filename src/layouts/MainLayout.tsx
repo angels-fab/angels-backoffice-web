@@ -14,8 +14,7 @@ import { loadReplies } from '@/store/slices/replySlice'
 
 export default function MainLayout() {
   const { pathname } = useLocation()
-  const { role, isAdmin } = useRole()
-  const loggedIn = role !== 'guest'
+  const { isMember } = useRole()
   const dispatch = useAppDispatch()
   const eqReady = useAppSelector(s => s.eq.ready)
   const workReady = useAppSelector(s => s.work.ready)
@@ -24,18 +23,18 @@ export default function MainLayout() {
   const improveReady = useAppSelector(s => s.improve.ready)
   const replyReady = useAppSelector(s => s.reply.ready)
 
-  // 앱 진입 시 데이터 미리 로드. 사내 데이터는 로그인해야 읽히므로(RLS: authenticated) 게스트일 땐 요청하지 않음.
-  // 장비 데이터는 관리자 전용. loggedIn/isAdmin 의존 → 로그인 시 effect 재실행으로 로드(새로고침 불필요).
+  // 앱 진입 시 팀 데이터 미리 로드. 팀 콘텐츠·장비는 팀원 이상만 열람하므로 팀원일 때만 요청.
+  // (게스트·유관자는 미로드 — 홈 로드맵·행사·바로가기만.) isMember 의존 → 로그인 시 effect 재실행.
   useEffect(() => {
-    if (!loggedIn) return // 게스트: 사내 데이터 미로드(홈은 공개 로드맵만 노출)
-    if (isAdmin && !eqReady) dispatch(loadEqData())
+    if (!isMember) return
+    if (!eqReady) dispatch(loadEqData())
     if (!workReady) dispatch(loadWorkData())
     if (!noticeReady) dispatch(loadNoticeData())
     if (!calReady) dispatch(loadCalEvents())
     if (!improveReady) dispatch(loadImproveData())
     if (!replyReady) dispatch(loadReplies())
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loggedIn, isAdmin])
+  }, [isMember])
 
   // 원본의 body 클래스 토글: 페이지 진입 시 in-page
   useEffect(() => {

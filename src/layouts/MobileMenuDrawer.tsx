@@ -13,7 +13,7 @@ import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import LinkIcon from '@mui/icons-material/Link'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
-import { useRole } from '@/auth/role'
+import { useRole, ROLE_LABEL } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
 import { useNavBadges } from './useNavBadges'
 import { memoCountByPath } from '@/utils/improveMemo'
@@ -31,14 +31,14 @@ interface NavRow {
   icon: JSX.Element
   label: string
   path: string
-  adminOnly?: boolean
+  memberOnly?: boolean
   badge?: number
 }
 
 export default function MobileMenuDrawer({ open, onClose }: Props) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { loggedIn, isAdmin, user, logout } = useRole()
+  const { role, loggedIn, isMember, isAdmin, user, logout } = useRole()
   const badges = useNavBadges()
   const improveItems = useAppSelector((s) => s.improve.items)
   const memoCounts = memoCountByPath(improveItems)
@@ -50,12 +50,13 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/')
 
   // 하단 탭에 없는 목적지(장비관리는 /equipment 안에서 도입/운영 탭으로 분기)
+  // 장비·개선요청 = 팀원 이상 / 행사·바로가기 = 유관자 포함 전체 로그인
   const rows: NavRow[] = [
-    { icon: <MonitorIcon />, label: '장비관리', path: '/equipment', adminOnly: true },
-    { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve },
+    { icon: <MonitorIcon />, label: '장비관리', path: '/equipment', memberOnly: true },
+    { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve, memberOnly: true },
     { icon: <CoPresentIcon />, label: '학술·교육·전시', path: '/events' },
     { icon: <LinkIcon />, label: '바로가기', path: '/links' },
-  ].filter((r) => !r.adminOnly || isAdmin)
+  ].filter((r) => !r.memberOnly || isMember)
 
   return (
     <Drawer
@@ -123,7 +124,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
         <>
           <Divider sx={{ my: 0.5 }} />
           <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>
-            계정{user ? ` · ${user}` : ''}{isAdmin ? '' : ' · 일반'}
+            계정{user ? ` · ${user}` : ''} · {ROLE_LABEL[role]}
           </Typography>
           <List dense sx={{ pt: 0.5 }}>
             {/* 설정 = 관리자 전용(가입 승인 등). 일반 사용자에겐 숨김. */}

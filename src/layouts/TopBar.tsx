@@ -10,7 +10,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows'
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone'
 import { StatusChip } from '@/components/ds'
-import { useRole } from '@/auth/role'
+import { useRole, ROLE_LABEL } from '@/auth/role'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
 import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
@@ -18,7 +18,7 @@ import topbarLogo from '@/assets/topbar-logo.jpg'
 
 export default function TopBar() {
   const navigate = useNavigate()
-  const { loggedIn, isAdmin, user, logout } = useRole()
+  const { role, loggedIn, isAdmin, user, logout } = useRole()
   const [loginOpen, setLoginOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   // 모바일에서 데스크톱(PC) 레이아웃 보기 토글 (터치 기기에서만 노출)
@@ -72,8 +72,8 @@ export default function TopBar() {
             {loggedIn ? (
               <>
                 <StatusChip
-                  status={isAdmin ? 'success' : 'info'}
-                  label={user ? `${isAdmin ? '관리자' : '일반'} · ${user}` : isAdmin ? '관리자' : '일반'}
+                  status={isAdmin ? 'success' : role === 'member' ? 'info' : 'neutral'}
+                  label={user ? `${ROLE_LABEL[role]} · ${user}` : ROLE_LABEL[role]}
                 />
                 <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: 16 }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
                   로그아웃

@@ -25,7 +25,7 @@ function Badge({ n }: { n: number }) {
 export default function BottomNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { loggedIn } = useRole()
+  const { isMember, loggedIn } = useRole()
   const { notice: noticeCnt, work: workCnt, improve: improveCnt } = useNavBadges()
   const [menuOpen, setMenuOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
@@ -57,7 +57,7 @@ export default function BottomNav() {
     <>
       <nav className="bottom-nav" id="bottom-nav">
         {navItem('/', '홈', <HomeIcon />)}
-        {loggedIn ? (
+        {isMember ? (
           <>
             {navItem('/work', '업무현황', <AssessmentIcon />, workCnt)}
             {navItem('/calendar', '일정', <CalendarMonthIcon />)}
@@ -65,6 +65,9 @@ export default function BottomNav() {
             {/* 메뉴 — 나머지 목적지·계정을 바텀시트로. 뒤에 새 개선요청이 있으면 배지 */}
             {actionItem('메뉴', <MenuIcon />, () => setMenuOpen(true), improveCnt, menuOpen)}
           </>
+        ) : loggedIn ? (
+          // 유관자 — 팀 업무 탭 없이 홈 + 메뉴(행사·바로가기·계정)
+          actionItem('메뉴', <MenuIcon />, () => setMenuOpen(true), 0, menuOpen)
         ) : (
           actionItem('로그인', <LockOpenIcon />, () => setLoginOpen(true))
         )}

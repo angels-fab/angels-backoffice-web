@@ -12,14 +12,29 @@ import { supabase, empEmail, empEmailLegacy, padPassword } from '@/api/supabase'
  * (쓰기 게이트의 truthy 판정용). 기존 브라우저에 남은 평문 비밀번호는 마운트 시 제거한다.
  */
 const SESSION_MARK = 'session' // authKey 표식 — 비밀 아님(값 미사용, 존재 여부만 로그인 판정에 씀)
-export type Role = 'guest' | 'member' | 'admin'
+// 권한 4단계: guest(비로그인) < associate(유관자·제한열람) < member(팀원·열람+작성) < admin(팀원+관리)
+// admin은 member의 상위 집합 — 관리자도 팀원 기능 전부 + 사용자·포털 관리.
+export type Role = 'guest' | 'associate' | 'member' | 'admin'
+
+/** 역할 표시명 — UI 라벨 단일 출처(칩·설정·메뉴 공용) */
+export const ROLE_LABEL: Record<Role, string> = {
+  guest: '게스트',
+  associate: '유관자',
+  member: '팀원',
+  admin: '관리자',
+}
 /** 로그인 결과 — ok=성공 / fail=사번·비번 불일치 / pending=가입 승인 대기(로그인 불가) */
 export type LoginResult = 'ok' | 'fail' | 'pending'
 
 interface RoleContextValue {
   role: Role
+  /** 관리자 — 사용자 승인·관리·포털관리 등 관리 기능 전용 게이트 */
   isAdmin: boolean
-  /** 로그인 여부(member 또는 admin) — 화면 표시·메뉴 노출은 이 값 기준(isAdmin은 관리 기능 전용) */
+  /** 팀원 이상(member 또는 admin) — 팀 콘텐츠 열람·작성 게이트 */
+  isMember: boolean
+  /** 유관자 — 제한 열람(장비 일부·행사·바로가기) */
+  isAssociate: boolean
+  /** 로그인 여부(유관자·팀원·관리자) — 로그인/로그아웃 표시 게이트 */
   loggedIn: boolean
   /** 세션 복원 완료 여부 — 라우트 가드는 이 값이 true일 때만 판정(새로고침 리다이렉트 방지) */
   ready: boolean
@@ -37,6 +52,8 @@ interface RoleContextValue {
 const RoleContext = createContext<RoleContextValue>({
   role: 'guest',
   isAdmin: false,
+  isMember: false,
+  isAssociate: false,
   loggedIn: false,
   ready: false,
   user: null,
@@ -56,8 +73,8 @@ async function fetchProfile(authUserId: string, metaName: string | undefined) {
   const raw = String(data?.role || '')
   return {
     name: data?.name || metaName || '',
-    // member/admin만 권한 부여 — pending·프로필없음은 접근 없음(guest)
-    role: (raw === 'admin' ? 'admin' : raw === 'member' ? 'member' : 'guest') as Role,
+    // admin/member/associate만 권한 부여 — pending·프로필없음은 접근 없음(guest)
+    role: (raw === 'admin' ? 'admin' : raw === 'member' ? 'member' : raw === 'associate' ? 'associate' : 'guest') as Role,
     pending: raw === 'pending',
   }
 }
@@ -156,7 +173,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', loggedIn: role !== 'guest', ready, user, authKey, login, signUp, logout }}>
+    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', isMember: role === 'member' || role === 'admin', isAssociate: role === 'associate', loggedIn: role !== 'guest', ready, user, authKey, login, signUp, logout }}>
       {children}
     </RoleContext.Provider>
   )

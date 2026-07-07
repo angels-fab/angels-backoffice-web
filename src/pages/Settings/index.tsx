@@ -9,7 +9,7 @@ import LockOpenIcon from '@mui/icons-material/LockOpen'
 import LogoutIcon from '@mui/icons-material/Logout'
 import StorageIcon from '@mui/icons-material/Storage'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '@/components/ds'
-import { useRole } from '@/auth/role'
+import { useRole, ROLE_LABEL } from '@/auth/role'
 import { supabase, padPassword } from '@/api/supabase'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 
@@ -96,7 +96,8 @@ function PendingApprovals() {
   }
   useEffect(() => { void load() }, [])
 
-  const approve = async (id: string, role: 'member' | 'admin') => {
+  // 승인 = 유관자 / 팀원 부여. 관리자 승격은 팀원에게만(포털관리 화면에서) — 추후.
+  const approve = async (id: string, role: 'associate' | 'member') => {
     setBusyId(id)
     await supabase.from('profiles').update({ role }).eq('id', id)
     setBusyId(null)
@@ -123,8 +124,8 @@ function PendingApprovals() {
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>사번 {r.emp_no || '-'} · 신청 {r.created_at?.slice(0, 10)}</Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-              <Button size="small" variant="contained" disabled={busyId === r.id} onClick={() => approve(r.id, 'member')}>일반 승인</Button>
-              <Button size="small" variant="outlined" disabled={busyId === r.id} onClick={() => approve(r.id, 'admin')}>관리자 승인</Button>
+              <Button size="small" variant="outlined" disabled={busyId === r.id} onClick={() => approve(r.id, 'associate')}>유관자 승인</Button>
+              <Button size="small" variant="contained" disabled={busyId === r.id} onClick={() => approve(r.id, 'member')}>팀원 승인</Button>
               <Button size="small" color="error" disabled={busyId === r.id} onClick={() => reject(r.id)}>거절</Button>
             </Box>
           </Box>
@@ -148,7 +149,7 @@ export default function Settings() {
         <AppCard padding={18}>
           <Row
             label="현재 권한"
-            value={<StatusChip status={isAdmin ? 'success' : 'neutral'} label={isAdmin ? `관리자${user ? ' · ' + user : ''}` : loggedIn ? `일반 사용자${user ? ' · ' + user : ''}` : '게스트 (Guest)'} />}
+            value={<StatusChip status={isAdmin ? 'success' : role === 'member' ? 'info' : 'neutral'} label={`${ROLE_LABEL[role]}${user ? ' · ' + user : ''}`} />}
             action={
               loggedIn ? (
                 <Button variant="text" startIcon={<LogoutIcon sx={{ fontSize: 18 }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
@@ -162,7 +163,7 @@ export default function Settings() {
             }
           />
           <Typography variant="body2" sx={{ mt: 1.5 }}>
-            {isAdmin ? '작성·관리 기능을 사용할 수 있습니다.' : loggedIn ? '열람 및 일부 작성이 가능합니다.' : '조회 전용입니다. 작성·관리 기능은 로그인 후 가능합니다.'}
+            {isAdmin ? '작성·관리 및 사용자 관리 기능을 사용할 수 있습니다.' : role === 'member' ? '팀 콘텐츠 열람 및 작성이 가능합니다.' : loggedIn ? '장비(제한)·행사·바로가기 열람이 가능합니다.' : '조회 전용입니다. 작성·관리 기능은 로그인 후 가능합니다.'}
           </Typography>
         </AppCard>
       </ContentSection>
