@@ -57,13 +57,13 @@ GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vit
   - **🔶 Phase 3**: 설정 "사용자 관리"에 **회원 목록 + 권한 변경(Select) + 강퇴** ✅ 완료(관리자만·본인계정 잠금방지·관리자승격은 팀원에게만). **⏸️ 보류(나중에)**: 가입/승인/거절/권한변경/강퇴 **이력**(`account_events` 테이블). (auth.users 완전 삭제는 service_role 필요 → 강퇴=프로필 삭제 소프트킥.)
   - **🐞 버그픽스(2026-07-07)**: ① `profiles_role_check` CHECK에 'associate' 없어 **유관자 승인 무반응** → 제약을 `guest/associate/member/admin/pending`으로 교체. ② `signUp()`이 기본 supabase 클라이언트로 실행돼 **가입 시 현재(관리자) 세션을 덮어써 로그아웃** → `makeSignupClient()`(persistSession:false) 격리 클라이언트로 변경, signOut 제거.
   - **⏳ 기타**: 유관자·팀원은 `/settings`(RequireAdmin) 못 들어가 **본인 비밀번호 변경 불가** — 필요 시 Settings를 RequireAuth로 열고 승인섹션만 isAdmin.
-- **C. 개인화 1차**: 내 기준 새 글 배지(메뉴별 마지막 확인시각, `user_settings`) + 보던 화면 기억(업무 KPI 탭·필터, 캘린더 뷰).
+- **C. 개인화 1차 (진행 2026-07-07)**: ✅ **보던 화면 기억 일부** — 캘린더 뷰(월/주/목록, `localStorage 'cal:view'`) + 업무 KPI 뷰(inProgress 등, `localStorage 'work:view'`) 복원. **⏳ 남음**: 내 기준 새 글 배지(메뉴별 마지막 확인시각 — `user_settings` 서버 상태 필요, 앱 전역 로드 배선) + 필터(구분·담당자) 기억. (view 기억은 per-device localStorage로 시작 — 추후 cross-device면 user_settings로 이전.)
 - **D. 개인화 2차**: 홈 섹션 순서/숨김 + 관심 업무 핀. **⏳ 결정 대기: 업무카드 정렬 = 팀 공유 vs 개인별.**
 - 참고: `user_settings` 테이블 준비돼 있음.
 
 ### 캘린더 UX (비치명)
-1. 일정 클릭 → 상세 팝오버(수정 버튼) 대신 **일정 수정 모달 바로 열기**.
-2. 반복 일정 **발생일 드래그 이동** (현재 시리즈 발생행은 `editable:!ev.recurring`이라 비활성). ※ 폼 "이 일정만" 날짜 변경은 W4로 이미 됨.
+1. ✅ **완료(2026-07-07)**: 일정 클릭 → (관리자) **수정 모달 바로 열기**. 열람 사용자는 상세 팝오버 유지. 호버는 여전히 빠른 상세. 드래그 직후 클릭은 `dragClickSuppress`로 무시.
+2. ⏳ 반복 일정 **발생일 드래그 이동** (현재 시리즈 발생행은 `editable:!ev.recurring`이라 비활성). ※ 폼 "이 일정만" 날짜 변경은 W4로 이미 됨. **주의**: 활성화 전 updateCalEvent가 그 발생행만 이동하는지(시리즈 전체 아님) 확인 필요.
 3~4. 특정/범위 삭제 → **W4에서 이미 커버**. 라이브 확인만.
 
 ### 캘린더 후속 다듬기 (난이도/제약 커 보류)

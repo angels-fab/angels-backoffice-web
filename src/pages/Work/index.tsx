@@ -201,7 +201,12 @@ export default function Work() {
   const { items, trashed, error, errorMsg, loading: workLoading, updatedAt } = useAppSelector((s) => s.work)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [view, setView] = useState<WorkView>('inProgress') // KPI 버튼이 전환하는 메인 목록
+  // KPI 버튼이 전환하는 메인 목록 — 마지막 보던 뷰 기억(개인화)
+  const [view, setView] = useState<WorkView>(() => {
+    const s = localStorage.getItem('work:view')
+    return s === 'inProgress' || s === 'hold' || s === 'check' || s === 'done' || s === 'remind' ? s : 'inProgress'
+  })
+  useEffect(() => { try { localStorage.setItem('work:view', view) } catch { /* 저장 불가 무시 */ } }, [view])
   // 구분·담당자 필터 — 업무일정 규칙(전체 칩 없음·빈 Set=전체·일반클릭 단독/재클릭 해제·Shift 복수). 구분은 normCat 키.
   const [selCats, setSelCats] = useState<Set<string>>(new Set())
   const [selMgrs, setSelMgrs] = useState<Set<string>>(new Set())

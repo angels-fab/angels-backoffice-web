@@ -101,7 +101,11 @@ export default function Calendar() {
 
   // 복수선택 버튼·모바일 기본뷰 판정. 폰(≤768px)은 월 그리드 대신 목록(아젠다) 뷰가 기본.
   const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true })
-  const [view, setView] = useState<ViewKey>(() => (isMobile ? 'agenda' : 'month'))
+  // 마지막으로 보던 뷰 기억(localStorage) — 없으면 기기 기본(모바일=목록, PC=월)
+  const [view, setView] = useState<ViewKey>(() => {
+    const saved = localStorage.getItem('cal:view')
+    return saved === 'month' || saved === 'timeweek' || saved === 'agenda' ? saved : isMobile ? 'agenda' : 'month'
+  })
   const [anchor, setAnchor] = useState<Date>(() => parseKey(todaySeoul()))
   const [search, setSearch] = useState('')
   const [selMembers, setSelMembers] = useState<string[]>([]) // 빈 배열 = 전체 선택
@@ -109,7 +113,7 @@ export default function Calendar() {
   const [multiSel, setMultiSel] = useState(false) // 모바일 복수선택 모드(Shift 대체)
   const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
   // 화면에 실제로 보이는 날짜 범위(FC activeStart/activeEnd). 종류별 건수 집계에 사용. datesSet에서 실제값 주입.
-  const [visRange, setVisRange] = useState<{ start: Date; end: Date }>(() => gridRange(isMobile ? 'agenda' : 'month', parseKey(todaySeoul())))
+  const [visRange, setVisRange] = useState<{ start: Date; end: Date }>(() => gridRange(view, parseKey(todaySeoul())))
   const calRef = useRef<FullCalendar>(null)
 
   // 호버·클릭 상세 — 마우스 위치 기준. 호버(locked=false)는 포인터를 따라다니고, 클릭(locked=true)은 그 자리 고정.
@@ -237,6 +241,11 @@ export default function Calendar() {
     lockedEl.current = null
     setPop(null)
   }, [view, anchor, searchTrim, selCats, selMembers])
+
+  // 마지막으로 보던 뷰 기억 — 재접속 시 복원(개인화)
+  useEffect(() => {
+    try { localStorage.setItem('cal:view', view) } catch { /* 저장 불가 무시 */ }
+  }, [view])
 
   // ── 필터 술어 (빈 선택 = 전체) ──
   const catSelected = (cat: RealCat) => selCats.length === 0 || selCats.includes(cat)
@@ -557,13 +566,22 @@ export default function Calendar() {
               return // 팝오버 닫기는 바깥-클릭 핸들러가 담당
             }
             e.stopPropagation() // 바깥-클릭 닫기로 전파 방지(하나의 클릭 경로)
+            if (Date.now() < dragClickSuppress.current) return // 드래그 드롭 직후 클릭 무시
+            const evId = idMap.current.get(el)
+            // 관리자: 일정 클릭 = 수정 모달 바로 열기(상세 팝오버 단계 생략)
+            if (isAdmin && evId) {
+              const ev = allEvents.find((e2) => e2.id === evId)
+              closePop()
+              if (ev) setWrite({ mode: 'edit', event: ev, initialDate: ev.start.slice(0, 10) })
+              return
+            }
+            // 열람 사용자: 기존 잠금 상세 팝오버(재클릭=닫기)
             const detail = detailMap.current.get(el)
             if (lockedEl.current === el) {
-              closePop() // 같은 segment 재클릭 = 닫기
+              closePop()
             } else if (detail) {
-              if (Date.now() < dragClickSuppress.current) return // 드래그 드롭 직후 클릭 무시
               lockedEl.current = el
-              setPop({ detail, x: e.clientX, y: e.clientY, locked: true, evId: idMap.current.get(el) })
+              setPop({ detail, x: e.clientX, y: e.clientY, locked: true, evId })
             }
           }}
         >
