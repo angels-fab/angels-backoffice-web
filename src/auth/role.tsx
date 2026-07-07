@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { supabase, empEmail, empEmailLegacy, padPassword } from '@/api/supabase'
+import { supabase, makeSignupClient, empEmail, empEmailLegacy, padPassword } from '@/api/supabase'
 
 /**
  * 권한 컨텍스트 — Supabase Auth 세션 기반.
@@ -145,7 +145,9 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUp = useCallback(async (empNo: string, name: string, password: string): Promise<{ ok: boolean; error?: string }> => {
-    const { error } = await supabase.auth.signUp({
+    // 격리 클라이언트로 가입 → 현재 로그인 세션(관리자 등)을 건드리지 않음. signOut 불필요(임시 세션은 저장 안 됨).
+    const tmp = makeSignupClient()
+    const { error } = await tmp.auth.signUp({
       email: empEmail(empNo),
       password: padPassword(password),
       options: { data: { name: name.trim() } },
@@ -154,11 +156,6 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       const dup = /registered|already/i.test(error.message || '')
       return { ok: false, error: dup ? '이미 등록된 사번입니다.' : error.message || '가입 신청에 실패했습니다.' }
     }
-    // 가입 직후 세션이 생겨도 pending이라 접근 불가 — 자동 로그인하지 않고 정리
-    await supabase.auth.signOut()
-    setRole('guest')
-    setUser(null)
-    setAuthKey(null)
     return { ok: true }
   }, [])
 

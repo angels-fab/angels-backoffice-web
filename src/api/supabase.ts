@@ -10,6 +10,13 @@ export const SUPABASE_ANON_KEY =
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
+/**
+ * 가입 신청 전용 임시 클라이언트 — `persistSession:false`로 **현재 로그인 세션을 건드리지 않게 격리**한다.
+ * (기본 클라이언트로 signUp하면 새 계정 세션이 로그인 세션을 덮어써 관리자가 로그아웃되는 문제 방지.)
+ */
+export const makeSignupClient = () =>
+  createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+
 // 페이지 이탈 직전 keepalive 전송(beacon 대체)처럼 동기 접근이 필요한 곳을 위한 최신 액세스 토큰
 export let currentAccessToken: string | null = null
 void supabase.auth.getSession().then(({ data }) => {

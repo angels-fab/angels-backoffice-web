@@ -3,6 +3,8 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
 import Alert from '@mui/material/Alert'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
@@ -79,32 +81,41 @@ function PasswordChangeCard() {
   )
 }
 
-interface PendingUser { id: string; name: string; emp_no: string | null; created_at: string }
+interface ProfileRow { id: string; name: string; emp_no: string | null; role: string; created_at: string }
 
-/** 가입 승인 대기 목록 — 관리자만. 승인(member/admin) / 거절(프로필 삭제). RLS: profiles_admin_update/delete. */
-function PendingApprovals() {
-  const [rows, setRows] = useState<PendingUser[] | null>(null)
+const MANAGEABLE_ROLES: { value: 'associate' | 'member' | 'admin'; label: string }[] = [
+  { value: 'associate', label: '유관자' },
+  { value: 'member', label: '팀원' },
+  { value: 'admin', label: '관리자' },
+]
+
+/** 사용자 관리 — 관리자만. 가입 승인(유관자/팀원)·권한 변경·강퇴. RLS: profiles_admin_update/delete.
+ *  관리자 승격은 팀원에게만(유관자는 팀원 거쳐야) · 본인 계정은 잠금 방지로 변경/강퇴 불가. */
+function UserManagement() {
+  const { user: me } = useRole()
+  const [rows, setRows] = useState<ProfileRow[] | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
 
   const load = async () => {
     const { data } = await supabase
       .from('profiles')
-      .select('id, name, emp_no, created_at')
-      .eq('role', 'pending')
+      .select('id, name, emp_no, role, created_at')
       .order('created_at', { ascending: true })
-    setRows((data || []) as PendingUser[])
+    setRows((data || []) as ProfileRow[])
   }
   useEffect(() => { void load() }, [])
 
-  // 승인 = 유관자 / 팀원 부여. 관리자 승격은 팀원에게만(포털관리 화면에서) — 추후.
-  const approve = async (id: string, role: 'associate' | 'member') => {
+  const changeRole = async (id: string, role: string) => {
     setBusyId(id)
     await supabase.from('profiles').update({ role }).eq('id', id)
     setBusyId(null)
     void load()
   }
-  const reject = async (id: string) => {
-    if (!window.confirm('이 가입 신청을 거절할까요? (프로필이 삭제됩니다)')) return
+  const remove = async (id: string, name: string, pending: boolean) => {
+    const msg = pending
+      ? `${name || '이 신청'} 가입 신청을 거절할까요? (프로필 삭제)`
+      : `${name} 회원을 강퇴할까요? (프로필 삭제 — 재가입 필요)`
+    if (!window.confirm(msg)) return
     setBusyId(id)
     await supabase.from('profiles').delete().eq('id', id)
     setBusyId(null)
@@ -112,25 +123,78 @@ function PendingApprovals() {
   }
 
   if (rows === null) return <AppCard padding={18}><Typography variant="body2">불러오는 중…</Typography></AppCard>
-  if (rows.length === 0) return <AppCard padding={18}><Typography variant="body2" sx={{ color: 'text.secondary' }}>대기 중인 가입 신청이 없습니다.</Typography></AppCard>
+
+  const pending = rows.filter((r) => r.role === 'pending')
+  const active = rows.filter((r) => r.role !== 'pending')
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-      {rows.map((r) => (
-        <AppCard key={r.id} padding={16}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle1">{r.name || '(이름 없음)'}</Typography>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>사번 {r.emp_no || '-'} · 신청 {r.created_at?.slice(0, 10)}</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-              <Button size="small" variant="outlined" disabled={busyId === r.id} onClick={() => approve(r.id, 'associate')}>유관자 승인</Button>
-              <Button size="small" variant="contained" disabled={busyId === r.id} onClick={() => approve(r.id, 'member')}>팀원 승인</Button>
-              <Button size="small" color="error" disabled={busyId === r.id} onClick={() => reject(r.id)}>거절</Button>
-            </Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      {/* 가입 승인 대기 */}
+      <Box>
+        <Typography variant="caption" sx={{ color: 'text.disabled' }}>가입 승인 대기{pending.length > 0 ? ` (${pending.length})` : ''}</Typography>
+        {pending.length === 0 ? (
+          <AppCard padding={14}><Typography variant="body2" sx={{ color: 'text.secondary' }}>대기 중인 가입 신청이 없습니다.</Typography></AppCard>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 0.5 }}>
+            {pending.map((r) => (
+              <AppCard key={r.id} padding={14}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="subtitle1">{r.name || '(이름 없음)'}</Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>사번 {r.emp_no || '-'} · 신청 {r.created_at?.slice(0, 10)}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+                    <Button size="small" variant="outlined" disabled={busyId === r.id} onClick={() => changeRole(r.id, 'associate')}>유관자 승인</Button>
+                    <Button size="small" variant="contained" disabled={busyId === r.id} onClick={() => changeRole(r.id, 'member')}>팀원 승인</Button>
+                    <Button size="small" color="error" disabled={busyId === r.id} onClick={() => remove(r.id, r.name, true)}>거절</Button>
+                  </Box>
+                </Box>
+              </AppCard>
+            ))}
           </Box>
-        </AppCard>
-      ))}
+        )}
+      </Box>
+
+      {/* 회원 목록 */}
+      <Box>
+        <Typography variant="caption" sx={{ color: 'text.disabled' }}>회원 목록 ({active.length})</Typography>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 0.5 }}>
+          {active.map((r) => {
+            const self = !!me && r.name === me
+            const roleVal = ['associate', 'member', 'admin'].includes(r.role) ? r.role : 'member'
+            return (
+              <AppCard key={r.id} padding={14}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography variant="subtitle1">
+                      {r.name || '(이름 없음)'}
+                      {self && <Typography component="span" variant="caption" sx={{ color: 'text.disabled', ml: 0.75 }}>(본인)</Typography>}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>사번 {r.emp_no || '-'} · 가입 {r.created_at?.slice(0, 10)}</Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Select
+                      size="small"
+                      value={roleVal}
+                      disabled={self || busyId === r.id}
+                      onChange={(e) => changeRole(r.id, e.target.value)}
+                      sx={{ minWidth: 104, '& .MuiSelect-select': { py: 0.5, fontSize: 13.5 } }}
+                    >
+                      {MANAGEABLE_ROLES.map((o) => (
+                        // 관리자 승격은 팀원(또는 이미 관리자)에게만 — 유관자는 바로 관리자로 못 올림(팀원 거쳐야)
+                        <MenuItem key={o.value} value={o.value} disabled={o.value === 'admin' && roleVal === 'associate'}>
+                          {o.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                    <Button size="small" color="error" variant="text" disabled={self || busyId === r.id} onClick={() => remove(r.id, r.name, false)}>강퇴</Button>
+                  </Box>
+                </Box>
+              </AppCard>
+            )
+          })}
+        </Box>
+      </Box>
     </Box>
   )
 }
@@ -175,8 +239,8 @@ export default function Settings() {
       )}
 
       {isAdmin && (
-        <ContentSection title="가입 승인 대기" description="가입 신청을 승인(일반/관리자)하거나 거절합니다">
-          <PendingApprovals />
+        <ContentSection title="사용자 관리" description="가입 승인(유관자/팀원) · 권한 변경 · 강퇴">
+          <UserManagement />
         </ContentSection>
       )}
 
