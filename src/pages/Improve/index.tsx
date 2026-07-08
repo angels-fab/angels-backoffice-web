@@ -45,6 +45,7 @@ import { useRole } from '@/auth/role'
 import { fmtDate, todaySeoul } from '@/utils/date'
 import { isImproveNew } from '@/utils/newPost'
 import { locationToPath } from '@/utils/improveMemo'
+import { NAV_LABELS } from '@/constants/nav'
 import type { ImprovementItem } from '@/types'
 import ReplyThread from './ReplyThread'
 import { IMP_STATUSES, impKind, needsReason, remarkOf, normStatus, statusRank, isSettled } from './improveMeta'
@@ -167,7 +168,7 @@ type DraftCard = { key: number; id: string; urgent: boolean; title: string; loc:
 
 export default function Improve() {
   const dispatch = useAppDispatch()
-  const { items, loading, error, updatedAt, locOptions: sheetLoc } = useAppSelector((s) => s.improve)
+  const { items, loading, error, updatedAt } = useAppSelector((s) => s.improve)
   const replies = useAppSelector((s) => s.reply.items)
   const { isAdmin, user, authKey } = useRole()
 
@@ -231,8 +232,9 @@ export default function Improve() {
       statusRank(a.status) - statusRank(b.status))
   }, [items, selected])
 
-  // 개선위치 드롭다운 — 시트 데이터 확인 목록 우선, 없으면 기존 데이터에서 추출. (유형 항목은 제거됨)
-  const locOptions = useMemo(() => (sheetLoc.length ? sheetLoc : [...new Set(items.map((t) => t.loc).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'ko'))), [items, sheetLoc])
+  // 개선위치 드롭다운 — 현재 내비게이션 메뉴(@/constants/nav)에서 파생 + '포털'(포털 전체) 항목.
+  // 메뉴를 추가/삭제하면 이 목록에 즉시 반영된다(미리 정해둔 목록·시트 불필요).
+  const locOptions = useMemo(() => ['포털', ...NAV_LABELS], [])
 
   const onTab = (s: ImpStatus, shift: boolean) => {
     setSelected((prev) => {
