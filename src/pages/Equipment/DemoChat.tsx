@@ -17,13 +17,14 @@ const memberOf = (name: string) => MEMBERS.find((m) => m.name === name || given(
 const FALLBACK = '#8a8f98'
 
 // ── 테마(시험 배포 — 5안 비교 후 하나로 고정 예정) ──
-export type ChatTheme = 'postit' | 'lined' | 'kraft' | 'polaroid' | 'neon'
+export type ChatTheme = 'postit' | 'lined' | 'kraft' | 'polaroid' | 'neon' | 'circuit'
 const THEME_OPTS: { key: ChatTheme; label: string }[] = [
   { key: 'postit', label: '포스트잇' },
   { key: 'lined', label: '유선노트' },
   { key: 'kraft', label: '크라프트' },
   { key: 'polaroid', label: '폴라로이드' },
   { key: 'neon', label: '네온' },
+  { key: 'circuit', label: '회로기판' },
 ]
 const HAND = "'Gaegu', 'Pretendard', sans-serif" // 손글씨(종이 테마 전용)
 const ROT = [-0.8, 0.6, -0.4] // 포스트잇·폴라로이드 살짝 기울임(순환)
@@ -94,6 +95,15 @@ function MemoCard({ m, idx, theme, own, onDelete }: { m: DemoChatMsg; idx: numbe
       </Box>
     </Box>
   )
+  if (theme === 'circuit') return (
+    <Box sx={{ borderRadius: '8px', overflow: 'hidden', bgcolor: '#0e2c1f', color: '#d7e8dc', border: '1.5px solid #c9a227' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, p: '6px 10px', bgcolor: 'rgba(201,162,39,.14)', borderBottom: '1px solid rgba(201,162,39,.4)' }}>
+        <Box sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, lineHeight: 1.3, color: '#eddc9a', wordBreak: 'break-word' }}>{title}</Box>
+        {chip()}{date('#9fb4a3')}{del(true)}
+      </Box>
+      {body && <Box sx={{ p: '7px 10px 10px', fontSize: 12.5, lineHeight: 1.5, ...bodySx }}>{body}</Box>}
+    </Box>
+  )
   // neon — 어두운 카드 + 담당자 색 네온 테두리(다크 포탈과 동화)
   return (
     <Box sx={{ borderRadius: '8px', overflow: 'hidden', bgcolor: '#1a1d26', color: '#dfe6f2', border: `1px solid ${c}`, boxShadow: `0 0 10px ${alpha(c, 0.45)}` }}>
@@ -108,7 +118,7 @@ function MemoCard({ m, idx, theme, own, onDelete }: { m: DemoChatMsg; idx: numbe
 
 /**
  * 코멘트 — 비교표 아래, 제목 있는 메모카드 그리드(PC=여러 장, 모바일=1열).
- * 테마 5종(포스트잇·유선노트·크라프트·폴라로이드·네온)을 우상단 칩으로 전환하며 비교(시험 배포).
+ * 테마 6종(포스트잇·유선노트·크라프트·폴라로이드·네온·회로기판)을 우상단 칩으로 전환하며 비교(시험 배포).
  * 작성자 색은 담당자 필터 색상과 매치. 본인 카드만 삭제. "코멘트 추가"로 제목+내용 입력.
  */
 export default function DemoChat({ memos, canPost, user, busy, onPost, onDelete }: {
@@ -118,7 +128,7 @@ export default function DemoChat({ memos, canPost, user, busy, onPost, onDelete 
   const [theme, setTheme] = useState<ChatTheme>(() => {
     let s: string | null = null
     try { s = localStorage.getItem('demoChat:theme') } catch { /* 스토리지 차단 무시 */ }
-    return s === 'postit' || s === 'lined' || s === 'kraft' || s === 'polaroid' || s === 'neon' ? s : 'postit'
+    return s === 'postit' || s === 'lined' || s === 'kraft' || s === 'polaroid' || s === 'neon' || s === 'circuit' ? s : 'postit'
   })
   const pickTheme = (t: ChatTheme) => { setTheme(t); try { localStorage.setItem('demoChat:theme', t) } catch { /* 저장 불가 무시 */ } }
   const [adding, setAdding] = useState(false)
