@@ -76,6 +76,17 @@ export async function fetchMetricDefHistory(equipment?: string): Promise<MetricD
     .map((h) => ({ id: h.id, equipment: h.equipment, metricKey: h.metric_key, action: h.action, before: h.before, after: h.after, changedBy: h.changed_by || '', changedAt: h.changed_at }))
 }
 
+/** 지표 값 변경 이력(조작방지) — 제조사별 값 변경 기록 */
+export interface ValueHistory { id: number; equipment: string; maker: string; model: string; round: number; before: Record<string, string> | null; after: Record<string, string> | null; changedBy: string; changedAt: string }
+export async function fetchValueHistory(equipment?: string): Promise<ValueHistory[]> {
+  let q = supabase.from('demo_value_history').select('*').order('changed_at', { ascending: false })
+  if (equipment) q = q.eq('equipment', equipment)
+  const { data, error } = await withTimeout(q, DB_TIMEOUT, '값 변경 이력 불러오기')
+  if (error) fail(error, '값 변경 이력을 불러오지 못했습니다')
+  return ((data || []) as { id: number; equipment: string; maker: string; model: string; round: number; before: Record<string, string> | null; after: Record<string, string> | null; changed_by: string | null; changed_at: string }[])
+    .map((h) => ({ id: h.id, equipment: h.equipment, maker: h.maker, model: h.model, round: h.round, before: h.before, after: h.after, changedBy: h.changed_by || '', changedAt: h.changed_at }))
+}
+
 // ── 그룹/비교 헬퍼(순수함수) ──
 export interface DemoMakerGroup { key: string; maker: string; model: string; rounds: DemoRoundRow[] } // rounds 오름차순
 export interface DemoEquipGroup { equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[] }
@@ -171,6 +182,12 @@ export async function addDemoResult(p: DemoResultInput & { author: string }): Pr
 }
 export async function updateDemoResult(id: number, p: Partial<DemoResultInput> & { author: string }): Promise<void> {
   await ensureSession()
+  // 값(metrics) 변경이면 조작방지 이력용으로 변경 전 상태를 먼저 확보
+  let prev: ResRow | null = null
+  if (p.metrics !== undefined) {
+    const { data } = await withTimeout(supabase.from('demo_results').select('equipment, maker, model, round, metrics').eq('id', id).single(), DB_TIMEOUT, '데모결과 조회')
+    prev = (data as ResRow) || null
+  }
   const patch: Record<string, unknown> = { updated_by: p.author, updated_at: new Date().toISOString() }
   if (p.equipment !== undefined) patch.equipment = p.equipment
   if (p.maker !== undefined) patch.maker = p.maker
@@ -185,6 +202,13 @@ export async function updateDemoResult(id: number, p: Partial<DemoResultInput> &
   if (p.cover !== undefined) patch.cover = p.cover
   const { error } = await withTimeout(supabase.from('demo_results').update(patch).eq('id', id), DB_TIMEOUT, '데모결과 수정')
   if (error) throw new Error(error.message || '데모결과 수정에 실패했습니다')
+  // 값 변경 이력 기록(조작방지). 실패해도 저장 자체는 성공 처리(best-effort)
+  if (p.metrics !== undefined && prev) {
+    await supabase.from('demo_value_history').insert({
+      equipment: prev.equipment, maker: prev.maker, model: prev.model, round: prev.round,
+      before: prev.metrics || {}, after: p.metrics, changed_by: p.author,
+    })
+  }
 }
 export async function deleteDemoResult(id: number): Promise<void> {
   await ensureSession()

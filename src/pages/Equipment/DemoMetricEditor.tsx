@@ -19,8 +19,8 @@ import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import {
-  createMetricDef, updateMetricDef, setMetricDefActive, fetchMetricDefHistory, METRIC_ACTION_LABEL,
-  type DemoMetricDef, type MetricDirection, type MetricDefHistory,
+  createMetricDef, updateMetricDef, setMetricDefActive, fetchMetricDefHistory, fetchValueHistory, METRIC_ACTION_LABEL,
+  type DemoMetricDef, type MetricDirection, type MetricDefHistory, type ValueHistory,
 } from '@/api/demo'
 
 const DIR_LABEL: Record<MetricDirection, string> = { higher: '높을수록 우수', lower: '낮을수록 우수', none: '비교 안 함' }
@@ -147,6 +147,47 @@ export function MetricHistoryDialog({ open, equipment, onClose }: { open: boolea
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Box sx={{ fontSize: 12.5, fontWeight: 600 }}>{label}</Box>
                     <Box sx={{ fontSize: 11.5, color: 'text.secondary' }}>{diffText(h)}</Box>
+                  </Box>
+                  <Box sx={{ flex: 'none', textAlign: 'right', color: 'text.disabled', fontSize: 10.5 }}>
+                    <Box>{h.changedBy || '-'}</Box><Box>{fmtTs(h.changedAt)}</Box>
+                  </Box>
+                </Box>
+              )
+            })}
+          </Box>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+/** 지표 '값' 변경 이력(조작방지) — 제조사·회차별 값 before→after. defs로 라벨 표시. */
+export function ValueHistoryDialog({ open, equipment, defs, onClose }: { open: boolean; equipment: string; defs: DemoMetricDef[]; onClose: () => void }) {
+  const [rows, setRows] = useState<ValueHistory[] | null>(null)
+  useEffect(() => { if (!open) return; setRows(null); fetchValueHistory(equipment).then(setRows).catch(() => setRows([])) }, [open, equipment])
+  const labelOf = (key: string) => defs.find((d) => d.equipment === equipment && d.key === key)?.label || key
+  const diffs = (h: ValueHistory) => {
+    const b = h.before || {}, a = h.after || {}
+    const keys = Array.from(new Set([...Object.keys(b), ...Object.keys(a)]))
+    return keys.filter((k) => String(b[k] ?? '') !== String(a[k] ?? '')).map((k) => `${labelOf(k)} ${b[k] ?? '-'}→${a[k] ?? '-'}`)
+  }
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+      <DialogTitle sx={{ fontSize: 15, fontWeight: 800 }}>지표값 변경 이력 · {equipment}</DialogTitle>
+      <DialogContent>
+        {rows === null ? (
+          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: 12.5 }}>불러오는 중…</Box>
+        ) : rows.length === 0 ? (
+          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: 12.5 }}>값 변경 이력이 없습니다.</Box>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, pb: 1 }}>
+            {rows.map((h) => {
+              const ds = diffs(h)
+              return (
+                <Box key={h.id} sx={(th) => ({ display: 'flex', gap: 1, p: 0.9, borderRadius: '8px', border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper' })}>
+                  <Box component="span" sx={(th) => ({ flex: 'none', alignSelf: 'flex-start', fontSize: 10.5, fontWeight: 700, px: '7px', py: '2px', borderRadius: '999px', bgcolor: alpha(th.palette.warning.main, 0.14), color: 'warning.main' })}>{h.maker} {h.round}차</Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Box sx={{ fontSize: 12, color: 'text.primary' }}>{ds.length ? ds.join(' · ') : '변경'}</Box>
                   </Box>
                   <Box sx={{ flex: 'none', textAlign: 'right', color: 'text.disabled', fontSize: 10.5 }}>
                     <Box>{h.changedBy || '-'}</Box><Box>{fmtTs(h.changedAt)}</Box>

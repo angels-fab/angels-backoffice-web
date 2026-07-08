@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, makeSignupClient, padPassword } from './supabase'
 
 /**
  * 공용 세션/타임아웃 가드 — 사무실망에서 supabase 요청이 토큰 갱신 스톨로 멈추는 것 방지.
@@ -25,4 +25,19 @@ export async function withTimeout<T>(work: PromiseLike<T>, ms: number, label: st
 export async function ensureSession(ms = 20_000): Promise<void> {
   const { error } = await withTimeout(supabase.auth.getSession(), ms, '세션 확인')
   if (error) throw new Error(error.message || '세션 확인에 실패했습니다 — 다시 시도해주세요.')
+}
+
+/**
+ * 로그인한 사용자의 비밀번호 재확인(민감 작업 보호). 격리 클라이언트로 검증해 현재 세션은 건드리지 않는다.
+ * 맞으면 true. (사번→내부 이메일은 이미 세션 email에 있으므로 그걸로 재인증)
+ */
+export async function verifyPassword(entered: string): Promise<boolean> {
+  const pw = entered.trim()
+  if (!pw) return false
+  const { data } = await supabase.auth.getSession()
+  const email = data.session?.user.email
+  if (!email) return false
+  const tmp = makeSignupClient()
+  const { error } = await withTimeout(tmp.auth.signInWithPassword({ email, password: padPassword(pw) }), 15_000, '비밀번호 확인')
+  return !error
 }

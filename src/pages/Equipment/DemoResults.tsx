@@ -7,6 +7,11 @@ import InputBase from '@mui/material/InputBase'
 import CircularProgress from '@mui/material/CircularProgress'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
+import Dialog from '@mui/material/Dialog'
+import DialogTitle from '@mui/material/DialogTitle'
+import DialogContent from '@mui/material/DialogContent'
+import DialogActions from '@mui/material/DialogActions'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined'
 import CloseIcon from '@mui/icons-material/Close'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
@@ -21,16 +26,18 @@ import type { Theme } from '@mui/material/styles'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
-  fetchMetricDefs, fetchDemoResults, fetchDemoChat, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, deleteDemoChat, updateDemoResult,
-  type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup,
+  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, deleteDemoChat, updateDemoResult,
+  type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup, type ValueHistory,
 } from '@/api/demo'
-import { MetricEditorDialog, MetricHistoryDialog } from './DemoMetricEditor'
+import { verifyPassword } from '@/api/session'
+import { MetricEditorDialog, MetricHistoryDialog, ValueHistoryDialog } from './DemoMetricEditor'
 import DemoChat from './DemoChat'
 
 const COL_W = 118 // 제조사 열 고정폭(1·2·3개사 통일, 타이트)
 const LABEL_W = 100 // 지표/장비명 열 폭
 
 const fmtDate = (d: string) => (d ? d.replace(/-/g, '.').slice(2) : '')
+const fmtWhen = (iso: string) => { try { return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) } catch { return iso.slice(0, 10) } }
 
 // 서명 URL 캐시 — 사진(비공개 버킷)을 매번 재요청하지 않도록
 const urlCache = new Map<string, string>()
@@ -153,24 +160,38 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewHistory }: {
-  equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean
+function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewHistory, onViewValueHistory }: {
+  equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onOpen: (photos: DemoPhotoRef[], idx: number) => void
   onPostChat: (equipment: string, makers: string[], body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
-  onEditMetrics: () => void; onViewHistory: () => void
+  onEditMetrics: () => void; onViewHistory: () => void; onViewValueHistory: () => void
 }) {
   // 제조사별 선택 회차(기본=최신)
   const [sel, setSel] = useState<Record<string, number>>(() => Object.fromEntries(makers.map((m) => [m.key, m.rounds.length - 1])))
   const shown = (m: DemoMakerGroup) => m.rounds[Math.min(sel[m.key] ?? m.rounds.length - 1, m.rounds.length - 1)]
 
-  // 제조사 지표값 수정 — 실수 방지로 열 단위 명시 편집(작은 트리거 → 인풋 → 저장)
+  // 제조사 지표값 수정 — 실수 방지로 열 단위 명시 편집(작은 트리거 → 인풋 → 저장). 저장 시 비밀번호 재확인(조작방지)
   const [valEditKey, setValEditKey] = useState<string | null>(null)
   const [valDraft, setValDraft] = useState<Record<string, string>>({})
   const [savingVal, setSavingVal] = useState(false)
+  const [pwPrompt, setPwPrompt] = useState<DemoMakerGroup | null>(null)
+  const [pw, setPw] = useState('')
+  const [pwErr, setPwErr] = useState('')
   const startVal = (m: DemoMakerGroup) => { setValEditKey(m.key); setValDraft({ ...shown(m).metrics }) }
   const cancelVal = () => { setValEditKey(null); setValDraft({}) }
-  const saveVal = async (m: DemoMakerGroup) => { setSavingVal(true); try { await onSaveValues(shown(m).id, valDraft); setValEditKey(null); setValDraft({}) } finally { setSavingVal(false) } }
+  const askSaveVal = (m: DemoMakerGroup) => { setPw(''); setPwErr(''); setPwPrompt(m) }
+  const confirmSaveVal = async () => {
+    if (!pwPrompt) return
+    setSavingVal(true); setPwErr('')
+    try {
+      const ok = await verifyPassword(pw)
+      if (!ok) { setPwErr('비밀번호가 올바르지 않습니다.'); return }
+      await onSaveValues(shown(pwPrompt).id, valDraft)
+      setPwPrompt(null); setPw(''); setValEditKey(null); setValDraft({})
+    } catch (e) { setPwErr(e instanceof Error ? e.message : '저장에 실패했습니다') }
+    finally { setSavingVal(false) }
+  }
 
   // 편집 중인 열은 draft 값으로 비교(우수 강조가 입력 즉시 반영)
   const bestFor = (def: DemoMetricDef) => bestMakers(def, makers.map((m) => ({ key: m.key, value: valEditKey === m.key ? valDraft[def.key] : shown(m).metrics[def.key] })))
@@ -184,6 +205,19 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
         {canEdit && <Button size="small" startIcon={<TuneIcon sx={{ fontSize: 15 }} />} onClick={onEditMetrics} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>지표 편집</Button>}
         <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 15 }} />} onClick={onViewHistory} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>변경 이력</Button>
       </Box>
+
+      {/* 지표 '값' 변경 알림(조작방지) — 최근 값 변경이 있으면 표시. 클릭 시 값 변경 이력 */}
+      {latestValueChange && (
+        <Box role="button" tabIndex={0} onClick={onViewValueHistory} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewValueHistory() } }}
+          sx={(th) => ({ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75, px: 1.25, py: 0.8, borderRadius: '9px', cursor: 'pointer', bgcolor: alpha(th.palette.warning.main, 0.1), border: `1px solid ${alpha(th.palette.warning.main, 0.4)}` })}>
+          <InfoOutlinedIcon sx={{ fontSize: 16, flex: 'none', color: 'warning.main' }} />
+          <Box sx={{ flex: 1, minWidth: 0, fontSize: 11.5, color: 'text.primary' }}>
+            <b>{latestValueChange.maker} 지표값이 변경되었습니다</b>
+            <Box component="span" sx={{ color: 'text.disabled', ml: 0.75 }}>· {latestValueChange.changedBy} · {fmtWhen(latestValueChange.changedAt)}</Box>
+          </Box>
+          <Box component="span" sx={{ fontSize: 10.5, fontWeight: 700, flex: 'none', color: 'warning.main' }}>이력 보기</Box>
+        </Box>
+      )}
 
       {/* PC = 표 | 채팅 나란히(같은 높이) · 모바일 = 세로 스택 */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.25, alignItems: 'stretch' }}>
@@ -200,7 +234,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
                 <Box component="th" key={m.key} sx={{ width: COL_W, p: '4px 6px', textAlign: 'center', verticalAlign: 'top', borderLeft: mi > 0 ? 1 : 0, borderColor: 'divider' }}>
                   <MakerHead mg={m} sel={sel[m.key] ?? m.rounds.length - 1} onSel={(i) => setSel((s) => ({ ...s, [m.key]: i }))} onOpen={onOpen}
                     canEdit={canEdit} editing={valEditKey === m.key} savingVal={savingVal}
-                    onStartVal={() => startVal(m)} onSaveVal={() => void saveVal(m)} onCancelVal={cancelVal} />
+                    onStartVal={() => startVal(m)} onSaveVal={() => askSaveVal(m)} onCancelVal={cancelVal} />
                 </Box>
               ))}
             </Box>
@@ -238,12 +272,32 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
         </Box>
       </Box>
 
-        {/* 오른쪽 = 비교 채팅(표와 같은 높이). 모바일은 표 아래로 스택 */}
-        <Box sx={{ flex: '1 1 0', minWidth: { md: 240 }, minHeight: { xs: 240, md: 0 } }}>
+        {/* 오른쪽 = 비교 채팅(고정 300px, 표와 같은 높이). 모바일은 표 아래로 스택 */}
+        <Box sx={{ flex: { md: '0 0 300px' }, width: { xs: '100%', md: 300 }, minHeight: { xs: 240, md: 0 } }}>
           <DemoChat makers={makers} messages={messages} canPost={canEdit} user={user} busy={chatBusy}
             onPost={(mk, body) => onPostChat(equipment, mk, body)} onDelete={onDeleteChat} />
         </Box>
       </Box>
+
+      {/* 지표값 저장 — 비밀번호 재확인(조작방지 보안강화) */}
+      <Dialog open={!!pwPrompt} onClose={() => !savingVal && setPwPrompt(null)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+        <DialogTitle sx={{ fontSize: 15, fontWeight: 800 }}>지표값 저장 확인</DialogTitle>
+        <DialogContent>
+          {pwPrompt && (
+            <Box sx={{ fontSize: 12.5, color: 'text.secondary', mb: 1.25 }}>
+              <b>{pwPrompt.maker}{pwPrompt.model ? ` ${pwPrompt.model}` : ''} · {shown(pwPrompt).round}차</b> 지표값을 저장합니다. 조작방지를 위해 <b>본인 비밀번호</b>를 입력해주세요.
+            </Box>
+          )}
+          <InputBase type="password" autoFocus value={pw} onChange={(e) => setPw(e.target.value)} placeholder="비밀번호"
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void confirmSaveVal() } }}
+            sx={(th) => ({ width: '100%', fontSize: 13, bgcolor: 'background.paper', border: `1px solid ${pwErr ? th.palette.error.main : th.palette.divider}`, borderRadius: '8px', px: 1.25, py: 0.85 })} />
+          {pwErr && <Box sx={{ fontSize: 11.5, color: 'error.main', mt: 0.5 }}>{pwErr}</Box>}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setPwPrompt(null)} disabled={savingVal} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button variant="contained" onClick={() => void confirmSaveVal()} disabled={savingVal || !pw.trim()} startIcon={savingVal ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined}>{savingVal ? '확인 중…' : '저장'}</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
@@ -262,12 +316,14 @@ export default function DemoResults() {
   const [viewer, setViewer] = useState<{ photos: DemoPhotoRef[]; idx: number } | null>(null)
   const [editorEquip, setEditorEquip] = useState<string | null>(null)
   const [historyEquip, setHistoryEquip] = useState<string | null>(null)
+  const [valHist, setValHist] = useState<ValueHistory[]>([])
+  const [valHistEquip, setValHistEquip] = useState<string | null>(null)
   const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'error' }>({ open: false, msg: '', sev: 'success' })
 
   const load = useCallback(() => {
     setLoading(true)
-    Promise.all([fetchMetricDefs(), fetchDemoResults(), fetchDemoChat()])
-      .then(([d, r, c]) => { setDefs(d); setRows(r); setChat(c) })
+    Promise.all([fetchMetricDefs(), fetchDemoResults(), fetchDemoChat(), fetchValueHistory()])
+      .then(([d, r, c, v]) => { setDefs(d); setRows(r); setChat(c); setValHist(v) })
       .catch((e) => setSnack({ open: true, msg: e instanceof Error ? e.message : '불러오기 실패', sev: 'error' }))
       .finally(() => setLoading(false))
   }, [])
@@ -276,6 +332,7 @@ export default function DemoResults() {
 
   const groups = useMemo(() => groupDemoResults(rows, defs), [rows, defs])
   const chatOf = (eq: string) => chat.filter((m) => m.equipment === eq)
+  const latestValueChangeOf = (eq: string) => valHist.find((v) => v.equipment === eq)
 
   const onPostChat = async (equipment: string, makers: string[], body: string) => {
     if (!user) throw new Error('로그인이 필요합니다')
@@ -305,9 +362,9 @@ export default function DemoResults() {
           <EquipGroup
             key={g.equipment}
             equipment={g.equipment} defs={g.defs} makers={g.makers}
-            messages={chatOf(g.equipment)} canEdit={isMember} user={user} chatBusy={chatBusy}
+            messages={chatOf(g.equipment)} canEdit={isMember} user={user} chatBusy={chatBusy} latestValueChange={latestValueChangeOf(g.equipment)}
             onOpen={(photos, idx) => setViewer({ photos, idx })} onPostChat={onPostChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues}
-            onEditMetrics={() => setEditorEquip(g.equipment)} onViewHistory={() => setHistoryEquip(g.equipment)}
+            onEditMetrics={() => setEditorEquip(g.equipment)} onViewHistory={() => setHistoryEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
           />
         ))
       )}
@@ -319,6 +376,7 @@ export default function DemoResults() {
           onError={(msg) => setSnack({ open: true, msg, sev: 'error' })} />
       )}
       {historyEquip && <MetricHistoryDialog open equipment={historyEquip} onClose={() => setHistoryEquip(null)} />}
+      {valHistEquip && <ValueHistoryDialog open equipment={valHistEquip} defs={defs} onClose={() => setValHistEquip(null)} />}
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert severity={snack.sev} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
       </Snackbar>
