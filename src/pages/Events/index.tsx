@@ -10,12 +10,14 @@ import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState } from '@/components/ds'
 import { useRole } from '@/auth/role'
-import { FAB_EVENTS, EVENT_REQUEST_FORM_URL, eventStatus, type FabEvent } from '@/constants/events'
-import { fetchAttendees, addAttendee, removeAttendee, type AttendeeRow } from '@/api/events'
+import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
+import { fetchAttendees, addAttendee, removeAttendee, fetchSubmissions, type AttendeeRow, type EventSubmissionRow } from '@/api/events'
 import { EventCardInner, EventDrawerDetail } from './eventCard'
 import MobileCarousel from './MobileCarousel'
 import EndedList from './EndedList'
 import AttendeeSection from './AttendeeSection'
+import SubmitEventModal from './SubmitEventModal'
+import SubmissionsAdmin from './SubmissionsAdmin'
 
 // PC 카드 — 인터랙션(클릭/포커스/hover) 래퍼 + 공용 비주얼(EventCardInner).
 function EventCard({ e, open, onToggle }: { e: FabEvent; open: boolean; onToggle: () => void }) {
@@ -58,6 +60,10 @@ export default function Events() {
   const [attendees, setAttendees] = useState<AttendeeRow[]>([])
   const [attBusy, setAttBusy] = useState(false)
   const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'error' }>({ open: false, msg: '', sev: 'success' })
+  const [submitOpen, setSubmitOpen] = useState(false)
+  const [submissions, setSubmissions] = useState<EventSubmissionRow[]>([])
+  const [subOpen, setSubOpen] = useState(false)
+  const showSnack = (msg: string, sev: 'success' | 'error' = 'success') => setSnack({ open: true, msg, sev })
 
   // 날짜 기준 분류: 진행중(green)+예정(amber)=진행·예정 / 종료(gray). 진행중 먼저, 예정은 start asc / 종료는 end desc.
   const { active, ended } = useMemo(() => {
@@ -105,6 +111,11 @@ export default function Events() {
     try { await removeAttendee(id); refetchAtt() } catch (err) { attErr(err) } finally { setAttBusy(false) }
   }
 
+  // 관리자 — 신청(제출) 대기 목록. 마운트·제출 후 로드.
+  const refetchSubs = () => { if (isAdmin) void fetchSubmissions().then(setSubmissions).catch(() => {}) }
+  useEffect(() => { refetchSubs() }, [isAdmin])
+  const pendingCount = submissions.filter((s) => s.status === 'pending').length
+
   // Escape로 열린 카드/상세 닫기 (PC 그리드·종료 상세 패널)
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') { setOpenId(null); setEndedDetail(null) } }
@@ -142,10 +153,17 @@ export default function Events() {
         title="학술·교육·전시"
         subtitle="학회 · 교육 · 전시 행사"
         actions={
-          isAdmin ? (
-            <Button variant="contained" startIcon={<AddIcon />} onClick={() => window.open(EVENT_REQUEST_FORM_URL, '_blank', 'noopener,noreferrer')}>
-              새 행사
-            </Button>
+          isMember ? (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              {isAdmin && pendingCount > 0 && (
+                <Button variant="outlined" color="warning" size="small" onClick={() => setSubOpen(true)} sx={{ whiteSpace: 'nowrap' }}>
+                  신청 대기 {pendingCount}
+                </Button>
+              )}
+              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setSubmitOpen(true)}>
+                새 행사
+              </Button>
+            </Box>
           ) : undefined
         }
       />
@@ -223,7 +241,20 @@ export default function Events() {
         </Box>
       )}
 
-      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+      {/* 새 행사 신청 팝업(팀원+) */}
+      <SubmitEventModal
+        open={submitOpen}
+        onClose={() => setSubmitOpen(false)}
+        user={user}
+        onSubmitted={() => { setSubmitOpen(false); showSnack('행사를 신청했습니다. 관리자 검토 후 게시됩니다.'); refetchSubs() }}
+        onError={(m) => showSnack(m, 'error')}
+      />
+      {/* 관리자 — 신청 대기·검토 */}
+      {isAdmin && (
+        <SubmissionsAdmin open={subOpen} onClose={() => setSubOpen(false)} submissions={submissions} onChanged={refetchSubs} onError={(m) => showSnack(m, 'error')} />
+      )}
+
+      <Snackbar open={snack.open} autoHideDuration={3500} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert severity={snack.sev} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
       </Snackbar>
     </PageContainer>
