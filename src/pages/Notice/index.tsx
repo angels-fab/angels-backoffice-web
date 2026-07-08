@@ -426,7 +426,9 @@ export default function Notice() {
                   {/* 전체 최신순(원본) */}
                   {filtered.map((n) =>
                     isMember && editingId === n.id
-                      ? <NoticeCompose key={n.id} mode="edit" notice={n} author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={(v) => handleSaveEdit(n, v)} onCancel={() => setEditingId(null)} />
+                      // key는 renderRow 원본 행과 동일한 String(n.num) 사용 — n.id(위치기반 idx+1)를 쓰면
+                      // 다른 행의 n.num과 충돌(id=13-num)해 React 재조정이 깨지고 저장 후 폼/스피너가 안 사라짐.
+                      ? <NoticeCompose key={String(n.num)} mode="edit" notice={n} author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={(v) => handleSaveEdit(n, v)} onCancel={() => setEditingId(null)} />
                       : renderRow(n, false),
                   )}
                 </TableBody>
