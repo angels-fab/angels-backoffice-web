@@ -32,6 +32,9 @@ import {
 import { verifyPassword } from '@/api/session'
 import { MetricEditorDialog, MetricHistoryDialog, ValueHistoryDialog } from './DemoMetricEditor'
 import DemoChat from './DemoChat'
+import DemoResultForm from './DemoResultForm'
+import AddIcon from '@mui/icons-material/Add'
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'
 
 const COL_W = 118 // 제조사 열 고정폭(1·2·3개사 통일, 타이트)
 const LABEL_W = 100 // 지표/장비명 열 폭
@@ -160,12 +163,12 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewHistory, onViewValueHistory }: {
+function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewHistory, onViewValueHistory, onAddRound }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onOpen: (photos: DemoPhotoRef[], idx: number) => void
   onPostChat: (equipment: string, makers: string[], body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
-  onEditMetrics: () => void; onViewHistory: () => void; onViewValueHistory: () => void
+  onEditMetrics: () => void; onViewHistory: () => void; onViewValueHistory: () => void; onAddRound: () => void
 }) {
   // 제조사별 선택 회차(기본=최신)
   const [sel, setSel] = useState<Record<string, number>>(() => Object.fromEntries(makers.map((m) => [m.key, m.rounds.length - 1])))
@@ -210,6 +213,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
       {/* 상단 = 버튼만(제목은 표 좌상단 셀로 이동) */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
         <Box sx={{ flex: 1 }} />
+        {canEdit && <Button size="small" startIcon={<PlaylistAddIcon sx={{ fontSize: 16 }} />} onClick={onAddRound} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>회차 추가</Button>}
         {canEdit && <Button size="small" startIcon={<TuneIcon sx={{ fontSize: 15 }} />} onClick={onEditMetrics} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>지표 편집</Button>}
         <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 15 }} />} onClick={onViewHistory} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>변경 이력</Button>
       </Box>
@@ -326,6 +330,8 @@ export default function DemoResults() {
   const [historyEquip, setHistoryEquip] = useState<string | null>(null)
   const [valHist, setValHist] = useState<ValueHistory[]>([])
   const [valHistEquip, setValHistEquip] = useState<string | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [formEquip, setFormEquip] = useState('')
   const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'error' }>({ open: false, msg: '', sev: 'success' })
 
   const load = useCallback(() => {
@@ -361,10 +367,15 @@ export default function DemoResults() {
 
   return (
     <Box sx={{ p: 1.5 }}>
+      {isMember && (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
+          <Button variant="contained" size="small" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => { setFormEquip(''); setFormOpen(true) }}>데모결과 추가</Button>
+        </Box>
+      )}
       {loading ? (
         <Box sx={{ py: 5, textAlign: 'center', color: 'text.disabled', fontSize: 13 }}>불러오는 중…</Box>
       ) : groups.length === 0 ? (
-        <Box sx={{ py: 5, textAlign: 'center', color: 'text.disabled', fontSize: 13 }}>등록된 데모결과가 없습니다.</Box>
+        <Box sx={{ py: 4, textAlign: 'center', color: 'text.disabled', fontSize: 13 }}>등록된 데모결과가 없습니다. {isMember && '“데모결과 추가”로 등록하세요.'}</Box>
       ) : (
         groups.map((g) => (
           <EquipGroup
@@ -373,6 +384,7 @@ export default function DemoResults() {
             messages={chatOf(g.equipment)} canEdit={isMember} user={user} chatBusy={chatBusy} latestValueChange={latestValueChangeOf(g.equipment)}
             onOpen={(photos, idx) => setViewer({ photos, idx })} onPostChat={onPostChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues}
             onEditMetrics={() => setEditorEquip(g.equipment)} onViewHistory={() => setHistoryEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
+            onAddRound={() => { setFormEquip(g.equipment); setFormOpen(true) }}
           />
         ))
       )}
@@ -385,6 +397,9 @@ export default function DemoResults() {
       )}
       {historyEquip && <MetricHistoryDialog open equipment={historyEquip} onClose={() => setHistoryEquip(null)} />}
       {valHistEquip && <ValueHistoryDialog open equipment={valHistEquip} defs={defs} onClose={() => setValHistEquip(null)} />}
+      <DemoResultForm open={formOpen} onClose={() => setFormOpen(false)} defs={defs} rows={rows} initialEquipment={formEquip} user={user}
+        onSaved={() => { setFormOpen(false); setSnack({ open: true, msg: '데모결과를 추가했습니다.', sev: 'success' }); load() }}
+        onError={(msg) => setSnack({ open: true, msg, sev: 'error' })} />
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert severity={snack.sev} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
       </Snackbar>
