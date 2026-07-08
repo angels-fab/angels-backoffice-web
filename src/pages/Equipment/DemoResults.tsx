@@ -166,7 +166,7 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
 function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewHistory, onViewValueHistory, onAddRound }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onOpen: (photos: DemoPhotoRef[], idx: number) => void
-  onPostChat: (equipment: string, makers: string[], body: string) => Promise<void>; onDeleteChat: (id: number) => void
+  onPostChat: (equipment: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
   onEditMetrics: () => void; onViewHistory: () => void; onViewValueHistory: () => void; onAddRound: () => void
 }) {
@@ -231,10 +231,9 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
         </Box>
       )}
 
-      {/* PC = 표 | 채팅 나란히(같은 높이) · 모바일 = 세로 스택 */}
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.25, alignItems: 'stretch' }}>
-        <Box sx={{ flex: '1 1 auto', minWidth: 0, border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
-          <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: '100%', minWidth: tableMinW }}>
+      {/* 비교표(전체 폭). 메모는 표 아래에 장비사 열 너비만큼 배치 */}
+      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
+        <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: '100%', minWidth: tableMinW }}>
           <Box component="thead">
             <Box component="tr">
               {/* 1행1열 = 장비명(높이 있는 좌상단 코너, 지표열과 같은 셀) */}
@@ -282,12 +281,10 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
             })}
           </Box>
         </Box>
-      </Box>
-
-        {/* 오른쪽 = 비교 채팅(고정 300px, 표와 같은 높이). 모바일은 표 아래로 스택 */}
-        <Box sx={{ flex: { md: '0 0 300px' }, width: { xs: '100%', md: 300 }, minHeight: { xs: 240, md: 0 } }}>
-          <DemoChat makers={makers} messages={messages} canPost={canEdit} user={user} busy={chatBusy}
-            onPost={(mk, body) => onPostChat(equipment, mk, body)} onDelete={onDeleteChat} />
+        {/* 비교 메모 — 표 아래, 지표헤더 열 빼고 장비사 열 너비만큼(pl = 지표열 폭) */}
+        <Box sx={{ pl: `${LABEL_W}px`, mt: 1.25 }}>
+          <DemoChat memos={messages} canPost={canEdit} user={user} busy={chatBusy}
+            onPost={(body) => onPostChat(equipment, body)} onDelete={onDeleteChat} />
         </Box>
       </Box>
 
@@ -348,11 +345,11 @@ export default function DemoResults() {
   const chatOf = (eq: string) => chat.filter((m) => m.equipment === eq)
   const latestValueChangeOf = (eq: string) => valHist.find((v) => v.equipment === eq)
 
-  const onPostChat = async (equipment: string, makers: string[], body: string) => {
+  const onPostChat = async (equipment: string, body: string) => {
     if (!user) throw new Error('로그인이 필요합니다')
     setChatBusy(true)
-    try { await postDemoChat({ equipment, makers, body, author: user }); refetchChat() }
-    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '메모 전송 실패', sev: 'error' }); throw e }
+    try { await postDemoChat({ equipment, body, author: user }); refetchChat() }
+    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '메모 저장 실패', sev: 'error' }); throw e }
     finally { setChatBusy(false) }
   }
   const onDeleteChat = async (id: number) => {

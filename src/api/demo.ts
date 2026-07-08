@@ -225,17 +225,16 @@ async function currentUid(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
   return data.session?.user.id ?? null
 }
-/** 메시지 전송 — makers(대상 제조사) 1개 이상 필수 */
-export async function postDemoChat(p: { equipment: string; makers: string[]; body: string; author: string }): Promise<void> {
-  if (!p.makers.length) throw new Error('대상 제조사를 1개 이상 선택해주세요')
+/** 비교 메모 저장(장비종류 단위, 대상 제조사 구분 없음) */
+export async function postDemoChat(p: { equipment: string; body: string; author: string }): Promise<void> {
   if (!p.body.trim()) throw new Error('내용을 입력해주세요')
   await ensureSession()
   const uid = await currentUid()
   const { error } = await withTimeout(
-    supabase.from('demo_chat').insert({ equipment: p.equipment, makers: p.makers, body: p.body.trim(), author: p.author, member_uid: uid }),
-    DB_TIMEOUT, '메모 전송',
+    supabase.from('demo_chat').insert({ equipment: p.equipment, makers: [], body: p.body.trim(), author: p.author, member_uid: uid }),
+    DB_TIMEOUT, '메모 저장',
   )
-  if (error) throw new Error(error.message || '메모 전송에 실패했습니다')
+  if (error) throw new Error(error.message || '메모 저장에 실패했습니다')
 }
 export async function deleteDemoChat(id: number): Promise<void> {
   await ensureSession()
