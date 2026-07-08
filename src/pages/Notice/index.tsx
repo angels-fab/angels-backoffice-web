@@ -158,13 +158,14 @@ export default function Notice() {
     setSaving(true)
     try {
       const newNum = await addNotice({ key: authKey, author: user, cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref, attachments: v.attachments, date: todaySeoul() })
-      setSaving(false); setComposing(false)
+      setComposing(false)
       dispatch(loadNoticeData())
       showSnack('공지를 등록했습니다.', 'success')
       if (newNum > 0) navigate(`/notice/${newNum}`, { replace: true })
     } catch (err) {
-      setSaving(false)
       showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+    } finally {
+      setSaving(false) // 성공·실패·타임아웃 무엇이든 스피너는 반드시 해제(멈춤 방지)
     }
   }
 
@@ -184,12 +185,13 @@ export default function Notice() {
       const keptPaths = new Set(v.attachments.map((a) => a.path))
       const removedPaths = (n.attachments || []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path)
       if (removedPaths.length) void removeNoticeFiles(removedPaths).catch(() => {})
-      setSaving(false); setEditingId(null)
+      setEditingId(null)
       dispatch(loadNoticeData())
       showSnack('공지를 수정했습니다.', 'success')
     } catch (err) {
-      setSaving(false)
       showSnack(err instanceof Error ? err.message : '수정 실패', 'error')
+    } finally {
+      setSaving(false) // 성공·실패·타임아웃 무엇이든 스피너는 반드시 해제(멈춤 방지)
     }
   }
 
@@ -203,13 +205,14 @@ export default function Notice() {
       const attachPaths = (deleteTarget.attachments || []).map((a) => a.path)
       if (attachPaths.length) void removeNoticeFiles(attachPaths).catch(() => {})
       const deletedNum = deleteTarget.num
-      setDeleteTarget(null); setDeleting(false)
+      setDeleteTarget(null)
       dispatch(loadNoticeData())
       showSnack('공지를 삭제했습니다.', 'success')
       if (String(num) === String(deletedNum)) navigate('/notice', { replace: true })
     } catch (err) {
-      setDeleting(false)
       showSnack(err instanceof Error ? err.message : '삭제 실패', 'error')
+    } finally {
+      setDeleting(false) // 성공·실패·타임아웃 무엇이든 진행 표시는 반드시 해제
     }
   }
 

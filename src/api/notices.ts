@@ -34,6 +34,18 @@ async function withTimeout<T>(work: PromiseLike<T>, ms: number, label: string): 
   }
 }
 
+/**
+ * 쓰기 전에 세션(액세스 토큰)을 먼저 확보한다.
+ * supabase-js는 모든 요청을 만들기 전에 getSession()으로 토큰을 읽는데, 토큰 만료가 임박(~90초)하면
+ * 내부에서 토큰 갱신(POST /token)을 하고 이 갱신 요청에는 타임아웃이 없다. 사무실망 프록시가 이 소켓을
+ * 붙잡으면 요청 자체가 안 나가고 무한 대기(저장 스피너 멈춤)한다 — 그래서 갱신을 '타임아웃 가능한' 단계로
+ * 분리해 먼저 처리한다. 정상 시엔 캐시 토큰이라 즉시 반환하고, 다음 실제 쓰기는 갱신된 토큰으로 바로 나간다.
+ */
+async function ensureSession(): Promise<void> {
+  const { error } = await withTimeout(supabase.auth.getSession(), DB_TIMEOUT, '세션 확인')
+  if (error) throw new Error(error.message || '세션 확인에 실패했습니다 — 다시 시도해주세요.')
+}
+
 interface NoticesTableRow {
   num: number
   pinned: boolean
@@ -86,6 +98,7 @@ const nowTimeKst = () =>
 /** 공지 등록 → 새 연번(자동 채번). 게시일 미지정 시 오늘(KST), 작성시간 자동 */
 export async function addNotice(p: AddNoticePayload): Promise<number> {
   if (!p.title.trim() || !p.body.trim()) throw new Error('제목과 내용을 입력해주세요')
+  await ensureSession()
   const { data, error } = await withTimeout(
     supabase
       .from('notices')
@@ -114,6 +127,7 @@ export async function updateNotice(p: AddNoticePayload & { num: string | number 
   if (p.ref !== undefined) patch.ref = p.ref
   if (p.attachments !== undefined) patch.attachments = p.attachments
   if (p.date) patch.posted_date = p.date
+  await ensureSession()
   const { error } = await withTimeout(
     supabase.from('notices').update(patch).eq('num', Number(p.num)),
     DB_TIMEOUT, '공지 수정',
@@ -121,9 +135,13 @@ export async function updateNotice(p: AddNoticePayload & { num: string | number 
   if (error) throw new Error(error.message || '수정 실패')
 }
 
-/** 공지 삭제(하드 — 기존 동작 유지) */
+/** 공지 삭제(하드 — 기존 동작 유지). 세션 확보 + 타임아웃으로 무한 대기 방지 */
 export async function deleteNotice(p: { num: string | number; author: string; key: string }): Promise<void> {
-  const { error } = await supabase.from('notices').delete().eq('num', Number(p.num))
+  await ensureSession()
+  const { error } = await withTimeout(
+    supabase.from('notices').delete().eq('num', Number(p.num)),
+    DB_TIMEOUT, '공지 삭제',
+  )
   if (error) throw new Error(error.message || '삭제 실패')
 }
 
@@ -143,6 +161,7 @@ export async function uploadNoticeFile(file: File): Promise<NoticeFile> {
   if (file.size > NOTICE_FILE_MAX) {
     throw new Error(`파일이 너무 큽니다(최대 10MB): ${file.name}`)
   }
+  await ensureSession()
   const path = `notice/${crypto.randomUUID()}${fileExt(file.name)}`
   const { error } = await withTimeout(
     supabase.storage
