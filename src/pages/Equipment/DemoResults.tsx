@@ -220,7 +220,7 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
 function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onOpen: (photos: DemoPhotoRef[], idx: number) => void
-  onPostChat: (equipment: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
+  onPostChat: (equipment: string, title: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
   onEditMetrics: () => void; onViewValueHistory: () => void; onAddRound: (mg: DemoMakerGroup) => void
   onDeleteRound: (roundId: number) => Promise<void>
@@ -372,7 +372,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <DemoChat memos={messages} canPost={canEdit} user={user} busy={chatBusy}
-              onPost={(body) => onPostChat(equipment, body)} onDelete={onDeleteChat} />
+              onPost={(title, body) => onPostChat(equipment, title, body)} onDelete={onDeleteChat} />
           </Box>
         </Box>
       </Box>
@@ -455,10 +455,10 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
   const chatOf = (eq: string) => chat.filter((m) => m.equipment === eq)
   const latestValueChangeOf = (eq: string) => valHist.find((v) => v.equipment === eq)
 
-  const onPostChat = async (equipment: string, body: string) => {
+  const onPostChat = async (equipment: string, title: string, body: string) => {
     if (!user) throw new Error('로그인이 필요합니다')
     setChatBusy(true)
-    try { await postDemoChat({ equipment, body, author: user }); refetchChat() }
+    try { await postDemoChat({ equipment, title, body, author: user }); refetchChat() }
     catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '메모 저장 실패', sev: 'error' }); throw e }
     finally { setChatBusy(false) }
   }

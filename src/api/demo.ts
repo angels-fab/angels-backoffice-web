@@ -29,8 +29,8 @@ export interface DemoRoundRow {
   date: string; place: string; conditions: string
   metrics: Record<string, string>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
 }
-/** 비교 채팅 메시지 — 장비종류별 스레드. makers = 대상 제조사명(필수 1개+) */
-export interface DemoChatMsg { id: number; equipment: string; makers: string[]; body: string; author: string; createdAt: string }
+/** 코멘트(제목 있는 메모카드) — 장비종류별. makers는 구버전 잔존(현재 미사용, 빈 배열) */
+export interface DemoChatMsg { id: number; equipment: string; makers: string[]; title: string; body: string; author: string; createdAt: string }
 export interface MetricDefHistory {
   id: number; equipment: string; metricKey: string; action: string
   before: Record<string, unknown> | null; after: Record<string, unknown> | null
@@ -40,7 +40,7 @@ export interface MetricDefHistory {
 // ── 매핑 ──
 interface DefRow { id: number; equipment: string; metric_key: string; label: string; unit: string; direction: MetricDirection; sort: number; active: boolean }
 interface ResRow { id: number; equipment: string; maker: string; model: string; round: number; visit_date: string | null; place: string; conditions: string; metrics: Record<string, string> | null; photos: DemoPhotoRef[] | null; files: DemoFileRef[] | null; cover: number }
-interface ChatRow { id: number; equipment: string; makers: string[] | null; body: string; author: string; created_at: string }
+interface ChatRow { id: number; equipment: string; makers: string[] | null; title: string | null; body: string; author: string; created_at: string }
 
 const toDef = (r: DefRow): DemoMetricDef => ({ id: r.id, equipment: r.equipment, key: r.metric_key, label: r.label, unit: r.unit, direction: r.direction, sort: r.sort, active: r.active })
 const toRound = (r: ResRow): DemoRoundRow => ({
@@ -61,9 +61,9 @@ export async function fetchDemoResults(): Promise<DemoRoundRow[]> {
   return ((data || []) as ResRow[]).map(toRound)
 }
 export async function fetchDemoChat(): Promise<DemoChatMsg[]> {
-  const { data, error } = await withTimeout(supabase.from('demo_chat').select('id, equipment, makers, body, author, created_at').order('created_at', { ascending: true }), DB_TIMEOUT, '메모 불러오기')
+  const { data, error } = await withTimeout(supabase.from('demo_chat').select('id, equipment, makers, title, body, author, created_at').order('created_at', { ascending: true }), DB_TIMEOUT, '메모 불러오기')
   if (error) fail(error, '메모를 불러오지 못했습니다')
-  return ((data || []) as ChatRow[]).map((r) => ({ id: r.id, equipment: r.equipment, makers: Array.isArray(r.makers) ? r.makers : [], body: r.body, author: r.author, createdAt: r.created_at }))
+  return ((data || []) as ChatRow[]).map((r) => ({ id: r.id, equipment: r.equipment, makers: Array.isArray(r.makers) ? r.makers : [], title: r.title || '', body: r.body, author: r.author, createdAt: r.created_at }))
 }
 /** 지표 정의 변경 이력 — equipment 생략 시 전체(알림 배너용) */
 export const METRIC_ACTION_LABEL: Record<string, string> = { create: '추가', update: '수정', deactivate: '비활성', reactivate: '재활성' }
@@ -256,13 +256,13 @@ async function currentUid(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
   return data.session?.user.id ?? null
 }
-/** 비교 메모 저장(장비종류 단위, 대상 제조사 구분 없음) */
-export async function postDemoChat(p: { equipment: string; body: string; author: string }): Promise<void> {
-  if (!p.body.trim()) throw new Error('내용을 입력해주세요')
+/** 코멘트 저장(장비종류 단위) — 제목 필수 + 내용 선택(제목 있는 메모카드) */
+export async function postDemoChat(p: { equipment: string; title: string; body: string; author: string }): Promise<void> {
+  if (!p.title.trim()) throw new Error('제목을 입력해주세요')
   await ensureSession()
   const uid = await currentUid()
   const { error } = await withTimeout(
-    supabase.from('demo_chat').insert({ equipment: p.equipment, makers: [], body: p.body.trim(), author: p.author, member_uid: uid }),
+    supabase.from('demo_chat').insert({ equipment: p.equipment, makers: [], title: p.title.trim(), body: p.body.trim(), author: p.author, member_uid: uid }),
     DB_TIMEOUT, '메모 저장',
   )
   if (error) throw new Error(error.message || '메모 저장에 실패했습니다')
