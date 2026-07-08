@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Dialog from '@mui/material/Dialog'
+import Drawer from '@mui/material/Drawer'
+import IconButton from '@mui/material/IconButton'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import AddIcon from '@mui/icons-material/Add'
+import CloseIcon from '@mui/icons-material/Close'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState } from '@/components/ds'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, EVENT_REQUEST_FORM_URL, eventStatus, type FabEvent } from '@/constants/events'
@@ -121,26 +123,40 @@ export default function Events() {
             <EmptyState icon={<CoPresentIcon />} title="종료된 행사가 없습니다" />
           </AppCard>
         ) : (
-          <AppCard padding={0}>
-            <EndedList events={ended} onPick={setEndedDetail} />
+          <AppCard padding={0} sx={{ transition: 'margin-right .22s ease', ...(endedDetail && { mr: { md: '396px' } }) }}>
+            <EndedList events={ended} selectedId={endedDetail?.id ?? null} onPick={setEndedDetail} />
           </AppCard>
         )}
       </ContentSection>
 
-      {/* 종료 행사 상세 — 카드 상세 재사용(다이얼로그) */}
-      <Dialog
+      {/* 종료 행사 상세 — 비모달 우측 Drawer. 배경(목록) 계속 클릭 가능 → 드로어 안 닫고 다른 행사 연속 열람.
+          Modal 루트는 pointer-events:none로 통과시키고 paper만 auto, 백드롭·포커스트랩·스크롤락 해제. */}
+      <Drawer
+        anchor="right"
         open={!!endedDetail}
         onClose={() => setEndedDetail(null)}
-        maxWidth="xs"
-        fullWidth
-        slotProps={{ paper: { sx: { bgcolor: 'transparent', boxShadow: 'none', overflow: 'visible', m: { xs: 1.5, sm: 2 } } } }}
+        hideBackdrop
+        disableEnforceFocus
+        disableScrollLock
+        sx={{ pointerEvents: 'none' }}
+        slotProps={{ paper: { sx: { pointerEvents: 'auto', width: 380, maxWidth: '92vw', bgcolor: 'background.default', borderLeft: 1, borderColor: 'divider', p: 1.5, boxShadow: '-8px 0 26px rgba(0,0,0,.42)' } } }}
       >
         {endedDetail && (
-          <Box sx={{ borderRadius: '18px', overflow: 'hidden', border: 1, borderColor: 'divider' }}>
-            <EventCardInner e={endedDetail} open />
+          <Box sx={{ position: 'relative' }}>
+            <IconButton
+              onClick={() => setEndedDetail(null)}
+              aria-label="상세 닫기"
+              size="small"
+              sx={{ position: 'absolute', top: 6, right: 6, zIndex: 2, bgcolor: 'rgba(0,0,0,.5)', color: '#fff', '&:hover': { bgcolor: 'rgba(0,0,0,.72)' } }}
+            >
+              <CloseIcon fontSize="small" />
+            </IconButton>
+            <Box sx={{ borderRadius: '18px', overflow: 'hidden', border: 1, borderColor: 'divider' }}>
+              <EventCardInner e={endedDetail} open />
+            </Box>
           </Box>
         )}
-      </Dialog>
+      </Drawer>
     </PageContainer>
   )
 }
