@@ -19,14 +19,16 @@ export default function DemoChat({ makers, messages, canPost, user, busy, onPost
   onPost: (makers: string[], body: string) => Promise<void>; onDelete: (id: number) => void
 }) {
   const makerNames = makers.map((m) => m.maker)
+  const single = makerNames.length === 1 // 제조사 1곳이면 대상 선택 불필요(자동 지정)
   const [sel, setSel] = useState<string[]>([])
   const [text, setText] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
   useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight }, [messages.length])
 
+  const target = single ? makerNames : sel
   const toggle = (n: string) => setSel((s) => (s.includes(n) ? s.filter((x) => x !== n) : [...s, n]))
-  const canSend = sel.length > 0 && text.trim().length > 0 && !busy
-  const send = async () => { if (!canSend) return; try { await onPost(sel, text); setText(''); setSel([]) } catch { /* 유지 */ } }
+  const canSend = target.length > 0 && text.trim().length > 0 && !busy
+  const send = async () => { if (!canSend) return; try { await onPost(target, text); setText(''); setSel([]) } catch { /* 유지 */ } }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: (th) => alpha(th.palette.text.primary, 0.02), overflow: 'hidden' }}>
@@ -64,18 +66,20 @@ export default function DemoChat({ makers, messages, canPost, user, busy, onPost
       {/* 작성 — 대상 제조사 선택 필수 */}
       {canPost && (
         <Box sx={{ flex: 'none', borderTop: 1, borderColor: 'divider', p: 0.75 }}>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '4px', mb: 0.5, alignItems: 'center' }}>
-            <Box component="span" sx={{ fontSize: 9.5, color: 'text.disabled', mr: 0.25 }}>대상</Box>
-            {makerNames.map((n) => {
-              const on = sel.includes(n)
-              return (
-                <Box key={n} component="button" type="button" aria-pressed={on} onClick={() => toggle(n)} sx={(th) => ({ fontSize: 10.5, fontWeight: 600, px: '8px', py: '2px', borderRadius: '999px', cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${on ? 'transparent' : th.palette.divider}`, bgcolor: on ? th.palette.primary.main : 'transparent', color: on ? '#fff' : 'text.secondary' })}>{n}</Box>
-              )
-            })}
-          </Box>
+          {!single && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '4px', mb: 0.5, alignItems: 'center' }}>
+              <Box component="span" sx={{ fontSize: 9.5, color: 'text.disabled', mr: 0.25 }}>대상</Box>
+              {makerNames.map((n) => {
+                const on = sel.includes(n)
+                return (
+                  <Box key={n} component="button" type="button" aria-pressed={on} onClick={() => toggle(n)} sx={(th) => ({ fontSize: 10.5, fontWeight: 600, px: '8px', py: '2px', borderRadius: '999px', cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${on ? 'transparent' : th.palette.divider}`, bgcolor: on ? th.palette.primary.main : 'transparent', color: on ? '#fff' : 'text.secondary' })}>{n}</Box>
+                )
+              })}
+            </Box>
+          )}
           <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5 }}>
             <InputBase multiline maxRows={3} value={text} onChange={(e) => setText(e.target.value)}
-              placeholder={sel.length ? '메모 입력…' : '대상을 먼저 선택하세요'}
+              placeholder={single || sel.length ? '메모 입력…' : '대상을 먼저 선택하세요'}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send() } }}
               sx={(th) => ({ flex: 1, fontSize: 12, bgcolor: 'background.paper', border: `1px solid ${th.palette.divider}`, borderRadius: '8px', px: 1, py: 0.5 })} />
             <IconButton size="small" color="primary" disabled={!canSend} onClick={() => void send()}>{busy ? <CircularProgress size={15} thickness={5} /> : <SendIcon sx={{ fontSize: 18 }} />}</IconButton>

@@ -180,7 +180,15 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
   const [pwErr, setPwErr] = useState('')
   const startVal = (m: DemoMakerGroup) => { setValEditKey(m.key); setValDraft({ ...shown(m).metrics }) }
   const cancelVal = () => { setValEditKey(null); setValDraft({}) }
-  const askSaveVal = (m: DemoMakerGroup) => { setPw(''); setPwErr(''); setPwPrompt(m) }
+  const isChanged = (m: DemoMakerGroup) => {
+    const cur = shown(m).metrics
+    for (const k of new Set([...Object.keys(cur), ...Object.keys(valDraft)])) if ((cur[k] ?? '') !== (valDraft[k] ?? '')) return true
+    return false
+  }
+  const askSaveVal = (m: DemoMakerGroup) => {
+    if (!isChanged(m)) { setValEditKey(null); setValDraft({}); return } // 변경 없으면 저장·비번·알림 없이 편집만 종료
+    setPw(''); setPwErr(''); setPwPrompt(m)
+  }
   const confirmSaveVal = async () => {
     if (!pwPrompt) return
     setSavingVal(true); setPwErr('')
@@ -195,7 +203,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
 
   // 편집 중인 열은 draft 값으로 비교(우수 강조가 입력 즉시 반영)
   const bestFor = (def: DemoMetricDef) => bestMakers(def, makers.map((m) => ({ key: m.key, value: valEditKey === m.key ? valDraft[def.key] : shown(m).metrics[def.key] })))
-  const tableW = LABEL_W + makers.length * COL_W
+  const tableMinW = LABEL_W + makers.length * COL_W // 스크롤 최소폭(열당 COL_W). 실제론 남는 공간까지 늘어남
 
   return (
     <Box sx={{ mb: 2.5 }}>
@@ -221,8 +229,8 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
 
       {/* PC = 표 | 채팅 나란히(같은 높이) · 모바일 = 세로 스택 */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.25, alignItems: 'stretch' }}>
-        <Box sx={{ flex: '0 0 auto', maxWidth: '100%', border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
-          <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: tableW }}>
+        <Box sx={{ flex: '1 1 auto', minWidth: 0, border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
+          <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: '100%', minWidth: tableMinW }}>
           <Box component="thead">
             <Box component="tr">
               {/* 1행1열 = 장비명(높이 있는 좌상단 코너, 지표열과 같은 셀) */}
@@ -231,7 +239,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
                 <Box sx={{ fontSize: 10, color: 'text.disabled', mt: 0.25 }}>경쟁 {makers.length}개사</Box>
               </Box>
               {makers.map((m, mi) => (
-                <Box component="th" key={m.key} sx={{ width: COL_W, p: '4px 6px', textAlign: 'center', verticalAlign: 'top', borderLeft: mi > 0 ? 1 : 0, borderColor: 'divider' }}>
+                <Box component="th" key={m.key} sx={{ p: '4px 6px', textAlign: 'center', verticalAlign: 'top', borderLeft: mi > 0 ? 1 : 0, borderColor: 'divider' }}>
                   <MakerHead mg={m} sel={sel[m.key] ?? m.rounds.length - 1} onSel={(i) => setSel((s) => ({ ...s, [m.key]: i }))} onOpen={onOpen}
                     canEdit={canEdit} editing={valEditKey === m.key} savingVal={savingVal}
                     onStartVal={() => startVal(m)} onSaveVal={() => askSaveVal(m)} onCancelVal={cancelVal} />
@@ -255,7 +263,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
                     const v = shown(m).metrics[def.key]
                     const isBest = best.has(m.key)
                     return (
-                      <Box component="td" key={m.key} sx={{ width: COL_W, textAlign: 'center', p: '5px 6px', fontSize: 12.5, borderLeft: mi > 0 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>
+                      <Box component="td" key={m.key} sx={{ textAlign: 'center', p: '5px 6px', fontSize: 12.5, borderLeft: mi > 0 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>
                         {editingThis ? (
                           <InputBase value={valDraft[def.key] ?? ''} onChange={(e) => setValDraft((d) => ({ ...d, [def.key]: e.target.value }))} placeholder="-"
                             sx={(th) => ({ width: '100%', fontSize: 12, bgcolor: alpha(th.palette.warning.main, 0.08), border: `1px solid ${alpha(th.palette.warning.main, 0.5)}`, borderRadius: '5px', px: 0.5, py: '1px', '& input': { textAlign: 'center', p: 0 } })} />

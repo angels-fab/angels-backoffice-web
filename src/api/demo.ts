@@ -180,6 +180,10 @@ export async function addDemoResult(p: DemoResultInput & { author: string }): Pr
   }), DB_TIMEOUT, '데모결과 저장')
   if (error) throw new Error(error.message || '데모결과 저장에 실패했습니다')
 }
+const sameMetrics = (a: Record<string, string>, b: Record<string, string>) => {
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) if (String(a[k] ?? '') !== String(b[k] ?? '')) return false
+  return true
+}
 export async function updateDemoResult(id: number, p: Partial<DemoResultInput> & { author: string }): Promise<void> {
   await ensureSession()
   // 값(metrics) 변경이면 조작방지 이력용으로 변경 전 상태를 먼저 확보
@@ -202,8 +206,8 @@ export async function updateDemoResult(id: number, p: Partial<DemoResultInput> &
   if (p.cover !== undefined) patch.cover = p.cover
   const { error } = await withTimeout(supabase.from('demo_results').update(patch).eq('id', id), DB_TIMEOUT, '데모결과 수정')
   if (error) throw new Error(error.message || '데모결과 수정에 실패했습니다')
-  // 값 변경 이력 기록(조작방지). 실패해도 저장 자체는 성공 처리(best-effort)
-  if (p.metrics !== undefined && prev) {
+  // 값 변경 이력 기록(조작방지). 실제 값이 바뀐 경우만(변경 없으면 알림·이력 없음). best-effort
+  if (p.metrics !== undefined && prev && !sameMetrics(prev.metrics || {}, p.metrics)) {
     await supabase.from('demo_value_history').insert({
       equipment: prev.equipment, maker: prev.maker, model: prev.model, round: prev.round,
       before: prev.metrics || {}, after: p.metrics, changed_by: p.author,
