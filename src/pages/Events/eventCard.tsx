@@ -295,7 +295,7 @@ function DrawerMeta({ icon, value }: { icon: ReactNode; value: string }) {
  * 종료 행사 상세(우측 드로어용) — 카드 슬라이드업이 아니라 **포스터를 풀사이즈로** 보여주고,
  * 그 아래에 상세(제목·일시·장소·주최·요약·참석자·사이트)를 일반 배경(테마색)으로 표시.
  */
-export function EventDrawerDetail({ e }: { e: FabEvent }) {
+export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSlot?: ReactNode }) {
   const url = posterUrl(e.poster)
   const st = eventStatus(e.start, e.end)
   const cat = eventCategory(e.kind)
@@ -338,8 +338,8 @@ export function EventDrawerDetail({ e }: { e: FabEvent }) {
             ))}
           </Box>
         )}
-        {/* 참석자 명단 */}
-        {e.attendees && e.attendees.length > 0 && (
+        {/* 참석자 영역 — 부모(index.tsx)가 조작 가능한 섹션을 끼워 넣음. 없으면 e.attendees 표시 */}
+        {attendeeSlot ?? (e.attendees && e.attendees.length > 0 && (
           <Box sx={{ mb: 1.5, borderTop: 1, borderColor: 'divider', pt: 1.25 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 0.7, color: 'text.disabled', fontSize: 11.5, fontWeight: 700, letterSpacing: '.03em' }}>
               <GroupsIcon sx={{ fontSize: 15 }} /> 참석자 {e.attendees.length}명
@@ -350,7 +350,7 @@ export function EventDrawerDetail({ e }: { e: FabEvent }) {
               ))}
             </Box>
           </Box>
-        )}
+        ))}
         <Button component="a" href={e.link} target="_blank" rel="noopener noreferrer" variant="contained" fullWidth size="small" startIcon={<OpenInNewIcon />} sx={{ bgcolor: KIND_BLUE, color: '#fff', fontSize: 12.5, py: '6px', '&:hover': { bgcolor: darken(KIND_BLUE, 0.14) } }}>
           행사 사이트 바로가기
         </Button>

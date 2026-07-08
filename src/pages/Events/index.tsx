@@ -6,12 +6,16 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState } from '@/components/ds'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, EVENT_REQUEST_FORM_URL, eventStatus, type FabEvent } from '@/constants/events'
+import { fetchAttendees, addAttendee, removeAttendee, type AttendeeRow } from '@/api/events'
 import { EventCardInner, EventDrawerDetail } from './eventCard'
 import MobileCarousel from './MobileCarousel'
 import EndedList from './EndedList'
+import AttendeeSection from './AttendeeSection'
 
 // PC 카드 — 인터랙션(클릭/포커스/hover) 래퍼 + 공용 비주얼(EventCardInner).
 function EventCard({ e, open, onToggle }: { e: FabEvent; open: boolean; onToggle: () => void }) {
@@ -45,12 +49,15 @@ type Tab = 'active' | 'ended'
  * 진행·예정 = 카드(PC 그리드 / 모바일 캐러셀, 진행중 먼저·예정 start asc). 종료 = 밀도 목록(end desc, 행 클릭 상세).
  */
 export default function Events() {
-  const { isAdmin } = useRole()
+  const { isAdmin, isMember, user } = useRole()
   const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true })
   const [tab, setTab] = useState<Tab>('active')
   const [openId, setOpenId] = useState<string | null>(null)
   const [endedDetail, setEndedDetail] = useState<FabEvent | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const [attendees, setAttendees] = useState<AttendeeRow[]>([])
+  const [attBusy, setAttBusy] = useState(false)
+  const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'error' }>({ open: false, msg: '', sev: 'success' })
 
   // 날짜 기준 분류: 진행중(green)+예정(amber)=진행·예정 / 종료(gray). 진행중 먼저, 예정은 start asc / 종료는 end desc.
   const { active, ended } = useMemo(() => {
@@ -64,6 +71,39 @@ export default function Events() {
     end.sort((a, b) => (b.end || b.start).localeCompare(a.end || a.start)) // 종료 end desc
     return { active: act, ended: end }
   }, [])
+
+  // 참석자 — 행사 id별 그룹(DB). 마운트 시 로드.
+  const refetchAtt = () => { void fetchAttendees().then(setAttendees).catch(() => {}) }
+  useEffect(() => { refetchAtt() }, [])
+  const attByEvent = useMemo(() => {
+    const m: Record<string, AttendeeRow[]> = {}
+    for (const a of attendees) (m[a.eventId] ||= []).push(a)
+    return m
+  }, [attendees])
+  // 종료 목록 표시용 — DB 참석자 이름 병합(없으면 상수값)
+  const endedView = useMemo(() => ended.map((e) => ({ ...e, attendees: attByEvent[e.id]?.map((a) => a.name) ?? e.attendees })), [ended, attByEvent])
+
+  const attErr = (err: unknown) => setSnack({ open: true, msg: err instanceof Error ? err.message : '오류가 발생했습니다', sev: 'error' })
+  // 본인 참석 토글(팀원) — 이미 있으면 취소, 없으면 추가
+  const toggleSelf = async (eventId: string) => {
+    if (!user) return
+    setAttBusy(true)
+    try {
+      const mine = attByEvent[eventId]?.find((r) => r.memberUid && r.name === user)
+      if (mine) await removeAttendee(mine.id)
+      else await addAttendee({ eventId, name: user, self: true })
+      refetchAtt()
+    } catch (err) { attErr(err) } finally { setAttBusy(false) }
+  }
+  // 관리자 수기추가
+  const addAttName = async (eventId: string, name: string) => {
+    setAttBusy(true)
+    try { await addAttendee({ eventId, name, self: false }); refetchAtt() } catch (err) { attErr(err) } finally { setAttBusy(false) }
+  }
+  const removeAtt = async (id: number) => {
+    setAttBusy(true)
+    try { await removeAttendee(id); refetchAtt() } catch (err) { attErr(err) } finally { setAttBusy(false) }
+  }
 
   // Escape로 열린 카드/상세 닫기 (PC 그리드·종료 상세 패널)
   useEffect(() => {
@@ -137,7 +177,8 @@ export default function Events() {
           </AppCard>
         ) : (
           <AppCard padding={0} sx={{ transition: 'margin-right .22s ease', ...(endedDetail && { mr: { md: '396px' } }) }}>
-            <EndedList events={ended} selectedId={endedDetail?.id ?? null} onPick={setEndedDetail} />
+            {/* 같은 행사를 다시 누르면 닫힘(토글), 다른 행사면 전환 */}
+            <EndedList events={endedView} selectedId={endedDetail?.id ?? null} onPick={(e) => setEndedDetail((prev) => (prev?.id === e.id ? null : e))} />
           </AppCard>
         )}
       </ContentSection>
@@ -164,9 +205,27 @@ export default function Events() {
           >
             <CloseIcon fontSize="small" />
           </IconButton>
-          <EventDrawerDetail e={endedDetail} />
+          <EventDrawerDetail
+            e={endedDetail}
+            attendeeSlot={
+              <AttendeeSection
+                rows={attByEvent[endedDetail.id] ?? []}
+                user={user}
+                isMember={isMember}
+                isAdmin={isAdmin}
+                busy={attBusy}
+                onToggleSelf={() => void toggleSelf(endedDetail.id)}
+                onAddName={(n) => void addAttName(endedDetail.id, n)}
+                onRemove={(id) => void removeAtt(id)}
+              />
+            }
+          />
         </Box>
       )}
+
+      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity={snack.sev} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
+      </Snackbar>
     </PageContainer>
   )
 }
