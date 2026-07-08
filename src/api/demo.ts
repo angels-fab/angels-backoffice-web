@@ -64,8 +64,12 @@ export async function fetchDemoMemos(): Promise<DemoMemo[]> {
   if (error) fail(error, '메모를 불러오지 못했습니다')
   return ((data || []) as MemoRow[]).map((m) => ({ equipment: m.equipment, body: m.body, updatedBy: m.updated_by || '', updatedAt: m.updated_at }))
 }
-export async function fetchMetricDefHistory(equipment: string): Promise<MetricDefHistory[]> {
-  const { data, error } = await withTimeout(supabase.from('demo_metric_def_history').select('*').eq('equipment', equipment).order('changed_at', { ascending: false }), DB_TIMEOUT, '지표 변경 이력 불러오기')
+/** 지표 정의 변경 이력 — equipment 생략 시 전체(알림 배너용) */
+export const METRIC_ACTION_LABEL: Record<string, string> = { create: '추가', update: '수정', deactivate: '비활성', reactivate: '재활성' }
+export async function fetchMetricDefHistory(equipment?: string): Promise<MetricDefHistory[]> {
+  let q = supabase.from('demo_metric_def_history').select('*').order('changed_at', { ascending: false })
+  if (equipment) q = q.eq('equipment', equipment)
+  const { data, error } = await withTimeout(q, DB_TIMEOUT, '지표 변경 이력 불러오기')
   if (error) fail(error, '지표 변경 이력을 불러오지 못했습니다')
   return ((data || []) as { id: number; equipment: string; metric_key: string; action: string; before: Record<string, unknown> | null; after: Record<string, unknown> | null; changed_by: string | null; changed_at: string }[])
     .map((h) => ({ id: h.id, equipment: h.equipment, metricKey: h.metric_key, action: h.action, before: h.before, after: h.after, changedBy: h.changed_by || '', changedAt: h.changed_at }))
@@ -203,40 +207,40 @@ const defSnapshot = (d: { label: string; unit: string; direction: string; sort: 
 
 export interface MetricDefInput { equipment: string; key: string; label: string; unit: string; direction: MetricDirection; sort: number }
 
-/** 지표 신설 + 이력('create') 기록 */
-export async function createMetricDef(p: MetricDefInput, admin: string): Promise<void> {
+/** 지표 신설 + 이력('create') 기록. author=변경한 팀원 이름 */
+export async function createMetricDef(p: MetricDefInput, author: string): Promise<void> {
   await ensureSession()
-  const row = { equipment: p.equipment, metric_key: p.key, label: p.label, unit: p.unit, direction: p.direction, sort: p.sort, active: true, created_by: admin, updated_by: admin }
+  const row = { equipment: p.equipment, metric_key: p.key, label: p.label, unit: p.unit, direction: p.direction, sort: p.sort, active: true, created_by: author, updated_by: author }
   const { error } = await withTimeout(supabase.from('demo_metric_defs').insert(row), DB_TIMEOUT, '지표 신설')
   if (error) throw new Error(error.message || '지표 신설에 실패했습니다')
-  await supabase.from('demo_metric_def_history').insert({ equipment: p.equipment, metric_key: p.key, action: 'create', after: defSnapshot({ ...p, active: true }), changed_by: admin })
+  await supabase.from('demo_metric_def_history').insert({ equipment: p.equipment, metric_key: p.key, action: 'create', after: defSnapshot({ ...p, active: true }), changed_by: author })
 }
 
 /** 지표 수정 + 이력('update', before→after) 기록 */
-export async function updateMetricDef(id: number, patch: Partial<MetricDefInput>, admin: string): Promise<void> {
+export async function updateMetricDef(id: number, patch: Partial<MetricDefInput>, author: string): Promise<void> {
   await ensureSession()
   const { data: cur, error: e1 } = await withTimeout(supabase.from('demo_metric_defs').select('*').eq('id', id).single(), DB_TIMEOUT, '지표 조회')
   if (e1 || !cur) throw new Error(e1?.message || '지표를 찾지 못했습니다')
   const c = cur as DefRow
   const next = { label: patch.label ?? c.label, unit: patch.unit ?? c.unit, direction: (patch.direction ?? c.direction) as MetricDirection, sort: patch.sort ?? c.sort }
-  const { error } = await withTimeout(supabase.from('demo_metric_defs').update({ ...next, updated_by: admin, updated_at: new Date().toISOString() }).eq('id', id), DB_TIMEOUT, '지표 수정')
+  const { error } = await withTimeout(supabase.from('demo_metric_defs').update({ ...next, updated_by: author, updated_at: new Date().toISOString() }).eq('id', id), DB_TIMEOUT, '지표 수정')
   if (error) throw new Error(error.message || '지표 수정에 실패했습니다')
   await supabase.from('demo_metric_def_history').insert({
     equipment: c.equipment, metric_key: c.metric_key, action: 'update',
-    before: defSnapshot(c), after: defSnapshot({ ...next, active: c.active }), changed_by: admin,
+    before: defSnapshot(c), after: defSnapshot({ ...next, active: c.active }), changed_by: author,
   })
 }
 
 /** 지표 활성/비활성 전환 + 이력 기록 */
-export async function setMetricDefActive(id: number, active: boolean, admin: string): Promise<void> {
+export async function setMetricDefActive(id: number, active: boolean, author: string): Promise<void> {
   await ensureSession()
   const { data: cur, error: e1 } = await withTimeout(supabase.from('demo_metric_defs').select('*').eq('id', id).single(), DB_TIMEOUT, '지표 조회')
   if (e1 || !cur) throw new Error(e1?.message || '지표를 찾지 못했습니다')
   const c = cur as DefRow
-  const { error } = await withTimeout(supabase.from('demo_metric_defs').update({ active, updated_by: admin, updated_at: new Date().toISOString() }).eq('id', id), DB_TIMEOUT, '지표 상태 변경')
+  const { error } = await withTimeout(supabase.from('demo_metric_defs').update({ active, updated_by: author, updated_at: new Date().toISOString() }).eq('id', id), DB_TIMEOUT, '지표 상태 변경')
   if (error) throw new Error(error.message || '지표 상태 변경에 실패했습니다')
   await supabase.from('demo_metric_def_history').insert({
     equipment: c.equipment, metric_key: c.metric_key, action: active ? 'reactivate' : 'deactivate',
-    before: defSnapshot(c), after: defSnapshot({ ...c, active }), changed_by: admin,
+    before: defSnapshot(c), after: defSnapshot({ ...c, active }), changed_by: author,
   })
 }

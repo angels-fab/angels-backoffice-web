@@ -13,16 +13,21 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap'
 import EditIcon from '@mui/icons-material/Edit'
+import TuneIcon from '@mui/icons-material/Tune'
+import HistoryIcon from '@mui/icons-material/History'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
-  fetchMetricDefs, fetchDemoResults, fetchDemoMemos, groupDemoResults, bestMakers, demoFileUrl, saveDemoMemo,
-  type DemoMetricDef, type DemoRoundRow, type DemoMemo, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup,
+  fetchMetricDefs, fetchDemoResults, fetchDemoMemos, fetchMetricDefHistory, groupDemoResults, bestMakers, demoFileUrl, saveDemoMemo, METRIC_ACTION_LABEL,
+  type DemoMetricDef, type DemoRoundRow, type DemoMemo, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup, type MetricDefHistory,
 } from '@/api/demo'
+import { MetricEditorDialog, MetricHistoryDialog } from './DemoMetricEditor'
 
 const fmtDate = (d: string) => (d ? d.replace(/-/g, '.').slice(2) : '')
+const fmtChangeTs = (iso: string) => { try { return new Date(iso).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', year: '2-digit', month: '2-digit', day: '2-digit' }) } catch { return iso.slice(0, 10) } }
 
 // 서명 URL 캐시 — 사진(비공개 버킷)을 매번 재요청하지 않도록
 const urlCache = new Map<string, string>()
@@ -125,9 +130,10 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + 비교 메모 */
-function EquipGroup({ equipment, defs, makers, memo, canEdit, onOpen, onSaveMemo }: {
-  equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; memo?: DemoMemo; canEdit: boolean
+function EquipGroup({ equipment, defs, makers, memo, canEdit, latestChange, onOpen, onSaveMemo, onEditMetrics, onViewHistory }: {
+  equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; memo?: DemoMemo; canEdit: boolean; latestChange?: MetricDefHistory
   onOpen: (photos: DemoPhotoRef[], idx: number) => void; onSaveMemo: (equipment: string, body: string) => Promise<void>
+  onEditMetrics: () => void; onViewHistory: () => void
 }) {
   // 제조사별 선택 회차(기본=최신)
   const [sel, setSel] = useState<Record<string, number>>(() => Object.fromEntries(makers.map((m) => [m.key, m.rounds.length - 1])))
@@ -144,9 +150,25 @@ function EquipGroup({ equipment, defs, makers, memo, canEdit, onOpen, onSaveMemo
 
   return (
     <Box sx={{ mb: 2.5 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, fontSize: 14, fontWeight: 700 }}>
-        {equipment}<Box component="span" sx={{ fontSize: 11.5, fontWeight: 400, color: 'text.disabled' }}>· 경쟁 {makers.length}개사</Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+        <Box sx={{ fontSize: 14, fontWeight: 700 }}>{equipment}<Box component="span" sx={{ fontSize: 11.5, fontWeight: 400, color: 'text.disabled', ml: 0.75 }}>· 경쟁 {makers.length}개사</Box></Box>
+        <Box sx={{ flex: 1 }} />
+        {canEdit && <Button size="small" startIcon={<TuneIcon sx={{ fontSize: 15 }} />} onClick={onEditMetrics} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>지표 편집</Button>}
+        <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 15 }} />} onClick={onViewHistory} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>변경 이력</Button>
       </Box>
+
+      {/* 지표가 바뀌면 그 사실을 이 박스에 알림(비교 기준이 달라졌을 수 있음). 클릭 시 이력 보기 */}
+      {latestChange && (
+        <Box role="button" tabIndex={0} onClick={onViewHistory} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onViewHistory() } }}
+          sx={(th) => ({ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1, px: 1.25, py: 0.85, borderRadius: '9px', cursor: 'pointer', bgcolor: alpha(th.palette.warning.main, 0.1), border: `1px solid ${alpha(th.palette.warning.main, 0.4)}`, color: 'warning.main' })}>
+          <InfoOutlinedIcon sx={{ fontSize: 16, flex: 'none' }} />
+          <Box sx={{ flex: 1, minWidth: 0, fontSize: 11.5, color: 'text.primary' }}>
+            <b>지표가 변경되었습니다</b> — {(latestChange.after?.label as string) || (latestChange.before?.label as string) || latestChange.metricKey} {METRIC_ACTION_LABEL[latestChange.action] ?? latestChange.action}
+            <Box component="span" sx={{ color: 'text.disabled', ml: 0.75 }}>· {latestChange.changedBy} · {fmtChangeTs(latestChange.changedAt)}</Box>
+          </Box>
+          <Box component="span" sx={{ fontSize: 10.5, fontWeight: 700, flex: 'none' }}>이력 보기</Box>
+        </Box>
+      )}
 
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
         <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: makers.length > 3 ? 560 : 0 }}>
@@ -222,14 +244,17 @@ export default function DemoResults() {
   const [defs, setDefs] = useState<DemoMetricDef[]>([])
   const [rows, setRows] = useState<DemoRoundRow[]>([])
   const [memos, setMemos] = useState<DemoMemo[]>([])
+  const [history, setHistory] = useState<MetricDefHistory[]>([])
   const [loading, setLoading] = useState(true)
   const [viewer, setViewer] = useState<{ photos: DemoPhotoRef[]; idx: number } | null>(null)
+  const [editorEquip, setEditorEquip] = useState<string | null>(null)
+  const [historyEquip, setHistoryEquip] = useState<string | null>(null)
   const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'error' }>({ open: false, msg: '', sev: 'success' })
 
   const load = useCallback(() => {
     setLoading(true)
-    Promise.all([fetchMetricDefs(), fetchDemoResults(), fetchDemoMemos()])
-      .then(([d, r, m]) => { setDefs(d); setRows(r); setMemos(m) })
+    Promise.all([fetchMetricDefs(), fetchDemoResults(), fetchDemoMemos(), fetchMetricDefHistory()])
+      .then(([d, r, m, h]) => { setDefs(d); setRows(r); setMemos(m); setHistory(h) })
       .catch((e) => setSnack({ open: true, msg: e instanceof Error ? e.message : '불러오기 실패', sev: 'error' }))
       .finally(() => setLoading(false))
   }, [])
@@ -237,6 +262,8 @@ export default function DemoResults() {
 
   const groups = useMemo(() => groupDemoResults(rows, defs), [rows, defs])
   const memoOf = (eq: string) => memos.find((m) => m.equipment === eq)
+  // 최근 '실제' 지표 변경(초기 시드 제외) — 있으면 그 장비 박스에 알림 표시. history는 changed_at desc.
+  const latestChangeOf = (eq: string) => history.find((h) => h.equipment === eq && h.changedBy !== 'system(seed)')
 
   const onSaveMemo = async (equipment: string, body: string) => {
     if (!user) throw new Error('로그인이 필요합니다')
@@ -255,12 +282,20 @@ export default function DemoResults() {
           <EquipGroup
             key={g.equipment}
             equipment={g.equipment} defs={g.defs} makers={g.makers}
-            memo={memoOf(g.equipment)} canEdit={isMember}
+            memo={memoOf(g.equipment)} canEdit={isMember} latestChange={latestChangeOf(g.equipment)}
             onOpen={(photos, idx) => setViewer({ photos, idx })} onSaveMemo={onSaveMemo}
+            onEditMetrics={() => setEditorEquip(g.equipment)} onViewHistory={() => setHistoryEquip(g.equipment)}
           />
         ))
       )}
       {viewer && <Lightbox photos={viewer.photos} idx={viewer.idx} onIdx={(i) => setViewer((v) => (v ? { ...v, idx: i } : v))} onClose={() => setViewer(null)} />}
+      {editorEquip && (
+        <MetricEditorDialog open equipment={editorEquip} defs={defs} author={user}
+          onClose={() => setEditorEquip(null)}
+          onChanged={() => { load(); setSnack({ open: true, msg: '지표를 변경했습니다(이력 기록됨).', sev: 'success' }) }}
+          onError={(msg) => setSnack({ open: true, msg, sev: 'error' })} />
+      )}
+      {historyEquip && <MetricHistoryDialog open equipment={historyEquip} onClose={() => setHistoryEquip(null)} />}
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert severity={snack.sev} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
       </Snackbar>
