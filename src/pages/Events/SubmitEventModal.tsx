@@ -6,7 +6,6 @@ import IconButton from '@mui/material/IconButton'
 import InputBase from '@mui/material/InputBase'
 import CircularProgress from '@mui/material/CircularProgress'
 import CloseIcon from '@mui/icons-material/Close'
-import AddIcon from '@mui/icons-material/Add'
 import LinkIcon from '@mui/icons-material/Link'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
@@ -16,6 +15,13 @@ import { CAT_COLOR, type EventCat } from './eventCard'
 import { uploadSubmissionPoster, submitEvent } from '@/api/events'
 
 const CATS: EventCat[] = ['학술', '교육', '전시']
+// 분류별 요약 항목(최대 3) — 분류 선택 시 자동으로 채워짐. 값 안 적은 항목은 게시 시 빠짐.
+const SUMMARY_PRESETS: Record<EventCat, string[]> = {
+  학술: ['사전등록', '초록마감', 'Plenary'],
+  교육: ['신청기간', '대상', '강사'],
+  전시: ['관람기간', '입장방법', '규모'],
+}
+const presetRows = (c: EventCat) => SUMMARY_PRESETS[c].map((l) => ({ label: l, value: '' }))
 const field = (th: Theme) => ({
   bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: '8px',
   px: 1.2, py: '8px', fontSize: 13, color: 'text.primary', width: '100%',
@@ -40,10 +46,13 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
   const [end, setEnd] = useState('')
   const [venue, setVenue] = useState('')
   const [organizer, setOrganizer] = useState('')
-  const [summary, setSummary] = useState<{ label: string; value: string }[]>([{ label: '', value: '' }, { label: '', value: '' }])
+  const [summary, setSummary] = useState<{ label: string; value: string }[]>(() => presetRows('학술'))
   const [busy, setBusy] = useState(false)
   const [drag, setDrag] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // 분류 선택 → 요약 항목을 그 분류 프리셋으로 교체(값은 비움)
+  const chooseCat = (c: EventCat) => { setCat(c); setSummary(presetRows(c)) }
 
   const pickFile = (f: File | null | undefined) => {
     if (!f) return
@@ -52,13 +61,11 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
     setPreview(f.type.startsWith('image/') ? URL.createObjectURL(f) : '')
   }
   const setSum = (i: number, patch: Partial<{ label: string; value: string }>) => setSummary((s) => s.map((r, j) => (j === i ? { ...r, ...patch } : r)))
-  const addSum = () => setSummary((s) => (s.length < 5 ? [...s, { label: '', value: '' }] : s))
-  const rmSum = (i: number) => setSummary((s) => (s.length > 1 ? s.filter((_, j) => j !== i) : s))
 
   const reset = () => {
     if (preview) URL.revokeObjectURL(preview)
     setCat('학술'); setFile(null); setPreview(''); setLink(''); setTitle(''); setStart(''); setEnd(''); setVenue(''); setOrganizer('')
-    setSummary([{ label: '', value: '' }, { label: '', value: '' }])
+    setSummary(presetRows('학술'))
   }
   const close = () => { if (busy) return; reset(); onClose() }
 
@@ -116,8 +123,8 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
                 <Box
                   key={c}
                   role="button" tabIndex={0} aria-pressed={on} aria-label={`분류 ${c}`}
-                  onClick={() => setCat(c)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setCat(c) } }}
+                  onClick={() => chooseCat(c)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chooseCat(c) } }}
                   sx={{
                     fontSize: 12, fontWeight: 800, px: '10px', py: '5px', borderRadius: 999, cursor: 'pointer', userSelect: 'none',
                     border: `1.5px solid ${color}`,
@@ -161,18 +168,14 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
           </Box>
         </Box>
 
-        {/* 요약 2~3 (라벨 + 내용) */}
+        {/* 요약 — 분류별 항목이 자동으로 나옴(최대 3). 값을 적은 항목만 게시됨. */}
         <Box sx={{ mt: 1.25 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box sx={label}>요약 (2~3개)</Box>
-            <Button size="small" startIcon={<AddIcon sx={{ fontSize: 16 }} />} onClick={addSum} disabled={summary.length >= 5} sx={{ fontSize: 11.5, minWidth: 0, py: 0, color: 'text.secondary' }}>줄 추가</Button>
-          </Box>
+          <Box sx={label}>요약 · {cat} (값을 적은 항목만 표시됩니다)</Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
             {summary.map((r, i) => (
               <Box key={i} sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                <InputBase value={r.label} onChange={(e) => setSum(i, { label: e.target.value })} placeholder="항목(예: 사전등록)" sx={(th) => ({ ...field(th), width: 130, flex: 'none' })} />
-                <InputBase value={r.value} onChange={(e) => setSum(i, { value: e.target.value })} placeholder="내용" sx={(th) => ({ ...field(th), flex: 1 })} />
-                <IconButton size="small" aria-label="요약 줄 삭제" onClick={() => rmSum(i)} disabled={summary.length <= 1} sx={{ color: 'text.disabled', '&:hover': { color: 'error.main' } }}><CloseIcon sx={{ fontSize: 16 }} /></IconButton>
+                <Box sx={{ width: 92, flex: 'none', fontSize: 12.5, fontWeight: 700, color: 'text.secondary', textAlign: 'right', pr: 0.5, whiteSpace: 'nowrap' }}>{r.label}</Box>
+                <InputBase value={r.value} onChange={(e) => setSum(i, { value: e.target.value })} placeholder={`${r.label} 내용`} sx={(th) => ({ ...field(th), flex: 1 })} />
               </Box>
             ))}
           </Box>

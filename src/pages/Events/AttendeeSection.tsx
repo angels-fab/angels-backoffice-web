@@ -13,9 +13,9 @@ import type { AttendeeRow } from '@/api/events'
  * 종료 행사 상세의 참석자 영역 — 하이브리드.
  * 로그인 팀원: '내가 참석/참석 취소' 토글(본인 이름만). 관리자: 이름 수기 추가 + 아무나 삭제.
  */
-export default function AttendeeSection({ rows, user, isMember, isAdmin, busy, onToggleSelf, onAddName, onRemove }: {
-  rows: AttendeeRow[]; user: string | null; isMember: boolean; isAdmin: boolean; busy: boolean
-  onToggleSelf: () => void; onAddName: (name: string) => void; onRemove: (id: number) => void
+export default function AttendeeSection({ rows, user, isMember, isAdmin, busy, hideSelfToggle, onToggleSelf, onAddName, onRemove }: {
+  rows: AttendeeRow[]; user: string | null; isMember: boolean; isAdmin: boolean; busy: boolean; hideSelfToggle?: boolean
+  onToggleSelf?: () => void; onAddName: (name: string) => void; onRemove: (id: number) => void
 }) {
   const [name, setName] = useState('')
   const mine = user ? rows.find((r) => r.memberUid && r.name === user) : undefined
@@ -27,7 +27,7 @@ export default function AttendeeSection({ rows, user, isMember, isAdmin, busy, o
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, color: 'text.disabled', fontSize: 11.5, fontWeight: 700, letterSpacing: '.03em' }}>
           <GroupsIcon sx={{ fontSize: 15 }} /> 참석자 {rows.length}명
         </Box>
-        {isMember && user && (
+        {!hideSelfToggle && isMember && user && onToggleSelf && (
           <Button size="small" variant={mine ? 'outlined' : 'contained'} color={mine ? 'inherit' : 'success'} disabled={busy} onClick={onToggleSelf} sx={{ fontSize: 11.5, py: '2px', minWidth: 0, whiteSpace: 'nowrap' }}>
             {mine ? '참석 취소' : '내가 참석'}
           </Button>

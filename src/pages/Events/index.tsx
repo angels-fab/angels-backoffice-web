@@ -15,7 +15,6 @@ import { fetchAttendees, addAttendee, removeAttendee, fetchSubmissions, type Att
 import { EventCardInner, EventDrawerDetail } from './eventCard'
 import MobileCarousel from './MobileCarousel'
 import EndedList from './EndedList'
-import AttendeeSection from './AttendeeSection'
 import SubmitEventModal from './SubmitEventModal'
 import SubmissionsAdmin from './SubmissionsAdmin'
 
@@ -130,6 +129,7 @@ export default function Events() {
       const t = ev.target as HTMLElement
       if (panelRef.current?.contains(t)) return       // 패널 내부 → 유지
       if (t.closest('.eq-ledger tbody tr')) return      // 목록 행 → 다른 행사로 전환(onPick)
+      if (t.closest('.MuiPopover-root, .MuiModal-root')) return // 관리자 참석자 관리 팝오버 등 → 유지
       setEndedDetail(null)                              // 그 외 바깥 → 닫기
     }
     document.addEventListener('mousedown', onDown)
@@ -195,8 +195,20 @@ export default function Events() {
           </AppCard>
         ) : (
           <AppCard padding={0} sx={{ transition: 'margin-right .22s ease', ...(endedDetail && { mr: { md: '396px' } }) }}>
-            {/* 같은 행사를 다시 누르면 닫힘(토글), 다른 행사면 전환 */}
-            <EndedList events={endedView} selectedId={endedDetail?.id ?? null} onPick={(e) => setEndedDetail((prev) => (prev?.id === e.id ? null : e))} />
+            {/* 같은 행사를 다시 누르면 닫힘(토글), 다른 행사면 전환. 참석 스위치·관리는 목록 안에서. */}
+            <EndedList
+              events={endedView}
+              selectedId={endedDetail?.id ?? null}
+              onPick={(e) => setEndedDetail((prev) => (prev?.id === e.id ? null : e))}
+              attByEvent={attByEvent}
+              user={user}
+              isMember={isMember}
+              isAdmin={isAdmin}
+              busy={attBusy}
+              onToggleSelf={(id) => void toggleSelf(id)}
+              onAddName={(id, n) => void addAttName(id, n)}
+              onRemove={(id) => void removeAtt(id)}
+            />
           </AppCard>
         )}
       </ContentSection>
@@ -223,21 +235,8 @@ export default function Events() {
           >
             <CloseIcon fontSize="small" />
           </IconButton>
-          <EventDrawerDetail
-            e={endedDetail}
-            attendeeSlot={
-              <AttendeeSection
-                rows={attByEvent[endedDetail.id] ?? []}
-                user={user}
-                isMember={isMember}
-                isAdmin={isAdmin}
-                busy={attBusy}
-                onToggleSelf={() => void toggleSelf(endedDetail.id)}
-                onAddName={(n) => void addAttName(endedDetail.id, n)}
-                onRemove={(id) => void removeAtt(id)}
-              />
-            }
-          />
+          {/* 상세 드로어는 참석자 이름만 읽기전용 표시(조작은 목록에서). endedView가 DB 이름을 병합해 전달 */}
+          <EventDrawerDetail e={endedDetail} />
         </Box>
       )}
 

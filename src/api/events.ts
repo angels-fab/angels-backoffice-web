@@ -74,7 +74,7 @@ export async function submitEvent(p: EventSubmissionInput & { submitter: string 
   const { error } = await supabase.from('event_submissions').insert({
     category: p.category, title: p.title.trim(), start_date: p.start, end_date: p.end, venue: p.venue.trim(),
     organizer: p.organizer.trim(), link: p.link.trim(), poster: p.poster,
-    summary: p.summary.filter((s) => s.label.trim() || s.value.trim()), submitter: p.submitter, status: 'pending',
+    summary: p.summary.filter((s) => s.value.trim()), submitter: p.submitter, status: 'pending',
   })
   if (error) throw new Error(error.message || '행사 신청에 실패했습니다')
 }
