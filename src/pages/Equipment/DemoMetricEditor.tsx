@@ -173,6 +173,7 @@ export function ValueHistoryDialog({ open, equipment, defs, onClose }: { open: b
   useEffect(() => { if (!open) return; setRows(null); fetchValueHistory(equipment).then(setRows).catch(() => setRows([])) }, [open, equipment])
   const labelOf = (key: string) => defs.find((d) => d.equipment === equipment && d.key === key)?.label || key
   const diffs = (h: ValueHistory) => {
+    if (h.after === null) return ['회차 삭제(사진·파일 포함)'] // 삭제 이력
     const b = h.before || {}, a = h.after || {}
     const keys = Array.from(new Set([...Object.keys(b), ...Object.keys(a)]))
     return keys.filter((k) => String(b[k] ?? '') !== String(a[k] ?? '')).map((k) => `${labelOf(k)} ${b[k] ?? '-'}→${a[k] ?? '-'}`)

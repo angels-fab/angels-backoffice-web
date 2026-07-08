@@ -18,6 +18,8 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap'
 import EditIcon from '@mui/icons-material/Edit'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined'
 import CheckIcon from '@mui/icons-material/Check'
 import TuneIcon from '@mui/icons-material/Tune'
 import HistoryIcon from '@mui/icons-material/History'
@@ -26,7 +28,7 @@ import type { Theme } from '@mui/material/styles'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
-  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, deleteDemoChat, updateDemoResult,
+  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, downloadDemoBlob, postDemoChat, deleteDemoChat, updateDemoResult, deleteDemoResult,
   type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup, type ValueHistory,
 } from '@/api/demo'
 import { verifyPassword } from '@/api/session'
@@ -78,10 +80,10 @@ const plusChip = (th: Theme) => ({
 })
 
 /** 제조사 열 헤더 — 색깔 밴드(제조사·모델·파일, 상단 라운드) → 사진영역(대표 크게 + 우측 썸네일 그리드 + 더보기) → 값수정 트리거 */
-function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStartVal, onSaveVal, onCancelVal, onAddRound }: {
+function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStartVal, onSaveVal, onCancelVal, onAddRound, onDeleteRound }: {
   mg: DemoMakerGroup; sel: number; onSel: (i: number) => void; onOpen: (photos: DemoPhotoRef[], idx: number) => void
   canEdit: boolean; editing: boolean; savingVal: boolean; onStartVal: () => void; onSaveVal: () => void; onCancelVal: () => void
-  onAddRound: () => void
+  onAddRound: () => void; onDeleteRound: () => void
 }) {
   const r = mg.rounds[Math.min(sel, mg.rounds.length - 1)]
   const coverIdx = Math.min(Math.max(r.cover || 0, 0), Math.max(r.photos.length - 1, 0))
@@ -97,11 +99,20 @@ function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStar
           {mg.maker}{mg.model ? <Box component="span" sx={{ opacity: 0.85, fontWeight: 500, ml: 0.5 }}>{mg.model}</Box> : null}
         </Box>
         {r.files.map((f, i) => (
-          <Tooltip key={i} title={f.name} arrow>
-            <Box component="span" onClick={() => void openFile(f)} sx={{ display: 'inline-flex', lineHeight: 0, flex: 'none', cursor: f.path ? 'pointer' : 'default' }}>
-              <AttachmentIcon type={f.type} name={f.name} size={14} />
-            </Box>
-          </Tooltip>
+          <Box key={i} sx={{ display: 'inline-flex', alignItems: 'center', gap: '1px', flex: 'none' }}>
+            <Tooltip title={`${f.name} 열기`} arrow>
+              <Box component="span" onClick={() => void openFile(f)} sx={{ display: 'inline-flex', lineHeight: 0, cursor: f.path ? 'pointer' : 'default' }}>
+                <AttachmentIcon type={f.type} name={f.name} size={14} />
+              </Box>
+            </Tooltip>
+            {f.path && (
+              <Tooltip title="다운로드(원본 파일명)" arrow>
+                <Box component="span" onClick={() => void saveFile(f)} sx={{ display: 'inline-flex', lineHeight: 0, cursor: 'pointer', color: 'rgba(255,255,255,.75)', '&:hover': { color: '#fff' } }}>
+                  <FileDownloadOutlinedIcon sx={{ fontSize: 13 }} />
+                </Box>
+              </Tooltip>
+            )}
+          </Box>
         ))}
       </Box>
       {/* 사진 영역 — 대표사진(좌, 높이 꽉) + 나머지 작은 그리드(우) + 다 안 담기면 +N 더보기 */}
@@ -144,7 +155,10 @@ function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStar
               <Tooltip title="취소"><IconButton size="small" onClick={onCancelVal} sx={{ p: '1px', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
             </Box>
           ) : (
-            <Tooltip title={`${r.round}차 지표값 수정`}><IconButton size="small" onClick={onStartVal} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton></Tooltip>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Tooltip title={`${r.round}차 지표값 수정`}><IconButton size="small" onClick={onStartVal} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton></Tooltip>
+              <Tooltip title={`${r.round}차 데모결과 삭제`}><IconButton size="small" onClick={onDeleteRound} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'error.main' } }}><DeleteOutlineIcon sx={{ fontSize: 13 }} /></IconButton></Tooltip>
+            </Box>
           )}
         </Box>
       )}
@@ -156,6 +170,18 @@ function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStar
 async function openFile(f: DemoFileRef) {
   if (!f.path) return
   try { const u = await demoFileUrl(f.path); window.open(u, '_blank', 'noopener,noreferrer') } catch { /* noop */ }
+}
+// 파일 저장 — blob + anchor download로 원본(한글) 파일명 그대로 저장(공지 첨부와 동일 방식)
+async function saveFile(f: DemoFileRef) {
+  if (!f.path) return
+  try {
+    const blob = await downloadDemoBlob(f.path)
+    const u = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = u; a.download = f.name || 'file'
+    document.body.appendChild(a); a.click(); a.remove()
+    URL.revokeObjectURL(u)
+  } catch { /* noop */ }
 }
 
 /** 사진 확대(라이트박스) */
@@ -191,12 +217,13 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewValueHistory, onAddRound }: {
+function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onOpen: (photos: DemoPhotoRef[], idx: number) => void
   onPostChat: (equipment: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
   onEditMetrics: () => void; onViewValueHistory: () => void; onAddRound: (mg: DemoMakerGroup) => void
+  onDeleteRound: (roundId: number) => Promise<void>
 }) {
   // 제조사별 선택 회차(기본=최신)
   const [sel, setSel] = useState<Record<string, number>>(() => Object.fromEntries(makers.map((m) => [m.key, m.rounds.length - 1])))
@@ -219,6 +246,24 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
   const askSaveVal = (m: DemoMakerGroup) => {
     if (!isChanged(m)) { setValEditKey(null); setValDraft({}); return } // 변경 없으면 저장·비번·알림 없이 편집만 종료
     setPw(''); setPwErr(''); setPwPrompt(m)
+  }
+
+  // 회차 삭제 — 비밀번호 재확인(값 수정과 동일한 조작방지)
+  const [delPrompt, setDelPrompt] = useState<DemoMakerGroup | null>(null)
+  const [delPw, setDelPw] = useState('')
+  const [delErr, setDelErr] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const askDelete = (m: DemoMakerGroup) => { setDelPw(''); setDelErr(''); setDelPrompt(m) }
+  const confirmDelete = async () => {
+    if (!delPrompt) return
+    setDeleting(true); setDelErr('')
+    try {
+      const ok = await verifyPassword(delPw)
+      if (!ok) { setDelErr('비밀번호가 올바르지 않습니다.'); return }
+      await onDeleteRound(shown(delPrompt).id)
+      setDelPrompt(null); setDelPw('')
+    } catch (e) { setDelErr(e instanceof Error ? e.message : '삭제에 실패했습니다') }
+    finally { setDeleting(false) }
   }
   const confirmSaveVal = async () => {
     if (!pwPrompt) return
@@ -281,7 +326,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
                   <MakerHead mg={m} sel={sel[m.key] ?? m.rounds.length - 1} onSel={(i) => setSel((s) => ({ ...s, [m.key]: i }))} onOpen={onOpen}
                     canEdit={canEdit} editing={valEditKey === m.key} savingVal={savingVal}
                     onStartVal={() => startVal(m)} onSaveVal={() => askSaveVal(m)} onCancelVal={cancelVal}
-                    onAddRound={() => onAddRound(m)} />
+                    onAddRound={() => onAddRound(m)} onDeleteRound={() => askDelete(m)} />
                 </Box>
               ))}
               {padSpan > 0 && <Box component="th" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
@@ -351,6 +396,27 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
           <Button variant="contained" onClick={() => void confirmSaveVal()} disabled={savingVal || !pw.trim()} startIcon={savingVal ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined}>{savingVal ? '확인 중…' : '저장'}</Button>
         </DialogActions>
       </Dialog>
+
+      {/* 회차 삭제 — 비밀번호 재확인. 사진·파일도 함께 삭제, 이력에 기록됨 */}
+      <Dialog open={!!delPrompt} onClose={() => !deleting && setDelPrompt(null)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+        <DialogTitle sx={{ fontSize: 15, fontWeight: 800 }}>데모결과 삭제</DialogTitle>
+        <DialogContent>
+          {delPrompt && (
+            <Box sx={{ fontSize: 12.5, color: 'text.secondary', mb: 1.25 }}>
+              <b>{delPrompt.maker}{delPrompt.model ? ` ${delPrompt.model}` : ''} · {shown(delPrompt).round}차</b> 데모결과를 삭제합니다.
+              사진·첨부파일도 함께 삭제되며 <b>되돌릴 수 없습니다</b>(삭제 기록은 변경 이력에 남음). 본인 비밀번호를 입력해주세요.
+            </Box>
+          )}
+          <InputBase type="password" autoFocus value={delPw} onChange={(e) => setDelPw(e.target.value)} placeholder="비밀번호"
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void confirmDelete() } }}
+            sx={(th) => ({ width: '100%', fontSize: 13, bgcolor: 'background.paper', border: `1px solid ${delErr ? th.palette.error.main : th.palette.divider}`, borderRadius: '8px', px: 1.25, py: 0.85 })} />
+          {delErr && <Box sx={{ fontSize: 11.5, color: 'error.main', mt: 0.5 }}>{delErr}</Box>}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setDelPrompt(null)} disabled={deleting} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button variant="contained" color="error" onClick={() => void confirmDelete()} disabled={deleting || !delPw.trim()} startIcon={deleting ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined}>{deleting ? '삭제 중…' : '삭제'}</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }
@@ -406,6 +472,12 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
     catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '값 수정 실패', sev: 'error' }); throw e }
   }
 
+  const onDeleteRound = async (roundId: number) => {
+    if (!user) throw new Error('로그인이 필요합니다')
+    try { await deleteDemoResult(roundId, user); setSnack({ open: true, msg: '데모결과를 삭제했습니다.', sev: 'success' }); load() }
+    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '삭제 실패', sev: 'error' }); throw e }
+  }
+
   // '데모결과 추가' 버튼 — 뷰탭(단계별/타임라인/목록/데모결과)과 같은 행 우측 슬롯에 포탈로 배치
   const addBtn = (
     <Button variant="contained" size="small" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => { setFormPre({ equipment: '' }); setFormOpen(true) }} sx={{ whiteSpace: 'nowrap' }}>
@@ -432,6 +504,7 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
             onOpen={(photos, idx) => setViewer({ photos, idx })} onPostChat={onPostChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues}
             onEditMetrics={() => setEditorEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
             onAddRound={(mg) => { setFormPre({ equipment: g.equipment, maker: mg.maker, model: mg.model }); setFormOpen(true) }}
+            onDeleteRound={onDeleteRound}
           />
         ))
       )}

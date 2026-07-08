@@ -139,19 +139,38 @@ export function bestMakers(def: DemoMetricDef, makerValues: { key: string; value
 
 // ── 파일(사진·문서) ──
 const ext = (name: string) => { const i = name.lastIndexOf('.'); return i > 0 ? name.slice(i).toLowerCase() : '' }
+/** 저장 키에 쓸 수 있게 파일명 정리(경로·특수문자 제거). 한글 등 유니코드는 유지 */
+const safeName = (name: string) => (name || '').replace(/[\\/:*?"<>|#%{}^~[\]`]/g, '_').replace(/\s+/g, ' ').trim() || 'file'
 
-/** 사진/파일 1건 업로드 → 메타 반환(원본명 보존, 저장키=UUID) */
+/**
+ * 사진/파일 1건 업로드 → 메타 반환. 키 = demo/<uuid>/<원본명> — 원본 파일명을 경로에 보존해
+ * 서명URL로 열람 후 다운로드해도 파일명이 UUID로 깨지지 않게 한다. (키 거부 시 uuid+확장자 폴백)
+ */
 export async function uploadDemoFile(file: File): Promise<{ name: string; path: string; type: string }> {
   if (file.size > FILE_MAX) throw new Error(`파일이 너무 큽니다(최대 15MB): ${file.name}`)
   await ensureSession()
-  const path = `demo/${crypto.randomUUID()}${ext(file.name)}`
-  const { error } = await withTimeout(
-    supabase.storage.from(DEMO_BUCKET).upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false }),
+  const contentType = file.type || 'application/octet-stream'
+  const id = crypto.randomUUID()
+  const tryUpload = async (path: string) => withTimeout(
+    supabase.storage.from(DEMO_BUCKET).upload(path, file, { contentType, upsert: false }),
     UPLOAD_TIMEOUT, `업로드(${file.name})`,
   )
+  const nicePath = `demo/${id}/${safeName(file.name)}`
+  let { error } = await tryUpload(nicePath)
+  if (!error) return { name: file.name, path: nicePath, type: contentType }
+  // 스토리지가 키를 거부하면(문자 제한 등) uuid+확장자로 폴백
+  const fallback = `demo/${id}${ext(file.name)}`
+  ;({ error } = await tryUpload(fallback))
   if (error) throw new Error(error.message || `업로드 실패: ${file.name}`)
-  return { name: file.name, path, type: file.type || 'application/octet-stream' }
+  return { name: file.name, path: fallback, type: contentType }
 }
+/** 원본 Blob 다운로드 — 한글 파일명 보존 저장용(스토리지가 한글 키를 거부해 열람 URL 이름은 uuid) */
+export async function downloadDemoBlob(path: string): Promise<Blob> {
+  const { data, error } = await supabase.storage.from(DEMO_BUCKET).download(path)
+  if (error || !data) throw new Error(error?.message || '파일 다운로드 실패')
+  return data
+}
+
 /** 열람용 서명 URL(1시간) — 사진 라이트박스·파일 새 탭 열기용 */
 export async function demoFileUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage.from(DEMO_BUCKET).createSignedUrl(path, 60 * 60)
@@ -214,10 +233,22 @@ export async function updateDemoResult(id: number, p: Partial<DemoResultInput> &
     })
   }
 }
-export async function deleteDemoResult(id: number): Promise<void> {
+/** 데모결과(회차) 삭제 — 삭제 이력(after=null) 기록 + 사진/파일 저장소 정리(best-effort) */
+export async function deleteDemoResult(id: number, author: string): Promise<void> {
   await ensureSession()
+  const { data: prev } = await withTimeout(supabase.from('demo_results').select('*').eq('id', id).single(), DB_TIMEOUT, '데모결과 조회')
   const { error } = await withTimeout(supabase.from('demo_results').delete().eq('id', id), DB_TIMEOUT, '데모결과 삭제')
   if (error) throw new Error(error.message || '데모결과 삭제에 실패했습니다')
+  if (prev) {
+    const p = prev as ResRow
+    // 조작방지 — 삭제도 이력에 남긴다(before=삭제 전 값, after=null)
+    await supabase.from('demo_value_history').insert({
+      equipment: p.equipment, maker: p.maker, model: p.model, round: p.round,
+      before: p.metrics || {}, after: null, changed_by: author,
+    })
+    const paths = [...(p.photos || []), ...(p.files || [])].map((x) => (x as { path?: string }).path).filter(Boolean) as string[]
+    void removeDemoFiles(paths).catch(() => {})
+  }
 }
 
 // ── 비교 채팅(팀원+) ──
