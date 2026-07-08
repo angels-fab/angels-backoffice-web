@@ -16,9 +16,10 @@ const fmtDay = (iso: string) => { try { return new Date(iso).toLocaleDateString(
 const memberOf = (name: string) => MEMBERS.find((m) => m.name === name || given(m.name) === name)
 const FALLBACK = '#8a8f98'
 
-// ── 테마(시험 배포 — 5안 비교 후 하나로 고정 예정) ──
-export type ChatTheme = 'postit' | 'lined' | 'kraft' | 'polaroid' | 'neon' | 'circuit'
+// ── 테마(시험 배포 — 여러 안 비교 후 하나로 고정 예정) ──
+export type ChatTheme = 'work' | 'postit' | 'lined' | 'kraft' | 'polaroid' | 'neon' | 'circuit'
 const THEME_OPTS: { key: ChatTheme; label: string }[] = [
+  { key: 'work', label: '업무카드' },
   { key: 'postit', label: '포스트잇' },
   { key: 'lined', label: '유선노트' },
   { key: 'kraft', label: '크라프트' },
@@ -57,6 +58,16 @@ function MemoCard({ m, idx, theme, own, onDelete }: { m: DemoChatMsg; idx: numbe
   )
   const bodySx = { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } as const
 
+  if (theme === 'work') return (
+    // 업무현황 업무카드식 — 담당자 색 은은한 틴트 + 띠 헤더, 깔끔한 기본 폰트(다크 포탈 동화)
+    <Box sx={{ borderRadius: '8px', overflow: 'hidden', border: `1px solid ${alpha(c, 0.28)}`, bgcolor: alpha(c, 0.06) }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, p: '6px 10px', bgcolor: alpha(c, 0.12), borderBottom: `1px solid ${alpha(c, 0.16)}` }}>
+        <Box sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, lineHeight: 1.3, color: 'text.primary', wordBreak: 'break-word' }}>{title}</Box>
+        {chip()}{date('text.disabled')}{del(true)}
+      </Box>
+      {body && <Box sx={{ p: '7px 10px 10px', fontSize: 12.5, lineHeight: 1.5, color: 'text.secondary', ...bodySx }}>{body}</Box>}
+    </Box>
+  )
   if (theme === 'postit') return (
     <Box sx={{ borderRadius: '4px', overflow: 'hidden', transform: rot, bgcolor: pastel(c), color: ink(c), boxShadow: '0 3px 8px rgba(0,0,0,.3)' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, p: '5px 10px', bgcolor: band(c) }}>
@@ -118,7 +129,7 @@ function MemoCard({ m, idx, theme, own, onDelete }: { m: DemoChatMsg; idx: numbe
 
 /**
  * 코멘트 — 비교표 아래, 제목 있는 메모카드 그리드(PC=여러 장, 모바일=1열).
- * 테마 6종(포스트잇·유선노트·크라프트·폴라로이드·네온·회로기판)을 우상단 칩으로 전환하며 비교(시험 배포).
+ * 테마 7종(업무카드·포스트잇·유선노트·크라프트·폴라로이드·네온·회로기판)을 우상단 칩으로 전환하며 비교(시험 배포).
  * 작성자 색은 담당자 필터 색상과 매치. 본인 카드만 삭제. "코멘트 추가"로 제목+내용 입력.
  */
 export default function DemoChat({ memos, canPost, user, busy, onPost, onDelete }: {
@@ -128,7 +139,7 @@ export default function DemoChat({ memos, canPost, user, busy, onPost, onDelete 
   const [theme, setTheme] = useState<ChatTheme>(() => {
     let s: string | null = null
     try { s = localStorage.getItem('demoChat:theme') } catch { /* 스토리지 차단 무시 */ }
-    return s === 'postit' || s === 'lined' || s === 'kraft' || s === 'polaroid' || s === 'neon' || s === 'circuit' ? s : 'postit'
+    return s === 'work' || s === 'postit' || s === 'lined' || s === 'kraft' || s === 'polaroid' || s === 'neon' || s === 'circuit' ? s : 'work'
   })
   const pickTheme = (t: ChatTheme) => { setTheme(t); try { localStorage.setItem('demoChat:theme', t) } catch { /* 저장 불가 무시 */ } }
   const [adding, setAdding] = useState(false)
