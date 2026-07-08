@@ -53,7 +53,6 @@ import type { Notice as NoticeItem } from '@/types'
 import { noticeCatStatus } from './noticeMeta'
 import NoticeDetail from './NoticeDetail'
 import NoticeCompose, { NOTICE_CATS, type NoticeFormValues } from './NoticeCompose'
-import floppyIcon from './filetypes/floppy.png'
 
 const refUrl = (ref: string) => String(ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
 
@@ -309,18 +308,14 @@ export default function Notice() {
           <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
             {!!n.attachments?.length && (
               <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
-                {/* 라인아트 아이콘을 알파 마스크로 렌더 → 테마색(라이트/다크 모두 보임) */}
-                <Box
-                  role="img"
-                  aria-label={`첨부파일 ${n.attachments.length}개`}
-                  sx={{
-                    display: 'inline-block', verticalAlign: 'middle', width: 19, height: 19, bgcolor: 'text.secondary',
-                    maskImage: `url(${floppyIcon})`, WebkitMaskImage: `url(${floppyIcon})`,
-                    maskSize: 'contain', WebkitMaskSize: 'contain',
-                    maskRepeat: 'no-repeat', WebkitMaskRepeat: 'no-repeat',
-                    maskPosition: 'center', WebkitMaskPosition: 'center',
-                  }}
-                />
+                {/* 단순 라인아트 플로피(SVG) — 가로줄·상단 슬라이더 제거, 굵은 선으로 작은 크기에서도 또렷. 테마색 */}
+                <Box role="img" aria-label={`첨부파일 ${n.attachments.length}개`} sx={{ display: 'inline-flex', verticalAlign: 'middle', color: 'text.secondary' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" strokeLinecap="round">
+                    <path d="M4.5 3.5 H15.5 L20.5 8.5 V19 A1.3 1.3 0 0 1 19.2 20.3 H4.8 A1.3 1.3 0 0 1 3.5 19 V4.8 A1.3 1.3 0 0 1 4.8 3.5 Z" />
+                    <rect x="7.6" y="4.6" width="6.4" height="3.9" rx="0.7" />
+                    <rect x="6.8" y="11.9" width="10.4" height="7.1" rx="1.1" />
+                  </svg>
+                </Box>
               </Tooltip>
             )}
           </TableCell>
