@@ -68,6 +68,12 @@ const inputSx = (th: Theme) => ({
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info' }
 type ReasonDlg = { row: ImprovementItem; status: string; value: string }
 
+// 개선위치 칩 — 상태칩과 동일한 모양, 색은 흰색으로 통일(위치별 색 구분 없음)
+const LOC_WHITE = '#ffffff'
+function LocChip({ label }: { label: string }) {
+  return <StatusChip status="neutral" customColor={LOC_WHITE} label={label} />
+}
+
 // 관련자료 — 박스 없는 아이콘 + 입력 팝업 (값 있으면 파랑)
 function LinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
@@ -91,7 +97,7 @@ function LinkField({ value, onChange }: { value: string; onChange: (v: string) =
 
 // 위치/유형 드롭다운 — 화살표 버튼, 클릭 시 시트 목록 표시 (선택만).
 // 기존 값이 목록에 없으면(예: 모바일) 그 값을 메뉴에 포함해 표시·보존(강제 변경 방지).
-function DropField({ value, onChange, options, placeholder, width }: { value: string; onChange: (v: string) => void; options: string[]; placeholder: string; width: number }) {
+function DropField({ value, onChange, options, placeholder }: { value: string; onChange: (v: string) => void; options: string[]; placeholder: string }) {
   const opts = value && !options.includes(value) ? [value, ...options] : options
   return (
     <Select
@@ -100,13 +106,10 @@ function DropField({ value, onChange, options, placeholder, width }: { value: st
       displayEmpty
       variant="standard"
       disableUnderline
+      IconComponent={() => null}
       MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}
-      renderValue={(v) => (v ? <span>{v}</span> : <Box component="span" sx={{ color: 'text.disabled' }}>{placeholder}</Box>)}
-      sx={(th) => ({
-        ...inputSx(th), width, maxWidth: '100%', height: 32,
-        '& .MuiSelect-select': { p: 0, pl: '20px !important', pr: '20px !important', minHeight: '0 !important', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translateX(-4px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-        '& .MuiSelect-icon': { right: 2, color: 'text.secondary' },
-      })}
+      renderValue={(v) => (v ? <LocChip label={v} /> : <Box component="span" sx={{ color: 'text.disabled', fontSize: 12.5, border: '1px dashed', borderColor: 'divider', borderRadius: '16px', px: 1, py: '3px' }}>{placeholder}</Box>)}
+      sx={{ maxWidth: '100%', '& .MuiSelect-select': { p: 0, pr: '0 !important', minHeight: '0 !important', display: 'flex', alignItems: 'center', justifyContent: 'center' } }}
     >
       {opts.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: 13 }}>{o}</MenuItem>)}
     </Select>
@@ -125,12 +128,12 @@ function CellSelect({ value, options, onChange, disabled, placeholder }: { value
       displayEmpty
       variant="standard"
       disableUnderline
+      IconComponent={() => null}
       MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}
-      renderValue={(v) => (v ? <Box component="span">{v}</Box> : <Box component="span" sx={{ color: 'text.disabled' }}>{placeholder}</Box>)}
+      renderValue={(v) => (v ? <LocChip label={v} /> : <Box component="span" sx={{ color: 'text.disabled', fontSize: 12.5 }}>{placeholder}</Box>)}
       sx={{
-        fontSize: 12.5, color: 'text.primary', maxWidth: '100%',
-        '& .MuiSelect-select': { p: 0, pr: '18px !important', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-        '& .MuiSelect-icon': { right: -2, fontSize: 18, color: 'text.secondary' },
+        maxWidth: '100%',
+        '& .MuiSelect-select': { p: '0 !important', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' },
       }}
     >
       {opts.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: 13 }}>{o}</MenuItem>)}
@@ -496,6 +499,7 @@ export default function Improve() {
     return [
       <TableRow key={`${kb}-1`} sx={{ '& td': { verticalAlign: 'middle', bgcolor: composeGreen, py: 1 } }}>
         <TableCell sx={{ textAlign: 'center' }}><Box sx={{ display: 'flex', justifyContent: 'center' }}><UrgentBox on={c.urgent} onToggle={() => patchCard(c.key, { urgent: !c.urgent })} /></Box></TableCell>
+        <TableCell><DropField value={c.loc} onChange={(v) => patchCard(c.key, { loc: v })} options={locOptions} placeholder="위치" /></TableCell>
         <TableCell sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
           <InputBase
             value={c.title}
@@ -506,7 +510,6 @@ export default function Improve() {
             sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
-        <TableCell><DropField value={c.loc} onChange={(v) => patchCard(c.key, { loc: v })} options={locOptions} placeholder="위치" width={96} /></TableCell>
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{user || '-'}</TableCell>
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{fmtDate(todaySeoul())}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status="neutral" label="접수" /></TableCell>
@@ -517,7 +520,8 @@ export default function Improve() {
       </TableRow>,
       <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: composeGreen, py: 0.75, verticalAlign: 'middle' } }}>
         <TableCell />
-        <TableCell colSpan={memoCol ? 6 : 5} sx={{ textAlign: 'left' }}>
+        <TableCell />
+        <TableCell colSpan={memoCol ? 5 : 4} sx={{ textAlign: 'left' }}>
           <InputBase
             value={c.content}
             onChange={(e) => patchCard(c.key, { content: e.target.value })}
@@ -546,6 +550,7 @@ export default function Improve() {
     return [
       <TableRow key={`${kb}-1`} onClick={onCancel} sx={{ cursor: 'pointer', '& td': { verticalAlign: 'middle', bgcolor: greenBg, py: 1 } }}>
         <TableCell onClick={stop} sx={{ textAlign: 'center' }}><Box sx={{ display: 'flex', justifyContent: 'center' }}><UrgentBox on={cUrgent} onToggle={() => setCUrgent((v) => !v)} /></Box></TableCell>
+        <TableCell onClick={stop}><DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="위치" /></TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
           <InputBase
             value={cTitle}
@@ -556,7 +561,6 @@ export default function Improve() {
             sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
-        <TableCell onClick={stop}><DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="위치" width={96} /></TableCell>
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{author}</TableCell>
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status={stKind} label={stLabel} /></TableCell>
@@ -565,7 +569,8 @@ export default function Improve() {
       </TableRow>,
       <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, py: 0.75, verticalAlign: 'middle' } }}>
         <TableCell />
-        <TableCell colSpan={memoCol ? 6 : 5} onClick={stop} sx={{ textAlign: 'left' }}>
+        <TableCell />
+        <TableCell colSpan={memoCol ? 5 : 4} onClick={stop} sx={{ textAlign: 'left' }}>
           <InputBase
             value={cContent}
             onChange={(e) => setCContent(e.target.value)}
@@ -667,8 +672,8 @@ export default function Improve() {
             <TableHead>
               <TableRow sx={{ '& th': { textAlign: 'center', color: 'text.secondary', fontWeight: 600, fontSize: 12.5 } }}>
                 <TableCell sx={{ width: '1%' }}>번호</TableCell>
-                <TableCell sx={{ width: '100%' }}>제목</TableCell>
                 <TableCell sx={{ width: '1%' }}>개선위치</TableCell>
+                <TableCell sx={{ width: '100%' }}>제목</TableCell>
                 <TableCell sx={{ width: '1%' }}>작성자</TableCell>
                 <TableCell sx={{ width: '1%' }}>제안일자</TableCell>
                 <TableCell sx={{ width: '1%' }}>상태</TableCell>
@@ -727,10 +732,7 @@ export default function Improve() {
                 return [
                   <TableRow
                     key={`${t.id}-r`}
-                    hover
-                    onClick={toggle}
                     sx={(th) => ({
-                      cursor: 'pointer',
                       '& td': {
                         textAlign: 'center', fontSize: 12.5,
                         ...(open
@@ -740,7 +742,14 @@ export default function Improve() {
                     })}
                   >
                     <TableCell sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>{t.num}</TableCell>
-                    <TableCell sx={{ textAlign: 'left !important', whiteSpace: 'normal' }}>
+                    {/* 개선위치 — 흰색 칩(번호와 제목 사이). 관리자는 셀에서 즉시 변경(드롭다운), 셀 onClick stop으로 아코디언 토글 방지 */}
+                    <TableCell onClick={editable ? stop : undefined} sx={{ maxWidth: 140, ...(editable && { cursor: 'pointer' }) }}>
+                      {editable
+                        ? <CellSelect value={t.loc} options={locOptions} disabled={savingId === t.id} placeholder="-" onChange={(v) => { if (v !== (t.loc || '')) void saveField(t, { loc: v }) }} />
+                        : (t.loc ? <LocChip label={t.loc} /> : '-')}
+                    </TableCell>
+                    {/* 제목 — 활성 영역(클릭 시 아코디언 토글). 행 전체가 아니라 이 셀만 포인터 */}
+                    <TableCell onClick={toggle} sx={{ textAlign: 'left !important', whiteSpace: 'normal', cursor: 'pointer' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: 18, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
                         <Box component="span" sx={{ fontWeight: 500, color: 'text.primary' }}>{t.title}</Box>
@@ -759,15 +768,9 @@ export default function Improve() {
                         )}
                       </Box>
                     </TableCell>
-                    {/* 개선위치 — 로그인 관리자는 셀에서 즉시 변경(아코디언 토글 방지: 셀 onClick stop) */}
-                    <TableCell onClick={editable ? stop : undefined} sx={{ maxWidth: 140 }}>
-                      {editable
-                        ? <CellSelect value={t.loc} options={locOptions} disabled={savingId === t.id} placeholder="-" onChange={(v) => { if (v !== (t.loc || '')) void saveField(t, { loc: v }) }} />
-                        : (t.loc || '-')}
-                    </TableCell>
                     <TableCell>{t.author || '-'}</TableCell>
                     <TableCell sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>{fmtDate(t.date)}</TableCell>
-                    <TableCell onClick={stop} sx={{ cursor: editable ? 'default' : 'not-allowed' }}>
+                    <TableCell onClick={stop} sx={{ cursor: editable ? 'pointer' : 'not-allowed' }}>
                       {editable ? (
                         <Select
                           value={st}

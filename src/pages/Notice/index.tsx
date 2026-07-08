@@ -310,10 +310,10 @@ export default function Notice() {
               <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
                 {/* 단순 라인아트 플로피(SVG) — 가로줄·상단 슬라이더 제거, 굵은 선으로 작은 크기에서도 또렷. 테마색 */}
                 <Box role="img" aria-label={`첨부파일 ${n.attachments.length}개`} sx={{ display: 'inline-flex', verticalAlign: 'middle', color: 'text.secondary' }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinejoin="round" strokeLinecap="round">
-                    <path d="M4.5 3.5 H15.5 L20.5 8.5 V19 A1.3 1.3 0 0 1 19.2 20.3 H4.8 A1.3 1.3 0 0 1 3.5 19 V4.8 A1.3 1.3 0 0 1 4.8 3.5 Z" />
-                    <rect x="7.6" y="4.6" width="6.4" height="3.9" rx="0.7" />
-                    <rect x="6.8" y="11.9" width="10.4" height="7.1" rx="1.1" />
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round">
+                    <path d="M4.7 3.5 H17 L20.5 7 V19.3 A1.2 1.2 0 0 1 19.3 20.5 H4.7 A1.2 1.2 0 0 1 3.5 19.3 V4.7 A1.2 1.2 0 0 1 4.7 3.5 Z" />
+                    <rect x="7" y="4.1" width="7" height="3.8" rx="0.6" />
+                    <rect x="6.8" y="12.7" width="10.4" height="7" rx="1" />
                   </svg>
                 </Box>
               </Tooltip>
