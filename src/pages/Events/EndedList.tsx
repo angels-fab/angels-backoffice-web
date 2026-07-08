@@ -17,6 +17,7 @@ export default function EndedList({ events, selectedId, onPick }: { events: FabE
             <Box component="th">행사명</Box>
             <Box component="th">기간</Box>
             <Box component="th" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>장소</Box>
+            <Box component="th" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>참석자</Box>
           </Box>
         </Box>
         <Box component="tbody">
@@ -24,6 +25,7 @@ export default function EndedList({ events, selectedId, onPick }: { events: FabE
             const cat = eventCategory(e.kind)
             const color = CAT_COLOR[cat]
             const on = selectedId === e.id
+            const attendees = e.attendees ?? []
             return (
               <Box
                 component="tr"
@@ -37,6 +39,13 @@ export default function EndedList({ events, selectedId, onPick }: { events: FabE
                 <Box component="td" className="lg-primary" sx={{ whiteSpace: 'normal' }}>{e.title}</Box>
                 <Box component="td" sx={{ whiteSpace: 'nowrap' }}>{fmtEventDate(e.start, e.end)}</Box>
                 <Box component="td" sx={{ display: { xs: 'none', sm: 'table-cell' }, color: 'text.secondary' }}>{e.venue || '-'}</Box>
+                <Box
+                  component="td"
+                  title={attendees.join(', ')}
+                  sx={{ display: { xs: 'none', sm: 'table-cell' }, color: 'text.secondary', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                >
+                  {attendees.length ? `${attendees.join(', ')} (${attendees.length})` : '-'}
+                </Box>
               </Box>
             )
           })}

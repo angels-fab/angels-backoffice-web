@@ -59,6 +59,8 @@ export interface FabEvent {
   summary?: EventSummaryItem[]
   /** 포스터 없을 때 카드 배경 그라데이션 */
   accent?: EventAccent
+  /** 참석자 명단(종료 행사) — 종료 목록·상세에 표시 */
+  attendees?: string[]
 }
 
 export const FAB_EVENTS: FabEvent[] = [

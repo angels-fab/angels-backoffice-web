@@ -11,7 +11,7 @@ import GroupsIcon from '@mui/icons-material/Groups'
 import ForumIcon from '@mui/icons-material/Forum'
 import StorefrontIcon from '@mui/icons-material/Storefront'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import { darken } from '@mui/material/styles'
+import { alpha, darken } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { eventStatus, fmtEventDate, type FabEvent, type EventAccent } from '@/constants/events'
 
@@ -276,6 +276,84 @@ export function EventCardInner({ e, open }: { e: FabEvent; open: boolean }) {
         }}
       >
         <InCardDetail e={e} />
+      </Box>
+    </Box>
+  )
+}
+
+// 드로어(종료 상세)용 메타 한 줄 — 일반 배경(테마색)
+function DrawerMeta({ icon, value }: { icon: ReactNode; value: string }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75, minWidth: 0 }}>
+      <Box sx={{ display: 'flex', flexShrink: 0, color: 'text.disabled', mt: '1px', '& .MuiSvgIcon-root': { fontSize: 16 } }}>{icon}</Box>
+      <Box sx={{ fontSize: 12.5, color: 'text.secondary', lineHeight: 1.5, wordBreak: 'break-word' }}>{value}</Box>
+    </Box>
+  )
+}
+
+/**
+ * 종료 행사 상세(우측 드로어용) — 카드 슬라이드업이 아니라 **포스터를 풀사이즈로** 보여주고,
+ * 그 아래에 상세(제목·일시·장소·주최·요약·참석자·사이트)를 일반 배경(테마색)으로 표시.
+ */
+export function EventDrawerDetail({ e }: { e: FabEvent }) {
+  const url = posterUrl(e.poster)
+  const st = eventStatus(e.start, e.end)
+  const cat = eventCategory(e.kind)
+  const items = e.summary ?? []
+  return (
+    <Box>
+      {/* 포스터 풀사이즈(전체 표시) + 좌상단 분류·상태 칩 */}
+      <Box sx={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', bgcolor: '#0b0e14' }}>
+        {url ? (
+          <Box component="img" src={url} alt={e.title} sx={{ display: 'block', width: '100%', height: 'auto' }} />
+        ) : (
+          <Box sx={{ aspectRatio: '800 / 1122', background: GRAD[e.accent ?? 'blue'], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {(() => { const Ico = categoryIcon(e.kind); return <Ico sx={{ fontSize: 84, color: 'rgba(255,255,255,.5)' }} /> })()}
+          </Box>
+        )}
+        <Box sx={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 800, px: '9px', py: '5px', borderRadius: 999, bgcolor: CAT_COLOR[cat], color: '#fff' }}>{cat}</Box>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 12, fontWeight: 700, px: '10px', py: '5px', borderRadius: 999, bgcolor: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)', color: '#fff' }}>
+            <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
+            {st.label}
+          </Box>
+        </Box>
+      </Box>
+
+      {/* 상세 — 일반 배경 */}
+      <Box sx={{ pt: 1.5, px: 0.25 }}>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: '0.3em', fontSize: 15, fontWeight: 800, color: 'text.primary', lineHeight: 1.35, mb: 1.25 }}>{splitTitle(e.title)}</Box>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1.5 }}>
+          <DrawerMeta icon={<EventIcon />} value={fmtEventDate(e.start, e.end)} />
+          <DrawerMeta icon={<PlaceIcon />} value={e.venue} />
+          {e.organizer && <DrawerMeta icon={<BusinessIcon />} value={e.organizer} />}
+        </Box>
+        {items.length > 0 && (
+          <Box component="ul" sx={{ m: 0, mb: 1.5, pl: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: 1, borderColor: 'divider', pt: 1.25 }}>
+            {items.map((s, i) => (
+              <Box component="li" key={i} sx={{ fontSize: 12.5, lineHeight: 1.5, color: 'text.secondary', wordBreak: 'break-word' }}>
+                {s.label && <Box component="span" sx={{ fontWeight: 700, color: 'text.primary', mr: 0.6 }}>{s.label}</Box>}
+                {s.speakers && s.speakers.length > 0 ? s.speakers.join(' · ') : s.value}
+              </Box>
+            ))}
+          </Box>
+        )}
+        {/* 참석자 명단 */}
+        {e.attendees && e.attendees.length > 0 && (
+          <Box sx={{ mb: 1.5, borderTop: 1, borderColor: 'divider', pt: 1.25 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 0.7, color: 'text.disabled', fontSize: 11.5, fontWeight: 700, letterSpacing: '.03em' }}>
+              <GroupsIcon sx={{ fontSize: 15 }} /> 참석자 {e.attendees.length}명
+            </Box>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+              {e.attendees.map((name, i) => (
+                <Box key={i} component="span" sx={(th) => ({ fontSize: 12, color: 'text.primary', bgcolor: alpha(th.palette.text.primary, 0.06), border: `1px solid ${th.palette.divider}`, borderRadius: '999px', px: 1, py: '2px' })}>{name}</Box>
+              ))}
+            </Box>
+          </Box>
+        )}
+        <Button component="a" href={e.link} target="_blank" rel="noopener noreferrer" variant="contained" fullWidth size="small" startIcon={<OpenInNewIcon />} sx={{ bgcolor: KIND_BLUE, color: '#fff', fontSize: 12.5, py: '6px', '&:hover': { bgcolor: darken(KIND_BLUE, 0.14) } }}>
+          행사 사이트 바로가기
+        </Button>
       </Box>
     </Box>
   )

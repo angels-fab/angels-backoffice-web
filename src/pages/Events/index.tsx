@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Drawer from '@mui/material/Drawer'
 import IconButton from '@mui/material/IconButton'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
@@ -10,7 +9,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState } from '@/components/ds'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, EVENT_REQUEST_FORM_URL, eventStatus, type FabEvent } from '@/constants/events'
-import { EventCardInner } from './eventCard'
+import { EventCardInner, EventDrawerDetail } from './eventCard'
 import MobileCarousel from './MobileCarousel'
 import EndedList from './EndedList'
 
@@ -51,6 +50,7 @@ export default function Events() {
   const [tab, setTab] = useState<Tab>('active')
   const [openId, setOpenId] = useState<string | null>(null)
   const [endedDetail, setEndedDetail] = useState<FabEvent | null>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   // 날짜 기준 분류: 진행중(green)+예정(amber)=진행·예정 / 종료(gray). 진행중 먼저, 예정은 start asc / 종료는 end desc.
   const { active, ended } = useMemo(() => {
@@ -65,12 +65,25 @@ export default function Events() {
     return { active: act, ended: end }
   }, [])
 
-  // Escape로 열린 카드/상세 닫기 (PC 그리드·종료 다이얼로그)
+  // Escape로 열린 카드/상세 닫기 (PC 그리드·종료 상세 패널)
   useEffect(() => {
     const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') { setOpenId(null); setEndedDetail(null) } }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // 종료 상세 패널 바깥 클릭 시 닫기 — 단, 목록 행 클릭은 '전환'(닫지 않음), 패널 안 클릭은 유지
+  useEffect(() => {
+    if (!endedDetail) return
+    const onDown = (ev: MouseEvent) => {
+      const t = ev.target as HTMLElement
+      if (panelRef.current?.contains(t)) return       // 패널 내부 → 유지
+      if (t.closest('.eq-ledger tbody tr')) return      // 목록 행 → 다른 행사로 전환(onPick)
+      setEndedDetail(null)                              // 그 외 바깥 → 닫기
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [endedDetail])
 
   const tabBtn = (v: Tab, label: string, count: number) => (
     <Button
@@ -129,34 +142,31 @@ export default function Events() {
         )}
       </ContentSection>
 
-      {/* 종료 행사 상세 — 비모달 우측 Drawer. 배경(목록) 계속 클릭 가능 → 드로어 안 닫고 다른 행사 연속 열람.
-          Modal 루트는 pointer-events:none로 통과시키고 paper만 auto, 백드롭·포커스트랩·스크롤락 해제. */}
-      <Drawer
-        anchor="right"
-        open={!!endedDetail}
-        onClose={() => setEndedDetail(null)}
-        hideBackdrop
-        disableEnforceFocus
-        disableScrollLock
-        sx={{ pointerEvents: 'none' }}
-        slotProps={{ paper: { sx: { pointerEvents: 'auto', width: 380, maxWidth: '92vw', bgcolor: 'background.default', borderLeft: 1, borderColor: 'divider', p: 1.5, boxShadow: '-8px 0 26px rgba(0,0,0,.42)' } } }}
-      >
-        {endedDetail && (
-          <Box sx={{ position: 'relative' }}>
-            <IconButton
-              onClick={() => setEndedDetail(null)}
-              aria-label="상세 닫기"
-              size="small"
-              sx={{ position: 'absolute', top: 6, right: 6, zIndex: 2, bgcolor: 'rgba(0,0,0,.5)', color: '#fff', '&:hover': { bgcolor: 'rgba(0,0,0,.72)' } }}
-            >
-              <CloseIcon fontSize="small" />
-            </IconButton>
-            <Box sx={{ borderRadius: '18px', overflow: 'hidden', border: 1, borderColor: 'divider' }}>
-              <EventCardInner e={endedDetail} open />
-            </Box>
-          </Box>
-        )}
-      </Drawer>
+      {/* 종료 행사 상세 — 비모달 고정 패널(상단바 아래 오른쪽). 목록은 계속 클릭 가능(다른 행사 연속 열람),
+          바깥 클릭·X·Esc로 닫힘. 포스터를 풀사이즈로 보여주고 그 아래에 상세(EventDrawerDetail). */}
+      {endedDetail && (
+        <Box
+          ref={panelRef}
+          role="dialog"
+          aria-label={`${endedDetail.title} 상세`}
+          sx={{
+            position: 'fixed', top: { xs: 48, md: 54 }, right: 0, bottom: { xs: 60, md: 0 },
+            width: 380, maxWidth: '92vw', zIndex: 1200,
+            bgcolor: 'background.default', borderLeft: 1, borderColor: 'divider',
+            boxShadow: '-8px 0 26px rgba(0,0,0,.42)', p: 1.5, overflowY: 'auto',
+          }}
+        >
+          <IconButton
+            onClick={() => setEndedDetail(null)}
+            aria-label="상세 닫기"
+            size="small"
+            sx={{ position: 'absolute', top: 12, right: 12, zIndex: 4, bgcolor: 'rgba(0,0,0,.5)', color: '#fff', '&:hover': { bgcolor: 'rgba(0,0,0,.72)' } }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+          <EventDrawerDetail e={endedDetail} />
+        </Box>
+      )}
     </PageContainer>
   )
 }
