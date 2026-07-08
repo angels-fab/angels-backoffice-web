@@ -4,6 +4,7 @@
 > 이 파일은 머신 간 동기화되지 않는 Claude 로컬 메모리를 대신해, 다른 PC에서 맥락을 빠르게 잡기 위한 요약입니다.
 
 ## 현재 상태
+- **데모결과 탭 신설(장비도입, 프런트·샘플단계 2026-07-08)**: 장비관리 → 장비도입 → 뷰전환에 **'데모결과'**(단계별/타임라인/목록 옆) 추가. 시안2(세션카드·사진중심) 채택. **묶음=장비+제조사=카드 1장**, 기본 최신 회차, 다회차면 **대표사진 좌상단 회차칩**으로 그 자리에서 내용만 교체(카드 크기·위치 고정). 카드=대표사진(좌상단 회차칩·우상단 날짜/장소)→썸네일 한 줄+N→제목+첨부아이콘(공지 첨부 유형아이콘 재사용·hover 파일명·클릭 새탭 열림)→핵심수치. 사진 클릭=라이트박스. 데모뷰에선 도입 KPI·필터 숨김. 파일: `src/pages/Equipment/DemoResults.tsx`+`demoData.ts`(샘플 상수), `index.tsx` 뷰 배선. **다음 단계**: 저장(Supabase `demo_results` 표+저장소)+**팀원+ 입력 폼**(입력 방식 사용자와 협의 예정 — 직접 폼 vs 간이업로드+Claude정리). type-check·컴파일 OK, 로그인 실측 필요(/equipment=RequireMember).
 - **공지 저장 멈춤 버그 수정(프런트, 2026-07-08) — 2건**:
   - **(1차) 네트워크 스톨**: 첨부 있는 공지 수정→저장 시 스피너 무한 대기·성공메시지도 안 뜸. **원인(멀티에이전트 RCA)**: supabase-js는 모든 요청 직전 `getSession()`으로 토큰을 읽는데, 액세스 토큰 만료 임박(~90초)이면 내부에서 **타임아웃 없는** 토큰 갱신(POST /token)을 하고, 사무실망 프록시가 이 소켓을 붙잡으면 PATCH가 아예 안 나가고 멈춤(서버 로그에 PATCH 없음으로 확인). **navigator.locks 데드락 아님**(supabase-js 2.110 기본 lockless). **수정**: `src/api/notices.ts`에 `ensureSession()`(쓰기 전 `withTimeout(getSession)`) 추가 → add/update/delete/upload 앞에 호출. 저장/삭제 핸들러 상태해제를 `finally`로.
   - **(2차) React key 충돌**: 1차 수정 후 저장은 성공(스낵바 뜸)하나 "저장 중" 폼·스피너가 안 사라짐. **원인**: 편집 폼 `<NoticeCompose key={n.id}>`(위치기반 idx+1) vs 일반 행 `renderRow key={String(n.num)}` — 키 체계 불일치. 공지 N개(num 1~N)면 id=N+1-num이라 편집행 key가 항상 다른 행의 num과 충돌(#4편집→"9"↔#9행"9"). 중복 key로 React 재조정 깨져 stale prop(saving=true)으로 폼 잔존. **수정**: 편집 폼 key를 `String(n.num)`으로 통일(`src/pages/Notice/index.tsx`).
