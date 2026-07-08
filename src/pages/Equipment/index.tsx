@@ -36,6 +36,7 @@ import type { DragTipData } from './DragTip'
 import EqProjectDrawer from './EqProjectDrawer'
 import ScheduleWrite from './ScheduleWrite'
 import EquipmentTabs from './EquipmentTabs'
+import DemoResults from './DemoResults'
 import { NameWithQty, codeRange } from './batchUtil'
 import { useTableSort, sortRows, SortTh } from './sortable'
 
@@ -47,7 +48,7 @@ const measureHalfPx = (el: Element | null, monthCount: number): number => {
 }
 const k = (v: number) => Math.round(v / 1000).toLocaleString()
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info' }
-type IntroView = 'timeline' | 'stage' | 'list'
+type IntroView = 'timeline' | 'stage' | 'list' | 'demo'
 type Batch = { g: EqGroup; info: StageInfo }
 
 // 'YYYY.M'(dueMonth) → 정렬용 정수(연*12+월). 비어있으면 null
@@ -682,20 +683,22 @@ export default function Equipment() {
 
       <EquipmentTabs />
 
-      {/* 요약 (종=고유 장비명 / 대=대수) */}
-      <Box className="eq-strip" sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 1, mb: 2 }}>
-        <StatTile value={counts.types} unit="종" label="전체 도입장비" status="info" sub={`총 ${counts.total}대`} />
-        <StatTile value={metrics.progress} unit="종" label="진행중" status="warning" sub={metrics.progNote || '진행 중 단계 없음'} />
-        <StatTile value={metrics.late} unit="종" label="일정 지연" status={metrics.late ? 'error' : 'neutral'} sub="예정일 경과" />
-        <StatTile value={metrics.noSched} unit="종" label="일정 미입력" status={metrics.noSched ? 'warning' : 'neutral'} sub="도입월 확인 필요" />
-      </Box>
+      {/* 요약 (종=고유 장비명 / 대=대수) — 데모결과 뷰에는 도입 KPI가 안 맞아 숨김 */}
+      {view !== 'demo' && (
+        <Box className="eq-strip" sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 1, mb: 2 }}>
+          <StatTile value={counts.types} unit="종" label="전체 도입장비" status="info" sub={`총 ${counts.total}대`} />
+          <StatTile value={metrics.progress} unit="종" label="진행중" status="warning" sub={metrics.progNote || '진행 중 단계 없음'} />
+          <StatTile value={metrics.late} unit="종" label="일정 지연" status={metrics.late ? 'error' : 'neutral'} sub="예정일 경과" />
+          <StatTile value={metrics.noSched} unit="종" label="일정 미입력" status={metrics.noSched ? 'warning' : 'neutral'} sub="도입월 확인 필요" />
+        </Box>
+      )}
 
       {/* 워크스페이스 */}
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper', overflow: 'hidden' }}>
         <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           {/* 보기 전환 */}
           <Box sx={{ display: 'inline-flex', gap: 0.5 }}>
-            {([['stage', '단계별'], ['timeline', '타임라인'], ['list', '목록']] as [IntroView, string][]).map(([v, label]) => (
+            {([['stage', '단계별'], ['timeline', '타임라인'], ['list', '목록'], ['demo', '데모결과']] as [IntroView, string][]).map(([v, label]) => (
               <Button
                 key={v} size="small" disableElevation variant={view === v ? 'contained' : 'text'}
                 onClick={() => setView(v)}
@@ -705,7 +708,8 @@ export default function Equipment() {
               </Button>
             ))}
           </Box>
-          {/* 필터 */}
+          {/* 필터 — 데모결과 뷰에는 도입용 필터(단계·담당자·구분) 미적용이라 숨김 */}
+          {view !== 'demo' && (
           <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <select className="eq-select" value={fltStage} onChange={(e) => setFltStage(e.target.value)} aria-label="단계">
               {stageOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 단계' : o}</option>)}
@@ -727,9 +731,13 @@ export default function Equipment() {
               </Button>
             )}
           </Box>
+          )}
         </Box>
 
-        {filtered.length === 0 ? (
+        {view === 'demo' ? (
+          /* ── 데모결과 (장비사 데모센터 테스트 결과 — 사진 중심 뷰. 현재 샘플 데이터) ── */
+          <DemoResults />
+        ) : filtered.length === 0 ? (
           <EmptyState size="sm" title="조건에 맞는 도입 장비가 없습니다" />
         ) : view === 'timeline' ? (
           /* ── 타임라인 (가변폭·가로 스크롤 없음·고밀도) ── */
