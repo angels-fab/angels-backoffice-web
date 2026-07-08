@@ -5,7 +5,7 @@ import { ensureSession, withTimeout } from './session'
  * 데모결과(장비사 데모센터 테스트 결과) API.
  * - demo_metric_defs: 장비종류별 표준 지표 정의(비교 기준). 변경=관리자만 + 이력 기록.
  * - demo_results: 회차 1건 = 1행. metrics = { metric_key: 값(텍스트) }.
- * - demo_memos: 장비종류별 비교 메모(팀원 작성).
+ * - demo_chat: 장비종류별 비교 채팅(메시지마다 대상 제조사 태그, 팀원 작성).
  * 사진/파일은 비공개 버킷 demo-files(서명 URL로 열람).
  */
 
@@ -29,7 +29,8 @@ export interface DemoRoundRow {
   date: string; place: string; conditions: string
   metrics: Record<string, string>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
 }
-export interface DemoMemo { equipment: string; body: string; updatedBy: string; updatedAt: string }
+/** 비교 채팅 메시지 — 장비종류별 스레드. makers = 대상 제조사명(필수 1개+) */
+export interface DemoChatMsg { id: number; equipment: string; makers: string[]; body: string; author: string; createdAt: string }
 export interface MetricDefHistory {
   id: number; equipment: string; metricKey: string; action: string
   before: Record<string, unknown> | null; after: Record<string, unknown> | null
@@ -39,7 +40,7 @@ export interface MetricDefHistory {
 // ── 매핑 ──
 interface DefRow { id: number; equipment: string; metric_key: string; label: string; unit: string; direction: MetricDirection; sort: number; active: boolean }
 interface ResRow { id: number; equipment: string; maker: string; model: string; round: number; visit_date: string | null; place: string; conditions: string; metrics: Record<string, string> | null; photos: DemoPhotoRef[] | null; files: DemoFileRef[] | null; cover: number }
-interface MemoRow { equipment: string; body: string; updated_by: string | null; updated_at: string }
+interface ChatRow { id: number; equipment: string; makers: string[] | null; body: string; author: string; created_at: string }
 
 const toDef = (r: DefRow): DemoMetricDef => ({ id: r.id, equipment: r.equipment, key: r.metric_key, label: r.label, unit: r.unit, direction: r.direction, sort: r.sort, active: r.active })
 const toRound = (r: ResRow): DemoRoundRow => ({
@@ -59,10 +60,10 @@ export async function fetchDemoResults(): Promise<DemoRoundRow[]> {
   if (error) fail(error, '데모결과를 불러오지 못했습니다')
   return ((data || []) as ResRow[]).map(toRound)
 }
-export async function fetchDemoMemos(): Promise<DemoMemo[]> {
-  const { data, error } = await withTimeout(supabase.from('demo_memos').select('*'), DB_TIMEOUT, '메모 불러오기')
+export async function fetchDemoChat(): Promise<DemoChatMsg[]> {
+  const { data, error } = await withTimeout(supabase.from('demo_chat').select('id, equipment, makers, body, author, created_at').order('created_at', { ascending: true }), DB_TIMEOUT, '메모 불러오기')
   if (error) fail(error, '메모를 불러오지 못했습니다')
-  return ((data || []) as MemoRow[]).map((m) => ({ equipment: m.equipment, body: m.body, updatedBy: m.updated_by || '', updatedAt: m.updated_at }))
+  return ((data || []) as ChatRow[]).map((r) => ({ id: r.id, equipment: r.equipment, makers: Array.isArray(r.makers) ? r.makers : [], body: r.body, author: r.author, createdAt: r.created_at }))
 }
 /** 지표 정의 변경 이력 — equipment 생략 시 전체(알림 배너용) */
 export const METRIC_ACTION_LABEL: Record<string, string> = { create: '추가', update: '수정', deactivate: '비활성', reactivate: '재활성' }
@@ -191,14 +192,27 @@ export async function deleteDemoResult(id: number): Promise<void> {
   if (error) throw new Error(error.message || '데모결과 삭제에 실패했습니다')
 }
 
-// ── 비교 메모(팀원+) ──
-export async function saveDemoMemo(equipment: string, body: string, author: string): Promise<void> {
+// ── 비교 채팅(팀원+) ──
+async function currentUid(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.user.id ?? null
+}
+/** 메시지 전송 — makers(대상 제조사) 1개 이상 필수 */
+export async function postDemoChat(p: { equipment: string; makers: string[]; body: string; author: string }): Promise<void> {
+  if (!p.makers.length) throw new Error('대상 제조사를 1개 이상 선택해주세요')
+  if (!p.body.trim()) throw new Error('내용을 입력해주세요')
   await ensureSession()
+  const uid = await currentUid()
   const { error } = await withTimeout(
-    supabase.from('demo_memos').upsert({ equipment, body, updated_by: author, updated_at: new Date().toISOString() }, { onConflict: 'equipment' }),
-    DB_TIMEOUT, '메모 저장',
+    supabase.from('demo_chat').insert({ equipment: p.equipment, makers: p.makers, body: p.body.trim(), author: p.author, member_uid: uid }),
+    DB_TIMEOUT, '메모 전송',
   )
-  if (error) throw new Error(error.message || '메모 저장에 실패했습니다')
+  if (error) throw new Error(error.message || '메모 전송에 실패했습니다')
+}
+export async function deleteDemoChat(id: number): Promise<void> {
+  await ensureSession()
+  const { error } = await withTimeout(supabase.from('demo_chat').delete().eq('id', id), DB_TIMEOUT, '메모 삭제')
+  if (error) throw new Error(error.message || '메모 삭제에 실패했습니다')
 }
 
 // ── 지표 정의(관리자만) + 이력 ──

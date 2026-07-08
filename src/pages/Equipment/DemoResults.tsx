@@ -21,10 +21,11 @@ import type { Theme } from '@mui/material/styles'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
-  fetchMetricDefs, fetchDemoResults, fetchDemoMemos, groupDemoResults, bestMakers, demoFileUrl, saveDemoMemo, updateDemoResult,
-  type DemoMetricDef, type DemoRoundRow, type DemoMemo, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup,
+  fetchMetricDefs, fetchDemoResults, fetchDemoChat, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, deleteDemoChat, updateDemoResult,
+  type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup,
 } from '@/api/demo'
 import { MetricEditorDialog, MetricHistoryDialog } from './DemoMetricEditor'
+import DemoChat from './DemoChat'
 
 const COL_W = 118 // 제조사 열 고정폭(1·2·3개사 통일, 타이트)
 const LABEL_W = 100 // 지표/장비명 열 폭
@@ -151,10 +152,11 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
   )
 }
 
-/** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + 비교 메모 */
-function EquipGroup({ equipment, defs, makers, memo, canEdit, onOpen, onSaveMemo, onSaveValues, onEditMetrics, onViewHistory }: {
-  equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; memo?: DemoMemo; canEdit: boolean
-  onOpen: (photos: DemoPhotoRef[], idx: number) => void; onSaveMemo: (equipment: string, body: string) => Promise<void>
+/** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
+function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewHistory }: {
+  equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean
+  onOpen: (photos: DemoPhotoRef[], idx: number) => void
+  onPostChat: (equipment: string, makers: string[], body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
   onEditMetrics: () => void; onViewHistory: () => void
 }) {
@@ -170,15 +172,8 @@ function EquipGroup({ equipment, defs, makers, memo, canEdit, onOpen, onSaveMemo
   const cancelVal = () => { setValEditKey(null); setValDraft({}) }
   const saveVal = async (m: DemoMakerGroup) => { setSavingVal(true); try { await onSaveValues(shown(m).id, valDraft); setValEditKey(null); setValDraft({}) } finally { setSavingVal(false) } }
 
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(memo?.body || '')
-  const [savingMemo, setSavingMemo] = useState(false)
-
   // 편집 중인 열은 draft 값으로 비교(우수 강조가 입력 즉시 반영)
   const bestFor = (def: DemoMetricDef) => bestMakers(def, makers.map((m) => ({ key: m.key, value: valEditKey === m.key ? valDraft[def.key] : shown(m).metrics[def.key] })))
-
-  const startEdit = () => { setDraft(memo?.body || ''); setEditing(true) }
-  const doSave = async () => { setSavingMemo(true); try { await onSaveMemo(equipment, draft.trim()); setEditing(false) } finally { setSavingMemo(false) } }
   const tableW = LABEL_W + makers.length * COL_W
 
   return (
@@ -190,8 +185,10 @@ function EquipGroup({ equipment, defs, makers, memo, canEdit, onOpen, onSaveMemo
         <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 15 }} />} onClick={onViewHistory} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>변경 이력</Button>
       </Box>
 
-      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
-        <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: tableW }}>
+      {/* PC = 표 | 채팅 나란히(같은 높이) · 모바일 = 세로 스택 */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 1.25, alignItems: 'stretch' }}>
+        <Box sx={{ flex: '0 0 auto', maxWidth: '100%', border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
+          <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: tableW }}>
           <Box component="thead">
             <Box component="tr">
               {/* 1행1열 = 장비명(높이 있는 좌상단 코너, 지표열과 같은 셀) */}
@@ -241,27 +238,11 @@ function EquipGroup({ equipment, defs, makers, memo, canEdit, onOpen, onSaveMemo
         </Box>
       </Box>
 
-      {/* 비교 메모 */}
-      <Box sx={{ mt: 1, border: 1, borderColor: 'divider', borderRadius: '10px', bgcolor: (th) => alpha(th.palette.text.primary, 0.02), p: 1.25 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.5 }}>
-          <Box sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '.03em', color: 'text.disabled' }}>비교 메모</Box>
-          <Box sx={{ flex: 1 }} />
-          {canEdit && !editing && <Button size="small" startIcon={<EditIcon sx={{ fontSize: 14 }} />} onClick={startEdit} sx={{ fontSize: 11, minWidth: 0, color: 'text.secondary' }}>{memo?.body ? '수정' : '작성'}</Button>}
+        {/* 오른쪽 = 비교 채팅(표와 같은 높이). 모바일은 표 아래로 스택 */}
+        <Box sx={{ flex: '1 1 0', minWidth: { md: 240 }, minHeight: { xs: 240, md: 0 } }}>
+          <DemoChat makers={makers} messages={messages} canPost={canEdit} user={user} busy={chatBusy}
+            onPost={(mk, body) => onPostChat(equipment, mk, body)} onDelete={onDeleteChat} />
         </Box>
-        {editing ? (
-          <Box>
-            <InputBase multiline minRows={2} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="제조사 비교·판단·후속 계획을 적어주세요" sx={(th) => ({ width: '100%', fontSize: 12.5, bgcolor: 'background.paper', border: `1px solid ${th.palette.divider}`, borderRadius: '8px', px: 1, py: 0.75 })} />
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.75 }}>
-              <Button size="small" onClick={() => setEditing(false)} disabled={savingMemo} sx={{ color: 'text.secondary', fontSize: 12 }}>취소</Button>
-              <Button size="small" variant="contained" onClick={() => void doSave()} disabled={savingMemo} startIcon={savingMemo ? <CircularProgress size={13} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: 12 }}>저장</Button>
-            </Box>
-          </Box>
-        ) : (
-          <Box sx={{ fontSize: 12.5, color: memo?.body ? 'text.primary' : 'text.disabled', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
-            {memo?.body || '아직 비교 메모가 없습니다.'}
-            {memo?.body && memo.updatedBy && <Box component="span" sx={{ fontSize: 10.5, color: 'text.disabled', ml: 1 }}>— {memo.updatedBy}</Box>}
-          </Box>
-        )}
       </Box>
     </Box>
   )
@@ -275,7 +256,8 @@ export default function DemoResults() {
   const { isMember, user } = useRole()
   const [defs, setDefs] = useState<DemoMetricDef[]>([])
   const [rows, setRows] = useState<DemoRoundRow[]>([])
-  const [memos, setMemos] = useState<DemoMemo[]>([])
+  const [chat, setChat] = useState<DemoChatMsg[]>([])
+  const [chatBusy, setChatBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [viewer, setViewer] = useState<{ photos: DemoPhotoRef[]; idx: number } | null>(null)
   const [editorEquip, setEditorEquip] = useState<string | null>(null)
@@ -284,20 +266,26 @@ export default function DemoResults() {
 
   const load = useCallback(() => {
     setLoading(true)
-    Promise.all([fetchMetricDefs(), fetchDemoResults(), fetchDemoMemos()])
-      .then(([d, r, m]) => { setDefs(d); setRows(r); setMemos(m) })
+    Promise.all([fetchMetricDefs(), fetchDemoResults(), fetchDemoChat()])
+      .then(([d, r, c]) => { setDefs(d); setRows(r); setChat(c) })
       .catch((e) => setSnack({ open: true, msg: e instanceof Error ? e.message : '불러오기 실패', sev: 'error' }))
       .finally(() => setLoading(false))
   }, [])
   useEffect(() => { load() }, [load])
+  const refetchChat = () => { void fetchDemoChat().then(setChat).catch(() => {}) }
 
   const groups = useMemo(() => groupDemoResults(rows, defs), [rows, defs])
-  const memoOf = (eq: string) => memos.find((m) => m.equipment === eq)
+  const chatOf = (eq: string) => chat.filter((m) => m.equipment === eq)
 
-  const onSaveMemo = async (equipment: string, body: string) => {
+  const onPostChat = async (equipment: string, makers: string[], body: string) => {
     if (!user) throw new Error('로그인이 필요합니다')
-    try { await saveDemoMemo(equipment, body, user); setSnack({ open: true, msg: '메모를 저장했습니다.', sev: 'success' }); load() }
-    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '메모 저장 실패', sev: 'error' }); throw e }
+    setChatBusy(true)
+    try { await postDemoChat({ equipment, makers, body, author: user }); refetchChat() }
+    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '메모 전송 실패', sev: 'error' }); throw e }
+    finally { setChatBusy(false) }
+  }
+  const onDeleteChat = async (id: number) => {
+    try { await deleteDemoChat(id); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '삭제 실패', sev: 'error' }) }
   }
 
   const onSaveValues = async (roundId: number, metrics: Record<string, string>) => {
@@ -317,8 +305,8 @@ export default function DemoResults() {
           <EquipGroup
             key={g.equipment}
             equipment={g.equipment} defs={g.defs} makers={g.makers}
-            memo={memoOf(g.equipment)} canEdit={isMember}
-            onOpen={(photos, idx) => setViewer({ photos, idx })} onSaveMemo={onSaveMemo} onSaveValues={onSaveValues}
+            messages={chatOf(g.equipment)} canEdit={isMember} user={user} chatBusy={chatBusy}
+            onOpen={(photos, idx) => setViewer({ photos, idx })} onPostChat={onPostChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues}
             onEditMetrics={() => setEditorEquip(g.equipment)} onViewHistory={() => setHistoryEquip(g.equipment)}
           />
         ))
