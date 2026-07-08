@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
@@ -120,6 +120,9 @@ export default function Equipment() {
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<IntroView>('stage') // 기본 보기 = 단계별
+  // 데모결과 '추가' 버튼 슬롯 — 뷰탭과 같은 행 우측(DemoResults가 포탈로 버튼을 꽂음)
+  const [demoSlot, setDemoSlot] = useState<HTMLElement | null>(null)
+  const demoSlotRef = useCallback((el: HTMLDivElement | null) => setDemoSlot(el), [])
   const [editMode, setEditMode] = useState(false) // '일정 편집' 토글 — 켤 때만 드래그/리사이즈(실수 방지)
   const [fltStage, setFltStage] = useState('전체')
   const [fltMgr, setFltMgr] = useState('전체')
@@ -732,11 +735,13 @@ export default function Equipment() {
             )}
           </Box>
           )}
+          {/* 데모결과 뷰 — '데모결과 추가' 버튼 자리(DemoResults가 포탈로 채움) */}
+          {view === 'demo' && <Box ref={demoSlotRef} sx={{ display: 'flex', alignItems: 'center' }} />}
         </Box>
 
         {view === 'demo' ? (
-          /* ── 데모결과 (장비사 데모센터 테스트 결과 — 사진 중심 뷰. 현재 샘플 데이터) ── */
-          <DemoResults />
+          /* ── 데모결과 (장비사 데모센터 테스트 결과 — 사진 중심 뷰) ── */
+          <DemoResults addSlot={demoSlot} />
         ) : filtered.length === 0 ? (
           <EmptyState size="sm" title="조건에 맞는 도입 장비가 없습니다" />
         ) : view === 'timeline' ? (

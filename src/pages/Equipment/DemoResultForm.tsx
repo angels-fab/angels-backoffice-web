@@ -29,8 +29,9 @@ type Pic = { file: File; url: string; name: string }
  * 데모결과 추가 폼(팀원+) — 장비종류 선택 시 표준 지표 자동 표시(값만 입력).
  * 사진 여러 장(대표 지정)·파일 첨부는 저장 시 업로드. 회차는 같은 장비+제조사+모델이면 자동 다음 회차.
  */
-export default function DemoResultForm({ open, onClose, defs, rows, initialEquipment, user, onSaved, onError }: {
-  open: boolean; onClose: () => void; defs: DemoMetricDef[]; rows: DemoRoundRow[]; initialEquipment?: string
+export default function DemoResultForm({ open, onClose, defs, rows, initialEquipment, initialMaker, initialModel, user, onSaved, onError }: {
+  open: boolean; onClose: () => void; defs: DemoMetricDef[]; rows: DemoRoundRow[]
+  initialEquipment?: string; initialMaker?: string; initialModel?: string
   user: string | null; onSaved: () => void; onError: (msg: string) => void
 }) {
   const [equipment, setEquipment] = useState('')
@@ -62,7 +63,11 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
     return ex.length ? Math.max(...ex.map((r) => r.round)) + 1 : 1
   }, [rows, equipment, maker, model])
   useEffect(() => { setRound(nextRound) }, [nextRound])
-  useEffect(() => { if (open) setEquipment(initialEquipment || '') }, [open, initialEquipment])
+  // 열릴 때 프리필 — '+ 칩'(다음 회차)이면 장비종류+제조사+모델까지 채워짐(회차는 자동)
+  useEffect(() => {
+    if (!open) return
+    setEquipment(initialEquipment || ''); setMaker(initialMaker || ''); setModel(initialModel || '')
+  }, [open, initialEquipment, initialMaker, initialModel])
 
   const addPics = (files: FileList | File[] | null) => {
     if (!files) return

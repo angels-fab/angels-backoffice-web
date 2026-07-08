@@ -34,7 +34,7 @@ import { MetricEditorDialog, MetricHistoryDialog, ValueHistoryDialog } from './D
 import DemoChat from './DemoChat'
 import DemoResultForm from './DemoResultForm'
 import AddIcon from '@mui/icons-material/Add'
-import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'
+import { createPortal } from 'react-dom'
 
 const COL_W = 118 // 제조사 열 고정폭(1·2·3개사 통일, 타이트)
 const LABEL_W = 100 // 지표/장비명 열 폭
@@ -70,22 +70,32 @@ const roundChip = (active: boolean) => (th: Theme) => ({
   boxShadow: active ? 'none' : 'inset 0 0 0 1px rgba(255,255,255,.28)',
 })
 
-/** 제조사 열 헤더 — (사진 위) 제조사·모델·파일 한 줄 → 대표사진(회차칩·날짜·확대) → 값수정 트리거 */
-function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStartVal, onSaveVal, onCancelVal }: {
+// 회차 칩 옆 '+' — 같은 장비+제조사의 다음 회차 등록
+const plusChip = (th: Theme) => ({
+  fontSize: 10.5, fontWeight: 700, lineHeight: 1, px: '6px', py: '2.5px', borderRadius: '999px',
+  cursor: 'pointer', fontFamily: 'inherit', color: '#fff', bgcolor: 'rgba(0,0,0,.5)',
+  border: '1px dashed rgba(255,255,255,.55)', '&:hover': { bgcolor: th.palette.primary.main, borderColor: 'transparent' },
+})
+
+/** 제조사 열 헤더 — 색깔 밴드(제조사·모델·파일, 상단 라운드) → 사진영역(대표 크게 + 우측 썸네일 그리드 + 더보기) → 값수정 트리거 */
+function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStartVal, onSaveVal, onCancelVal, onAddRound }: {
   mg: DemoMakerGroup; sel: number; onSel: (i: number) => void; onOpen: (photos: DemoPhotoRef[], idx: number) => void
   canEdit: boolean; editing: boolean; savingVal: boolean; onStartVal: () => void; onSaveVal: () => void; onCancelVal: () => void
+  onAddRound: () => void
 }) {
   const r = mg.rounds[Math.min(sel, mg.rounds.length - 1)]
-  const cover = r.photos[r.cover] || r.photos[0]
-  const multi = mg.rounds.length > 1
+  const coverIdx = Math.min(Math.max(r.cover || 0, 0), Math.max(r.photos.length - 1, 0))
+  const cover = r.photos[coverIdx]
+  const otherIdx = r.photos.map((_, i) => i).filter((i) => i !== coverIdx)
+  const thumbs = otherIdx.slice(0, 2)
+  const extra = otherIdx.length - thumbs.length
   return (
     <Box sx={{ width: '100%' }}>
-      {/* 사진 위 헤더 한 줄: 제조사 · 모델명 · 파일 */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, mb: 0.5, minWidth: 0 }}>
-        <Box sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11, fontWeight: 700 }}>
-          {mg.maker}{mg.model ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 500, ml: 0.4 }}>{mg.model}</Box> : null}
+      {/* 색깔 밴드 — 제조사·모델·파일 나란히 가운데 정렬, 상단 두 모서리만 라운드 */}
+      <Box sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.6, px: 0.75, py: '4px', bgcolor: th.palette.primary.main, borderRadius: '8px 8px 0 0', minWidth: 0 })}>
+        <Box sx={{ fontSize: 11.5, fontWeight: 700, color: '#fff', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {mg.maker}{mg.model ? <Box component="span" sx={{ opacity: 0.85, fontWeight: 500, ml: 0.5 }}>{mg.model}</Box> : null}
         </Box>
-        <Box sx={{ flex: 1 }} />
         {r.files.map((f, i) => (
           <Tooltip key={i} title={f.name} arrow>
             <Box component="span" onClick={() => void openFile(f)} sx={{ display: 'inline-flex', lineHeight: 0, flex: 'none', cursor: f.path ? 'pointer' : 'default' }}>
@@ -94,18 +104,36 @@ function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStar
           </Tooltip>
         ))}
       </Box>
-      {/* 대표사진 */}
-      <Box sx={{ position: 'relative', height: 74, borderRadius: '8px', overflow: 'hidden', border: 1, borderColor: 'divider' }}>
-        <Photo photo={cover} onClick={() => onOpen(r.photos, r.cover || 0)} />
-        {multi && (
-          <Box sx={{ position: 'absolute', top: 4, left: 4, display: 'flex', gap: '3px' }}>
+      {/* 사진 영역 — 대표사진(좌, 높이 꽉) + 나머지 작은 그리드(우) + 다 안 담기면 +N 더보기 */}
+      <Box sx={{ position: 'relative', height: 96, border: 1, borderTop: 0, borderColor: 'divider', borderRadius: '0 0 8px 8px', overflow: 'hidden', display: 'flex', gap: '2px', bgcolor: 'background.default' }}>
+        <Box sx={{ flex: '1 1 auto', minWidth: 0, position: 'relative' }}>
+          <Photo photo={cover} onClick={() => { if (r.photos.length) onOpen(r.photos, coverIdx) }} />
+          {/* 회차 칩 + '+'(다음 회차 등록) */}
+          <Box sx={{ position: 'absolute', top: 4, left: 4, display: 'flex', gap: '3px', flexWrap: 'wrap', pr: 4 }}>
             {mg.rounds.map((rr, i) => (
               <Box key={rr.round} component="button" aria-label={`${rr.round}차`} aria-pressed={i === sel} onClick={(e) => { e.stopPropagation(); onSel(i) }} sx={roundChip(i === sel)}>{rr.round}차</Box>
             ))}
+            {canEdit && (
+              <Tooltip title={`${mg.maker} 다음 회차(${mg.rounds[mg.rounds.length - 1].round + 1}차) 등록`}>
+                <Box component="button" aria-label="다음 회차 등록" onClick={(e) => { e.stopPropagation(); onAddRound() }} sx={plusChip}>+</Box>
+              </Tooltip>
+            )}
+          </Box>
+          <Box sx={{ position: 'absolute', top: 4, right: 4, fontSize: 9, color: '#fff', bgcolor: 'rgba(0,0,0,.5)', borderRadius: '4px', px: '4px', py: '1px', fontWeight: 700 }}>{fmtDate(r.date)}</Box>
+          {r.photos.length > 0 && <ZoomOutMapIcon sx={{ position: 'absolute', bottom: 4, right: 4, fontSize: 14, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', borderRadius: '4px', p: '2px' }} />}
+        </Box>
+        {thumbs.length > 0 && (
+          <Box sx={{ flex: '0 0 34%', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+            {thumbs.map((pi, ti) => (
+              <Box key={pi} sx={{ position: 'relative', flex: 1, minHeight: 0 }}>
+                <Photo photo={r.photos[pi]} onClick={() => onOpen(r.photos, pi)} />
+                {ti === thumbs.length - 1 && extra > 0 && (
+                  <Box onClick={() => onOpen(r.photos, otherIdx[thumbs.length])} sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,.55)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+{extra}</Box>
+                )}
+              </Box>
+            ))}
           </Box>
         )}
-        <Box sx={{ position: 'absolute', top: 4, right: 4, fontSize: 9, color: '#fff', bgcolor: 'rgba(0,0,0,.5)', borderRadius: '4px', px: '4px', py: '1px', fontWeight: 700 }}>{fmtDate(r.date)}</Box>
-        {r.photos.length > 0 && <ZoomOutMapIcon sx={{ position: 'absolute', bottom: 4, right: 4, fontSize: 14, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', borderRadius: '4px', p: '2px' }} />}
       </Box>
       {/* 값 수정(작은 트리거 — 실수 방지용 최소 노출). 편집 중이면 저장·취소 */}
       {canEdit && (
@@ -163,12 +191,12 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewHistory, onViewValueHistory, onAddRound }: {
+function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewValueHistory, onAddRound }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onOpen: (photos: DemoPhotoRef[], idx: number) => void
   onPostChat: (equipment: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
-  onEditMetrics: () => void; onViewHistory: () => void; onViewValueHistory: () => void; onAddRound: () => void
+  onEditMetrics: () => void; onViewValueHistory: () => void; onAddRound: (mg: DemoMakerGroup) => void
 }) {
   // 제조사별 선택 회차(기본=최신)
   const [sel, setSel] = useState<Record<string, number>>(() => Object.fromEntries(makers.map((m) => [m.key, m.rounds.length - 1])))
@@ -206,16 +234,18 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
 
   // 편집 중인 열은 draft 값으로 비교(우수 강조가 입력 즉시 반영)
   const bestFor = (def: DemoMetricDef) => bestMakers(def, makers.map((m) => ({ key: m.key, value: valEditKey === m.key ? valDraft[def.key] : shown(m).metrics[def.key] })))
-  const tableMinW = LABEL_W + makers.length * COL_W // 스크롤 최소폭(열당 COL_W). 실제론 남는 공간까지 늘어남
+  // 카드(제조사) 열은 항상 '3사 기준' 너비 — 1·2곳이면 좌우 패드로 가운데 정렬.
+  // Chrome은 fixed 테이블에서 calc() 셀폭을 무시하므로, colgroup 6등분 서브컬럼 + colSpan(카드=2칸)으로 구현.
+  const tableMinW = LABEL_W + 3 * COL_W
+  const padSpan = 3 - makers.length // 좌우 각각의 패드 서브컬럼 수: 0(3곳)·1(2곳)·2(1곳)
 
   return (
     <Box sx={{ mb: 2.5 }}>
-      {/* 상단 = 버튼만(제목은 표 좌상단 셀로 이동) */}
+      {/* 상단 = 버튼만(제목은 표 좌상단 셀). 변경 이력 = 지표'값' 변경 추적. 회차 추가는 카드의 + 칩으로 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
         <Box sx={{ flex: 1 }} />
-        {canEdit && <Button size="small" startIcon={<PlaylistAddIcon sx={{ fontSize: 16 }} />} onClick={onAddRound} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>회차 추가</Button>}
         {canEdit && <Button size="small" startIcon={<TuneIcon sx={{ fontSize: 15 }} />} onClick={onEditMetrics} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>지표 편집</Button>}
-        <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 15 }} />} onClick={onViewHistory} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>변경 이력</Button>
+        <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 15 }} />} onClick={onViewValueHistory} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>변경 이력</Button>
       </Box>
 
       {/* 지표 '값' 변경 알림(조작방지) — 최근 값 변경이 있으면 표시. 클릭 시 값 변경 이력 */}
@@ -234,39 +264,47 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
       {/* 비교표(전체 폭). 메모는 표 아래에 장비사 열 너비만큼 배치 */}
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
         <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: '100%', minWidth: tableMinW }}>
+          {/* 열 정의 — 라벨(고정) + 6등분 서브컬럼(카드 1장 = 2칸) */}
+          <Box component="colgroup">
+            <Box component="col" sx={{ width: LABEL_W }} />
+            {Array.from({ length: 6 }).map((_, i) => <Box component="col" key={i} />)}
+          </Box>
           <Box component="thead">
             <Box component="tr">
-              {/* 1행1열 = 장비명(높이 있는 좌상단 코너, 지표열과 같은 셀) */}
-              <Box component="th" sx={{ width: LABEL_W, textAlign: 'left', verticalAlign: 'top', p: '4px 8px', borderRight: 1, borderColor: 'divider' }}>
-                <Box sx={{ fontSize: 13.5, fontWeight: 800, lineHeight: 1.2 }}>{equipment}</Box>
-                <Box sx={{ fontSize: 10, color: 'text.disabled', mt: 0.25 }}>경쟁 {makers.length}개사</Box>
+              {/* 1행1열 = 장비명(가운데·중앙 정렬) */}
+              <Box component="th" sx={{ textAlign: 'center', verticalAlign: 'middle', p: '4px 8px', borderRight: 1, borderColor: 'divider' }}>
+                <Box sx={{ fontSize: 13.5, fontWeight: 800, lineHeight: 1.3 }}>{equipment}</Box>
               </Box>
+              {padSpan > 0 && <Box component="th" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
               {makers.map((m, mi) => (
-                <Box component="th" key={m.key} sx={{ p: '4px 6px', textAlign: 'center', verticalAlign: 'top', borderLeft: mi > 0 ? 1 : 0, borderColor: 'divider' }}>
+                <Box component="th" key={m.key} colSpan={2} sx={{ p: '4px 6px', textAlign: 'center', verticalAlign: 'top', borderLeft: mi > 0 ? 1 : 0, borderColor: 'divider' }}>
                   <MakerHead mg={m} sel={sel[m.key] ?? m.rounds.length - 1} onSel={(i) => setSel((s) => ({ ...s, [m.key]: i }))} onOpen={onOpen}
                     canEdit={canEdit} editing={valEditKey === m.key} savingVal={savingVal}
-                    onStartVal={() => startVal(m)} onSaveVal={() => askSaveVal(m)} onCancelVal={cancelVal} />
+                    onStartVal={() => startVal(m)} onSaveVal={() => askSaveVal(m)} onCancelVal={cancelVal}
+                    onAddRound={() => onAddRound(m)} />
                 </Box>
               ))}
+              {padSpan > 0 && <Box component="th" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
             </Box>
           </Box>
           <Box component="tbody">
             {defs.length === 0 && (
-              <Box component="tr"><Box component="td" colSpan={makers.length + 1} sx={{ p: 1.5, textAlign: 'center', color: 'text.disabled', fontSize: 12 }}>등록된 표준 지표가 없습니다. 위 "지표 편집"에서 추가하세요.</Box></Box>
+              <Box component="tr"><Box component="td" colSpan={7} sx={{ p: 1.5, textAlign: 'center', color: 'text.disabled', fontSize: 12 }}>등록된 표준 지표가 없습니다. 위 "지표 편집"에서 추가하세요.</Box></Box>
             )}
             {defs.map((def) => {
               const best = bestFor(def)
               return (
                 <Box component="tr" key={def.key}>
-                  <Box component="td" sx={{ width: LABEL_W, textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>
-                    {def.label}{def.unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.4, fontSize: 10 }}>{def.unit}</Box> : null}
+                  <Box component="td" sx={{ textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>
+                    {def.label}{def.unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.5, fontSize: 10 }}>[{def.unit}]</Box> : null}
                   </Box>
+                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
                   {makers.map((m, mi) => {
                     const editingThis = valEditKey === m.key
                     const v = shown(m).metrics[def.key]
                     const isBest = best.has(m.key)
                     return (
-                      <Box component="td" key={m.key} sx={{ textAlign: 'center', p: '5px 6px', fontSize: 12.5, borderLeft: mi > 0 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>
+                      <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'center', p: '5px 6px', fontSize: 12.5, borderLeft: mi > 0 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>
                         {editingThis ? (
                           <InputBase value={valDraft[def.key] ?? ''} onChange={(e) => setValDraft((d) => ({ ...d, [def.key]: e.target.value }))} placeholder="-"
                             sx={(th) => ({ width: '100%', fontSize: 12, bgcolor: alpha(th.palette.warning.main, 0.08), border: `1px solid ${alpha(th.palette.warning.main, 0.5)}`, borderRadius: '5px', px: 0.5, py: '1px', '& input': { textAlign: 'center', p: 0 } })} />
@@ -276,15 +314,21 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
                       </Box>
                     )
                   })}
+                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
                 </Box>
               )
             })}
           </Box>
         </Box>
-        {/* 비교 메모 — 표 아래, 지표헤더 열 빼고 장비사 열 너비만큼(pl = 지표열 폭) */}
-        <Box sx={{ pl: `${LABEL_W}px`, mt: 1.25 }}>
-          <DemoChat memos={messages} canPost={canEdit} user={user} busy={chatBusy}
-            onPost={(body) => onPostChat(equipment, body)} onDelete={onDeleteChat} />
+        {/* 코멘트 — 표 아래. 왼쪽 = '코멘트' 라벨 박스(지표열 폭·목록 높이만큼 늘어남), 오른쪽 = 코멘트 목록 */}
+        <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1, mt: 1.25 }}>
+          <Box sx={{ width: LABEL_W, flex: 'none', display: 'flex' }}>
+            <Box sx={(th) => ({ flex: 1, border: `1px solid ${th.palette.divider}`, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 700, color: 'text.secondary' })}>코멘트</Box>
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <DemoChat memos={messages} canPost={canEdit} user={user} busy={chatBusy}
+              onPost={(body) => onPostChat(equipment, body)} onDelete={onDeleteChat} />
+          </Box>
         </Box>
       </Box>
 
@@ -315,7 +359,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
  * 데모결과 뷰 — 장비도입 '데모결과' 탭. 장비종류별로 경쟁 제조사를 매트릭스로 묶어 핵심지표 비교.
  * 지표는 표준 정의(demo_metric_defs)를 따름. 사진 탭=라이트박스. 비교 메모(팀원 작성).
  */
-export default function DemoResults() {
+export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null }) {
   const { isMember, user } = useRole()
   const [defs, setDefs] = useState<DemoMetricDef[]>([])
   const [rows, setRows] = useState<DemoRoundRow[]>([])
@@ -328,7 +372,7 @@ export default function DemoResults() {
   const [valHist, setValHist] = useState<ValueHistory[]>([])
   const [valHistEquip, setValHistEquip] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
-  const [formEquip, setFormEquip] = useState('')
+  const [formPre, setFormPre] = useState<{ equipment: string; maker?: string; model?: string }>({ equipment: '' })
   const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'error' }>({ open: false, msg: '', sev: 'success' })
 
   const load = useCallback(() => {
@@ -362,13 +406,19 @@ export default function DemoResults() {
     catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '값 수정 실패', sev: 'error' }); throw e }
   }
 
+  // '데모결과 추가' 버튼 — 뷰탭(단계별/타임라인/목록/데모결과)과 같은 행 우측 슬롯에 포탈로 배치
+  const addBtn = (
+    <Button variant="contained" size="small" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => { setFormPre({ equipment: '' }); setFormOpen(true) }} sx={{ whiteSpace: 'nowrap' }}>
+      데모결과 추가
+    </Button>
+  )
+
   return (
+    <>
+    {/* 포탈은 프래그먼트 루트에 — Box children에 ReactPortal을 넣으면 MUI propTypes 경고 발생 */}
+    {isMember && addSlot && createPortal(addBtn, addSlot)}
     <Box sx={{ p: 1.5 }}>
-      {isMember && (
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>
-          <Button variant="contained" size="small" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => { setFormEquip(''); setFormOpen(true) }}>데모결과 추가</Button>
-        </Box>
-      )}
+      {isMember && !addSlot && <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>{addBtn}</Box>}
       {loading ? (
         <Box sx={{ py: 5, textAlign: 'center', color: 'text.disabled', fontSize: 13 }}>불러오는 중…</Box>
       ) : groups.length === 0 ? (
@@ -380,8 +430,8 @@ export default function DemoResults() {
             equipment={g.equipment} defs={g.defs} makers={g.makers}
             messages={chatOf(g.equipment)} canEdit={isMember} user={user} chatBusy={chatBusy} latestValueChange={latestValueChangeOf(g.equipment)}
             onOpen={(photos, idx) => setViewer({ photos, idx })} onPostChat={onPostChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues}
-            onEditMetrics={() => setEditorEquip(g.equipment)} onViewHistory={() => setHistoryEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
-            onAddRound={() => { setFormEquip(g.equipment); setFormOpen(true) }}
+            onEditMetrics={() => setEditorEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
+            onAddRound={(mg) => { setFormPre({ equipment: g.equipment, maker: mg.maker, model: mg.model }); setFormOpen(true) }}
           />
         ))
       )}
@@ -390,16 +440,19 @@ export default function DemoResults() {
         <MetricEditorDialog open equipment={editorEquip} defs={defs} author={user}
           onClose={() => setEditorEquip(null)}
           onChanged={() => { load(); setSnack({ open: true, msg: '지표를 변경했습니다(이력 기록됨).', sev: 'success' }) }}
-          onError={(msg) => setSnack({ open: true, msg, sev: 'error' })} />
+          onError={(msg) => setSnack({ open: true, msg, sev: 'error' })}
+          onViewDefHistory={() => setHistoryEquip(editorEquip)} />
       )}
       {historyEquip && <MetricHistoryDialog open equipment={historyEquip} onClose={() => setHistoryEquip(null)} />}
       {valHistEquip && <ValueHistoryDialog open equipment={valHistEquip} defs={defs} onClose={() => setValHistEquip(null)} />}
-      <DemoResultForm open={formOpen} onClose={() => setFormOpen(false)} defs={defs} rows={rows} initialEquipment={formEquip} user={user}
+      <DemoResultForm open={formOpen} onClose={() => setFormOpen(false)} defs={defs} rows={rows}
+        initialEquipment={formPre.equipment} initialMaker={formPre.maker} initialModel={formPre.model} user={user}
         onSaved={() => { setFormOpen(false); setSnack({ open: true, msg: '데모결과를 추가했습니다.', sev: 'success' }); load() }}
         onError={(msg) => setSnack({ open: true, msg, sev: 'error' })} />
       <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         <Alert severity={snack.sev} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
       </Snackbar>
     </Box>
+    </>
   )
 }

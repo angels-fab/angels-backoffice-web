@@ -16,6 +16,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import AddIcon from '@mui/icons-material/Add'
+import HistoryIcon from '@mui/icons-material/History'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import {
@@ -41,9 +42,11 @@ function DirSelect({ value, onChange }: { value: MetricDirection; onChange: (v: 
  * 지표 관리(팀원+) — 장비종류별 표준 지표 추가/수정/비활성. 모든 변경은 이력에 자동 기록.
  * 라벨과 별개의 안정 key를 써서 라벨을 바꿔도 기존 값(비교)이 어긋나지 않는다.
  */
-export function MetricEditorDialog({ open, equipment, defs, author, onClose, onChanged, onError }: {
+export function MetricEditorDialog({ open, equipment, defs, author, onClose, onChanged, onError, onViewDefHistory }: {
   open: boolean; equipment: string; defs: DemoMetricDef[]; author: string | null
   onClose: () => void; onChanged: () => void; onError: (msg: string) => void
+  /** 지표 '정의' 변경 이력 보기(선택) — 그룹의 변경 이력 버튼은 '값' 이력이라 여기서 제공 */
+  onViewDefHistory?: () => void
 }) {
   const eqDefs = defs.filter((d) => d.equipment === equipment).sort((a, b) => (a.active === b.active ? a.sort - b.sort : a.active ? -1 : 1))
   const [busy, setBusy] = useState(false)
@@ -66,7 +69,10 @@ export function MetricEditorDialog({ open, equipment, defs, author, onClose, onC
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
       <DialogTitle sx={{ fontSize: 15, fontWeight: 800 }}>지표 관리 · {equipment}</DialogTitle>
       <DialogContent>
-        <Box sx={{ fontSize: 11.5, color: 'text.secondary', mb: 1.5 }}>표준 지표는 이 장비의 모든 제조사 비교 기준입니다. 바꾸면 비교표가 함께 바뀌고, <b>변경 이력이 자동 기록</b>됩니다.</Box>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5 }}>
+          <Box sx={{ fontSize: 11.5, color: 'text.secondary', flex: 1 }}>표준 지표는 이 장비의 모든 제조사 비교 기준입니다. 바꾸면 비교표가 함께 바뀌고, <b>변경 이력이 자동 기록</b>됩니다.</Box>
+          {onViewDefHistory && <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 14 }} />} onClick={onViewDefHistory} sx={{ fontSize: 11, minWidth: 0, color: 'text.secondary', whiteSpace: 'nowrap', flex: 'none' }}>지표 변경 이력</Button>}
+        </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
           {eqDefs.map((d) => {
             const editing = editId === d.id
