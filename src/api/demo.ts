@@ -267,6 +267,15 @@ export async function postDemoChat(p: { equipment: string; title: string; body: 
   )
   if (error) throw new Error(error.message || '메모 저장에 실패했습니다')
 }
+export async function updateDemoChat(id: number, p: { title: string; body: string }): Promise<void> {
+  if (!p.title.trim()) throw new Error('제목을 입력해주세요')
+  await ensureSession()
+  const { error } = await withTimeout(
+    supabase.from('demo_chat').update({ title: p.title.trim(), body: p.body.trim() }).eq('id', id),
+    DB_TIMEOUT, '메모 수정',
+  )
+  if (error) throw new Error(error.message || '메모 수정에 실패했습니다')
+}
 export async function deleteDemoChat(id: number): Promise<void> {
   await ensureSession()
   const { error } = await withTimeout(supabase.from('demo_chat').delete().eq('id', id), DB_TIMEOUT, '메모 삭제')

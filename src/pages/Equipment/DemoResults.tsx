@@ -28,7 +28,7 @@ import type { Theme } from '@mui/material/styles'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
-  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, downloadDemoBlob, postDemoChat, deleteDemoChat, updateDemoResult, deleteDemoResult,
+  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, downloadDemoBlob, postDemoChat, updateDemoChat, deleteDemoChat, updateDemoResult, deleteDemoResult,
   type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup, type ValueHistory,
 } from '@/api/demo'
 import { verifyPassword } from '@/api/session'
@@ -311,9 +311,10 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound }: {
+function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onPostChat, onEditChat, onDeleteChat, onSaveValues, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
-  onPostChat: (equipment: string, title: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
+  onPostChat: (equipment: string, title: string, body: string) => Promise<void>
+  onEditChat: (id: number, title: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
   onEditMetrics: () => void; onViewValueHistory: () => void; onAddRound: (mg: DemoMakerGroup) => void
   onDeleteRound: (roundId: number) => Promise<void>
@@ -414,10 +415,10 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
         </Box>
       )}
 
-      {/* 비교표(왼쪽·2개사 기준 폭) + 코멘트(오른쪽, 좁은 화면은 표 아래) */}
+      {/* 비교표(왼쪽·PC 절반 폭) + 코멘트(오른쪽 절반, 좁은 화면은 표 아래) */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', gap: 1.5 }}>
-      <Box sx={{ flex: '0 1 auto', minWidth: 0, maxWidth: '100%', border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
-        <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: tableMinW }}>
+      <Box sx={{ flex: { xs: '0 1 auto', md: '1 1 0' }, minWidth: 0, maxWidth: '100%', border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
+        <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: '100%', minWidth: tableMinW }}>
           {/* 열 정의 — 라벨(고정) + 등분 서브컬럼(카드 1장 = 2칸) */}
           <Box component="colgroup">
             <Box component="col" sx={{ width: LABEL_W }} />
@@ -479,7 +480,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
         <Box sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
           <Box sx={{ fontSize: 12.5, fontWeight: 700, color: 'text.secondary', mb: 0.75 }}>코멘트</Box>
           <DemoChat memos={messages} canPost={canEdit} user={user} busy={chatBusy}
-            onPost={(title, body) => onPostChat(equipment, title, body)} onDelete={onDeleteChat} />
+            onPost={(title, body) => onPostChat(equipment, title, body)} onEdit={onEditChat} onDelete={onDeleteChat} />
         </Box>
       </Box>
 
@@ -570,6 +571,12 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
     catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '메모 저장 실패', sev: 'error' }); throw e }
     finally { setChatBusy(false) }
   }
+  const onEditChat = async (id: number, title: string, body: string) => {
+    setChatBusy(true)
+    try { await updateDemoChat(id, { title, body }); refetchChat() }
+    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '메모 수정 실패', sev: 'error' }); throw e }
+    finally { setChatBusy(false) }
+  }
   const onDeleteChat = async (id: number) => {
     try { await deleteDemoChat(id); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '삭제 실패', sev: 'error' }) }
   }
@@ -609,7 +616,7 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
             key={g.equipment}
             equipment={g.equipment} defs={g.defs} makers={g.makers}
             messages={chatOf(g.equipment)} canEdit={isMember} user={user} chatBusy={chatBusy} latestValueChange={latestValueChangeOf(g.equipment)}
-            onPostChat={onPostChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues}
+            onPostChat={onPostChat} onEditChat={onEditChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues}
             onEditMetrics={() => setEditorEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
             onAddRound={(mg) => { setFormPre({ equipment: g.equipment, maker: mg.maker, model: mg.model }); setFormOpen(true) }}
             onDeleteRound={onDeleteRound}

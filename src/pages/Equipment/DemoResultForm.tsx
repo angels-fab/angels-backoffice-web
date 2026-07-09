@@ -54,6 +54,9 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
   // 옵션(자동완성)
   const equipmentOpts = useMemo(() => [...new Set([...defs.map((d) => d.equipment), ...rows.map((r) => r.equipment)])], [defs, rows])
   const makerOpts = useMemo(() => [...new Set(rows.filter((r) => !equipment || r.equipment === equipment).map((r) => r.maker))], [rows, equipment])
+  // 비교 장비사는 한 장비당 최대 2곳 — 기존 2곳에 없는 '3번째 신규 제조사'는 차단(기존 장비사 회차 추가는 허용)
+  const existingMakers = useMemo(() => [...new Set(rows.filter((r) => r.equipment === equipment.trim()).map((r) => r.maker))], [rows, equipment])
+  const makerCapReached = !!equipment.trim() && !!maker.trim() && existingMakers.length >= 2 && !existingMakers.includes(maker.trim())
   const modelOpts = useMemo(() => [...new Set(rows.filter((r) => r.equipment === equipment && r.maker === maker).map((r) => r.model).filter(Boolean))], [rows, equipment, maker])
   const placeOpts = useMemo(() => [...new Set(rows.map((r) => r.place).filter(Boolean))], [rows])
   const eqDefs = useMemo(() => defs.filter((d) => d.equipment === equipment && d.active).sort((a, b) => a.sort - b.sort), [defs, equipment])
@@ -87,6 +90,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
     if (busy) return
     if (!equipment.trim()) return onError('장비종류를 입력해주세요.')
     if (!maker.trim()) return onError('제조사를 입력해주세요.')
+    if (makerCapReached) return onError(`비교 장비사는 한 장비당 최대 2곳입니다. 기존 장비사(${existingMakers.join(', ')}) 중에서 선택하거나 회차를 추가하세요.`)
     if (!user) return onError('로그인이 필요합니다.')
     setBusy(true)
     try {
@@ -114,6 +118,11 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
           <Box><Box sx={label}>모델</Box><ComboField value={model} onChange={setModel} options={modelOpts} placeholder="예: X-200" ariaLabel="모델" /></Box>
           <Box><Box sx={label}>회차</Box><Box component="input" type="number" min={1} value={round} onChange={(e) => setRound(Math.max(1, Number((e.target as HTMLInputElement).value) || 1))} sx={(th) => ({ ...field(th) })} /></Box>
         </Box>
+        {makerCapReached && (
+          <Box sx={{ fontSize: 11.5, color: 'warning.main', mb: 1, mt: -0.25 }}>
+            비교 장비사는 한 장비당 최대 2곳입니다. 기존: {existingMakers.join(', ')} — 이 중 선택하거나 회차를 추가하세요.
+          </Box>
+        )}
         {/* 방문일/데모센터 */}
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 1, mb: 1 }}>
           <Box><Box sx={label}>방문일</Box><Box component="input" type="date" value={date} onChange={(e) => setDate((e.target as HTMLInputElement).value)} sx={(th) => ({ ...field(th), colorScheme: 'dark' })} /></Box>
@@ -187,7 +196,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
       <DialogActions sx={{ px: 3, pb: 2 }}>
         {busy && prog && <Box sx={{ flex: 1, fontSize: 11.5, color: 'text.secondary' }}>{prog}</Box>}
         <Button onClick={close} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
-        <Button variant="contained" onClick={() => void save()} disabled={busy} startIcon={busy ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined}>{busy ? '저장 중…' : '저장'}</Button>
+        <Button variant="contained" onClick={() => void save()} disabled={busy || makerCapReached} startIcon={busy ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined}>{busy ? '저장 중…' : '저장'}</Button>
       </DialogActions>
     </Dialog>
   )
