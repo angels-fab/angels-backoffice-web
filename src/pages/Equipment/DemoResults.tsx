@@ -184,7 +184,7 @@ function Lightbox({ photos, idx, onIdx, onClose }: { photos: DemoPhotoRef[]; idx
     <Box role="button" aria-label={dir < 0 ? '이전 사진' : '다음 사진'}
       onClick={(e) => { e.stopPropagation(); move(dir) }}
       sx={{
-        position: 'absolute', top: 0, bottom: 0, width: '32%', cursor: 'pointer',
+        position: 'absolute', top: 0, bottom: 0, width: '45%', cursor: 'pointer',
         ...(dir < 0 ? { left: 0, borderRadius: '8px 0 0 8px' } : { right: 0, borderRadius: '0 8px 8px 0' }),
         display: 'flex', alignItems: 'center', justifyContent: dir < 0 ? 'flex-start' : 'flex-end',
         opacity: 0, transition: 'opacity .18s ease',
@@ -384,8 +384,8 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
     <Box aria-hidden onClick={requestClose} sx={(th) => ({ position: 'fixed', inset: 0, zIndex: th.zIndex.drawer, bgcolor: 'rgba(0,0,0,.2)', opacity: closing ? 0 : 1, transition: 'opacity .2s ease', pointerEvents: closing ? 'none' : 'auto' })} />
     <Box
       sx={(th) => ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: th.zIndex.drawer + 1,
-        // 높이 = 슬롯이 16:9 비율로 여백 없이 차는 값(폭 기준 자동): (미리보기 폭 / 슬롯수) * 9/16 + 헤더·패딩
-        height: { xs: '56vh', md: `clamp(320px, calc((100vw - 343px) / ${Math.max(columns.length, 1)} * 0.5625 + 58px), 84vh)` },
+        // 높이 = 모든 그룹 공통 고정: 4:3 사진 2장을 좌우로 나란히 뒀을 때 여백 없이 가득 차는 값(항상 2슬롯)
+        height: { xs: '56vh', md: 'clamp(340px, calc((100vw - 343px) / 2 * 0.75 + 58px), 84vh)' },
         bgcolor: 'background.paper', borderTop: `1px solid ${th.palette.divider}`, borderRadius: '16px 16px 0 0', boxShadow: '0 -12px 32px rgba(0,0,0,.42)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: closing ? 'gsDown .2s ease forwards' : 'gsUp .22s ease', '@keyframes gsUp': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } }, '@keyframes gsDown': { from: { transform: 'translateY(0)' }, to: { transform: 'translateY(100%)' } } })}>
       {/* 헤더 — 장비명·장수 + 닫기 */}
       <Box sx={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider' }}>
@@ -396,10 +396,18 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
         <Box sx={{ fontSize: 11, color: 'text.disabled' }}>제조사 칩을 눌러 나란히 비교</Box>
         <IconButton size="small" aria-label="닫기" onClick={requestClose}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
       </Box>
-      {/* 본문 — 미리보기(카드 배열 순서 고정 슬롯) + 콘택트시트(오른쪽/아래) */}
+      {/* 본문 — 미리보기(카드 배열 순서 고정 슬롯, 항상 2열: 1개사면 왼쪽 + 오른쪽은 비교사 자리) + 콘택트시트 */}
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
         <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', gap: 0.75, p: 1 }}>
           {columns.map((_, c) => previewSlot(c))}
+          {columns.length < 2 && (
+            <Box key="vacant" sx={{ flex: 1, minWidth: 0, position: 'relative', borderRadius: 2, overflow: 'hidden', bgcolor: 'background.default', border: 1, borderColor: 'divider', borderStyle: 'dashed' }}>
+              <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75, color: 'text.disabled' }}>
+                <ImageOutlinedIcon sx={{ fontSize: 26, opacity: 0.5 }} />
+                <Box sx={{ fontSize: 11.5 }}>비교 제조사 자리 — 데모결과가 등록되면 표시</Box>
+              </Box>
+            </Box>
+          )}
         </Box>
         <Box sx={{ flex: 'none', width: { xs: '100%', md: 320 }, minHeight: 0, borderLeft: { md: 1 }, borderTop: { xs: 1, md: 0 }, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ flex: 'none', fontSize: 11, color: 'text.disabled', px: 1.25, pt: 1, pb: 0.5 }}>훑어보기 — 제조사별</Box>
@@ -527,21 +535,12 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
   const padSpan = basis - makers.length // 좌우 각각의 패드 서브컬럼 수: 0(가득)·1(가운데)
 
   return (
-    <Box sx={{ mb: 2.5 }}>
-      {/* 상단 = 버튼만(제목은 표 좌상단 셀). 값 변경이 있으면 '변경 이력' 우상단 점 배지(배너 대체) */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
-        <Box sx={{ flex: 1 }} />
-        {canEdit && <Button size="small" startIcon={<TuneIcon sx={{ fontSize: 15 }} />} onClick={onEditMetrics} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>지표 편집</Button>}
-        <Tooltip title={latestValueChange ? `최근 값 변경 — ${latestValueChange.maker} · ${latestValueChange.changedBy}` : ''} arrow disableHoverListener={!latestValueChange}>
-          <Badge color="warning" variant="dot" invisible={!latestValueChange} sx={{ '& .MuiBadge-badge': { top: 5, right: 2, minWidth: 6, width: 6, height: 6, borderRadius: '3px' } }}>
-            <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 15 }} />} onClick={onViewValueHistory} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>변경 이력</Button>
-          </Badge>
-        </Tooltip>
-      </Box>
+    // 그룹 셸 — 한 데모(장비종류) 단위 묶음. 그룹끼리는 카드 경계로 구분, 내부는 표(밝은 면) vs 코멘트(어두운 인셋)로 역할 대비
+    <Box sx={{ mb: 3, border: 1, borderColor: 'divider', borderRadius: '14px', bgcolor: 'background.paper', p: { xs: 1.25, md: 1.5 }, boxShadow: '0 6px 18px rgba(0,0,0,.16)' }}>
 
-      {/* 비교표(왼쪽·PC 절반 폭) + 코멘트(오른쪽 절반, 좁은 화면은 표 아래) */}
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', gap: 1.5 }}>
-      <Box sx={{ flex: { xs: '0 1 auto', md: '1 1 0' }, minWidth: 0, maxWidth: '100%', border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
+      {/* 비교표(왼쪽·PC 절반 폭) + 코멘트(오른쪽 절반 인셋 패널, 좁은 화면은 표 아래) */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'stretch', gap: 1.5 }}>
+      <Box sx={{ flex: { xs: '0 1 auto', md: '1 1 0' }, minWidth: 0, maxWidth: '100%', p: 0.25, overflowX: 'auto' }}>
         <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: '100%', minWidth: tableMinW }}>
           {/* 열 정의 — 라벨(고정) + 등분 서브컬럼(카드 1장 = 2칸) */}
           <Box component="colgroup">
@@ -550,9 +549,19 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
           </Box>
           <Box component="thead">
             <Box component="tr">
-              {/* 1행1열 = 장비명(가운데·중앙 정렬) */}
+              {/* 1행1열 = 장비명 + 지표편집·변경이력 아이콘(값 변경 시 점 배지) */}
               <Box component="th" sx={{ textAlign: 'center', verticalAlign: 'middle', p: '4px 8px', borderRight: 1, borderColor: 'divider' }}>
                 <Box sx={{ fontSize: 13.5, fontWeight: 800, lineHeight: 1.3 }}>{equipment}</Box>
+                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.25, mt: 0.5 }}>
+                  {canEdit && (
+                    <Tooltip title="지표 편집"><IconButton size="small" aria-label="지표 편집" onClick={onEditMetrics} sx={{ p: '2px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><TuneIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+                  )}
+                  <Tooltip title={latestValueChange ? `변경 이력 — 최근: ${latestValueChange.maker} · ${latestValueChange.changedBy}` : '변경 이력'} arrow>
+                    <Badge color="warning" variant="dot" invisible={!latestValueChange} sx={{ '& .MuiBadge-badge': { top: 3, right: 3, minWidth: 6, width: 6, height: 6, borderRadius: '3px' } }}>
+                      <IconButton size="small" aria-label="변경 이력" onClick={onViewValueHistory} sx={{ p: '2px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><HistoryIcon sx={{ fontSize: 15 }} /></IconButton>
+                    </Badge>
+                  </Tooltip>
+                </Box>
               </Box>
               {padSpan > 0 && <Box component="th" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
               {makers.map((m, mi) => (
@@ -576,11 +585,11 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
               .map(([labelTxt, get]) => (
                 <Box component="tr" key={labelTxt}>
                   <Box component="td" sx={{ textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>{labelTxt}</Box>
-                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
+                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
                   {makers.map((m, mi) => (
-                    <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'left', p: '5px 8px', fontSize: 11, lineHeight: 1.5, color: 'text.secondary', whiteSpace: 'pre-wrap', wordBreak: 'break-word', borderLeft: mi > 0 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>{(get(m) || '').trim() || '-'}</Box>
+                    <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'left', p: '5px 8px', fontSize: 11, lineHeight: 1.5, color: 'text.secondary', whiteSpace: 'pre-wrap', wordBreak: 'break-word', borderLeft: mi > 0 || padSpan > 0 ? 1 : 0, borderRight: padSpan > 0 && mi === makers.length - 1 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>{(get(m) || '').trim() || '-'}</Box>
                   ))}
-                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
+                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
                 </Box>
               ))}
             {defs.map((def) => {
@@ -590,13 +599,13 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
                   <Box component="td" sx={{ textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>
                     {def.label}{def.unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.5, fontSize: 10 }}>[{def.unit}]</Box> : null}
                   </Box>
-                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
+                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
                   {makers.map((m, mi) => {
                     const editingThis = valEditKey === m.key
                     const v = shown(m).metrics[def.key]
                     const isBest = best.has(m.key)
                     return (
-                      <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'center', p: '5px 6px', fontSize: 12.5, borderLeft: mi > 0 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>
+                      <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'center', p: '5px 6px', fontSize: 12.5, borderLeft: mi > 0 || padSpan > 0 ? 1 : 0, borderRight: padSpan > 0 && mi === makers.length - 1 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>
                         {editingThis ? (
                           <InputBase value={valDraft[def.key] ?? ''} onChange={(e) => setValDraft((d) => ({ ...d, [def.key]: e.target.value }))} placeholder="-"
                             sx={(th) => ({ width: '100%', fontSize: 12, bgcolor: alpha(th.palette.warning.main, 0.08), border: `1px solid ${alpha(th.palette.warning.main, 0.5)}`, borderRadius: '5px', px: 0.5, py: '1px', '& input': { textAlign: 'center', p: 0 } })} />
@@ -606,15 +615,15 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
                       </Box>
                     )
                   })}
-                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
+                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
                 </Box>
               )
             })}
           </Box>
         </Box>
       </Box>
-        {/* 코멘트 — PC는 표 오른쪽 빈 공간, 좁은 화면은 표 아래로 */}
-        <Box sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
+        {/* 코멘트 — 어두운 인셋 패널(그룹 안에서 표와 역할 대비). PC는 표 오른쪽, 좁은 화면은 표 아래 */}
+        <Box sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minWidth: 0, width: { xs: '100%', md: 'auto' }, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: '10px', p: 1.25 }}>
           <Box sx={{ fontSize: 12.5, fontWeight: 700, color: 'text.secondary', mb: 0.75 }}>코멘트</Box>
           <DemoChat memos={messages} canPost={canEdit} canModerate={canModerate} user={user} busy={chatBusy}
             onPost={(title, body) => onPostChat(equipment, title, body)} onEdit={onEditChat} onDelete={onDeleteChat} />
