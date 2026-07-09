@@ -10,6 +10,7 @@ import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import CircularProgress from '@mui/material/CircularProgress'
 import CloseIcon from '@mui/icons-material/Close'
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutlined'
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import StarIcon from '@mui/icons-material/Star'
@@ -18,13 +19,15 @@ import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { ComboField } from '@/pages/Work/inlineFields'
 import { AttachmentIcon, formatBytes } from '@/pages/Notice/attachmentUI'
-import { addDemoResult, uploadDemoFile, type DemoMetricDef, type DemoRoundRow } from '@/api/demo'
+import { addDemoResult, uploadDemoFile, createMetricDef, updateMetricDef, type DemoMetricDef, type DemoRoundRow } from '@/api/demo'
 import { prepDemoPhoto, isPhotoFile } from '@/utils/imagePrep'
 
 const field = (th: Theme) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: '8px', px: 1.1, py: '7px', fontSize: 13, color: 'text.primary', width: '100%' })
 const label = { fontSize: 11, fontWeight: 700, color: 'text.disabled', letterSpacing: '.02em', mb: 0.35 }
 
 type Pic = { file: File; url: string; name: string }
+/** 폼 지표 행 — 표준 지표 프리필(수정 가능) + 신규 추가. 저장 시 정의 생성/수정 후 값 매핑 */
+type MetricRow = { defId?: number; key: string; label: string; unit: string; value: string; isNew: boolean; origLabel: string; origUnit: string }
 
 /**
  * 데모결과 추가 폼(팀원+) — 장비종류 선택 시 표준 지표 자동 표시(값만 입력).
@@ -41,8 +44,9 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
   const [round, setRound] = useState(1)
   const [date, setDate] = useState('')
   const [place, setPlace] = useState('')
-  const [conditions, setConditions] = useState('')
-  const [metricVals, setMetricVals] = useState<Record<string, string>>({})
+  const [sample, setSample] = useState('')
+  const [condItems, setCondItems] = useState<string[]>([''])
+  const [mrows, setMrows] = useState<MetricRow[]>([])
   const [photos, setPhotos] = useState<Pic[]>([])
   const [cover, setCover] = useState(0)
   const [docs, setDocs] = useState<File[]>([])
@@ -62,6 +66,12 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
   const modelOpts = useMemo(() => [...new Set(rows.filter((r) => r.equipment === equipment && r.maker === maker).map((r) => r.model).filter(Boolean))], [rows, equipment, maker])
   const placeOpts = useMemo(() => [...new Set(rows.map((r) => r.place).filter(Boolean))], [rows])
   const eqDefs = useMemo(() => defs.filter((d) => d.equipment === equipment && d.active).sort((a, b) => a.sort - b.sort), [defs, equipment])
+  // 장비종류가 정해지면 표준 지표를 편집 가능한 행으로 프리필(지표명·단위 수정 가능, 값만 입력)
+  useEffect(() => {
+    setMrows(eqDefs.map((d) => ({ defId: d.id, key: d.key, label: d.label, unit: d.unit, value: '', isNew: false, origLabel: d.label, origUnit: d.unit })))
+  }, [eqDefs])
+  const addMetricRow = () => setMrows((r) => [...r, { key: `k_${crypto.randomUUID().slice(0, 8)}`, label: '', unit: '', value: '', isNew: true, origLabel: '', origUnit: '' }])
+  const setMrow = (i: number, patch: Partial<MetricRow>) => setMrows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   // 다음 회차 자동 — 같은 장비+제조사+모델이 있으면 그 마지막+1, 없으면 같은 장비+제조사(모델 무관)의 마지막+1
   const nextRound = useMemo(() => {
     const eq = equipment.trim(), mk = maker.trim()
@@ -93,8 +103,8 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
 
   const reset = () => {
     photos.forEach((p) => URL.revokeObjectURL(p.url))
-    setEquipment(''); setMaker(''); setModel(''); setRound(1); setDate(''); setPlace(''); setConditions('')
-    setMetricVals({}); setPhotos([]); setCover(0); setDocs([]); setProg('')
+    setEquipment(''); setMaker(''); setModel(''); setRound(1); setDate(''); setPlace(''); setSample(''); setCondItems([''])
+    setMrows([]); setPhotos([]); setCover(0); setDocs([]); setProg('')
   }
   const close = () => { if (busy) return; reset(); onClose() }
 
@@ -106,14 +116,31 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
     if (!user) return onError('로그인이 필요합니다.')
     setBusy(true)
     try {
+      // 지표 정의 반영 — 신규 행은 정의 생성(direction none, 이후 '지표 편집'에서 조정), 라벨/단위 바뀐 표준 행은 수정(이력 자동)
+      const metricsObj: Record<string, string> = {}
+      let sortNext = eqDefs.reduce((m, d) => Math.max(m, d.sort), 0)
+      for (const r of mrows) {
+        const lab = r.label.trim(), un = r.unit.trim(), val = r.value.trim()
+        if (r.isNew) {
+          if (!lab) continue // 이름 없는 신규 행은 무시
+          sortNext += 1
+          setProg('지표 정의 저장…')
+          await createMetricDef({ equipment: equipment.trim(), key: r.key, label: lab, unit: un, direction: 'none', sort: sortNext }, user)
+        } else if (r.defId != null && lab && (lab !== r.origLabel || un !== r.origUnit)) {
+          setProg('지표 정의 수정…')
+          await updateMetricDef(r.defId, { label: lab, unit: un }, user)
+        }
+        if (val) metricsObj[r.key] = val
+      }
       const upPhotos: { name: string; path: string }[] = []
       for (let i = 0; i < photos.length; i++) { setProg(`사진 업로드 ${i + 1}/${photos.length}`); const m = await uploadDemoFile(photos[i].file); upPhotos.push({ name: m.name, path: m.path }) }
       const upFiles: { name: string; path: string; type: string }[] = []
       for (let i = 0; i < docs.length; i++) { setProg(`파일 업로드 ${i + 1}/${docs.length}`); const m = await uploadDemoFile(docs[i]); upFiles.push({ name: m.name, path: m.path, type: m.type }) }
       setProg('저장 중…')
       await addDemoResult({
-        equipment: equipment.trim(), maker: maker.trim(), model: model.trim(), round, date, place: place.trim(), conditions: conditions.trim(),
-        metrics: metricVals, photos: upPhotos, files: upFiles, cover: Math.min(cover, Math.max(0, upPhotos.length - 1)), author: user,
+        equipment: equipment.trim(), maker: maker.trim(), model: model.trim(), round, date, place: place.trim(),
+        conditions: condItems.map((t) => t.trim()).filter(Boolean).join('\n'), sample: sample.trim(),
+        metrics: metricsObj, photos: upPhotos, files: upFiles, cover: Math.min(cover, Math.max(0, upPhotos.length - 1)), author: user,
       })
       setBusy(false); reset(); onSaved()
     } catch (e) { setBusy(false); setProg(''); onError(e instanceof Error ? e.message : '저장에 실패했습니다') }
@@ -140,21 +167,41 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
           <Box><Box sx={label}>방문일</Box><Box component="input" type="date" value={date} onChange={(e) => setDate((e.target as HTMLInputElement).value)} sx={(th) => ({ ...field(th), colorScheme: 'dark' })} /></Box>
           <Box><Box sx={label}>데모센터</Box><ComboField value={place} onChange={setPlace} options={placeOpts} placeholder="예: 용인 데모센터" ariaLabel="데모센터" /></Box>
         </Box>
-        <Box sx={{ mb: 1.25 }}><Box sx={label}>테스트 조건</Box><InputBase value={conditions} onChange={(e) => setConditions(e.target.value)} placeholder="예: 챔버압 20mTorr · RF 700W" sx={(th) => ({ ...field(th) })} /></Box>
+        {/* 샘플 정보 */}
+        <Box sx={{ mb: 1 }}><Box sx={label}>샘플 정보</Box><InputBase value={sample} onChange={(e) => setSample(e.target.value)} placeholder="예: 유리 기판 위 SiO2 1μm 패턴 웨이퍼" sx={(th) => ({ ...field(th) })} /></Box>
 
-        {/* 핵심 지표 — 장비종류의 표준 지표 자동 표시 */}
+        {/* 테스트 조건 — ⊕로 조건 항목 추가(여러 개) */}
         <Box sx={{ mb: 1.25 }}>
-          <Box sx={label}>핵심 지표 {equipment && <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400 }}>· {equipment} 표준</Box>}</Box>
+          <Box sx={{ ...label, display: 'flex', alignItems: 'center', gap: 0.5 }}>테스트 조건
+            <Tooltip title="조건 항목 추가"><IconButton size="small" aria-label="테스트 조건 추가" onClick={() => setCondItems((c) => [...c, ''])} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}><AddCircleOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+          </Box>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
+            {condItems.map((cv, i) => (
+              <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <InputBase value={cv} onChange={(e) => setCondItems((c) => c.map((x, j) => (j === i ? e.target.value : x)))} placeholder={i === 0 ? '예: 챔버압 20mTorr · RF 700W' : '조건 추가…'} sx={(th) => ({ ...field(th), flex: 1 })} />
+                {condItems.length > 1 && <IconButton size="small" aria-label="조건 삭제" onClick={() => setCondItems((c) => c.filter((_, j) => j !== i))} sx={{ p: '2px', color: 'text.disabled' }}><CloseIcon sx={{ fontSize: 13 }} /></IconButton>}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+
+        {/* 핵심 지표 — 표준 지표 프리필(지표명·단위 수정 가능) + ⊕ 지표 추가 */}
+        <Box sx={{ mb: 1.25 }}>
+          <Box sx={{ ...label, display: 'flex', alignItems: 'center', gap: 0.5 }}>핵심 지표 {equipment && <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400 }}>· {equipment} 표준(수정 가능)</Box>}
+            {!!equipment && <Tooltip title="지표 추가"><IconButton size="small" aria-label="지표 추가" onClick={addMetricRow} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}><AddCircleOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>}
+          </Box>
           {!equipment ? (
             <Box sx={{ fontSize: 12, color: 'text.disabled', py: 0.5 }}>장비종류를 먼저 선택하세요.</Box>
-          ) : eqDefs.length === 0 ? (
-            <Box sx={{ fontSize: 12, color: 'text.disabled', py: 0.5 }}>이 장비의 표준 지표가 없습니다. 저장 후 “지표 편집”에서 지표를 추가하고 값을 입력하세요.</Box>
+          ) : mrows.length === 0 ? (
+            <Box sx={{ fontSize: 12, color: 'text.disabled', py: 0.5 }}>이 장비의 표준 지표가 없습니다. 위 ⊕로 지표를 추가하세요.</Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
-              {eqDefs.map((d) => (
-                <Box key={d.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                  <Box sx={{ width: 120, flex: 'none', fontSize: 12.5, fontWeight: 600, color: 'text.secondary', textAlign: 'right', pr: 0.5 }}>{d.label}{d.unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.4, fontSize: 10.5 }}>{d.unit}</Box> : null}</Box>
-                  <InputBase value={metricVals[d.key] ?? ''} onChange={(e) => setMetricVals((m) => ({ ...m, [d.key]: e.target.value }))} placeholder="값" sx={(th) => ({ ...field(th), flex: 1 })} />
+              {mrows.map((r, i) => (
+                <Box key={r.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <InputBase value={r.label} onChange={(e) => setMrow(i, { label: e.target.value })} placeholder="지표명" sx={(th) => ({ ...field(th), flex: '0 0 34%', fontSize: 12.5 })} />
+                  <InputBase value={r.unit} onChange={(e) => setMrow(i, { unit: e.target.value })} placeholder="단위" sx={(th) => ({ ...field(th), flex: '0 0 72px', fontSize: 12 })} />
+                  <InputBase value={r.value} onChange={(e) => setMrow(i, { value: e.target.value })} placeholder="값" sx={(th) => ({ ...field(th), flex: 1 })} />
+                  {r.isNew && <IconButton size="small" aria-label="지표 행 삭제" onClick={() => setMrows((rows) => rows.filter((_, j) => j !== i))} sx={{ p: '2px', color: 'text.disabled' }}><CloseIcon sx={{ fontSize: 13 }} /></IconButton>}
                 </Box>
               ))}
             </Box>

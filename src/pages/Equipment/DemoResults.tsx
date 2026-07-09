@@ -178,15 +178,37 @@ function Lightbox({ photos, idx, onIdx, onClose }: { photos: DemoPhotoRef[]; idx
     window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey)
   }, [move, onClose])
   const p = photos[idx]
+  // 좌/우 엣지 호버 내비게이션 — 사진 안 좌·우 영역에 마우스를 올리면 끝단이 은은하게 빛나며(glossy)
+  // 쉐브론이 떠오르고, 클릭하면 그 방향으로 넘어간다(화살표 버튼 대체). 키보드 ←→도 유지.
+  const edgeZone = (dir: -1 | 1) => (
+    <Box role="button" aria-label={dir < 0 ? '이전 사진' : '다음 사진'}
+      onClick={(e) => { e.stopPropagation(); move(dir) }}
+      sx={{
+        position: 'absolute', top: 0, bottom: 0, width: '32%', cursor: 'pointer',
+        ...(dir < 0 ? { left: 0, borderRadius: '8px 0 0 8px' } : { right: 0, borderRadius: '0 8px 8px 0' }),
+        display: 'flex', alignItems: 'center', justifyContent: dir < 0 ? 'flex-start' : 'flex-end',
+        opacity: 0, transition: 'opacity .18s ease',
+        background: dir < 0
+          ? 'linear-gradient(90deg, rgba(255,255,255,.2), rgba(255,255,255,.05) 45%, transparent 75%)'
+          : 'linear-gradient(270deg, rgba(255,255,255,.2), rgba(255,255,255,.05) 45%, transparent 75%)',
+        '&:hover': { opacity: 1 },
+      }}>
+      {dir < 0
+        ? <ChevronLeftIcon sx={{ fontSize: 38, color: '#fff', ml: 0.5, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} />
+        : <ChevronRightIcon sx={{ fontSize: 38, color: '#fff', mr: 0.5, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} />}
+    </Box>
+  )
   return (
     <Box onClick={onClose} sx={{ position: 'fixed', inset: 0, zIndex: 1400, bgcolor: 'rgba(0,0,0,.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
       <IconButton onClick={onClose} aria-label="닫기" sx={{ position: 'absolute', top: 12, right: 12, color: '#fff', bgcolor: 'rgba(0,0,0,.4)' }}><CloseIcon /></IconButton>
-      {photos.length > 1 && <IconButton onClick={(e) => { e.stopPropagation(); move(-1) }} aria-label="이전" sx={{ position: 'absolute', left: 12, color: '#fff', bgcolor: 'rgba(0,0,0,.4)' }}><ChevronLeftIcon /></IconButton>}
       <Box onClick={(e) => e.stopPropagation()} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-        <LightboxImg photo={p} />
+        <Box sx={{ position: 'relative' }}>
+          <LightboxImg photo={p} />
+          {photos.length > 1 && edgeZone(-1)}
+          {photos.length > 1 && edgeZone(1)}
+        </Box>
         <Box sx={{ color: 'rgba(255,255,255,.9)', fontSize: 13 }}>{p?.name}<Box component="span" sx={{ color: 'rgba(255,255,255,.5)', ml: 1 }}>{idx + 1} / {photos.length}</Box></Box>
       </Box>
-      {photos.length > 1 && <IconButton onClick={(e) => { e.stopPropagation(); move(1) }} aria-label="다음" sx={{ position: 'absolute', right: 12, color: '#fff', bgcolor: 'rgba(0,0,0,.4)' }}><ChevronRightIcon /></IconButton>}
     </Box>
   )
 }
@@ -302,15 +324,15 @@ interface GItem { roundNo: number; idx: number; name: string; path?: string; pho
 interface GCol { key: string; maker: string; color: string; items: GItem[] }
 
 /**
- * 사진 갤러리 시트(B+C 절충) — 비교표는 위에 유지, 화면 하단 고정 시트(높이 1/2)로 뜬다.
- *  · 썸네일 클릭 = 왼쪽 큰 미리보기 / 미리보기 클릭 = 전체화면 확대
- *  · 제조사 칩 토글 = 그 제조사 미리보기 고정(여러 개 켜면 좌우 나란히 비교, 다시 누르면 해제)
+ * 사진 갤러리 시트(B+C 절충) — 비교표는 위에 유지, 화면 하단 고정 시트로 뜬다.
+ *  · 미리보기 = 제조사 카드 배열과 같은 고정 슬롯(1개사=가운데 1칸, 2개사=좌우 분할 고정)
+ *  · 제조사 칩 토글(색 채움) = 그 슬롯에 사진 표시/해제 · 썸네일 클릭 = 해당 슬롯 사진 교체
+ *  · 시트 높이 = 16:9 사진 2장이 나란히 꽉 차는 높이(화면 폭 기준 자동)
  *  · 닫힘 = 내려가는 모션(백드롭·X·Esc 공통)
  */
 function GallerySheet({ equipment, columns, initial, onClose }: { equipment: string; columns: GCol[]; initial: { c: number; i: number }; onClose: () => void }) {
-  const [sel, setSel] = useState(initial)
   const [slots, setSlots] = useState<number[]>(() => columns.map((_, c) => (c === initial.c ? initial.i : 0)))
-  const [active, setActive] = useState<number[]>([]) // 켜진 제조사 열(누른 순서 유지)
+  const [active, setActive] = useState<number[]>([initial.c]) // 켜진 제조사(슬롯에 사진 표시). 배열이지만 표시는 항상 카드 배열 순서
   const [zoom, setZoom] = useState<{ photos: DemoPhotoRef[]; idx: number } | null>(null)
   const [closing, setClosing] = useState(false) // 닫힘 모션 재생 후 실제 unmount
   const total = columns.reduce((s, c) => s + c.items.length, 0)
@@ -329,22 +351,27 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
 
   const openZoom = (it?: GItem) => { if (it && it.photos.length) setZoom({ photos: it.photos, idx: it.idx }) }
   const toggleMaker = (c: number) => setActive((a) => (a.includes(c) ? a.filter((x) => x !== c) : [...a, c]))
-  // 썸네일 클릭 — 칩이 켜져 있으면 그 열 슬롯 교체(비교 유지), 꺼져 있으면 단일 보기
+  // 썸네일 클릭 — 그 제조사 슬롯을 켜고(꺼져 있었다면) 사진 교체
   const pickThumb = (c: number, i: number) => {
-    if (active.length) {
-      if (!active.includes(c)) setActive((a) => [...a, c]) // 비활성 열 클릭 = 자동으로 켜서 바로 보기
-      setSlots((s) => s.map((v, ci) => (ci === c ? i : v)))
-    } else setSel({ c, i })
+    setActive((a) => (a.includes(c) ? a : [...a, c]))
+    setSlots((s) => s.map((v, ci) => (ci === c ? i : v)))
   }
 
-  // 미리보기 1칸 — 큰 사진(전체 보기) + 캡션 + 확대 아이콘. label = 제조사 슬롯 표시(비교 시)
-  const preview = (c: number, i: number, label?: string) => {
-    const col = columns[c]; const it = col?.items[i]
+  // 미리보기 슬롯 — 카드 배열 순서 고정. 칩 꺼짐 = 빈 슬롯(자리 유지), 켜짐 = 사진(전체 보기)+캡션+확대
+  const previewSlot = (c: number) => {
+    const col = columns[c]
+    const on = active.includes(c)
+    const it = on ? col.items[slots[c]] : undefined
     return (
-      <Box key={label ?? 'one'} onClick={() => openZoom(it)}
+      <Box key={col.key} onClick={() => openZoom(it)}
         sx={{ flex: 1, minWidth: 0, position: 'relative', borderRadius: 2, overflow: 'hidden', bgcolor: 'background.default', border: 1, borderColor: 'divider', cursor: it && it.photos.length ? 'zoom-in' : 'default' }}>
-        <Photo photo={it ? { name: it.name, path: it.path } : undefined} fit="contain" />
-        {label && <Box sx={{ position: 'absolute', top: 8, left: 8, fontSize: 11, fontWeight: 700, color: '#fff', bgcolor: alpha(col.color, 0.92), borderRadius: '6px', px: 1, py: '2px' }}>{label}</Box>}
+        {it ? <Photo photo={{ name: it.name, path: it.path }} fit="contain" /> : (
+          <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75, color: 'text.disabled' }}>
+            <ImageOutlinedIcon sx={{ fontSize: 26, opacity: 0.6 }} />
+            <Box sx={{ fontSize: 11.5 }}>{col.maker} — 칩이나 사진을 눌러 표시</Box>
+          </Box>
+        )}
+        {columns.length > 1 && <Box sx={{ position: 'absolute', top: 8, left: 8, fontSize: 11, fontWeight: 700, color: '#fff', bgcolor: alpha(col.color, on ? 0.92 : 0.4), borderRadius: '6px', px: 1, py: '2px' }}>{col.maker}</Box>}
         {it && <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '8px 10px', fontSize: 12, color: '#fff', background: 'linear-gradient(0deg, rgba(0,0,0,.6), transparent)' }}><b>{col.maker} · {it.roundNo}차</b> · {it.name}</Box>}
         {it && it.photos.length > 0 && <ZoomOutMapIcon sx={{ position: 'absolute', bottom: 8, right: 8, fontSize: 16, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', borderRadius: '4px', p: '2px' }} />}
       </Box>
@@ -356,7 +383,10 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
     {/* 백드롭 — 시트 밖(비교표 등) 클릭 시 닫힘. 옅은 스크림으로 클릭 가능함을 암시 */}
     <Box aria-hidden onClick={requestClose} sx={(th) => ({ position: 'fixed', inset: 0, zIndex: th.zIndex.drawer, bgcolor: 'rgba(0,0,0,.2)', opacity: closing ? 0 : 1, transition: 'opacity .2s ease', pointerEvents: closing ? 'none' : 'auto' })} />
     <Box
-      sx={(th) => ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: th.zIndex.drawer + 1, height: '50vh', bgcolor: 'background.paper', borderTop: `1px solid ${th.palette.divider}`, borderRadius: '16px 16px 0 0', boxShadow: '0 -12px 32px rgba(0,0,0,.42)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: closing ? 'gsDown .2s ease forwards' : 'gsUp .22s ease', '@keyframes gsUp': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } }, '@keyframes gsDown': { from: { transform: 'translateY(0)' }, to: { transform: 'translateY(100%)' } } })}>
+      sx={(th) => ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: th.zIndex.drawer + 1,
+        // 높이 = 슬롯이 16:9 비율로 여백 없이 차는 값(폭 기준 자동): (미리보기 폭 / 슬롯수) * 9/16 + 헤더·패딩
+        height: { xs: '56vh', md: `clamp(320px, calc((100vw - 343px) / ${Math.max(columns.length, 1)} * 0.5625 + 58px), 84vh)` },
+        bgcolor: 'background.paper', borderTop: `1px solid ${th.palette.divider}`, borderRadius: '16px 16px 0 0', boxShadow: '0 -12px 32px rgba(0,0,0,.42)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: closing ? 'gsDown .2s ease forwards' : 'gsUp .22s ease', '@keyframes gsUp': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } }, '@keyframes gsDown': { from: { transform: 'translateY(0)' }, to: { transform: 'translateY(100%)' } } })}>
       {/* 헤더 — 장비명·장수 + 닫기 */}
       <Box sx={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider' }}>
         <ImageOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', flex: 'none' }} />
@@ -366,10 +396,10 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
         <Box sx={{ fontSize: 11, color: 'text.disabled' }}>제조사 칩을 눌러 나란히 비교</Box>
         <IconButton size="small" aria-label="닫기" onClick={requestClose}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
       </Box>
-      {/* 본문 — 미리보기(왼쪽/위) + 콘택트시트(오른쪽/아래). 칩 켠 제조사들이 좌우 나란히 */}
+      {/* 본문 — 미리보기(카드 배열 순서 고정 슬롯) + 콘택트시트(오른쪽/아래) */}
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
         <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', gap: 0.75, p: 1 }}>
-          {active.length ? active.map((c) => preview(c, slots[c], columns[c].maker)) : preview(sel.c, sel.i)}
+          {columns.map((_, c) => previewSlot(c))}
         </Box>
         <Box sx={{ flex: 'none', width: { xs: '100%', md: 320 }, minHeight: 0, borderLeft: { md: 1 }, borderTop: { xs: 1, md: 0 }, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ flex: 'none', fontSize: 11, color: 'text.disabled', px: 1.25, pt: 1, pb: 0.5 }}>훑어보기 — 제조사별</Box>
@@ -378,15 +408,16 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
               const on = active.includes(c)
               return (
               <Box key={col.key} sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.75, overflowY: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
-                {/* 제조사 칩 — 클릭 = 왼쪽 미리보기 고정 토글(여러 개 = 나란히 비교) */}
+                {/* 제조사 칩 — 클릭 = 그 슬롯 표시 토글. 켜짐=색 채움, 꺼짐=옅은 틴트(테두리 효과 없음) */}
                 <Box role="button" tabIndex={0} aria-pressed={on} onClick={() => toggleMaker(c)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMaker(c) } }}
-                  sx={{ position: 'sticky', top: 0, zIndex: 1, fontSize: 11.5, fontWeight: 700, color: '#fff', bgcolor: col.color, borderRadius: '6px', textAlign: 'center', py: '3px', cursor: 'pointer', userSelect: 'none', outline: on ? '2px solid #fff' : '2px solid transparent', outlineOffset: '-2px', opacity: active.length && !on ? 0.55 : 1, transition: 'opacity .15s' }}>
+                  sx={{ position: 'sticky', top: 0, zIndex: 1, fontSize: 11.5, fontWeight: 700, borderRadius: '6px', textAlign: 'center', py: '3px', cursor: 'pointer', userSelect: 'none', transition: 'background-color .18s, color .18s',
+                    ...(on ? { bgcolor: col.color, color: '#fff' } : { bgcolor: alpha(col.color, 0.16), color: col.color, '&:hover': { bgcolor: alpha(col.color, 0.3) } }) }}>
                   {col.maker}
                 </Box>
                 {col.items.length === 0 && <Box sx={{ fontSize: 10.5, color: 'text.disabled', textAlign: 'center', py: 1 }}>사진 없음</Box>}
                 {col.items.map((it, i) => {
-                  const picked = active.length ? (on && slots[c] === i) : (sel.c === c && sel.i === i)
+                  const picked = on && slots[c] === i
                   return (
                     <Box key={i} role="button" tabIndex={0} aria-pressed={picked}
                       onClick={() => pickThumb(c, i)}
@@ -539,6 +570,19 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
             {defs.length === 0 && (
               <Box component="tr"><Box component="td" colSpan={1 + subCols} sx={{ p: 1.5, textAlign: 'center', color: 'text.disabled', fontSize: 12 }}>등록된 표준 지표가 없습니다. 위 "지표 편집"에서 추가하세요.</Box></Box>
             )}
+            {/* 샘플·테스트조건 — 선택 회차 기준, 값이 하나라도 있으면 지표 위에 표시(입력폼에서 작성한 내용이 여기 보임) */}
+            {([['샘플', (m: DemoMakerGroup) => shown(m).sample], ['테스트조건', (m: DemoMakerGroup) => shown(m).conditions]] as const)
+              .filter(([, get]) => makers.some((m) => (get(m) || '').trim()))
+              .map(([labelTxt, get]) => (
+                <Box component="tr" key={labelTxt}>
+                  <Box component="td" sx={{ textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>{labelTxt}</Box>
+                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
+                  {makers.map((m, mi) => (
+                    <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'left', p: '5px 8px', fontSize: 11, lineHeight: 1.5, color: 'text.secondary', whiteSpace: 'pre-wrap', wordBreak: 'break-word', borderLeft: mi > 0 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>{(get(m) || '').trim() || '-'}</Box>
+                  ))}
+                  {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
+                </Box>
+              ))}
             {defs.map((def) => {
               const best = bestFor(def)
               return (

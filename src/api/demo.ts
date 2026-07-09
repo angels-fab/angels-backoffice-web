@@ -26,7 +26,7 @@ export interface DemoPhotoRef { name: string; path?: string }
 export interface DemoFileRef { name: string; path?: string; type?: string }
 export interface DemoRoundRow {
   id: number; equipment: string; maker: string; model: string; round: number
-  date: string; place: string; conditions: string
+  date: string; place: string; conditions: string; sample: string
   metrics: Record<string, string>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
 }
 /** 코멘트(제목 있는 메모카드) — 장비종류별. makers는 구버전 잔존(현재 미사용, 빈 배열) */
@@ -39,13 +39,13 @@ export interface MetricDefHistory {
 
 // ── 매핑 ──
 interface DefRow { id: number; equipment: string; metric_key: string; label: string; unit: string; direction: MetricDirection; sort: number; active: boolean }
-interface ResRow { id: number; equipment: string; maker: string; model: string; round: number; visit_date: string | null; place: string; conditions: string; metrics: Record<string, string> | null; photos: DemoPhotoRef[] | null; files: DemoFileRef[] | null; cover: number }
+interface ResRow { id: number; equipment: string; maker: string; model: string; round: number; visit_date: string | null; place: string; conditions: string; sample_info: string | null; metrics: Record<string, string> | null; photos: DemoPhotoRef[] | null; files: DemoFileRef[] | null; cover: number }
 interface ChatRow { id: number; equipment: string; makers: string[] | null; title: string | null; body: string; author: string; created_at: string }
 
 const toDef = (r: DefRow): DemoMetricDef => ({ id: r.id, equipment: r.equipment, key: r.metric_key, label: r.label, unit: r.unit, direction: r.direction, sort: r.sort, active: r.active })
 const toRound = (r: ResRow): DemoRoundRow => ({
   id: r.id, equipment: r.equipment, maker: r.maker, model: r.model, round: r.round,
-  date: r.visit_date || '', place: r.place, conditions: r.conditions,
+  date: r.visit_date || '', place: r.place, conditions: r.conditions, sample: r.sample_info || '',
   metrics: r.metrics || {}, photos: Array.isArray(r.photos) ? r.photos : [], files: Array.isArray(r.files) ? r.files : [], cover: r.cover || 0,
 })
 
@@ -186,14 +186,14 @@ export async function removeDemoFiles(paths: string[]): Promise<void> {
 // ── 데모결과 쓰기(팀원+) ──
 export interface DemoResultInput {
   equipment: string; maker: string; model: string; round: number
-  date: string; place: string; conditions: string
+  date: string; place: string; conditions: string; sample: string
   metrics: Record<string, string>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
 }
 export async function addDemoResult(p: DemoResultInput & { author: string }): Promise<void> {
   await ensureSession()
   const { error } = await withTimeout(supabase.from('demo_results').insert({
     equipment: p.equipment, maker: p.maker, model: p.model, round: p.round,
-    visit_date: p.date || null, place: p.place, conditions: p.conditions,
+    visit_date: p.date || null, place: p.place, conditions: p.conditions, sample_info: p.sample,
     metrics: p.metrics, photos: p.photos, files: p.files, cover: p.cover,
     created_by: p.author, updated_by: p.author,
   }), DB_TIMEOUT, '데모결과 저장')
@@ -219,6 +219,7 @@ export async function updateDemoResult(id: number, p: Partial<DemoResultInput> &
   if (p.date !== undefined) patch.visit_date = p.date || null
   if (p.place !== undefined) patch.place = p.place
   if (p.conditions !== undefined) patch.conditions = p.conditions
+  if (p.sample !== undefined) patch.sample_info = p.sample
   if (p.metrics !== undefined) patch.metrics = p.metrics
   if (p.photos !== undefined) patch.photos = p.photos
   if (p.files !== undefined) patch.files = p.files
