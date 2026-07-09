@@ -20,6 +20,7 @@ import { addCalEvent, updateCalEvent, deleteCalEvent, type CalScope } from '@/ap
 import { useRole } from '@/auth/role'
 import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
+import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
 
 // 제목에서 '@참석자' 부분을 뗀 기본 제목([구분]·내용) — 참석자는 별도 피커가 관리
 const baseTitle = (t: string): string => {
@@ -27,6 +28,33 @@ const baseTitle = (t: string): string => {
   return (at >= 0 ? t.slice(0, at) : t).trim()
 }
 const memberColor = (name: string): string => MEMBERS.find((m) => m.name === name)?.color ?? 'var(--text3)'
+
+// 종류 선택 시 제목 앞에 붙일 표준 태그 — calSlice.classify()가 그대로 인식하는 문구
+// ([국내출장]/[국외출장]은 '출장' 매칭 + 국외 판별까지 한 번에 통과)
+const STD_TAG: Record<RealCat, string> = {
+  meeting: '회의', work: '업무', edu: '교육',
+  trip_dom: '국내출장', trip_intl: '국외출장',
+  recruit: '기타', leave: '연차', etc: '기타',
+}
+
+/** 기본 제목에서 선두 [구분] 태그 분리 + 종류 판별(calSlice.classify와 동일 규칙) — 수정 프리필용 */
+function parseTitleTag(base: string): { cat: RealCat | null; tag: string | null; content: string } {
+  const m = (base || '').match(/^\s*\[([^\]]+)\]\s*/)
+  if (!m) return { cat: null, tag: null, content: (base || '').trim() }
+  const tag = m[1]
+  const content = base.slice(m[0].length).trim()
+  let cat: RealCat | null = null
+  if (/연차|반차|휴가|사가/.test(tag)) cat = 'leave'
+  else if (/회의|미팅|보고|위원회/.test(tag)) cat = 'meeting'
+  else if (/업무/.test(tag)) cat = 'work'
+  else if (/교육|세미나|워크숍|강의/.test(tag)) cat = 'edu'
+  else if (/출장|실사|방문/.test(tag)) cat = /국외|해외/.test(base) ? 'trip_intl' : 'trip_dom'
+  else cat = 'etc'
+  return { cat, tag, content }
+}
+
+// 종류 픽커에 노출할 순서 — CAT_ORDER에서 채용(recruit) 제외(필터 미노출과 동일 정책)
+const PICK_CATS: RealCat[] = CAT_ORDER.filter((c) => c !== 'recruit')
 
 interface Props {
   open: boolean
@@ -66,8 +94,11 @@ function inclusiveEndDate(endDt: string): string {
  */
 export default function CalEventWrite({ open, mode, event, initialDate, initialEndDate, onClose, onSaved }: Props) {
   const { user, isAdmin } = useRole()
-  const [title, setTitle] = useState('') // 기본 제목([구분]·내용) — @참석자 제외
+  const [title, setTitle] = useState('') // 내용 제목 — [구분] 태그·@참석자 제외(둘 다 별도 피커가 관리)
   const [attendees, setAttendees] = useState<string[]>([]) // 참석자 이름들(제목 @뒤로 합쳐 저장)
+  const [cat, setCat] = useState<RealCat | null>(null) // 일정 종류 — 선택 시 제목 앞 [태그]로 저장
+  const [origTag, setOrigTag] = useState<string | null>(null) // 수정 시 원본 태그(종류 안 바꾸면 원문 보존)
+  const [origCat, setOrigCat] = useState<RealCat | null>(null)
   const [allDay, setAllDay] = useState(false)
   const [date, setDate] = useState('') // 시작일
   const [endDate, setEndDate] = useState('') // 종료일(선택 — 비우면 시작일)
@@ -91,7 +122,11 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     setRepeat('none')
     setRepeatUntil('')
     if (mode === 'edit' && event) {
-      setTitle(baseTitle(event.title))
+      const parsed = parseTitleTag(baseTitle(event.title))
+      setTitle(parsed.content)
+      setCat(parsed.cat)
+      setOrigTag(parsed.tag)
+      setOrigCat(parsed.cat)
       setAttendees(eventParticipants(event.title))
       setAllDay(event.allDay)
       setDate(dateOnly(event.start))
@@ -107,6 +142,9 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       }
     } else {
       setTitle('')
+      setCat(null)
+      setOrigTag(null)
+      setOrigCat(null)
       setAttendees([])
       setAllDay(false)
       setDate(initialDate || '')
@@ -122,8 +160,10 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   const buildInput = () => {
     const s = date
     const e = repeat !== 'none' ? date : (endDate || date) // 반복 일정은 단일 날짜 기준
-    // 기본 제목 + '@참석자1, 참석자2'(있을 때만) — 표시/파싱 규칙과 동일 포맷
-    const fullTitle = title.trim() + (attendees.length ? ` @${attendees.join(', ')}` : '')
+    // [구분] + 내용 + '@참석자'(있을 때만) — 표시/파싱 규칙과 동일 포맷.
+    // 수정에서 종류를 안 바꿨으면 원본 태그 문구 보존(예: '[출장] 국내(…)' 형식 유지), 바꿨으면 표준 태그.
+    const tagText = cat ? (cat === origCat && origTag ? origTag : STD_TAG[cat]) : null
+    const fullTitle = (tagText ? `[${tagText}] ` : '') + title.trim() + (attendees.length ? ` @${attendees.join(', ')}` : '')
     return {
       title: fullTitle,
       loc: loc.trim(),
@@ -212,7 +252,40 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           <IconButton onClick={onClose} disabled={busy} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
         </Box>
 
-        <TextField label="제목" size="small" fullWidth required value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목 (참석자는 아래에서 선택)" />
+        <TextField label="제목" size="small" fullWidth required value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목 (종류·참석자는 아래에서 선택)" />
+
+        <Box>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>일정 종류</Typography>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+            {PICK_CATS.map((c) => {
+              const on = cat === c
+              const color = CAT_META[c].color
+              return (
+                <Box
+                  key={c}
+                  component="button"
+                  type="button"
+                  onClick={() => setCat(on ? null : c)}
+                  sx={{
+                    px: 1.25, height: 28, borderRadius: '999px', cursor: 'pointer',
+                    fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', lineHeight: 1,
+                    border: '1.5px solid', transition: 'all .12s',
+                    borderColor: on ? color : 'divider',
+                    bgcolor: on ? color : 'transparent',
+                    color: on ? '#fff' : 'text.secondary',
+                  }}
+                >
+                  {CAT_META[c].label}
+                </Box>
+              )
+            })}
+          </Box>
+          {!cat && (
+            <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 0.5 }}>
+              선택하지 않으면 제목 문구로 자동 분류돼요
+            </Typography>
+          )}
+        </Box>
 
         <Box>
           <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>참석자</Typography>
