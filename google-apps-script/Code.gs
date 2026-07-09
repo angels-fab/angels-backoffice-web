@@ -41,9 +41,10 @@ function doGet(e) {
     if (String(p.action || '') === 'getImprovements') return getImprovements_();
     // 포털개선요청 답글 읽기 — 삭제 안 된 답글 전체(요청번호별 그룹화는 프런트). 한 번에 로드(N+1 금지).
     if (String(p.action || '') === 'getReplies') return getReplies_();
-    // 구글캘린더↔Supabase 동기화 — 설정(토큰 저장+트리거 설치, 최초 1회) / 수동 실행(검증용)
+    // 구글캘린더↔Supabase 동기화 — 설정(토큰 저장+트리거 설치, 최초 1회) / 수동 실행(검증용) / 즉시 깨우기(앱 저장 직후)
     if (String(p.calsyncsetup || '')) return calSyncSetup_(String(p.calsyncsetup));
     if (String(p.calsyncrun || '') === '1') return calSyncRunHttp_(String(p.token || ''));
+    if (String(p.calsyncnudge || '') === '1') return json_({ status: 'ok', result: syncCalendarNudge_() });
   } catch (err) {
     return json_({ status: 'error', message: String(err) });
   }
@@ -2013,11 +2014,33 @@ function syncRpc_(fn, payload) {
   return JSON.parse(res.getContentText());
 }
 
-// 시간 트리거 대상 — 잠금으로 중복 실행 방지
+// 시간 트리거 대상(10분 안전망) — 잠금으로 중복 실행 방지
 function syncCalendar() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return;
   try { syncCalendarRun_(); } finally { lock.releaseLock(); }
+}
+
+// 즉시 동기화(깨우기) — 앱 저장 직후(?calsyncnudge)·구글캘린더 변경 트리거 공용.
+// '실행 1 + 대기 1' 패턴: 이미 대기 중이면 스킵(그 실행이 이 변경도 포함), 실행 중 새 변경은 다음 대기로.
+// 공개 엔드포인트지만 멱등 + 잠금 + 대기 1개 상한이라 악용돼도 동기화가 자주 도는 것 이상 피해 없음.
+function syncCalendarNudge_() {
+  const cache = CacheService.getScriptCache();
+  if (cache.get('calsync_q')) return { queued: 'already' };
+  cache.put('calsync_q', '1', 90);
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(60000)) { cache.remove('calsync_q'); return { error: 'lock timeout' }; }
+  try {
+    cache.remove('calsync_q'); // 실행 시작 — 이후 변경은 새 대기 슬롯으로
+    return syncCalendarRun_();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 구글캘린더 변경 트리거 대상 — 캘린더에서 일정이 생성/수정/삭제되면 즉시 실행
+function syncCalendarOnEdit() {
+  syncCalendarNudge_();
 }
 
 function syncCalendarRun_() {
@@ -2125,15 +2148,23 @@ function calSyncSetup_(token) {
   try {
     syncRpc_('calendar_sync_ack', { token: token });
   } catch (e) {
-    return json_({ status: 'error', message: '토큰 검증 실패 — Supabase의 토큰과 일치하지 않습니다' });
+    return json_({ status: 'error', message: '토큰 검증 실패', detail: String(e) });
   }
   props.setProperty('CAL_SYNC_TOKEN', token);
   const triggers = ScriptApp.getProjectTriggers();
   for (let i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === 'syncCalendar') ScriptApp.deleteTrigger(triggers[i]);
+    const fn = triggers[i].getHandlerFunction();
+    if (fn === 'syncCalendar' || fn === 'syncCalendarOnEdit') ScriptApp.deleteTrigger(triggers[i]);
   }
+  // ① 10분 타이머(안전망) + ② 캘린더 변경 트리거(구글캘린더→포털 즉시)
   ScriptApp.newTrigger('syncCalendar').timeBased().everyMinutes(10).create();
-  return json_({ status: 'ok', message: '동기화 토큰 저장 + 10분 트리거 설치 완료' });
+  let calTrig = 'ok';
+  try {
+    ScriptApp.newTrigger('syncCalendarOnEdit').forUserCalendar(CALENDAR_ID).onEventUpdated().create();
+  } catch (e) {
+    calTrig = String(e); // 캘린더 트리거 실패해도 타이머는 동작 — 사유를 응답에 포함
+  }
+  return json_({ status: 'ok', message: '동기화 토큰 저장 + 트리거 설치 완료', timer: '10min', calendarTrigger: calTrig });
 }
 
 // 수동 실행(검증용) — 저장된 토큰과 일치해야 실행

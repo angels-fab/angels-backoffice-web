@@ -1,6 +1,18 @@
 import { supabase } from './supabase'
 
 /**
+ * 구글캘린더 동기화 즉시 깨우기(nudge) — 일정 저장/삭제 성공 직후 GAS 동기화를 fire-and-forget으로 호출.
+ * 실패해도 무시(10분 타이머 안전망이 따라잡음). no-cors라 응답은 읽지 않음.
+ */
+const GAS_SYNC_NUDGE_URL =
+  'https://script.google.com/macros/s/AKfycbxwvgPPyZDVTnWl6g7M_Y2vv1U-mrYitz0KUy9SBxfCtSWOzjX1w9oZp90b7don9Fmd/exec?calsyncnudge=1'
+const nudgeCalendarSync = () => {
+  try {
+    void fetch(GAS_SYNC_NUDGE_URL, { mode: 'no-cors', keepalive: true }).catch(() => {})
+  } catch { /* 무시 — 안전망 타이머가 처리 */ }
+}
+
+/**
  * 업무일정 API — Supabase 전환(5단계, 마지막 GAS 의존 제거).
  * 반환 계약은 기존 fetchCalendarEvents(구글캘린더 경유)와 동일:
  *  - start/end 'yyyy-MM-ddTHH:mm' (KST), 종일 end는 구글식 '미포함'(마지막 날 +1일) — calSlice가 -1일 보정.
@@ -146,6 +158,7 @@ export async function addCalEvent(p: CalWriteInput): Promise<{ note?: string }> 
   if (!p.repeat || p.repeat === 'none') {
     const { error } = await supabase.from('calendar_events').insert({ ...toPatch(p), series_id: '', created_by: p.createdBy || '' })
     if (error) throw new Error(error.message || '일정 추가에 실패했습니다')
+    nudgeCalendarSync()
     return {}
   }
   // 반복 — 발생일별 개별 행으로 펼쳐 저장(series_id로 묶음). 종료일 비우면 6개월, 상한 400건.
@@ -163,6 +176,7 @@ export async function addCalEvent(p: CalWriteInput): Promise<{ note?: string }> 
   }))
   const { error } = await supabase.from('calendar_events').insert(rows)
   if (error) throw new Error(error.message || '반복 일정 추가에 실패했습니다')
+  nudgeCalendarSync()
   const truncated = dates.length >= 400 && dates[dates.length - 1] < until
   return {
     note: truncated
@@ -191,6 +205,7 @@ export async function updateCalEvent(
   if (scope === 'one' || !p.seriesId) {
     const { error } = await supabase.from('calendar_events').update(toPatch(p)).eq('id', seriesIdOf(p.id))
     if (error) throw new Error(error.message || '일정 수정에 실패했습니다')
+    nudgeCalendarSync()
     return {}
   }
   if (scope === 'following' && !p.occDate) throw new Error('기준 발생일이 없어 이후 수정을 진행할 수 없습니다')
@@ -208,6 +223,7 @@ export async function updateCalEvent(
   }))
   const failed = results.filter((r) => r.status === 'rejected').length
   if (rows.length && failed === rows.length) throw new Error('반복 일정 수정에 실패했습니다')
+  nudgeCalendarSync()
   const n = rows.length - failed
   return { note: failed ? `${n}건 반영, ${failed}건 실패` : `반복 일정 ${n}건에 반영했어요` }
 }
@@ -220,6 +236,7 @@ export async function deleteCalEvent(
   if (scope === 'one' || !p.seriesId) {
     const { error } = await supabase.from('calendar_events').delete().eq('id', seriesIdOf(p.id))
     if (error) throw new Error(error.message || '일정 삭제에 실패했습니다')
+    nudgeCalendarSync()
     return {}
   }
   if (scope === 'following' && !p.occDate) throw new Error('기준 발생일이 없어 이후 삭제를 진행할 수 없습니다')
@@ -227,6 +244,7 @@ export async function deleteCalEvent(
   if (scope === 'following') q = q.gte('start_at', p.occDate as string)
   const { error } = await q
   if (error) throw new Error(error.message || '반복 일정 삭제에 실패했습니다')
+  nudgeCalendarSync()
   return { note: scope === 'all' ? '반복 일정 전체를 삭제했어요' : '이 일정 및 이후를 삭제했어요' }
 }
 
