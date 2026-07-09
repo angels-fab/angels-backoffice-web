@@ -89,7 +89,8 @@ function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStar
   const coverIdx = Math.min(Math.max(r.cover || 0, 0), Math.max(r.photos.length - 1, 0))
   const cover = r.photos[coverIdx]
   const otherIdx = r.photos.map((_, i) => i).filter((i) => i !== coverIdx)
-  const thumbs = otherIdx.slice(0, 2)
+  const MAX_THUMB = 4 // 하단 그리드 한 줄(4칸). 넘치면 마지막 칸이 +N
+  const thumbs = otherIdx.length <= MAX_THUMB ? otherIdx : otherIdx.slice(0, MAX_THUMB - 1)
   const extra = otherIdx.length - thumbs.length
   return (
     <Box sx={{ width: '100%' }}>
@@ -115,9 +116,9 @@ function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStar
           </Box>
         ))}
       </Box>
-      {/* 사진 영역 — 대표사진(좌, 높이 꽉) + 나머지 작은 그리드(우) + 다 안 담기면 +N 더보기 */}
-      <Box sx={{ position: 'relative', height: 96, border: 1, borderTop: 0, borderColor: 'divider', borderRadius: '0 0 8px 8px', overflow: 'hidden', display: 'flex', gap: '2px', bgcolor: 'background.default' }}>
-        <Box sx={{ flex: '1 1 auto', minWidth: 0, position: 'relative' }}>
+      {/* 사진 영역 — 대표사진(상단, 4:3 비율 유지) + 나머지 작은 그리드(하단) + 넘치면 +N */}
+      <Box sx={{ border: 1, borderTop: 0, borderColor: 'divider', borderRadius: '0 0 8px 8px', overflow: 'hidden', bgcolor: 'background.default' }}>
+        <Box sx={{ position: 'relative', width: '100%', aspectRatio: '4 / 3' }}>
           <Photo photo={cover} onClick={() => { if (r.photos.length) onOpen(r.photos, coverIdx) }} />
           {/* 회차 칩 + '+'(다음 회차 등록) */}
           <Box sx={{ position: 'absolute', top: 4, left: 4, display: 'flex', gap: '3px', flexWrap: 'wrap', pr: 4 }}>
@@ -134,15 +135,18 @@ function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStar
           {r.photos.length > 0 && <ZoomOutMapIcon sx={{ position: 'absolute', bottom: 4, right: 4, fontSize: 14, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', borderRadius: '4px', p: '2px' }} />}
         </Box>
         {thumbs.length > 0 && (
-          <Box sx={{ flex: '0 0 34%', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-            {thumbs.map((pi, ti) => (
-              <Box key={pi} sx={{ position: 'relative', flex: 1, minHeight: 0 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px', p: '2px' }}>
+            {thumbs.map((pi) => (
+              <Box key={pi} sx={{ position: 'relative', aspectRatio: '1 / 1', overflow: 'hidden', borderRadius: '3px' }}>
                 <Photo photo={r.photos[pi]} onClick={() => onOpen(r.photos, pi)} />
-                {ti === thumbs.length - 1 && extra > 0 && (
-                  <Box onClick={() => onOpen(r.photos, otherIdx[thumbs.length])} sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,.55)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>+{extra}</Box>
-                )}
               </Box>
             ))}
+            {extra > 0 && (
+              <Box onClick={() => onOpen(r.photos, otherIdx[thumbs.length])} sx={{ position: 'relative', aspectRatio: '1 / 1', overflow: 'hidden', borderRadius: '3px', cursor: 'pointer' }}>
+                <Photo photo={r.photos[otherIdx[thumbs.length]]} />
+                <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,.6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>+{extra}</Box>
+              </Box>
+            )}
           </Box>
         )}
       </Box>
@@ -279,10 +283,12 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
 
   // 편집 중인 열은 draft 값으로 비교(우수 강조가 입력 즉시 반영)
   const bestFor = (def: DemoMetricDef) => bestMakers(def, makers.map((m) => ({ key: m.key, value: valEditKey === m.key ? valDraft[def.key] : shown(m).metrics[def.key] })))
-  // 카드(제조사) 열은 항상 '3사 기준' 너비 — 1·2곳이면 좌우 패드로 가운데 정렬.
-  // Chrome은 fixed 테이블에서 calc() 셀폭을 무시하므로, colgroup 6등분 서브컬럼 + colSpan(카드=2칸)으로 구현.
-  const tableMinW = LABEL_W + 3 * COL_W
-  const padSpan = 3 - makers.length // 좌우 각각의 패드 서브컬럼 수: 0(3곳)·1(2곳)·2(1곳)
+  // 카드(제조사) 열 기준 너비 — 실사용 최대 2사. 1곳이면 좌우 패드로 가운데, 2곳이면 가득.
+  // (혹시 3사 데이터가 있어도 basis가 그만큼 늘어 안전.) Chrome fixed 테이블 calc() 무시 우회 → colgroup 등분 + colSpan(카드=2칸).
+  const basis = Math.max(2, makers.length)
+  const tableMinW = LABEL_W + basis * COL_W
+  const subCols = 2 * basis // 카드 1장 = 2 서브컬럼
+  const padSpan = basis - makers.length // 좌우 각각의 패드 서브컬럼 수: 0(가득)·1(가운데)
 
   return (
     <Box sx={{ mb: 2.5 }}>
@@ -306,13 +312,14 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
         </Box>
       )}
 
-      {/* 비교표(전체 폭). 메모는 표 아래에 장비사 열 너비만큼 배치 */}
-      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
-        <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: '100%', minWidth: tableMinW }}>
-          {/* 열 정의 — 라벨(고정) + 6등분 서브컬럼(카드 1장 = 2칸) */}
+      {/* 비교표(왼쪽·2개사 기준 폭) + 코멘트(오른쪽, 좁은 화면은 표 아래) */}
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', gap: 1.5 }}>
+      <Box sx={{ flex: '0 1 auto', minWidth: 0, maxWidth: '100%', border: 1, borderColor: 'divider', borderRadius: '12px', bgcolor: 'background.paper', p: 1.25, overflowX: 'auto' }}>
+        <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: tableMinW }}>
+          {/* 열 정의 — 라벨(고정) + 등분 서브컬럼(카드 1장 = 2칸) */}
           <Box component="colgroup">
             <Box component="col" sx={{ width: LABEL_W }} />
-            {Array.from({ length: 6 }).map((_, i) => <Box component="col" key={i} />)}
+            {Array.from({ length: subCols }).map((_, i) => <Box component="col" key={i} />)}
           </Box>
           <Box component="thead">
             <Box component="tr">
@@ -334,7 +341,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
           </Box>
           <Box component="tbody">
             {defs.length === 0 && (
-              <Box component="tr"><Box component="td" colSpan={7} sx={{ p: 1.5, textAlign: 'center', color: 'text.disabled', fontSize: 12 }}>등록된 표준 지표가 없습니다. 위 "지표 편집"에서 추가하세요.</Box></Box>
+              <Box component="tr"><Box component="td" colSpan={1 + subCols} sx={{ p: 1.5, textAlign: 'center', color: 'text.disabled', fontSize: 12 }}>등록된 표준 지표가 없습니다. 위 "지표 편집"에서 추가하세요.</Box></Box>
             )}
             {defs.map((def) => {
               const best = bestFor(def)
@@ -365,15 +372,12 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
             })}
           </Box>
         </Box>
-        {/* 코멘트 — 표 아래. 왼쪽 = '코멘트' 라벨 박스(지표열 폭·목록 높이만큼 늘어남), 오른쪽 = 코멘트 목록 */}
-        <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 1, mt: 1.25 }}>
-          <Box sx={{ width: LABEL_W, flex: 'none', display: 'flex' }}>
-            <Box sx={(th) => ({ flex: 1, border: `1px solid ${th.palette.divider}`, borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 700, color: 'text.secondary' })}>코멘트</Box>
-          </Box>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <DemoChat memos={messages} canPost={canEdit} user={user} busy={chatBusy}
-              onPost={(title, body) => onPostChat(equipment, title, body)} onDelete={onDeleteChat} />
-          </Box>
+      </Box>
+        {/* 코멘트 — PC는 표 오른쪽 빈 공간, 좁은 화면은 표 아래로 */}
+        <Box sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
+          <Box sx={{ fontSize: 12.5, fontWeight: 700, color: 'text.secondary', mb: 0.75 }}>코멘트</Box>
+          <DemoChat memos={messages} canPost={canEdit} user={user} busy={chatBusy}
+            onPost={(title, body) => onPostChat(equipment, title, body)} onDelete={onDeleteChat} />
         </Box>
       </Box>
 
