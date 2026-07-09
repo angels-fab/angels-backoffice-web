@@ -19,9 +19,14 @@ const FALLBACK = '#8a8f98'
 /** 담당자 색을 밝게 — 어두운 카드 위 제목/칩 글자용 */
 const liteC = (c: string) => `color-mix(in srgb, ${c} 55%, #ffffff)`
 
+/** 네온 카드 껍데기 — 제목 띠(담당자 색) + 얇은 구분선 + 본문. 작성/수정/표시 카드가 동일 포맷 공유 */
+function neonSx(c: string) {
+  return { borderRadius: '8px', overflow: 'hidden', bgcolor: '#1a1d26', color: '#dfe6f2', border: `1px solid ${alpha(c, 0.85)}`, boxShadow: `0 0 5px ${alpha(c, 0.18)}` } as const
+}
+
 /**
- * 코멘트 메모 카드 1장 — 네온(어두운 카드 + 담당자 색 테두리, 다크 포탈 동화).
- * 띠 헤더(제목·작성자칩·날짜·수정/삭제) + 본문. 수정/삭제 = 본인 글 또는 관리자.
+ * 코멘트 메모 카드 1장 — 네온(어두운 카드 + 담당자 색 테두리). 제목 띠(담당자 색)·얇은 선·본문으로 제목/내용 구분.
+ * 수정/삭제 = 본인 글 또는 관리자.
  */
 function MemoCard({ m, own, onEdit, onDelete }: { m: DemoChatMsg; own: boolean; onEdit: () => void; onDelete: () => void }) {
   const c = memberOf(m.author)?.color || FALLBACK
@@ -29,8 +34,8 @@ function MemoCard({ m, own, onEdit, onDelete }: { m: DemoChatMsg; own: boolean; 
   const title = m.title || m.body
   const body = m.title ? m.body : ''
   return (
-    <Box sx={{ borderRadius: '8px', overflow: 'hidden', bgcolor: '#1a1d26', color: '#dfe6f2', border: `1px solid ${alpha(c, 0.85)}`, boxShadow: `0 0 5px ${alpha(c, 0.18)}` }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, p: '6px 10px', bgcolor: alpha(c, 0.09) }}>
+    <Box sx={neonSx(c)}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, p: '6px 10px', bgcolor: alpha(c, 0.14), borderBottom: body ? `1px solid ${alpha(c, 0.28)}` : 'none' }}>
         <Box sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, lineHeight: 1.3, color: liteC(c), textShadow: `0 0 3px ${alpha(c, 0.35)}`, wordBreak: 'break-word' }}>{title}</Box>
         <Box component="span" sx={{ flex: 'none', display: 'inline-flex', alignItems: 'center', height: 20, px: 1, fontSize: 11, fontWeight: 600, borderRadius: '7px', whiteSpace: 'nowrap', border: `1px solid ${alpha(c, 0.85)}`, color: liteC(c) }}>{m.author || '팀원'}</Box>
         <Box component="span" sx={{ flex: 'none', fontSize: 10.5, fontFamily: 'monospace', color: '#7e8797', opacity: 0.75 }}>{fmtDay(m.createdAt)}</Box>
@@ -50,27 +55,35 @@ function MemoCard({ m, own, onEdit, onDelete }: { m: DemoChatMsg; own: boolean; 
   )
 }
 
-/** 제목+내용 입력 카드(신규 작성·수정 공용) — 전체폭 */
-function ComposeCard({ title, body, busy, onTitle, onBody, onCancel, onSave, saveLabel }: {
-  title: string; body: string; busy: boolean; onTitle: (v: string) => void; onBody: (v: string) => void; onCancel: () => void; onSave: () => void; saveLabel: string
+/** 작성/수정 카드 — 표시 카드와 동일한 네온 포맷(제목 띠 + 본문). 폭은 메모카드와 동일(한 칸). */
+function ComposeCard({ accent, title, body, busy, onTitle, onBody, onCancel, onSave, saveLabel }: {
+  accent: string; title: string; body: string; busy: boolean; onTitle: (v: string) => void; onBody: (v: string) => void; onCancel: () => void; onSave: () => void; saveLabel: string
 }) {
+  const c = accent
   return (
-    <Box sx={(th) => ({ gridColumn: '1 / -1', border: `1px solid ${th.palette.primary.main}`, borderRadius: '10px', bgcolor: 'background.paper', p: '8px 10px' })}>
-      <InputBase autoFocus value={title} onChange={(e) => onTitle(e.target.value)} placeholder="제목" sx={{ width: '100%', fontSize: 13, fontWeight: 700 }} />
-      <InputBase multiline minRows={2} value={body} onChange={(e) => onBody(e.target.value)} placeholder="내용 입력… (선택)"
-        onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onSave() } }}
-        sx={{ width: '100%', fontSize: 12 }} />
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
-        <Button size="small" onClick={onCancel} disabled={busy} sx={{ color: 'text.secondary', fontSize: 11.5, minWidth: 0 }}>취소</Button>
-        <Button size="small" variant="contained" onClick={onSave} disabled={busy || !title.trim()} startIcon={busy ? <CircularProgress size={12} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: 11.5, minWidth: 0 }}>{saveLabel}</Button>
+    <Box sx={neonSx(c)}>
+      {/* 제목 띠 — 표시 카드의 제목 자리에 인풋 */}
+      <Box sx={{ p: '5px 10px', bgcolor: alpha(c, 0.14), borderBottom: `1px solid ${alpha(c, 0.28)}` }}>
+        <InputBase autoFocus value={title} onChange={(e) => onTitle(e.target.value)} placeholder="제목"
+          sx={{ width: '100%', fontSize: 13, fontWeight: 700, color: liteC(c), '& input::placeholder': { color: 'rgba(255,255,255,.45)', opacity: 1 } }} />
+      </Box>
+      {/* 본문 */}
+      <Box sx={{ p: '6px 10px 8px' }}>
+        <InputBase multiline minRows={2} value={body} onChange={(e) => onBody(e.target.value)} placeholder="내용 입력… (선택)"
+          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onSave() } }}
+          sx={{ width: '100%', fontSize: 12.5, color: '#dfe6f2', '& textarea::placeholder': { color: 'rgba(255,255,255,.35)', opacity: 1 } }} />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
+          <Button size="small" onClick={onCancel} disabled={busy} sx={{ color: 'rgba(255,255,255,.6)', fontSize: 11.5, minWidth: 0 }}>취소</Button>
+          <Button size="small" variant="contained" onClick={onSave} disabled={busy || !title.trim()} startIcon={busy ? <CircularProgress size={12} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: 11.5, minWidth: 0 }}>{saveLabel}</Button>
+        </Box>
       </Box>
     </Box>
   )
 }
 
 /**
- * 코멘트 — 비교표 옆/아래, 제목 있는 메모카드 그리드(PC=여러 장, 모바일=1열). 네온 테마 고정.
- * 작성자 색은 담당자 필터 색상과 매치. 본인 카드만 수정·삭제. "코멘트 추가"로 제목+내용 입력.
+ * 코멘트 — 비교표 옆/아래, 제목 있는 메모카드. **masonry(컬럼) 레이아웃**으로 카드끼리 세로 여백 없이 밀착.
+ * 작성자 색은 담당자 필터 색상과 매치. 본인/관리자만 수정·삭제. 작성 카드는 표시 카드와 동일 포맷·동일 폭.
  */
 export default function DemoChat({ memos, canPost, canModerate = false, user, busy, onPost, onEdit, onDelete }: {
   memos: DemoChatMsg[]; canPost: boolean; canModerate?: boolean; user: string | null; busy: boolean
@@ -84,25 +97,27 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const [editId, setEditId] = useState<number | null>(null)
   const [eTitle, setETitle] = useState('')
   const [eBody, setEBody] = useState('')
+  const myColor = memberOf(user || '')?.color || FALLBACK
 
   const save = async () => { if (!title.trim() || busy) return; try { await onPost(title, draft); setTitle(''); setDraft(''); setAdding(false) } catch { /* 입력 유지 */ } }
   const startEdit = (m: DemoChatMsg) => { setAdding(false); setEditId(m.id); setETitle(m.title); setEBody(m.body) }
   const saveEdit = async () => { if (!eTitle.trim() || editId == null || busy) return; try { await onEdit(editId, eTitle, eBody); setEditId(null) } catch { /* 입력 유지 */ } }
 
+  // masonry — CSS 멀티컬럼: 같은 컬럼의 윗카드 바로 아래에 밀착(행 높이 여백 없음). 카드는 breakInside:avoid + mb로 간격.
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 1.25, alignItems: 'start' }}>
+    <Box sx={{ columnWidth: 190, columnGap: '10px', '& > *': { breakInside: 'avoid', mb: 1.25, WebkitColumnBreakInside: 'avoid' } }}>
       {memos.map((m) => (
         editId === m.id ? (
-          <ComposeCard key={m.id} title={eTitle} body={eBody} busy={busy} saveLabel="수정"
+          <ComposeCard key={m.id} accent={memberOf(m.author)?.color || FALLBACK} title={eTitle} body={eBody} busy={busy} saveLabel="수정"
             onTitle={setETitle} onBody={setEBody} onCancel={() => setEditId(null)} onSave={() => void saveEdit()} />
         ) : (
           <MemoCard key={m.id} m={m} own={canModerate || (!!user && m.author === user)} onEdit={() => startEdit(m)} onDelete={() => onDelete(m.id)} />
         )
       ))}
 
-      {/* 작성 카드 — 입력 중이면 전체폭(제목+내용), 아니면 한 칸 '+ 코멘트 추가' */}
+      {/* 작성 카드 — 표시 카드와 동일 포맷·동일 폭(한 칸) */}
       {canPost && (adding ? (
-        <ComposeCard title={title} body={draft} busy={busy} saveLabel="저장"
+        <ComposeCard accent={myColor} title={title} body={draft} busy={busy} saveLabel="저장"
           onTitle={setTitle} onBody={setDraft} onCancel={() => { setAdding(false); setTitle(''); setDraft('') }} onSave={() => void save()} />
       ) : (
         <Box role="button" tabIndex={0} onClick={() => setAdding(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdding(true) } }}

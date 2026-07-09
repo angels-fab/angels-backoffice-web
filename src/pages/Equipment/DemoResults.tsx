@@ -3,7 +3,6 @@ import Box from '@mui/material/Box'
 import Tooltip from '@mui/material/Tooltip'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
-import Badge from '@mui/material/Badge'
 import InputBase from '@mui/material/InputBase'
 import CircularProgress from '@mui/material/CircularProgress'
 import Snackbar from '@mui/material/Snackbar'
@@ -22,7 +21,6 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
-import CheckIcon from '@mui/icons-material/Check'
 import TuneIcon from '@mui/icons-material/Tune'
 import HistoryIcon from '@mui/icons-material/History'
 import { alpha } from '@mui/material/styles'
@@ -30,7 +28,7 @@ import type { Theme } from '@mui/material/styles'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
-  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, updateDemoChat, deleteDemoChat, updateDemoResult, deleteDemoResult, uploadDemoFile, removeDemoFiles,
+  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, updateDemoChat, deleteDemoChat, updateDemoResult, deleteDemoResult, updateMetricDef, uploadDemoFile, removeDemoFiles,
   type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup, type ValueHistory,
 } from '@/api/demo'
 import { verifyPassword } from '@/api/session'
@@ -81,38 +79,70 @@ const plusChip = (th: Theme) => ({
   border: '1px dashed rgba(255,255,255,.55)', '&:hover': { bgcolor: th.palette.primary.main, borderColor: 'transparent' },
 })
 
+/**
+ * 인라인 편집 텍스트 — 평소엔 텍스트(또는 display), 호버 시 오른쪽에 연필. 클릭하면 그 항목만 노란 테두리 인풋으로.
+ * Enter/blur=저장(변경 시 onCommit), Esc=취소. 헤더·값·샘플·조건 등 공용.
+ */
+function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, placeholder = '-', display }: {
+  text: string; canEdit: boolean; onCommit: (v: string) => void
+  align?: 'left' | 'center'; multiline?: boolean; placeholder?: string; display?: React.ReactNode
+}) {
+  const [editing, setEditing] = useState(false)
+  const [v, setV] = useState('')
+  const start = (e: React.MouseEvent) => { e.stopPropagation(); setV(text); setEditing(true) }
+  const commit = () => { setEditing(false); const nv = v.trim(); if (nv !== (text || '').trim()) onCommit(nv) }
+  if (editing) {
+    return (
+      <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
+          else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); commit() }
+        }}
+        sx={(th) => ({ width: '100%', fontSize: 12, bgcolor: alpha(th.palette.warning.main, 0.1), border: `1px solid ${alpha(th.palette.warning.main, 0.65)}`, borderRadius: '5px', px: 0.5, py: '1px', '& textarea, & input': { textAlign: align, p: 0 } })} />
+    )
+  }
+  return (
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%', verticalAlign: 'middle', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0 } }}>
+      <Box component="span" sx={{ minWidth: 0, ...(multiline ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } : {}) }}>{display ?? (text || (canEdit ? placeholder : '-'))}</Box>
+      {canEdit && <IconButton className="pen" size="small" aria-label="수정" onClick={start} sx={{ p: '1px', flex: 'none', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
+    </Box>
+  )
+}
+
 /** 제조사 열 헤더 — 색깔 밴드(제조사·모델·파일, 상단 라운드) → 사진영역(대표 크게 + 우측 썸네일 그리드 + 더보기) → 값수정 트리거 */
-function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStartVal, onSaveVal, onCancelVal, onAddRound, onDeleteRound, onManagePhotos }: {
+function MakerHead({ mg, sel, onSel, onOpen, canEdit, onAddRound, onDeleteRound, onManagePhotos }: {
   mg: DemoMakerGroup; sel: number; onSel: (i: number) => void; onOpen: (photos: DemoPhotoRef[], idx: number) => void
-  canEdit: boolean; editing: boolean; savingVal: boolean; onStartVal: () => void; onSaveVal: () => void; onCancelVal: () => void
-  onAddRound: () => void; onDeleteRound: () => void; onManagePhotos: () => void
+  canEdit: boolean; onAddRound: () => void; onDeleteRound: () => void; onManagePhotos: () => void
 }) {
   const r = mg.rounds[Math.min(sel, mg.rounds.length - 1)]
   const coverIdx = Math.min(Math.max(r.cover || 0, 0), Math.max(r.photos.length - 1, 0))
   const cover = r.photos[coverIdx]
-  const otherIdx = r.photos.map((_, i) => i).filter((i) => i !== coverIdx)
-  const MAX_THUMB = 4 // 하단 그리드 한 줄(4칸). 넘치면 마지막 칸이 +N
-  const thumbs = otherIdx.length <= MAX_THUMB ? otherIdx : otherIdx.slice(0, MAX_THUMB - 1)
-  const extra = otherIdx.length - thumbs.length
+  const others = r.photos.map((_, i) => i).filter((i) => i !== coverIdx)
+  const CELLS = 4 // 하단 4:3 썸네일 4칸 고정(빈 칸은 검은 자리). 4개 초과면 마지막 칸이 +N
+  const overflow = others.length > CELLS
   return (
     <Box sx={{ width: '100%' }}>
-      {/* 색깔 밴드 — 제조사·모델·파일 나란히 가운데 정렬, 상단 두 모서리만 라운드 */}
-      <Box sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.6, px: 0.75, py: '4px', bgcolor: th.palette.primary.main, borderRadius: '8px 8px 0 0', minWidth: 0 })}>
-        <Box sx={{ fontSize: 11.5, fontWeight: 700, color: '#fff', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      {/* 색깔 밴드 — 제조사·모델은 항상 가운데(첨부 아이콘과 무관하게 중앙), 첨부는 우측 절대배치 */}
+      <Box sx={(th) => ({ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 1.5, py: '4px', bgcolor: th.palette.primary.main, borderRadius: '8px 8px 0 0', minWidth: 0 })}>
+        <Box sx={{ fontSize: 11.5, fontWeight: 700, color: '#fff', minWidth: 0, maxWidth: r.files.length ? 'calc(100% - 34px)' : '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {mg.maker}{mg.model ? <Box component="span" sx={{ opacity: 0.85, fontWeight: 500, ml: 0.5 }}>{mg.model}</Box> : null}
         </Box>
-        {r.files.map((f, i) => (
-          <Tooltip key={i} title={`${f.name} 열기`} arrow>
-            <Box component="span" onClick={() => void openFile(f)} sx={{ display: 'inline-flex', lineHeight: 0, flex: 'none', cursor: f.path ? 'pointer' : 'default' }}>
-              <AttachmentIcon type={f.type} name={f.name} size={14} />
-            </Box>
-          </Tooltip>
-        ))}
+        {r.files.length > 0 && (
+          <Box sx={{ position: 'absolute', right: 5, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 0.4 }}>
+            {r.files.map((f, i) => (
+              <Tooltip key={i} title={`${f.name} 열기`} arrow>
+                <Box component="span" onClick={() => void openFile(f)} sx={{ display: 'inline-flex', lineHeight: 0, flex: 'none', cursor: f.path ? 'pointer' : 'default' }}>
+                  <AttachmentIcon type={f.type} name={f.name} size={14} />
+                </Box>
+              </Tooltip>
+            ))}
+          </Box>
+        )}
       </Box>
-      {/* 사진 영역 — 대표사진(상단, 4:3 비율 유지) + 나머지 작은 그리드(하단) + 넘치면 +N */}
+      {/* 사진 영역 — 대표사진(4:3, 전체 보기·비율 다르면 검은 여백) + 하단 4:3 썸네일 4칸 고정(정렬 일관) */}
       <Box sx={{ border: 1, borderTop: 0, borderColor: 'divider', borderRadius: '0 0 8px 8px', overflow: 'hidden', bgcolor: 'background.default' }}>
         <Box sx={{ position: 'relative', width: '100%', aspectRatio: '4 / 3' }}>
-          <Photo photo={cover} onClick={() => { if (r.photos.length) onOpen(r.photos, coverIdx) }} />
+          <Photo photo={cover} fit="contain" onClick={() => { if (r.photos.length) onOpen(r.photos, coverIdx) }} />
           {/* 회차 칩 + '+'(다음 회차 등록) */}
           <Box sx={{ position: 'absolute', top: 4, left: 4, display: 'flex', gap: '3px', flexWrap: 'wrap', pr: 4 }}>
             {mg.rounds.map((rr, i) => (
@@ -127,37 +157,26 @@ function MakerHead({ mg, sel, onSel, onOpen, canEdit, editing, savingVal, onStar
           <Box sx={{ position: 'absolute', top: 4, right: 4, fontSize: 9, color: '#fff', bgcolor: 'rgba(0,0,0,.5)', borderRadius: '4px', px: '4px', py: '1px', fontWeight: 700 }}>{fmtDate(r.date)}</Box>
           {r.photos.length > 0 && <ZoomOutMapIcon sx={{ position: 'absolute', bottom: 4, right: 4, fontSize: 14, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', borderRadius: '4px', p: '2px' }} />}
         </Box>
-        {thumbs.length > 0 && (
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px', p: '2px' }}>
-            {thumbs.map((pi) => (
-              <Box key={pi} sx={{ position: 'relative', aspectRatio: '1 / 1', overflow: 'hidden', borderRadius: '3px' }}>
-                <Photo photo={r.photos[pi]} onClick={() => onOpen(r.photos, pi)} />
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '2px', p: '2px' }}>
+          {Array.from({ length: CELLS }).map((_, k) => {
+            const isPlus = overflow && k === CELLS - 1
+            const pi = isPlus ? others[CELLS - 1] : others[k]
+            const has = pi !== undefined
+            return (
+              <Box key={k} onClick={() => { if (has) onOpen(r.photos, pi) }}
+                sx={{ position: 'relative', aspectRatio: '4 / 3', overflow: 'hidden', borderRadius: '3px', bgcolor: '#000', cursor: has ? 'pointer' : 'default' }}>
+                {has && <Photo photo={r.photos[pi]} fit="contain" />}
+                {isPlus && <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,.6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>+{others.length - (CELLS - 1)}</Box>}
               </Box>
-            ))}
-            {extra > 0 && (
-              <Box onClick={() => onOpen(r.photos, otherIdx[thumbs.length])} sx={{ position: 'relative', aspectRatio: '1 / 1', overflow: 'hidden', borderRadius: '3px', cursor: 'pointer' }}>
-                <Photo photo={r.photos[otherIdx[thumbs.length]]} />
-                <Box sx={{ position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,.6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>+{extra}</Box>
-              </Box>
-            )}
-          </Box>
-        )}
+            )
+          })}
+        </Box>
       </Box>
-      {/* 값 수정(작은 트리거 — 실수 방지용 최소 노출). 편집 중이면 저장·취소 */}
+      {/* 회차 도구 — 사진 관리 · 데모결과 삭제(지표값은 표 셀에서 직접 인라인 편집) */}
       {canEdit && (
-        <Box sx={{ mt: 0.4, display: 'flex', justifyContent: 'center', minHeight: 18 }}>
-          {editing ? (
-            <Box sx={{ display: 'flex', gap: 0.25 }}>
-              <Tooltip title="값 저장"><span><IconButton size="small" color="success" disabled={savingVal} onClick={onSaveVal} sx={{ p: '1px' }}>{savingVal ? <CircularProgress size={12} thickness={5} color="inherit" /> : <CheckIcon sx={{ fontSize: 15 }} />}</IconButton></span></Tooltip>
-              <Tooltip title="취소"><IconButton size="small" onClick={onCancelVal} sx={{ p: '1px', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
-            </Box>
-          ) : (
-            <Box sx={{ display: 'flex', gap: 0.5 }}>
-              <Tooltip title={`${r.round}차 지표값 수정`}><IconButton size="small" onClick={onStartVal} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton></Tooltip>
-              <Tooltip title={`${r.round}차 사진 추가·삭제`}><IconButton size="small" onClick={onManagePhotos} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><AddPhotoAlternateOutlinedIcon sx={{ fontSize: 13 }} /></IconButton></Tooltip>
-              <Tooltip title={`${r.round}차 데모결과 삭제`}><IconButton size="small" onClick={onDeleteRound} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'error.main' } }}><DeleteOutlineIcon sx={{ fontSize: 13 }} /></IconButton></Tooltip>
-            </Box>
-          )}
+        <Box sx={{ mt: 0.4, display: 'flex', justifyContent: 'center', gap: 0.5, minHeight: 18 }}>
+          <Tooltip title={`${r.round}차 사진 추가·삭제`}><IconButton size="small" onClick={onManagePhotos} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><AddPhotoAlternateOutlinedIcon sx={{ fontSize: 13 }} /></IconButton></Tooltip>
+          <Tooltip title={`${r.round}차 데모결과 삭제`}><IconButton size="small" onClick={onDeleteRound} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'error.main' } }}><DeleteOutlineIcon sx={{ fontSize: 13 }} /></IconButton></Tooltip>
         </Box>
       )}
     </Box>
@@ -184,7 +203,7 @@ function Lightbox({ photos, idx, onIdx, onClose }: { photos: DemoPhotoRef[]; idx
     <Box role="button" aria-label={dir < 0 ? '이전 사진' : '다음 사진'}
       onClick={(e) => { e.stopPropagation(); move(dir) }}
       sx={{
-        position: 'absolute', top: 0, bottom: 0, width: '45%', cursor: 'pointer',
+        position: 'absolute', top: 0, bottom: 0, width: '40%', cursor: 'pointer',
         ...(dir < 0 ? { left: 0, borderRadius: '8px 0 0 8px' } : { right: 0, borderRadius: '0 8px 8px 0' }),
         display: 'flex', alignItems: 'center', justifyContent: dir < 0 ? 'flex-start' : 'flex-end',
         opacity: 0, transition: 'opacity .18s ease',
@@ -357,14 +376,15 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
     setSlots((s) => s.map((v, ci) => (ci === c ? i : v)))
   }
 
-  // 미리보기 슬롯 — 카드 배열 순서 고정. 칩 꺼짐 = 빈 슬롯(자리 유지), 켜짐 = 사진(전체 보기)+캡션+확대
+  // 미리보기 슬롯 — 카드 배열 순서 고정(1개사=가운데 한 칸, 2개사=양옆). 칩 꺼짐 = 빈 슬롯(자리 유지), 켜짐 = 사진+캡션+확대
+  const single = columns.length === 1
   const previewSlot = (c: number) => {
     const col = columns[c]
     const on = active.includes(c)
     const it = on ? col.items[slots[c]] : undefined
     return (
       <Box key={col.key} onClick={() => openZoom(it)}
-        sx={{ flex: 1, minWidth: 0, position: 'relative', borderRadius: 2, overflow: 'hidden', bgcolor: 'background.default', border: 1, borderColor: 'divider', cursor: it && it.photos.length ? 'zoom-in' : 'default' }}>
+        sx={{ ...(single ? { flex: '0 0 auto', height: '100%', aspectRatio: '4 / 3' } : { flex: 1 }), minWidth: 0, position: 'relative', borderRadius: 2, overflow: 'hidden', bgcolor: 'background.default', border: 1, borderColor: 'divider', cursor: it && it.photos.length ? 'zoom-in' : 'default' }}>
         {it ? <Photo photo={{ name: it.name, path: it.path }} fit="contain" /> : (
           <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75, color: 'text.disabled' }}>
             <ImageOutlinedIcon sx={{ fontSize: 26, opacity: 0.6 }} />
@@ -396,18 +416,10 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
         <Box sx={{ fontSize: 11, color: 'text.disabled' }}>제조사 칩을 눌러 나란히 비교</Box>
         <IconButton size="small" aria-label="닫기" onClick={requestClose}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
       </Box>
-      {/* 본문 — 미리보기(카드 배열 순서 고정 슬롯, 항상 2열: 1개사면 왼쪽 + 오른쪽은 비교사 자리) + 콘택트시트 */}
+      {/* 본문 — 미리보기(1개사=가운데, 2개사=양옆 고정 슬롯) + 콘택트시트(오른쪽) */}
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
-        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', gap: 0.75, p: 1 }}>
+        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', gap: 0.75, p: 1, justifyContent: single ? 'center' : 'stretch' }}>
           {columns.map((_, c) => previewSlot(c))}
-          {columns.length < 2 && (
-            <Box key="vacant" sx={{ flex: 1, minWidth: 0, position: 'relative', borderRadius: 2, overflow: 'hidden', bgcolor: 'background.default', border: 1, borderColor: 'divider', borderStyle: 'dashed' }}>
-              <Box sx={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75, color: 'text.disabled' }}>
-                <ImageOutlinedIcon sx={{ fontSize: 26, opacity: 0.5 }} />
-                <Box sx={{ fontSize: 11.5 }}>비교 제조사 자리 — 데모결과가 등록되면 표시</Box>
-              </Box>
-            </Box>
-          )}
         </Box>
         <Box sx={{ flex: 'none', width: { xs: '100%', md: 320 }, minHeight: 0, borderLeft: { md: 1 }, borderTop: { xs: 1, md: 0 }, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ flex: 'none', fontSize: 11, color: 'text.disabled', px: 1.25, pt: 1, pb: 0.5 }}>훑어보기 — 제조사별</Box>
@@ -450,11 +462,13 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, user, chatBusy, latestValueChange, onPostChat, onEditChat, onDeleteChat, onSaveValues, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound, onReload }: {
+function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, user, chatBusy, latestValueChange, onPostChat, onEditChat, onDeleteChat, onSaveValues, onSaveMeta, onSaveMetricDef, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound, onReload }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; canModerate: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onPostChat: (equipment: string, title: string, body: string) => Promise<void>
   onEditChat: (id: number, title: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
+  onSaveMeta: (roundId: number, patch: { sample?: string; conditions?: string }) => Promise<void>
+  onSaveMetricDef: (defId: number, patch: { label?: string; unit?: string }) => Promise<void>
   onEditMetrics: () => void; onViewValueHistory: () => void; onAddRound: (mg: DemoMakerGroup) => void
   onDeleteRound: (roundId: number) => Promise<void>; onReload: () => void
 }) {
@@ -477,23 +491,16 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
     setGallery({ c, i: it >= 0 ? it : 0 })
   }
 
-  // 제조사 지표값 수정 — 실수 방지로 열 단위 명시 편집(작은 트리거 → 인풋 → 저장). 저장 시 비밀번호 재확인(조작방지)
-  const [valEditKey, setValEditKey] = useState<string | null>(null)
-  const [valDraft, setValDraft] = useState<Record<string, string>>({})
+  // 지표값 수정 = 셀별 인라인 편집. 저장 시 비밀번호 재확인(조작방지). pwPrompt = 저장 대기(제조사·라운드·병합된 metrics)
   const [savingVal, setSavingVal] = useState(false)
-  const [pwPrompt, setPwPrompt] = useState<DemoMakerGroup | null>(null)
+  const [pwPrompt, setPwPrompt] = useState<{ maker: DemoMakerGroup; roundId: number; metrics: Record<string, string>; label: string } | null>(null)
   const [pw, setPw] = useState('')
   const [pwErr, setPwErr] = useState('')
-  const startVal = (m: DemoMakerGroup) => { setValEditKey(m.key); setValDraft({ ...shown(m).metrics }) }
-  const cancelVal = () => { setValEditKey(null); setValDraft({}) }
-  const isChanged = (m: DemoMakerGroup) => {
-    const cur = shown(m).metrics
-    for (const k of new Set([...Object.keys(cur), ...Object.keys(valDraft)])) if ((cur[k] ?? '') !== (valDraft[k] ?? '')) return true
-    return false
-  }
-  const askSaveVal = (m: DemoMakerGroup) => {
-    if (!isChanged(m)) { setValEditKey(null); setValDraft({}); return } // 변경 없으면 저장·비번·알림 없이 편집만 종료
-    setPw(''); setPwErr(''); setPwPrompt(m)
+  // 값 셀 한 칸 수정 → 변경 있으면 비밀번호창(전체 metrics에 병합해 저장)
+  const askValueSave = (m: DemoMakerGroup, key: string, val: string) => {
+    const round = shown(m)
+    if ((round.metrics[key] ?? '') === val) return // 변경 없음
+    setPw(''); setPwErr(''); setPwPrompt({ maker: m, roundId: round.id, metrics: { ...round.metrics, [key]: val }, label: `${m.maker}${m.model ? ` ${m.model}` : ''} · ${round.round}차` })
   }
 
   // 회차 삭제 — 비밀번호 재확인(값 수정과 동일한 조작방지)
@@ -519,14 +526,13 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
     try {
       const ok = await verifyPassword(pw)
       if (!ok) { setPwErr('비밀번호가 올바르지 않습니다.'); return }
-      await onSaveValues(shown(pwPrompt).id, valDraft)
-      setPwPrompt(null); setPw(''); setValEditKey(null); setValDraft({})
+      await onSaveValues(pwPrompt.roundId, pwPrompt.metrics)
+      setPwPrompt(null); setPw('')
     } catch (e) { setPwErr(e instanceof Error ? e.message : '저장에 실패했습니다') }
     finally { setSavingVal(false) }
   }
 
-  // 편집 중인 열은 draft 값으로 비교(우수 강조가 입력 즉시 반영)
-  const bestFor = (def: DemoMetricDef) => bestMakers(def, makers.map((m) => ({ key: m.key, value: valEditKey === m.key ? valDraft[def.key] : shown(m).metrics[def.key] })))
+  const bestFor = (def: DemoMetricDef) => bestMakers(def, makers.map((m) => ({ key: m.key, value: shown(m).metrics[def.key] })))
   // 카드(제조사) 열 기준 너비 — 실사용 최대 2사. 1곳이면 좌우 패드로 가운데, 2곳이면 가득.
   // (혹시 3사 데이터가 있어도 basis가 그만큼 늘어 안전.) Chrome fixed 테이블 calc() 무시 우회 → colgroup 등분 + colSpan(카드=2칸).
   const basis = Math.max(2, makers.length)
@@ -556,10 +562,9 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
                   {canEdit && (
                     <Tooltip title="지표 편집"><IconButton size="small" aria-label="지표 편집" onClick={onEditMetrics} sx={{ p: '2px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><TuneIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
                   )}
+                  {/* 값 변경이 있으면 아이콘 색으로 알림(앰버). '확인' 표시는 사용자 개인화 패치 완료 시 latestValueChange를 seen 타임스탬프와 비교해 해제 → 그때까지는 변경 존재만 색으로. (코드 유지) */}
                   <Tooltip title={latestValueChange ? `변경 이력 — 최근: ${latestValueChange.maker} · ${latestValueChange.changedBy}` : '변경 이력'} arrow>
-                    <Badge color="warning" variant="dot" invisible={!latestValueChange} sx={{ '& .MuiBadge-badge': { top: 3, right: 3, minWidth: 6, width: 6, height: 6, borderRadius: '3px' } }}>
-                      <IconButton size="small" aria-label="변경 이력" onClick={onViewValueHistory} sx={{ p: '2px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><HistoryIcon sx={{ fontSize: 15 }} /></IconButton>
-                    </Badge>
+                    <IconButton size="small" aria-label="변경 이력" onClick={onViewValueHistory} sx={{ p: '2px', color: latestValueChange ? 'warning.main' : 'text.disabled', '&:hover': { color: latestValueChange ? 'warning.main' : 'text.secondary' } }}><HistoryIcon sx={{ fontSize: 15 }} /></IconButton>
                   </Tooltip>
                 </Box>
               </Box>
@@ -567,8 +572,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
               {makers.map((m, mi) => (
                 <Box component="th" key={m.key} colSpan={2} sx={{ p: '4px 6px', textAlign: 'center', verticalAlign: 'top', borderLeft: mi > 0 ? 1 : 0, borderColor: 'divider' }}>
                   <MakerHead mg={m} sel={sel[m.key] ?? m.rounds.length - 1} onSel={(i) => setSel((s) => ({ ...s, [m.key]: i }))} onOpen={(_photos, idx) => openGallery(m, idx)}
-                    canEdit={canEdit} editing={valEditKey === m.key} savingVal={savingVal}
-                    onStartVal={() => startVal(m)} onSaveVal={() => askSaveVal(m)} onCancelVal={cancelVal}
+                    canEdit={canEdit}
                     onAddRound={() => onAddRound(m)} onDeleteRound={() => askDelete(m)} onManagePhotos={() => setPhotoMg(m)} />
                 </Box>
               ))}
@@ -579,15 +583,17 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
             {defs.length === 0 && (
               <Box component="tr"><Box component="td" colSpan={1 + subCols} sx={{ p: 1.5, textAlign: 'center', color: 'text.disabled', fontSize: 12 }}>등록된 표준 지표가 없습니다. 위 "지표 편집"에서 추가하세요.</Box></Box>
             )}
-            {/* 샘플·테스트조건 — 선택 회차 기준, 값이 하나라도 있으면 지표 위에 표시(입력폼에서 작성한 내용이 여기 보임) */}
-            {([['샘플', (m: DemoMakerGroup) => shown(m).sample], ['테스트조건', (m: DemoMakerGroup) => shown(m).conditions]] as const)
-              .filter(([, get]) => makers.some((m) => (get(m) || '').trim()))
-              .map(([labelTxt, get]) => (
+            {/* 샘플·테스트조건 — 선택 회차 기준, 값 있거나 편집 가능하면 지표 위에 표시. 값은 가운데정렬 + 셀별 인라인 수정 */}
+            {(([['샘플', 'sample'], ['테스트조건', 'conditions']]) as [string, 'sample' | 'conditions'][])
+              .filter(([, field]) => canEdit || makers.some((m) => (shown(m)[field] || '').trim()))
+              .map(([labelTxt, field]) => (
                 <Box component="tr" key={labelTxt}>
                   <Box component="td" sx={{ textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>{labelTxt}</Box>
                   {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
                   {makers.map((m, mi) => (
-                    <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'left', p: '5px 8px', fontSize: 11, lineHeight: 1.5, color: 'text.secondary', whiteSpace: 'pre-wrap', wordBreak: 'break-word', borderLeft: mi > 0 || padSpan > 0 ? 1 : 0, borderRight: padSpan > 0 && mi === makers.length - 1 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>{(get(m) || '').trim() || '-'}</Box>
+                    <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'center', p: '5px 8px', fontSize: 11, lineHeight: 1.5, color: 'text.secondary', borderLeft: mi > 0 || padSpan > 0 ? 1 : 0, borderRight: padSpan > 0 && mi === makers.length - 1 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>
+                      <EditText text={shown(m)[field] || ''} canEdit={canEdit} align="center" multiline onCommit={(v) => onSaveMeta(shown(m).id, { [field]: v })} />
+                    </Box>
                   ))}
                   {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
                 </Box>
@@ -596,22 +602,20 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
               const best = bestFor(def)
               return (
                 <Box component="tr" key={def.key}>
+                  {/* 지표 헤더 — 지표명·단위 각각 호버 연필로 인라인 수정(updateMetricDef, 이력 자동) */}
                   <Box component="td" sx={{ textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>
-                    {def.label}{def.unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.5, fontSize: 10 }}>[{def.unit}]</Box> : null}
+                    <EditText text={def.label} canEdit={canEdit} placeholder="지표명" onCommit={(v) => { if (v) onSaveMetricDef(def.id, { label: v }) }} />
+                    <Box component="span" sx={{ color: 'text.disabled', ml: 0.4, fontSize: 10 }}>[<EditText text={def.unit} canEdit={canEdit} placeholder="단위" onCommit={(v) => onSaveMetricDef(def.id, { unit: v })} />]</Box>
                   </Box>
                   {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
                   {makers.map((m, mi) => {
-                    const editingThis = valEditKey === m.key
                     const v = shown(m).metrics[def.key]
                     const isBest = best.has(m.key)
                     return (
                       <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'center', p: '5px 6px', fontSize: 12.5, borderLeft: mi > 0 || padSpan > 0 ? 1 : 0, borderRight: padSpan > 0 && mi === makers.length - 1 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>
-                        {editingThis ? (
-                          <InputBase value={valDraft[def.key] ?? ''} onChange={(e) => setValDraft((d) => ({ ...d, [def.key]: e.target.value }))} placeholder="-"
-                            sx={(th) => ({ width: '100%', fontSize: 12, bgcolor: alpha(th.palette.warning.main, 0.08), border: `1px solid ${alpha(th.palette.warning.main, 0.5)}`, borderRadius: '5px', px: 0.5, py: '1px', '& input': { textAlign: 'center', p: 0 } })} />
-                        ) : (
-                          <Box component="span" sx={(th) => ({ display: 'inline-block', px: isBest ? '7px' : 0, py: isBest ? '2px' : 0, borderRadius: '6px', fontWeight: isBest ? 700 : 400, ...(isBest && { bgcolor: alpha(th.palette.success.main, 0.16), color: th.palette.success.main }) })}>{v || '-'}</Box>
-                        )}
+                        {/* 값 — 호버 연필로 그 셀만 수정(저장 시 비밀번호 재확인). 우수값은 초록 pill */}
+                        <EditText text={v || ''} canEdit={canEdit} align="center" onCommit={(nv) => askValueSave(m, def.key, nv)}
+                          display={<Box component="span" sx={(th) => ({ display: 'inline-block', px: isBest ? '7px' : 0, py: isBest ? '2px' : 0, borderRadius: '6px', fontWeight: isBest ? 700 : 400, ...(isBest && { bgcolor: alpha(th.palette.success.main, 0.16), color: th.palette.success.main }) })}>{v || '-'}</Box>} />
                       </Box>
                     )
                   })}
@@ -622,9 +626,8 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
           </Box>
         </Box>
       </Box>
-        {/* 코멘트 — 어두운 인셋 패널(그룹 안에서 표와 역할 대비). PC는 표 오른쪽, 좁은 화면은 표 아래 */}
+        {/* 코멘트 — 어두운 인셋 패널(그룹 안에서 표와 역할 대비). 헤더 라벨 없이 카드만(무슨 공간인지 자명) */}
         <Box sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minWidth: 0, width: { xs: '100%', md: 'auto' }, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: '10px', p: 1.25 }}>
-          <Box sx={{ fontSize: 12.5, fontWeight: 700, color: 'text.secondary', mb: 0.75 }}>코멘트</Box>
           <DemoChat memos={messages} canPost={canEdit} canModerate={canModerate} user={user} busy={chatBusy}
             onPost={(title, body) => onPostChat(equipment, title, body)} onEdit={onEditChat} onDelete={onDeleteChat} />
         </Box>
@@ -642,7 +645,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
         <DialogContent>
           {pwPrompt && (
             <Box sx={{ fontSize: 12.5, color: 'text.secondary', mb: 1.25 }}>
-              <b>{pwPrompt.maker}{pwPrompt.model ? ` ${pwPrompt.model}` : ''} · {shown(pwPrompt).round}차</b> 지표값을 저장합니다. 조작방지를 위해 <b>본인 비밀번호</b>를 입력해주세요.
+              <b>{pwPrompt.label}</b> 지표값을 저장합니다. 조작방지를 위해 <b>본인 비밀번호</b>를 입력해주세요.
             </Box>
           )}
           <InputBase type="password" autoFocus value={pw} onChange={(e) => setPw(e.target.value)} placeholder="비밀번호"
@@ -735,6 +738,18 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
     try { await updateDemoResult(roundId, { metrics, author: user }); setSnack({ open: true, msg: '지표값을 수정했습니다.', sev: 'success' }); load() }
     catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '값 수정 실패', sev: 'error' }); throw e }
   }
+  // 샘플·테스트조건 셀 인라인 저장(비밀번호 없이)
+  const onSaveMeta = async (roundId: number, patch: { sample?: string; conditions?: string }) => {
+    if (!user) throw new Error('로그인이 필요합니다')
+    try { await updateDemoResult(roundId, { ...patch, author: user }); load() }
+    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '저장 실패', sev: 'error' }) }
+  }
+  // 지표명·단위 셀 인라인 저장(정의 수정 → 변경 이력 자동)
+  const onSaveMetricDef = async (defId: number, patch: { label?: string; unit?: string }) => {
+    if (!user) throw new Error('로그인이 필요합니다')
+    try { await updateMetricDef(defId, patch, user); setSnack({ open: true, msg: '지표를 수정했습니다.', sev: 'success' }); load() }
+    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '지표 수정 실패', sev: 'error' }) }
+  }
 
   const onDeleteRound = async (roundId: number) => {
     if (!user) throw new Error('로그인이 필요합니다')
@@ -742,11 +757,14 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
     catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '삭제 실패', sev: 'error' }); throw e }
   }
 
-  // '데모결과 추가' 버튼 — 뷰탭(단계별/타임라인/목록/데모결과)과 같은 행 우측 슬롯에 포탈로 배치
+  // '데모결과 추가' — 뷰탭(…/목록/데모결과) 옆 슬롯에 포탈로 배치되는 + 아이콘 버튼(데모결과 탭에서만 슬롯 존재)
   const addBtn = (
-    <Button variant="contained" size="small" startIcon={<AddIcon sx={{ fontSize: 18 }} />} onClick={() => { setFormPre({ equipment: '' }); setFormOpen(true) }} sx={{ whiteSpace: 'nowrap' }}>
-      데모결과 추가
-    </Button>
+    <Tooltip title="데모결과 추가" arrow>
+      <IconButton aria-label="데모결과 추가" onClick={() => { setFormPre({ equipment: '' }); setFormOpen(true) }}
+        sx={(th) => ({ width: 30, height: 30, borderRadius: '8px', bgcolor: th.palette.primary.main, color: th.palette.primary.contrastText, '&:hover': { bgcolor: th.palette.primary.dark } })}>
+        <AddIcon sx={{ fontSize: 20 }} />
+      </IconButton>
+    </Tooltip>
   )
 
   return (
@@ -765,7 +783,7 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
             key={g.equipment}
             equipment={g.equipment} defs={g.defs} makers={g.makers}
             messages={chatOf(g.equipment)} canEdit={isMember} canModerate={isAdmin} user={user} chatBusy={chatBusy} latestValueChange={latestValueChangeOf(g.equipment)}
-            onPostChat={onPostChat} onEditChat={onEditChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues} onReload={load}
+            onPostChat={onPostChat} onEditChat={onEditChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues} onSaveMeta={onSaveMeta} onSaveMetricDef={onSaveMetricDef} onReload={load}
             onEditMetrics={() => setEditorEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
             onAddRound={(mg) => { setFormPre({ equipment: g.equipment, maker: mg.maker, model: mg.model }); setFormOpen(true) }}
             onDeleteRound={onDeleteRound}
