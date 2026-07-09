@@ -259,7 +259,7 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
   }
 
   return (
-    <Box sx={(th) => ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: th.zIndex.drawer, height: { xs: '82vh', md: '66vh' }, bgcolor: 'background.paper', borderTop: `1px solid ${th.palette.divider}`, borderRadius: '16px 16px 0 0', boxShadow: '0 -12px 32px rgba(0,0,0,.42)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'gsUp .22s ease', '@keyframes gsUp': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } } })}>
+    <Box sx={(th) => ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: th.zIndex.drawer, height: { xs: '48vh', md: '34vh' }, bgcolor: 'background.paper', borderTop: `1px solid ${th.palette.divider}`, borderRadius: '16px 16px 0 0', boxShadow: '0 -12px 32px rgba(0,0,0,.42)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'gsUp .22s ease', '@keyframes gsUp': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } } })}>
       {/* 헤더 — 장비명·장수 + 훑기/2장 비교 토글 + 닫기 */}
       <Box sx={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider' }}>
         <ImageOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', flex: 'none' }} />
@@ -284,9 +284,9 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
         </Box>
         <Box sx={{ flex: 'none', width: { xs: '100%', md: 320 }, minHeight: 0, borderLeft: { md: 1 }, borderTop: { xs: 1, md: 0 }, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ flex: 'none', fontSize: 11, color: 'text.disabled', px: 1.25, pt: 1, pb: 0.5 }}>훑어보기 — 제조사별{mode === 'compare' && ' (열마다 골라 좌우 비교)'}</Box>
-          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', gap: 1, px: 1.25, pb: 1.25 }}>
+          <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', gap: 1, px: 1.25, pb: 1.25 }}>
             {columns.map((col, c) => (
-              <Box key={col.key} sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.75, overflowY: 'auto' }}>
+              <Box key={col.key} sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.75, overflowY: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
                 <Box sx={{ position: 'sticky', top: 0, zIndex: 1, fontSize: 11.5, fontWeight: 700, color: '#fff', bgcolor: col.color, borderRadius: '6px', textAlign: 'center', py: '3px' }}>{col.maker}</Box>
                 {col.items.length === 0 && <Box sx={{ fontSize: 10.5, color: 'text.disabled', textAlign: 'center', py: 1 }}>사진 없음</Box>}
                 {col.items.map((it, i) => {
@@ -302,6 +302,8 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
                 })}
               </Box>
             ))}
+            {/* 하단 페이드 — 스크롤바 숨김 대신 '아래 더 있음' 힌트(H안) */}
+            <Box aria-hidden sx={(th) => ({ position: 'absolute', left: 0, right: 0, bottom: 0, height: 26, pointerEvents: 'none', background: `linear-gradient(0deg, ${th.palette.background.paper} 18%, transparent)` })} />
           </Box>
         </Box>
       </Box>
