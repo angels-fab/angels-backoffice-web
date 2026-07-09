@@ -48,6 +48,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
   const [busy, setBusy] = useState(false)
   const [prog, setProg] = useState('')
   const [drag, setDrag] = useState(false)
+  const [dragDoc, setDragDoc] = useState(false) // 파일 첨부 드롭존 하이라이트
   const photoInput = useRef<HTMLInputElement>(null)
   const docInput = useRef<HTMLInputElement>(null)
 
@@ -60,10 +61,13 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
   const modelOpts = useMemo(() => [...new Set(rows.filter((r) => r.equipment === equipment && r.maker === maker).map((r) => r.model).filter(Boolean))], [rows, equipment, maker])
   const placeOpts = useMemo(() => [...new Set(rows.map((r) => r.place).filter(Boolean))], [rows])
   const eqDefs = useMemo(() => defs.filter((d) => d.equipment === equipment && d.active).sort((a, b) => a.sort - b.sort), [defs, equipment])
-  // 같은 장비+제조사+모델의 다음 회차
+  // 다음 회차 자동 — 같은 장비+제조사+모델이 있으면 그 마지막+1, 없으면 같은 장비+제조사(모델 무관)의 마지막+1
   const nextRound = useMemo(() => {
-    const ex = rows.filter((r) => r.equipment === equipment && r.maker === maker && r.model === (model || ''))
-    return ex.length ? Math.max(...ex.map((r) => r.round)) + 1 : 1
+    const eq = equipment.trim(), mk = maker.trim()
+    const sameModel = rows.filter((r) => r.equipment === eq && r.maker === mk && r.model === (model.trim() || ''))
+    if (sameModel.length) return Math.max(...sameModel.map((r) => r.round)) + 1
+    const sameMaker = rows.filter((r) => r.equipment === eq && r.maker === mk)
+    return sameMaker.length ? Math.max(...sameMaker.map((r) => r.round)) + 1 : 1
   }, [rows, equipment, maker, model])
   useEffect(() => { setRound(nextRound) }, [nextRound])
   // 열릴 때 프리필 — '+ 칩'(다음 회차)이면 장비종류+제조사+모델까지 채워짐(회차는 자동)
@@ -174,9 +178,11 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
           </Box>
         </Box>
 
-        {/* 파일 첨부 */}
-        <Box>
-          <Box sx={label}>파일 첨부 (결과 PDF·측정 데이터 등)</Box>
+        {/* 파일 첨부 — 버튼 또는 드래그&드롭 */}
+        <Box onDragOver={(e) => { e.preventDefault(); setDragDoc(true) }} onDragLeave={() => setDragDoc(false)}
+          onDrop={(e) => { e.preventDefault(); setDragDoc(false); const fs = e.dataTransfer.files; if (fs?.length) setDocs((d) => [...d, ...Array.from(fs)]) }}
+          sx={(th) => ({ border: '2px dashed', borderColor: dragDoc ? th.palette.primary.main : th.palette.divider, bgcolor: dragDoc ? alpha(th.palette.primary.main, 0.06) : 'transparent', borderRadius: '10px', p: 1 })}>
+          <Box sx={label}>파일 첨부 (결과 PDF·측정 데이터 등 — 끌어놓기 가능)</Box>
           <input ref={docInput} type="file" multiple hidden onChange={(e) => { const fs = e.target.files; if (fs) setDocs((d) => [...d, ...Array.from(fs)]); if (docInput.current) docInput.current.value = '' }} />
           <Button size="small" variant="outlined" startIcon={<AttachFileIcon sx={{ fontSize: 16 }} />} onClick={() => docInput.current?.click()} sx={{ color: 'text.secondary', borderColor: 'divider' }}>파일 선택</Button>
           {docs.length > 0 && (

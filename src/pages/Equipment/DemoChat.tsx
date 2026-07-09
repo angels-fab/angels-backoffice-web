@@ -21,7 +21,7 @@ const liteC = (c: string) => `color-mix(in srgb, ${c} 55%, #ffffff)`
 
 /**
  * 코멘트 메모 카드 1장 — 네온(어두운 카드 + 담당자 색 테두리, 다크 포탈 동화).
- * 띠 헤더(제목·작성자칩·날짜·본인이면 수정/삭제) + 본문. 발광 효과는 은은하게.
+ * 띠 헤더(제목·작성자칩·날짜·수정/삭제) + 본문. 수정/삭제 = 본인 글 또는 관리자.
  */
 function MemoCard({ m, own, onEdit, onDelete }: { m: DemoChatMsg; own: boolean; onEdit: () => void; onDelete: () => void }) {
   const c = memberOf(m.author)?.color || FALLBACK
@@ -72,8 +72,8 @@ function ComposeCard({ title, body, busy, onTitle, onBody, onCancel, onSave, sav
  * 코멘트 — 비교표 옆/아래, 제목 있는 메모카드 그리드(PC=여러 장, 모바일=1열). 네온 테마 고정.
  * 작성자 색은 담당자 필터 색상과 매치. 본인 카드만 수정·삭제. "코멘트 추가"로 제목+내용 입력.
  */
-export default function DemoChat({ memos, canPost, user, busy, onPost, onEdit, onDelete }: {
-  memos: DemoChatMsg[]; canPost: boolean; user: string | null; busy: boolean
+export default function DemoChat({ memos, canPost, canModerate = false, user, busy, onPost, onEdit, onDelete }: {
+  memos: DemoChatMsg[]; canPost: boolean; canModerate?: boolean; user: string | null; busy: boolean
   onPost: (title: string, body: string) => Promise<void>
   onEdit: (id: number, title: string, body: string) => Promise<void>
   onDelete: (id: number) => void
@@ -96,7 +96,7 @@ export default function DemoChat({ memos, canPost, user, busy, onPost, onEdit, o
           <ComposeCard key={m.id} title={eTitle} body={eBody} busy={busy} saveLabel="수정"
             onTitle={setETitle} onBody={setEBody} onCancel={() => setEditId(null)} onSave={() => void saveEdit()} />
         ) : (
-          <MemoCard key={m.id} m={m} own={!!user && m.author === user} onEdit={() => startEdit(m)} onDelete={() => onDelete(m.id)} />
+          <MemoCard key={m.id} m={m} own={canModerate || (!!user && m.author === user)} onEdit={() => startEdit(m)} onDelete={() => onDelete(m.id)} />
         )
       ))}
 
