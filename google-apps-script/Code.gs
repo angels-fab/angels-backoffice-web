@@ -41,6 +41,9 @@ function doGet(e) {
     if (String(p.action || '') === 'getImprovements') return getImprovements_();
     // 포털개선요청 답글 읽기 — 삭제 안 된 답글 전체(요청번호별 그룹화는 프런트). 한 번에 로드(N+1 금지).
     if (String(p.action || '') === 'getReplies') return getReplies_();
+    // 구글캘린더↔Supabase 동기화 — 설정(토큰 저장+트리거 설치, 최초 1회) / 수동 실행(검증용)
+    if (String(p.calsyncsetup || '')) return calSyncSetup_(String(p.calsyncsetup));
+    if (String(p.calsyncrun || '') === '1') return calSyncRunHttp_(String(p.token || ''));
   } catch (err) {
     return json_({ status: 'error', message: String(err) });
   }
@@ -1946,4 +1949,210 @@ function authorizeCalendar() {
 
 function json_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ═════════════════ 구글캘린더 ↔ Supabase(앱) 양방향 동기화 ═════════════════
+// 엔진: 시간 트리거(10분)로 syncCalendar() 실행.
+//  ① 구글캘린더(-30일~+365일)를 읽어 Supabase RPC calendar_sync로 전송 → DB가 업서트(신규/수정/클레임)·
+//     GCal에서 삭제된 일정 정리 후, 앱쪽 변경(생성/수정/삭제 대기)을 돌려줌.
+//  ② 돌려받은 목록을 구글캘린더에 반영하고 calendar_sync_ack로 새 id·수정시각을 기록(에코 루프 방지).
+// 충돌: 최신 수정 우선(LWW). 토큰은 Script Properties(CAL_SYNC_TOKEN) — 저장은 ?calsyncsetup=토큰 1회.
+const SYNC_SUPABASE_URL = 'https://rmvutlhdcfkqubzrckqf.supabase.co';
+// 프런트에 이미 공개된 anon 키(RLS 전제) — RPC 자체는 별도 동기화 토큰으로 보호됨
+const SYNC_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtdnV0bGhkY2ZrcXVienJja3FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwNjY4MTIsImV4cCI6MjA5ODY0MjgxMn0.D5wXLA2fqc_u9byPLOc6e_mMUKlZD6IdaEnxbU7iCk8';
+
+function fmtSyncDate_(d) { return Utilities.formatDate(d, 'Asia/Seoul', 'yyyy-MM-dd'); }
+function fmtSyncDT_(d) { return Utilities.formatDate(d, 'Asia/Seoul', "yyyy-MM-dd'T'HH:mm"); }
+
+// 이벤트 1건 → DB 계약 행. 종일 end는 GCal '미포함' → DB '마지막 날 포함'(-1일).
+// 키: 단일 = iCal UID / 반복 인스턴스 = UID + '/' + 발생일(반복은 UID가 시리즈 공유라 날짜로 구분).
+function syncEventToRow_(ev) {
+  const allDay = ev.isAllDayEvent();
+  const uid = ev.getId();
+  let start, end;
+  if (allDay) {
+    start = fmtSyncDate_(ev.getAllDayStartDate());
+    end = fmtSyncDate_(new Date(ev.getAllDayEndDate().getTime() - CAL_DAY_MS));
+  } else {
+    start = fmtSyncDT_(ev.getStartTime());
+    end = fmtSyncDT_(ev.getEndTime());
+  }
+  const key = ev.isRecurringEvent() ? uid + '/' + start.slice(0, 10) : uid;
+  return { key: key, title: ev.getTitle(), loc: ev.getLocation() || '', allDay: allDay, start: start, end: end, updated: ev.getLastUpdated().toISOString() };
+}
+
+// 키로 이벤트 후보 전부 찾기 — 단일=getEventById(창 무관), 반복 인스턴스=발생일 하루 범위 UID 일치.
+// 반환 배열 길이로 판단: 수정 push는 정확히 1건일 때만(중복 인스턴스 오덮어쓰기 방지),
+// 삭제 확정은 0건일 때만(창 밖 이동 등 '아직 존재'하는 이벤트 보호).
+function syncFindAll_(cal, key) {
+  const parts = String(key).split('/');
+  if (parts.length === 1) {
+    try {
+      const ev = cal.getEventById(key);
+      return ev ? [ev] : [];
+    } catch (e) { return []; }
+  }
+  const day = parseDate_(parts[1]);
+  if (!day) return [];
+  const out = [];
+  const evs = cal.getEvents(day, new Date(day.getTime() + CAL_DAY_MS));
+  for (let i = 0; i < evs.length; i++) if (evs[i].getId() === parts[0]) out.push(evs[i]);
+  return out;
+}
+
+function syncRpc_(fn, payload) {
+  const res = UrlFetchApp.fetch(SYNC_SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { apikey: SYNC_ANON_KEY, Authorization: 'Bearer ' + SYNC_ANON_KEY },
+    payload: JSON.stringify({ payload: payload }),
+    muteHttpExceptions: true,
+  });
+  const code = res.getResponseCode();
+  if (code >= 300) throw new Error('sync rpc ' + fn + ' HTTP ' + code + ': ' + res.getContentText().slice(0, 300));
+  return JSON.parse(res.getContentText());
+}
+
+// 시간 트리거 대상 — 잠금으로 중복 실행 방지
+function syncCalendar() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return;
+  try { syncCalendarRun_(); } finally { lock.releaseLock(); }
+}
+
+function syncCalendarRun_() {
+  const token = PropertiesService.getScriptProperties().getProperty('CAL_SYNC_TOKEN');
+  if (!token) { console.log('syncCalendar: 토큰 미설정(?calsyncsetup 필요)'); return { error: 'no token' }; }
+  const cal = CalendarApp.getCalendarById(CALENDAR_ID);
+  if (!cal) return { error: 'calendar not found' };
+
+  const now = new Date();
+  const from = new Date(now.getTime() - 30 * CAL_DAY_MS);
+  const to = new Date(now.getTime() + 365 * CAL_DAY_MS);
+  let events = cal.getEvents(from, to).map(syncEventToRow_);
+  // 같은 키 2개 이상(반복 인스턴스를 형제 발생일로 옮긴 경우 등) → 이번 실행에서 그 키 전체 제외
+  // (한 행으로 붕괴·타 인스턴스 오덮어쓰기 방지 — 삭제 확정도 GAS 실존 확인이 막아줌)
+  const keyCount = {};
+  events.forEach(function (e) { keyCount[e.key] = (keyCount[e.key] || 0) + 1; });
+  const dupKeys = Object.keys(keyCount).filter(function (k) { return keyCount[k] > 1; });
+  if (dupKeys.length) {
+    console.log('sync: 중복 키 제외 ' + dupKeys.join(', '));
+    events = events.filter(function (e) { return keyCount[e.key] === 1; });
+  }
+  // 삭제 판정 창은 조회 창보다 하루씩 좁게 — 경계일의 '조회엔 빠졌지만 존재하는' 일정 오삭제 방지
+  const win = { from: fmtSyncDate_(new Date(from.getTime() + CAL_DAY_MS)), to: fmtSyncDate_(new Date(to.getTime() - CAL_DAY_MS)) };
+
+  const out = syncRpc_('calendar_sync', { token: token, window: win, events: events });
+  const ack = { token: token, created: [], updated: [], clearedLogIds: [], appDeleteIds: [] };
+
+  // 앱 → GCal: 생성
+  (out.toCreate || []).forEach(function (row) {
+    try {
+      const opts = row.loc ? { location: row.loc } : {};
+      let ev;
+      if (row.allDay) {
+        const sd = parseDate_(row.start);
+        const ed = parseDate_(row.end);
+        ev = (ed && ed.getTime() > sd.getTime())
+          ? cal.createAllDayEvent(row.title, sd, new Date(ed.getTime() + CAL_DAY_MS), opts)
+          : cal.createAllDayEvent(row.title, sd, opts);
+      } else {
+        ev = cal.createEvent(row.title, parseDateTime_(row.start), parseDateTime_(row.end), opts);
+      }
+      ack.created.push({ id: row.id, key: ev.getId(), updated: ev.getLastUpdated().toISOString(), snap: row.snap });
+    } catch (e) { console.log('sync create 실패 id=' + row.id + ': ' + e); }
+  });
+
+  // 앱 → GCal: 수정(반복 인스턴스는 날짜 이동 시 키가 바뀌므로 newKey로 재키). 후보 2건 이상이면 보류.
+  (out.toUpdate || []).forEach(function (u) {
+    try {
+      const found = syncFindAll_(cal, u.key);
+      if (found.length !== 1) { console.log('sync update 보류(' + found.length + '건): ' + u.key); return; }
+      const ev = found[0];
+      ev.setTitle(u.title);
+      ev.setLocation(u.loc || '');
+      if (u.allDay) {
+        const sd = parseDate_(u.start);
+        const ed = parseDate_(u.end);
+        if (ed && ed.getTime() > sd.getTime()) ev.setAllDayDates(sd, new Date(ed.getTime() + CAL_DAY_MS));
+        else ev.setAllDayDate(sd);
+      } else {
+        ev.setTime(parseDateTime_(u.start), parseDateTime_(u.end));
+      }
+      const newKey = ev.isRecurringEvent() ? ev.getId() + '/' + u.start.slice(0, 10) : ev.getId();
+      ack.updated.push({ key: u.key, newKey: newKey === u.key ? '' : newKey, updated: ev.getLastUpdated().toISOString(), snap: u.snap });
+    } catch (e) { console.log('sync update 실패 ' + u.key + ': ' + e); }
+  });
+
+  // 앱 → GCal: 삭제(이미 없으면 통과) — 처리한 톰스톤은 정리
+  (out.toDelete || []).forEach(function (d) {
+    try {
+      const found = syncFindAll_(cal, d.key);
+      for (let i = 0; i < found.length; i++) found[i].deleteEvent();
+      ack.clearedLogIds.push(d.logId);
+    } catch (e) { console.log('sync delete 실패 ' + d.key + ': ' + e); }
+  });
+
+  // GCal → 앱: 삭제 '확정' — RPC가 준 후보를 GCal 실존 확인 후에만 삭제 승인
+  // (창 밖 이동·부분 조회 실패 등 '아직 존재'하는 이벤트의 앱 행을 지키는 2단계 삭제)
+  (out.toAppDelete || []).forEach(function (d) {
+    try {
+      const found = syncFindAll_(cal, d.key);
+      if (found.length === 0) ack.appDeleteIds.push(d.id);
+    } catch (e) { console.log('sync appDelete 확인 실패 ' + d.key + ': ' + e); }
+  });
+
+  if (ack.created.length || ack.updated.length || ack.clearedLogIds.length || ack.appDeleteIds.length) {
+    syncRpc_('calendar_sync_ack', ack);
+  }
+  const summary = {
+    pulled: out.stats,
+    pushedCreate: ack.created.length,
+    pushedUpdate: ack.updated.length,
+    pushedDelete: ack.clearedLogIds.length,
+    appDeleted: ack.appDeleteIds.length,
+  };
+  console.log('syncCalendar: ' + JSON.stringify(summary));
+  return summary;
+}
+
+// 설정(1회): 토큰 저장 + 10분 트리거 설치. 이미 다른 토큰이 있으면 거부(선점 보호).
+// 저장 전 Supabase에서 토큰 유효성 검증(가짜 토큰 선점·DoS 차단) — ack를 빈 페이로드로 시험 호출.
+function calSyncSetup_(token) {
+  const props = PropertiesService.getScriptProperties();
+  const existing = props.getProperty('CAL_SYNC_TOKEN');
+  if (existing && existing !== token) return json_({ status: 'error', message: '이미 다른 토큰이 설정돼 있습니다' });
+  try {
+    syncRpc_('calendar_sync_ack', { token: token });
+  } catch (e) {
+    return json_({ status: 'error', message: '토큰 검증 실패 — Supabase의 토큰과 일치하지 않습니다' });
+  }
+  props.setProperty('CAL_SYNC_TOKEN', token);
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'syncCalendar') ScriptApp.deleteTrigger(triggers[i]);
+  }
+  ScriptApp.newTrigger('syncCalendar').timeBased().everyMinutes(10).create();
+  return json_({ status: 'ok', message: '동기화 토큰 저장 + 10분 트리거 설치 완료' });
+}
+
+// 수동 실행(검증용) — 저장된 토큰과 일치해야 실행
+function calSyncRunHttp_(token) {
+  const stored = PropertiesService.getScriptProperties().getProperty('CAL_SYNC_TOKEN');
+  if (!stored || token !== stored) return json_({ status: 'error', message: '토큰 불일치' });
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(30000)) return json_({ status: 'error', message: '다른 동기화가 실행 중입니다' });
+  try {
+    return json_({ status: 'ok', summary: syncCalendarRun_() });
+  } catch (e) {
+    return json_({ status: 'error', message: String(e) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// 권한 승인용(편집기에서 1회 실행) — UrlFetchApp(외부요청) 스코프 동의를 발생시킨다.
+function authorizeSync() {
+  const res = UrlFetchApp.fetch(SYNC_SUPABASE_URL + '/auth/v1/settings', { headers: { apikey: SYNC_ANON_KEY }, muteHttpExceptions: true });
+  Logger.log('Supabase 연결 OK (HTTP ' + res.getResponseCode() + ') — 이제 동기화가 동작할 수 있습니다.');
 }
