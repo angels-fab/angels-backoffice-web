@@ -34,6 +34,7 @@ import {
   type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup, type ValueHistory,
 } from '@/api/demo'
 import { verifyPassword } from '@/api/session'
+import { prepDemoPhoto, isPhotoFile } from '@/utils/imagePrep'
 import { MetricEditorDialog, MetricHistoryDialog, ValueHistoryDialog } from './DemoMetricEditor'
 import DemoChat from './DemoChat'
 import DemoResultForm from './DemoResultForm'
@@ -215,10 +216,17 @@ function PhotoManageDialog({ round, maker, user, onClose, onSaved }: {
   const inputRef = useRef<HTMLInputElement>(null)
   const total = kept.length + added.length
 
+  // 사진 추가 — TIF는 JPEG 변환·대용량은 1600px 리사이즈(prepDemoPhoto) 후 썸네일 표시(순서 유지)
   const addFiles = (files: FileList | File[] | null) => {
     if (!files) return
-    const imgs = Array.from(files).filter((f) => f.type.startsWith('image/'))
-    if (imgs.length) setAdded((a) => [...a, ...imgs.map((f) => ({ file: f, url: URL.createObjectURL(f) }))])
+    const imgs = Array.from(files).filter(isPhotoFile)
+    if (!imgs.length) return
+    void (async () => {
+      for (const f of imgs) {
+        const p = await prepDemoPhoto(f)
+        setAdded((a) => [...a, { file: p, url: URL.createObjectURL(p) }])
+      }
+    })()
   }
   // 통합 인덱스(kept 먼저, added 뒤) 기준 삭제 — 대표 인덱스 보정
   const rmAt = (i: number) => {
@@ -247,7 +255,7 @@ function PhotoManageDialog({ round, maker, user, onClose, onSaved }: {
     <Dialog open onClose={close} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
       <DialogTitle sx={{ fontSize: 15, fontWeight: 800 }}>{maker} · {round.round}차 사진 관리</DialogTitle>
       <DialogContent>
-        <input ref={inputRef} type="file" accept="image/*" multiple hidden onChange={(e) => { addFiles(e.target.files); if (inputRef.current) inputRef.current.value = '' }} />
+        <input ref={inputRef} type="file" accept="image/*,.tif,.tiff" multiple hidden onChange={(e) => { addFiles(e.target.files); if (inputRef.current) inputRef.current.value = '' }} />
         <Box onClick={() => inputRef.current?.click()} onDragOver={(e) => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); addFiles(e.dataTransfer.files) }}
           sx={(th) => ({ border: '2px dashed', borderColor: drag ? th.palette.primary.main : th.palette.divider, bgcolor: drag ? alpha(th.palette.primary.main, 0.06) : 'transparent', borderRadius: '10px', p: 1, cursor: 'pointer' })}>
           {total === 0 ? (
@@ -294,25 +302,42 @@ interface GItem { roundNo: number; idx: number; name: string; path?: string; pho
 interface GCol { key: string; maker: string; color: string; items: GItem[] }
 
 /**
- * 사진 갤러리 시트(B+C 절충) — 비교표는 위에 유지, 화면 하단 고정 시트로 뜬다.
- *  · 훑기: 제조사별 썸네일 스트립 + 큰 미리보기(클릭 = 전체화면 확대 라이트박스)
- *  · 2장 비교: 제조사별 미리보기를 좌우로 나란히(경쟁사 직접 비교)
+ * 사진 갤러리 시트(B+C 절충) — 비교표는 위에 유지, 화면 하단 고정 시트(높이 1/2)로 뜬다.
+ *  · 썸네일 클릭 = 왼쪽 큰 미리보기 / 미리보기 클릭 = 전체화면 확대
+ *  · 제조사 칩 토글 = 그 제조사 미리보기 고정(여러 개 켜면 좌우 나란히 비교, 다시 누르면 해제)
+ *  · 닫힘 = 내려가는 모션(백드롭·X·Esc 공통)
  */
 function GallerySheet({ equipment, columns, initial, onClose }: { equipment: string; columns: GCol[]; initial: { c: number; i: number }; onClose: () => void }) {
-  const [mode, setMode] = useState<'one' | 'compare'>('one')
   const [sel, setSel] = useState(initial)
   const [slots, setSlots] = useState<number[]>(() => columns.map((_, c) => (c === initial.c ? initial.i : 0)))
+  const [active, setActive] = useState<number[]>([]) // 켜진 제조사 열(누른 순서 유지)
   const [zoom, setZoom] = useState<{ photos: DemoPhotoRef[]; idx: number } | null>(null)
+  const [closing, setClosing] = useState(false) // 닫힘 모션 재생 후 실제 unmount
   const total = columns.reduce((s, c) => s + c.items.length, 0)
+  // 닫기 = 모션(.2s) 후 타이머로 unmount — animationend 이벤트는 환경에 따라 안 올 수 있어 타이머가 확실
+  const closeTimer = useRef<number | null>(null)
+  const requestClose = useCallback(() => {
+    setClosing(true)
+    if (closeTimer.current == null) closeTimer.current = window.setTimeout(onClose, 230)
+  }, [onClose])
+  useEffect(() => () => { if (closeTimer.current != null) clearTimeout(closeTimer.current) }, [])
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (zoom) setZoom(null); else onClose() } }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (zoom) setZoom(null); else requestClose() } }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [zoom, onClose])
+  }, [zoom, requestClose])
 
   const openZoom = (it?: GItem) => { if (it && it.photos.length) setZoom({ photos: it.photos, idx: it.idx }) }
+  const toggleMaker = (c: number) => setActive((a) => (a.includes(c) ? a.filter((x) => x !== c) : [...a, c]))
+  // 썸네일 클릭 — 칩이 켜져 있으면 그 열 슬롯 교체(비교 유지), 꺼져 있으면 단일 보기
+  const pickThumb = (c: number, i: number) => {
+    if (active.length) {
+      if (!active.includes(c)) setActive((a) => [...a, c]) // 비활성 열 클릭 = 자동으로 켜서 바로 보기
+      setSlots((s) => s.map((v, ci) => (ci === c ? i : v)))
+    } else setSel({ c, i })
+  }
 
-  // 미리보기 1칸 — 큰 사진(전체 보기) + 캡션 + 확대 아이콘. label 있으면(2장 비교) 제조사 슬롯 표시
+  // 미리보기 1칸 — 큰 사진(전체 보기) + 캡션 + 확대 아이콘. label = 제조사 슬롯 표시(비교 시)
   const preview = (c: number, i: number, label?: string) => {
     const col = columns[c]; const it = col?.items[i]
     return (
@@ -329,50 +354,51 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
   return (
     <>
     {/* 백드롭 — 시트 밖(비교표 등) 클릭 시 닫힘. 옅은 스크림으로 클릭 가능함을 암시 */}
-    <Box aria-hidden onClick={onClose} sx={(th) => ({ position: 'fixed', inset: 0, zIndex: th.zIndex.drawer, bgcolor: 'rgba(0,0,0,.2)' })} />
-    <Box sx={(th) => ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: th.zIndex.drawer + 1, height: { xs: '48vh', md: '34vh' }, bgcolor: 'background.paper', borderTop: `1px solid ${th.palette.divider}`, borderRadius: '16px 16px 0 0', boxShadow: '0 -12px 32px rgba(0,0,0,.42)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'gsUp .22s ease', '@keyframes gsUp': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } } })}>
-      {/* 헤더 — 장비명·장수 + 훑기/2장 비교 토글 + 닫기 */}
+    <Box aria-hidden onClick={requestClose} sx={(th) => ({ position: 'fixed', inset: 0, zIndex: th.zIndex.drawer, bgcolor: 'rgba(0,0,0,.2)', opacity: closing ? 0 : 1, transition: 'opacity .2s ease', pointerEvents: closing ? 'none' : 'auto' })} />
+    <Box
+      sx={(th) => ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: th.zIndex.drawer + 1, height: '50vh', bgcolor: 'background.paper', borderTop: `1px solid ${th.palette.divider}`, borderRadius: '16px 16px 0 0', boxShadow: '0 -12px 32px rgba(0,0,0,.42)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: closing ? 'gsDown .2s ease forwards' : 'gsUp .22s ease', '@keyframes gsUp': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } }, '@keyframes gsDown': { from: { transform: 'translateY(0)' }, to: { transform: 'translateY(100%)' } } })}>
+      {/* 헤더 — 장비명·장수 + 닫기 */}
       <Box sx={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider' }}>
         <ImageOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', flex: 'none' }} />
         <Box sx={{ fontSize: 13.5, fontWeight: 800 }}>{equipment} 사진</Box>
         <Box sx={{ fontSize: 11.5, color: 'text.disabled' }}>· {total}장</Box>
         <Box sx={{ flex: 1 }} />
-        <Box sx={(th) => ({ display: 'flex', border: `1px solid ${th.palette.divider}`, borderRadius: '999px', overflow: 'hidden', fontSize: 12 })}>
-          {(['one', 'compare'] as const).map((m) => (
-            <Box key={m} role="button" tabIndex={0} aria-pressed={mode === m} onClick={() => setMode(m)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMode(m) } }}
-              sx={(th) => ({ px: 1.5, py: 0.5, cursor: 'pointer', userSelect: 'none', ...(mode === m ? { bgcolor: th.palette.primary.main, color: '#fff', fontWeight: 700 } : { color: 'text.secondary' }) })}>
-              {m === 'one' ? '훑기' : '2장 비교'}
-            </Box>
-          ))}
-        </Box>
-        <IconButton size="small" aria-label="닫기" onClick={onClose}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+        <Box sx={{ fontSize: 11, color: 'text.disabled' }}>제조사 칩을 눌러 나란히 비교</Box>
+        <IconButton size="small" aria-label="닫기" onClick={requestClose}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
       </Box>
-      {/* 본문 — 미리보기(왼쪽/위) + 콘택트시트(오른쪽/아래) */}
+      {/* 본문 — 미리보기(왼쪽/위) + 콘택트시트(오른쪽/아래). 칩 켠 제조사들이 좌우 나란히 */}
       <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
         <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', gap: 0.75, p: 1 }}>
-          {mode === 'one' ? preview(sel.c, sel.i) : columns.map((_, c) => preview(c, slots[c], columns[c].maker))}
+          {active.length ? active.map((c) => preview(c, slots[c], columns[c].maker)) : preview(sel.c, sel.i)}
         </Box>
         <Box sx={{ flex: 'none', width: { xs: '100%', md: 320 }, minHeight: 0, borderLeft: { md: 1 }, borderTop: { xs: 1, md: 0 }, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ flex: 'none', fontSize: 11, color: 'text.disabled', px: 1.25, pt: 1, pb: 0.5 }}>훑어보기 — 제조사별{mode === 'compare' && ' (열마다 골라 좌우 비교)'}</Box>
+          <Box sx={{ flex: 'none', fontSize: 11, color: 'text.disabled', px: 1.25, pt: 1, pb: 0.5 }}>훑어보기 — 제조사별</Box>
           <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', gap: 1, px: 1.25, pb: 1.25 }}>
-            {columns.map((col, c) => (
+            {columns.map((col, c) => {
+              const on = active.includes(c)
+              return (
               <Box key={col.key} sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.75, overflowY: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
-                <Box sx={{ position: 'sticky', top: 0, zIndex: 1, fontSize: 11.5, fontWeight: 700, color: '#fff', bgcolor: col.color, borderRadius: '6px', textAlign: 'center', py: '3px' }}>{col.maker}</Box>
+                {/* 제조사 칩 — 클릭 = 왼쪽 미리보기 고정 토글(여러 개 = 나란히 비교) */}
+                <Box role="button" tabIndex={0} aria-pressed={on} onClick={() => toggleMaker(c)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMaker(c) } }}
+                  sx={{ position: 'sticky', top: 0, zIndex: 1, fontSize: 11.5, fontWeight: 700, color: '#fff', bgcolor: col.color, borderRadius: '6px', textAlign: 'center', py: '3px', cursor: 'pointer', userSelect: 'none', outline: on ? '2px solid #fff' : '2px solid transparent', outlineOffset: '-2px', opacity: active.length && !on ? 0.55 : 1, transition: 'opacity .15s' }}>
+                  {col.maker}
+                </Box>
                 {col.items.length === 0 && <Box sx={{ fontSize: 10.5, color: 'text.disabled', textAlign: 'center', py: 1 }}>사진 없음</Box>}
                 {col.items.map((it, i) => {
-                  const on = mode === 'one' ? (sel.c === c && sel.i === i) : (slots[c] === i)
+                  const picked = active.length ? (on && slots[c] === i) : (sel.c === c && sel.i === i)
                   return (
-                    <Box key={i} role="button" tabIndex={0} aria-pressed={on}
-                      onClick={() => { if (mode === 'one') setSel({ c, i }); else setSlots((s) => s.map((v, ci) => (ci === c ? i : v))) }}
-                      sx={(th) => ({ position: 'relative', height: 64, flex: 'none', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', outline: on ? `2px solid ${th.palette.primary.main}` : '2px solid transparent', outlineOffset: '-2px' })}>
+                    <Box key={i} role="button" tabIndex={0} aria-pressed={picked}
+                      onClick={() => pickThumb(c, i)}
+                      sx={(th) => ({ position: 'relative', height: 64, flex: 'none', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', outline: picked ? `2px solid ${th.palette.primary.main}` : '2px solid transparent', outlineOffset: '-2px' })}>
                       <Photo photo={{ name: it.name, path: it.path }} />
                       <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, fontSize: 9, color: '#fff', bgcolor: 'rgba(0,0,0,.5)', px: '4px', py: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.roundNo}차 · {it.name}</Box>
                     </Box>
                   )
                 })}
               </Box>
-            ))}
+              )
+            })}
             {/* 하단 페이드 — 스크롤바 숨김 대신 '아래 더 있음' 힌트(H안) */}
             <Box aria-hidden sx={(th) => ({ position: 'absolute', left: 0, right: 0, bottom: 0, height: 26, pointerEvents: 'none', background: `linear-gradient(0deg, ${th.palette.background.paper} 18%, transparent)` })} />
           </Box>
@@ -476,7 +502,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
         <Box sx={{ flex: 1 }} />
         {canEdit && <Button size="small" startIcon={<TuneIcon sx={{ fontSize: 15 }} />} onClick={onEditMetrics} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>지표 편집</Button>}
         <Tooltip title={latestValueChange ? `최근 값 변경 — ${latestValueChange.maker} · ${latestValueChange.changedBy}` : ''} arrow disableHoverListener={!latestValueChange}>
-          <Badge color="warning" variant="dot" invisible={!latestValueChange} sx={{ '& .MuiBadge-badge': { top: 4, right: 4 } }}>
+          <Badge color="warning" variant="dot" invisible={!latestValueChange} sx={{ '& .MuiBadge-badge': { top: 5, right: 2, minWidth: 6, width: 6, height: 6, borderRadius: '3px' } }}>
             <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 15 }} />} onClick={onViewValueHistory} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>변경 이력</Button>
           </Badge>
         </Tooltip>

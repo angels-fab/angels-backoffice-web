@@ -19,6 +19,7 @@ import type { Theme } from '@mui/material/styles'
 import { ComboField } from '@/pages/Work/inlineFields'
 import { AttachmentIcon, formatBytes } from '@/pages/Notice/attachmentUI'
 import { addDemoResult, uploadDemoFile, type DemoMetricDef, type DemoRoundRow } from '@/api/demo'
+import { prepDemoPhoto, isPhotoFile } from '@/utils/imagePrep'
 
 const field = (th: Theme) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: '8px', px: 1.1, py: '7px', fontSize: 13, color: 'text.primary', width: '100%' })
 const label = { fontSize: 11, fontWeight: 700, color: 'text.disabled', letterSpacing: '.02em', mb: 0.35 }
@@ -76,10 +77,17 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
     setEquipment(initialEquipment || ''); setMaker(initialMaker || ''); setModel(initialModel || '')
   }, [open, initialEquipment, initialMaker, initialModel])
 
+  // 사진 추가 — TIF는 JPEG 변환·대용량은 1600px 리사이즈(prepDemoPhoto) 후 썸네일 표시(순서 유지)
   const addPics = (files: FileList | File[] | null) => {
     if (!files) return
-    const imgs = Array.from(files).filter((f) => f.type.startsWith('image/'))
-    if (imgs.length) setPhotos((p) => [...p, ...imgs.map((f) => ({ file: f, url: URL.createObjectURL(f), name: f.name }))])
+    const imgs = Array.from(files).filter(isPhotoFile)
+    if (!imgs.length) return
+    void (async () => {
+      for (const f of imgs) {
+        const p = await prepDemoPhoto(f)
+        setPhotos((prev) => [...prev, { file: p, url: URL.createObjectURL(p), name: p.name }])
+      }
+    })()
   }
   const rmPic = (i: number) => setPhotos((p) => { const x = p[i]; if (x) URL.revokeObjectURL(x.url); const next = p.filter((_, j) => j !== i); if (cover >= next.length) setCover(0); return next })
 
@@ -156,7 +164,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
         {/* 사진 — 드래그&드롭 / 클릭, 대표 지정 */}
         <Box sx={{ mb: 1.25 }}>
           <Box sx={label}>사진 (여러 장 · 대표 1장 지정)</Box>
-          <input ref={photoInput} type="file" accept="image/*" multiple hidden onChange={(e) => { addPics(e.target.files); if (photoInput.current) photoInput.current.value = '' }} />
+          <input ref={photoInput} type="file" accept="image/*,.tif,.tiff" multiple hidden onChange={(e) => { addPics(e.target.files); if (photoInput.current) photoInput.current.value = '' }} />
           <Box onClick={() => photoInput.current?.click()} onDragOver={(e) => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); addPics(e.dataTransfer.files) }}
             sx={(th) => ({ border: '2px dashed', borderColor: drag ? th.palette.primary.main : th.palette.divider, bgcolor: drag ? alpha(th.palette.primary.main, 0.06) : 'transparent', borderRadius: '10px', p: 1, cursor: 'pointer', textAlign: 'center' })}>
             {photos.length === 0 ? (
