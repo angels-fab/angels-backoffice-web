@@ -47,8 +47,8 @@ const fmtWhen = (iso: string) => { try { return new Date(iso).toLocaleString('ko
 // 서명 URL 캐시 — 사진(비공개 버킷)을 매번 재요청하지 않도록
 const urlCache = new Map<string, string>()
 
-/** 사진 타일 — path 있으면 서명URL로 이미지, 없으면(샘플) 플레이스홀더 */
-function Photo({ photo, onClick }: { photo?: DemoPhotoRef; onClick?: () => void }) {
+/** 사진 타일 — path 있으면 서명URL로 이미지, 없으면(샘플) 플레이스홀더. fit=contain이면 전체 보기(미리보기용) */
+function Photo({ photo, onClick, fit = 'cover' }: { photo?: DemoPhotoRef; onClick?: () => void; fit?: 'cover' | 'contain' }) {
   const path = photo?.path
   const [url, setUrl] = useState<string | null>(path ? urlCache.get(path) ?? null : null)
   useEffect(() => {
@@ -61,7 +61,7 @@ function Photo({ photo, onClick }: { photo?: DemoPhotoRef; onClick?: () => void 
   }, [path])
   return (
     <Box onClick={onClick} sx={{ width: '100%', height: '100%', bgcolor: 'background.default', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', cursor: onClick ? 'pointer' : 'default', overflow: 'hidden' }}>
-      {url ? <Box component="img" src={url} alt={photo?.name || ''} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <ImageOutlinedIcon sx={{ fontSize: 20 }} />}
+      {url ? <Box component="img" src={url} alt={photo?.name || ''} sx={{ width: '100%', height: '100%', objectFit: fit }} /> : <ImageOutlinedIcon sx={{ fontSize: 20 }} />}
     </Box>
   )
 }
@@ -220,10 +220,99 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
   )
 }
 
+// 갤러리 콘택트시트 제조사 열 색(A/B 구분용) — 앱 accent 톤
+const MK_COLORS = ['#5491DA', '#4DA167', '#A98AE0', '#D6A23E']
+interface GItem { roundNo: number; idx: number; name: string; path?: string; photos: DemoPhotoRef[] }
+interface GCol { key: string; maker: string; color: string; items: GItem[] }
+
+/**
+ * 사진 갤러리 시트(B+C 절충) — 비교표는 위에 유지, 화면 하단 고정 시트로 뜬다.
+ *  · 훑기: 제조사별 썸네일 스트립 + 큰 미리보기(클릭 = 전체화면 확대 라이트박스)
+ *  · 2장 비교: 제조사별 미리보기를 좌우로 나란히(경쟁사 직접 비교)
+ */
+function GallerySheet({ equipment, columns, initial, onClose }: { equipment: string; columns: GCol[]; initial: { c: number; i: number }; onClose: () => void }) {
+  const [mode, setMode] = useState<'one' | 'compare'>('one')
+  const [sel, setSel] = useState(initial)
+  const [slots, setSlots] = useState<number[]>(() => columns.map((_, c) => (c === initial.c ? initial.i : 0)))
+  const [zoom, setZoom] = useState<{ photos: DemoPhotoRef[]; idx: number } | null>(null)
+  const total = columns.reduce((s, c) => s + c.items.length, 0)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (zoom) setZoom(null); else onClose() } }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [zoom, onClose])
+
+  const openZoom = (it?: GItem) => { if (it && it.photos.length) setZoom({ photos: it.photos, idx: it.idx }) }
+
+  // 미리보기 1칸 — 큰 사진(전체 보기) + 캡션 + 확대 아이콘. label 있으면(2장 비교) 제조사 슬롯 표시
+  const preview = (c: number, i: number, label?: string) => {
+    const col = columns[c]; const it = col?.items[i]
+    return (
+      <Box key={label ?? 'one'} onClick={() => openZoom(it)}
+        sx={{ flex: 1, minWidth: 0, position: 'relative', borderRadius: 2, overflow: 'hidden', bgcolor: 'background.default', border: 1, borderColor: 'divider', cursor: it && it.photos.length ? 'zoom-in' : 'default' }}>
+        <Photo photo={it ? { name: it.name, path: it.path } : undefined} fit="contain" />
+        {label && <Box sx={{ position: 'absolute', top: 8, left: 8, fontSize: 11, fontWeight: 700, color: '#fff', bgcolor: alpha(col.color, 0.92), borderRadius: '6px', px: 1, py: '2px' }}>{label}</Box>}
+        {it && <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, p: '8px 10px', fontSize: 12, color: '#fff', background: 'linear-gradient(0deg, rgba(0,0,0,.6), transparent)' }}><b>{col.maker} · {it.roundNo}차</b> · {it.name}</Box>}
+        {it && it.photos.length > 0 && <ZoomOutMapIcon sx={{ position: 'absolute', bottom: 8, right: 8, fontSize: 16, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', borderRadius: '4px', p: '2px' }} />}
+      </Box>
+    )
+  }
+
+  return (
+    <Box sx={(th) => ({ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: th.zIndex.drawer, height: { xs: '82vh', md: '66vh' }, bgcolor: 'background.paper', borderTop: `1px solid ${th.palette.divider}`, borderRadius: '16px 16px 0 0', boxShadow: '0 -12px 32px rgba(0,0,0,.42)', display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: 'gsUp .22s ease', '@keyframes gsUp': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } } })}>
+      {/* 헤더 — 장비명·장수 + 훑기/2장 비교 토글 + 닫기 */}
+      <Box sx={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+        <ImageOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary', flex: 'none' }} />
+        <Box sx={{ fontSize: 13.5, fontWeight: 800 }}>{equipment} 사진</Box>
+        <Box sx={{ fontSize: 11.5, color: 'text.disabled' }}>· {total}장</Box>
+        <Box sx={{ flex: 1 }} />
+        <Box sx={(th) => ({ display: 'flex', border: `1px solid ${th.palette.divider}`, borderRadius: '999px', overflow: 'hidden', fontSize: 12 })}>
+          {(['one', 'compare'] as const).map((m) => (
+            <Box key={m} role="button" tabIndex={0} aria-pressed={mode === m} onClick={() => setMode(m)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMode(m) } }}
+              sx={(th) => ({ px: 1.5, py: 0.5, cursor: 'pointer', userSelect: 'none', ...(mode === m ? { bgcolor: th.palette.primary.main, color: '#fff', fontWeight: 700 } : { color: 'text.secondary' }) })}>
+              {m === 'one' ? '훑기' : '2장 비교'}
+            </Box>
+          ))}
+        </Box>
+        <IconButton size="small" aria-label="닫기" onClick={onClose}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+      </Box>
+      {/* 본문 — 미리보기(왼쪽/위) + 콘택트시트(오른쪽/아래) */}
+      <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', gap: 0.75, p: 1 }}>
+          {mode === 'one' ? preview(sel.c, sel.i) : columns.map((_, c) => preview(c, slots[c], columns[c].maker))}
+        </Box>
+        <Box sx={{ flex: 'none', width: { xs: '100%', md: 320 }, minHeight: 0, borderLeft: { md: 1 }, borderTop: { xs: 1, md: 0 }, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ flex: 'none', fontSize: 11, color: 'text.disabled', px: 1.25, pt: 1, pb: 0.5 }}>훑어보기 — 제조사별{mode === 'compare' && ' (열마다 골라 좌우 비교)'}</Box>
+          <Box sx={{ flex: 1, minHeight: 0, display: 'flex', gap: 1, px: 1.25, pb: 1.25 }}>
+            {columns.map((col, c) => (
+              <Box key={col.key} sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.75, overflowY: 'auto' }}>
+                <Box sx={{ position: 'sticky', top: 0, zIndex: 1, fontSize: 11.5, fontWeight: 700, color: '#fff', bgcolor: col.color, borderRadius: '6px', textAlign: 'center', py: '3px' }}>{col.maker}</Box>
+                {col.items.length === 0 && <Box sx={{ fontSize: 10.5, color: 'text.disabled', textAlign: 'center', py: 1 }}>사진 없음</Box>}
+                {col.items.map((it, i) => {
+                  const on = mode === 'one' ? (sel.c === c && sel.i === i) : (slots[c] === i)
+                  return (
+                    <Box key={i} role="button" tabIndex={0} aria-pressed={on}
+                      onClick={() => { if (mode === 'one') setSel({ c, i }); else setSlots((s) => s.map((v, ci) => (ci === c ? i : v))) }}
+                      sx={(th) => ({ position: 'relative', height: 64, flex: 'none', borderRadius: '6px', overflow: 'hidden', cursor: 'pointer', outline: on ? `2px solid ${th.palette.primary.main}` : '2px solid transparent', outlineOffset: '-2px' })}>
+                      <Photo photo={{ name: it.name, path: it.path }} />
+                      <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, fontSize: 9, color: '#fff', bgcolor: 'rgba(0,0,0,.5)', px: '4px', py: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.roundNo}차 · {it.name}</Box>
+                    </Box>
+                  )
+                })}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      </Box>
+      {zoom && <Lightbox photos={zoom.photos} idx={zoom.idx} onIdx={(i) => setZoom((z) => (z ? { ...z, idx: i } : z))} onClose={() => setZoom(null)} />}
+    </Box>
+  )
+}
+
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onOpen, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound }: {
+function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy, latestValueChange, onPostChat, onDeleteChat, onSaveValues, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
-  onOpen: (photos: DemoPhotoRef[], idx: number) => void
   onPostChat: (equipment: string, title: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
   onEditMetrics: () => void; onViewValueHistory: () => void; onAddRound: (mg: DemoMakerGroup) => void
@@ -232,6 +321,19 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
   // 제조사별 선택 회차(기본=최신)
   const [sel, setSel] = useState<Record<string, number>>(() => Object.fromEntries(makers.map((m) => [m.key, m.rounds.length - 1])))
   const shown = (m: DemoMakerGroup) => m.rounds[Math.min(sel[m.key] ?? m.rounds.length - 1, m.rounds.length - 1)]
+
+  // 사진 갤러리(B+C 절충) — 제조사별 전 회차 사진을 열로 모아 시트로 열람
+  const columns: GCol[] = makers.map((m, ci) => ({
+    key: m.key, maker: m.maker, color: MK_COLORS[ci % MK_COLORS.length],
+    items: m.rounds.flatMap((rd) => rd.photos.map((ph, i) => ({ roundNo: rd.round, idx: i, name: ph.name, path: ph.path, photos: rd.photos }))),
+  }))
+  const [gallery, setGallery] = useState<{ c: number; i: number } | null>(null)
+  const openGallery = (m: DemoMakerGroup, photoIdxInShown: number) => {
+    const c = Math.max(0, makers.indexOf(m))
+    const rn = shown(m).round
+    const it = columns[c]?.items.findIndex((x) => x.roundNo === rn && x.idx === photoIdxInShown) ?? -1
+    setGallery({ c, i: it >= 0 ? it : 0 })
+  }
 
   // 제조사 지표값 수정 — 실수 방지로 열 단위 명시 편집(작은 트리거 → 인풋 → 저장). 저장 시 비밀번호 재확인(조작방지)
   const [valEditKey, setValEditKey] = useState<string | null>(null)
@@ -330,7 +432,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
               {padSpan > 0 && <Box component="th" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0 }} />}
               {makers.map((m, mi) => (
                 <Box component="th" key={m.key} colSpan={2} sx={{ p: '4px 6px', textAlign: 'center', verticalAlign: 'top', borderLeft: mi > 0 ? 1 : 0, borderColor: 'divider' }}>
-                  <MakerHead mg={m} sel={sel[m.key] ?? m.rounds.length - 1} onSel={(i) => setSel((s) => ({ ...s, [m.key]: i }))} onOpen={onOpen}
+                  <MakerHead mg={m} sel={sel[m.key] ?? m.rounds.length - 1} onSel={(i) => setSel((s) => ({ ...s, [m.key]: i }))} onOpen={(_photos, idx) => openGallery(m, idx)}
                     canEdit={canEdit} editing={valEditKey === m.key} savingVal={savingVal}
                     onStartVal={() => startVal(m)} onSaveVal={() => askSaveVal(m)} onCancelVal={cancelVal}
                     onAddRound={() => onAddRound(m)} onDeleteRound={() => askDelete(m)} />
@@ -380,6 +482,9 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, user, chatBusy
             onPost={(title, body) => onPostChat(equipment, title, body)} onDelete={onDeleteChat} />
         </Box>
       </Box>
+
+      {/* 사진 갤러리 시트(B+C 절충) — 표 유지 + 하단 시트에서 훑기·2장 비교·전체화면 확대 */}
+      {gallery && <GallerySheet equipment={equipment} columns={columns} initial={gallery} onClose={() => setGallery(null)} />}
 
       {/* 지표값 저장 — 비밀번호 재확인(조작방지 보안강화) */}
       <Dialog open={!!pwPrompt} onClose={() => !savingVal && setPwPrompt(null)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
@@ -436,7 +541,6 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
   const [chat, setChat] = useState<DemoChatMsg[]>([])
   const [chatBusy, setChatBusy] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [viewer, setViewer] = useState<{ photos: DemoPhotoRef[]; idx: number } | null>(null)
   const [editorEquip, setEditorEquip] = useState<string | null>(null)
   const [historyEquip, setHistoryEquip] = useState<string | null>(null)
   const [valHist, setValHist] = useState<ValueHistory[]>([])
@@ -505,14 +609,13 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
             key={g.equipment}
             equipment={g.equipment} defs={g.defs} makers={g.makers}
             messages={chatOf(g.equipment)} canEdit={isMember} user={user} chatBusy={chatBusy} latestValueChange={latestValueChangeOf(g.equipment)}
-            onOpen={(photos, idx) => setViewer({ photos, idx })} onPostChat={onPostChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues}
+            onPostChat={onPostChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues}
             onEditMetrics={() => setEditorEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
             onAddRound={(mg) => { setFormPre({ equipment: g.equipment, maker: mg.maker, model: mg.model }); setFormOpen(true) }}
             onDeleteRound={onDeleteRound}
           />
         ))
       )}
-      {viewer && <Lightbox photos={viewer.photos} idx={viewer.idx} onIdx={(i) => setViewer((v) => (v ? { ...v, idx: i } : v))} onClose={() => setViewer(null)} />}
       {editorEquip && (
         <MetricEditorDialog open equipment={editorEquip} defs={defs} author={user}
           onClose={() => setEditorEquip(null)}
