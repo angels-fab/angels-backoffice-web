@@ -28,6 +28,7 @@
     "@tiptap/extension-bold": "^2.27.2",
     "@tiptap/extension-bullet-list": "^2.27.2",
     "@tiptap/extension-document": "^2.27.2",
+    "@tiptap/extension-highlight": "^2.27.2",
     "@tiptap/extension-history": "^2.27.2",
     "@tiptap/extension-italic": "^2.27.2",
     "@tiptap/extension-list-item": "^2.27.2",

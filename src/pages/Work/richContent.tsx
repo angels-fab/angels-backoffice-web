@@ -31,10 +31,13 @@ export const COLOR_LABEL: Record<ColorToken, string> = {
 interface PMMark { type: string; attrs?: { token?: string } }
 interface PMText { type: 'text'; text: string; marks?: PMMark[] }
 export interface PMParagraph { type: 'paragraph'; content?: PMText[] }
-export interface PMDoc { type: 'doc'; content: PMParagraph[] }
+export interface PMList { type: 'bulletList' | 'orderedList'; content?: PMListItem[] }
+export interface PMListItem { type: 'listItem'; content?: PMBlock[] }
+export type PMBlock = PMParagraph | PMList
+export interface PMDoc { type: 'doc'; content: PMBlock[] }
 
 // ── 렌더용 구조 ──
-export interface RunMarks { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; color?: ColorToken }
+export interface RunMarks { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; color?: ColorToken; highlight?: boolean }
 export interface Run { text: string; marks: RunMarks }
 export interface BodyLine { marker: string | null; indentPx: number; runs: Run[]; plain: string }
 
@@ -63,20 +66,54 @@ function sanitizeMarks(marks: unknown): PMMark[] | undefined {
   for (const m of marks) {
     if (!m || typeof m !== 'object') continue
     const type = (m as PMMark).type
-    if (type === 'bold' || type === 'italic' || type === 'underline' || type === 'strike') {
+    if (type === 'bold' || type === 'italic' || type === 'underline' || type === 'strike' || type === 'highlightToken') {
       out.push({ type })
     } else if (type === 'colorToken') {
       const token = String((m as PMMark).attrs?.token || '')
       if (NAMED_COLORS.has(token)) out.push({ type: 'colorToken', attrs: { token } })
     }
-    // highlightToken(형광펜, 구버전) 등 미지원 mark는 버린다 — 텍스트·나머지 서식은 유지
+    // 그 외 미지원 mark는 버린다 — 텍스트·나머지 서식은 유지
   }
   return out.length ? out : undefined
 }
 
+/** 문단 정제 — text 노드 + 허용 mark만 남긴다 */
+function sanitizeParagraph(p: unknown): PMParagraph {
+  const kids = (p as PMParagraph)?.content
+  if (!Array.isArray(kids)) return { type: 'paragraph' }
+  const texts: PMText[] = []
+  for (const t of kids) {
+    if (!t || (t as PMText).type !== 'text' || typeof (t as PMText).text !== 'string') continue
+    if (!(t as PMText).text.length) continue
+    texts.push({ type: 'text', text: (t as PMText).text, marks: sanitizeMarks((t as PMText).marks) })
+  }
+  return texts.length ? { type: 'paragraph', content: texts } : { type: 'paragraph' }
+}
+
+/** 블록 정제 — paragraph / bulletList / orderedList(→listItem→블록)만 허용, 나머지는 버림 */
+function sanitizeBlock(node: unknown): PMBlock | null {
+  const type = (node as { type?: unknown })?.type
+  if (type === 'paragraph') return sanitizeParagraph(node)
+  if (type === 'bulletList' || type === 'orderedList') {
+    const items: PMListItem[] = []
+    const kids = (node as PMList).content
+    if (Array.isArray(kids)) {
+      for (const it of kids) {
+        if (!it || (it as PMListItem).type !== 'listItem') continue
+        const inner: PMBlock[] = []
+        const ikids = (it as PMListItem).content
+        if (Array.isArray(ikids)) for (const c of ikids) { const b = sanitizeBlock(c); if (b) inner.push(b) }
+        items.push({ type: 'listItem', content: inner.length ? inner : [{ type: 'paragraph' }] })
+      }
+    }
+    return items.length ? { type, content: items } : null
+  }
+  return null // heading/table/image 등 미지원 노드는 버림(방어적 정제)
+}
+
 /**
- * '업무내용서식' 문자열 → 정제된 PM doc. 실패/미지원 버전/손상 시 null.
- * 빈 문자열도 null(정상 — 서식 없음). 허용 노드/mark만 남긴다(방어적 정제).
+ * '업무내용서식' 문자열 → 정제된 PM doc. 실패/미지원 버전/손상/빈 문서 시 null(=서식 없음 → 평문 fallback).
+ * 허용 노드(문단·목록)/mark(굵게·기울임·밑줄·취소선·글자색·형광펜)만 남긴다(방어적 정제).
  */
 export function parseContentFmt(raw: unknown): PMDoc | null {
   const s = typeof raw === 'string' ? raw.trim() : ''
@@ -92,20 +129,9 @@ export function parseContentFmt(raw: unknown): PMDoc | null {
   if (obj.version !== CONTENT_FMT_VERSION) return null
   const doc = obj.doc as { type?: unknown; content?: unknown } | undefined
   if (!doc || doc.type !== 'doc' || !Array.isArray(doc.content)) return null
-  const content: PMParagraph[] = []
-  for (const p of doc.content) {
-    if (!p || (p as PMParagraph).type !== 'paragraph') continue
-    const kids = (p as PMParagraph).content
-    if (!Array.isArray(kids)) { content.push({ type: 'paragraph' }); continue }
-    const texts: PMText[] = []
-    for (const t of kids) {
-      if (!t || (t as PMText).type !== 'text' || typeof (t as PMText).text !== 'string') continue
-      if (!(t as PMText).text.length) continue
-      texts.push({ type: 'text', text: (t as PMText).text, marks: sanitizeMarks((t as PMText).marks) })
-    }
-    content.push(texts.length ? { type: 'paragraph', content: texts } : { type: 'paragraph' })
-  }
-  return { type: 'doc', content }
+  const content: PMBlock[] = []
+  for (const b of doc.content) { const sb = sanitizeBlock(b); if (sb) content.push(sb) }
+  return content.length ? { type: 'doc', content } : null
 }
 
 function marksOf(marks?: PMMark[]): RunMarks {
@@ -115,6 +141,7 @@ function marksOf(marks?: PMMark[]): RunMarks {
     else if (m.type === 'italic') out.italic = true
     else if (m.type === 'underline') out.underline = true
     else if (m.type === 'strike') out.strike = true
+    else if (m.type === 'highlightToken') out.highlight = true
     else if (m.type === 'colorToken') {
       const tok = String(m.attrs?.token || '')
       if (NAMED_COLORS.has(tok)) out.color = tok as ColorToken
@@ -157,20 +184,55 @@ export function plainLineToBodyLine(line: string): BodyLine {
   return { marker: null, indentPx, runs: rest ? [{ text: rest, marks: {} }] : [], plain: line }
 }
 
-/** PM doc(본문) → BodyLine[] (문단=줄, 글머리·들여쓰기 분리 + mark 유지) */
-export function docToBodyLines(doc: PMDoc): BodyLine[] {
-  return doc.content.map((p) => {
-    const runs = runsOf(p)
-    const plain = runs.map((r) => r.text).join('')
-    const { indentPx, leadLen } = lineMeta(plain)
-    const rest = plain.slice(leadLen)
-    const m = rest.match(MARKER_RE)
-    if (m) {
-      const consumed = leadLen + (rest.length - m[2].length)
-      return { marker: m[1], indentPx, runs: sliceRunsFrom(runs, consumed), plain }
+// 목록 한 단계 들여쓰기(px) — 텍스트 글머리(선행 공백)와 시각적으로 어울리게
+const LIST_INDENT_PX = 18
+
+/** 문단 → BodyLine. forcedMarker(목록 항목)면 마커는 목록에서 부여하고 본문은 그대로 유지 */
+function paragraphToBodyLine(p: PMParagraph, baseIndentPx: number, forcedMarker?: string): BodyLine {
+  const runs = runsOf(p)
+  const plain = runs.map((r) => r.text).join('')
+  if (forcedMarker !== undefined) {
+    return { marker: forcedMarker, indentPx: baseIndentPx, runs, plain }
+  }
+  // 목록 밖 문단: 기존과 동일하게 선행 공백=들여쓰기, 선두 글머리문자 분리(구버전 텍스트 글머리 호환)
+  const { indentPx, leadLen } = lineMeta(plain)
+  const rest = plain.slice(leadLen)
+  const m = rest.match(MARKER_RE)
+  if (m) {
+    const consumed = leadLen + (rest.length - m[2].length)
+    return { marker: m[1], indentPx: baseIndentPx + indentPx, runs: sliceRunsFrom(runs, consumed), plain }
+  }
+  return { marker: null, indentPx: baseIndentPx + indentPx, runs: sliceRunsFrom(runs, leadLen), plain }
+}
+
+/** 블록 목록 → BodyLine[] (목록은 마커·깊이 들여쓰기로 평탄화, 중첩 재귀) */
+function flattenBlocks(blocks: PMBlock[], depth: number, out: BodyLine[]): void {
+  for (const b of blocks) {
+    if (b.type === 'paragraph') { out.push(paragraphToBodyLine(b, depth * LIST_INDENT_PX)); continue }
+    const ordered = b.type === 'orderedList'
+    let n = 0
+    for (const item of b.content || []) {
+      n += 1
+      const marker = ordered ? `${n}.` : '•'
+      let markerUsed = false
+      for (const c of item.content || []) {
+        if (c.type === 'paragraph') {
+          out.push(paragraphToBodyLine(c, (depth + 1) * LIST_INDENT_PX, markerUsed ? undefined : marker))
+          markerUsed = true
+        } else {
+          flattenBlocks([c], depth + 1, out)
+        }
+      }
+      if (!markerUsed) out.push({ marker, indentPx: (depth + 1) * LIST_INDENT_PX, runs: [], plain: '' })
     }
-    return { marker: null, indentPx, runs: sliceRunsFrom(runs, leadLen), plain }
-  })
+  }
+}
+
+/** PM doc(본문) → BodyLine[] (문단=줄, 목록=마커·들여쓰기로 평탄화 + mark 유지) */
+export function docToBodyLines(doc: PMDoc): BodyLine[] {
+  const out: BodyLine[] = []
+  flattenBlocks(doc.content, 0, out)
+  return out
 }
 
 /**
@@ -199,29 +261,39 @@ export function workBodyLines(t: WorkItem): BodyLine[] {
   return lines
 }
 
-/** contentFmt 안에 실제 mark가 하나라도 있는지 */
+/** 블록에 서식(mark) 또는 목록 구조가 하나라도 있는지 — 저장 여부 판정용(목록도 '서식'으로 취급) */
+function blocksHaveFormatting(blocks: PMBlock[]): boolean {
+  for (const b of blocks) {
+    if (b.type !== 'paragraph') return true // 목록 = 서식
+    if ((b.content || []).some((t) => (t.marks || []).length > 0)) return true
+  }
+  return false
+}
+
+/** contentFmt 안에 실제 서식(mark)·목록이 하나라도 있는지 */
 export function docHasMarks(raw: unknown): boolean {
   const doc = parseContentFmt(raw)
   if (!doc) return false
-  return doc.content.some((p) => (p.content || []).some((t) => (t.marks || []).length > 0))
+  return blocksHaveFormatting(doc.content)
+}
+
+/** 블록 → 시그니처(구조 + mark). 문단/목록 중첩 반영 */
+function sigBlocks(blocks: PMBlock[]): unknown[] {
+  return blocks.map((b) => {
+    if (b.type === 'paragraph') return { p: (b.content || []).map((t) => ({ t: t.text, m: marksOf(t.marks) })) }
+    return { [b.type]: (b.content || []).map((it) => sigBlocks(it.content || [])) }
+  })
 }
 
 /**
- * 서식 변경 판정용 시그니처. mark가 전혀 없으면 '' (= '서식 없음'과 동일 취급) →
+ * 서식 변경 판정용 시그니처. 서식(mark)·목록이 전혀 없으면 '' (= '서식 없음'과 동일 취급) →
  * 일반 텍스트에서 에디터가 문서를 실체화해도 '서식 추가'로 오판하지 않음.
  */
 export function fmtSignature(raw: unknown): string {
   const doc = parseContentFmt(raw)
   if (!doc) return ''
-  let any = false
-  const rep = doc.content.map((p) =>
-    (p.content || []).map((t) => {
-      const m = marksOf(t.marks)
-      if (Object.keys(m).length) any = true
-      return { t: t.text, m }
-    }),
-  )
-  return any ? JSON.stringify(rep) : ''
+  if (!blocksHaveFormatting(doc.content)) return ''
+  return JSON.stringify(sigBlocks(doc.content))
 }
 
 // ── 렌더 ──
@@ -234,6 +306,7 @@ export function runStyle(m: RunMarks): CSSProperties {
   if (m.strike) deco.push('line-through')
   if (deco.length) s.textDecoration = deco.join(' ')
   if (m.color && m.color !== 'default') s.color = COLOR_VAR[m.color]
+  if (m.highlight) { s.backgroundColor = 'var(--hl)'; s.borderRadius = '3px'; s.padding = '0 1px' }
   return s
 }
 
