@@ -35,6 +35,8 @@ export const HL_VAR: Record<HlToken, string> = {
   yellow: 'var(--hl-yellow)', green: 'var(--hl-green)', blue: 'var(--hl-blue)', pink: 'var(--hl-pink)',
 }
 export const HL_LABEL: Record<HlToken, string> = { yellow: '노랑', green: '초록', blue: '파랑', pink: '분홍' }
+/** 형광펜 칠하기 모드 커서(펜 촉)용 불투명 색 — CSS 변수(rgba)는 커서 SVG에서 흐리게 보여 별도 solid hex */
+export const HL_SOLID: Record<HlToken, string> = { yellow: '#f4e000', green: '#43d17a', blue: '#5aa0ff', pink: '#ff6eb4' }
 
 // ── PM 문서(직렬화 대상)의 최소 타입 ──
 interface PMMark { type: string; attrs?: { token?: string } }

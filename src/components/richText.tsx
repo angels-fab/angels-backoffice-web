@@ -33,7 +33,19 @@ import Placeholder from '@tiptap/extension-placeholder'
 import BulletList from '@tiptap/extension-bullet-list'
 import OrderedList from '@tiptap/extension-ordered-list'
 import ListItem from '@tiptap/extension-list-item'
-import { COLOR_TOKENS, COLOR_LABEL, COLOR_VAR, HL_TOKENS, HL_LABEL, HL_VAR, type ColorToken, type HlToken } from '@/pages/Work/richContent'
+import { COLOR_TOKENS, COLOR_LABEL, COLOR_VAR, HL_TOKENS, HL_LABEL, HL_VAR, HL_SOLID, type ColorToken, type HlToken } from '@/pages/Work/richContent'
+
+/** 형광펜 칠하기 모드 커서 — 촉 색이 현재 형광펜 색인 마커 SVG(촉 끝이 핫스팟). 실제 형광펜으로 긋는 감각 재현 */
+function hlCursorCss(hex: string): string {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'>`
+    + `<g transform='rotate(35 10 30)'>`
+    + `<rect x='4' y='4' width='12' height='15' rx='3' fill='#2f3542' stroke='#f2f4f8' stroke-width='1.2'/>`
+    + `<rect x='5' y='8' width='10' height='3' rx='1' fill='#dfe6f2'/>`
+    + `<path d='M4 19 h12 v3 l-3 6 h-6 l-3 -6 z' fill='${hex}' stroke='rgba(0,0,0,.28)' stroke-width='0.7'/>`
+    + `<path d='M8 28 h4 l-1.5 2.5 h-1 z' fill='${hex}'/>`
+    + `</g></svg>`
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 10 30, crosshair`
+}
 
 /**
  * 업무·공지 공용 리치텍스트 — 마크(글자색·형광펜) + 목록 확장 + 공용 툴바.
@@ -75,31 +87,54 @@ export const HighlightTokenMark = Mark.create({
 /** 목록 확장(글머리·번호·항목) — Tab/Shift-Tab 들여쓰기·자동 이어쓰기 포함(ListItem 기본 키맵) */
 export const listExtensions = [BulletList, OrderedList, ListItem]
 
+/**
+ * 툴바 힌트 툴팁 — 버튼 위(placement top)로 떠서 아래 본문을 가리지 않고,
+ * 클릭(mousedown)하면 즉시 사라지며, 버튼에서 벗어나면 바로 닫힌다(interactive 아님·leave 0).
+ * span 래퍼가 disabled 버튼의 이벤트도 받는다.
+ */
+function HintTip({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <Tooltip title={title} open={open} placement="top" disableInteractive
+      enterDelay={350} leaveDelay={0} onClose={() => setOpen(false)}
+      // flip 비활성 = 위 공간이 좁아도 아래로 안 뒤집힘 → 항상 툴바 위, 본문 텍스트를 가리지 않음
+      slotProps={{ popper: { modifiers: [{ name: 'flip', enabled: false }] } }}>
+      <Box
+        component="span"
+        sx={{ display: 'inline-flex' }}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onMouseDown={() => setOpen(false)}
+      >
+        {children}
+      </Box>
+    </Tooltip>
+  )
+}
+
 // 툴바 버튼(선택 유지 위해 mousedown 기본동작 차단)
 function TBtn({ active, disabled, title, onClick, children }: {
   active?: boolean; disabled?: boolean; title: string; onClick: () => void; children: React.ReactNode
 }) {
   return (
-    <Tooltip title={title}>
-      <span>
-        <IconButton
-          size="small"
-          aria-label={title}
-          aria-pressed={active}
-          disabled={disabled}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onClick}
-          sx={(th) => ({
-            p: 0.4, borderRadius: '7px',
-            color: active ? th.palette.primary.main : 'text.secondary',
-            bgcolor: active ? alpha(th.palette.primary.main, 0.16) : 'transparent',
-            '&:hover': { bgcolor: alpha(th.palette.primary.main, active ? 0.22 : 0.1) },
-          })}
-        >
-          {children}
-        </IconButton>
-      </span>
-    </Tooltip>
+    <HintTip title={title}>
+      <IconButton
+        size="small"
+        aria-label={title}
+        aria-pressed={active}
+        disabled={disabled}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onClick}
+        sx={(th) => ({
+          p: 0.4, borderRadius: '7px',
+          color: active ? th.palette.primary.main : 'text.secondary',
+          bgcolor: active ? alpha(th.palette.primary.main, 0.16) : 'transparent',
+          '&:hover': { bgcolor: alpha(th.palette.primary.main, active ? 0.22 : 0.1) },
+        })}
+      >
+        {children}
+      </IconButton>
+    </HintTip>
   )
 }
 
@@ -117,25 +152,21 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
       bgcolor: active ? alpha(th.palette.primary.main, 0.16) : 'transparent',
       '&:hover': { bgcolor: alpha(th.palette.primary.main, active ? 0.22 : 0.1) },
     })}>
-      <Tooltip title={title}>
-        <span style={{ display: 'inline-flex' }}>
-          <IconButton size="small" aria-label={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={onApply}
-            sx={{ p: '3px 4px', borderRadius: 0, color: 'text.secondary' }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
-              {glyph}
-              <Box sx={{ width: 15, height: 3, borderRadius: '1px', mt: '2px', bgcolor: barColor }} />
-            </Box>
-          </IconButton>
-        </span>
-      </Tooltip>
-      <Tooltip title={`${title} 선택`}>
-        <span style={{ display: 'inline-flex' }}>
-          <IconButton size="small" aria-label={`${title} 선택`} aria-haspopup="menu" onMouseDown={(e) => e.preventDefault()} onClick={(e) => onOpen(e.currentTarget)}
-            sx={{ p: 0, width: 15, borderRadius: 0, color: 'text.secondary' }}>
-            <ArrowDropDownIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        </span>
-      </Tooltip>
+      <HintTip title={title}>
+        <IconButton size="small" aria-label={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={onApply}
+          sx={{ p: '3px 4px', borderRadius: 0, color: 'text.secondary' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+            {glyph}
+            <Box sx={{ width: 15, height: 3, borderRadius: '1px', mt: '2px', bgcolor: barColor }} />
+          </Box>
+        </IconButton>
+      </HintTip>
+      <HintTip title={`${title} 선택`}>
+        <IconButton size="small" aria-label={`${title} 선택`} aria-haspopup="menu" onMouseDown={(e) => e.preventDefault()} onClick={(e) => onOpen(e.currentTarget)}
+          sx={{ p: 0, width: 15, borderRadius: 0, color: 'text.secondary' }}>
+          <ArrowDropDownIcon sx={{ fontSize: 16 }} />
+        </IconButton>
+      </HintTip>
     </Box>
   )
 }
@@ -155,7 +186,10 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
 
   useEffect(() => {
     if (!editor || !hlMode) return
-    const dom = editor.view.dom
+    const dom = editor.view.dom as HTMLElement
+    // 모드 동안 마커 커서(촉 색=현재 형광펜 색) — 실제 형광펜으로 긋는 감각
+    const prevCursor = dom.style.cursor
+    dom.style.cursor = hlCursorCss(HL_SOLID[lastHl])
     const onUp = () => {
       // mouseup 직후 DOM 선택을 PM 좌표로 직접 변환해 칠하고 선택 해제(연속 칠하기) — PM sync 타이밍에 안 기댐
       window.setTimeout(() => {
@@ -174,7 +208,11 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setHlMode(false) } }
     dom.addEventListener('mouseup', onUp)
     window.addEventListener('keydown', onKey, true)
-    return () => { dom.removeEventListener('mouseup', onUp); window.removeEventListener('keydown', onKey, true) }
+    return () => {
+      dom.removeEventListener('mouseup', onUp)
+      window.removeEventListener('keydown', onKey, true)
+      dom.style.cursor = prevCursor
+    }
   }, [editor, hlMode, lastHl])
 
   if (!editor) return null
