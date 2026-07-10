@@ -21,7 +21,7 @@ export const COLOR_TOKENS: ColorToken[] = ['default', 'red', 'amber', 'green', '
 const NAMED_COLORS = new Set<string>(['red', 'amber', 'green', 'blue', 'purple'])
 /** 토큰 → 현재 테마 CSS 변수(다크/라이트 모두 index.css에서 대비 확보) */
 export const COLOR_VAR: Record<Exclude<ColorToken, 'default'>, string> = {
-  red: 'var(--red)', amber: 'var(--amber)', green: 'var(--green)', blue: 'var(--blue)', purple: 'var(--purple)',
+  red: 'var(--ec-red)', amber: 'var(--ec-amber)', green: 'var(--ec-green)', blue: 'var(--ec-blue)', purple: 'var(--ec-purple)',
 }
 export const COLOR_LABEL: Record<ColorToken, string> = {
   default: '기본 글자색', red: '빨강', amber: '주황', green: '초록', blue: '파랑', purple: '보라',
@@ -35,8 +35,8 @@ export const HL_VAR: Record<HlToken, string> = {
   yellow: 'var(--hl-yellow)', green: 'var(--hl-green)', blue: 'var(--hl-blue)', pink: 'var(--hl-pink)',
 }
 export const HL_LABEL: Record<HlToken, string> = { yellow: '노랑', green: '초록', blue: '파랑', pink: '분홍' }
-/** 형광펜 칠하기 모드 커서(펜 촉)용 불투명 색 — CSS 변수(rgba)는 커서 SVG에서 흐리게 보여 별도 solid hex */
-export const HL_SOLID: Record<HlToken, string> = { yellow: '#f4e000', green: '#43d17a', blue: '#5aa0ff', pink: '#ff6eb4' }
+/** 형광펜 색(불투명) — 커서 촉·툴바 색상 바용. 실제 형광펜 배경(--hl-*)과 동일한 PPT 원색 */
+export const HL_SOLID: Record<HlToken, string> = { yellow: '#FFFF00', green: '#00FF00', blue: '#00FFFF', pink: '#FF00FF' }
 
 // ── PM 문서(직렬화 대상)의 최소 타입 ──
 interface PMMark { type: string; attrs?: { token?: string } }
@@ -323,7 +323,11 @@ export function runStyle(m: RunMarks): CSSProperties {
   if (m.strike) deco.push('line-through')
   if (deco.length) s.textDecoration = deco.join(' ')
   if (m.color && m.color !== 'default') s.color = COLOR_VAR[m.color]
-  if (m.highlight) { s.backgroundColor = HL_VAR[m.highlight]; s.borderRadius = '3px'; s.padding = '0 1px' }
+  if (m.highlight) {
+    s.backgroundColor = HL_VAR[m.highlight]; s.borderRadius = '3px'; s.padding = '0 1px'
+    // PPT식 — 원색 형광펜 위 글자는 어둡게(가독). 단, 사용자가 글자색을 지정했으면 그 색 유지
+    if (!m.color || m.color === 'default') s.color = 'var(--hl-ink)'
+  }
   return s
 }
 

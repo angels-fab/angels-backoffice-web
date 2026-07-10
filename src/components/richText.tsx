@@ -398,7 +398,8 @@ export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSi
   const editor = useEditor({
     extensions: [
       Document, Paragraph, Text,
-      Bold, Italic, Underline, Strike, ColorTokenMark, HighlightTokenMark,
+      // Highlight를 Color보다 먼저 = 형광펜 mark가 바깥, 글자색이 안쪽 → 형광펜 위에서도 글자색 유지
+      Bold, Italic, Underline, Strike, HighlightTokenMark, ColorTokenMark,
       ...listExtensions, History,
       Placeholder.configure({ placeholder: placeholder || '' }),
     ],

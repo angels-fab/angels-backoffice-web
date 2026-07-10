@@ -8,7 +8,10 @@
   --ink:#0F1117;--ink2:#161B22;--ink3:#1D2635;
   --border:#293244;--border2:#232C3A;--text:#FFFFFF;--text2:#AAB4C3;--text3:#7D8899;
   --amber:#D6A23E;--blue:#5491DA;--green:#4DA167;--purple:#A98AE0;--teal:#46B7BE;--red:#E05B54;
-  --hl-yellow:rgba(255,214,0,.32);--hl-green:rgba(80,220,130,.28);--hl-blue:rgba(90,160,255,.30);--hl-pink:rgba(255,110,180,.28);
+  /* 형광펜 = PPT/Word 형광펜색(원색·불투명) + 형광펜 위 글자는 어둡게(가독) */
+  --hl-yellow:#FFFF00;--hl-green:#00FF00;--hl-blue:#00FFFF;--hl-pink:#FF00FF;--hl-ink:#1b1c22;
+  /* 에디터 글자색 = PPT 표준색(다크 배경에서 안 보이는 파랑·보라·빨강은 톤만 올림) */
+  --ec-red:#FF453A;--ec-amber:#FFC000;--ec-green:#22C55E;--ec-blue:#3B9BFF;--ec-purple:#B57BFF;
 }
 body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
@@ -213,13 +216,13 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 
 /* ── 업무내용 리치 텍스트 ── */
 /* 글자색 토큰(의미 기반) → 테마 팔레트. 다크/라이트 모두 index.css 변수로 대비 확보 */
-.wc-color[data-color="red"]{color:var(--red)}
-.wc-color[data-color="amber"]{color:var(--amber)}
-.wc-color[data-color="green"]{color:var(--green)}
-.wc-color[data-color="blue"]{color:var(--blue)}
-.wc-color[data-color="purple"]{color:var(--purple)}
-/* 형광펜(하이라이트, 다색) — 업무·공지·개선요청·코멘트 공용. 줄바꿈돼도 배경 유지(box-decoration-break) */
-.wc-hl{background:var(--hl-yellow);border-radius:3px;padding:0 1px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:inherit}
+.wc-color[data-color="red"]{color:var(--ec-red)}
+.wc-color[data-color="amber"]{color:var(--ec-amber)}
+.wc-color[data-color="green"]{color:var(--ec-green)}
+.wc-color[data-color="blue"]{color:var(--ec-blue)}
+.wc-color[data-color="purple"]{color:var(--ec-purple)}
+/* 형광펜(하이라이트, 다색) — 업무·공지·개선요청·코멘트 공용. 원색 위 글자는 어둡게(PPT식). 글자색(.wc-color)이 안쪽이면 그 색이 우선 */
+.wc-hl{background:var(--hl-yellow);color:var(--hl-ink);border-radius:3px;padding:0 1px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 .wc-hl[data-color="green"]{background:var(--hl-green)}
 .wc-hl[data-color="blue"]{background:var(--hl-blue)}
 .wc-hl[data-color="pink"]{background:var(--hl-pink)}
