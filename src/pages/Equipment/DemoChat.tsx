@@ -1,12 +1,10 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import InputBase from '@mui/material/InputBase'
-import Tooltip from '@mui/material/Tooltip'
 import CircularProgress from '@mui/material/CircularProgress'
 import CloseIcon from '@mui/icons-material/Close'
-import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
 import { MEMBERS, given } from '@/pages/Calendar/members'
@@ -22,53 +20,45 @@ const FALLBACK = '#8a8f98'
 /** 담당자 색을 밝게 — 어두운 카드 위 제목/칩 글자용 */
 const liteC = (c: string) => `color-mix(in srgb, ${c} 55%, #ffffff)`
 
+// ── masonry(진짜 빈틈 채우기) 상수 ──
+// 카드는 모두 '좁은 1열' 균일폭 — 폭을 섞으면(전폭 카드) masonry가 빈틈을 못 메우므로 너비 조절을 버리고 균일화.
+// CSS grid를 1px 행 + `dense`로 깔고, 카드 실측 높이만큼 grid-row를 span시켜 세로 빈틈을 메운다.
+const GRID_GAP = 10          // 열 간격 + 카드 세로 간격(px)
+const MIN_2COL_W = 400       // 이 폭 미만이면 1열(모바일·좁은 패널). 2열이면 각 열 ≥ ~195px 보장
+const ADD_KEY = -1           // 하단 작성/추가 카드의 측정 키(메모 id와 겹치지 않게 음수)
+
+// ── 부드러운 드래그(포인터 기반 삽입정렬 + FLIP) 상수 ──
+const ACTIVATION_DISTANCE = 8   // px 이상 움직여야 드래그 시작(제자리 더블클릭=수정과 구분)
+const SWITCH_LOCK_MS = 180      // 재배치 직후 추가 판정 잠금(masonry 재패킹 왕복 방지)
+const MOVE_DURATION = 220       // 주변 카드 자리 이동 애니메이션(ms)
+const SETTLE_DURATION = 180     // 드롭 후 정착 애니메이션(ms)
+const EASING = 'cubic-bezier(0.22, 1, 0.36, 1)'
+const CLICK_SUPPRESS_MS = 320   // 드롭 직후 더블클릭(수정) 억제
+
 /** 네온 카드 껍데기 — 제목 띠(담당자 색) + 얇은 구분선 + 본문. 작성/수정/표시 카드가 동일 포맷 공유 */
 function neonSx(c: string) {
   return { borderRadius: '8px', overflow: 'hidden', bgcolor: '#1a1d26', color: '#dfe6f2', border: `1px solid ${alpha(c, 0.85)}`, boxShadow: `0 0 5px ${alpha(c, 0.18)}` } as const
 }
 
 /**
- * 코멘트 메모 카드 1장 — 네온(어두운 카드 + 담당자 색 테두리).
- * 더블클릭=수정(본인/관리자) · 드래그=순서 변경(팀원) · N열 버튼=너비 사이클(본인/관리자).
+ * 코멘트 메모 카드 1장 — 네온(어두운 카드 + 담당자 색 테두리). 표시 전용.
+ * 수정 = 카드 더블클릭(본인/관리자, 래퍼가 처리) · 삭제 = X 버튼(본인/관리자) · 순서 = 드래그(래퍼가 처리).
  */
-function MemoCard({ m, own, draggable, dragOver, onEdit, onDelete, onWidth, onDragStart, onDragOver, onDrop, onDragEnd }: {
-  m: DemoChatMsg; own: boolean; draggable: boolean; dragOver: boolean
-  onEdit: () => void; onDelete: () => void; onWidth: (w: number) => void
-  onDragStart: () => void; onDragOver: (e: React.DragEvent) => void; onDrop: () => void; onDragEnd: () => void
-}) {
+function MemoCard({ m, own, onDelete }: { m: DemoChatMsg; own: boolean; onDelete: () => void }) {
   const c = memberOf(m.author)?.color || FALLBACK
   // 제목 도입 전 구버전 글(title='')은 본문을 제목 자리로 올림(빈 띠 방지)
   const title = m.title || m.body
   const body = m.title ? m.body : ''
-  const w = Math.min(3, Math.max(1, m.width || 1))
   return (
-    <Box
-      draggable={draggable}
-      onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd}
-      onDoubleClick={own ? onEdit : undefined}
-      sx={(th) => ({ ...neonSx(c), gridColumn: `span ${w}`, cursor: draggable ? 'grab' : 'default', outline: dragOver ? `2px dashed ${th.palette.primary.main}` : 'none', outlineOffset: '2px' })}
-    >
+    <Box sx={{ ...neonSx(c) }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, p: '6px 10px', bgcolor: alpha(c, 0.14), borderBottom: body ? `1px solid ${alpha(c, 0.28)}` : 'none' }}>
         <Box sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, lineHeight: 1.3, color: liteC(c), textShadow: `0 0 3px ${alpha(c, 0.35)}`, wordBreak: 'break-word' }}>{title}</Box>
         <Box component="span" sx={{ flex: 'none', display: 'inline-flex', alignItems: 'center', height: 20, px: 1, fontSize: 11, fontWeight: 600, borderRadius: '7px', whiteSpace: 'nowrap', border: `1px solid ${alpha(c, 0.85)}`, color: liteC(c) }}>{m.author || '팀원'}</Box>
         <Box component="span" sx={{ flex: 'none', fontSize: 10.5, fontFamily: 'monospace', color: '#7e8797', opacity: 0.75 }}>{fmtDay(m.createdAt)}</Box>
         {own && (
-          <>
-            <Tooltip title="너비 전환 (1→2→3열)">
-              <Box role="button" tabIndex={0} aria-label={`카드 너비 ${w}열 — 클릭 시 전환`}
-                onClick={() => onWidth(w >= 3 ? 1 : w + 1)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onWidth(w >= 3 ? 1 : w + 1) } }}
-                sx={{ flex: 'none', fontSize: 9.5, lineHeight: 1, px: '4px', py: '3px', borderRadius: '5px', border: '1px solid rgba(255,255,255,.3)', color: 'rgba(255,255,255,.55)', cursor: 'pointer', userSelect: 'none', '&:hover': { color: liteC(c), borderColor: liteC(c) } }}>
-                {w}열
-              </Box>
-            </Tooltip>
-            <IconButton size="small" aria-label="코멘트 수정" onClick={onEdit} sx={{ p: '1px', flex: 'none', color: 'rgba(255,255,255,.45)', '&:hover': { color: liteC(c) } }}>
-              <EditIcon sx={{ fontSize: 13 }} />
-            </IconButton>
-            <IconButton size="small" aria-label="코멘트 삭제" onClick={onDelete} sx={{ p: '1px', flex: 'none', color: 'rgba(255,255,255,.45)', '&:hover': { color: '#e05b54' } }}>
-              <CloseIcon sx={{ fontSize: 13 }} />
-            </IconButton>
-          </>
+          <IconButton size="small" aria-label="코멘트 삭제" onClick={onDelete} sx={{ p: '1px', flex: 'none', color: 'rgba(255,255,255,.45)', '&:hover': { color: '#e05b54' } }}>
+            <CloseIcon sx={{ fontSize: 13 }} />
+          </IconButton>
         )}
       </Box>
       {body && <Box sx={{ p: '7px 10px 10px', fontSize: 12.5, lineHeight: 1.5 }}><RichBodyView html={body} /></Box>}
@@ -76,14 +66,14 @@ function MemoCard({ m, own, draggable, dragOver, onEdit, onDelete, onWidth, onDr
   )
 }
 
-/** 작성/수정 카드 — 표시 카드와 동일한 네온 포맷(제목 띠 + 리치 본문 에디터). 그리드 span은 호출부가 지정 */
-function ComposeCard({ accent, title, body, busy, span, onTitle, onBody, onCancel, onSave, saveLabel }: {
-  accent: string; title: string; body: string; busy: boolean; span: number
+/** 작성/수정 카드 — 표시 카드와 동일한 네온 포맷(제목 띠 + 리치 본문 에디터) */
+function ComposeCard({ accent, title, body, busy, onTitle, onBody, onCancel, onSave, saveLabel }: {
+  accent: string; title: string; body: string; busy: boolean
   onTitle: (v: string) => void; onBody: (v: string) => void; onCancel: () => void; onSave: () => void; saveLabel: string
 }) {
   const c = accent
   return (
-    <Box sx={{ ...neonSx(c), gridColumn: `span ${span}` }}>
+    <Box sx={{ ...neonSx(c) }}>
       {/* 제목 띠 — 표시 카드의 제목 자리에 인풋 */}
       <Box sx={{ p: '5px 10px', bgcolor: alpha(c, 0.14), borderBottom: `1px solid ${alpha(c, 0.28)}` }}>
         <InputBase autoFocus value={title} onChange={(e) => onTitle(e.target.value)} placeholder="제목"
@@ -103,16 +93,19 @@ function ComposeCard({ accent, title, body, busy, span, onTitle, onBody, onCance
 }
 
 /**
- * 코멘트 보드 — 3열 그리드. 카드 너비 1~3열(span, DB width) · 드래그로 순서 변경(팀원) ·
- * 더블클릭/연필=수정(본인·관리자) · 작성 카드는 보드 하단 전폭.
+ * 코멘트 보드 — 균일한 좁은 2열 masonry. 순서 변경 = 부드러운 포인터 드래그(삽입정렬 + FLIP, 팀원) ·
+ * 수정 = 카드 더블클릭(본인·관리자) · 삭제 = X · 작성 카드는 보드 하단(작성 중만 전폭).
+ *
+ * 레이아웃: CSS grid(1px 행 + grid-auto-flow dense)에 카드 실측 높이만큼 grid-row를 span시켜 세로 빈틈을
+ * 채운다(masonry). 드래그: 마우스/펜만(터치 제외) — 8px 이동 시 들어올려 커서 추적, 포인터 아래 카드 기준
+ * 삽입정렬, 주변 카드 FLIP 이동, Esc/취소 시 원위치, 드롭 시 순서 저장(onReorder).
  */
-export default function DemoChat({ memos, canPost, canModerate = false, user, busy, onPost, onEdit, onDelete, onReorder, onWidth }: {
+export default function DemoChat({ memos, canPost, canModerate = false, user, busy, onPost, onEdit, onDelete, onReorder }: {
   memos: DemoChatMsg[]; canPost: boolean; canModerate?: boolean; user: string | null; busy: boolean
   onPost: (title: string, body: string) => Promise<void>
   onEdit: (id: number, title: string, body: string) => Promise<void>
   onDelete: (id: number) => void
   onReorder: (ids: number[]) => void
-  onWidth: (id: number, width: number) => void
 }) {
   const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState('')
@@ -120,52 +113,295 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const [editId, setEditId] = useState<number | null>(null)
   const [eTitle, setETitle] = useState('')
   const [eBody, setEBody] = useState('')
-  const [dragId, setDragId] = useState<number | null>(null)
-  const [overId, setOverId] = useState<number | null>(null)
+  const [optOrder, setOptOrder] = useState<number[] | null>(null) // 드롭 후 낙관적 순서(서버 반영 전 유지)
   const myColor = memberOf(user || '')?.color || FALLBACK
+  // 표시 순서 = 낙관적 순서가 있으면 그 순서로 memos 정렬(원위치 튐 방지), 없으면 서버 순서 그대로
+  const orderedMemos = (() => {
+    if (!optOrder) return memos
+    const pos = new Map(optOrder.map((id, i) => [id, i] as const))
+    return [...memos].sort((a, b) => (pos.get(a.id) ?? 1e9) - (pos.get(b.id) ?? 1e9))
+  })()
+  const memoById = new Map(orderedMemos.map((m) => [m.id, m]))
+  const ownOf = (m: DemoChatMsg) => canModerate || (!!user && m.author === user)
+
+  // masonry 측정 상태 — 컨테이너 폭으로 열 수(1/2) 결정, 각 그리드 아이템 실측 높이로 span 결정
+  const gridRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef(new Map<number, HTMLElement>())
+  const [cols, setCols] = useState(2)
+  const [spans, setSpans] = useState<Map<number, number>>(new Map())
+  const setItemRef = (key: number) => (el: HTMLElement | null) => { if (el) itemRefs.current.set(key, el); else itemRefs.current.delete(key) }
+
+  // 드래그 상태
+  const [dragId, setDragId] = useState<number | null>(null)
+  const [overIndex, setOverIndex] = useState(0)
+  const memosRef = useRef(orderedMemos); memosRef.current = orderedMemos
+  const onReorderRef = useRef(onReorder); onReorderRef.current = onReorder
+  const overIndexRef = useRef(0)
+  const switchLockUntil = useRef(0)
+  const suppressClickUntil = useRef(0)
+  const lastPointer = useRef({ x: 0, y: 0 })
+  const pending = useRef<null | { id: number; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
+  const drag = useRef<null | { id: number; baseOrder: number[]; width: number; height: number; offsetX: number; offsetY: number }>(null)
+  const liftedRef = useRef<HTMLDivElement | null>(null)
+  const flipRects = useRef(new Map<number, { left: number; top: number }>())
+  const settleFrom = useRef<null | { id: number; rect: DOMRect }>(null)
+
+  // masonry 실측 — 각 아이템의 '안쪽 카드'(firstElementChild = grid 아이템 아님) 높이를 재서 래퍼의 grid-row(span) 결정.
+  // 래퍼의 span을 바꿔도 카드 크기는 안 변하므로 측정↔쓰기 피드백 루프가 생기지 않음. 값이 실제로 바뀔 때만 setState.
+  const measureSpans = useCallback(() => setSpans((prev) => {
+    const next = new Map<number, number>()
+    let changed = itemRefs.current.size !== prev.size
+    itemRefs.current.forEach((el, key) => {
+      const card = (el.firstElementChild as HTMLElement | null) ?? el
+      const s = Math.round(card.getBoundingClientRect().height) + GRID_GAP
+      next.set(key, s)
+      if (prev.get(key) !== s) changed = true
+    })
+    return changed ? next : prev
+  }), [])
+
+  // 아이템 집합(추가/삭제/순서/편집·작성/드래그 토글)이 바뀔 때만 ResizeObserver 재구독 — 무관한 부모 리렌더로는 재구독 안 함.
+  // memos는 매 렌더 새 배열이라 그대로 deps에 넣으면 옵저버를 매번 떼었다 붙임 → id 시그니처(memoKey)로 안정화.
+  const memoKey = orderedMemos.map((m) => m.id).join(',')
+  useLayoutEffect(() => {
+    const g = gridRef.current
+    if (!g) return
+    const measureCols = () => setCols((c) => { const n = g.clientWidth >= MIN_2COL_W ? 2 : 1; return c === n ? c : n })
+    const cardRO = new ResizeObserver(measureSpans)
+    itemRefs.current.forEach((el) => { const card = el.firstElementChild; if (card) cardRO.observe(card) })
+    let lastW = g.clientWidth
+    const boardRO = new ResizeObserver(() => { const w = g.clientWidth; if (w === lastW) return; lastW = w; measureCols() })
+    boardRO.observe(g)
+    measureCols()
+    measureSpans()
+    return () => { cardRO.disconnect(); boardRO.disconnect() }
+  }, [memoKey, editId, adding, dragId, measureSpans])
+
+  // 열 수(1↔2) 변경 직후 페인트 전에 span 재측정 — 새 폭 기준 높이로 다시 재서 경계(400px) 통과 시 1프레임 겹침 방지
+  useLayoutEffect(() => { measureSpans() }, [cols, measureSpans])
+
+  // FLIP — 순서 변경(드래그)으로 자리가 바뀐 카드를 이전 위치→새 위치로 부드럽게 이동. 드롭 시 정착 애니메이션.
+  useLayoutEffect(() => {
+    if (!drag.current && !settleFrom.current) return
+    const st = settleFrom.current
+    if (st) {
+      settleFrom.current = null
+      const el = itemRefs.current.get(st.id)
+      if (el) {
+        const now = el.getBoundingClientRect()
+        if (now.width > 0) {
+          const dx = st.rect.left - now.left
+          const dy = st.rect.top - now.top
+          el.getAnimations?.().forEach((a) => a.cancel())
+          el.animate([{ transform: `translate(${dx}px, ${dy}px)`, opacity: 0.92 }, { transform: 'translate(0,0)', opacity: 1 }], { duration: SETTLE_DURATION, easing: EASING })
+        }
+      }
+    }
+    const dragging = !!drag.current
+    itemRefs.current.forEach((el, id) => {
+      if (drag.current && id === drag.current.id) return
+      const r = el.getBoundingClientRect()
+      const now = { left: r.left + window.scrollX, top: r.top + window.scrollY }
+      const prev = flipRects.current.get(id)
+      if (dragging && prev && (Math.abs(prev.left - now.left) > 0.5 || Math.abs(prev.top - now.top) > 0.5)) {
+        el.getAnimations?.().forEach((a) => a.cancel())
+        el.animate([{ transform: `translate(${prev.left - now.left}px, ${prev.top - now.top}px)` }, { transform: 'translate(0,0)' }], { duration: MOVE_DURATION, easing: EASING })
+      }
+      flipRects.current.set(id, now)
+    })
+  })
+
+  // 낙관적 순서 해제 — 서버 재조회로 순서가 반영되거나 카드 집합이 바뀌면 즉시 해제. 실패로 안 바뀌면 안전 타임아웃(6s).
+  useEffect(() => {
+    if (!optOrder) return
+    const ids = memos.map((m) => m.id)
+    const sameSet = ids.length === optOrder.length && ids.every((id) => optOrder.includes(id))
+    if (!sameSet || ids.join(',') === optOrder.join(',')) { setOptOrder(null); return }
+    const t = window.setTimeout(() => setOptOrder(null), 6000)
+    return () => window.clearTimeout(t)
+  }, [memos, optOrder])
 
   const save = async () => { if (!title.trim() || busy) return; try { await onPost(title, draft); setTitle(''); setDraft(''); setAdding(false) } catch { /* 입력 유지 */ } }
   const startEdit = (m: DemoChatMsg) => { setAdding(false); setEditId(m.id); setETitle(m.title); setEBody(m.body) }
   const saveEdit = async () => { if (!eTitle.trim() || editId == null || busy) return; try { await onEdit(editId, eTitle, eBody); setEditId(null) } catch { /* 입력 유지 */ } }
 
-  // 드래그 재정렬 — 드롭한 카드 앞에 삽입한 새 id 순서를 통째로 전달(같은 장비 그룹 내)
-  const drop = (targetId: number) => {
-    if (dragId == null || dragId === targetId) return
-    const ids = memos.map((m) => m.id).filter((id) => id !== dragId)
-    const at = ids.indexOf(targetId)
-    ids.splice(at < 0 ? ids.length : at, 0, dragId)
-    onReorder(ids)
+  // ── 드래그(포인터) ──
+  const cleanupListeners = () => {
+    document.removeEventListener('pointermove', onMove)
+    document.removeEventListener('pointerup', onEnd)
+    document.removeEventListener('pointercancel', onCancel)
+    document.removeEventListener('keydown', onKeyDown)
+    document.removeEventListener('selectstart', prevent)
+  }
+  const prevent = (e: Event) => e.preventDefault()
+
+  const beginDrag = (x: number, y: number) => {
+    const p = pending.current
+    if (!p || drag.current) return
+    const baseOrder = memosRef.current.map((m) => m.id)
+    const originIndex = baseOrder.indexOf(p.id)
+    if (originIndex < 0) return
+    // FLIP 기준선 — 현재 모든 카드 위치(문서좌표) 저장
+    flipRects.current.clear()
+    itemRefs.current.forEach((el, id) => { const r = el.getBoundingClientRect(); flipRects.current.set(id, { left: r.left + window.scrollX, top: r.top + window.scrollY }) })
+    drag.current = { id: p.id, baseOrder, width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY }
+    overIndexRef.current = originIndex // rest에 dragId를 originIndex로 넣으면 baseOrder와 동일
+    switchLockUntil.current = 0
+    try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
+    document.addEventListener('selectstart', prevent)
+    document.body.style.cursor = 'grabbing'
+    lastPointer.current = { x, y }
+    setOverIndex(originIndex)
+    setDragId(p.id)
   }
 
-  return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 1.25, alignItems: 'start' }}>
-      {memos.map((m) => (
-        editId === m.id ? (
-          <ComposeCard key={m.id} accent={memberOf(m.author)?.color || FALLBACK} title={eTitle} body={eBody} busy={busy} saveLabel="수정"
-            span={Math.min(3, Math.max(1, m.width || 1))}
-            onTitle={setETitle} onBody={setEBody} onCancel={() => setEditId(null)} onSave={() => void saveEdit()} />
-        ) : (
-          <MemoCard key={m.id} m={m} own={canModerate || (!!user && m.author === user)}
-            draggable={canPost && editId == null} dragOver={overId === m.id && dragId !== m.id}
-            onEdit={() => startEdit(m)} onDelete={() => onDelete(m.id)} onWidth={(w) => onWidth(m.id, w)}
-            onDragStart={() => setDragId(m.id)}
-            onDragOver={(e) => { if (dragId != null) { e.preventDefault(); setOverId(m.id) } }}
-            onDrop={() => { drop(m.id); setDragId(null); setOverId(null) }}
-            onDragEnd={() => { setDragId(null); setOverId(null) }} />
-        )
-      ))}
+  const updateDrag = (x: number, y: number) => {
+    const d = drag.current
+    if (!d) return
+    if (liftedRef.current) { liftedRef.current.style.left = `${x - d.offsetX}px`; liftedRef.current.style.top = `${y - d.offsetY}px` }
+    if (Date.now() < switchLockUntil.current) return
+    // 포인터 아래의 (드래그 대상 아닌) 카드를 찾아 그 앞/뒤로 삽입 — masonry 실제 위치 기반이라 재패킹에 강함
+    const stack = document.elementsFromPoint(x, y)
+    let targetId: number | null = null
+    let before = true
+    for (const el of stack) {
+      const cell = (el as HTMLElement).closest?.('[data-memo-id]') as HTMLElement | null
+      if (cell) {
+        const tid = Number(cell.getAttribute('data-memo-id'))
+        if (tid !== d.id) { const r = cell.getBoundingClientRect(); before = y < r.top + r.height / 2; targetId = tid; break }
+      }
+    }
+    if (targetId == null) return
+    const rest = d.baseOrder.filter((id) => id !== d.id)
+    const j = rest.indexOf(targetId)
+    if (j < 0) return
+    const next = before ? j : j + 1
+    if (next !== overIndexRef.current) {
+      overIndexRef.current = next
+      switchLockUntil.current = Date.now() + SWITCH_LOCK_MS
+      setOverIndex(next)
+    }
+  }
 
-      {/* 작성 카드 — 보드 하단 전폭. 저장된 카드는 기본 1열로 들어감 */}
-      {canPost && (adding ? (
-        <ComposeCard accent={myColor} title={title} body={draft} busy={busy} saveLabel="저장" span={3}
-          onTitle={setTitle} onBody={setDraft} onCancel={() => { setAdding(false); setTitle(''); setDraft('') }} onSave={() => void save()} />
-      ) : (
-        <Box role="button" tabIndex={0} onClick={() => setAdding(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdding(true) } }}
-          sx={(th) => ({ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 44, border: `1px dashed ${th.palette.divider}`, borderRadius: '10px', color: 'text.disabled', cursor: 'pointer', fontSize: 12, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
-          <AddIcon sx={{ fontSize: 15 }} /> 코멘트 추가
+  const finishDrag = (commit: boolean) => {
+    const d = drag.current
+    document.body.style.cursor = ''
+    if (!d) return
+    const rest = d.baseOrder.filter((id) => id !== d.id)
+    const finalOver = commit ? Math.max(0, Math.min(overIndexRef.current, rest.length)) : d.baseOrder.indexOf(d.id)
+    const finalOrder = [...rest.slice(0, finalOver), d.id, ...rest.slice(finalOver)]
+    const changed = commit && finalOrder.join(',') !== d.baseOrder.join(',')
+    // 드롭 정착 — 오버레이 마지막 위치에서 슬롯으로 내려앉음
+    if (commit && liftedRef.current) settleFrom.current = { id: d.id, rect: liftedRef.current.getBoundingClientRect() }
+    drag.current = null
+    flipRects.current.clear()
+    suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS
+    setDragId(null)
+    setOverIndex(0)
+    if (changed) { setOptOrder(finalOrder); onReorderRef.current(finalOrder) }
+  }
+
+  const onMove = (e: PointerEvent) => {
+    if (!pending.current) return
+    lastPointer.current = { x: e.clientX, y: e.clientY }
+    if (!drag.current) {
+      const dist = Math.hypot(e.clientX - pending.current.startX, e.clientY - pending.current.startY)
+      if (dist < ACTIVATION_DISTANCE) return
+      beginDrag(e.clientX, e.clientY)
+    }
+    if (!drag.current) return
+    e.preventDefault()
+    updateDrag(e.clientX, e.clientY)
+  }
+  const onEnd = () => { if (drag.current) finishDrag(true); pending.current = null; cleanupListeners() }
+  const onCancel = () => { if (drag.current) finishDrag(false); pending.current = null; cleanupListeners() }
+  const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
+
+  const onCellPointerDown = (e: React.PointerEvent, id: number) => {
+    if (pending.current || drag.current) return
+    if (e.button !== 0 || e.pointerType === 'touch') return // 마우스/펜만(터치 드래그 없음)
+    if ((e.target as HTMLElement).closest('button, a, input, textarea, [contenteditable="true"]')) return
+    const el = itemRefs.current.get(id)
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    pending.current = { id, startX: e.clientX, startY: e.clientY, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top, rect }
+    lastPointer.current = { x: e.clientX, y: e.clientY }
+    document.addEventListener('pointermove', onMove, { passive: false })
+    document.addEventListener('pointerup', onEnd)
+    document.addEventListener('pointercancel', onCancel)
+    document.addEventListener('keydown', onKeyDown)
+  }
+
+  // 그리드 아이템 공통 래퍼 — ref(측정)+행span(masonry). 모든 카드 1열(gridColumn auto), 카드는 자연 높이(alignSelf start)
+  const itemSx = (key: number) => ({
+    gridRowEnd: `span ${spans.get(key) ?? 240}`,
+    alignSelf: 'start' as const,
+    minWidth: 0,
+  })
+
+  // 드래그 중 표시 순서 = 원래 순서에서 드래그 카드를 overIndex 위치로 삽입(원본 기준)
+  const baseIds = orderedMemos.map((m) => m.id)
+  let displayIds = baseIds
+  if (dragId != null) {
+    const rest = baseIds.filter((id) => id !== dragId)
+    const idx = Math.max(0, Math.min(overIndex, rest.length))
+    displayIds = [...rest.slice(0, idx), dragId, ...rest.slice(idx)]
+  }
+  const dragItem = dragId != null ? memoById.get(dragId) : undefined
+  const canDrag = canPost && editId == null
+
+  return (
+    <Box ref={gridRef} sx={{ display: 'grid', gridTemplateColumns: cols === 1 ? '1fr' : 'repeat(2, minmax(0, 1fr))', gridAutoRows: '1px', gridAutoFlow: 'row dense', columnGap: `${GRID_GAP}px`, rowGap: 0, alignItems: 'start', ...(dragId != null ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}) }}>
+      {displayIds.map((id) => {
+        const m = memoById.get(id)
+        if (!m) return null
+        // 드래그 중인 카드 자리 = 점선 placeholder(그 높이만큼 공간 확보). 카드 본체는 커서 추적 오버레이로 렌더.
+        if (dragId === id) {
+          return (
+            <Box key={id} aria-hidden sx={(th) => ({ gridRowEnd: `span ${(drag.current?.height ?? 80) + GRID_GAP}`, alignSelf: 'start', minWidth: 0, minHeight: drag.current?.height ?? 80, border: '2px dashed', borderColor: alpha(th.palette.primary.main, 0.6), bgcolor: alpha(th.palette.primary.main, 0.06), borderRadius: '8px' })} />
+          )
+        }
+        const own = ownOf(m)
+        return (
+          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ ...itemSx(id), ...(canDrag ? { cursor: 'grab' } : {}) }}
+            onPointerDown={canDrag ? (e) => onCellPointerDown(e, id) : undefined}
+            onDoubleClick={own && editId == null ? () => { if (Date.now() >= suppressClickUntil.current) startEdit(m) } : undefined}>
+            {editId === id ? (
+              <ComposeCard accent={memberOf(m.author)?.color || FALLBACK} title={eTitle} body={eBody} busy={busy} saveLabel="수정"
+                onTitle={setETitle} onBody={setEBody} onCancel={() => setEditId(null)} onSave={() => void saveEdit()} />
+            ) : (
+              <MemoCard m={m} own={own} onDelete={() => onDelete(id)} />
+            )}
+          </Box>
+        )
+      })}
+
+      {/* 추가 트리거 = 좁은 카드(짧은 열에 끼워 빈틈 최소화) · 작성 중(adding)만 전폭으로 펴서 편하게 입력 */}
+      {canPost && (
+        <Box ref={setItemRef(ADD_KEY)} sx={adding
+          ? { gridColumn: '1 / -1', gridRowEnd: `span ${spans.get(ADD_KEY) ?? 200}`, alignSelf: 'start', minWidth: 0 }
+          : itemSx(ADD_KEY)}>
+          {adding ? (
+            <ComposeCard accent={myColor} title={title} body={draft} busy={busy} saveLabel="저장"
+              onTitle={setTitle} onBody={setDraft} onCancel={() => { setAdding(false); setTitle(''); setDraft('') }} onSave={() => void save()} />
+          ) : (
+            <Box role="button" tabIndex={0} onClick={() => setAdding(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdding(true) } }}
+              sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 44, border: `1px dashed ${th.palette.divider}`, borderRadius: '10px', color: 'text.disabled', cursor: 'pointer', fontSize: 12, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
+              <AddIcon sx={{ fontSize: 15 }} /> 코멘트 추가
+            </Box>
+          )}
         </Box>
-      ))}
-      {memos.length === 0 && !adding && !canPost && <Box sx={{ gridColumn: '1 / -1', fontSize: 11.5, color: 'text.disabled' }}>코멘트가 없습니다.</Box>}
+      )}
+      {memos.length === 0 && !adding && !canPost && <Box sx={{ gridColumn: '1 / -1', gridRow: 'span 30', fontSize: 11.5, color: 'text.disabled' }}>코멘트가 없습니다.</Box>}
+
+      {/* 들어올린 카드 — 커서 추적 오버레이(위치는 ref로 명령형 갱신). 원본 카드 폭 유지 */}
+      {dragItem && (
+        <Box ref={(el: HTMLDivElement | null) => { liftedRef.current = el; const d = drag.current; if (el && d) { el.style.left = `${lastPointer.current.x - d.offsetX}px`; el.style.top = `${lastPointer.current.y - d.offsetY}px` } }}
+          aria-hidden
+          sx={(th) => ({ position: 'fixed', zIndex: th.zIndex.modal + 1, width: drag.current?.width, pointerEvents: 'none', opacity: 0.95, borderRadius: '8px', boxShadow: '0 20px 50px rgba(0,0,0,.48)' })}>
+          <MemoCard m={dragItem} own={ownOf(dragItem)} onDelete={() => {}} />
+        </Box>
+      )}
     </Box>
   )
 }

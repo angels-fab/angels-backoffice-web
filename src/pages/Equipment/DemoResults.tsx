@@ -29,7 +29,7 @@ import type { Theme } from '@mui/material/styles'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
-  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, updateDemoChat, deleteDemoChat, reorderDemoChat, setDemoChatWidth, updateDemoResult, deleteDemoResult, updateMetricDef, uploadDemoFile, removeDemoFiles,
+  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, updateDemoChat, deleteDemoChat, reorderDemoChat, updateDemoResult, deleteDemoResult, updateMetricDef, uploadDemoFile, removeDemoFiles,
   type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup, type ValueHistory,
 } from '@/api/demo'
 import { verifyPassword } from '@/api/session'
@@ -521,11 +521,11 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, user, chatBusy, latestValueChange, onPostChat, onEditChat, onDeleteChat, onReorderChat, onWidthChat, onSaveValues, onSaveMeta, onSaveMetricDef, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound, onReload }: {
+function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, user, chatBusy, latestValueChange, onPostChat, onEditChat, onDeleteChat, onReorderChat, onSaveValues, onSaveMeta, onSaveMetricDef, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound, onReload }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; canModerate: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onPostChat: (equipment: string, title: string, body: string) => Promise<void>
   onEditChat: (id: number, title: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
-  onReorderChat: (ids: number[]) => void; onWidthChat: (id: number, width: number) => void
+  onReorderChat: (ids: number[]) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
   onSaveMeta: (roundId: number, patch: { sample?: string; conditions?: string }) => Promise<void>
   onSaveMetricDef: (defId: number, patch: { label?: string; unit?: string }) => Promise<void>
@@ -689,7 +689,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
         <Box sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minWidth: 0, width: { xs: '100%', md: 'auto' }, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: '10px', p: 1.25 }}>
           <DemoChat memos={messages} canPost={canEdit} canModerate={canModerate} user={user} busy={chatBusy}
             onPost={(title, body) => onPostChat(equipment, title, body)} onEdit={onEditChat} onDelete={onDeleteChat}
-            onReorder={onReorderChat} onWidth={onWidthChat} />
+            onReorder={onReorderChat} />
         </Box>
       </Box>
 
@@ -792,12 +792,9 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
   const onDeleteChat = async (id: number) => {
     try { await deleteDemoChat(id); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '삭제 실패', sev: 'error' }) }
   }
-  // 보드 배치 — 순서(드래그)·너비(1~3열). 낙관 갱신 없이 저장 후 재조회(카드 수 적어 충분히 빠름)
+  // 보드 배치 — 순서(드래그). 낙관 갱신 없이 저장 후 재조회(카드 수 적어 충분히 빠름)
   const onReorderChat = async (ids: number[]) => {
     try { await reorderDemoChat(ids); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '순서 변경 실패', sev: 'error' }) }
-  }
-  const onWidthChat = async (id: number, width: number) => {
-    try { await setDemoChatWidth(id, width); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '너비 변경 실패', sev: 'error' }) }
   }
 
   const onSaveValues = async (roundId: number, metrics: Record<string, string>) => {
@@ -850,7 +847,7 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
             key={g.equipment}
             equipment={g.equipment} defs={g.defs} makers={g.makers}
             messages={chatOf(g.equipment)} canEdit={isMember} canModerate={isAdmin} user={user} chatBusy={chatBusy} latestValueChange={latestValueChangeOf(g.equipment)}
-            onPostChat={onPostChat} onEditChat={onEditChat} onDeleteChat={onDeleteChat} onReorderChat={onReorderChat} onWidthChat={onWidthChat} onSaveValues={onSaveValues} onSaveMeta={onSaveMeta} onSaveMetricDef={onSaveMetricDef} onReload={load}
+            onPostChat={onPostChat} onEditChat={onEditChat} onDeleteChat={onDeleteChat} onReorderChat={onReorderChat} onSaveValues={onSaveValues} onSaveMeta={onSaveMeta} onSaveMetricDef={onSaveMetricDef} onReload={load}
             onEditMetrics={() => setEditorEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
             onAddRound={(mg) => { setFormPre({ equipment: g.equipment, maker: mg.maker, model: mg.model }); setFormOpen(true) }}
             onDeleteRound={onDeleteRound}
