@@ -17,9 +17,20 @@ import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered'
 import FormatIndentIncreaseIcon from '@mui/icons-material/FormatIndentIncrease'
 import FormatIndentDecreaseIcon from '@mui/icons-material/FormatIndentDecrease'
 import FormatClearIcon from '@mui/icons-material/FormatClear'
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import { alpha } from '@mui/material/styles'
+import { useEditor, EditorContent } from '@tiptap/react'
 import type { Editor } from '@tiptap/react'
 import { Mark, mergeAttributes } from '@tiptap/core'
+import Document from '@tiptap/extension-document'
+import Paragraph from '@tiptap/extension-paragraph'
+import Text from '@tiptap/extension-text'
+import Bold from '@tiptap/extension-bold'
+import Italic from '@tiptap/extension-italic'
+import Underline from '@tiptap/extension-underline'
+import Strike from '@tiptap/extension-strike'
+import History from '@tiptap/extension-history'
+import Placeholder from '@tiptap/extension-placeholder'
 import BulletList from '@tiptap/extension-bullet-list'
 import OrderedList from '@tiptap/extension-ordered-list'
 import ListItem from '@tiptap/extension-list-item'
@@ -90,6 +101,8 @@ function TBtn({ active, disabled, title, onClick, children }: {
  */
 export function RichToolbar({ editor }: { editor: Editor | null }) {
   const [colorAnchor, setColorAnchor] = useState<HTMLElement | null>(null)
+  // MS Office식 — 마지막 사용 색 기억, 본버튼 클릭=바로 적용, ▾만 팔레트
+  const [lastColor, setLastColor] = useState<ColorToken>('red')
   if (!editor) return null
 
   const curColor: ColorToken = (editor.isActive('colorToken') ? editor.getAttributes('colorToken').token : 'default') as ColorToken
@@ -100,6 +113,7 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
     const chain = editor.chain().focus()
     if (token === 'default') chain.unsetMark('colorToken').run()
     else chain.setMark('colorToken', { token }).run()
+    setLastColor(token)
     setColorAnchor(null)
   }
 
@@ -128,22 +142,38 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
 
       <Divider orientation="vertical" flexItem sx={{ my: 0.25 }} />
 
-      <Tooltip title="글자색">
-        <span>
-          <IconButton
-            size="small" aria-label="글자색" aria-pressed={curColor !== 'default'}
-            onMouseDown={(e) => e.preventDefault()} onClick={(e) => setColorAnchor(e.currentTarget)}
-            sx={(th) => ({
-              p: 0.4, borderRadius: '7px',
-              color: curColor !== 'default' ? COLOR_VAR[curColor] : 'text.secondary',
-              bgcolor: curColor !== 'default' ? alpha(th.palette.primary.main, 0.16) : 'transparent',
-              '&:hover': { bgcolor: alpha(th.palette.primary.main, 0.1) },
-            })}
-          >
-            <FormatColorTextIcon sx={{ fontSize: 18 }} />
-          </IconButton>
-        </span>
-      </Tooltip>
+      <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
+        <Tooltip title={`글자색 적용 (${COLOR_LABEL[lastColor]})`}>
+          <span>
+            <IconButton
+              size="small" aria-label={`글자색 적용 (${COLOR_LABEL[lastColor]})`} aria-pressed={curColor !== 'default'}
+              onMouseDown={(e) => e.preventDefault()} onClick={() => applyColor(lastColor)}
+              sx={(th) => ({
+                p: 0.4, borderRadius: '7px 0 0 7px',
+                color: curColor !== 'default' ? COLOR_VAR[curColor] : 'text.secondary',
+                bgcolor: curColor !== 'default' ? alpha(th.palette.primary.main, 0.16) : 'transparent',
+                '&:hover': { bgcolor: alpha(th.palette.primary.main, 0.1) },
+              })}
+            >
+              <Box sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                <FormatColorTextIcon sx={{ fontSize: 16, display: 'block' }} />
+                <Box sx={{ width: 15, height: 3, borderRadius: '1px', mt: '1px', bgcolor: lastColor === 'default' ? 'text.disabled' : COLOR_VAR[lastColor] }} />
+              </Box>
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="글자색 선택">
+          <span>
+            <IconButton
+              size="small" aria-label="글자색 선택" aria-haspopup="menu"
+              onMouseDown={(e) => e.preventDefault()} onClick={(e) => setColorAnchor(e.currentTarget)}
+              sx={(th) => ({ p: 0, borderRadius: '0 7px 7px 0', color: 'text.secondary', '&:hover': { bgcolor: alpha(th.palette.primary.main, 0.1) } })}
+            >
+              <ArrowDropDownIcon sx={{ fontSize: 17 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
       <TBtn title="형광펜" active={editor.isActive('highlightToken')} onClick={() => editor.chain().focus().toggleMark('highlightToken').run()}>
         <BorderColorIcon sx={{ fontSize: 18 }} />
       </TBtn>
@@ -191,6 +221,82 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
           </MenuItem>
         ))}
       </Menu>
+    </Box>
+  )
+}
+
+// 초기 콘텐츠 — HTML이면 그대로, 평문이면 줄바꿈→문단(기존 평문 데이터 호환)
+const bodyToContent = (body: string): string => {
+  const s = String(body || '')
+  const looksHTML = /<\/?(p|br|div|ul|li|ol|strong|b|em|u|s|a|h[1-6]|span|mark)\b/i.test(s)
+  if (looksHTML) return s
+  const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return s.split(/\r?\n/).map((l) => (l.trim() ? `<p>${esc(l)}</p>` : '<p></p>')).join('') || '<p></p>'
+}
+
+export interface RichBodyEditorProps {
+  /** 초기 본문(HTML 또는 평문). 마운트 1회만 사용 — 이후엔 에디터가 자체 관리 */
+  value: string
+  /** 변경 시 HTML 반환(비면 '') */
+  onChange: (html: string) => void
+  placeholder?: string
+  ariaLabel?: string
+  fontSize?: number
+  minHeight?: number
+  /** true면 인풋처럼 테두리 박스로 감쌈(개선요청·답글·코멘트), false면 맨몸(공지) */
+  framed?: boolean
+  /** Ctrl/Cmd+Enter 콜백(코멘트 저장 등) */
+  onCtrlEnter?: () => void
+}
+
+/**
+ * 공용 리치 본문 에디터(HTML in/out) — 공지·포털개선요청(게시글/답글)·데모 코멘트가 공유.
+ * RichToolbar 항상 표시. 저장은 getHTML() → 표시는 utils/richBody의 RichBodyView.
+ */
+export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSize = 13, minHeight = 64, framed = false, onCtrlEnter }: RichBodyEditorProps) {
+  const editor = useEditor({
+    extensions: [
+      Document, Paragraph, Text,
+      Bold, Italic, Underline, Strike, ColorTokenMark, HighlightTokenMark,
+      ...listExtensions, History,
+      Placeholder.configure({ placeholder: placeholder || '' }),
+    ],
+    content: bodyToContent(value),
+    editorProps: { attributes: { class: 'rb-editor', role: 'textbox', 'aria-multiline': 'true', 'aria-label': ariaLabel || '내용' } },
+    onUpdate: ({ editor: ed }) => onChange(ed.isEmpty ? '' : ed.getHTML()),
+  })
+
+  if (!editor) return null
+
+  return (
+    <Box sx={{ width: '100%' }} onKeyDown={(e) => { if (onCtrlEnter && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onCtrlEnter() } }}>
+      <RichToolbar editor={editor} />
+      <Box
+        sx={(th) => ({
+          ...(framed && {
+            bgcolor: alpha(th.palette.text.primary, 0.05),
+            border: '1px solid', borderColor: th.palette.divider, borderRadius: '8px',
+            px: 1, py: '6px',
+            '&:focus-within': { borderColor: th.palette.accent?.green || th.palette.primary.main },
+          }),
+          '& .ProseMirror': {
+            minHeight, outline: 'none', fontSize, lineHeight: 1.65, color: 'text.primary',
+            wordBreak: 'break-word', overflowWrap: 'anywhere',
+            '& p': { m: 0, mb: 0.25 },
+            '& p:last-child': { mb: 0 },
+            '& ul, & ol': { pl: '18px', m: 0, mb: 0.25 },
+            '& ul': { listStyle: 'disc' },
+            '& ol': { listStyle: 'decimal' },
+            '& li': { m: '1px 0' },
+            '& li p': { m: 0 },
+          },
+          '& .ProseMirror p.is-editor-empty:first-of-type::before': {
+            content: 'attr(data-placeholder)', color: 'text.disabled', float: 'left', height: 0, pointerEvents: 'none',
+          },
+        })}
+      >
+        <EditorContent editor={editor} />
+      </Box>
     </Box>
   )
 }

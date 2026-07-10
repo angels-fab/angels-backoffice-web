@@ -2,32 +2,18 @@ import { useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
-import InputBase from '@mui/material/InputBase'
 import Tooltip from '@mui/material/Tooltip'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { alpha } from '@mui/material/styles'
-import type { Theme } from '@mui/material/styles'
 import type { ReplyRow } from '@/api/sheets'
+import { RichBodyEditor } from '@/components/richText'
+import { RichBodyView } from '@/utils/richBody'
 
 /** 'yyyy-MM-dd HH:mm:ss' → 'yyyy-MM-dd HH:mm' (화면은 분까지만) */
 function fmtReplyTime(s: string): string {
   return (s || '').slice(0, 16)
 }
-
-const taSx = (th: Theme) => ({
-  bgcolor: alpha(th.palette.text.primary, 0.05),
-  border: '1px solid',
-  borderColor: th.palette.divider,
-  borderRadius: '8px',
-  px: 1,
-  py: '6px',
-  fontSize: 12.5,
-  color: 'text.primary',
-  lineHeight: 1.6,
-  '&.Mui-focused': { borderColor: th.palette.accent.green },
-  '& textarea::placeholder': { color: 'text.disabled', opacity: 1 },
-})
 
 interface Props {
   replies: ReplyRow[]
@@ -49,12 +35,15 @@ export default function ReplyThread({ replies, isAdmin, user, busy, onCreate, on
   const [text, setText] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  // 에디터는 초기값을 마운트 1회만 읽으므로, 등록 성공 시 key로 리마운트해 입력창 비움
+  const [composeKey, setComposeKey] = useState(0)
 
   const submit = async () => {
     const v = text.trim()
     if (!v || busy) return
     await onCreate(v) // 실패 시 throw → 아래 setText 미실행(입력 유지)
     setText('')
+    setComposeKey((k) => k + 1)
   }
   const startEdit = (r: ReplyRow) => {
     setEditingId(r.id)
@@ -99,14 +88,14 @@ export default function ReplyThread({ replies, isAdmin, user, busy, onCreate, on
                 </Box>
                 {editing ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                    <InputBase multiline minRows={2} value={editText} onChange={(e) => setEditText(e.target.value)} inputProps={{ 'aria-label': '답글 수정' }} sx={(th) => ({ ...taSx(th), width: '100%' })} />
+                    <RichBodyEditor value={editText} onChange={setEditText} ariaLabel="답글 수정" fontSize={12.5} minHeight={48} framed onCtrlEnter={() => void saveEdit(r)} />
                     <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
                       <Button size="small" color="inherit" onClick={() => setEditingId(null)} disabled={busy}>취소</Button>
                       <Button size="small" variant="contained" color="success" onClick={() => saveEdit(r)} disabled={busy || !editText.trim()}>저장</Button>
                     </Box>
                   </Box>
                 ) : (
-                  <Box sx={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 12.5, lineHeight: 1.65, color: 'text.primary' }}>{r.content}</Box>
+                  <RichBodyView html={r.content} sx={{ fontSize: 12.5, lineHeight: 1.65, color: 'text.primary' }} />
                 )}
               </Box>
             )
@@ -116,15 +105,19 @@ export default function ReplyThread({ replies, isAdmin, user, busy, onCreate, on
 
       {isAdmin && (
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-end', mt: 1.25, flexWrap: 'wrap' }}>
-          <InputBase
-            multiline
-            minRows={2}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="이 요청에 대한 답글을 입력하세요"
-            inputProps={{ 'aria-label': '답글 입력' }}
-            sx={(th) => ({ ...taSx(th), flex: 1, minWidth: 180 })}
-          />
+          <Box sx={{ flex: 1, minWidth: 180 }}>
+            <RichBodyEditor
+              key={composeKey}
+              value={text}
+              onChange={setText}
+              placeholder="이 요청에 대한 답글을 입력하세요"
+              ariaLabel="답글 입력"
+              fontSize={12.5}
+              minHeight={48}
+              framed
+              onCtrlEnter={() => void submit()}
+            />
+          </Box>
           <Button variant="contained" onClick={submit} disabled={busy || !text.trim()} sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}>
             {busy ? '등록 중…' : '답글 등록'}
           </Button>

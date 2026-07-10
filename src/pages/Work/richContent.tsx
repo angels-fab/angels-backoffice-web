@@ -217,13 +217,14 @@ function flattenBlocks(blocks: PMBlock[], depth: number, out: BodyLine[]): void 
       let markerUsed = false
       for (const c of item.content || []) {
         if (c.type === 'paragraph') {
-          out.push(paragraphToBodyLine(c, (depth + 1) * LIST_INDENT_PX, markerUsed ? undefined : marker))
+          // 1단계 목록 = 들여쓰기 0(기존 텍스트 글머리 '• '와 동일 위치), 단계당 +18px
+          out.push(paragraphToBodyLine(c, depth * LIST_INDENT_PX, markerUsed ? undefined : marker))
           markerUsed = true
         } else {
           flattenBlocks([c], depth + 1, out)
         }
       }
-      if (!markerUsed) out.push({ marker, indentPx: (depth + 1) * LIST_INDENT_PX, runs: [], plain: '' })
+      if (!markerUsed) out.push({ marker, indentPx: depth * LIST_INDENT_PX, runs: [], plain: '' })
     }
   }
 }

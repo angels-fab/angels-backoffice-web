@@ -48,6 +48,8 @@ import { locationToPath } from '@/utils/improveMemo'
 import { NAV_LABELS } from '@/constants/nav'
 import type { ImprovementItem } from '@/types'
 import ReplyThread from './ReplyThread'
+import { RichBodyEditor } from '@/components/richText'
+import { RichBodyView } from '@/utils/richBody'
 import { IMP_STATUSES, impKind, needsReason, remarkOf, normStatus, statusRank, isSettled } from './improveMeta'
 import type { ImpStatus } from './improveMeta'
 
@@ -524,14 +526,14 @@ export default function Improve() {
         <TableCell />
         <TableCell />
         <TableCell colSpan={memoCol ? 5 : 4} sx={{ textAlign: 'left' }}>
-          <InputBase
+          <RichBodyEditor
             value={c.content}
-            onChange={(e) => patchCard(c.key, { content: e.target.value })}
+            onChange={(v) => patchCard(c.key, { content: v })}
             placeholder="요청내용"
-            multiline
-            minRows={1}
-            inputProps={{ 'aria-label': `요청내용 ${idx + 1}` }}
-            sx={(th) => ({ ...inputSx(th), width: '100%', minHeight: 32, py: '6px' })}
+            ariaLabel={`요청내용 ${idx + 1}`}
+            fontSize={13}
+            minHeight={32}
+            framed
           />
         </TableCell>
         <TableCell />
@@ -573,14 +575,14 @@ export default function Improve() {
         <TableCell />
         <TableCell />
         <TableCell colSpan={memoCol ? 5 : 4} onClick={stop} sx={{ textAlign: 'left' }}>
-          <InputBase
+          <RichBodyEditor
             value={cContent}
-            onChange={(e) => setCContent(e.target.value)}
+            onChange={setCContent}
             placeholder="요청내용"
-            multiline
-            minRows={1}
-            inputProps={{ 'aria-label': '요청내용' }}
-            sx={(th) => ({ ...inputSx(th), width: '100%', minHeight: 32, py: '6px' })}
+            ariaLabel="요청내용"
+            fontSize={13}
+            minHeight={32}
+            framed
           />
         </TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'center' }}>
@@ -830,7 +832,9 @@ export default function Improve() {
                       <TableCell colSpan={detailSpan} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
                         {/* 원문 내용 + (관리자) 개선요청 수정/삭제 */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-                          <Box sx={{ whiteSpace: 'pre-wrap', fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>{t.content || '내용 없음'}</Box>
+                          <Box sx={{ fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>
+                            {t.content ? <RichBodyView html={t.content} /> : '내용 없음'}
+                          </Box>
                           {(editable || removable) && (
                             <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0, pt: 0.25 }} onClick={stop}>
                               {/* 수정 = 로그인 관리자 전체 / 삭제 = 담당자(작성자)만 */}

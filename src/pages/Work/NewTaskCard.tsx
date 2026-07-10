@@ -180,7 +180,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
             valueJson={initial?.bodyFmt ?? ''}
             valuePlain={initial?.body ?? ''}
             onChange={({ json, text }) => { setBody(text); setBodyFmt(json) }}
-            placeholder="업무 내용 — '- '는 글머리(•), 'ㅇ1 '는 동그라미 숫자(①). 본문 선택 시 서식 툴바"
+            placeholder="업무 내용 — '- '는 글머리 목록, '1. '은 번호 목록, 'ㅇ1 '은 동그라미 숫자(①)"
             disabled={saving}
             ariaLabel="업무 내용"
           />

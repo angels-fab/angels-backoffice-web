@@ -11,8 +11,28 @@ import Underline from '@tiptap/extension-underline'
 import Strike from '@tiptap/extension-strike'
 import History from '@tiptap/extension-history'
 import Placeholder from '@tiptap/extension-placeholder'
+import { Extension, InputRule } from '@tiptap/core'
+import { circledNumber } from './workMeta'
 import { serializeContentFmt, parseContentFmt, plainToDoc } from './richContent'
 import { ColorTokenMark, HighlightTokenMark, listExtensions, RichToolbar } from '@/components/richText'
+
+// 입력 규칙: 'ㅇN ' → 들여쓴 동그라미 숫자(①…) — 업무 글쓰기 관례('- '는 BulletList 기본 규칙이 진짜 목록으로 처리)
+const CircledNumRule = Extension.create({
+  name: 'workCircledNum',
+  addInputRules() {
+    return [
+      new InputRule({
+        find: /^([ \t]*)[ㅇᄋ](\d{1,2})\s$/,
+        handler: ({ state, range, match }) => {
+          const ch = circledNumber(parseInt(match[2], 10))
+          if (!ch) return
+          const indent = (match[1] || '').length >= 2 ? match[1] : '  '
+          state.tr.insertText(indent + ch + ' ', range.from, range.to)
+        },
+      }),
+    ]
+  },
+})
 
 export interface RichContentEditorProps {
   /** 초기 서식 JSON(업무내용서식). 유효하면 이 문서로 복원 */
@@ -49,6 +69,7 @@ export default function RichContentEditor({
       ...listExtensions,
       History,
       Placeholder.configure({ placeholder: placeholder || '' }),
+      CircledNumRule,
     ],
     content: initialContent,
     editable: !disabled,

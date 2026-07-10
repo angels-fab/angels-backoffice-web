@@ -9,6 +9,8 @@ import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
 import { MEMBERS, given } from '@/pages/Calendar/members'
+import { RichBodyEditor } from '@/components/richText'
+import { RichBodyView } from '@/utils/richBody'
 import type { DemoChatMsg } from '@/api/demo'
 
 /** 카드 날짜 — MM.DD (KST 고정, 다른 포매터들과 동일 관례). ko-KR "07. 08." → "07.08" */
@@ -50,7 +52,7 @@ function MemoCard({ m, own, onEdit, onDelete }: { m: DemoChatMsg; own: boolean; 
           </>
         )}
       </Box>
-      {body && <Box sx={{ p: '7px 10px 10px', fontSize: 12.5, lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{body}</Box>}
+      {body && <Box sx={{ p: '7px 10px 10px', fontSize: 12.5, lineHeight: 1.5 }}><RichBodyView html={body} /></Box>}
     </Box>
   )
 }
@@ -67,11 +69,10 @@ function ComposeCard({ accent, title, body, busy, onTitle, onBody, onCancel, onS
         <InputBase autoFocus value={title} onChange={(e) => onTitle(e.target.value)} placeholder="제목"
           sx={{ width: '100%', fontSize: 13, fontWeight: 700, color: liteC(c), '& input::placeholder': { color: 'rgba(255,255,255,.45)', opacity: 1 } }} />
       </Box>
-      {/* 본문 */}
-      <Box sx={{ p: '6px 10px 8px' }}>
-        <InputBase multiline minRows={2} value={body} onChange={(e) => onBody(e.target.value)} placeholder="내용 입력… (선택)"
-          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onSave() } }}
-          sx={{ width: '100%', fontSize: 12.5, color: '#dfe6f2', '& textarea::placeholder': { color: 'rgba(255,255,255,.35)', opacity: 1 } }} />
+      {/* 본문 — 공용 리치 에디터(HTML). 어두운 카드라 글자색만 고정 */}
+      <Box sx={{ p: '6px 10px 8px', '& .rb-editor': { color: '#dfe6f2' } }}>
+        <RichBodyEditor value={body} onChange={onBody} placeholder="내용 입력… (선택)"
+          ariaLabel="코멘트 내용" fontSize={12.5} minHeight={44} onCtrlEnter={onSave} />
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
           <Button size="small" onClick={onCancel} disabled={busy} sx={{ color: 'rgba(255,255,255,.6)', fontSize: 11.5, minWidth: 0 }}>취소</Button>
           <Button size="small" variant="contained" onClick={onSave} disabled={busy || !title.trim()} startIcon={busy ? <CircularProgress size={12} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: 11.5, minWidth: 0 }}>{saveLabel}</Button>

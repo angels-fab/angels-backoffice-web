@@ -22,6 +22,7 @@ import { loadImproveData } from '@/store/slices/improveSlice'
 import { addReply, patchReply, removeReply } from '@/store/slices/replySlice'
 import { updateImprovement, createReply, updateReply, deleteReply } from '@/api/improve'
 import type { ReplyRow } from '@/api/sheets'
+import { RichBodyView } from '@/utils/richBody'
 import { useRole } from '@/auth/role'
 import { memosForPath } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
@@ -186,8 +187,8 @@ function MemoRow({
       {open && (
         <Box sx={{ mt: 1 }}>
           {/* 1·2: 개선요청 내용 */}
-          <Box sx={{ fontSize: 12.5, color: 'text.secondary', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-            {t.content || '내용 없음'}
+          <Box sx={{ fontSize: 12.5, color: 'text.secondary', lineHeight: 1.7 }}>
+            {t.content ? <RichBodyView html={t.content} /> : '내용 없음'}
           </Box>
           {/* 3·4·5·6: 답글 +N · 목록 · 입력창 · 등록 (게시판과 동일 데이터/컴포넌트) */}
           <ReplyThread

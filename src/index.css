@@ -226,8 +226,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   padding:6px 8px;overflow-wrap:anywhere;word-break:break-word}
 .wc-editor:focus{border-color:var(--green)}
 .wc-editor p{margin:0}
-/* 목록(글머리·번호) — 에디터 안에서 들여쓰기·마커 표시 */
-.wc-editor ul,.wc-editor ol{margin:0;padding-left:22px}
+/* 목록(글머리·번호) — 에디터 안에서 들여쓰기·마커 표시(마커 폭 최소치 18px) */
+.wc-editor ul,.wc-editor ol{margin:0;padding-left:18px}
 .wc-editor ul{list-style:disc}
 .wc-editor ol{list-style:decimal}
 .wc-editor li{margin:1px 0}
