@@ -24,8 +24,8 @@ const CARD_GAP = 10 // 카드 간격(px)
 
 // ── 부드러운 드래그(포인터 기반 삽입정렬 + FLIP) 상수 ──
 const ACTIVATION_DISTANCE = 8   // px 이상 움직여야 드래그 시작(제자리 더블클릭=수정과 구분)
-const SWITCH_LOCK_MS = 160      // 재배치 직후 추가 판정 잠금(경계 왕복 방지)
-const MOVE_DURATION = 220       // 주변 카드 자리 이동 애니메이션(ms)
+const SWITCH_LOCK_MS = 70       // 재배치 직후 추가 판정 잠금(애니 중 왕복만 살짝 막고 즉각 반응)
+const MOVE_DURATION = 150       // 주변 카드 자리 이동 애니메이션(ms) — 짧게 = 즉시 비켜주는 감
 const SETTLE_DURATION = 180     // 드롭 후 정착 애니메이션(ms)
 const EASING = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const CLICK_SUPPRESS_MS = 320   // 드롭 직후 더블클릭(수정) 억제
@@ -218,15 +218,17 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     if (!d) return
     if (liftedRef.current) { liftedRef.current.style.left = `${x - d.offsetX}px`; liftedRef.current.style.top = `${y - d.offsetY}px` }
     if (Date.now() < switchLockUntil.current) return
-    // 포인터 아래의 (드래그 대상 아닌) 카드를 찾아 그 앞/뒤로 삽입
-    const stack = document.elementsFromPoint(x, y)
+    // 판정점 = 끌리는 카드의 '중심'(커서 끝점 아님) — 카드 몸통이 상대 카드 중앙을 넘으면 바로 자리 교환(밀어내는 감)
+    const cx = x - d.offsetX + d.width / 2
+    const cy = y - d.offsetY + d.height / 2
+    const stack = document.elementsFromPoint(cx, cy)
     let targetId: number | null = null
     let before = true
     for (const el of stack) {
       const cell = (el as HTMLElement).closest?.('[data-memo-id]') as HTMLElement | null
       if (cell) {
         const tid = Number(cell.getAttribute('data-memo-id'))
-        if (tid !== d.id) { const r = cell.getBoundingClientRect(); before = y < r.top + r.height / 2; targetId = tid; break }
+        if (tid !== d.id) { const r = cell.getBoundingClientRect(); before = cy < r.top + r.height / 2; targetId = tid; break }
       }
     }
     if (targetId == null) return
