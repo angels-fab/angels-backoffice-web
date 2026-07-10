@@ -6,11 +6,11 @@ import type { WorkItem } from '@/types'
  *
  * 저장 형식: '업무내용서식' 열에 **버전 포함 구조화 JSON 문자열**을 저장한다.
  *   { "version": 1, "doc": <ProseMirror doc> }
- * - doc = 본문(제목 제외)만. 허용 노드는 paragraph/text, 허용 mark는 bold/italic/underline/strike/colorToken 뿐.
+ * - doc = 본문(제목 제외)만. 허용 노드는 paragraph/bulletList/orderedList/listItem/text,
+ *   허용 mark는 bold/italic/underline/strike/colorToken/highlightToken(형광펜, 다색 토큰) 뿐.
  * - 파싱 실패·알 수 없는 버전·손상 데이터는 null → 호출부가 기존 '업무내용' 일반 텍스트로 대체 표시.
  * - 임의 HTML/script/style/event handler 등 실행 가능한 데이터는 저장·렌더링하지 않는다(허용 노드/mark만 통과).
- * - 과거 버전이 저장한 highlightToken(형광펜) mark는 더 이상 지원하지 않음 — sanitize에서 제거하고
- *   나머지 서식은 그대로 표시한다(하위호환).
+ * - highlightToken의 색 토큰이 없거나 미지원 값이면 노랑으로 정규화한다(구버전 무토큰 데이터 호환).
  */
 
 export const CONTENT_FMT_VERSION = 1
@@ -24,7 +24,7 @@ export const COLOR_VAR: Record<Exclude<ColorToken, 'default'>, string> = {
   red: 'var(--red)', amber: 'var(--amber)', green: 'var(--green)', blue: 'var(--blue)', purple: 'var(--purple)',
 }
 export const COLOR_LABEL: Record<ColorToken, string> = {
-  default: '기본', red: '빨강', amber: '주황', green: '초록', blue: '파랑', purple: '보라',
+  default: '기본 글자색', red: '빨강', amber: '주황', green: '초록', blue: '파랑', purple: '보라',
 }
 
 // ── 형광펜 토큰(다색) — <mark class="wc-hl" data-color="…">, CSS가 테마 배경 적용 ──

@@ -194,7 +194,8 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
       <SplitBtn
         title={`글자색 (${COLOR_LABEL[lastColor]})`}
         glyph={<Box component="span" sx={{ fontSize: 11.5, fontWeight: 800, color: curColor !== 'default' ? COLOR_VAR[curColor] : 'text.secondary' }}>가</Box>}
-        barColor={lastColor === 'default' ? 'text.disabled' : COLOR_VAR[lastColor]}
+        // 기본 글자색이면 실제 기본 글자색(중립)을 바에 그대로 — 비활성처럼 흐려 보이지 않게
+        barColor={lastColor === 'default' ? 'text.primary' : COLOR_VAR[lastColor]}
         active={curColor !== 'default'}
         onApply={() => applyColor(lastColor)}
         onOpen={setColorAnchor}
@@ -225,7 +226,11 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
 
       <Divider orientation="vertical" flexItem sx={{ my: 0.25 }} />
 
-      <TBtn title="서식 제거" onClick={() => editor.chain().focus().unsetAllMarks().run()}>
+      <TBtn title="서식 제거" onClick={() => {
+        editor.chain().focus().unsetAllMarks().run()
+        // 커서만 있을 때는 대기 중(storedMarks) 서식도 비움 — unsetAllMarks는 빈 선택에서 no-op이라 방금 고른 색이 남는 것 방지
+        if (editor.state.selection.empty) editor.view.dispatch(editor.state.tr.setStoredMarks([]))
+      }}>
         <FormatClearIcon sx={{ fontSize: 18 }} />
       </TBtn>
 
@@ -266,9 +271,11 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
             {curHl === tk && <CheckIcon sx={{ fontSize: 15, color: 'primary.main' }} />}
           </MenuItem>
         ))}
+        <Divider sx={{ my: 0.5 }} />
+        {/* 색 없음 = 형광펜 mark만 제거(글자색 불변) — 마지막 사용 형광펜 색은 유지(다시 본체 클릭 시 재적용 가능) */}
         <MenuItem onClick={() => applyHl('none')} sx={{ gap: 1, fontSize: 13, minHeight: 34 }}>
           <Box component="span" sx={(th) => ({ width: 18, height: 12, borderRadius: '3px', flexShrink: 0, border: `1.5px solid ${th.palette.text.secondary}` })} />
-          <Box component="span" sx={{ flex: 1 }}>없음(제거)</Box>
+          <Box component="span" sx={{ flex: 1 }}>색 없음</Box>
         </MenuItem>
       </Menu>
     </Box>
