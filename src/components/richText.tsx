@@ -35,16 +35,16 @@ import OrderedList from '@tiptap/extension-ordered-list'
 import ListItem from '@tiptap/extension-list-item'
 import { COLOR_TOKENS, COLOR_LABEL, COLOR_VAR, HL_TOKENS, HL_LABEL, HL_VAR, HL_SOLID, type ColorToken, type HlToken } from '@/pages/Work/richContent'
 
-/** 형광펜 칠하기 모드 커서 — 촉 색이 현재 형광펜 색인 마커 SVG(촉 끝이 핫스팟). 실제 형광펜으로 긋는 감각 재현 */
+/** 형광펜 칠하기 모드 커서 — 슬림 몸통 + 비스듬 사각(치즐) 촉, 촉 색=현재 형광펜 색. 실제 형광펜 감각 재현 */
 function hlCursorCss(hex: string): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'>`
     + `<g transform='rotate(35 10 30)'>`
-    + `<rect x='4' y='4' width='12' height='15' rx='3' fill='#2f3542' stroke='#f2f4f8' stroke-width='1.2'/>`
-    + `<rect x='5' y='8' width='10' height='3' rx='1' fill='#dfe6f2'/>`
-    + `<path d='M4 19 h12 v3 l-3 6 h-6 l-3 -6 z' fill='${hex}' stroke='rgba(0,0,0,.28)' stroke-width='0.7'/>`
-    + `<path d='M8 28 h4 l-1.5 2.5 h-1 z' fill='${hex}'/>`
+    + `<rect x='5.5' y='4' width='9' height='15' rx='2.5' fill='#2f3542' stroke='#f2f4f8' stroke-width='1.1'/>`
+    + `<rect x='6.4' y='8' width='7.2' height='2.6' rx='1' fill='#dfe6f2'/>`
+    + `<path d='M5.5 19 h9 v1.5 h-9 z' fill='#3a4150'/>`
+    + `<path d='M5.5 20.5 h9 v3.2 l-9 4.6 z' fill='${hex}' stroke='rgba(0,0,0,.28)' stroke-width='0.6' stroke-linejoin='round'/>`
     + `</g></svg>`
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 10 30, crosshair`
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 10 27, crosshair`
 }
 
 /**
