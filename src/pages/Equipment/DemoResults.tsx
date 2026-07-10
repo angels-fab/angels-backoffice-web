@@ -21,6 +21,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import ZoomOutMapIcon from '@mui/icons-material/ZoomOutMap'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
+import CheckIcon from '@mui/icons-material/Check'
 import TuneIcon from '@mui/icons-material/Tune'
 import HistoryIcon from '@mui/icons-material/History'
 import { alpha } from '@mui/material/styles'
@@ -83,6 +84,16 @@ const plusChip = (th: Theme) => ({
  * 인라인 편집 텍스트 — 평소엔 텍스트(또는 display), 호버 시 오른쪽에 연필. 클릭하면 그 항목만 노란 테두리 인풋으로.
  * Enter/blur=저장(변경 시 onCommit), Esc=취소. 헤더·값·샘플·조건 등 공용.
  */
+// 인라인 편집 공용 노란 인풋 스타일 + 저장/취소 버튼(마우스 조작). 버튼 onMouseDown preventDefault로 인풋 blur 선발생 방지
+const editInputSx = (th: Theme) => ({ fontSize: 12, bgcolor: alpha(th.palette.warning.main, 0.1), border: `1px solid ${alpha(th.palette.warning.main, 0.65)}`, borderRadius: '5px', px: 0.5, py: '1px' })
+function SaveCancel({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.25 }}>
+      <Tooltip title="저장"><IconButton size="small" aria-label="저장" onMouseDown={(e) => e.preventDefault()} onClick={onSave} sx={{ p: '1px', color: 'success.main' }}><CheckIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+      <Tooltip title="취소"><IconButton size="small" aria-label="취소" onMouseDown={(e) => e.preventDefault()} onClick={onCancel} sx={{ p: '1px', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+    </Box>
+  )
+}
 function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, placeholder = '-', display }: {
   text: string; canEdit: boolean; onCommit: (v: string) => void
   align?: 'left' | 'center'; multiline?: boolean; placeholder?: string; display?: React.ReactNode
@@ -93,18 +104,49 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
   const commit = () => { setEditing(false); const nv = v.trim(); if (nv !== (text || '').trim()) onCommit(nv) }
   if (editing) {
     return (
-      <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
-          else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); commit() }
-        }}
-        sx={(th) => ({ width: '100%', fontSize: 12, bgcolor: alpha(th.palette.warning.main, 0.1), border: `1px solid ${alpha(th.palette.warning.main, 0.65)}`, borderRadius: '5px', px: 0.5, py: '1px', '& textarea, & input': { textAlign: align, p: 0 } })} />
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, width: '100%' }}>
+        <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
+            else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); commit() }
+          }}
+          sx={(th) => ({ width: '100%', ...editInputSx(th), '& textarea, & input': { textAlign: align, p: 0 } })} />
+        <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
+      </Box>
     )
   }
   return (
     <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%', verticalAlign: 'middle', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0 } }}>
       <Box component="span" sx={{ minWidth: 0, ...(multiline ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } : {}) }}>{display ?? (text || (canEdit ? placeholder : '-'))}</Box>
       {canEdit && <IconButton className="pen" size="small" aria-label="수정" onClick={start} sx={{ p: '1px', flex: 'none', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
+    </Box>
+  )
+}
+
+/** 지표명+단위 통합 인라인 편집 — 연필 하나로 [지표명] [단위] 동시 수정 + 저장/취소 버튼 */
+function EditLabelUnit({ label, unit, canEdit, onCommit }: { label: string; unit: string; canEdit: boolean; onCommit: (label: string, unit: string) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [l, setL] = useState(''); const [u, setU] = useState('')
+  const start = (e: React.MouseEvent) => { e.stopPropagation(); setL(label); setU(unit); setEditing(true) }
+  const commit = () => { setEditing(false); if (l.trim() !== label.trim() || u.trim() !== unit.trim()) onCommit(l.trim(), u.trim()) }
+  const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setEditing(false) } else if (e.key === 'Enter') { e.preventDefault(); commit() } }
+  if (editing) {
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
+        <InputBase autoFocus value={l} onChange={(e) => setL(e.target.value)} placeholder="지표명" onKeyDown={onKey} sx={(th) => ({ width: '100%', ...editInputSx(th) })} />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+          <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>[</Box>
+          <InputBase value={u} onChange={(e) => setU(e.target.value)} placeholder="단위" onKeyDown={onKey} sx={(th) => ({ flex: 1, minWidth: 0, ...editInputSx(th), fontSize: 11 })} />
+          <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>]</Box>
+        </Box>
+        <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
+      </Box>
+    )
+  }
+  return (
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0 } }}>
+      <Box component="span" sx={{ minWidth: 0 }}>{label || (canEdit ? '지표명' : '-')}{unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.4, fontSize: 10 }}>[{unit}]</Box> : null}</Box>
+      {canEdit && <IconButton className="pen" size="small" aria-label="지표 수정" onClick={start} sx={{ p: '1px', flex: 'none', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
     </Box>
   )
 }
@@ -602,10 +644,9 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
               const best = bestFor(def)
               return (
                 <Box component="tr" key={def.key}>
-                  {/* 지표 헤더 — 지표명·단위 각각 호버 연필로 인라인 수정(updateMetricDef, 이력 자동) */}
+                  {/* 지표 헤더 — 연필 하나로 지표명·단위 동시 인라인 수정(updateMetricDef, 이력 자동) */}
                   <Box component="td" sx={{ textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>
-                    <EditText text={def.label} canEdit={canEdit} placeholder="지표명" onCommit={(v) => { if (v) onSaveMetricDef(def.id, { label: v }) }} />
-                    <Box component="span" sx={{ color: 'text.disabled', ml: 0.4, fontSize: 10 }}>[<EditText text={def.unit} canEdit={canEdit} placeholder="단위" onCommit={(v) => onSaveMetricDef(def.id, { unit: v })} />]</Box>
+                    <EditLabelUnit label={def.label} unit={def.unit} canEdit={canEdit} onCommit={(label, unit) => { if (label) onSaveMetricDef(def.id, { label, unit }) }} />
                   </Box>
                   {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
                   {makers.map((m, mi) => {
