@@ -11,7 +11,7 @@
   /* 형광펜 = PPT/Word 형광펜색(원색·불투명) + 형광펜 위 글자는 어둡게(가독) */
   --hl-yellow:#FFFF00;--hl-green:#00FF00;--hl-blue:#00FFFF;--hl-pink:#FF00FF;--hl-ink:#1b1c22;
   /* 에디터 글자색 = PPT 표준색(다크 배경에서 안 보이는 파랑·보라·빨강은 톤만 올림) */
-  --ec-red:#FF453A;--ec-amber:#FFC000;--ec-green:#22C55E;--ec-blue:#3B9BFF;--ec-purple:#B57BFF;
+  --ec-red:#FF453A;--ec-amber:#FFC000;--ec-yellow:#FFD400;--ec-green:#22C55E;--ec-blue:#3B9BFF;--ec-purple:#B57BFF;
 }
 body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
@@ -218,6 +218,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* 글자색 토큰(의미 기반) → 테마 팔레트. 다크/라이트 모두 index.css 변수로 대비 확보 */
 .wc-color[data-color="red"]{color:var(--ec-red)}
 .wc-color[data-color="amber"]{color:var(--ec-amber)}
+.wc-color[data-color="yellow"]{color:var(--ec-yellow)}
 .wc-color[data-color="green"]{color:var(--ec-green)}
 .wc-color[data-color="blue"]{color:var(--ec-blue)}
 .wc-color[data-color="purple"]{color:var(--ec-purple)}

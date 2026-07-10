@@ -16,15 +16,18 @@ import type { WorkItem } from '@/types'
 export const CONTENT_FMT_VERSION = 1
 
 // ── 글자색 토큰(의미 기반) — raw hex 대신 토큰 저장, 화면에서 테마 팔레트로 변환 ──
-export type ColorToken = 'default' | 'red' | 'amber' | 'green' | 'blue' | 'purple'
-export const COLOR_TOKENS: ColorToken[] = ['default', 'red', 'amber', 'green', 'blue', 'purple']
-const NAMED_COLORS = new Set<string>(['red', 'amber', 'green', 'blue', 'purple'])
+// amber/purple은 구버전 콘텐츠 호환용으로 렌더는 유지하되, 팔레트(COLOR_PALETTE)에는 노출 안 함
+export type ColorToken = 'default' | 'red' | 'amber' | 'yellow' | 'green' | 'blue' | 'purple'
+export const COLOR_TOKENS: ColorToken[] = ['default', 'red', 'amber', 'yellow', 'green', 'blue', 'purple']
+/** 팔레트 노출 순서(1행 5열) — 기본·빨강·노랑·초록·파랑 */
+export const COLOR_PALETTE: ColorToken[] = ['default', 'red', 'yellow', 'green', 'blue']
+const NAMED_COLORS = new Set<string>(['red', 'amber', 'yellow', 'green', 'blue', 'purple'])
 /** 토큰 → 현재 테마 CSS 변수(다크/라이트 모두 index.css에서 대비 확보) */
 export const COLOR_VAR: Record<Exclude<ColorToken, 'default'>, string> = {
-  red: 'var(--ec-red)', amber: 'var(--ec-amber)', green: 'var(--ec-green)', blue: 'var(--ec-blue)', purple: 'var(--ec-purple)',
+  red: 'var(--ec-red)', amber: 'var(--ec-amber)', yellow: 'var(--ec-yellow)', green: 'var(--ec-green)', blue: 'var(--ec-blue)', purple: 'var(--ec-purple)',
 }
 export const COLOR_LABEL: Record<ColorToken, string> = {
-  default: '기본 글자색', red: '빨강', amber: '주황', green: '초록', blue: '파랑', purple: '보라',
+  default: '기본 글자색', red: '빨강', amber: '주황', yellow: '노랑', green: '초록', blue: '파랑', purple: '보라',
 }
 
 // ── 형광펜 토큰(다색) — <mark class="wc-hl" data-color="…">, CSS가 테마 배경 적용 ──

@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Tooltip from '@mui/material/Tooltip'
 import Divider from '@mui/material/Divider'
-import CheckIcon from '@mui/icons-material/Check'
 import FormatBoldIcon from '@mui/icons-material/FormatBold'
 import FormatItalicIcon from '@mui/icons-material/FormatItalic'
 import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined'
@@ -33,7 +32,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import BulletList from '@tiptap/extension-bullet-list'
 import OrderedList from '@tiptap/extension-ordered-list'
 import ListItem from '@tiptap/extension-list-item'
-import { COLOR_TOKENS, COLOR_LABEL, COLOR_VAR, HL_TOKENS, HL_LABEL, HL_VAR, HL_SOLID, type ColorToken, type HlToken } from '@/pages/Work/richContent'
+import { COLOR_PALETTE, COLOR_LABEL, COLOR_VAR, HL_TOKENS, HL_LABEL, HL_VAR, HL_SOLID, type ColorToken, type HlToken } from '@/pages/Work/richContent'
 
 /** 형광펜 칠하기 모드 커서 — 슬림 몸통 + 비스듬 사각(치즐) 촉, 촉 색=현재 형광펜 색. 실제 형광펜 감각 재현 */
 function hlCursorCss(hex: string): string {
@@ -146,6 +145,8 @@ function TBtn({ active, disabled, title, onClick, children }: {
 function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
   title: string; glyph: React.ReactNode; barColor: string; active?: boolean; onApply: () => void; onOpen: (el: HTMLElement) => void
 }) {
+  // 팔레트는 화살표가 아니라 본체(글리프) 아래에서 열리게 — 앵커를 본체 버튼으로
+  const mainRef = useRef<HTMLButtonElement>(null)
   return (
     // 호버 강조는 컨트롤 전체(본체+화살표)에 한 번에 — PPT처럼 한 덩어리로 반응
     <Box sx={(th) => ({
@@ -154,7 +155,7 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
       '&:hover': { bgcolor: alpha(th.palette.primary.main, active ? 0.22 : 0.1) },
     })}>
       <HintTip title={title}>
-        <IconButton size="small" aria-label={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={onApply}
+        <IconButton ref={mainRef} size="small" aria-label={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={onApply}
           sx={{ p: '3px 4px', borderRadius: 0, color: 'text.secondary' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
             {/* 글리프 고정 높이 박스 — '가'/아이콘 높이가 달라도 아래 색상 바가 같은 높이에 정렬되게 */}
@@ -164,7 +165,7 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
         </IconButton>
       </HintTip>
       <HintTip title={`${title} 선택`}>
-        <IconButton size="small" aria-label={`${title} 선택`} aria-haspopup="menu" onMouseDown={(e) => e.preventDefault()} onClick={(e) => onOpen(e.currentTarget)}
+        <IconButton size="small" aria-label={`${title} 선택`} aria-haspopup="menu" onMouseDown={(e) => e.preventDefault()} onClick={() => mainRef.current && onOpen(mainRef.current)}
           sx={{ p: 0, width: 15, borderRadius: 0, color: 'text.secondary' }}>
           <ArrowDropDownIcon sx={{ fontSize: 16 }} />
         </IconButton>
@@ -318,53 +319,60 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
         <FormatClearIcon sx={{ fontSize: 18 }} />
       </TBtn>
 
+      {/* 글자색 팔레트 — 본체('가') 아래, 이름 없이 1행 5열 네모 스와치(기본·빨강·노랑·초록·파랑) */}
       <Menu
         anchorEl={colorAnchor}
         open={Boolean(colorAnchor)}
         onClose={() => setColorAnchor(null)}
-        slotProps={{ list: { dense: true, onMouseDown: (e: React.MouseEvent) => e.preventDefault() } }}
+        slotProps={{ list: { dense: true, sx: SWATCH_ROW_SX, onMouseDown: (e: React.MouseEvent) => e.preventDefault() } }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        {COLOR_TOKENS.map((tk) => (
-          <MenuItem key={tk} onClick={() => applyColor(tk)} sx={{ gap: 1, fontSize: 13, minHeight: 34 }}>
+        {COLOR_PALETTE.map((tk) => (
+          <MenuItem key={tk} onClick={() => applyColor(tk)} aria-label={COLOR_LABEL[tk]} disableGutters sx={SWATCH_ITEM_SX}>
             <Box
               component="span"
               sx={(th) => ({
-                width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                bgcolor: tk === 'default' ? 'transparent' : COLOR_VAR[tk],
-                border: tk === 'default' ? `1.5px solid ${th.palette.text.secondary}` : 'none',
+                ...SWATCH_BOX,
+                // 기본 글자색 = 실제 기본색(밝은 텍스트) 네모, 나머지는 해당 색
+                bgcolor: tk === 'default' ? th.palette.text.primary : COLOR_VAR[tk],
+                boxShadow: curColor === tk ? `0 0 0 2px ${th.palette.primary.main}` : `inset 0 0 0 1px ${alpha(th.palette.common.black, 0.25)}`,
               })}
             />
-            <Box component="span" sx={{ flex: 1 }}>{COLOR_LABEL[tk]}</Box>
-            {curColor === tk && <CheckIcon sx={{ fontSize: 15, color: 'primary.main' }} />}
           </MenuItem>
         ))}
       </Menu>
 
+      {/* 형광펜 팔레트 — 본체(펜) 아래, 이름 없이 1행 5열 네모(노랑·초록·파랑·분홍·색없음) */}
       <Menu
         anchorEl={hlAnchor}
         open={Boolean(hlAnchor)}
         onClose={() => setHlAnchor(null)}
-        slotProps={{ list: { dense: true, onMouseDown: (e: React.MouseEvent) => e.preventDefault() } }}
+        slotProps={{ list: { dense: true, sx: SWATCH_ROW_SX, onMouseDown: (e: React.MouseEvent) => e.preventDefault() } }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
         {HL_TOKENS.map((tk) => (
-          <MenuItem key={tk} onClick={() => applyHl(tk)} sx={{ gap: 1, fontSize: 13, minHeight: 34 }}>
-            <Box component="span" sx={{ width: 18, height: 12, borderRadius: '3px', flexShrink: 0, bgcolor: HL_VAR[tk] }} />
-            <Box component="span" sx={{ flex: 1 }}>{HL_LABEL[tk]}</Box>
-            {curHl === tk && <CheckIcon sx={{ fontSize: 15, color: 'primary.main' }} />}
+          <MenuItem key={tk} onClick={() => applyHl(tk)} aria-label={HL_LABEL[tk]} disableGutters sx={SWATCH_ITEM_SX}>
+            <Box component="span" sx={(th) => ({ ...SWATCH_BOX, bgcolor: HL_VAR[tk], boxShadow: curHl === tk ? `0 0 0 2px ${th.palette.primary.main}` : `inset 0 0 0 1px ${alpha(th.palette.common.black, 0.25)}` })} />
           </MenuItem>
         ))}
-        <Divider sx={{ my: 0.5 }} />
-        {/* 색 없음 = 형광펜 mark만 제거(글자색 불변) — 마지막 사용 형광펜 색은 유지(다시 본체 클릭 시 재적용 가능) */}
-        <MenuItem onClick={() => applyHl('none')} sx={{ gap: 1, fontSize: 13, minHeight: 34 }}>
-          <Box component="span" sx={(th) => ({ width: 18, height: 12, borderRadius: '3px', flexShrink: 0, border: `1.5px solid ${th.palette.text.secondary}` })} />
-          <Box component="span" sx={{ flex: 1 }}>색 없음</Box>
+        {/* 색 없음 = 형광펜 mark만 제거(글자색·마지막 색 불변) — 빨간 사선 네모 */}
+        <MenuItem onClick={() => applyHl('none')} aria-label="색 없음" disableGutters sx={SWATCH_ITEM_SX}>
+          <Box component="span" sx={(th) => ({
+            ...SWATCH_BOX, bgcolor: 'transparent', boxShadow: `inset 0 0 0 1px ${th.palette.text.secondary}`, position: 'relative', overflow: 'hidden',
+            '&::after': { content: '""', position: 'absolute', top: '50%', left: '-20%', width: '140%', height: '1.5px', bgcolor: th.palette.error.main, transform: 'rotate(-45deg)' },
+          })} />
         </MenuItem>
       </Menu>
     </Box>
   )
 }
+
+// 팔레트 공용 스타일 — 가로 1행 네모 스와치
+const SWATCH_ROW_SX = { display: 'flex', flexDirection: 'row', gap: 0.5, p: 0.5 } as const
+const SWATCH_ITEM_SX = { p: '3px', minWidth: 0, minHeight: 0, borderRadius: '6px' } as const
+const SWATCH_BOX = { display: 'block', width: 20, height: 20, borderRadius: '4px', flexShrink: 0, boxSizing: 'border-box' } as const
 
 // 초기 콘텐츠 — HTML이면 그대로, 평문이면 줄바꿈→문단(기존 평문 데이터 호환)
 const bodyToContent = (body: string): string => {
