@@ -178,7 +178,7 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
  * 공용 서식 툴바 — 굵게·기울임·밑줄·취소선 | 글자색·형광펜(PPT식 스플릿) | 글머리·번호·들여쓰기·내어쓰기 | 서식제거.
  * editor가 null이면 렌더 안 함. 색상 메뉴 상태는 내부 관리.
  */
-export function RichToolbar({ editor }: { editor: Editor | null }) {
+export function RichToolbar({ editor, compact = false }: { editor: Editor | null; compact?: boolean }) {
   const [colorAnchor, setColorAnchor] = useState<HTMLElement | null>(null)
   const [hlAnchor, setHlAnchor] = useState<HTMLElement | null>(null)
   // PPT식 — 마지막 사용 색 기억, 본버튼 클릭=바로 적용, ▾만 팔레트
@@ -265,12 +265,17 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
       <TBtn title="기울임 (Ctrl+I)" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
         <FormatItalicIcon sx={{ fontSize: 18 }} />
       </TBtn>
-      <TBtn title="밑줄 (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-        <FormatUnderlinedIcon sx={{ fontSize: 18 }} />
-      </TBtn>
-      <TBtn title="취소선" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
-        <StrikethroughSIcon sx={{ fontSize: 18 }} />
-      </TBtn>
+      {/* 밑줄·취소선 — compact(데모 코멘트)에선 숨김 */}
+      {!compact && (
+        <>
+          <TBtn title="밑줄 (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
+            <FormatUnderlinedIcon sx={{ fontSize: 18 }} />
+          </TBtn>
+          <TBtn title="취소선" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
+            <StrikethroughSIcon sx={{ fontSize: 18 }} />
+          </TBtn>
+        </>
+      )}
 
       <Divider orientation="vertical" flexItem sx={{ my: 0.25 }} />
 
@@ -302,12 +307,17 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
       <TBtn title="번호 목록" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
         <FormatListNumberedIcon sx={{ fontSize: 18 }} />
       </TBtn>
-      <TBtn title="들여쓰기 (Tab)" disabled={!canSink} onClick={() => editor.chain().focus().sinkListItem('listItem').run()}>
-        <FormatIndentIncreaseIcon sx={{ fontSize: 18 }} />
-      </TBtn>
-      <TBtn title="내어쓰기 (Shift+Tab)" disabled={!canLift} onClick={() => editor.chain().focus().liftListItem('listItem').run()}>
-        <FormatIndentDecreaseIcon sx={{ fontSize: 18 }} />
-      </TBtn>
+      {/* 들여쓰기·내어쓰기 — compact(데모 코멘트)에선 숨김 */}
+      {!compact && (
+        <>
+          <TBtn title="들여쓰기 (Tab)" disabled={!canSink} onClick={() => editor.chain().focus().sinkListItem('listItem').run()}>
+            <FormatIndentIncreaseIcon sx={{ fontSize: 18 }} />
+          </TBtn>
+          <TBtn title="내어쓰기 (Shift+Tab)" disabled={!canLift} onClick={() => editor.chain().focus().liftListItem('listItem').run()}>
+            <FormatIndentDecreaseIcon sx={{ fontSize: 18 }} />
+          </TBtn>
+        </>
+      )}
 
       <Divider orientation="vertical" flexItem sx={{ my: 0.25 }} />
 
@@ -396,13 +406,15 @@ export interface RichBodyEditorProps {
   framed?: boolean
   /** Ctrl/Cmd+Enter 콜백(코멘트 저장 등) */
   onCtrlEnter?: () => void
+  /** 축소 툴바(밑줄·취소선·들여쓰기·내어쓰기 숨김) — 짧은 코멘트용 */
+  compact?: boolean
 }
 
 /**
  * 공용 리치 본문 에디터(HTML in/out) — 공지·포털개선요청(게시글/답글)·데모 코멘트가 공유.
  * RichToolbar 항상 표시. 저장은 getHTML() → 표시는 utils/richBody의 RichBodyView.
  */
-export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSize = 13, minHeight = 64, framed = false, onCtrlEnter }: RichBodyEditorProps) {
+export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSize = 13, minHeight = 64, framed = false, onCtrlEnter, compact = false }: RichBodyEditorProps) {
   const editor = useEditor({
     extensions: [
       Document, Paragraph, Text,
@@ -432,7 +444,7 @@ export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSi
         }),
       })}
     >
-      <RichToolbar editor={editor} />
+      <RichToolbar editor={editor} compact={compact} />
       <Box
         sx={{
           '& .ProseMirror': {
