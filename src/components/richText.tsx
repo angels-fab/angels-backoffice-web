@@ -157,7 +157,8 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
         <IconButton size="small" aria-label={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={onApply}
           sx={{ p: '3px 4px', borderRadius: 0, color: 'text.secondary' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
-            {glyph}
+            {/* 글리프 고정 높이 박스 — '가'/아이콘 높이가 달라도 아래 색상 바가 같은 높이에 정렬되게 */}
+            <Box sx={{ height: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{glyph}</Box>
             <Box sx={{ width: 15, height: 3, borderRadius: '1px', mt: '2px', bgcolor: barColor }} />
           </Box>
         </IconButton>
@@ -285,7 +286,8 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
       <SplitBtn
         title={hlMode ? `형광펜 칠하기 모드 (${HL_LABEL[lastHl]}) — 드래그하면 칠해짐, 재클릭·Esc 해제` : `형광펜 (${HL_LABEL[lastHl]})`}
         glyph={<EditIcon sx={{ fontSize: 12.5 }} />}
-        barColor={HL_VAR[lastHl]}
+        // 글자색 바와 동일 스타일 — 불투명 색(HL_SOLID)으로 두께·선명도 정렬(HL_VAR은 반투명이라 얇아 보임)
+        barColor={HL_SOLID[lastHl]}
         active={hlMode}
         onApply={onHlBody}
         onOpen={setHlAnchor}
