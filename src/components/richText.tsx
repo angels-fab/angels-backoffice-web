@@ -42,9 +42,10 @@ function hlCursorCss(hex: string): string {
     + `<rect x='5.5' y='4' width='9' height='15' rx='2.5' fill='#2f3542' stroke='#f2f4f8' stroke-width='1.1'/>`
     + `<rect x='6.4' y='8' width='7.2' height='2.6' rx='1' fill='#dfe6f2'/>`
     + `<path d='M5.5 19 h9 v1.5 h-9 z' fill='#3a4150'/>`
-    + `<path d='M5.5 20.5 h9 v3.2 l-9 4.6 z' fill='${hex}' stroke='rgba(0,0,0,.28)' stroke-width='0.6' stroke-linejoin='round'/>`
+    + `<path d='M5.5 20.5 L14.5 20.5 L14.5 27 L5.5 22.8 Z' fill='${hex}' stroke='rgba(0,0,0,.28)' stroke-width='0.6' stroke-linejoin='round'/>`
     + `</g></svg>`
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 10 27, crosshair`
+  // 핫스팟 = 45° 촉이 회전 후 지면에 닿는 촉 끝(≈ 이미지 15,28)
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") 15 28, crosshair`
 }
 
 /**
