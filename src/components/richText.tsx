@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import Menu from '@mui/material/Menu'
@@ -10,7 +10,7 @@ import FormatBoldIcon from '@mui/icons-material/FormatBold'
 import FormatItalicIcon from '@mui/icons-material/FormatItalic'
 import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined'
 import StrikethroughSIcon from '@mui/icons-material/StrikethroughS'
-import BorderColorIcon from '@mui/icons-material/BorderColor'
+import EditIcon from '@mui/icons-material/Edit'
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted'
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered'
 import FormatIndentIncreaseIcon from '@mui/icons-material/FormatIndentIncrease'
@@ -111,11 +111,16 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
   title: string; glyph: React.ReactNode; barColor: string; active?: boolean; onApply: () => void; onOpen: (el: HTMLElement) => void
 }) {
   return (
-    <Box sx={(th) => ({ display: 'inline-flex', alignItems: 'stretch', borderRadius: '7px', overflow: 'hidden', bgcolor: active ? alpha(th.palette.primary.main, 0.16) : 'transparent' })}>
+    // 호버 강조는 컨트롤 전체(본체+화살표)에 한 번에 — PPT처럼 한 덩어리로 반응
+    <Box sx={(th) => ({
+      display: 'inline-flex', alignItems: 'stretch', borderRadius: '7px', overflow: 'hidden',
+      bgcolor: active ? alpha(th.palette.primary.main, 0.16) : 'transparent',
+      '&:hover': { bgcolor: alpha(th.palette.primary.main, active ? 0.22 : 0.1) },
+    })}>
       <Tooltip title={title}>
         <span style={{ display: 'inline-flex' }}>
           <IconButton size="small" aria-label={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={onApply}
-            sx={(th) => ({ p: '3px 4px', borderRadius: 0, color: 'text.secondary', '&:hover': { bgcolor: alpha(th.palette.primary.main, 0.1) } })}>
+            sx={{ p: '3px 4px', borderRadius: 0, color: 'text.secondary' }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
               {glyph}
               <Box sx={{ width: 15, height: 3, borderRadius: '1px', mt: '2px', bgcolor: barColor }} />
@@ -126,7 +131,7 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
       <Tooltip title={`${title} 선택`}>
         <span style={{ display: 'inline-flex' }}>
           <IconButton size="small" aria-label={`${title} 선택`} aria-haspopup="menu" onMouseDown={(e) => e.preventDefault()} onClick={(e) => onOpen(e.currentTarget)}
-            sx={(th) => ({ p: 0, width: 15, borderRadius: 0, color: 'text.secondary', '&:hover': { bgcolor: alpha(th.palette.primary.main, 0.1) } })}>
+            sx={{ p: 0, width: 15, borderRadius: 0, color: 'text.secondary' }}>
             <ArrowDropDownIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </span>
@@ -145,6 +150,33 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
   // PPT식 — 마지막 사용 색 기억, 본버튼 클릭=바로 적용, ▾만 팔레트
   const [lastColor, setLastColor] = useState<ColorToken>('red')
   const [lastHl, setLastHl] = useState<HlToken>('yellow')
+  // 형광펜 칠하기 모드 — 선택 없이 형광펜을 켜면 유지되고, 텍스트를 드래그할 때마다 칠해진다(PPT). 재클릭·Esc로 해제
+  const [hlMode, setHlMode] = useState(false)
+
+  useEffect(() => {
+    if (!editor || !hlMode) return
+    const dom = editor.view.dom
+    const onUp = () => {
+      // mouseup 직후 DOM 선택을 PM 좌표로 직접 변환해 칠하고 선택 해제(연속 칠하기) — PM sync 타이밍에 안 기댐
+      window.setTimeout(() => {
+        const sel = window.getSelection()
+        if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
+        const r = sel.getRangeAt(0)
+        if (!dom.contains(r.commonAncestorContainer)) return
+        let from = -1, to = -1
+        try { from = editor.view.posAtDOM(r.startContainer, r.startOffset); to = editor.view.posAtDOM(r.endContainer, r.endOffset) } catch { return }
+        if (from < 0 || to < 0 || from === to) return
+        const [a, b] = from < to ? [from, to] : [to, from]
+        editor.chain().focus().setTextSelection({ from: a, to: b }).setMark('highlightToken', { token: lastHl }).setTextSelection(b).run()
+      }, 0)
+    }
+    // Esc = 모드만 해제 — capture+stopPropagation으로 폼 닫기 등 다른 Esc 동작보다 우선(모드 중일 때만 이 리스너가 존재)
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setHlMode(false) } }
+    dom.addEventListener('mouseup', onUp)
+    window.addEventListener('keydown', onKey, true)
+    return () => { dom.removeEventListener('mouseup', onUp); window.removeEventListener('keydown', onKey, true) }
+  }, [editor, hlMode, lastHl])
+
   if (!editor) return null
 
   const curColor: ColorToken = (editor.isActive('colorToken') ? editor.getAttributes('colorToken').token : 'default') as ColorToken
@@ -159,11 +191,21 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
     setLastColor(token)
     setColorAnchor(null)
   }
+  // 형광펜 — 선택이 있으면 그 자리에서 한 번 칠하기(딸깍), 없으면 칠하기 모드 유지. '색 없음'은 mark만 제거(모드·마지막 색 불변)
   const applyHl = (token: HlToken | 'none') => {
-    const chain = editor.chain().focus()
-    if (token === 'none') chain.unsetMark('highlightToken').run()
-    else { chain.setMark('highlightToken', { token }).run(); setLastHl(token) }
+    if (token === 'none') {
+      editor.chain().focus().unsetMark('highlightToken').run()
+      setHlAnchor(null)
+      return
+    }
+    setLastHl(token)
+    if (editor.state.selection.empty) { setHlMode(true); editor.chain().focus().run() } // 포커스 복귀 — 이후 드래그 선택이 에디터에 잡히게
+    else editor.chain().focus().setMark('highlightToken', { token }).run()
     setHlAnchor(null)
+  }
+  const onHlBody = () => {
+    if (editor.state.selection.empty) { setHlMode((m) => !m); editor.chain().focus().run() }
+    else applyHl(lastHl)
   }
 
   return (
@@ -191,21 +233,22 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
 
       <Divider orientation="vertical" flexItem sx={{ my: 0.25 }} />
 
+      {/* 글자색 — 커서 위치에 따른 선택효과 없음(클릭 딸깍 + 색 적용만). 바=마지막 사용 색 */}
       <SplitBtn
         title={`글자색 (${COLOR_LABEL[lastColor]})`}
-        glyph={<Box component="span" sx={{ fontSize: 11.5, fontWeight: 800, color: curColor !== 'default' ? COLOR_VAR[curColor] : 'text.secondary' }}>가</Box>}
+        glyph={<Box component="span" sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.secondary' }}>가</Box>}
         // 기본 글자색이면 실제 기본 글자색(중립)을 바에 그대로 — 비활성처럼 흐려 보이지 않게
         barColor={lastColor === 'default' ? 'text.primary' : COLOR_VAR[lastColor]}
-        active={curColor !== 'default'}
         onApply={() => applyColor(lastColor)}
         onOpen={setColorAnchor}
       />
+      {/* 형광펜 — 선택효과 = 칠하기 모드일 때만(커서 위치와 무관) */}
       <SplitBtn
-        title={`형광펜 (${HL_LABEL[lastHl]})`}
-        glyph={<BorderColorIcon sx={{ fontSize: 12.5 }} />}
+        title={hlMode ? `형광펜 칠하기 모드 (${HL_LABEL[lastHl]}) — 드래그하면 칠해짐, 재클릭·Esc 해제` : `형광펜 (${HL_LABEL[lastHl]})`}
+        glyph={<EditIcon sx={{ fontSize: 12.5 }} />}
         barColor={HL_VAR[lastHl]}
-        active={!!curHl}
-        onApply={() => applyHl(lastHl)}
+        active={hlMode}
+        onApply={onHlBody}
         onOpen={setHlAnchor}
       />
 
