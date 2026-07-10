@@ -8,7 +8,7 @@
   --ink:#0F1117;--ink2:#161B22;--ink3:#1D2635;
   --border:#293244;--border2:#232C3A;--text:#FFFFFF;--text2:#AAB4C3;--text3:#7D8899;
   --amber:#D6A23E;--blue:#5491DA;--green:#4DA167;--purple:#A98AE0;--teal:#46B7BE;--red:#E05B54;
-  --hl:rgba(255,214,0,.32);
+  --hl-yellow:rgba(255,214,0,.32);--hl-green:rgba(80,220,130,.28);--hl-blue:rgba(90,160,255,.30);--hl-pink:rgba(255,110,180,.28);
 }
 body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
@@ -218,13 +218,16 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wc-color[data-color="green"]{color:var(--green)}
 .wc-color[data-color="blue"]{color:var(--blue)}
 .wc-color[data-color="purple"]{color:var(--purple)}
-/* 형광펜(하이라이트) — 업무·공지 공용. 줄바꿈돼도 배경 유지(box-decoration-break) */
-.wc-hl{background:var(--hl);border-radius:3px;padding:0 1px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:inherit}
-/* TipTap 본문 에디터(작성/수정) — 카드 폭 안에서 줄바꿈, 가로 스크롤 없음 */
+/* 형광펜(하이라이트, 다색) — 업무·공지·개선요청·코멘트 공용. 줄바꿈돼도 배경 유지(box-decoration-break) */
+.wc-hl{background:var(--hl-yellow);border-radius:3px;padding:0 1px;-webkit-box-decoration-break:clone;box-decoration-break:clone;color:inherit}
+.wc-hl[data-color="green"]{background:var(--hl-green)}
+.wc-hl[data-color="blue"]{background:var(--hl-blue)}
+.wc-hl[data-color="pink"]{background:var(--hl-pink)}
+/* TipTap 본문 에디터(작성/수정) — 프레임(.wc-field)이 툴바+본문을 함께 감쌈(서식툴 작성란 내부 규칙) */
+.wc-field{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+.wc-field:focus-within{border-color:var(--green)}
 .wc-editor{outline:none;min-height:66px;font-size:13px;line-height:1.6;color:var(--text);
-  background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;
-  padding:6px 8px;overflow-wrap:anywhere;word-break:break-word}
-.wc-editor:focus{border-color:var(--green)}
+  overflow-wrap:anywhere;word-break:break-word}
 .wc-editor p{margin:0}
 /* 목록(글머리·번호) — 에디터 안에서 들여쓰기·마커 표시(마커 폭 최소치 18px) */
 .wc-editor ul,.wc-editor ol{margin:0;padding-left:18px}

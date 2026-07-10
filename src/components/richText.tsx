@@ -10,7 +10,6 @@ import FormatBoldIcon from '@mui/icons-material/FormatBold'
 import FormatItalicIcon from '@mui/icons-material/FormatItalic'
 import FormatUnderlinedIcon from '@mui/icons-material/FormatUnderlined'
 import StrikethroughSIcon from '@mui/icons-material/StrikethroughS'
-import FormatColorTextIcon from '@mui/icons-material/FormatColorText'
 import BorderColorIcon from '@mui/icons-material/BorderColor'
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted'
 import FormatListNumberedIcon from '@mui/icons-material/FormatListNumbered'
@@ -34,7 +33,7 @@ import Placeholder from '@tiptap/extension-placeholder'
 import BulletList from '@tiptap/extension-bullet-list'
 import OrderedList from '@tiptap/extension-ordered-list'
 import ListItem from '@tiptap/extension-list-item'
-import { COLOR_TOKENS, COLOR_LABEL, COLOR_VAR, type ColorToken } from '@/pages/Work/richContent'
+import { COLOR_TOKENS, COLOR_LABEL, COLOR_VAR, HL_TOKENS, HL_LABEL, HL_VAR, type ColorToken, type HlToken } from '@/pages/Work/richContent'
 
 /**
  * 업무·공지 공용 리치텍스트 — 마크(글자색·형광펜) + 목록 확장 + 공용 툴바.
@@ -57,9 +56,18 @@ export const ColorTokenMark = Mark.create({
   renderHTML({ HTMLAttributes }) { return ['span', mergeAttributes({ class: 'wc-color' }, HTMLAttributes), 0] },
 })
 
-// ── 형광펜(하이라이트) — 단색, <mark class="wc-hl">, CSS가 테마 대응 배경 적용 ──
+// ── 형광펜(하이라이트) — 다색 토큰, <mark class="wc-hl" data-color="…">, CSS가 테마 배경 적용 ──
 export const HighlightTokenMark = Mark.create({
   name: 'highlightToken',
+  addAttributes() {
+    return {
+      token: {
+        default: 'yellow',
+        parseHTML: (el) => el.getAttribute('data-color') || 'yellow',
+        renderHTML: (attrs) => (attrs.token && attrs.token !== 'yellow' ? { 'data-color': attrs.token } : {}),
+      },
+    }
+  },
   parseHTML() { return [{ tag: 'mark' }] },
   renderHTML({ HTMLAttributes }) { return ['mark', mergeAttributes({ class: 'wc-hl' }, HTMLAttributes), 0] },
 })
@@ -96,16 +104,51 @@ function TBtn({ active, disabled, title, onClick, children }: {
 }
 
 /**
- * 공용 서식 툴바 — 굵게·기울임·밑줄·취소선 | 글자색·형광펜 | 글머리·번호·들여쓰기·내어쓰기 | 서식제거.
+ * PPT식 스플릿 버튼 — 본버튼(글리프 + 마지막 색 바) 클릭 = 즉시 적용, ▾(밀착) = 팔레트.
+ * 글자색·형광펜이 공유. 두 버튼은 한 그룹으로 붙어 보임.
+ */
+function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
+  title: string; glyph: React.ReactNode; barColor: string; active?: boolean; onApply: () => void; onOpen: (el: HTMLElement) => void
+}) {
+  return (
+    <Box sx={(th) => ({ display: 'inline-flex', alignItems: 'stretch', borderRadius: '7px', overflow: 'hidden', bgcolor: active ? alpha(th.palette.primary.main, 0.16) : 'transparent' })}>
+      <Tooltip title={title}>
+        <span style={{ display: 'inline-flex' }}>
+          <IconButton size="small" aria-label={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={onApply}
+            sx={(th) => ({ p: '3px 4px', borderRadius: 0, color: 'text.secondary', '&:hover': { bgcolor: alpha(th.palette.primary.main, 0.1) } })}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
+              {glyph}
+              <Box sx={{ width: 15, height: 3, borderRadius: '1px', mt: '2px', bgcolor: barColor }} />
+            </Box>
+          </IconButton>
+        </span>
+      </Tooltip>
+      <Tooltip title={`${title} 선택`}>
+        <span style={{ display: 'inline-flex' }}>
+          <IconButton size="small" aria-label={`${title} 선택`} aria-haspopup="menu" onMouseDown={(e) => e.preventDefault()} onClick={(e) => onOpen(e.currentTarget)}
+            sx={(th) => ({ p: 0, width: 15, borderRadius: 0, color: 'text.secondary', '&:hover': { bgcolor: alpha(th.palette.primary.main, 0.1) } })}>
+            <ArrowDropDownIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        </span>
+      </Tooltip>
+    </Box>
+  )
+}
+
+/**
+ * 공용 서식 툴바 — 굵게·기울임·밑줄·취소선 | 글자색·형광펜(PPT식 스플릿) | 글머리·번호·들여쓰기·내어쓰기 | 서식제거.
  * editor가 null이면 렌더 안 함. 색상 메뉴 상태는 내부 관리.
  */
 export function RichToolbar({ editor }: { editor: Editor | null }) {
   const [colorAnchor, setColorAnchor] = useState<HTMLElement | null>(null)
-  // MS Office식 — 마지막 사용 색 기억, 본버튼 클릭=바로 적용, ▾만 팔레트
+  const [hlAnchor, setHlAnchor] = useState<HTMLElement | null>(null)
+  // PPT식 — 마지막 사용 색 기억, 본버튼 클릭=바로 적용, ▾만 팔레트
   const [lastColor, setLastColor] = useState<ColorToken>('red')
+  const [lastHl, setLastHl] = useState<HlToken>('yellow')
   if (!editor) return null
 
   const curColor: ColorToken = (editor.isActive('colorToken') ? editor.getAttributes('colorToken').token : 'default') as ColorToken
+  const curHl: HlToken | null = editor.isActive('highlightToken') ? ((editor.getAttributes('highlightToken').token || 'yellow') as HlToken) : null
   const canSink = editor.can().sinkListItem('listItem')
   const canLift = editor.can().liftListItem('listItem')
 
@@ -115,6 +158,12 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
     else chain.setMark('colorToken', { token }).run()
     setLastColor(token)
     setColorAnchor(null)
+  }
+  const applyHl = (token: HlToken | 'none') => {
+    const chain = editor.chain().focus()
+    if (token === 'none') chain.unsetMark('highlightToken').run()
+    else { chain.setMark('highlightToken', { token }).run(); setLastHl(token) }
+    setHlAnchor(null)
   }
 
   return (
@@ -142,41 +191,22 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
 
       <Divider orientation="vertical" flexItem sx={{ my: 0.25 }} />
 
-      <Box sx={{ display: 'inline-flex', alignItems: 'center' }}>
-        <Tooltip title={`글자색 적용 (${COLOR_LABEL[lastColor]})`}>
-          <span>
-            <IconButton
-              size="small" aria-label={`글자색 적용 (${COLOR_LABEL[lastColor]})`} aria-pressed={curColor !== 'default'}
-              onMouseDown={(e) => e.preventDefault()} onClick={() => applyColor(lastColor)}
-              sx={(th) => ({
-                p: 0.4, borderRadius: '7px 0 0 7px',
-                color: curColor !== 'default' ? COLOR_VAR[curColor] : 'text.secondary',
-                bgcolor: curColor !== 'default' ? alpha(th.palette.primary.main, 0.16) : 'transparent',
-                '&:hover': { bgcolor: alpha(th.palette.primary.main, 0.1) },
-              })}
-            >
-              <Box sx={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
-                <FormatColorTextIcon sx={{ fontSize: 16, display: 'block' }} />
-                <Box sx={{ width: 15, height: 3, borderRadius: '1px', mt: '1px', bgcolor: lastColor === 'default' ? 'text.disabled' : COLOR_VAR[lastColor] }} />
-              </Box>
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title="글자색 선택">
-          <span>
-            <IconButton
-              size="small" aria-label="글자색 선택" aria-haspopup="menu"
-              onMouseDown={(e) => e.preventDefault()} onClick={(e) => setColorAnchor(e.currentTarget)}
-              sx={(th) => ({ p: 0, borderRadius: '0 7px 7px 0', color: 'text.secondary', '&:hover': { bgcolor: alpha(th.palette.primary.main, 0.1) } })}
-            >
-              <ArrowDropDownIcon sx={{ fontSize: 17 }} />
-            </IconButton>
-          </span>
-        </Tooltip>
-      </Box>
-      <TBtn title="형광펜" active={editor.isActive('highlightToken')} onClick={() => editor.chain().focus().toggleMark('highlightToken').run()}>
-        <BorderColorIcon sx={{ fontSize: 18 }} />
-      </TBtn>
+      <SplitBtn
+        title={`글자색 (${COLOR_LABEL[lastColor]})`}
+        glyph={<Box component="span" sx={{ fontSize: 11.5, fontWeight: 800, color: curColor !== 'default' ? COLOR_VAR[curColor] : 'text.secondary' }}>가</Box>}
+        barColor={lastColor === 'default' ? 'text.disabled' : COLOR_VAR[lastColor]}
+        active={curColor !== 'default'}
+        onApply={() => applyColor(lastColor)}
+        onOpen={setColorAnchor}
+      />
+      <SplitBtn
+        title={`형광펜 (${HL_LABEL[lastHl]})`}
+        glyph={<BorderColorIcon sx={{ fontSize: 12.5 }} />}
+        barColor={HL_VAR[lastHl]}
+        active={!!curHl}
+        onApply={() => applyHl(lastHl)}
+        onOpen={setHlAnchor}
+      />
 
       <Divider orientation="vertical" flexItem sx={{ my: 0.25 }} />
 
@@ -220,6 +250,26 @@ export function RichToolbar({ editor }: { editor: Editor | null }) {
             {curColor === tk && <CheckIcon sx={{ fontSize: 15, color: 'primary.main' }} />}
           </MenuItem>
         ))}
+      </Menu>
+
+      <Menu
+        anchorEl={hlAnchor}
+        open={Boolean(hlAnchor)}
+        onClose={() => setHlAnchor(null)}
+        slotProps={{ list: { dense: true, onMouseDown: (e: React.MouseEvent) => e.preventDefault() } }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        {HL_TOKENS.map((tk) => (
+          <MenuItem key={tk} onClick={() => applyHl(tk)} sx={{ gap: 1, fontSize: 13, minHeight: 34 }}>
+            <Box component="span" sx={{ width: 18, height: 12, borderRadius: '3px', flexShrink: 0, bgcolor: HL_VAR[tk] }} />
+            <Box component="span" sx={{ flex: 1 }}>{HL_LABEL[tk]}</Box>
+            {curHl === tk && <CheckIcon sx={{ fontSize: 15, color: 'primary.main' }} />}
+          </MenuItem>
+        ))}
+        <MenuItem onClick={() => applyHl('none')} sx={{ gap: 1, fontSize: 13, minHeight: 34 }}>
+          <Box component="span" sx={(th) => ({ width: 18, height: 12, borderRadius: '3px', flexShrink: 0, border: `1.5px solid ${th.palette.text.secondary}` })} />
+          <Box component="span" sx={{ flex: 1 }}>없음(제거)</Box>
+        </MenuItem>
       </Menu>
     </Box>
   )
@@ -269,16 +319,22 @@ export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSi
   if (!editor) return null
 
   return (
-    <Box sx={{ width: '100%' }} onKeyDown={(e) => { if (onCtrlEnter && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onCtrlEnter() } }}>
+    // framed = 인풋풍 테두리 박스가 툴바+본문을 함께 감쌈(서식툴이 작성란 내부에 위치)
+    <Box
+      onKeyDown={(e) => { if (onCtrlEnter && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onCtrlEnter() } }}
+      sx={(th) => ({
+        width: '100%',
+        ...(framed && {
+          bgcolor: alpha(th.palette.text.primary, 0.05),
+          border: '1px solid', borderColor: th.palette.divider, borderRadius: '8px',
+          px: 1, py: '6px',
+          '&:focus-within': { borderColor: th.palette.accent?.green || th.palette.primary.main },
+        }),
+      })}
+    >
       <RichToolbar editor={editor} />
       <Box
-        sx={(th) => ({
-          ...(framed && {
-            bgcolor: alpha(th.palette.text.primary, 0.05),
-            border: '1px solid', borderColor: th.palette.divider, borderRadius: '8px',
-            px: 1, py: '6px',
-            '&:focus-within': { borderColor: th.palette.accent?.green || th.palette.primary.main },
-          }),
+        sx={{
           '& .ProseMirror': {
             minHeight, outline: 'none', fontSize, lineHeight: 1.65, color: 'text.primary',
             wordBreak: 'break-word', overflowWrap: 'anywhere',
@@ -293,7 +349,7 @@ export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSi
           '& .ProseMirror p.is-editor-empty:first-of-type::before': {
             content: 'attr(data-placeholder)', color: 'text.disabled', float: 'left', height: 0, pointerEvents: 'none',
           },
-        })}
+        }}
       >
         <EditorContent editor={editor} />
       </Box>

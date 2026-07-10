@@ -29,8 +29,8 @@ export interface DemoRoundRow {
   date: string; place: string; conditions: string; sample: string
   metrics: Record<string, string>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
 }
-/** 코멘트(제목 있는 메모카드) — 장비종류별. makers는 구버전 잔존(현재 미사용, 빈 배열) */
-export interface DemoChatMsg { id: number; equipment: string; makers: string[]; title: string; body: string; author: string; createdAt: string }
+/** 코멘트(제목 있는 메모카드) — 장비종류별 보드(순서·너비 1~3열). makers는 구버전 잔존(현재 미사용, 빈 배열) */
+export interface DemoChatMsg { id: number; equipment: string; makers: string[]; title: string; body: string; author: string; createdAt: string; sortOrder: number; width: number }
 export interface MetricDefHistory {
   id: number; equipment: string; metricKey: string; action: string
   before: Record<string, unknown> | null; after: Record<string, unknown> | null
@@ -40,7 +40,7 @@ export interface MetricDefHistory {
 // ── 매핑 ──
 interface DefRow { id: number; equipment: string; metric_key: string; label: string; unit: string; direction: MetricDirection; sort: number; active: boolean }
 interface ResRow { id: number; equipment: string; maker: string; model: string; round: number; visit_date: string | null; place: string; conditions: string; sample_info: string | null; metrics: Record<string, string> | null; photos: DemoPhotoRef[] | null; files: DemoFileRef[] | null; cover: number }
-interface ChatRow { id: number; equipment: string; makers: string[] | null; title: string | null; body: string; author: string; created_at: string }
+interface ChatRow { id: number; equipment: string; makers: string[] | null; title: string | null; body: string; author: string; created_at: string; sort_order: number | null; width: number | null }
 
 const toDef = (r: DefRow): DemoMetricDef => ({ id: r.id, equipment: r.equipment, key: r.metric_key, label: r.label, unit: r.unit, direction: r.direction, sort: r.sort, active: r.active })
 const toRound = (r: ResRow): DemoRoundRow => ({
@@ -61,9 +61,16 @@ export async function fetchDemoResults(): Promise<DemoRoundRow[]> {
   return ((data || []) as ResRow[]).map(toRound)
 }
 export async function fetchDemoChat(): Promise<DemoChatMsg[]> {
-  const { data, error } = await withTimeout(supabase.from('demo_chat').select('id, equipment, makers, title, body, author, created_at').order('created_at', { ascending: true }), DB_TIMEOUT, '메모 불러오기')
+  const { data, error } = await withTimeout(
+    supabase.from('demo_chat').select('id, equipment, makers, title, body, author, created_at, sort_order, width')
+      .order('sort_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: true }),
+    DB_TIMEOUT, '메모 불러오기',
+  )
   if (error) fail(error, '메모를 불러오지 못했습니다')
-  return ((data || []) as ChatRow[]).map((r) => ({ id: r.id, equipment: r.equipment, makers: Array.isArray(r.makers) ? r.makers : [], title: r.title || '', body: r.body, author: r.author, createdAt: r.created_at }))
+  return ((data || []) as ChatRow[]).map((r) => ({
+    id: r.id, equipment: r.equipment, makers: Array.isArray(r.makers) ? r.makers : [], title: r.title || '', body: r.body,
+    author: r.author, createdAt: r.created_at, sortOrder: r.sort_order ?? 0, width: Math.min(3, Math.max(1, r.width || 1)),
+  }))
 }
 /** 지표 정의 변경 이력 — equipment 생략 시 전체(알림 배너용) */
 export const METRIC_ACTION_LABEL: Record<string, string> = { create: '추가', update: '수정', deactivate: '비활성', reactivate: '재활성' }
@@ -263,10 +270,23 @@ export async function postDemoChat(p: { equipment: string; title: string; body: 
   await ensureSession()
   const uid = await currentUid()
   const { error } = await withTimeout(
-    supabase.from('demo_chat').insert({ equipment: p.equipment, makers: [], title: p.title.trim(), body: p.body.trim(), author: p.author, member_uid: uid }),
+    // sort_order = epoch 초 — 재정렬(1..n) 이후에도 새 카드는 항상 맨 뒤. width 기본 1열
+    supabase.from('demo_chat').insert({ equipment: p.equipment, makers: [], title: p.title.trim(), body: p.body.trim(), author: p.author, member_uid: uid, sort_order: Date.now() / 1000, width: 1 }),
     DB_TIMEOUT, '메모 저장',
   )
   if (error) throw new Error(error.message || '메모 저장에 실패했습니다')
+}
+/** 코멘트 순서 변경(같은 장비 그룹 내) — 팀원 전체 허용(RPC security definer) */
+export async function reorderDemoChat(ids: number[]): Promise<void> {
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('demo_chat_reorder', { p_ids: ids }), DB_TIMEOUT, '코멘트 순서 변경')
+  if (error) throw new Error(error.message || '순서 변경에 실패했습니다')
+}
+/** 코멘트 카드 너비(1~3열) — 팀원 전체 허용(보드 배치 속성) */
+export async function setDemoChatWidth(id: number, width: number): Promise<void> {
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('demo_chat_set_width', { p_id: id, p_width: width }), DB_TIMEOUT, '카드 너비 변경')
+  if (error) throw new Error(error.message || '너비 변경에 실패했습니다')
 }
 export async function updateDemoChat(id: number, p: { title: string; body: string }): Promise<void> {
   if (!p.title.trim()) throw new Error('제목을 입력해주세요')

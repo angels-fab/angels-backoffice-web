@@ -27,6 +27,15 @@ export const COLOR_LABEL: Record<ColorToken, string> = {
   default: '기본', red: '빨강', amber: '주황', green: '초록', blue: '파랑', purple: '보라',
 }
 
+// ── 형광펜 토큰(다색) — <mark class="wc-hl" data-color="…">, CSS가 테마 배경 적용 ──
+export type HlToken = 'yellow' | 'green' | 'blue' | 'pink'
+export const HL_TOKENS: HlToken[] = ['yellow', 'green', 'blue', 'pink']
+const HL_SET = new Set<string>(HL_TOKENS)
+export const HL_VAR: Record<HlToken, string> = {
+  yellow: 'var(--hl-yellow)', green: 'var(--hl-green)', blue: 'var(--hl-blue)', pink: 'var(--hl-pink)',
+}
+export const HL_LABEL: Record<HlToken, string> = { yellow: '노랑', green: '초록', blue: '파랑', pink: '분홍' }
+
 // ── PM 문서(직렬화 대상)의 최소 타입 ──
 interface PMMark { type: string; attrs?: { token?: string } }
 interface PMText { type: 'text'; text: string; marks?: PMMark[] }
@@ -37,7 +46,7 @@ export type PMBlock = PMParagraph | PMList
 export interface PMDoc { type: 'doc'; content: PMBlock[] }
 
 // ── 렌더용 구조 ──
-export interface RunMarks { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; color?: ColorToken; highlight?: boolean }
+export interface RunMarks { bold?: boolean; italic?: boolean; underline?: boolean; strike?: boolean; color?: ColorToken; highlight?: HlToken }
 export interface Run { text: string; marks: RunMarks }
 export interface BodyLine { marker: string | null; indentPx: number; runs: Run[]; plain: string }
 
@@ -66,8 +75,11 @@ function sanitizeMarks(marks: unknown): PMMark[] | undefined {
   for (const m of marks) {
     if (!m || typeof m !== 'object') continue
     const type = (m as PMMark).type
-    if (type === 'bold' || type === 'italic' || type === 'underline' || type === 'strike' || type === 'highlightToken') {
+    if (type === 'bold' || type === 'italic' || type === 'underline' || type === 'strike') {
       out.push({ type })
+    } else if (type === 'highlightToken') {
+      const token = String((m as PMMark).attrs?.token || '')
+      out.push({ type: 'highlightToken', attrs: { token: HL_SET.has(token) ? token : 'yellow' } })
     } else if (type === 'colorToken') {
       const token = String((m as PMMark).attrs?.token || '')
       if (NAMED_COLORS.has(token)) out.push({ type: 'colorToken', attrs: { token } })
@@ -141,8 +153,10 @@ function marksOf(marks?: PMMark[]): RunMarks {
     else if (m.type === 'italic') out.italic = true
     else if (m.type === 'underline') out.underline = true
     else if (m.type === 'strike') out.strike = true
-    else if (m.type === 'highlightToken') out.highlight = true
-    else if (m.type === 'colorToken') {
+    else if (m.type === 'highlightToken') {
+      const tok = String(m.attrs?.token || '')
+      out.highlight = (HL_SET.has(tok) ? tok : 'yellow') as HlToken
+    } else if (m.type === 'colorToken') {
       const tok = String(m.attrs?.token || '')
       if (NAMED_COLORS.has(tok)) out.color = tok as ColorToken
     }
@@ -307,7 +321,7 @@ export function runStyle(m: RunMarks): CSSProperties {
   if (m.strike) deco.push('line-through')
   if (deco.length) s.textDecoration = deco.join(' ')
   if (m.color && m.color !== 'default') s.color = COLOR_VAR[m.color]
-  if (m.highlight) { s.backgroundColor = 'var(--hl)'; s.borderRadius = '3px'; s.padding = '0 1px' }
+  if (m.highlight) { s.backgroundColor = HL_VAR[m.highlight]; s.borderRadius = '3px'; s.padding = '0 1px' }
   return s
 }
 

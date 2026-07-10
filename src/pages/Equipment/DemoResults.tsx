@@ -29,7 +29,7 @@ import type { Theme } from '@mui/material/styles'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
-  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, updateDemoChat, deleteDemoChat, updateDemoResult, deleteDemoResult, updateMetricDef, uploadDemoFile, removeDemoFiles,
+  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, updateDemoChat, deleteDemoChat, reorderDemoChat, setDemoChatWidth, updateDemoResult, deleteDemoResult, updateMetricDef, uploadDemoFile, removeDemoFiles,
   type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup, type ValueHistory,
 } from '@/api/demo'
 import { verifyPassword } from '@/api/session'
@@ -103,13 +103,23 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
   const start = (e: React.MouseEvent) => { e.stopPropagation(); setV(text); setEditing(true) }
   const commit = () => { setEditing(false); const nv = v.trim(); if (nv !== (text || '').trim()) onCommit(nv) }
   if (editing) {
+    const onKey = (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
+      else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); commit() }
+    }
+    // 한 줄 값 = [좁은 인풋][✓][✕] 한 줄(그 자리 그대로) / 여러 줄(샘플·조건) = 인풋 아래 버튼
+    if (!multiline) {
+      return (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%', verticalAlign: 'middle' }}>
+          <InputBase autoFocus value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder} onKeyDown={onKey}
+            sx={(th) => ({ width: `${Math.max(5, Math.min(14, v.length + 2))}ch`, ...editInputSx(th), '& input': { textAlign: align, p: 0 } })} />
+          <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
+        </Box>
+      )
+    }
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, width: '100%' }}>
-        <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
-            else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); commit() }
-          }}
+        <InputBase autoFocus multiline value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder} onKeyDown={onKey}
           sx={(th) => ({ width: '100%', ...editInputSx(th), '& textarea, & input': { textAlign: align, p: 0 } })} />
         <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
       </Box>
@@ -131,20 +141,24 @@ function EditLabelUnit({ label, unit, canEdit, onCommit }: { label: string; unit
   const commit = () => { setEditing(false); if (l.trim() !== label.trim() || u.trim() !== unit.trim()) onCommit(l.trim(), u.trim()) }
   const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setEditing(false) } else if (e.key === 'Enter') { e.preventDefault(); commit() } }
   if (editing) {
+    // 지표명·단위가 써진 그 자리에서 그대로 — 좁은 인풋(내용 길이 맞춤) 가운데 스택, 단위 줄에 저장/취소 인라인
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.3 }}>
-        <InputBase autoFocus value={l} onChange={(e) => setL(e.target.value)} placeholder="지표명" onKeyDown={onKey} sx={(th) => ({ width: '100%', ...editInputSx(th) })} />
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.3 }}>
+        <InputBase autoFocus value={l} onChange={(e) => setL(e.target.value)} placeholder="지표명" onKeyDown={onKey}
+          sx={(th) => ({ width: `${Math.max(6, Math.min(16, l.length + 2))}ch`, maxWidth: '100%', ...editInputSx(th), '& input': { textAlign: 'center', p: 0 } })} />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
           <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>[</Box>
-          <InputBase value={u} onChange={(e) => setU(e.target.value)} placeholder="단위" onKeyDown={onKey} sx={(th) => ({ flex: 1, minWidth: 0, ...editInputSx(th), fontSize: 11 })} />
+          <InputBase value={u} onChange={(e) => setU(e.target.value)} placeholder="단위" onKeyDown={onKey}
+            sx={(th) => ({ width: `${Math.max(4, Math.min(10, u.length + 2))}ch`, ...editInputSx(th), fontSize: 11, '& input': { textAlign: 'center', p: 0 } })} />
           <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>]</Box>
+          <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
         </Box>
-        <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
       </Box>
     )
   }
   return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0 } }}>
+    // 표시 — 두 줄로 줄바꿈돼도 가운데정렬(셀 textAlign center와 함께)
+    <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 0.25, maxWidth: '100%', textAlign: 'center', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0 } }}>
       <Box component="span" sx={{ minWidth: 0 }}>{label || (canEdit ? '지표명' : '-')}{unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.4, fontSize: 10 }}>[{unit}]</Box> : null}</Box>
       {canEdit && <IconButton className="pen" size="small" aria-label="지표 수정" onClick={start} sx={{ p: '1px', flex: 'none', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
     </Box>
@@ -466,7 +480,10 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
         <Box sx={{ flex: 'none', width: { xs: '100%', md: 320 }, minHeight: 0, borderLeft: { md: 1 }, borderTop: { xs: 1, md: 0 }, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ flex: 'none', fontSize: 11, color: 'text.disabled', px: 1.25, pt: 1, pb: 0.5 }}>훑어보기 — 제조사별</Box>
           <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', gap: 1, px: 1.25, pb: 1.25 }}>
-            {columns.map((col, c) => {
+            {/* 항상 2열 분할 — 1개사면 왼쪽만 차고 오른쪽은 공란(비교 슬롯 자리) */}
+            {[0, 1].map((c) => {
+              const col = columns[c]
+              if (!col) return <Box key={`empty-${c}`} aria-hidden sx={{ flex: 1, minWidth: 0 }} />
               const on = active.includes(c)
               return (
               <Box key={col.key} sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.75, overflowY: 'auto', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
@@ -504,10 +521,11 @@ function GallerySheet({ equipment, columns, initial, onClose }: { equipment: str
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, user, chatBusy, latestValueChange, onPostChat, onEditChat, onDeleteChat, onSaveValues, onSaveMeta, onSaveMetricDef, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound, onReload }: {
+function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, user, chatBusy, latestValueChange, onPostChat, onEditChat, onDeleteChat, onReorderChat, onWidthChat, onSaveValues, onSaveMeta, onSaveMetricDef, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound, onReload }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; canModerate: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onPostChat: (equipment: string, title: string, body: string) => Promise<void>
   onEditChat: (id: number, title: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
+  onReorderChat: (ids: number[]) => void; onWidthChat: (id: number, width: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
   onSaveMeta: (roundId: number, patch: { sample?: string; conditions?: string }) => Promise<void>
   onSaveMetricDef: (defId: number, patch: { label?: string; unit?: string }) => Promise<void>
@@ -630,7 +648,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
               .filter(([, field]) => canEdit || makers.some((m) => (shown(m)[field] || '').trim()))
               .map(([labelTxt, field]) => (
                 <Box component="tr" key={labelTxt}>
-                  <Box component="td" sx={{ textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>{labelTxt}</Box>
+                  <Box component="td" sx={{ textAlign: 'center', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>{labelTxt}</Box>
                   {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
                   {makers.map((m, mi) => (
                     <Box component="td" key={m.key} colSpan={2} sx={{ textAlign: 'center', p: '5px 8px', fontSize: 11, lineHeight: 1.5, color: 'text.secondary', borderLeft: mi > 0 || padSpan > 0 ? 1 : 0, borderRight: padSpan > 0 && mi === makers.length - 1 ? 1 : 0, borderTop: 1, borderColor: 'divider' }}>
@@ -644,8 +662,8 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
               const best = bestFor(def)
               return (
                 <Box component="tr" key={def.key}>
-                  {/* 지표 헤더 — 연필 하나로 지표명·단위 동시 인라인 수정(updateMetricDef, 이력 자동) */}
-                  <Box component="td" sx={{ textAlign: 'left', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>
+                  {/* 지표 헤더 — 연필 하나로 지표명·단위 동시 인라인 수정(updateMetricDef, 이력 자동). 가운데정렬 */}
+                  <Box component="td" sx={{ textAlign: 'center', p: '6px 8px', fontSize: 11.5, color: 'text.secondary', borderRight: 1, borderTop: 1, borderColor: 'divider' }}>
                     <EditLabelUnit label={def.label} unit={def.unit} canEdit={canEdit} onCommit={(label, unit) => { if (label) onSaveMetricDef(def.id, { label, unit }) }} />
                   </Box>
                   {padSpan > 0 && <Box component="td" aria-hidden colSpan={padSpan} sx={{ p: 0, border: 0, borderTop: 1, borderColor: 'divider' }} />}
@@ -670,7 +688,8 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
         {/* 코멘트 — 어두운 인셋 패널(그룹 안에서 표와 역할 대비). 헤더 라벨 없이 카드만(무슨 공간인지 자명) */}
         <Box sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minWidth: 0, width: { xs: '100%', md: 'auto' }, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: '10px', p: 1.25 }}>
           <DemoChat memos={messages} canPost={canEdit} canModerate={canModerate} user={user} busy={chatBusy}
-            onPost={(title, body) => onPostChat(equipment, title, body)} onEdit={onEditChat} onDelete={onDeleteChat} />
+            onPost={(title, body) => onPostChat(equipment, title, body)} onEdit={onEditChat} onDelete={onDeleteChat}
+            onReorder={onReorderChat} onWidth={onWidthChat} />
         </Box>
       </Box>
 
@@ -773,6 +792,13 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
   const onDeleteChat = async (id: number) => {
     try { await deleteDemoChat(id); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '삭제 실패', sev: 'error' }) }
   }
+  // 보드 배치 — 순서(드래그)·너비(1~3열). 낙관 갱신 없이 저장 후 재조회(카드 수 적어 충분히 빠름)
+  const onReorderChat = async (ids: number[]) => {
+    try { await reorderDemoChat(ids); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '순서 변경 실패', sev: 'error' }) }
+  }
+  const onWidthChat = async (id: number, width: number) => {
+    try { await setDemoChatWidth(id, width); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '너비 변경 실패', sev: 'error' }) }
+  }
 
   const onSaveValues = async (roundId: number, metrics: Record<string, string>) => {
     if (!user) throw new Error('로그인이 필요합니다')
@@ -824,7 +850,7 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
             key={g.equipment}
             equipment={g.equipment} defs={g.defs} makers={g.makers}
             messages={chatOf(g.equipment)} canEdit={isMember} canModerate={isAdmin} user={user} chatBusy={chatBusy} latestValueChange={latestValueChangeOf(g.equipment)}
-            onPostChat={onPostChat} onEditChat={onEditChat} onDeleteChat={onDeleteChat} onSaveValues={onSaveValues} onSaveMeta={onSaveMeta} onSaveMetricDef={onSaveMetricDef} onReload={load}
+            onPostChat={onPostChat} onEditChat={onEditChat} onDeleteChat={onDeleteChat} onReorderChat={onReorderChat} onWidthChat={onWidthChat} onSaveValues={onSaveValues} onSaveMeta={onSaveMeta} onSaveMetricDef={onSaveMetricDef} onReload={load}
             onEditMetrics={() => setEditorEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
             onAddRound={(mg) => { setFormPre({ equipment: g.equipment, maker: mg.maker, model: mg.model }); setFormOpen(true) }}
             onDeleteRound={onDeleteRound}
