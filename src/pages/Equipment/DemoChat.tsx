@@ -315,9 +315,9 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     setDragId(p.id)
   }
 
-  // 삽입 위치 판정 — 포인터 기준 '행 밴드 + 좌/우 절반'(원본 슬롯 고정 좌표).
-  // 세로로 어느 행인지 찾고, 행 안에서 각 슬롯 중심 x보다 왼쪽이면 그 앞에 삽입, 다 지나면 행 끝.
-  // 최근접-유클리드 방식과 달리 혼합 폭(1·2열)에서도 "이 카드 앞/뒤"라는 의도가 그대로 반영된다.
+  // 삽입 위치 판정 — '행 밴드 + 좌/우 절반'(원본 슬롯 고정 좌표). 판정점은 updateDrag가 넘기는
+  // '끌리는 카드의 중심'(업무현황 카드와 동일 — 마우스 포인터 아님): 세로로 어느 행인지 찾고,
+  // 행 안에서 각 슬롯 중심 x보다 왼쪽이면 그 앞, 다 지나면 행 끝. 혼합 폭(1·2열)에서도 의도대로.
   const insertIndexAt = (slots: DOMRect[], x: number, y: number, dyScroll: number): number => {
     const rows: { top: number; bottom: number; idxs: number[] }[] = []
     slots.forEach((s, i) => {
@@ -332,6 +332,11 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     if (y < rows[0].top) return 0
     const row = rows.find((r) => y <= r.bottom + CARD_GAP)
     if (!row) return slots.length // 모든 행 아래 = 맨 끝
+    if (row.idxs.length === 1) {
+      // 행에 슬롯 하나(전폭 카드 등) — 좌/우가 아니라 위/아래 절반으로 앞/뒤 판정(중심 x가 같아 x 비교 불가)
+      const s = slots[row.idxs[0]]
+      return y < s.top - dyScroll + s.height / 2 ? row.idxs[0] : row.idxs[0] + 1
+    }
     for (const i of row.idxs) { if (x < slots[i].left + slots[i].width / 2) return i }
     return row.idxs[row.idxs.length - 1] + 1
   }
@@ -339,10 +344,16 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const updateDrag = (x: number, y: number) => {
     const d = drag.current
     if (!d) return
-    if (liftedRef.current) { liftedRef.current.style.left = `${x - d.offsetX}px`; liftedRef.current.style.top = `${y - d.offsetY}px` }
+    const left = x - d.offsetX
+    const top = y - d.offsetY
+    if (liftedRef.current) { liftedRef.current.style.left = `${left}px`; liftedRef.current.style.top = `${top}px` }
     if (Date.now() < switchLockUntil.current) return
+    // 판정점 = 끌리는 카드의 '중심'(업무현황 카드와 동일). 포인터가 아니라 카드가 놓일 자리를 보고 판정 —
+    // 카드 모서리를 잡아도 눈에 보이는 카드 위치 그대로 판정된다.
+    const cx = left + d.width / 2
+    const cy = top + d.height / 2
     const dyScroll = window.scrollY - d.scrollY0 // 드래그 중 페이지 스크롤 보정
-    const raw = insertIndexAt(d.slotRects, x, y, dyScroll)
+    const raw = insertIndexAt(d.slotRects, cx, cy, dyScroll)
     // 원본 슬롯 인덱스 → rest(드래그 카드 제외) 삽입 인덱스 보정
     const originIndex = d.baseOrder.indexOf(d.id)
     const next = Math.max(0, Math.min(raw > originIndex ? raw - 1 : raw, d.baseOrder.length - 1))
