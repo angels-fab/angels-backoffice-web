@@ -67,12 +67,17 @@ function Photo({ photo, onClick, fit = 'cover' }: { photo?: DemoPhotoRef; onClic
   )
 }
 
+/** versus(≤2사) 카드 규격 — 이미지창 크기는 제조사 수(1·2사)와 무관하게 동일(고정). 카드 사이 간격은 종전 표 느낌(12px) */
+const VS_CARD_W = 190
+const VS_GAP = 12
+const VS_W = VS_CARD_W * 2 + VS_GAP
+
 /** versus 레이아웃 셀 — 값 셀(VCell) / 지표명 셀(LCell). 값 | 지표명 | 값 그리드에서 사용 */
 function VCell({ children }: { children: React.ReactNode }) {
-  return <Box sx={{ textAlign: 'center', p: '6px 6px', fontSize: 12.5, borderTop: 1, borderColor: 'divider', minWidth: 0 }}>{children}</Box>
+  return <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', p: '6px 6px', fontSize: 12.5, borderTop: 1, borderColor: 'divider', minWidth: 0 }}>{children}</Box>
 }
 function LCell({ children }: { children: React.ReactNode }) {
-  return <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', p: '6px 10px', fontSize: 11.5, color: 'text.secondary', bgcolor: 'action.hover', borderTop: 1, borderColor: 'divider', whiteSpace: 'nowrap' }}>{children}</Box>
+  return <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', p: '6px 10px', fontSize: 11.5, color: 'text.secondary', bgcolor: 'action.hover', borderTop: 1, borderColor: 'divider', maxWidth: 170, wordBreak: 'keep-all', lineHeight: 1.35 }}>{children}</Box>
 }
 
 const roundChip = (active: boolean) => (th: Theme) => ({
@@ -200,7 +205,7 @@ function ThumbStrip({ photos, sel, onPick }: { photos: DemoPhotoRef[]; sel: numb
     <Box sx={{ position: 'relative' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       <Box ref={ref} sx={{ display: 'flex', gap: '2px', overflowX: 'auto', p: '2px', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
         {photos.map((p, i) => (
-          <Box key={i} onClick={() => onPick(i)} sx={{ flex: '0 0 auto', width: 46, aspectRatio: '4 / 3', overflow: 'hidden', borderRadius: '3px', bgcolor: '#000', cursor: 'pointer', border: i === sel ? '2px solid' : '1px solid', borderColor: i === sel ? 'primary.main' : 'divider' }}>
+          <Box key={i} onClick={() => onPick(i)} sx={{ flex: '0 0 auto', width: 46, height: 34, overflow: 'hidden', borderRadius: '3px', bgcolor: '#000', cursor: 'pointer', border: i === sel ? '2px solid' : '1px solid', borderColor: i === sel ? 'primary.main' : 'divider' }}>
             <Photo photo={p} fit="cover" />
           </Box>
         ))}
@@ -256,7 +261,8 @@ function MakerHead({ mg, sel, onSel, onZoom, repIdx, onPick, canEdit, onAddRound
           <Box sx={{ position: 'absolute', top: 4, right: 4, fontSize: 9, color: '#fff', bgcolor: 'rgba(0,0,0,.5)', borderRadius: '4px', px: '4px', py: '1px', fontWeight: 700 }}>{fmtDate(r.date)}</Box>
           {r.photos.length > 0 && <ZoomOutMapIcon sx={{ position: 'absolute', bottom: 4, right: 4, fontSize: 14, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', borderRadius: '4px', p: '2px' }} />}
         </Box>
-        {r.photos.length > 1 && <ThumbStrip photos={r.photos} sel={ri} onPick={onPick} />}
+        {/* 썸네일 자리 상시 확보 — 기타 사진이 없어도 공란(높이 38)으로 비워 A/B 카드·도구줄 높이 정렬 */}
+        {r.photos.length > 1 ? <ThumbStrip photos={r.photos} sel={ri} onPick={onPick} /> : <Box aria-hidden sx={{ height: 38 }} />}
       </Box>
       {/* 회차 도구 — 사진 관리 · 데모결과 삭제(지표값은 표 셀에서 직접 인라인 편집) */}
       {canEdit && (
@@ -518,7 +524,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
 
       {/* 본문 — 데모카드(≤2사=versus / 3사+=표) + 코멘트(오른쪽, 좁은 화면은 아래) */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', gap: 1.5, p: { xs: 1.25, md: 1.5 } }}>
-      <Box sx={{ flex: { xs: '0 1 auto', md: '1 1 0' }, minWidth: 0, maxWidth: '100%', overflowX: 'auto' }}>
+      <Box sx={{ flex: { xs: '0 1 auto', md: makers.length > 2 ? '1 1 0' : '0 0 auto' }, minWidth: 0, maxWidth: '100%', overflowX: 'auto' }}>
         {makers.length > 2 ? (
         <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: '100%', minWidth: tableMinW }}>
           {/* 열 정의 — 라벨(고정) + 등분 서브컬럼(카드 1장 = 2칸) */}
@@ -587,16 +593,17 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
           </Box>
         </Box>
         ) : (
-          <Box>
-            {/* 사진 2칸 딱 붙음(가운데 벌어짐 없음) */}
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+          <Box sx={{ width: { xs: '100%', md: VS_W }, maxWidth: '100%' }}>
+            {/* 사진 카드 2칸 — 크기는 1·2사 무관 고정(고정폭 컨테이너), 사이 간격만 살짝(지표칸이 벌리지는 않음) */}
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: `${VS_GAP}px` }}>
               <MakerHead mg={makers[0]} sel={sel[makers[0].key] ?? makers[0].rounds.length - 1} onSel={selOf(makers[0])} onZoom={(photos, idx) => setLightbox({ photos, idx })} repIdx={repIdxOf(makers[0])} onPick={pickOf(makers[0])} canEdit={canEdit} onAddRound={() => onAddRound(makers[0])} onDeleteRound={() => askDelete(makers[0])} onManagePhotos={() => setPhotoMg(makers[0])} />
               {makers[1] ? (
                 <MakerHead mg={makers[1]} sel={sel[makers[1].key] ?? makers[1].rounds.length - 1} onSel={selOf(makers[1])} onZoom={(photos, idx) => setLightbox({ photos, idx })} repIdx={repIdxOf(makers[1])} onPick={pickOf(makers[1])} canEdit={canEdit} onAddRound={() => onAddRound(makers[1])} onDeleteRound={() => askDelete(makers[1])} onManagePhotos={() => setPhotoMg(makers[1])} />
               ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                   <Box sx={{ py: '5px', textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: 'text.disabled', bgcolor: 'action.hover', borderRadius: '8px 8px 0 0' }}>비교사 없음</Box>
-                  <Box sx={(th) => ({ flex: 1, aspectRatio: '4 / 3', border: 1, borderTop: 0, borderColor: 'divider', borderRadius: '0 0 8px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', fontSize: 11, background: `repeating-linear-gradient(45deg, ${th.palette.background.default}, ${th.palette.background.default} 7px, ${alpha(th.palette.text.primary, 0.03)} 7px, ${alpha(th.palette.text.primary, 0.03)} 14px)` })}>공란</Box>
+                  {/* 높이 = 그리드 stretch로 왼쪽 카드와 자동 일치(고정 비율 없음) */}
+                  <Box sx={(th) => ({ flex: 1, minHeight: 120, border: 1, borderTop: 0, borderColor: 'divider', borderRadius: '0 0 8px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', fontSize: 11, background: `repeating-linear-gradient(45deg, ${th.palette.background.default}, ${th.palette.background.default} 7px, ${alpha(th.palette.text.primary, 0.03)} 7px, ${alpha(th.palette.text.primary, 0.03)} 14px)` })}>공란</Box>
                 </Box>
               )}
             </Box>

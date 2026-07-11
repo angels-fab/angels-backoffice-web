@@ -24,8 +24,9 @@ const CARD_GAP = 10 // 카드 간격(px)
 
 // ── 부드러운 드래그(포인터 기반 삽입정렬 + FLIP) 상수 ──
 const ACTIVATION_DISTANCE = 8   // px 이상 움직여야 드래그 시작(제자리 더블클릭=수정과 구분)
-const SWITCH_LOCK_MS = 70       // 재배치 직후 추가 판정 잠금(애니 중 왕복만 살짝 막고 즉각 반응)
-const MOVE_DURATION = 150       // 주변 카드 자리 이동 애니메이션(ms) — 짧게 = 즉시 비켜주는 감
+const SWITCH_MARGIN = 28        // 새 슬롯이 현재 슬롯보다 이만큼 명확히 가까울 때만 재배치(업무카드와 동일)
+const SWITCH_LOCK_MS = 240      // 재배치 시작 후 추가 판정 잠금 — 왕복 방지(업무카드와 동일)
+const MOVE_DURATION = 240       // 주변 카드 자리 이동 애니메이션(ms, 업무카드와 동일)
 const SETTLE_DURATION = 180     // 드롭 후 정착 애니메이션(ms)
 const EASING = 'cubic-bezier(0.22, 1, 0.36, 1)'
 const CLICK_SUPPRESS_MS = 320   // 드롭 직후 더블클릭(수정) 억제
@@ -92,7 +93,8 @@ function ComposeCard({ accent, title, body, busy, onTitle, onBody, onCancel, onS
  * 수정 = 카드 더블클릭(본인·관리자) · 삭제 = X · 작성 카드는 보드 하단 전폭.
  *
  * masonry(dense)가 아니라 줄 단위 그리드 → 순서 변경 시 카드가 한 칸씩 밀려 자연스럽다(업무카드와 동일 모델).
- * 드래그: 마우스/펜만(터치 제외) — 8px 이동 시 들어올려 커서추적 오버레이, 포인터 아래 카드 앞/뒤 삽입,
+ * 드래그: 마우스/펜만(터치 제외) — 8px 이동 시 들어올려 커서추적 오버레이. 목적지 판정은 업무카드와
+ * 동일하게 시작 시 고정 캡처한 슬롯 좌표 vs 이동 카드 중심의 최근접 매칭(MARGIN 히스테리시스) — 즉시 비켜줌.
  * 주변 카드 FLIP 이동, Esc/취소 시 원위치, 드롭 시 순서 저장(onReorder) + 낙관적 순서로 즉시 반영.
  */
 export default function DemoChat({ memos, canPost, canModerate = false, user, busy, onPost, onEdit, onDelete, onReorder }: {
@@ -132,7 +134,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const suppressClickUntil = useRef(0)
   const lastPointer = useRef({ x: 0, y: 0 })
   const pending = useRef<null | { id: number; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
-  const drag = useRef<null | { id: number; baseOrder: number[]; width: number; height: number; offsetX: number; offsetY: number }>(null)
+  const drag = useRef<null | { id: number; baseOrder: number[]; slotRects: DOMRect[]; scrollY0: number; width: number; height: number; offsetX: number; offsetY: number }>(null)
   const liftedRef = useRef<HTMLDivElement | null>(null)
   const flipRects = useRef(new Map<number, { left: number; top: number }>())
   const settleFrom = useRef<null | { id: number; rect: DOMRect }>(null)
@@ -199,10 +201,17 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     const baseOrder = memosRef.current.map((m) => m.id)
     const originIndex = baseOrder.indexOf(p.id)
     if (originIndex < 0) return
+    // 슬롯 좌표 = 드래그 시작 시 1회 고정 캡처(업무카드 방식) — 이동한 카드들의 현재 위치로 재계산하지 않아 왕복 없음
+    const slotRects: DOMRect[] = []
+    for (const id of baseOrder) {
+      const el = itemRefs.current.get(id)
+      if (!el) return // 측정 불가 → 시작 안 함
+      slotRects.push(el.getBoundingClientRect())
+    }
     // FLIP 기준선 — 현재 모든 카드 위치(문서좌표) 저장
     flipRects.current.clear()
     itemRefs.current.forEach((el, id) => { const r = el.getBoundingClientRect(); flipRects.current.set(id, { left: r.left + window.scrollX, top: r.top + window.scrollY }) })
-    drag.current = { id: p.id, baseOrder, width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY }
+    drag.current = { id: p.id, baseOrder, slotRects, scrollY0: window.scrollY, width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY }
     overIndexRef.current = originIndex // rest에 dragId를 originIndex로 넣으면 baseOrder와 동일
     switchLockUntil.current = 0
     try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
@@ -213,34 +222,28 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     setDragId(p.id)
   }
 
+  // 목적지 판정 = 업무카드(ReorderableTaskGrid)와 동일: 드래그 시작 시 고정 캡처한 슬롯 좌표 기준,
+  // 이동 카드 '중심'과 가장 가까운 슬롯으로 삽입. 새 슬롯이 현재 슬롯보다 SWITCH_MARGIN 이상 명확히
+  // 가까울 때만 재배치(경계 왕복 없음) — 슬롯이 원본 기준 고정이라 카드들이 즉시·안정적으로 비켜줌.
   const updateDrag = (x: number, y: number) => {
     const d = drag.current
     if (!d) return
-    if (liftedRef.current) { liftedRef.current.style.left = `${x - d.offsetX}px`; liftedRef.current.style.top = `${y - d.offsetY}px` }
+    const left = x - d.offsetX
+    const top = y - d.offsetY
+    if (liftedRef.current) { liftedRef.current.style.left = `${left}px`; liftedRef.current.style.top = `${top}px` }
     if (Date.now() < switchLockUntil.current) return
-    // 판정점 = 끌리는 카드의 '중심'(커서 끝점 아님) — 카드 몸통이 상대 카드 중앙을 넘으면 바로 자리 교환(밀어내는 감)
-    const cx = x - d.offsetX + d.width / 2
-    const cy = y - d.offsetY + d.height / 2
-    const stack = document.elementsFromPoint(cx, cy)
-    let targetId: number | null = null
-    let before = true
-    for (const el of stack) {
-      const cell = (el as HTMLElement).closest?.('[data-memo-id]') as HTMLElement | null
-      if (cell) {
-        const tid = Number(cell.getAttribute('data-memo-id'))
-        if (tid !== d.id) { const r = cell.getBoundingClientRect(); before = cy < r.top + r.height / 2; targetId = tid; break }
-      }
-    }
-    if (targetId == null) return
-    const rest = d.baseOrder.filter((id) => id !== d.id)
-    const j = rest.indexOf(targetId)
-    if (j < 0) return
-    const next = before ? j : j + 1
-    if (next !== overIndexRef.current) {
-      overIndexRef.current = next
-      switchLockUntil.current = Date.now() + SWITCH_LOCK_MS
-      setOverIndex(next)
-    }
+    const dyScroll = window.scrollY - d.scrollY0 // 드래그 중 페이지 스크롤 보정
+    const dist = (slot: DOMRect) =>
+      Math.hypot(left + d.width / 2 - (slot.left + slot.width / 2), top + d.height / 2 - (slot.top - dyScroll + slot.height / 2))
+    let best = 0
+    let bestD = Infinity
+    d.slotRects.forEach((slot, i) => { const di = dist(slot); if (di < bestD) { bestD = di; best = i } })
+    const cur = overIndexRef.current
+    if (best === cur) return
+    if (dist(d.slotRects[cur]) - bestD < SWITCH_MARGIN) return
+    switchLockUntil.current = Date.now() + SWITCH_LOCK_MS
+    overIndexRef.current = best
+    setOverIndex(best)
   }
 
   const finishDrag = (commit: boolean) => {
