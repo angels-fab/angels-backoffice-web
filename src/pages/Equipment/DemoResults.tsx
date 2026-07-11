@@ -96,8 +96,9 @@ const plusChip = (th: Theme) => ({
  * 인라인 편집 텍스트 — 평소엔 텍스트(또는 display), 호버 시 오른쪽에 연필. 클릭하면 그 항목만 노란 테두리 인풋으로.
  * Enter/blur=저장(변경 시 onCommit), Esc=취소. 헤더·값·샘플·조건 등 공용.
  */
-// 인라인 편집 공용 노란 인풋 스타일 + 저장/취소 버튼(마우스 조작). 버튼 onMouseDown preventDefault로 인풋 blur 선발생 방지
-const editInputSx = (th: Theme) => ({ fontSize: 12, bgcolor: alpha(th.palette.warning.main, 0.1), border: `1px solid ${alpha(th.palette.warning.main, 0.65)}`, borderRadius: '5px', px: 0.5, py: '1px' })
+// 제자리 편집 인풋 — 표시 텍스트와 같은 폰트·크기·자리(박스·배경 없음), 편집 중 표시는 앰버 밑줄만.
+// 저장/취소 버튼은 onMouseDown preventDefault로 인풋 blur 선발생 방지
+const editInputSx = (th: Theme) => ({ font: 'inherit', color: 'inherit', bgcolor: 'transparent', borderBottom: `1px solid ${alpha(th.palette.warning.main, 0.65)}`, borderRadius: 0, p: 0 })
 function SaveCancel({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.25 }}>
@@ -120,21 +121,23 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
       if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
       else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); commit() }
     }
-    // 제자리 수정 — 인풋이 텍스트 자리 그대로(줄바꿈·밀림 없음, 폭은 원문 기준 고정=타이핑 떨림 없음),
-    // 저장/취소는 Popper 플로팅(레이아웃 무영향·스크롤 컨테이너에 안 잘림)
+    // 제자리 수정 — 적힌 텍스트가 그대로 인풋으로 바뀜(같은 폰트·크기·위치, 박스 없음·앰버 밑줄만).
+    // 한 줄 폭 = 숨은 사이저(in-flow)가 입력값 실측 폭으로 결정, 인풋은 그 위에 절대배치(인풋 고유 최소폭 무시).
     return (
-      <Box ref={setAnchorEl} sx={{ position: 'relative', display: multiline ? 'block' : 'inline-flex', alignItems: 'center', width: multiline ? '100%' : 'auto', maxWidth: '100%', verticalAlign: 'middle' }}>
+      <Box ref={setAnchorEl} sx={{ position: 'relative', display: multiline ? 'block' : 'inline-block', width: multiline ? '100%' : 'auto', maxWidth: '100%', verticalAlign: 'middle' }}>
+        {!multiline && <Box component="span" aria-hidden sx={{ visibility: 'hidden', whiteSpace: 'pre', display: 'inline-block', minWidth: '2ch' }}>{v || placeholder}</Box>}
         <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder} onKeyDown={onKey}
-          sx={(th) => ({ width: multiline ? '100%' : `${Math.max(5, Math.min(14, (text || '').length + 2))}ch`, ...editInputSx(th), '& textarea, & input': { textAlign: align, p: 0 } })} />
+          sx={(th) => ({ ...editInputSx(th), ...(multiline ? { width: '100%' } : { position: 'absolute', inset: 0, width: '100%' }), '& textarea, & input': { textAlign: align, p: 0, font: 'inherit', minWidth: 0 } })} />
         <FloatSaveCancel anchor={anchorEl} onSave={commit} onCancel={() => setEditing(false)} />
       </Box>
     )
   }
   return (
-    // 연필은 절대배치(흐름 밖) — 숨은 버튼이 가운데정렬을 밀지 않음. 숨김 중엔 클릭도 차단(pointerEvents)
-    <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', maxWidth: '100%', verticalAlign: 'middle', '& .pen': { opacity: 0, pointerEvents: 'none', transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0, pointerEvents: canEdit ? 'auto' : 'none' } }}>
+    // 텍스트 클릭 = 바로 수정(연필을 조준할 필요 없음). 연필은 호버 힌트 전용(장식, 클릭 불가·정렬 안 밀림)
+    <Box role={canEdit ? 'button' : undefined} aria-label={canEdit ? '수정' : undefined} onClick={canEdit ? start : undefined}
+      sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', maxWidth: '100%', verticalAlign: 'middle', cursor: canEdit ? 'pointer' : 'default', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.7 : 0 } }}>
       <Box component="span" sx={{ minWidth: 0, ...(multiline ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } : {}) }}>{display ?? (text || (canEdit ? placeholder : '-'))}</Box>
-      {canEdit && <IconButton className="pen" size="small" aria-label="수정" onClick={start} sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', ml: '1px', p: '1px', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
+      {canEdit && <Box component="span" className="pen" aria-hidden sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', pl: '2px', display: 'inline-flex', color: 'text.disabled', pointerEvents: 'none' }}><EditIcon sx={{ fontSize: 12 }} /></Box>}
     </Box>
   )
 }
@@ -160,51 +163,56 @@ function EditLabelUnit({ label, unit, canEdit, onCommit }: { label: string; unit
   const commit = () => { setEditing(false); if (l.trim() !== label.trim() || u.trim() !== unit.trim()) onCommit(l.trim(), u.trim()) }
   const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setEditing(false) } else if (e.key === 'Enter') { e.preventDefault(); commit() } }
   if (editing) {
-    // 제자리 수정 — 표시와 같은 한 줄([지표명] [단위])에서 인풋으로만 바뀜(줄바꿈 없음), 폭은 원문 기준 고정
-    // (타이핑해도 가운데 열이 안 떨림), 저장/취소는 Popper 플로팅
+    // 제자리 수정 — 표시(지표명 [단위]) 그대로 인풋으로 바뀜(같은 폰트·크기·자리, 앰버 밑줄만).
+    // 폭 = 숨은 사이저(in-flow)가 결정, 인풋은 절대배치로 겹침(인풋 고유 최소폭 무시).
+    const sizerCell = { position: 'relative', display: 'inline-block' } as const
+    const overlayInput = (th: Theme) => ({ ...editInputSx(th), position: 'absolute', inset: 0, width: '100%', '& input': { textAlign: 'center', p: 0, font: 'inherit', minWidth: 0 } })
     return (
       <Box ref={setAnchorEl} sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 0.3, maxWidth: '100%' }}>
-        <InputBase autoFocus value={l} onChange={(e) => setL(e.target.value)} placeholder="지표명" onKeyDown={onKey}
-          sx={(th) => ({ width: `${Math.max(6, Math.min(12, label.length + 2))}ch`, ...editInputSx(th), '& input': { textAlign: 'center', p: 0 } })} />
+        <Box component="span" sx={sizerCell}>
+          <Box component="span" aria-hidden sx={{ visibility: 'hidden', whiteSpace: 'pre', display: 'inline-block', minWidth: '3ch' }}>{l || '지표명'}</Box>
+          <InputBase autoFocus value={l} onChange={(e) => setL(e.target.value)} placeholder="지표명" onKeyDown={onKey} sx={overlayInput} />
+        </Box>
         <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>[</Box>
-        <InputBase value={u} onChange={(e) => setU(e.target.value)} placeholder="단위" onKeyDown={onKey}
-          sx={(th) => ({ width: `${Math.max(3, Math.min(8, unit.length + 2))}ch`, ...editInputSx(th), fontSize: 11, '& input': { textAlign: 'center', p: 0 } })} />
+        <Box component="span" sx={{ ...sizerCell, fontSize: 10 }}>
+          <Box component="span" aria-hidden sx={{ visibility: 'hidden', whiteSpace: 'pre', display: 'inline-block', minWidth: '2ch' }}>{u || '단위'}</Box>
+          <InputBase value={u} onChange={(e) => setU(e.target.value)} placeholder="단위" onKeyDown={onKey} sx={overlayInput} />
+        </Box>
         <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>]</Box>
         <FloatSaveCancel anchor={anchorEl} onSave={commit} onCancel={() => setEditing(false)} />
       </Box>
     )
   }
   return (
-    // 표시 — 연필은 절대배치(흐름 밖)라 가운데정렬이 밀리지 않음. 숨김 중엔 클릭도 차단(pointerEvents)
-    <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', maxWidth: '100%', textAlign: 'center', '& .pen': { opacity: 0, pointerEvents: 'none', transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0, pointerEvents: canEdit ? 'auto' : 'none' } }}>
+    // 텍스트 클릭 = 바로 수정. 연필은 호버 힌트 전용(장식) — 가운데정렬을 밀지 않음
+    <Box role={canEdit ? 'button' : undefined} aria-label={canEdit ? '지표 수정' : undefined} onClick={canEdit ? start : undefined}
+      sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', maxWidth: '100%', textAlign: 'center', cursor: canEdit ? 'pointer' : 'default', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.7 : 0 } }}>
       <Box component="span" sx={{ minWidth: 0 }}>{label || (canEdit ? '지표명' : '-')}{unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.4, fontSize: 10 }}>[{unit}]</Box> : null}</Box>
-      {canEdit && <IconButton className="pen" size="small" aria-label="지표 수정" onClick={start} sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', ml: '1px', p: '1px', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
+      {canEdit && <Box component="span" className="pen" aria-hidden sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', pl: '2px', display: 'inline-flex', color: 'text.disabled', pointerEvents: 'none' }}><EditIcon sx={{ fontSize: 12 }} /></Box>}
     </Box>
   )
 }
 
 /** 제조사 열 헤더 — 색깔 밴드(제조사·모델·파일, 상단 라운드) → 사진영역(대표 크게 + 우측 썸네일 그리드 + 더보기) → 값수정 트리거 */
 /** 썸네일 가로 스트립 — 스크롤바 숨김 + 좌/우 호버 화살표로 이동(라이트박스 엣지 내비와 동일 결). 클릭 = 대표사진 지정 */
-function ThumbStrip({ photos, sel, onPick }: { photos: DemoPhotoRef[]; sel: number; onPick: (i: number) => void }) {
-  const ref = useRef<HTMLDivElement>(null)
+function ThumbStrip({ photos, sel, onPick, scrollerRef }: { photos: DemoPhotoRef[]; sel: number; onPick: (i: number) => void; scrollerRef?: React.MutableRefObject<HTMLDivElement | null> }) {
+  const ref = useRef<HTMLDivElement | null>(null)
   const [hover, setHover] = useState(false)
-  const [ov, setOv] = useState(false) // 넘침(스크롤 가능) 여부 — 넘칠 때만 화살표
+  // 좌/우로 더 있는지 — 있는 쪽 끝을 페이드시켜 조작 전에도 '이쪽에 더 있음'이 보이게 + 화살표 표시 기준
+  const [edge, setEdge] = useState({ l: false, r: false })
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    const check = () => setOv(el.scrollWidth > el.clientWidth + 2)
+    const check = () => setEdge((prev) => {
+      const l = el.scrollLeft > 2
+      const r = el.scrollLeft < el.scrollWidth - el.clientWidth - 2
+      return prev.l === l && prev.r === r ? prev : { l, r }
+    })
     check()
     const roz = new ResizeObserver(check)
     roz.observe(el)
-    // 마우스 휠 = 가로 스크롤(넘칠 때만). React onWheel은 passive라 preventDefault가 안 먹어 네이티브로 부착
-    const onWheel = (e: WheelEvent) => {
-      if (el.scrollWidth <= el.clientWidth + 2) return
-      e.preventDefault()
-      const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
-      el.scrollLeft += e.deltaMode === 1 ? raw * 16 : raw // deltaMode 1 = 줄 단위(Firefox) → px 환산
-    }
-    el.addEventListener('wheel', onWheel, { passive: false })
-    return () => { roz.disconnect(); el.removeEventListener('wheel', onWheel) }
+    el.addEventListener('scroll', check, { passive: true })
+    return () => { roz.disconnect(); el.removeEventListener('scroll', check) }
   }, [photos.length])
   const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * 100, behavior: 'smooth' })
   const arrow = (dir: -1 | 1) => (
@@ -214,17 +222,20 @@ function ThumbStrip({ photos, sel, onPick }: { photos: DemoPhotoRef[]; sel: numb
       {dir < 0 ? <ChevronLeftIcon sx={{ fontSize: 20 }} /> : <ChevronRightIcon sx={{ fontSize: 20 }} />}
     </Box>
   )
+  // 끝단 페이드 — 더 있는 쪽 끝의 마지막 썸네일이 흐려져 잘려 보임(스크롤 가능 힌트)
+  const mask = `linear-gradient(90deg, ${edge.l ? 'transparent 0, #000 24px' : '#000 0'}, ${edge.r ? '#000 calc(100% - 28px), transparent 100%' : '#000 100%'})`
   return (
     <Box sx={{ position: 'relative' }} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
-      <Box ref={ref} sx={{ display: 'flex', gap: '2px', overflowX: 'auto', p: '2px', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
+      <Box ref={(el: HTMLDivElement | null) => { ref.current = el; if (scrollerRef) scrollerRef.current = el }}
+        sx={{ display: 'flex', gap: '2px', overflowX: 'auto', p: '2px', scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' }, maskImage: mask, WebkitMaskImage: mask }}>
         {photos.map((p, i) => (
           <Box key={i} onClick={() => onPick(i)} sx={{ flex: '0 0 auto', width: 46, height: 34, overflow: 'hidden', borderRadius: '3px', bgcolor: '#000', cursor: 'pointer', border: i === sel ? '2px solid' : '1px solid', borderColor: i === sel ? 'primary.main' : 'divider' }}>
             <Photo photo={p} fit="cover" />
           </Box>
         ))}
       </Box>
-      {ov && hover && arrow(-1)}
-      {ov && hover && arrow(1)}
+      {edge.l && hover && arrow(-1)}
+      {edge.r && hover && arrow(1)}
     </Box>
   )
 }
@@ -237,6 +248,22 @@ function MakerHead({ mg, sel, onSel, onZoom, repIdx, onPick, canEdit, onAddRound
   const r = mg.rounds[Math.min(sel, mg.rounds.length - 1)]
   const ri = Math.min(Math.max(repIdx, 0), Math.max(r.photos.length - 1, 0))
   const rep = r.photos[ri]
+  // 휠 = 썸네일 가로 스크롤. 38px 스트립을 정확히 겨누지 않아도 되게 '사진 카드 영역 전체'에서 받음
+  const areaRef = useRef<HTMLDivElement | null>(null)
+  const stripScrollRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const area = areaRef.current
+    if (!area) return
+    const onWheel = (e: WheelEvent) => {
+      const s = stripScrollRef.current
+      if (!s || s.scrollWidth <= s.clientWidth + 2) return
+      e.preventDefault()
+      const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+      s.scrollLeft += e.deltaMode === 1 ? raw * 16 : raw // deltaMode 1 = 줄 단위(Firefox) → px 환산
+    }
+    area.addEventListener('wheel', onWheel, { passive: false })
+    return () => area.removeEventListener('wheel', onWheel)
+  }, [])
   return (
     <Box sx={{ width: '100%' }}>
       {/* 색깔 밴드 — 제조사·모델은 항상 가운데(첨부 아이콘과 무관하게 중앙), 첨부는 우측 절대배치 */}
@@ -257,7 +284,7 @@ function MakerHead({ mg, sel, onSel, onZoom, repIdx, onPick, canEdit, onAddRound
         )}
       </Box>
       {/* 사진 영역 — 대표사진(4:3, 전체 보기·비율 다르면 검은 여백) + 하단 4:3 썸네일 4칸 고정(정렬 일관) */}
-      <Box sx={{ border: 1, borderTop: 0, borderColor: 'divider', borderRadius: '0 0 8px 8px', overflow: 'hidden', bgcolor: 'background.default' }}>
+      <Box ref={areaRef} sx={{ border: 1, borderTop: 0, borderColor: 'divider', borderRadius: '0 0 8px 8px', overflow: 'hidden', bgcolor: 'background.default' }}>
         <Box sx={{ position: 'relative', width: '100%', aspectRatio: '4 / 3' }}>
           <Photo photo={rep} fit="contain" onClick={r.photos.length ? () => onZoom(r.photos, ri) : undefined} />
           {/* 회차 칩 + '+'(다음 회차 등록) */}
@@ -275,7 +302,7 @@ function MakerHead({ mg, sel, onSel, onZoom, repIdx, onPick, canEdit, onAddRound
           {r.photos.length > 0 && <ZoomOutMapIcon sx={{ position: 'absolute', bottom: 4, right: 4, fontSize: 14, color: '#fff', bgcolor: 'rgba(0,0,0,.45)', borderRadius: '4px', p: '2px' }} />}
         </Box>
         {/* 썸네일 자리 상시 확보 — 기타 사진이 없어도 공란(높이 38)으로 비워 A/B 카드·도구줄 높이 정렬 */}
-        {r.photos.length > 1 ? <ThumbStrip photos={r.photos} sel={ri} onPick={onPick} /> : <Box aria-hidden sx={{ height: 38 }} />}
+        {r.photos.length > 1 ? <ThumbStrip photos={r.photos} sel={ri} onPick={onPick} scrollerRef={stripScrollRef} /> : <Box aria-hidden sx={{ height: 38 }} />}
       </Box>
       {/* 회차 도구 — 사진 관리 · 데모결과 삭제(지표값은 표 셀에서 직접 인라인 편집) */}
       {canEdit && (
