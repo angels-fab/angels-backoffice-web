@@ -121,6 +121,14 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
     editBus.addEventListener('editopen', close)
     return () => editBus.removeEventListener('editopen', close)
   }, [editing])
+  // 바깥 클릭 = 취소 — 저장은 ✓/Enter로만(실수 저장 방지). 캡처 단계라 다른 클릭 핸들러보다 먼저 판정
+  const wrapRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!editing) return
+    const onDown = (e: PointerEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setEditing(false) }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [editing])
   if (editing) {
     const onKey = (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
@@ -129,9 +137,9 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
     // 제자리 수정 — 적힌 텍스트가 그대로 인풋으로 바뀜(같은 폰트·크기·위치). 저장/취소는 연필 자리(오른쪽).
     // 한 줄 폭 = 숨은 사이저(in-flow)가 입력값 실측 폭으로 결정, 인풋은 그 위에 절대배치(인풋 고유 최소폭 무시).
     return (
-      <Box sx={{ position: 'relative', display: multiline ? 'block' : 'inline-block', width: multiline ? '100%' : 'auto', maxWidth: '100%', verticalAlign: 'middle' }}>
+      <Box ref={wrapRef} sx={{ position: 'relative', display: multiline ? 'block' : 'inline-block', width: multiline ? '100%' : 'auto', maxWidth: '100%', verticalAlign: 'middle' }}>
         {!multiline && <Box component="span" aria-hidden sx={{ visibility: 'hidden', whiteSpace: 'pre', display: 'inline-block', minWidth: '2ch' }}>{v || placeholder}</Box>}
-        <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder} onKeyDown={onKey}
+        <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} onKeyDown={onKey}
           sx={(th) => ({ ...editInputSx(th), ...(multiline ? { width: '100%' } : { position: 'absolute', inset: 0, width: '100%' }), '& textarea, & input': { textAlign: align, p: 0, font: 'inherit', minWidth: 0 } })} />
         <EditActions onSave={commit} onCancel={() => setEditing(false)} />
       </Box>
@@ -176,13 +184,21 @@ function EditLabelUnit({ label, unit, canEdit, onCommit }: { label: string; unit
     editBus.addEventListener('editopen', close)
     return () => editBus.removeEventListener('editopen', close)
   }, [editing])
+  // 바깥 클릭 = 취소 — 저장은 ✓/Enter로만
+  const wrapRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!editing) return
+    const onDown = (e: PointerEvent) => { if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setEditing(false) }
+    document.addEventListener('pointerdown', onDown, true)
+    return () => document.removeEventListener('pointerdown', onDown, true)
+  }, [editing])
   if (editing) {
     // 제자리 수정 — 표시(지표명 [단위]) 그대로 인풋으로 바뀜(같은 폰트·크기·자리, 앰버 밑줄만).
     // 폭 = 숨은 사이저(in-flow)가 결정, 인풋은 절대배치로 겹침(인풋 고유 최소폭 무시).
     const sizerCell = { position: 'relative', display: 'inline-block' } as const
     const overlayInput = (th: Theme) => ({ ...editInputSx(th), position: 'absolute', inset: 0, width: '100%', '& input': { textAlign: 'center', p: 0, font: 'inherit', minWidth: 0 } })
     return (
-      <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 0.3, maxWidth: '100%' }}>
+      <Box ref={wrapRef} sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 0.3, maxWidth: '100%' }}>
         <Box component="span" sx={sizerCell}>
           <Box component="span" aria-hidden sx={{ visibility: 'hidden', whiteSpace: 'pre', display: 'inline-block', minWidth: '3ch' }}>{l || '지표명'}</Box>
           <InputBase autoFocus value={l} onChange={(e) => setL(e.target.value)} placeholder="지표명" onKeyDown={onKey} sx={overlayInput} />

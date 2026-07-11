@@ -260,7 +260,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const suppressClickUntil = useRef(0)
   const lastPointer = useRef({ x: 0, y: 0 })
   const pending = useRef<null | { id: number; pid: number; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
-  const drag = useRef<null | { id: number; baseOrder: number[]; slotRects: DOMRect[]; scrollY0: number; width: number; height: number; offsetX: number; offsetY: number }>(null)
+  const drag = useRef<null | { id: number; baseOrder: number[]; slotRects: DOMRect[]; scrollY0: number; width: number; height: number; offsetX: number; offsetY: number; span: 1 | 2; gridCx: number; alignPreview: number | null }>(null)
   const liftedRef = useRef<HTMLDivElement | null>(null)
   const flipRects = useRef(new Map<number, { left: number; top: number }>())
   const settleFrom = useRef<null | { id: number; rect: DOMRect }>(null)
@@ -337,7 +337,14 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     // FLIP 기준선 — 현재 모든 카드 위치(문서좌표) 저장
     flipRects.current.clear()
     itemRefs.current.forEach((el, id) => { const r = el.getBoundingClientRect(); flipRects.current.set(id, { left: r.left + window.scrollX, top: r.top + window.scrollY }) })
-    drag.current = { id: p.id, baseOrder, slotRects, scrollY0: window.scrollY, width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY }
+    const gridRect = itemRefs.current.get(p.id)?.parentElement?.getBoundingClientRect()
+    const dragged = memosRef.current.find((m) => m.id === p.id)
+    drag.current = {
+      id: p.id, baseOrder, slotRects, scrollY0: window.scrollY, width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY,
+      span: dragged ? decodeCardWidth(widthValOf(dragged)).span : 1,
+      gridCx: gridRect ? gridRect.left + gridRect.width / 2 : 0,
+      alignPreview: null,
+    }
     overIndexRef.current = originIndex // rest에 dragId를 originIndex로 넣으면 baseOrder와 동일
     switchLockUntil.current = 0
     try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
@@ -380,11 +387,17 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     const left = x - d.offsetX
     const top = y - d.offsetY
     if (liftedRef.current) { liftedRef.current.style.left = `${left}px`; liftedRef.current.style.top = `${top}px` }
-    if (Date.now() < switchLockUntil.current) return
     // 판정점 = 끌리는 카드의 '중심'(업무현황 카드와 동일). 포인터가 아니라 카드가 놓일 자리를 보고 판정 —
     // 카드 모서리를 잡아도 눈에 보이는 카드 위치 그대로 판정된다.
     const cx = left + d.width / 2
     const cy = top + d.height / 2
+    // 1열 카드 좌/우 자석 정렬 — 카드 중심이 보드 중앙의 왼쪽이면 좌측 열, 오른쪽이면 우측 열로
+    // placeholder가 즉시 따라붙어(미리보기) 놓기 전에 어느 열로 갈지 보인다(폭 조절 자석 스냅과 동일 감각)
+    if (d.span === 1) {
+      const alignVal = cx > d.gridCx ? 3 : 1
+      if (alignVal !== d.alignPreview) { d.alignPreview = alignVal; setWOverride((prev) => new Map(prev).set(d.id, alignVal)) }
+    }
+    if (Date.now() < switchLockUntil.current) return
     const dyScroll = window.scrollY - d.scrollY0 // 드래그 중 페이지 스크롤 보정
     const raw = insertIndexAt(d.slotRects, cx, cy, dyScroll)
     // 원본 슬롯 인덱스 → rest(드래그 카드 제외) 삽입 인덱스 보정
@@ -410,6 +423,12 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS
     setDragId(null)
     setOverIndex(0)
+    // 1열 카드 좌/우 정렬 커밋 — 드롭한 쪽 열로 저장(취소·변경 없음이면 미리보기 해제)
+    if (d.span === 1 && d.alignPreview != null) {
+      const server = memosRef.current.find((mm) => mm.id === d.id)?.width || 1
+      if (commit && d.alignPreview !== server) onWidthRef.current(d.id, d.alignPreview) // 오버라이드는 반영/6s 안전망이 정리
+      else setWOverride((prev) => { if (!prev.has(d.id)) return prev; const n = new Map(prev); n.delete(d.id); return n })
+    }
     if (changed) { setOptOrder(finalOrder); onReorderRef.current(finalOrder) }
   }
 
@@ -455,8 +474,9 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const dragItem = dragId != null ? memoById.get(dragId) : undefined
   const canDrag = canPost && editId == null
 
+  // dense = 우측 정렬 카드가 만든 왼쪽 빈 칸을 뒤 카드가 되채움(1열 카드 좌/우 나란히 배치 가능)
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: `${CARD_GAP}px`, alignItems: 'stretch', ...(dragId != null ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}) }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gridAutoFlow: 'row dense', gap: `${CARD_GAP}px`, alignItems: 'stretch', ...(dragId != null ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}) }}>
       {displayIds.map((id) => {
         const m = memoById.get(id)
         if (!m) return null
@@ -474,7 +494,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
         }
         const own = ownOf(m)
         return (
-          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ position: 'relative', ...wSx, minWidth: 0, ...(canDrag ? { cursor: 'grab' } : {}), '&:hover .rz': { opacity: 0.65 } }}
+          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ position: 'relative', ...wSx, minWidth: 0, ...(canDrag ? { cursor: 'grab' } : {}) }}
             onPointerDown={canDrag ? (e) => onCellPointerDown(e, id) : undefined}
             onDoubleClick={own && editId == null ? () => { if (Date.now() >= suppressClickUntil.current) startEdit(m) } : undefined}>
             {editId === id ? (
@@ -483,12 +503,15 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
             ) : (
               <MemoCard m={m} own={own} onDelete={() => onDelete(id)} />
             )}
-            {/* 좌/우 엣지 리사이즈 핸들 — 카드에 호버하면 은은히 보이고, 핸들에 올리면 선명(잘 보이고 잘 잡히게 12px 히트존).
+            {/* 좌/우 엣지 리사이즈 그립 — 그 엣지에 다가가면(한쪽만) 카드 모서리 라운드를 감싸는 엣지 글로우가 떠오름.
                 잡고 끌면 창처럼 실시간, 1·2열 근처 자석 스냅, 1열 카드를 안쪽으로 계속 끌면 반대 열로 이동(팀원, PC 전용) */}
             {canPost && editId !== id && ([-1, 1] as const).map((dir) => (
-              <Box key={dir} data-resize className="rz" role="separator" aria-label="카드 폭 조절"
+              <Box key={dir} data-resize role="separator" aria-label="카드 폭 조절"
                 onPointerDown={(ev) => startResize(ev, id, dir)} onDoubleClick={(ev) => ev.stopPropagation()}
-                sx={{ position: 'absolute', top: 6, bottom: 6, ...(dir === 1 ? { right: -6 } : { left: -6 }), width: 12, cursor: 'col-resize', zIndex: 2, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity .15s', '&:hover': { opacity: '1 !important' }, '&::before': { content: '""', width: '3px', height: '46%', minHeight: 18, maxHeight: 34, borderRadius: '2px', bgcolor: 'rgba(255,255,255,.55)', transition: 'background-color .15s' }, '&:hover::before': { bgcolor: 'rgba(255,255,255,.95)' } }} />
+                sx={{ position: 'absolute', top: 0, bottom: 0, ...(dir === 1 ? { right: -7 } : { left: -7 }), width: 14, cursor: 'col-resize', zIndex: 2, display: { xs: 'none', sm: 'block' }, opacity: 0, transition: 'opacity .18s', '&:hover': { opacity: 1 },
+                  '&::before': { content: '""', position: 'absolute', top: 0, bottom: 0, width: '8px', ...(dir === 1
+                    ? { right: 7, borderRadius: '0 8px 8px 0', background: 'linear-gradient(270deg, rgba(255,255,255,.5), rgba(255,255,255,.04))' }
+                    : { left: 7, borderRadius: '8px 0 0 8px', background: 'linear-gradient(90deg, rgba(255,255,255,.5), rgba(255,255,255,.04))' }) } }} />
             ))}
           </Box>
         )
