@@ -68,10 +68,8 @@ function Photo({ photo, onClick, fit = 'cover' }: { photo?: DemoPhotoRef; onClic
   )
 }
 
-/** versus(≤2사) 카드 규격 — 이미지창 크기는 제조사 수(1·2사)와 무관하게 동일(고정). 카드 사이 간격 = 코멘트 카드 간격(10px)과 통일 */
-const VS_CARD_W = 190
+/** versus(≤2사) 카드 간격 — 코멘트 카드 간격(10px)과 통일. 카드 크기는 '그룹 절반 영역의 반씩'이라 1·2사 모두 동일 */
 const VS_GAP = 10
-const VS_W = VS_CARD_W * 2 + VS_GAP
 
 /** versus 레이아웃 셀 — 값 셀(VCell) / 지표명 셀(LCell). 값 | 지표명 | 값 그리드에서 사용 */
 function VCell({ children }: { children: React.ReactNode }) {
@@ -202,7 +200,8 @@ function ThumbStrip({ photos, sel, onPick }: { photos: DemoPhotoRef[]; sel: numb
     const onWheel = (e: WheelEvent) => {
       if (el.scrollWidth <= el.clientWidth + 2) return
       e.preventDefault()
-      el.scrollLeft += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+      const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+      el.scrollLeft += e.deltaMode === 1 ? raw * 16 : raw // deltaMode 1 = 줄 단위(Firefox) → px 환산
     }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => { roz.disconnect(); el.removeEventListener('wheel', onWheel) }
@@ -538,7 +537,8 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
 
       {/* 본문 — 데모카드(≤2사=versus / 3사+=표) + 코멘트(오른쪽, 좁은 화면은 아래) */}
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, alignItems: 'flex-start', gap: 1.5, p: { xs: 1.25, md: 1.5 } }}>
-      <Box sx={{ flex: { xs: '0 1 auto', md: makers.length > 2 ? '1 1 0' : '0 0 auto' }, minWidth: 0, maxWidth: '100%', overflowX: 'auto' }}>
+      {/* 데모카드 영역 = 그룹의 절반(코멘트와 50:50). 가로스크롤은 3사+ 표에서만(2사 versus엔 불필요) */}
+      <Box sx={{ flex: { xs: '0 1 auto', md: '1 1 0' }, minWidth: 0, maxWidth: '100%', overflowX: makers.length > 2 ? 'auto' : 'visible' }}>
         {makers.length > 2 ? (
         <Box component="table" sx={{ borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed', width: '100%', minWidth: tableMinW }}>
           {/* 열 정의 — 라벨(고정) + 등분 서브컬럼(카드 1장 = 2칸) */}
@@ -607,8 +607,8 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
           </Box>
         </Box>
         ) : (
-          <Box sx={{ width: { xs: '100%', md: VS_W }, maxWidth: '100%' }}>
-            {/* 사진 카드 2칸 — 크기는 1·2사 무관 고정(고정폭 컨테이너), 사이 간격만 살짝(지표칸이 벌리지는 않음) */}
+          <Box>
+            {/* 사진 카드 2칸 — 절반 영역을 반씩(모든 그룹이 같은 절반 폭이라 1·2사 카드 크기 동일), 사이 간격 10px */}
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: `${VS_GAP}px` }}>
               <MakerHead mg={makers[0]} sel={sel[makers[0].key] ?? makers[0].rounds.length - 1} onSel={selOf(makers[0])} onZoom={(photos, idx) => setLightbox({ photos, idx })} repIdx={repIdxOf(makers[0])} onPick={pickOf(makers[0])} canEdit={canEdit} onAddRound={() => onAddRound(makers[0])} onDeleteRound={() => askDelete(makers[0])} onManagePhotos={() => setPhotoMg(makers[0])} />
               {makers[1] ? (

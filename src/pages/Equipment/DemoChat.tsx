@@ -129,7 +129,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const [wOverride, setWOverride] = useState<Map<number, number>>(new Map()) // 리사이즈 중·저장 대기 낙관값
   const widthOf = (m: DemoChatMsg) => Math.min(2, Math.max(1, wOverride.get(m.id) ?? (m.width || 1)))
   const onWidthRef = useRef(onWidth); onWidthRef.current = onWidth
-  const resizing = useRef<null | { id: number; pid: number; startX: number; startW: number; last: number }>(null)
+  const resizing = useRef<null | { id: number; pid: number; startX: number; startW: number; last: number; dir: 1 | -1 }>(null)
   const resizeCleanup = useRef<(() => void) | null>(null)
   useEffect(() => () => { resizeCleanup.current?.() }, []) // 언마운트 시 리스너·커서 정리
   // 서버 데이터가 낙관값을 따라잡으면 오버라이드 해제(리사이즈 중인 카드는 건드리지 않음)
@@ -152,21 +152,21 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     const t = window.setTimeout(() => { if (!resizing.current) setWOverride(new Map()) }, 6000)
     return () => window.clearTimeout(t)
   }, [wOverride, memos])
-  const startResize = (e: React.PointerEvent, id: number) => {
+  const startResize = (e: React.PointerEvent, id: number, dir: 1 | -1) => {
     e.stopPropagation(); e.preventDefault()
     if (e.pointerType === 'touch') return
     if (resizing.current || pending.current || drag.current) return // 다른 제스처 진행 중엔 시작 안 함
     const m = memoById.get(id)
     if (!m) return
     const startW = widthOf(m)
-    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startW, last: startW }
+    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startW, last: startW, dir }
     document.body.style.cursor = 'col-resize'
     const move = (ev: PointerEvent) => {
       const r = resizing.current
       if (!r || ev.pointerId !== r.pid) return
-      // 방향 기반 스냅 — 시작점에서 오른쪽 40px+ = 2열, 왼쪽 40px+ = 1열, 그 사이 = 원래 폭.
-      // 절대 좌표가 아니라 이동량 기준이라 열 위치(왼/오른쪽)·스냅 후 리플로우와 무관하게 항상 동작.
-      const dx = ev.clientX - r.startX
+      // 방향 기반 스냅 — '바깥쪽'으로 40px+ = 2열, '안쪽'으로 40px+ = 1열, 그 사이 = 원래 폭.
+      // 오른쪽 핸들(dir=1)은 오른쪽이 바깥, 왼쪽 핸들(dir=-1)은 왼쪽이 바깥. 이동량 기준이라 열 위치·리플로우 무관.
+      const dx = (ev.clientX - r.startX) * r.dir
       const target = dx > 40 ? 2 : dx < -40 ? 1 : r.startW
       if (target !== r.last) { r.last = target; setWOverride((prev) => new Map(prev).set(r.id, target)) }
     }
@@ -405,12 +405,12 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
             ) : (
               <MemoCard m={m} own={own} onDelete={() => onDelete(id)} />
             )}
-            {/* 오른쪽 엣지 리사이즈 핸들 — 잡고 좌/우로 끌면 1↔2열 스냅(팀원, PC 전용) */}
-            {canPost && editId !== id && (
-              <Box data-resize role="separator" aria-label="카드 폭 조절 (1↔2열)"
-                onPointerDown={(ev) => startResize(ev, id)} onDoubleClick={(ev) => ev.stopPropagation()}
-                sx={(th) => ({ position: 'absolute', top: 6, bottom: 6, right: -5, width: 10, cursor: 'col-resize', zIndex: 2, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity .15s', '&:hover': { opacity: 1 }, '&::before': { content: '""', width: '3px', height: 26, borderRadius: '2px', bgcolor: alpha(th.palette.primary.main, 0.9) } })} />
-            )}
+            {/* 좌/우 엣지 리사이즈 핸들 — 어느 쪽이든 잡고 바깥으로 끌면 2열, 안쪽으로 끌면 1열(팀원, PC 전용) */}
+            {canPost && editId !== id && ([-1, 1] as const).map((dir) => (
+              <Box key={dir} data-resize role="separator" aria-label="카드 폭 조절 (1↔2열)"
+                onPointerDown={(ev) => startResize(ev, id, dir)} onDoubleClick={(ev) => ev.stopPropagation()}
+                sx={(th) => ({ position: 'absolute', top: 6, bottom: 6, ...(dir === 1 ? { right: -5 } : { left: -5 }), width: 10, cursor: 'col-resize', zIndex: 2, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity .15s', '&:hover': { opacity: 1 }, '&::before': { content: '""', width: '3px', height: 26, borderRadius: '2px', bgcolor: alpha(th.palette.primary.main, 0.9) } })} />
+            ))}
           </Box>
         )
       })}
