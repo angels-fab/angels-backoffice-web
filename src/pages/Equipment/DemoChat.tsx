@@ -6,11 +6,14 @@ import InputBase from '@mui/material/InputBase'
 import CircularProgress from '@mui/material/CircularProgress'
 import CloseIcon from '@mui/icons-material/Close'
 import AddIcon from '@mui/icons-material/Add'
-import { alpha, useTheme } from '@mui/material/styles'
+import CheckIcon from '@mui/icons-material/Check'
+import ReorderIcon from '@mui/icons-material/Reorder'
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
+import { alpha } from '@mui/material/styles'
 import { MEMBERS, given } from '@/pages/Calendar/members'
 import { RichBodyEditor } from '@/components/richText'
 import { RichBodyView } from '@/utils/richBody'
-import { decodeCardWidth, type DemoChatMsg } from '@/api/demo'
+import { type DemoChatMsg } from '@/api/demo'
 
 /** 카드 날짜 — MM.DD (KST 고정, 다른 포매터들과 동일 관례). ko-KR "07. 08." → "07.08" */
 const fmtDay = (iso: string) => { try { return new Date(iso).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit' }).replace(/\s/g, '').replace(/\.$/, '') } catch { return '' } }
@@ -24,12 +27,17 @@ const CARD_GAP = 10 // 카드 간격(px)
 const ADD_KEY = -1  // 추가/작성 칸의 FLIP 측정 키(메모 id와 겹치지 않게 음수)
 
 // ── 부드러운 드래그(포인터 기반 삽입정렬 + FLIP) 상수 ──
-const ACTIVATION_DISTANCE = 8   // px 이상 움직여야 드래그 시작(제자리 더블클릭=수정과 구분)
+const ACTIVATION_DISTANCE = 8   // px 이상 움직여야 드래그 시작
 const SWITCH_LOCK_MS = 120      // 재배치 직후 추가 판정 잠금 — 애니 중 미세 왕복만 차단(판정은 구역 기반이라 안정적)
 const MOVE_DURATION = 240       // 주변 카드 자리 이동 애니메이션(ms, 업무카드와 동일)
 const SETTLE_DURATION = 180     // 드롭 후 정착 애니메이션(ms)
 const EASING = 'cubic-bezier(0.22, 1, 0.36, 1)'
-const CLICK_SUPPRESS_MS = 320   // 드롭 직후 더블클릭(수정) 억제
+
+/** 순서 적용 — memos를 id 순서(order)대로 정렬. order에 없는 id는 뒤로(카드 추가/삭제에도 안전) */
+const applyOrder = (memos: DemoChatMsg[], order: number[]): DemoChatMsg[] => {
+  const pos = new Map(order.map((id, i) => [id, i] as const))
+  return [...memos].sort((a, b) => (pos.get(a.id) ?? 1e9) - (pos.get(b.id) ?? 1e9))
+}
 
 /** 네온 카드 껍데기 — 제목 띠(담당자 색) + 얇은 구분선 + 본문. 작성/수정/표시 카드가 동일 포맷 공유 */
 function neonSx(c: string) {
@@ -38,7 +46,7 @@ function neonSx(c: string) {
 
 /**
  * 코멘트 메모 카드 1장 — 네온(어두운 카드 + 담당자 색 테두리). 표시 전용.
- * 수정 = 카드 더블클릭(본인/관리자, 래퍼가 처리) · 삭제 = X 버튼(본인/관리자) · 순서 = 드래그(래퍼가 처리).
+ * 수정 = 카드 더블클릭(본인/관리자, 래퍼가 처리) · 삭제 = X 버튼(본인/관리자) · 순서 = 정렬 모드 핸들 드래그.
  */
 function MemoCard({ m, own, onDelete }: { m: DemoChatMsg; own: boolean; onDelete: () => void }) {
   const c = memberOf(m.author)?.color || FALLBACK
@@ -90,22 +98,19 @@ function ComposeCard({ accent, title, body, busy, onTitle, onBody, onCancel, onS
 }
 
 /**
- * 코멘트 보드 — 일반 2열 그리드(모바일 1열), 같은 행 카드 높이 통일(stretch). 순서 변경 = 부드러운 포인터
- * 드래그(삽입정렬 + FLIP, 팀원) · 수정 = 카드 더블클릭(본인·관리자) · 삭제 = X ·
- * 폭 = 오른쪽 엣지 드래그로 1↔2열 스냅(기본 1열, DB width) · 추가/작성 = 다음 카드 자리(1열).
+ * 검토 메모 보드 — 1열 세로 목록(데모 비교가 주인공, 코멘트는 검토 기록). 헤더 = "검토 메모" + (팀원) 코멘트 정렬.
  *
- * masonry(dense)가 아니라 줄 단위 그리드 → 순서 변경 시 카드가 한 칸씩 밀려 자연스럽다(업무카드와 동일 모델).
- * 드래그: 마우스/펜만(터치 제외) — 8px 이동 시 들어올려 커서추적 오버레이. 목적지 판정은 업무카드와
- * 동일하게 시작 시 고정 캡처한 슬롯 좌표 vs 이동 카드 중심의 최근접 매칭(MARGIN 히스테리시스) — 즉시 비켜줌.
- * 주변 카드 FLIP 이동, Esc/취소 시 원위치, 드롭 시 순서 저장(onReorder) + 낙관적 순서로 즉시 반영.
+ * 순서 변경은 **명시적 '코멘트 정렬' 모드**에서만 — 각 카드의 DragIndicator 핸들로 드래그(본문 드래그 불가).
+ * 정렬 중 순서는 화면 내부(sortDraft)에서만 바뀌고, '완료' 시 한 번 onReorder로 저장 / '취소' 시 서버 순서로 복원.
+ * 일반 모드: 수정 = 카드 더블클릭(본인·관리자) · 삭제 = X · 추가 = 하단 바. (정렬 모드에선 이 조작들을 숨김)
+ * 드래그 감각(FLIP 자리 이동·Esc 취소·정착 애니메이션)은 업무현황 카드와 동일하게 유지.
  */
-export default function DemoChat({ memos, canPost, canModerate = false, user, busy, onPost, onEdit, onDelete, onReorder, onWidth }: {
+export default function DemoChat({ memos, canPost, canModerate = false, user, busy, onPost, onEdit, onDelete, onReorder }: {
   memos: DemoChatMsg[]; canPost: boolean; canModerate?: boolean; user: string | null; busy: boolean
   onPost: (title: string, body: string) => Promise<void>
   onEdit: (id: number, title: string, body: string) => Promise<void>
   onDelete: (id: number) => void
-  onReorder: (ids: number[]) => void
-  onWidth: (id: number, width: number) => void
+  onReorder: (ids: number[]) => Promise<void>
 }) {
   const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState('')
@@ -113,206 +118,37 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const [editId, setEditId] = useState<number | null>(null)
   const [eTitle, setETitle] = useState('')
   const [eBody, setEBody] = useState('')
-  const [optOrder, setOptOrder] = useState<number[] | null>(null) // 드롭 후 낙관적 순서(서버 반영 전 유지)
+  const [optOrder, setOptOrder] = useState<number[] | null>(null) // 저장 후 낙관적 순서(서버 반영 전 유지)
+  // ── 코멘트 정렬 모드 ── 팀원이 명시적으로 켜는 순서 변경 모드. sortDraft = 저장 전 화면 내부 순서.
+  const [sortMode, setSortMode] = useState(false)
+  const [sortDraft, setSortDraft] = useState<number[] | null>(null)
+  const [savingSort, setSavingSort] = useState(false)
   const myColor = memberOf(user || '')?.color || FALLBACK
-  // 표시 순서 = 낙관적 순서가 있으면 그 순서로 memos 정렬(원위치 튐 방지), 없으면 서버 순서 그대로
-  const orderedMemos = (() => {
-    if (!optOrder) return memos
-    const pos = new Map(optOrder.map((id, i) => [id, i] as const))
-    return [...memos].sort((a, b) => (pos.get(a.id) ?? 1e9) - (pos.get(b.id) ?? 1e9))
-  })()
+
+  // 표시 순서 = (정렬 모드) sortDraft > (저장 후) optOrder > 서버 순서. 셋 다 memos를 그 id순서로 정렬.
+  const serverOrdered = optOrder ? applyOrder(memos, optOrder) : memos
+  const orderedMemos = sortMode && sortDraft ? applyOrder(memos, sortDraft) : serverOrdered
   const memoById = new Map(orderedMemos.map((m) => [m.id, m]))
   const ownOf = (m: DemoChatMsg) => canModerate || (!!user && m.author === user)
 
-  // ── 카드 폭 — 좌/우 엣지 드래그. 잡은 반대쪽 엣지가 고정(창 리사이즈 감각):
-  //   오른쪽 핸들 = 왼쪽 고정 / 왼쪽 핸들 = 오른쪽 고정(2열을 왼쪽에서 좁히면 우측 1열이 됨).
-  //   드래그 중 실시간 추적 + 1·2열 ±SNAP 자석, 결과는 1/2열뿐(MID 갈림점) — 점선 박스가 놓았을 때 영역을 미리보기.
-  //   최소폭 아래로 누르면 고무줄 저항, BOUNCE_AT만큼 눌리면 드래그 중 즉시 튕겨 복귀. 1열 바깥 엣지는 확장 불가.
-  //   인코딩(decodeCardWidth): 1=1열좌 · 2=2열 · 3=1열우 (1050+·2050+ 자유폭 값은 레거시 디코드 전용)
-  const theme = useTheme()
-  const [wOverride, setWOverride] = useState<Map<number, number>>(new Map()) // 리사이즈 중·저장 대기 낙관값(인코딩 값)
-  const widthValOf = (m: DemoChatMsg) => wOverride.get(m.id) ?? (m.width || 1)
-  const onWidthRef = useRef(onWidth); onWidthRef.current = onWidth
-  const resizing = useRef<null | { id: number; pid: number; startX: number; startVal: number; preview: number; livePx: number; desiredPx: number; snapped: boolean; bounced: boolean; dir: 1 | -1 }>(null)
-  const resizeCleanup = useRef<(() => void) | null>(null)
-  useEffect(() => () => { resizeCleanup.current?.() }, []) // 언마운트 시 리스너·커서 정리
-  // 서버 데이터가 낙관값을 따라잡으면 오버라이드 해제(리사이즈 중인 카드는 건드리지 않음)
-  useEffect(() => {
-    setWOverride((prev) => {
-      if (!prev.size) return prev
-      const next = new Map(prev)
-      let changed = false
-      memos.forEach((m) => {
-        if (resizing.current?.id === m.id) return
-        const ov = next.get(m.id)
-        if (ov !== undefined && (m.width || 1) === ov) { next.delete(m.id); changed = true }
-      })
-      return changed ? next : prev
-    })
-  }, [memos])
-  // 저장 실패 등으로 남은 오버라이드 안전 해제(6s) — optOrder와 동일한 안전망
-  useEffect(() => {
-    if (!wOverride.size) return
-    const t = window.setTimeout(() => { if (!resizing.current) setWOverride(new Map()) }, 6000)
-    return () => window.clearTimeout(t)
-  }, [wOverride, memos])
-  const areaCatOf = (val: number) => { const c = decodeCardWidth(val); return c.span === 2 ? 2 : c.right ? 3 : 1 }
-  const startResize = (e: React.PointerEvent, id: number, dir: 1 | -1) => {
-    e.stopPropagation(); e.preventDefault()
-    if (e.pointerType === 'touch') return
-    if (resizing.current || pending.current || drag.current) return // 다른 제스처 진행 중엔 시작 안 함
-    const m = memoById.get(id)
-    const cell = itemRefs.current.get(id)
-    const grid = cell?.parentElement
-    if (!m || !cell || !grid) return
-    const oneCol = (grid.clientWidth - CARD_GAP) / 2
-    const full = grid.clientWidth
-    const SNAP = 36 // 1·2열 자석 스냅 반경(px)
-    const MID = (oneCol + full) / 2 // 놓았을 때 1열/2열 갈림점
-    const SQUISH_RESIST = 0.35 // 최소폭 아래 고무줄 저항 — 이 비율만큼만 눌림
-    const BOUNCE_AT = 12       // 이만큼(px) 눌리면 놓기 전이라도 즉시 튕겨 복귀
-    const startVal = widthValOf(m)
-    const startPx = cell.getBoundingClientRect().width
-    const startCw = decodeCardWidth(startVal)
-    const startSpan2 = startCw.span === 2
-    // 1열 카드의 바깥쪽 엣지(보드 가장자리) — 밖으로는 못 늘림(1↔2열 전환은 안쪽 핸들 몫)
-    const outerEdge = !startSpan2 && (startCw.right ? dir === 1 : dir === -1)
-    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startVal, preview: areaCatOf(startVal), livePx: startPx, desiredPx: startPx, snapped: true, bounced: false, dir }
-    document.body.style.cursor = 'col-resize'
-    cell.style.width = `${startPx}px` // justifySelf로 stretch가 풀리는 순간 내용물 폭으로 줄어드는 것 방지
-    cell.style.zIndex = '5' // 실시간 확장 중 이웃 카드 위로
-    cell.style.justifySelf = dir === -1 ? 'end' : 'start' // 잡은 반대쪽 엣지 고정
-    const clearCellStyle = () => { cell.style.transition = ''; cell.style.width = ''; cell.style.zIndex = ''; cell.style.justifySelf = '' }
-    // 결과 미리보기 점선 박스(카드 드래그 placeholder와 동일 룩) — 놓았을 때 채워질 그리드 영역 표시
-    const gc = theme.palette.primary.main
-    const ghost = document.createElement('div')
-    ghost.style.cssText = `position:absolute;pointer-events:none;box-sizing:border-box;border:2px dashed ${alpha(gc, 0.6)};background:${alpha(gc, 0.06)};border-radius:8px;opacity:0`
-    grid.appendChild(ghost)
-    const placeGhost = () => {
-      const r = resizing.current
-      if (!r) return
-      ghost.style.left = `${r.preview === 3 ? oneCol + CARD_GAP : 0}px`
-      ghost.style.top = `${cell.offsetTop}px`
-      ghost.style.width = `${r.preview === 2 ? full : oneCol}px`
-      ghost.style.height = `${cell.offsetHeight}px`
-    }
-    placeGhost()
-    ghost.getBoundingClientRect() // 강제 리플로우로 초기 위치·투명 상태 확정 — 등장 시 미끄러져 들어오지 않게
-    ghost.style.transition = 'left .18s cubic-bezier(0.22, 1, 0.36, 1), width .18s cubic-bezier(0.22, 1, 0.36, 1), top .15s ease, height .15s ease, opacity .15s ease'
-    ghost.style.opacity = '1'
-    // 1열 확정 시 어느 열인가 — 2열에서 줄인 경우만 핸들 반대쪽 열(왼 핸들=우측·오른 핸들=좌측).
-    // 1열 카드는 항상 자기 열 유지(열 이동은 핸들이 아니라 카드 드래그로).
-    const oneColVal = (): number => (startSpan2 ? (dir === -1 ? 3 : 1) : startVal)
-    // 결과는 1열/2열뿐 — 갈림점(MID) 기준
-    const encodeLive = (desired: number): number => (desired > MID ? 2 : oneColVal())
-    const move = (ev: PointerEvent) => {
-      const r = resizing.current
-      if (!r || ev.pointerId !== r.pid) return
-      const raw = startPx + (ev.clientX - r.startX) * r.dir // 저항 전 원시 폭
-      const desired = outerEdge ? Math.min(raw, oneCol) : raw
-      r.desiredPx = desired
-      // 튕겨진 뒤에는 1열 폭 고정 — 포인터가 엣지 안쪽으로 되돌아오면 재무장하고 추적 재개
-      if (r.bounced) {
-        if (desired >= oneCol) { r.bounced = false; cell.style.transition = '' }
-        else { placeGhost(); return }
-      }
-      let live: number
-      if (desired < oneCol) {
-        const squish = (oneCol - desired) * SQUISH_RESIST
-        if (squish >= BOUNCE_AT) {
-          // 일정 폭 이하로 좁아지는 순간(드래그 중) 스프링 이징으로 튕겨 원위치 — 놓을 때가 아니라 지금
-          r.bounced = true
-          r.livePx = oneCol
-          cell.style.transition = 'width .3s cubic-bezier(0.34, 1.56, 0.64, 1)'
-          cell.style.width = `${oneCol}px`
-          placeGhost()
-          return
-        }
-        live = oneCol - squish // 고무줄 저항 — 살짝만 눌림
-      } else if (desired - oneCol < SNAP) live = oneCol // 1열 자석
-      else if (full - desired < SNAP) live = full       // 2열 자석
-      else live = Math.min(full, desired)               // 사이 구간 = 실시간 미세 추적(결과는 놓을 때 가까운 열)
-      const snapped = live !== Math.min(full, Math.max(oneCol * 0.7, desired))
-      if (snapped !== r.snapped) {
-        cell.style.transition = 'width .12s cubic-bezier(0.22, 1, 0.36, 1)' // 스냅 진입/이탈만 부드럽게
-        window.setTimeout(() => { if (resizing.current === r && !r.bounced) cell.style.transition = '' }, 130)
-        r.snapped = snapped
-      }
-      r.livePx = live
-      cell.style.width = `${live}px`
-      // 그리드 자리(영역) — 갈림점(MID) 기준이라 점선 박스 = 놓았을 때 결과
-      const cat = desired > MID ? 2 : areaCatOf(oneColVal())
-      if (cat !== r.preview) {
-        r.preview = cat
-        setWOverride((prev) => new Map(prev).set(r.id, cat))
-        window.setTimeout(() => { if (resizing.current === r) placeGhost() }, 0) // 영역 리플로우 반영 후 재배치
-      }
-      placeGhost()
-    }
-    const cleanup = () => {
-      document.removeEventListener('pointermove', move)
-      document.removeEventListener('pointerup', up)
-      document.removeEventListener('pointercancel', cancel)
-      document.removeEventListener('keydown', key)
-      document.body.style.cursor = ''
-      ghost.style.opacity = '0' // 점선 박스는 페이드 아웃 후 제거
-      window.setTimeout(() => ghost.remove(), 220)
-      resizeCleanup.current = null
-    }
-    // commit=true(pointerup)만 저장, 취소(Esc·pointercancel)·8px 미만 이동은 시작 값 복원. 사이드이펙트는 setState 밖에서.
-    const finish = (commit: boolean) => {
-      cleanup()
-      const r = resizing.current
-      resizing.current = null
-      if (!r) return
-      const moved = Math.abs(r.livePx - startPx) >= 8
-      const finalVal = commit && moved ? encodeLive(r.desiredPx) : r.startVal
-      const cw = decodeCardWidth(finalVal)
-      const settlePx = cw.span === 2 ? full : oneCol
-      // 놓으면 목표 폭으로 정착 — 잡았던 앵커(justifySelf)를 그대로 유지해 조작하던 그 엣지가 움직이게
-      // (앵커를 최종값으로 뒤집으면 반대편 엣지가 튕기는 오동작. 정착 폭 = 영역 폭이라 앵커 유지로 항상 정확)
-      const squished = r.livePx < oneCol - 1
-      cell.style.transition = squished
-        ? 'width .3s cubic-bezier(0.34, 1.56, 0.64, 1)' // 눌린 채 놓으면 스프링으로 복귀
-        : 'width .16s cubic-bezier(0.22, 1, 0.36, 1)'
-      cell.style.width = `${settlePx}px`
-      window.setTimeout(clearCellStyle, squished ? 330 : 200)
-      const server = memosRef.current.find((mm) => mm.id === r.id)?.width || 1
-      setWOverride((prev) => {
-        const n = new Map(prev)
-        if (finalVal !== server) n.set(r.id, finalVal)
-        else n.delete(r.id)
-        return n
-      })
-      if (commit && finalVal !== server) onWidthRef.current(r.id, finalVal) // 저장 — 반영/6s 안전망이 오버라이드 정리
-    }
-    const up = (ev: PointerEvent) => { if (resizing.current && ev.pointerId !== resizing.current.pid) return; finish(true) }
-    const cancel = () => finish(false)
-    const key = (ev: KeyboardEvent) => { if (ev.key === 'Escape') finish(false) }
-    resizeCleanup.current = () => { cleanup(); clearCellStyle(); resizing.current = null }
-    document.addEventListener('pointermove', move)
-    document.addEventListener('pointerup', up)
-    document.addEventListener('pointercancel', cancel)
-    document.addEventListener('keydown', key)
-  }
-
+  const onReorderRef = useRef(onReorder); onReorderRef.current = onReorder
   const itemRefs = useRef(new Map<number, HTMLElement>())
   const setItemRef = (key: number) => (el: HTMLElement | null) => { if (el) itemRefs.current.set(key, el); else itemRefs.current.delete(key) }
 
-  // 드래그 상태
+  // 드래그 상태(정렬 모드 전용)
   const [dragId, setDragId] = useState<number | null>(null)
   const [overIndex, setOverIndex] = useState(0)
   const memosRef = useRef(orderedMemos); memosRef.current = orderedMemos
-  const onReorderRef = useRef(onReorder); onReorderRef.current = onReorder
   const overIndexRef = useRef(0)
   const switchLockUntil = useRef(0)
-  const suppressClickUntil = useRef(0)
   const lastPointer = useRef({ x: 0, y: 0 })
   const pending = useRef<null | { id: number; pid: number; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
-  const drag = useRef<null | { id: number; baseOrder: number[]; slotRects: DOMRect[]; scrollY0: number; width: number; height: number; offsetX: number; offsetY: number; span: 1 | 2; gridCx: number; alignPreview: number | null }>(null)
+  const drag = useRef<null | { id: number; baseOrder: number[]; slotRects: DOMRect[]; scrollY0: number; width: number; height: number; offsetX: number; offsetY: number }>(null)
   const liftedRef = useRef<HTMLDivElement | null>(null)
   const flipRects = useRef(new Map<number, { left: number; top: number }>())
   const settleFrom = useRef<null | { id: number; rect: DOMRect }>(null)
+  const dragCleanup = useRef<(() => void) | null>(null)
+  useEffect(() => () => { dragCleanup.current?.() }, []) // 언마운트 시 리스너·커서 정리
 
   // FLIP — 순서 변경(드래그)으로 자리가 바뀐 카드를 이전 위치→새 위치로 부드럽게 이동. 드롭 시 정착 애니메이션.
   // 측정 전 진행 중 애니메이션을 먼저 취소 → getBoundingClientRect가 '변환 없는' 실제 레이아웃 좌표를 반환(누적 오염 방지).
@@ -360,13 +196,30 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const startEdit = (m: DemoChatMsg) => { setAdding(false); setEditId(m.id); setETitle(m.title); setEBody(m.body) }
   const saveEdit = async () => { if (!eTitle.trim() || editId == null || busy) return; try { await onEdit(editId, eTitle, eBody); setEditId(null) } catch { /* 입력 유지 */ } }
 
-  // ── 드래그(포인터) ──
+  // ── 정렬 모드 진입/취소/완료 ──
+  const enterSort = () => { setAdding(false); setEditId(null); setSortDraft(serverOrdered.map((m) => m.id)); setSortMode(true) }
+  const cancelSort = () => { if (drag.current || savingSort) return; setSortMode(false); setSortDraft(null) } // 서버 순서로 복원(저장 안 함)
+  const completeSort = async () => {
+    if (!sortDraft || savingSort || drag.current) return
+    const ids = sortDraft
+    if (ids.join(',') === memos.map((m) => m.id).join(',')) { setSortMode(false); setSortDraft(null); return } // 변화 없음
+    setSavingSort(true)
+    try {
+      await onReorderRef.current(ids)      // 한 번만 저장(reorderDemoChat) — 실패 시 throw
+      setOptOrder(ids)                      // 저장 성공 → 서버 재조회 반영 전까지 낙관 순서 유지(깜빡임 방지)
+      setSortMode(false); setSortDraft(null)
+    } catch { /* 실패 = 정렬 모드 유지, 부모가 스낵바로 알림 */ }
+    finally { setSavingSort(false) }
+  }
+
+  // ── 드래그(포인터, 정렬 모드 전용) ──
   const cleanupListeners = () => {
     document.removeEventListener('pointermove', onMove)
     document.removeEventListener('pointerup', onEnd)
     document.removeEventListener('pointercancel', onCancel)
     document.removeEventListener('keydown', onKeyDown)
     document.removeEventListener('selectstart', prevent)
+    dragCleanup.current = null
   }
   const prevent = (e: Event) => e.preventDefault()
 
@@ -386,15 +239,10 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     // FLIP 기준선 — 현재 모든 카드 위치(문서좌표) 저장
     flipRects.current.clear()
     itemRefs.current.forEach((el, id) => { const r = el.getBoundingClientRect(); flipRects.current.set(id, { left: r.left + window.scrollX, top: r.top + window.scrollY }) })
-    const gridRect = itemRefs.current.get(p.id)?.parentElement?.getBoundingClientRect()
-    const dragged = memosRef.current.find((m) => m.id === p.id)
     drag.current = {
       id: p.id, baseOrder, slotRects, scrollY0: window.scrollY, width: p.rect.width, height: p.rect.height, offsetX: p.offsetX, offsetY: p.offsetY,
-      span: dragged ? decodeCardWidth(widthValOf(dragged)).span : 1,
-      gridCx: gridRect ? gridRect.left + gridRect.width / 2 : 0,
-      alignPreview: null,
     }
-    overIndexRef.current = originIndex // rest에 dragId를 originIndex로 넣으면 baseOrder와 동일
+    overIndexRef.current = originIndex
     switchLockUntil.current = 0
     try { window.getSelection()?.removeAllRanges() } catch { /* noop */ }
     document.addEventListener('selectstart', prevent)
@@ -404,31 +252,14 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     setDragId(p.id)
   }
 
-  // 삽입 위치 판정 — '행 밴드 + 좌/우 절반'(원본 슬롯 고정 좌표). 판정점은 updateDrag가 넘기는
-  // '끌리는 카드의 중심'(업무현황 카드와 동일 — 마우스 포인터 아님): 세로로 어느 행인지 찾고,
-  // 행 안에서 각 슬롯 중심 x보다 왼쪽이면 그 앞, 다 지나면 행 끝. 혼합 폭(1·2열)에서도 의도대로.
-  const insertIndexAt = (slots: DOMRect[], x: number, y: number, dyScroll: number): number => {
-    const rows: { top: number; bottom: number; idxs: number[] }[] = []
-    slots.forEach((s, i) => {
-      const top = s.top - dyScroll
-      const bottom = s.bottom - dyScroll
-      const row = rows.find((r) => Math.abs(r.top - top) < 8)
-      if (row) { row.idxs.push(i); row.bottom = Math.max(row.bottom, bottom) }
-      else rows.push({ top, bottom, idxs: [i] })
-    })
-    rows.sort((a, b) => a.top - b.top)
+  // 삽입 위치 판정 — 1열이라 각 카드 = 한 행. 판정점은 '끌리는 카드의 중심'(업무현황 카드와 동일 — 마우스 포인터 아님):
+  // 세로로 어느 행인지 찾고, 그 카드의 상/하 절반으로 앞/뒤를 정한다.
+  const insertIndexAt = (slots: DOMRect[], y: number, dyScroll: number): number => {
+    const rows = slots.map((s, i) => ({ top: s.top - dyScroll, bottom: s.bottom - dyScroll, mid: s.top - dyScroll + s.height / 2, i }))
     if (!rows.length) return 0
     if (y < rows[0].top) return 0
-    const row = rows.find((r) => y <= r.bottom + CARD_GAP)
-    if (!row) return slots.length // 모든 행 아래 = 맨 끝
-    if (row.idxs.length === 1) {
-      // 행에 슬롯 하나(전폭 카드 등) — 좌/우가 아니라 위/아래 절반으로 앞/뒤 판정(중심 x가 같아 x 비교 불가)
-      const s = slots[row.idxs[0]]
-      return y < s.top - dyScroll + s.height / 2 ? row.idxs[0] : row.idxs[0] + 1
-    }
-    // 앞삽입 경계 = 슬롯의 75% 지점 — 슬롯 위에 얹으면 대체로 '그 앞'(같은 행 좌우 스왑이 확실히 걸리게)
-    for (const i of row.idxs) { if (x < slots[i].left + slots[i].width * 0.75) return i }
-    return row.idxs[row.idxs.length - 1] + 1
+    for (const r of rows) { if (y <= r.bottom + CARD_GAP) return y < r.mid ? r.i : r.i + 1 }
+    return slots.length // 모든 카드 아래 = 맨 끝
   }
 
   const updateDrag = (x: number, y: number) => {
@@ -437,19 +268,11 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     const left = x - d.offsetX
     const top = y - d.offsetY
     if (liftedRef.current) { liftedRef.current.style.left = `${left}px`; liftedRef.current.style.top = `${top}px` }
-    // 판정점 = 끌리는 카드의 '중심'(업무현황 카드와 동일). 포인터가 아니라 카드가 놓일 자리를 보고 판정 —
-    // 카드 모서리를 잡아도 눈에 보이는 카드 위치 그대로 판정된다.
-    const cx = left + d.width / 2
+    // 판정점 = 끌리는 카드의 '중심'(업무현황 카드와 동일). 포인터가 아니라 카드가 놓일 자리를 보고 판정.
     const cy = top + d.height / 2
-    // 1열 카드 좌/우 자석 정렬 — 카드 중심이 보드 중앙의 왼쪽이면 좌측 열, 오른쪽이면 우측 열로
-    // placeholder가 즉시 따라붙어(미리보기) 놓기 전에 어느 열로 갈지 보인다(폭 조절 자석 스냅과 동일 감각)
-    if (d.span === 1) {
-      const alignVal = cx > d.gridCx ? 3 : 1
-      if (alignVal !== d.alignPreview) { d.alignPreview = alignVal; setWOverride((prev) => new Map(prev).set(d.id, alignVal)) }
-    }
     if (Date.now() < switchLockUntil.current) return
     const dyScroll = window.scrollY - d.scrollY0 // 드래그 중 페이지 스크롤 보정
-    const raw = insertIndexAt(d.slotRects, cx, cy, dyScroll)
+    const raw = insertIndexAt(d.slotRects, cy, dyScroll)
     // 원본 슬롯 인덱스 → rest(드래그 카드 제외) 삽입 인덱스 보정
     const originIndex = d.baseOrder.indexOf(d.id)
     const next = Math.max(0, Math.min(raw > originIndex ? raw - 1 : raw, d.baseOrder.length - 1))
@@ -470,16 +293,10 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     if (commit && liftedRef.current) settleFrom.current = { id: d.id, rect: liftedRef.current.getBoundingClientRect() }
     drag.current = null
     flipRects.current.clear()
-    suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS
     setDragId(null)
     setOverIndex(0)
-    // 1열 카드 좌/우 정렬 커밋 — 드롭한 쪽 열로 저장(취소·변경 없음이면 미리보기 해제)
-    if (d.span === 1 && d.alignPreview != null) {
-      const server = memosRef.current.find((mm) => mm.id === d.id)?.width || 1
-      if (commit && d.alignPreview !== server) onWidthRef.current(d.id, d.alignPreview) // 오버라이드는 반영/6s 안전망이 정리
-      else setWOverride((prev) => { if (!prev.has(d.id)) return prev; const n = new Map(prev); n.delete(d.id); return n })
-    }
-    if (changed) { setOptOrder(finalOrder); onReorderRef.current(finalOrder) }
+    // 저장은 여기서 하지 않음 — 화면 내부 순서(sortDraft)만 갱신. 서버 저장은 '완료' 버튼에서 한 번만.
+    if (changed) setSortDraft(finalOrder)
   }
 
   const onMove = (e: PointerEvent) => {
@@ -498,10 +315,11 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const onCancel = (e?: PointerEvent) => { if (e && pending.current && e.pointerId !== pending.current.pid) return; if (drag.current) finishDrag(false); pending.current = null; cleanupListeners() }
   const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
 
-  const onCellPointerDown = (e: React.PointerEvent, id: number) => {
+  // 정렬 모드 핸들에서만 드래그 시작(카드 본문 드래그 없음)
+  const onHandlePointerDown = (e: React.PointerEvent, id: number) => {
     if (pending.current || drag.current) return
     if (e.button !== 0 || e.pointerType === 'touch') return // 마우스/펜만(터치 드래그 없음)
-    if ((e.target as HTMLElement).closest('button, a, input, textarea, [contenteditable="true"]')) return
+    e.preventDefault()
     const el = itemRefs.current.get(id)
     if (!el) return
     const rect = el.getBoundingClientRect()
@@ -511,9 +329,10 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     document.addEventListener('pointerup', onEnd)
     document.addEventListener('pointercancel', onCancel)
     document.addEventListener('keydown', onKeyDown)
+    dragCleanup.current = () => { cleanupListeners(); if (drag.current) finishDrag(false); pending.current = null; document.body.style.cursor = '' }
   }
 
-  // 드래그 중 표시 순서 = 원래 순서에서 드래그 카드를 overIndex 위치로 삽입(원본 기준)
+  // 드래그 중 표시 순서 = 원래 순서에서 드래그 카드를 overIndex 위치로 삽입
   const baseIds = orderedMemos.map((m) => m.id)
   let displayIds = baseIds
   if (dragId != null) {
@@ -522,75 +341,93 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     displayIds = [...rest.slice(0, idx), dragId, ...rest.slice(idx)]
   }
   const dragItem = dragId != null ? memoById.get(dragId) : undefined
-  const canDrag = canPost && editId == null
+  const canSort = canPost && orderedMemos.length > 1
 
-  // dense = 우측 정렬 카드가 만든 왼쪽 빈 칸을 뒤 카드가 되채움(1열 카드 좌/우 나란히 배치 가능)
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gridAutoFlow: 'row dense', gap: `${CARD_GAP}px`, alignItems: 'stretch', position: 'relative', ...(dragId != null ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}) }}>
-      {displayIds.map((id) => {
-        const m = memoById.get(id)
-        if (!m) return null
-        // 폭 인코딩 디코드 → 그리드 자리·정렬·폭: 2열=span 2 / 1열 우측=col 2 명시 / 1열 좌측=auto / 자유폭=span 2 영역 + %폭 + 좌우 고정
-        const cw = decodeCardWidth(widthValOf(m))
-        const wSx = {
-          gridColumn: { xs: 'auto', sm: cw.span === 2 ? 'span 2' : cw.right ? '2' : 'auto' },
-          ...(cw.pct != null ? { justifySelf: { xs: 'stretch', sm: cw.right ? 'end' : 'start' }, width: { xs: '100%', sm: `${cw.pct}%` } } : {}),
-        }
-        // 드래그 중인 카드 자리 = 점선 placeholder(그 폭·높이만큼 공간 확보). 카드 본체는 커서 추적 오버레이로 렌더.
-        if (dragId === id) {
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+      {/* 헤더 — "검토 메모" + (팀원) 코멘트 정렬 / 정렬 중이면 취소·완료 */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 28 }}>
+        <Box sx={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '.02em', color: 'text.secondary' }}>검토 메모</Box>
+        <Box sx={{ flex: 1 }} />
+        {canSort && !sortMode && (
+          <Button size="small" startIcon={<ReorderIcon sx={{ fontSize: 16 }} />} onClick={enterSort}
+            sx={{ fontSize: 11.5, minWidth: 0, py: 0.25, color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>코멘트 정렬</Button>
+        )}
+        {sortMode && (
+          <>
+            <Button size="small" onClick={cancelSort} disabled={savingSort} sx={{ fontSize: 11.5, minWidth: 0, py: 0.25, color: 'text.secondary' }}>취소</Button>
+            <Button size="small" variant="contained" onClick={() => void completeSort()} disabled={savingSort}
+              startIcon={savingSort ? <CircularProgress size={12} thickness={5} color="inherit" /> : <CheckIcon sx={{ fontSize: 16 }} />}
+              sx={{ fontSize: 11.5, minWidth: 0, py: 0.25 }}>완료</Button>
+          </>
+        )}
+      </Box>
+      {sortMode && (
+        <Box sx={(th) => ({ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 0.5, px: 1, py: 0.75, borderRadius: '8px', bgcolor: alpha(th.palette.primary.main, 0.1), fontSize: 11, lineHeight: 1.5, color: 'text.secondary' })}>
+          <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>코멘트 정렬 중</Box>
+          <Box component="span">· 카드 핸들을 끌어 순서를 바꾸세요. 완료하면 모든 팀원에게 같은 순서로 보입니다.</Box>
+        </Box>
+      )}
+
+      {/* 목록 — 1열(PC·모바일 공통). 정렬 모드에서만 핸들 드래그로 순서 변경 */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: `${CARD_GAP}px`, ...(dragId != null ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}) }}>
+        {displayIds.map((id) => {
+          const m = memoById.get(id)
+          if (!m) return null
+          // 드래그 중인 카드 자리 = 점선 placeholder(그 높이만큼 공간 확보). 카드 본체는 커서 추적 오버레이로 렌더.
+          if (dragId === id) {
+            return (
+              <Box key={id} aria-hidden sx={(th) => ({ minWidth: 0, minHeight: drag.current?.height ?? 80, border: '2px dashed', borderColor: alpha(th.palette.primary.main, 0.6), bgcolor: alpha(th.palette.primary.main, 0.06), borderRadius: '8px' })} />
+            )
+          }
+          const own = ownOf(m)
           return (
-            <Box key={id} aria-hidden sx={(th) => ({ ...wSx, minWidth: 0, minHeight: drag.current?.height ?? 80, border: '2px dashed', borderColor: alpha(th.palette.primary.main, 0.6), bgcolor: alpha(th.palette.primary.main, 0.06), borderRadius: '8px' })} />
-          )
-        }
-        const own = ownOf(m)
-        return (
-          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ position: 'relative', ...wSx, minWidth: 0, ...(canDrag ? { cursor: 'grab' } : {}) }}
-            onPointerDown={canDrag ? (e) => onCellPointerDown(e, id) : undefined}
-            onDoubleClick={own && editId == null ? () => { if (Date.now() >= suppressClickUntil.current) startEdit(m) } : undefined}>
-            {editId === id ? (
-              <ComposeCard accent={memberOf(m.author)?.color || FALLBACK} title={eTitle} body={eBody} busy={busy} saveLabel="수정"
-                onTitle={setETitle} onBody={setEBody} onCancel={() => setEditId(null)} onSave={() => void saveEdit()} />
-            ) : (
-              <MemoCard m={m} own={own} onDelete={() => onDelete(id)} />
-            )}
-            {/* 좌/우 엣지 리사이즈 그립 — 그 엣지에 다가가면(한쪽만) 카드 모서리 라운드를 감싸는 엣지 글로우가 떠오름.
-                잡고 끌면 창처럼 실시간 + 점선 박스가 1/2열 결과 미리보기, 최소폭 아래로 누르면 고무줄 튕김(팀원, PC 전용) */}
-            {canPost && editId !== id && ([-1, 1] as const).map((dir) => (
-              <Box key={dir} data-resize role="separator" aria-label="카드 폭 조절"
-                onPointerDown={(ev) => startResize(ev, id, dir)} onDoubleClick={(ev) => ev.stopPropagation()}
-                sx={{ position: 'absolute', top: 0, bottom: 0, ...(dir === 1 ? { right: -7 } : { left: -7 }), width: 14, cursor: 'col-resize', zIndex: 2, display: { xs: 'none', sm: 'block' }, opacity: 0, transition: 'opacity .18s', '&:hover': { opacity: 1 },
-                  '&::before': { content: '""', position: 'absolute', top: 0, bottom: 0, width: '8px', ...(dir === 1
-                    ? { right: 7, borderRadius: '0 8px 8px 0', background: 'linear-gradient(270deg, rgba(255,255,255,.5), rgba(255,255,255,.04))' }
-                    : { left: 7, borderRadius: '8px 0 0 8px', background: 'linear-gradient(90deg, rgba(255,255,255,.5), rgba(255,255,255,.04))' }) } }} />
-            ))}
-          </Box>
-        )
-      })}
-
-      {/* 작성/추가 = 맨 아래 전폭 얇은 바 — 전폭(span 2)이라 dense가 1열 빈 칸으로 끌어오지 못함(카드 배치 방해 없음) */}
-      {canPost && (
-        <Box ref={setItemRef(ADD_KEY)} sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
-          {adding ? (
-            <ComposeCard accent={myColor} title={title} body={draft} busy={busy} saveLabel="저장"
-              onTitle={setTitle} onBody={setDraft} onCancel={() => { setAdding(false); setTitle(''); setDraft('') }} onSave={() => void save()} />
-          ) : (
-            <Box role="button" tabIndex={0} onClick={() => setAdding(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdding(true) } }}
-              sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 36, border: `1px dashed ${th.palette.divider}`, borderRadius: '10px', color: 'text.disabled', cursor: 'pointer', fontSize: 12, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
-              <AddIcon sx={{ fontSize: 15 }} /> 코멘트 추가
+            <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ position: 'relative', minWidth: 0 }}
+              onDoubleClick={!sortMode && own && editId == null ? () => startEdit(m) : undefined}>
+              {sortMode ? (
+                <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0.75 }}>
+                  {/* 드래그 핸들 — 이 핸들로만 순서 변경. 카드 본문은 드래그 불가 */}
+                  <Box role="button" aria-label="드래그하여 순서 변경" onPointerDown={(e) => onHandlePointerDown(e, id)}
+                    sx={(th) => ({ flex: 'none', display: 'flex', alignItems: 'center', px: 0.25, borderRadius: '6px', cursor: 'grab', touchAction: 'none', color: 'text.disabled', '&:hover': { color: 'text.primary', bgcolor: alpha(th.palette.primary.main, 0.12) }, '&:active': { cursor: 'grabbing' } })}>
+                    <DragIndicatorIcon sx={{ fontSize: 20 }} />
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}><MemoCard m={m} own={false} onDelete={() => {}} /></Box>
+                </Box>
+              ) : editId === id ? (
+                <ComposeCard accent={memberOf(m.author)?.color || FALLBACK} title={eTitle} body={eBody} busy={busy} saveLabel="수정"
+                  onTitle={setETitle} onBody={setEBody} onCancel={() => setEditId(null)} onSave={() => void saveEdit()} />
+              ) : (
+                <MemoCard m={m} own={own} onDelete={() => onDelete(id)} />
+              )}
             </Box>
-          )}
-        </Box>
-      )}
-      {memos.length === 0 && !adding && !canPost && <Box sx={{ gridColumn: '1 / -1', fontSize: 11.5, color: 'text.disabled' }}>코멘트가 없습니다.</Box>}
+          )
+        })}
 
-      {/* 들어올린 카드 — 커서 추적 오버레이(위치는 ref로 명령형 갱신). 원본 카드 폭 유지 */}
-      {dragItem && (
-        <Box ref={(el: HTMLDivElement | null) => { liftedRef.current = el; const d = drag.current; if (el && d) { el.style.left = `${lastPointer.current.x - d.offsetX}px`; el.style.top = `${lastPointer.current.y - d.offsetY}px` } }}
-          aria-hidden
-          sx={(th) => ({ position: 'fixed', zIndex: th.zIndex.modal + 1, width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none', opacity: 0.95, borderRadius: '8px', boxShadow: '0 20px 50px rgba(0,0,0,.48)' })}>
-          <MemoCard m={dragItem} own={ownOf(dragItem)} onDelete={() => {}} />
-        </Box>
-      )}
+        {/* 작성/추가 = 하단 바(일반 모드에서만 — 정렬 모드에선 숨김) */}
+        {canPost && !sortMode && (
+          <Box ref={setItemRef(ADD_KEY)} sx={{ minWidth: 0 }}>
+            {adding ? (
+              <ComposeCard accent={myColor} title={title} body={draft} busy={busy} saveLabel="저장"
+                onTitle={setTitle} onBody={setDraft} onCancel={() => { setAdding(false); setTitle(''); setDraft('') }} onSave={() => void save()} />
+            ) : (
+              <Box role="button" tabIndex={0} onClick={() => setAdding(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdding(true) } }}
+                sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 36, border: `1px dashed ${th.palette.divider}`, borderRadius: '10px', color: 'text.disabled', cursor: 'pointer', fontSize: 12, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
+                <AddIcon sx={{ fontSize: 15 }} /> 코멘트 추가
+              </Box>
+            )}
+          </Box>
+        )}
+        {memos.length === 0 && !adding && !canPost && <Box sx={{ fontSize: 11.5, color: 'text.disabled' }}>코멘트가 없습니다.</Box>}
+
+        {/* 들어올린 카드 — 커서 추적 오버레이(위치는 ref로 명령형 갱신). 원본 카드 폭 유지 */}
+        {dragItem && (
+          <Box ref={(el: HTMLDivElement | null) => { liftedRef.current = el; const d = drag.current; if (el && d) { el.style.left = `${lastPointer.current.x - d.offsetX}px`; el.style.top = `${lastPointer.current.y - d.offsetY}px` } }}
+            aria-hidden
+            sx={(th) => ({ position: 'fixed', zIndex: th.zIndex.modal + 1, width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none', opacity: 0.95, borderRadius: '8px', boxShadow: '0 20px 50px rgba(0,0,0,.48)' })}>
+            <MemoCard m={dragItem} own={false} onDelete={() => {}} />
+          </Box>
+        )}
+      </Box>
     </Box>
   )
 }
