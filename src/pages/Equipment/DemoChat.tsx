@@ -21,6 +21,7 @@ const FALLBACK = '#8a8f98'
 const liteC = (c: string) => `color-mix(in srgb, ${c} 55%, #ffffff)`
 
 const CARD_GAP = 10 // 카드 간격(px)
+const ADD_KEY = -1  // 추가/작성 칸의 FLIP 측정 키(메모 id와 겹치지 않게 음수)
 
 // ── 부드러운 드래그(포인터 기반 삽입정렬 + FLIP) 상수 ──
 const ACTIVATION_DISTANCE = 8   // px 이상 움직여야 드래그 시작(제자리 더블클릭=수정과 구분)
@@ -69,17 +70,18 @@ function ComposeCard({ accent, title, body, busy, onTitle, onBody, onCancel, onS
 }) {
   const c = accent
   return (
-    <Box sx={{ ...neonSx(c) }}>
+    // 높이 100% + 세로 flex — stretch 행에서 표시 카드처럼 행 높이를 채움(버튼은 하단 정렬)
+    <Box sx={{ ...neonSx(c), height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* 제목 띠 — 표시 카드의 제목 자리에 인풋 */}
-      <Box sx={{ p: '5px 10px', bgcolor: alpha(c, 0.14), borderBottom: `1px solid ${alpha(c, 0.28)}` }}>
+      <Box sx={{ flex: 'none', p: '5px 10px', bgcolor: alpha(c, 0.14), borderBottom: `1px solid ${alpha(c, 0.28)}` }}>
         <InputBase autoFocus value={title} onChange={(e) => onTitle(e.target.value)} placeholder="제목"
           sx={{ width: '100%', fontSize: 13, fontWeight: 700, color: liteC(c), '& input::placeholder': { color: 'rgba(255,255,255,.45)', opacity: 1 } }} />
       </Box>
       {/* 본문 — 공용 리치 에디터(HTML). 어두운 카드라 글자색만 고정. compact=코멘트용 축소 툴바 */}
-      <Box sx={{ p: '6px 10px 8px', '& .rb-editor': { color: '#dfe6f2' } }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: '6px 10px 8px', '& .rb-editor': { color: '#dfe6f2' } }}>
         <RichBodyEditor value={body} onChange={onBody} placeholder="내용 입력… (선택)"
           ariaLabel="코멘트 내용" fontSize={12.5} minHeight={44} onCtrlEnter={onSave} compact />
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 'auto', pt: 0.5 }}>
           <Button size="small" onClick={onCancel} disabled={busy} sx={{ color: 'rgba(255,255,255,.6)', fontSize: 11.5, minWidth: 0 }}>취소</Button>
           <Button size="small" variant="contained" onClick={onSave} disabled={busy || !title.trim()} startIcon={busy ? <CircularProgress size={12} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: 11.5, minWidth: 0 }}>{saveLabel}</Button>
         </Box>
@@ -89,20 +91,22 @@ function ComposeCard({ accent, title, body, busy, onTitle, onBody, onCancel, onS
 }
 
 /**
- * 코멘트 보드 — 일반 2열 그리드(모바일 1열). 순서 변경 = 부드러운 포인터 드래그(삽입정렬 + FLIP, 팀원) ·
- * 수정 = 카드 더블클릭(본인·관리자) · 삭제 = X · 작성 카드는 보드 하단 전폭.
+ * 코멘트 보드 — 일반 2열 그리드(모바일 1열), 같은 행 카드 높이 통일(stretch). 순서 변경 = 부드러운 포인터
+ * 드래그(삽입정렬 + FLIP, 팀원) · 수정 = 카드 더블클릭(본인·관리자) · 삭제 = X ·
+ * 폭 = 오른쪽 엣지 드래그로 1↔2열 스냅(기본 1열, DB width) · 추가/작성 = 다음 카드 자리(1열).
  *
  * masonry(dense)가 아니라 줄 단위 그리드 → 순서 변경 시 카드가 한 칸씩 밀려 자연스럽다(업무카드와 동일 모델).
  * 드래그: 마우스/펜만(터치 제외) — 8px 이동 시 들어올려 커서추적 오버레이. 목적지 판정은 업무카드와
  * 동일하게 시작 시 고정 캡처한 슬롯 좌표 vs 이동 카드 중심의 최근접 매칭(MARGIN 히스테리시스) — 즉시 비켜줌.
  * 주변 카드 FLIP 이동, Esc/취소 시 원위치, 드롭 시 순서 저장(onReorder) + 낙관적 순서로 즉시 반영.
  */
-export default function DemoChat({ memos, canPost, canModerate = false, user, busy, onPost, onEdit, onDelete, onReorder }: {
+export default function DemoChat({ memos, canPost, canModerate = false, user, busy, onPost, onEdit, onDelete, onReorder, onWidth }: {
   memos: DemoChatMsg[]; canPost: boolean; canModerate?: boolean; user: string | null; busy: boolean
   onPost: (title: string, body: string) => Promise<void>
   onEdit: (id: number, title: string, body: string) => Promise<void>
   onDelete: (id: number) => void
   onReorder: (ids: number[]) => void
+  onWidth: (id: number, width: number) => void
 }) {
   const [adding, setAdding] = useState(false)
   const [title, setTitle] = useState('')
@@ -121,6 +125,79 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const memoById = new Map(orderedMemos.map((m) => [m.id, m]))
   const ownOf = (m: DemoChatMsg) => canModerate || (!!user && m.author === user)
 
+  // ── 카드 폭 1↔2열 — 오른쪽 엣지 드래그(스냅). 기본 1열, 부득이하게 넓어야 할 카드만 2열 ──
+  const [wOverride, setWOverride] = useState<Map<number, number>>(new Map()) // 리사이즈 중·저장 대기 낙관값
+  const widthOf = (m: DemoChatMsg) => Math.min(2, Math.max(1, wOverride.get(m.id) ?? (m.width || 1)))
+  const onWidthRef = useRef(onWidth); onWidthRef.current = onWidth
+  const resizing = useRef<null | { id: number; pid: number; startX: number; startW: number; last: number }>(null)
+  const resizeCleanup = useRef<(() => void) | null>(null)
+  useEffect(() => () => { resizeCleanup.current?.() }, []) // 언마운트 시 리스너·커서 정리
+  // 서버 데이터가 낙관값을 따라잡으면 오버라이드 해제(리사이즈 중인 카드는 건드리지 않음)
+  useEffect(() => {
+    setWOverride((prev) => {
+      if (!prev.size) return prev
+      const next = new Map(prev)
+      let changed = false
+      memos.forEach((m) => {
+        if (resizing.current?.id === m.id) return
+        const ov = next.get(m.id)
+        if (ov !== undefined && Math.min(2, Math.max(1, m.width || 1)) === ov) { next.delete(m.id); changed = true }
+      })
+      return changed ? next : prev
+    })
+  }, [memos])
+  // 저장 실패 등으로 남은 오버라이드 안전 해제(6s) — optOrder와 동일한 안전망
+  useEffect(() => {
+    if (!wOverride.size) return
+    const t = window.setTimeout(() => { if (!resizing.current) setWOverride(new Map()) }, 6000)
+    return () => window.clearTimeout(t)
+  }, [wOverride, memos])
+  const startResize = (e: React.PointerEvent, id: number) => {
+    e.stopPropagation(); e.preventDefault()
+    if (e.pointerType === 'touch') return
+    if (resizing.current || pending.current || drag.current) return // 다른 제스처 진행 중엔 시작 안 함
+    const m = memoById.get(id)
+    if (!m) return
+    const startW = widthOf(m)
+    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startW, last: startW }
+    document.body.style.cursor = 'col-resize'
+    const move = (ev: PointerEvent) => {
+      const r = resizing.current
+      if (!r || ev.pointerId !== r.pid) return
+      // 방향 기반 스냅 — 시작점에서 오른쪽 40px+ = 2열, 왼쪽 40px+ = 1열, 그 사이 = 원래 폭.
+      // 절대 좌표가 아니라 이동량 기준이라 열 위치(왼/오른쪽)·스냅 후 리플로우와 무관하게 항상 동작.
+      const dx = ev.clientX - r.startX
+      const target = dx > 40 ? 2 : dx < -40 ? 1 : r.startW
+      if (target !== r.last) { r.last = target; setWOverride((prev) => new Map(prev).set(r.id, target)) }
+    }
+    const cleanup = () => {
+      document.removeEventListener('pointermove', move)
+      document.removeEventListener('pointerup', up)
+      document.removeEventListener('pointercancel', cancel)
+      document.removeEventListener('keydown', key)
+      document.body.style.cursor = ''
+      resizeCleanup.current = null
+    }
+    // commit=true(pointerup)만 저장, 취소(Esc·pointercancel)는 서버 폭으로 복원. 사이드이펙트는 setState 밖에서.
+    const finish = (commit: boolean) => {
+      cleanup()
+      const r = resizing.current
+      resizing.current = null
+      if (!r) return
+      const server = Math.min(2, Math.max(1, memosRef.current.find((mm) => mm.id === r.id)?.width || 1))
+      if (commit && r.last !== server) { onWidthRef.current(r.id, r.last); return } // 저장 — 반영/6s 안전망이 오버라이드 정리
+      setWOverride((prev) => { if (!prev.has(r.id)) return prev; const n = new Map(prev); n.delete(r.id); return n })
+    }
+    const up = (ev: PointerEvent) => { if (resizing.current && ev.pointerId !== resizing.current.pid) return; finish(true) }
+    const cancel = () => finish(false)
+    const key = (ev: KeyboardEvent) => { if (ev.key === 'Escape') finish(false) }
+    resizeCleanup.current = () => { cleanup(); resizing.current = null }
+    document.addEventListener('pointermove', move)
+    document.addEventListener('pointerup', up)
+    document.addEventListener('pointercancel', cancel)
+    document.addEventListener('keydown', key)
+  }
+
   const itemRefs = useRef(new Map<number, HTMLElement>())
   const setItemRef = (key: number) => (el: HTMLElement | null) => { if (el) itemRefs.current.set(key, el); else itemRefs.current.delete(key) }
 
@@ -133,7 +210,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const switchLockUntil = useRef(0)
   const suppressClickUntil = useRef(0)
   const lastPointer = useRef({ x: 0, y: 0 })
-  const pending = useRef<null | { id: number; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
+  const pending = useRef<null | { id: number; pid: number; startX: number; startY: number; offsetX: number; offsetY: number; rect: DOMRect }>(null)
   const drag = useRef<null | { id: number; baseOrder: number[]; slotRects: DOMRect[]; scrollY0: number; width: number; height: number; offsetX: number; offsetY: number }>(null)
   const liftedRef = useRef<HTMLDivElement | null>(null)
   const flipRects = useRef(new Map<number, { left: number; top: number }>())
@@ -264,7 +341,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   }
 
   const onMove = (e: PointerEvent) => {
-    if (!pending.current) return
+    if (!pending.current || e.pointerId !== pending.current.pid) return // 시작한 포인터만(마우스+펜 혼선 차단)
     lastPointer.current = { x: e.clientX, y: e.clientY }
     if (!drag.current) {
       const dist = Math.hypot(e.clientX - pending.current.startX, e.clientY - pending.current.startY)
@@ -275,8 +352,8 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     e.preventDefault()
     updateDrag(e.clientX, e.clientY)
   }
-  const onEnd = () => { if (drag.current) finishDrag(true); pending.current = null; cleanupListeners() }
-  const onCancel = () => { if (drag.current) finishDrag(false); pending.current = null; cleanupListeners() }
+  const onEnd = (e: PointerEvent) => { if (pending.current && e.pointerId !== pending.current.pid) return; if (drag.current) finishDrag(true); pending.current = null; cleanupListeners() }
+  const onCancel = (e?: PointerEvent) => { if (e && pending.current && e.pointerId !== pending.current.pid) return; if (drag.current) finishDrag(false); pending.current = null; cleanupListeners() }
   const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
 
   const onCellPointerDown = (e: React.PointerEvent, id: number) => {
@@ -286,7 +363,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     const el = itemRefs.current.get(id)
     if (!el) return
     const rect = el.getBoundingClientRect()
-    pending.current = { id, startX: e.clientX, startY: e.clientY, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top, rect }
+    pending.current = { id, pid: e.pointerId, startX: e.clientX, startY: e.clientY, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top, rect }
     lastPointer.current = { x: e.clientX, y: e.clientY }
     document.addEventListener('pointermove', onMove, { passive: false })
     document.addEventListener('pointerup', onEnd)
@@ -306,19 +383,20 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const canDrag = canPost && editId == null
 
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: `${CARD_GAP}px`, alignItems: 'start', ...(dragId != null ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}) }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: `${CARD_GAP}px`, alignItems: 'stretch', ...(dragId != null ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}) }}>
       {displayIds.map((id) => {
         const m = memoById.get(id)
         if (!m) return null
-        // 드래그 중인 카드 자리 = 점선 placeholder(그 높이만큼 공간 확보). 카드 본체는 커서 추적 오버레이로 렌더.
+        const w = widthOf(m)
+        // 드래그 중인 카드 자리 = 점선 placeholder(그 폭·높이만큼 공간 확보). 카드 본체는 커서 추적 오버레이로 렌더.
         if (dragId === id) {
           return (
-            <Box key={id} aria-hidden sx={(th) => ({ minWidth: 0, minHeight: drag.current?.height ?? 80, border: '2px dashed', borderColor: alpha(th.palette.primary.main, 0.6), bgcolor: alpha(th.palette.primary.main, 0.06), borderRadius: '8px' })} />
+            <Box key={id} aria-hidden sx={(th) => ({ gridColumn: { xs: 'auto', sm: `span ${w}` }, minWidth: 0, minHeight: drag.current?.height ?? 80, border: '2px dashed', borderColor: alpha(th.palette.primary.main, 0.6), bgcolor: alpha(th.palette.primary.main, 0.06), borderRadius: '8px' })} />
           )
         }
         const own = ownOf(m)
         return (
-          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ minWidth: 0, ...(canDrag ? { cursor: 'grab' } : {}) }}
+          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ position: 'relative', gridColumn: { xs: 'auto', sm: `span ${w}` }, minWidth: 0, ...(canDrag ? { cursor: 'grab' } : {}) }}
             onPointerDown={canDrag ? (e) => onCellPointerDown(e, id) : undefined}
             onDoubleClick={own && editId == null ? () => { if (Date.now() >= suppressClickUntil.current) startEdit(m) } : undefined}>
             {editId === id ? (
@@ -327,19 +405,25 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
             ) : (
               <MemoCard m={m} own={own} onDelete={() => onDelete(id)} />
             )}
+            {/* 오른쪽 엣지 리사이즈 핸들 — 잡고 좌/우로 끌면 1↔2열 스냅(팀원, PC 전용) */}
+            {canPost && editId !== id && (
+              <Box data-resize role="separator" aria-label="카드 폭 조절 (1↔2열)"
+                onPointerDown={(ev) => startResize(ev, id)} onDoubleClick={(ev) => ev.stopPropagation()}
+                sx={(th) => ({ position: 'absolute', top: 6, bottom: 6, right: -5, width: 10, cursor: 'col-resize', zIndex: 2, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity .15s', '&:hover': { opacity: 1 }, '&::before': { content: '""', width: '3px', height: 26, borderRadius: '2px', bgcolor: alpha(th.palette.primary.main, 0.9) } })} />
+            )}
           </Box>
         )
       })}
 
-      {/* 작성/추가 = 보드 하단 전폭(줄 그리드라 자연스러움) */}
+      {/* 작성/추가 = 다음 카드가 생길 자리(1열 좁은 너비 기본). itemRefs 등록 = 드래그 중 FLIP으로 함께 이동 */}
       {canPost && (
-        <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+        <Box ref={setItemRef(ADD_KEY)} sx={{ minWidth: 0 }}>
           {adding ? (
             <ComposeCard accent={myColor} title={title} body={draft} busy={busy} saveLabel="저장"
               onTitle={setTitle} onBody={setDraft} onCancel={() => { setAdding(false); setTitle(''); setDraft('') }} onSave={() => void save()} />
           ) : (
             <Box role="button" tabIndex={0} onClick={() => setAdding(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdding(true) } }}
-              sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 44, border: `1px dashed ${th.palette.divider}`, borderRadius: '10px', color: 'text.disabled', cursor: 'pointer', fontSize: 12, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
+              sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 44, height: '100%', border: `1px dashed ${th.palette.divider}`, borderRadius: '10px', color: 'text.disabled', cursor: 'pointer', fontSize: 12, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
               <AddIcon sx={{ fontSize: 15 }} /> 코멘트 추가
             </Box>
           )}
@@ -351,7 +435,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
       {dragItem && (
         <Box ref={(el: HTMLDivElement | null) => { liftedRef.current = el; const d = drag.current; if (el && d) { el.style.left = `${lastPointer.current.x - d.offsetX}px`; el.style.top = `${lastPointer.current.y - d.offsetY}px` } }}
           aria-hidden
-          sx={(th) => ({ position: 'fixed', zIndex: th.zIndex.modal + 1, width: drag.current?.width, pointerEvents: 'none', opacity: 0.95, borderRadius: '8px', boxShadow: '0 20px 50px rgba(0,0,0,.48)' })}>
+          sx={(th) => ({ position: 'fixed', zIndex: th.zIndex.modal + 1, width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none', opacity: 0.95, borderRadius: '8px', boxShadow: '0 20px 50px rgba(0,0,0,.48)' })}>
           <MemoCard m={dragItem} own={ownOf(dragItem)} onDelete={() => {}} />
         </Box>
       )}

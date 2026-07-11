@@ -4,6 +4,7 @@ import Tooltip from '@mui/material/Tooltip'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
 import InputBase from '@mui/material/InputBase'
+import Popper from '@mui/material/Popper'
 import CircularProgress from '@mui/material/CircularProgress'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
@@ -29,7 +30,7 @@ import type { Theme } from '@mui/material/styles'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
-  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, updateDemoChat, deleteDemoChat, reorderDemoChat, updateDemoResult, deleteDemoResult, updateMetricDef, uploadDemoFile, removeDemoFiles,
+  fetchMetricDefs, fetchDemoResults, fetchDemoChat, fetchValueHistory, groupDemoResults, bestMakers, demoFileUrl, postDemoChat, updateDemoChat, deleteDemoChat, reorderDemoChat, setDemoChatWidth, updateDemoResult, deleteDemoResult, updateMetricDef, uploadDemoFile, removeDemoFiles,
   type DemoMetricDef, type DemoRoundRow, type DemoChatMsg, type DemoPhotoRef, type DemoFileRef, type DemoMakerGroup, type ValueHistory,
 } from '@/api/demo'
 import { verifyPassword } from '@/api/session'
@@ -67,9 +68,9 @@ function Photo({ photo, onClick, fit = 'cover' }: { photo?: DemoPhotoRef; onClic
   )
 }
 
-/** versus(≤2사) 카드 규격 — 이미지창 크기는 제조사 수(1·2사)와 무관하게 동일(고정). 카드 사이 간격은 종전 표 느낌(12px) */
+/** versus(≤2사) 카드 규격 — 이미지창 크기는 제조사 수(1·2사)와 무관하게 동일(고정). 카드 사이 간격 = 코멘트 카드 간격(10px)과 통일 */
 const VS_CARD_W = 190
-const VS_GAP = 12
+const VS_GAP = 10
 const VS_W = VS_CARD_W * 2 + VS_GAP
 
 /** versus 레이아웃 셀 — 값 셀(VCell) / 지표명 셀(LCell). 값 | 지표명 | 값 그리드에서 사용 */
@@ -113,6 +114,7 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
 }) {
   const [editing, setEditing] = useState(false)
   const [v, setV] = useState('')
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const start = (e: React.MouseEvent) => { e.stopPropagation(); setV(text); setEditing(true) }
   const commit = () => { setEditing(false); const nv = v.trim(); if (nv !== (text || '').trim()) onCommit(nv) }
   if (editing) {
@@ -120,29 +122,34 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
       if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
       else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); commit() }
     }
-    // 한 줄 값 = [좁은 인풋][✓][✕] 한 줄(그 자리 그대로) / 여러 줄(샘플·조건) = 인풋 아래 버튼
-    if (!multiline) {
-      return (
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%', verticalAlign: 'middle' }}>
-          <InputBase autoFocus value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder} onKeyDown={onKey}
-            sx={(th) => ({ width: `${Math.max(5, Math.min(14, v.length + 2))}ch`, ...editInputSx(th), '& input': { textAlign: align, p: 0 } })} />
-          <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
-        </Box>
-      )
-    }
+    // 제자리 수정 — 인풋이 텍스트 자리 그대로(줄바꿈·밀림 없음, 폭은 원문 기준 고정=타이핑 떨림 없음),
+    // 저장/취소는 Popper 플로팅(레이아웃 무영향·스크롤 컨테이너에 안 잘림)
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, width: '100%' }}>
-        <InputBase autoFocus multiline value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder} onKeyDown={onKey}
-          sx={(th) => ({ width: '100%', ...editInputSx(th), '& textarea, & input': { textAlign: align, p: 0 } })} />
-        <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
+      <Box ref={setAnchorEl} sx={{ position: 'relative', display: multiline ? 'block' : 'inline-flex', alignItems: 'center', width: multiline ? '100%' : 'auto', maxWidth: '100%', verticalAlign: 'middle' }}>
+        <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder} onKeyDown={onKey}
+          sx={(th) => ({ width: multiline ? '100%' : `${Math.max(5, Math.min(14, (text || '').length + 2))}ch`, ...editInputSx(th), '& textarea, & input': { textAlign: align, p: 0 } })} />
+        <FloatSaveCancel anchor={anchorEl} onSave={commit} onCancel={() => setEditing(false)} />
       </Box>
     )
   }
   return (
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, maxWidth: '100%', verticalAlign: 'middle', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0 } }}>
+    // 연필은 절대배치(흐름 밖) — 숨은 버튼이 가운데정렬을 밀지 않음. 숨김 중엔 클릭도 차단(pointerEvents)
+    <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', maxWidth: '100%', verticalAlign: 'middle', '& .pen': { opacity: 0, pointerEvents: 'none', transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0, pointerEvents: canEdit ? 'auto' : 'none' } }}>
       <Box component="span" sx={{ minWidth: 0, ...(multiline ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } : {}) }}>{display ?? (text || (canEdit ? placeholder : '-'))}</Box>
-      {canEdit && <IconButton className="pen" size="small" aria-label="수정" onClick={start} sx={{ p: '1px', flex: 'none', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
+      {canEdit && <IconButton className="pen" size="small" aria-label="수정" onClick={start} sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', ml: '1px', p: '1px', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
     </Box>
+  )
+}
+
+/** 저장/취소 플로팅 — Popper(포탈)로 편집 인풋 아래에 띄움: 주변 레이아웃을 밀지 않고, 표의 overflow 스크롤 컨테이너에도 안 잘림 */
+function FloatSaveCancel({ anchor, onSave, onCancel }: { anchor: HTMLElement | null; onSave: () => void; onCancel: () => void }) {
+  if (!anchor) return null
+  return (
+    <Popper open anchorEl={anchor} placement="bottom" sx={{ zIndex: 1500 }}>
+      <Box sx={(th) => ({ mt: '3px', bgcolor: 'background.paper', border: `1px solid ${th.palette.divider}`, borderRadius: '7px', px: 0.25, boxShadow: '0 4px 12px rgba(0,0,0,.35)' })}>
+        <SaveCancel onSave={onSave} onCancel={onCancel} />
+      </Box>
+    </Popper>
   )
 }
 
@@ -150,30 +157,30 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
 function EditLabelUnit({ label, unit, canEdit, onCommit }: { label: string; unit: string; canEdit: boolean; onCommit: (label: string, unit: string) => void }) {
   const [editing, setEditing] = useState(false)
   const [l, setL] = useState(''); const [u, setU] = useState('')
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const start = (e: React.MouseEvent) => { e.stopPropagation(); setL(label); setU(unit); setEditing(true) }
   const commit = () => { setEditing(false); if (l.trim() !== label.trim() || u.trim() !== unit.trim()) onCommit(l.trim(), u.trim()) }
   const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setEditing(false) } else if (e.key === 'Enter') { e.preventDefault(); commit() } }
   if (editing) {
-    // 지표명·단위가 써진 그 자리에서 그대로 — 좁은 인풋(내용 길이 맞춤) 가운데 스택, 단위 줄에 저장/취소 인라인
+    // 제자리 수정 — 표시와 같은 한 줄([지표명] [단위])에서 인풋으로만 바뀜(줄바꿈 없음), 폭은 원문 기준 고정
+    // (타이핑해도 가운데 열이 안 떨림), 저장/취소는 Popper 플로팅
     return (
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.3 }}>
+      <Box ref={setAnchorEl} sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 0.3, maxWidth: '100%' }}>
         <InputBase autoFocus value={l} onChange={(e) => setL(e.target.value)} placeholder="지표명" onKeyDown={onKey}
-          sx={(th) => ({ width: `${Math.max(6, Math.min(16, l.length + 2))}ch`, maxWidth: '100%', ...editInputSx(th), '& input': { textAlign: 'center', p: 0 } })} />
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-          <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>[</Box>
-          <InputBase value={u} onChange={(e) => setU(e.target.value)} placeholder="단위" onKeyDown={onKey}
-            sx={(th) => ({ width: `${Math.max(4, Math.min(10, u.length + 2))}ch`, ...editInputSx(th), fontSize: 11, '& input': { textAlign: 'center', p: 0 } })} />
-          <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>]</Box>
-          <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
-        </Box>
+          sx={(th) => ({ width: `${Math.max(6, Math.min(12, label.length + 2))}ch`, ...editInputSx(th), '& input': { textAlign: 'center', p: 0 } })} />
+        <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>[</Box>
+        <InputBase value={u} onChange={(e) => setU(e.target.value)} placeholder="단위" onKeyDown={onKey}
+          sx={(th) => ({ width: `${Math.max(3, Math.min(8, unit.length + 2))}ch`, ...editInputSx(th), fontSize: 11, '& input': { textAlign: 'center', p: 0 } })} />
+        <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>]</Box>
+        <FloatSaveCancel anchor={anchorEl} onSave={commit} onCancel={() => setEditing(false)} />
       </Box>
     )
   }
   return (
-    // 표시 — 두 줄로 줄바꿈돼도 가운데정렬(셀 textAlign center와 함께)
-    <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 0.25, maxWidth: '100%', textAlign: 'center', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0 } }}>
+    // 표시 — 연필은 절대배치(흐름 밖)라 가운데정렬이 밀리지 않음. 숨김 중엔 클릭도 차단(pointerEvents)
+    <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', maxWidth: '100%', textAlign: 'center', '& .pen': { opacity: 0, pointerEvents: 'none', transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.75 : 0, pointerEvents: canEdit ? 'auto' : 'none' } }}>
       <Box component="span" sx={{ minWidth: 0 }}>{label || (canEdit ? '지표명' : '-')}{unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.4, fontSize: 10 }}>[{unit}]</Box> : null}</Box>
-      {canEdit && <IconButton className="pen" size="small" aria-label="지표 수정" onClick={start} sx={{ p: '1px', flex: 'none', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
+      {canEdit && <IconButton className="pen" size="small" aria-label="지표 수정" onClick={start} sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', ml: '1px', p: '1px', color: 'text.disabled', '&:hover': { color: 'warning.main' } }}><EditIcon sx={{ fontSize: 12 }} /></IconButton>}
     </Box>
   )
 }
@@ -191,7 +198,14 @@ function ThumbStrip({ photos, sel, onPick }: { photos: DemoPhotoRef[]; sel: numb
     check()
     const roz = new ResizeObserver(check)
     roz.observe(el)
-    return () => roz.disconnect()
+    // 마우스 휠 = 가로 스크롤(넘칠 때만). React onWheel은 passive라 preventDefault가 안 먹어 네이티브로 부착
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollWidth <= el.clientWidth + 2) return
+      e.preventDefault()
+      el.scrollLeft += Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => { roz.disconnect(); el.removeEventListener('wheel', onWheel) }
   }, [photos.length])
   const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * 100, behavior: 'smooth' })
   const arrow = (dir: -1 | 1) => (
@@ -430,11 +444,11 @@ function PhotoManageDialog({ round, maker, user, onClose, onSaved }: {
 }
 
 /** 장비종류 1묶음 — 경쟁 제조사 매트릭스 + (오른쪽) 비교 채팅 */
-function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, user, chatBusy, latestValueChange, onPostChat, onEditChat, onDeleteChat, onReorderChat, onSaveValues, onSaveMeta, onSaveMetricDef, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound, onReload }: {
+function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, user, chatBusy, latestValueChange, onPostChat, onEditChat, onDeleteChat, onReorderChat, onWidthChat, onSaveValues, onSaveMeta, onSaveMetricDef, onEditMetrics, onViewValueHistory, onAddRound, onDeleteRound, onReload }: {
   equipment: string; defs: DemoMetricDef[]; makers: DemoMakerGroup[]; messages: DemoChatMsg[]; canEdit: boolean; canModerate: boolean; user: string | null; chatBusy: boolean; latestValueChange?: ValueHistory
   onPostChat: (equipment: string, title: string, body: string) => Promise<void>
   onEditChat: (id: number, title: string, body: string) => Promise<void>; onDeleteChat: (id: number) => void
-  onReorderChat: (ids: number[]) => void
+  onReorderChat: (ids: number[]) => void; onWidthChat: (id: number, width: number) => void
   onSaveValues: (roundId: number, metrics: Record<string, string>) => Promise<void>
   onSaveMeta: (roundId: number, patch: { sample?: string; conditions?: string }) => Promise<void>
   onSaveMetricDef: (defId: number, patch: { label?: string; unit?: string }) => Promise<void>
@@ -643,7 +657,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
         <Box sx={{ flex: { xs: '0 0 auto', md: '1 1 0' }, minWidth: 0, width: { xs: '100%', md: 'auto' }, bgcolor: 'background.default', border: 1, borderColor: 'divider', borderRadius: '10px', p: 1.25 }}>
           <DemoChat memos={messages} canPost={canEdit} canModerate={canModerate} user={user} busy={chatBusy}
             onPost={(title, body) => onPostChat(equipment, title, body)} onEdit={onEditChat} onDelete={onDeleteChat}
-            onReorder={onReorderChat} />
+            onReorder={onReorderChat} onWidth={onWidthChat} />
         </Box>
       </Box>
 
@@ -747,9 +761,12 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
   const onDeleteChat = async (id: number) => {
     try { await deleteDemoChat(id); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '삭제 실패', sev: 'error' }) }
   }
-  // 보드 배치 — 순서(드래그). 낙관 갱신 없이 저장 후 재조회(카드 수 적어 충분히 빠름)
+  // 보드 배치 — 순서(드래그)·폭(엣지 리사이즈 1↔2열). 낙관 갱신 없이 저장 후 재조회(카드 수 적어 충분히 빠름)
   const onReorderChat = async (ids: number[]) => {
     try { await reorderDemoChat(ids); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '순서 변경 실패', sev: 'error' }) }
+  }
+  const onWidthChat = async (id: number, width: number) => {
+    try { await setDemoChatWidth(id, width); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '너비 변경 실패', sev: 'error' }) }
   }
 
   const onSaveValues = async (roundId: number, metrics: Record<string, string>) => {
@@ -802,7 +819,7 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
             key={g.equipment}
             equipment={g.equipment} defs={g.defs} makers={g.makers}
             messages={chatOf(g.equipment)} canEdit={isMember} canModerate={isAdmin} user={user} chatBusy={chatBusy} latestValueChange={latestValueChangeOf(g.equipment)}
-            onPostChat={onPostChat} onEditChat={onEditChat} onDeleteChat={onDeleteChat} onReorderChat={onReorderChat} onSaveValues={onSaveValues} onSaveMeta={onSaveMeta} onSaveMetricDef={onSaveMetricDef} onReload={load}
+            onPostChat={onPostChat} onEditChat={onEditChat} onDeleteChat={onDeleteChat} onReorderChat={onReorderChat} onWidthChat={onWidthChat} onSaveValues={onSaveValues} onSaveMeta={onSaveMeta} onSaveMetricDef={onSaveMetricDef} onReload={load}
             onEditMetrics={() => setEditorEquip(g.equipment)} onViewValueHistory={() => setValHistEquip(g.equipment)}
             onAddRound={(mg) => { setFormPre({ equipment: g.equipment, maker: mg.maker, model: mg.model }); setFormOpen(true) }}
             onDeleteRound={onDeleteRound}
