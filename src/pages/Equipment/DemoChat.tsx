@@ -202,7 +202,9 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const completeSort = async () => {
     if (!sortDraft || savingSort || drag.current) return
     const ids = sortDraft
-    if (ids.join(',') === memos.map((m) => m.id).join(',')) { setSortMode(false); setSortDraft(null); return } // 변화 없음
+    // '변화 없음' 기준 = 지금 화면에 표시 중인 순서(serverOrdered = optOrder 반영). memos(원본)로 비교하면
+    // 저장 직후 optOrder가 떠 있는 창에서 되돌리기가 조용히 누락·화면 튐(리뷰 #1) → serverOrdered로 비교.
+    if (ids.join(',') === serverOrdered.map((m) => m.id).join(',')) { setSortMode(false); setSortDraft(null); return }
     setSavingSort(true)
     try {
       await onReorderRef.current(ids)      // 한 번만 저장(reorderDemoChat) — 실패 시 throw
@@ -315,9 +317,10 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const onCancel = (e?: PointerEvent) => { if (e && pending.current && e.pointerId !== pending.current.pid) return; if (drag.current) finishDrag(false); pending.current = null; cleanupListeners() }
   const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
 
-  // 정렬 모드 핸들에서만 드래그 시작(카드 본문 드래그 없음)
+  // 정렬 모드 핸들에서만 드래그 시작(카드 본문 드래그 없음). 저장(완료) 대기 중엔 시작 금지 —
+  // await 도중 드래그를 시작하면 저장 완료 시 sortMode가 꺼지며 드롭이 삭제·카드가 붕 뜨는 글리치(리뷰 #2·#3).
   const onHandlePointerDown = (e: React.PointerEvent, id: number) => {
-    if (pending.current || drag.current) return
+    if (pending.current || drag.current || savingSort) return
     if (e.button !== 0 || e.pointerType === 'touch') return // 마우스/펜만(터치 드래그 없음)
     e.preventDefault()
     const el = itemRefs.current.get(id)
