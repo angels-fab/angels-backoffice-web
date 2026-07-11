@@ -4,7 +4,6 @@ import Tooltip from '@mui/material/Tooltip'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
 import InputBase from '@mui/material/InputBase'
-import Popper from '@mui/material/Popper'
 import CircularProgress from '@mui/material/CircularProgress'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
@@ -113,22 +112,28 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
 }) {
   const [editing, setEditing] = useState(false)
   const [v, setV] = useState('')
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const start = (e: React.MouseEvent) => { e.stopPropagation(); setV(text); setEditing(true) }
+  const start = (e: React.MouseEvent) => { e.stopPropagation(); editBus.dispatchEvent(new Event('editopen')); setV(text); setEditing(true) }
   const commit = () => { setEditing(false); const nv = v.trim(); if (nv !== (text || '').trim()) onCommit(nv) }
+  // 단일 오픈 — 다른 연필이 눌리면 이 수정란을 닫는다(새로 여는 쪽은 dispatch 후에 구독하므로 자기 자신은 안 닫힘)
+  useEffect(() => {
+    if (!editing) return
+    const close = () => setEditing(false)
+    editBus.addEventListener('editopen', close)
+    return () => editBus.removeEventListener('editopen', close)
+  }, [editing])
   if (editing) {
     const onKey = (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
       else if (e.key === 'Enter' && (!multiline || e.metaKey || e.ctrlKey)) { e.preventDefault(); commit() }
     }
-    // 제자리 수정 — 적힌 텍스트가 그대로 인풋으로 바뀜(같은 폰트·크기·위치, 박스 없음·앰버 밑줄만).
+    // 제자리 수정 — 적힌 텍스트가 그대로 인풋으로 바뀜(같은 폰트·크기·위치). 저장/취소는 연필 자리(오른쪽).
     // 한 줄 폭 = 숨은 사이저(in-flow)가 입력값 실측 폭으로 결정, 인풋은 그 위에 절대배치(인풋 고유 최소폭 무시).
     return (
-      <Box ref={setAnchorEl} sx={{ position: 'relative', display: multiline ? 'block' : 'inline-block', width: multiline ? '100%' : 'auto', maxWidth: '100%', verticalAlign: 'middle' }}>
+      <Box sx={{ position: 'relative', display: multiline ? 'block' : 'inline-block', width: multiline ? '100%' : 'auto', maxWidth: '100%', verticalAlign: 'middle' }}>
         {!multiline && <Box component="span" aria-hidden sx={{ visibility: 'hidden', whiteSpace: 'pre', display: 'inline-block', minWidth: '2ch' }}>{v || placeholder}</Box>}
         <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} onBlur={commit} placeholder={placeholder} onKeyDown={onKey}
           sx={(th) => ({ ...editInputSx(th), ...(multiline ? { width: '100%' } : { position: 'absolute', inset: 0, width: '100%' }), '& textarea, & input': { textAlign: align, p: 0, font: 'inherit', minWidth: 0 } })} />
-        <FloatSaveCancel anchor={anchorEl} onSave={commit} onCancel={() => setEditing(false)} />
+        <EditActions onSave={commit} onCancel={() => setEditing(false)} />
       </Box>
     )
   }
@@ -145,33 +150,39 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
   )
 }
 
-/** 저장/취소 플로팅 — Popper(포탈)로 편집 인풋 아래에 띄움: 주변 레이아웃을 밀지 않고, 표의 overflow 스크롤 컨테이너에도 안 잘림 */
-function FloatSaveCancel({ anchor, onSave, onCancel }: { anchor: HTMLElement | null; onSave: () => void; onCancel: () => void }) {
-  if (!anchor) return null
+/** 저장/취소 — 편집 중 '연필이 있던 자리'(입력칸 오른쪽)에 플로팅. 흐름 밖 절대배치라 레이아웃을 밀지 않음 */
+function EditActions({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   return (
-    <Popper open anchorEl={anchor} placement="bottom" sx={{ zIndex: 1500 }}>
-      <Box sx={(th) => ({ mt: '3px', bgcolor: 'background.paper', border: `1px solid ${th.palette.divider}`, borderRadius: '7px', px: 0.25, boxShadow: '0 4px 12px rgba(0,0,0,.35)' })}>
-        <SaveCancel onSave={onSave} onCancel={onCancel} />
-      </Box>
-    </Popper>
+    <Box sx={(th) => ({ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', ml: '3px', zIndex: 6, display: 'flex', bgcolor: 'background.paper', border: `1px solid ${th.palette.divider}`, borderRadius: '7px', px: 0.25, boxShadow: '0 2px 8px rgba(0,0,0,.3)' })}>
+      <SaveCancel onSave={onSave} onCancel={onCancel} />
+    </Box>
   )
 }
+
+// 지표 편집 단일 오픈 — 어떤 연필을 누르면 'editopen'을 쏘고, 열려 있던 다른 수정란은 이를 듣고 닫힌다
+const editBus = new EventTarget()
 
 /** 지표명+단위 통합 인라인 편집 — 연필 하나로 [지표명] [단위] 동시 수정 + 저장/취소 버튼 */
 function EditLabelUnit({ label, unit, canEdit, onCommit }: { label: string; unit: string; canEdit: boolean; onCommit: (label: string, unit: string) => void }) {
   const [editing, setEditing] = useState(false)
   const [l, setL] = useState(''); const [u, setU] = useState('')
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
-  const start = (e: React.MouseEvent) => { e.stopPropagation(); setL(label); setU(unit); setEditing(true) }
+  const start = (e: React.MouseEvent) => { e.stopPropagation(); editBus.dispatchEvent(new Event('editopen')); setL(label); setU(unit); setEditing(true) }
   const commit = () => { setEditing(false); if (l.trim() !== label.trim() || u.trim() !== unit.trim()) onCommit(l.trim(), u.trim()) }
   const onKey = (e: React.KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); setEditing(false) } else if (e.key === 'Enter') { e.preventDefault(); commit() } }
+  // 단일 오픈 — 다른 연필이 눌리면 이 수정란을 닫는다
+  useEffect(() => {
+    if (!editing) return
+    const close = () => setEditing(false)
+    editBus.addEventListener('editopen', close)
+    return () => editBus.removeEventListener('editopen', close)
+  }, [editing])
   if (editing) {
     // 제자리 수정 — 표시(지표명 [단위]) 그대로 인풋으로 바뀜(같은 폰트·크기·자리, 앰버 밑줄만).
     // 폭 = 숨은 사이저(in-flow)가 결정, 인풋은 절대배치로 겹침(인풋 고유 최소폭 무시).
     const sizerCell = { position: 'relative', display: 'inline-block' } as const
     const overlayInput = (th: Theme) => ({ ...editInputSx(th), position: 'absolute', inset: 0, width: '100%', '& input': { textAlign: 'center', p: 0, font: 'inherit', minWidth: 0 } })
     return (
-      <Box ref={setAnchorEl} sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 0.3, maxWidth: '100%' }}>
+      <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 0.3, maxWidth: '100%' }}>
         <Box component="span" sx={sizerCell}>
           <Box component="span" aria-hidden sx={{ visibility: 'hidden', whiteSpace: 'pre', display: 'inline-block', minWidth: '3ch' }}>{l || '지표명'}</Box>
           <InputBase autoFocus value={l} onChange={(e) => setL(e.target.value)} placeholder="지표명" onKeyDown={onKey} sx={overlayInput} />
@@ -182,7 +193,7 @@ function EditLabelUnit({ label, unit, canEdit, onCommit }: { label: string; unit
           <InputBase value={u} onChange={(e) => setU(e.target.value)} placeholder="단위" onKeyDown={onKey} sx={overlayInput} />
         </Box>
         <Box component="span" sx={{ fontSize: 10, color: 'text.disabled' }}>]</Box>
-        <FloatSaveCancel anchor={anchorEl} onSave={commit} onCancel={() => setEditing(false)} />
+        <EditActions onSave={commit} onCancel={() => setEditing(false)} />
       </Box>
     )
   }

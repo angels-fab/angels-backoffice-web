@@ -131,7 +131,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const [wOverride, setWOverride] = useState<Map<number, number>>(new Map()) // 리사이즈 중·저장 대기 낙관값(인코딩 값)
   const widthValOf = (m: DemoChatMsg) => wOverride.get(m.id) ?? (m.width || 1)
   const onWidthRef = useRef(onWidth); onWidthRef.current = onWidth
-  const resizing = useRef<null | { id: number; pid: number; startX: number; startVal: number; preview: number; livePx: number; snapped: boolean; dir: 1 | -1 }>(null)
+  const resizing = useRef<null | { id: number; pid: number; startX: number; startVal: number; preview: number; livePx: number; desiredPx: number; snapped: boolean; dir: 1 | -1 }>(null)
   const resizeCleanup = useRef<(() => void) | null>(null)
   useEffect(() => () => { resizeCleanup.current?.() }, []) // 언마운트 시 리스너·커서 정리
   // 서버 데이터가 낙관값을 따라잡으면 오버라이드 해제(리사이즈 중인 카드는 건드리지 않음)
@@ -168,22 +168,27 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     const SNAP = 36 // 1·2열 자동맞춤 반경(px)
     const startVal = widthValOf(m)
     const startPx = cell.getBoundingClientRect().width
-    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startVal, preview: areaCatOf(startVal), livePx: startPx, snapped: true, dir }
+    const startSpan2 = decodeCardWidth(startVal).span === 2
+    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startVal, preview: areaCatOf(startVal), livePx: startPx, desiredPx: startPx, snapped: true, dir }
     document.body.style.cursor = 'col-resize'
     cell.style.zIndex = '5' // 실시간 확장 중 이웃 카드 위로
     cell.style.justifySelf = dir === -1 ? 'end' : 'start' // 잡은 반대쪽 엣지 고정
     const clearCellStyle = () => { cell.style.transition = ''; cell.style.width = ''; cell.style.zIndex = ''; cell.style.justifySelf = '' }
-    // live px → 인코딩 값(스냅존 = 1·2·3, 사이 = 자유폭 %)
-    const encodeLive = (live: number): number => {
+    // 1열 확정 시 어느 열인가 — 2열류에서 줄였으면 핸들 반대쪽 열. 1열 카드는 '최소폭 넘어 안쪽으로 50px+ 슬라이드'해야
+    // 반대 열로 이동(왼 핸들을 오른쪽으로 계속 끌면 카드가 우측 열로), 살짝 움직인 건 제자리 유지.
+    const oneColVal = (desired: number): number => (startSpan2 || desired < oneCol - 50) ? (dir === -1 ? 3 : 1) : startVal
+    // live px → 인코딩 값(스냅존 = 1열/2열, 사이 = 자유폭 %)
+    const encodeLive = (live: number, desired: number): number => {
       if (live >= full - SNAP) return 2
-      if (live <= oneCol + SNAP) return dir === -1 ? 3 : 1
+      if (live <= oneCol + SNAP) return oneColVal(desired)
       const pct = Math.max(50, Math.min(100, Math.round((live / full) * 100)))
       return (dir === -1 ? 2000 : 1000) + pct
     }
     const move = (ev: PointerEvent) => {
       const r = resizing.current
       if (!r || ev.pointerId !== r.pid) return
-      const raw = Math.max(oneCol * 0.7, Math.min(full, startPx + (ev.clientX - r.startX) * r.dir))
+      const desired = startPx + (ev.clientX - r.startX) * r.dir // 클램프 전 원시 폭(안쪽 초과 = 슬라이드 판정)
+      const raw = Math.max(oneCol * 0.7, Math.min(full, desired))
       // 자석 스냅 — 1열·2열 폭 근처(±SNAP)면 그 폭에 딱 붙어 "이러면 1열/2열이 되겠구나"가 놓기 전에 보임
       const live = Math.abs(raw - oneCol) < SNAP ? oneCol : Math.abs(raw - full) < SNAP ? full : raw
       const snapped = live !== raw
@@ -192,10 +197,11 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
         window.setTimeout(() => { if (resizing.current === r) cell.style.transition = '' }, 130)
         r.snapped = snapped
       }
+      r.desiredPx = desired
       r.livePx = live
       cell.style.width = `${live}px`
       // 그리드 자리(영역) 미리보기만 상태로 — 자유폭의 미세 % 변화는 인라인 style이 담당(리렌더 없음)
-      const cat = live > oneCol + SNAP ? 2 : (r.dir === -1 ? 3 : 1)
+      const cat = live > oneCol + SNAP ? 2 : areaCatOf(oneColVal(desired))
       if (cat !== r.preview) { r.preview = cat; setWOverride((prev) => new Map(prev).set(r.id, cat)) }
     }
     const cleanup = () => {
@@ -212,8 +218,9 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
       const r = resizing.current
       resizing.current = null
       if (!r) return
-      const moved = Math.abs(r.livePx - startPx) >= 8
-      const finalVal = commit && moved ? encodeLive(r.livePx) : r.startVal
+      const slide = !startSpan2 && r.desiredPx < oneCol - 50 // 1열 카드를 안쪽으로 초과 드래그 = 반대 열로 이동
+      const moved = Math.abs(r.livePx - startPx) >= 8 || slide
+      const finalVal = commit && moved ? encodeLive(r.livePx, r.desiredPx) : r.startVal
       const cw = decodeCardWidth(finalVal)
       const settlePx = cw.pct != null ? (full * cw.pct) / 100 : cw.span === 2 ? full : oneCol
       // 놓으면 목표 폭으로 부드럽게 정착 → 정착 후 인라인 정리(그리드/sx가 이어받음)
@@ -467,7 +474,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
         }
         const own = ownOf(m)
         return (
-          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ position: 'relative', ...wSx, minWidth: 0, ...(canDrag ? { cursor: 'grab' } : {}) }}
+          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ position: 'relative', ...wSx, minWidth: 0, ...(canDrag ? { cursor: 'grab' } : {}), '&:hover .rz': { opacity: 0.65 } }}
             onPointerDown={canDrag ? (e) => onCellPointerDown(e, id) : undefined}
             onDoubleClick={own && editId == null ? () => { if (Date.now() >= suppressClickUntil.current) startEdit(m) } : undefined}>
             {editId === id ? (
@@ -476,11 +483,12 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
             ) : (
               <MemoCard m={m} own={own} onDelete={() => onDelete(id)} />
             )}
-            {/* 좌/우 엣지 리사이즈 핸들 — 잡고 끌면 창처럼 폭이 실시간으로 따라오고, 놓으면 1↔2열 스냅(팀원, PC 전용) */}
+            {/* 좌/우 엣지 리사이즈 핸들 — 카드에 호버하면 은은히 보이고, 핸들에 올리면 선명(잘 보이고 잘 잡히게 12px 히트존).
+                잡고 끌면 창처럼 실시간, 1·2열 근처 자석 스냅, 1열 카드를 안쪽으로 계속 끌면 반대 열로 이동(팀원, PC 전용) */}
             {canPost && editId !== id && ([-1, 1] as const).map((dir) => (
-              <Box key={dir} data-resize role="separator" aria-label="카드 폭 조절 (1↔2열)"
+              <Box key={dir} data-resize className="rz" role="separator" aria-label="카드 폭 조절"
                 onPointerDown={(ev) => startResize(ev, id, dir)} onDoubleClick={(ev) => ev.stopPropagation()}
-                sx={{ position: 'absolute', top: 8, bottom: 8, ...(dir === 1 ? { right: -5 } : { left: -5 }), width: 10, cursor: 'col-resize', zIndex: 2, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity .15s', '&:hover': { opacity: 1 }, '&::before': { content: '""', width: '2px', height: '38%', minHeight: 16, maxHeight: 26, borderRadius: '2px', bgcolor: 'rgba(255,255,255,.35)' } }} />
+                sx={{ position: 'absolute', top: 6, bottom: 6, ...(dir === 1 ? { right: -6 } : { left: -6 }), width: 12, cursor: 'col-resize', zIndex: 2, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity .15s', '&:hover': { opacity: '1 !important' }, '&::before': { content: '""', width: '3px', height: '46%', minHeight: 18, maxHeight: 34, borderRadius: '2px', bgcolor: 'rgba(255,255,255,.55)', transition: 'background-color .15s' }, '&:hover::before': { bgcolor: 'rgba(255,255,255,.95)' } }} />
             ))}
           </Box>
         )
