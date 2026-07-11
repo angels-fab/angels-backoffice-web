@@ -6,7 +6,7 @@ import InputBase from '@mui/material/InputBase'
 import CircularProgress from '@mui/material/CircularProgress'
 import CloseIcon from '@mui/icons-material/Close'
 import AddIcon from '@mui/icons-material/Add'
-import { alpha } from '@mui/material/styles'
+import { alpha, useTheme } from '@mui/material/styles'
 import { MEMBERS, given } from '@/pages/Calendar/members'
 import { RichBodyEditor } from '@/components/richText'
 import { RichBodyView } from '@/utils/richBody'
@@ -126,12 +126,14 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
 
   // ── 카드 폭 — 좌/우 엣지 드래그. 잡은 반대쪽 엣지가 고정(창 리사이즈 감각):
   //   오른쪽 핸들 = 왼쪽 고정 / 왼쪽 핸들 = 오른쪽 고정(2열을 왼쪽에서 좁히면 우측 1열이 됨).
-  //   1·2열 폭 ±SNAP 안 = 자석처럼 그 폭에 딱 붙음(놓기 전에 결과가 보임), 사이 구간 = 자유 폭(% 저장).
-  //   인코딩(decodeCardWidth): 1=1열좌 · 2=2열 · 3=1열우 · 1050+pct=자유폭 좌고정 · 2050+pct=자유폭 우고정
+  //   드래그 중 실시간 추적 + 1·2열 ±SNAP 자석, 결과는 1/2열뿐(MID 갈림점) — 점선 박스가 놓았을 때 영역을 미리보기.
+  //   최소폭 아래로 누르면 고무줄 저항, BOUNCE_AT만큼 눌리면 드래그 중 즉시 튕겨 복귀. 1열 바깥 엣지는 확장 불가.
+  //   인코딩(decodeCardWidth): 1=1열좌 · 2=2열 · 3=1열우 (1050+·2050+ 자유폭 값은 레거시 디코드 전용)
+  const theme = useTheme()
   const [wOverride, setWOverride] = useState<Map<number, number>>(new Map()) // 리사이즈 중·저장 대기 낙관값(인코딩 값)
   const widthValOf = (m: DemoChatMsg) => wOverride.get(m.id) ?? (m.width || 1)
   const onWidthRef = useRef(onWidth); onWidthRef.current = onWidth
-  const resizing = useRef<null | { id: number; pid: number; startX: number; startVal: number; preview: number; livePx: number; desiredPx: number; snapped: boolean; dir: 1 | -1 }>(null)
+  const resizing = useRef<null | { id: number; pid: number; startX: number; startVal: number; preview: number; livePx: number; desiredPx: number; snapped: boolean; bounced: boolean; dir: 1 | -1 }>(null)
   const resizeCleanup = useRef<(() => void) | null>(null)
   useEffect(() => () => { resizeCleanup.current?.() }, []) // 언마운트 시 리스너·커서 정리
   // 서버 데이터가 낙관값을 따라잡으면 오버라이드 해제(리사이즈 중인 카드는 건드리지 않음)
@@ -167,42 +169,85 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     const full = grid.clientWidth
     const SNAP = 36 // 1·2열 자석 스냅 반경(px)
     const MID = (oneCol + full) / 2 // 놓았을 때 1열/2열 갈림점
+    const SQUISH_RESIST = 0.35 // 최소폭 아래 고무줄 저항 — 이 비율만큼만 눌림
+    const BOUNCE_AT = 12       // 이만큼(px) 눌리면 놓기 전이라도 즉시 튕겨 복귀
     const startVal = widthValOf(m)
     const startPx = cell.getBoundingClientRect().width
-    const startSpan2 = decodeCardWidth(startVal).span === 2
-    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startVal, preview: areaCatOf(startVal), livePx: startPx, desiredPx: startPx, snapped: true, dir }
+    const startCw = decodeCardWidth(startVal)
+    const startSpan2 = startCw.span === 2
+    // 1열 카드의 바깥쪽 엣지(보드 가장자리) — 밖으로는 못 늘림(1↔2열 전환은 안쪽 핸들 몫)
+    const outerEdge = !startSpan2 && (startCw.right ? dir === 1 : dir === -1)
+    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startVal, preview: areaCatOf(startVal), livePx: startPx, desiredPx: startPx, snapped: true, bounced: false, dir }
     document.body.style.cursor = 'col-resize'
+    cell.style.width = `${startPx}px` // justifySelf로 stretch가 풀리는 순간 내용물 폭으로 줄어드는 것 방지
     cell.style.zIndex = '5' // 실시간 확장 중 이웃 카드 위로
     cell.style.justifySelf = dir === -1 ? 'end' : 'start' // 잡은 반대쪽 엣지 고정
     const clearCellStyle = () => { cell.style.transition = ''; cell.style.width = ''; cell.style.zIndex = ''; cell.style.justifySelf = '' }
+    // 결과 미리보기 점선 박스(카드 드래그 placeholder와 동일 룩) — 놓았을 때 채워질 그리드 영역 표시
+    const gc = theme.palette.primary.main
+    const ghost = document.createElement('div')
+    ghost.style.cssText = `position:absolute;pointer-events:none;box-sizing:border-box;border:2px dashed ${alpha(gc, 0.6)};background:${alpha(gc, 0.06)};border-radius:8px;opacity:0`
+    grid.appendChild(ghost)
+    const placeGhost = () => {
+      const r = resizing.current
+      if (!r) return
+      ghost.style.left = `${r.preview === 3 ? oneCol + CARD_GAP : 0}px`
+      ghost.style.top = `${cell.offsetTop}px`
+      ghost.style.width = `${r.preview === 2 ? full : oneCol}px`
+      ghost.style.height = `${cell.offsetHeight}px`
+    }
+    placeGhost()
+    ghost.getBoundingClientRect() // 강제 리플로우로 초기 위치·투명 상태 확정 — 등장 시 미끄러져 들어오지 않게
+    ghost.style.transition = 'left .18s cubic-bezier(0.22, 1, 0.36, 1), width .18s cubic-bezier(0.22, 1, 0.36, 1), top .15s ease, height .15s ease, opacity .15s ease'
+    ghost.style.opacity = '1'
     // 1열 확정 시 어느 열인가 — 2열에서 줄인 경우만 핸들 반대쪽 열(왼 핸들=우측·오른 핸들=좌측).
-    // 1열 카드는 항상 자기 열 유지(열 이동은 핸들이 아니라 카드 드래그로) — 안쪽 초과 드래그는 고무줄로 튕겨냄.
+    // 1열 카드는 항상 자기 열 유지(열 이동은 핸들이 아니라 카드 드래그로).
     const oneColVal = (): number => (startSpan2 ? (dir === -1 ? 3 : 1) : startVal)
     // 결과는 1열/2열뿐 — 갈림점(MID) 기준
     const encodeLive = (desired: number): number => (desired > MID ? 2 : oneColVal())
     const move = (ev: PointerEvent) => {
       const r = resizing.current
       if (!r || ev.pointerId !== r.pid) return
-      const desired = startPx + (ev.clientX - r.startX) * r.dir // 저항 전 원시 폭
+      const raw = startPx + (ev.clientX - r.startX) * r.dir // 저항 전 원시 폭
+      const desired = outerEdge ? Math.min(raw, oneCol) : raw
+      r.desiredPx = desired
+      // 튕겨진 뒤에는 1열 폭 고정 — 포인터가 엣지 안쪽으로 되돌아오면 재무장하고 추적 재개
+      if (r.bounced) {
+        if (desired >= oneCol) { r.bounced = false; cell.style.transition = '' }
+        else { placeGhost(); return }
+      }
       let live: number
       if (desired < oneCol) {
-        // 고무줄 저항 — 최소폭(1열) 아래로 당기면 살짝만 눌리고(최대 12%), 놓으면 원위치로 튕겨 돌아감
-        live = oneCol - Math.min((oneCol - desired) * 0.25, oneCol * 0.12)
+        const squish = (oneCol - desired) * SQUISH_RESIST
+        if (squish >= BOUNCE_AT) {
+          // 일정 폭 이하로 좁아지는 순간(드래그 중) 스프링 이징으로 튕겨 원위치 — 놓을 때가 아니라 지금
+          r.bounced = true
+          r.livePx = oneCol
+          cell.style.transition = 'width .3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+          cell.style.width = `${oneCol}px`
+          placeGhost()
+          return
+        }
+        live = oneCol - squish // 고무줄 저항 — 살짝만 눌림
       } else if (desired - oneCol < SNAP) live = oneCol // 1열 자석
       else if (full - desired < SNAP) live = full       // 2열 자석
       else live = Math.min(full, desired)               // 사이 구간 = 실시간 미세 추적(결과는 놓을 때 가까운 열)
       const snapped = live !== Math.min(full, Math.max(oneCol * 0.7, desired))
       if (snapped !== r.snapped) {
         cell.style.transition = 'width .12s cubic-bezier(0.22, 1, 0.36, 1)' // 스냅 진입/이탈만 부드럽게
-        window.setTimeout(() => { if (resizing.current === r) cell.style.transition = '' }, 130)
+        window.setTimeout(() => { if (resizing.current === r && !r.bounced) cell.style.transition = '' }, 130)
         r.snapped = snapped
       }
-      r.desiredPx = desired
       r.livePx = live
       cell.style.width = `${live}px`
-      // 그리드 자리(영역) 미리보기 — 갈림점(MID) 기준이라 미리보기 = 놓았을 때 결과
+      // 그리드 자리(영역) — 갈림점(MID) 기준이라 점선 박스 = 놓았을 때 결과
       const cat = desired > MID ? 2 : areaCatOf(oneColVal())
-      if (cat !== r.preview) { r.preview = cat; setWOverride((prev) => new Map(prev).set(r.id, cat)) }
+      if (cat !== r.preview) {
+        r.preview = cat
+        setWOverride((prev) => new Map(prev).set(r.id, cat))
+        window.setTimeout(() => { if (resizing.current === r) placeGhost() }, 0) // 영역 리플로우 반영 후 재배치
+      }
+      placeGhost()
     }
     const cleanup = () => {
       document.removeEventListener('pointermove', move)
@@ -210,6 +255,8 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
       document.removeEventListener('pointercancel', cancel)
       document.removeEventListener('keydown', key)
       document.body.style.cursor = ''
+      ghost.style.opacity = '0' // 점선 박스는 페이드 아웃 후 제거
+      window.setTimeout(() => ghost.remove(), 220)
       resizeCleanup.current = null
     }
     // commit=true(pointerup)만 저장, 취소(Esc·pointercancel)·8px 미만 이동은 시작 값 복원. 사이드이펙트는 setState 밖에서.
@@ -222,12 +269,12 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
       const finalVal = commit && moved ? encodeLive(r.desiredPx) : r.startVal
       const cw = decodeCardWidth(finalVal)
       const settlePx = cw.span === 2 ? full : oneCol
-      // 놓으면 목표 폭으로 정착. 고무줄로 눌려 있었으면(최소폭 미만) 오버슛 이징으로 '튕겨' 원위치 복귀
+      // 놓으면 목표 폭으로 정착 — 잡았던 앵커(justifySelf)를 그대로 유지해 조작하던 그 엣지가 움직이게
+      // (앵커를 최종값으로 뒤집으면 반대편 엣지가 튕기는 오동작. 정착 폭 = 영역 폭이라 앵커 유지로 항상 정확)
       const squished = r.livePx < oneCol - 1
       cell.style.transition = squished
-        ? 'width .3s cubic-bezier(0.34, 1.56, 0.64, 1)' // 튕김(뒤로 살짝 넘었다 돌아오는 스프링)
+        ? 'width .3s cubic-bezier(0.34, 1.56, 0.64, 1)' // 눌린 채 놓으면 스프링으로 복귀
         : 'width .16s cubic-bezier(0.22, 1, 0.36, 1)'
-      cell.style.justifySelf = cw.right ? 'end' : 'start'
       cell.style.width = `${settlePx}px`
       window.setTimeout(clearCellStyle, squished ? 330 : 200)
       const server = memosRef.current.find((mm) => mm.id === r.id)?.width || 1
@@ -479,7 +526,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
 
   // dense = 우측 정렬 카드가 만든 왼쪽 빈 칸을 뒤 카드가 되채움(1열 카드 좌/우 나란히 배치 가능)
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gridAutoFlow: 'row dense', gap: `${CARD_GAP}px`, alignItems: 'stretch', ...(dragId != null ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}) }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gridAutoFlow: 'row dense', gap: `${CARD_GAP}px`, alignItems: 'stretch', position: 'relative', ...(dragId != null ? { userSelect: 'none', WebkitUserSelect: 'none' } : {}) }}>
       {displayIds.map((id) => {
         const m = memoById.get(id)
         if (!m) return null
@@ -507,7 +554,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
               <MemoCard m={m} own={own} onDelete={() => onDelete(id)} />
             )}
             {/* 좌/우 엣지 리사이즈 그립 — 그 엣지에 다가가면(한쪽만) 카드 모서리 라운드를 감싸는 엣지 글로우가 떠오름.
-                잡고 끌면 창처럼 실시간, 1·2열 근처 자석 스냅, 1열 카드를 안쪽으로 계속 끌면 반대 열로 이동(팀원, PC 전용) */}
+                잡고 끌면 창처럼 실시간 + 점선 박스가 1/2열 결과 미리보기, 최소폭 아래로 누르면 고무줄 튕김(팀원, PC 전용) */}
             {canPost && editId !== id && ([-1, 1] as const).map((dir) => (
               <Box key={dir} data-resize role="separator" aria-label="카드 폭 조절"
                 onPointerDown={(ev) => startResize(ev, id, dir)} onDoubleClick={(ev) => ev.stopPropagation()}
