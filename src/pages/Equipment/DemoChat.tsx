@@ -165,7 +165,8 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     if (!m || !cell || !grid) return
     const oneCol = (grid.clientWidth - CARD_GAP) / 2
     const full = grid.clientWidth
-    const SNAP = 36 // 1·2열 자동맞춤 반경(px)
+    const SNAP = 36 // 1·2열 자석 스냅 반경(px)
+    const MID = (oneCol + full) / 2 // 놓았을 때 1열/2열 갈림점
     const startVal = widthValOf(m)
     const startPx = cell.getBoundingClientRect().width
     const startSpan2 = decodeCardWidth(startVal).span === 2
@@ -174,34 +175,33 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     cell.style.zIndex = '5' // 실시간 확장 중 이웃 카드 위로
     cell.style.justifySelf = dir === -1 ? 'end' : 'start' // 잡은 반대쪽 엣지 고정
     const clearCellStyle = () => { cell.style.transition = ''; cell.style.width = ''; cell.style.zIndex = ''; cell.style.justifySelf = '' }
-    // 1열 확정 시 어느 열인가 — 2열류에서 줄였으면 핸들 반대쪽 열. 1열 카드는 '최소폭 넘어 안쪽으로 50px+ 슬라이드'해야
-    // 반대 열로 이동(왼 핸들을 오른쪽으로 계속 끌면 카드가 우측 열로), 살짝 움직인 건 제자리 유지.
-    const oneColVal = (desired: number): number => (startSpan2 || desired < oneCol - 50) ? (dir === -1 ? 3 : 1) : startVal
-    // live px → 인코딩 값(스냅존 = 1열/2열, 사이 = 자유폭 %)
-    const encodeLive = (live: number, desired: number): number => {
-      if (live >= full - SNAP) return 2
-      if (live <= oneCol + SNAP) return oneColVal(desired)
-      const pct = Math.max(50, Math.min(100, Math.round((live / full) * 100)))
-      return (dir === -1 ? 2000 : 1000) + pct
-    }
+    // 1열 확정 시 어느 열인가 — 2열에서 줄인 경우만 핸들 반대쪽 열(왼 핸들=우측·오른 핸들=좌측).
+    // 1열 카드는 항상 자기 열 유지(열 이동은 핸들이 아니라 카드 드래그로) — 안쪽 초과 드래그는 고무줄로 튕겨냄.
+    const oneColVal = (): number => (startSpan2 ? (dir === -1 ? 3 : 1) : startVal)
+    // 결과는 1열/2열뿐 — 갈림점(MID) 기준
+    const encodeLive = (desired: number): number => (desired > MID ? 2 : oneColVal())
     const move = (ev: PointerEvent) => {
       const r = resizing.current
       if (!r || ev.pointerId !== r.pid) return
-      const desired = startPx + (ev.clientX - r.startX) * r.dir // 클램프 전 원시 폭(안쪽 초과 = 슬라이드 판정)
-      const raw = Math.max(oneCol * 0.7, Math.min(full, desired))
-      // 자석 스냅 — 1열·2열 폭 근처(±SNAP)면 그 폭에 딱 붙어 "이러면 1열/2열이 되겠구나"가 놓기 전에 보임
-      const live = Math.abs(raw - oneCol) < SNAP ? oneCol : Math.abs(raw - full) < SNAP ? full : raw
-      const snapped = live !== raw
+      const desired = startPx + (ev.clientX - r.startX) * r.dir // 저항 전 원시 폭
+      let live: number
+      if (desired < oneCol) {
+        // 고무줄 저항 — 최소폭(1열) 아래로 당기면 살짝만 눌리고(최대 12%), 놓으면 원위치로 튕겨 돌아감
+        live = oneCol - Math.min((oneCol - desired) * 0.25, oneCol * 0.12)
+      } else if (desired - oneCol < SNAP) live = oneCol // 1열 자석
+      else if (full - desired < SNAP) live = full       // 2열 자석
+      else live = Math.min(full, desired)               // 사이 구간 = 실시간 미세 추적(결과는 놓을 때 가까운 열)
+      const snapped = live !== Math.min(full, Math.max(oneCol * 0.7, desired))
       if (snapped !== r.snapped) {
-        cell.style.transition = 'width .12s cubic-bezier(0.22, 1, 0.36, 1)' // 스냅 진입/이탈만 부드럽게, 자유 구간은 즉시 추적
+        cell.style.transition = 'width .12s cubic-bezier(0.22, 1, 0.36, 1)' // 스냅 진입/이탈만 부드럽게
         window.setTimeout(() => { if (resizing.current === r) cell.style.transition = '' }, 130)
         r.snapped = snapped
       }
       r.desiredPx = desired
       r.livePx = live
       cell.style.width = `${live}px`
-      // 그리드 자리(영역) 미리보기만 상태로 — 자유폭의 미세 % 변화는 인라인 style이 담당(리렌더 없음)
-      const cat = live > oneCol + SNAP ? 2 : areaCatOf(oneColVal(desired))
+      // 그리드 자리(영역) 미리보기 — 갈림점(MID) 기준이라 미리보기 = 놓았을 때 결과
+      const cat = desired > MID ? 2 : areaCatOf(oneColVal())
       if (cat !== r.preview) { r.preview = cat; setWOverride((prev) => new Map(prev).set(r.id, cat)) }
     }
     const cleanup = () => {
@@ -218,16 +218,18 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
       const r = resizing.current
       resizing.current = null
       if (!r) return
-      const slide = !startSpan2 && r.desiredPx < oneCol - 50 // 1열 카드를 안쪽으로 초과 드래그 = 반대 열로 이동
-      const moved = Math.abs(r.livePx - startPx) >= 8 || slide
-      const finalVal = commit && moved ? encodeLive(r.livePx, r.desiredPx) : r.startVal
+      const moved = Math.abs(r.livePx - startPx) >= 8
+      const finalVal = commit && moved ? encodeLive(r.desiredPx) : r.startVal
       const cw = decodeCardWidth(finalVal)
-      const settlePx = cw.pct != null ? (full * cw.pct) / 100 : cw.span === 2 ? full : oneCol
-      // 놓으면 목표 폭으로 부드럽게 정착 → 정착 후 인라인 정리(그리드/sx가 이어받음)
-      cell.style.transition = 'width .16s cubic-bezier(0.22, 1, 0.36, 1)'
+      const settlePx = cw.span === 2 ? full : oneCol
+      // 놓으면 목표 폭으로 정착. 고무줄로 눌려 있었으면(최소폭 미만) 오버슛 이징으로 '튕겨' 원위치 복귀
+      const squished = r.livePx < oneCol - 1
+      cell.style.transition = squished
+        ? 'width .3s cubic-bezier(0.34, 1.56, 0.64, 1)' // 튕김(뒤로 살짝 넘었다 돌아오는 스프링)
+        : 'width .16s cubic-bezier(0.22, 1, 0.36, 1)'
       cell.style.justifySelf = cw.right ? 'end' : 'start'
       cell.style.width = `${settlePx}px`
-      window.setTimeout(clearCellStyle, 200)
+      window.setTimeout(clearCellStyle, squished ? 330 : 200)
       const server = memosRef.current.find((mm) => mm.id === r.id)?.width || 1
       setWOverride((prev) => {
         const n = new Map(prev)
@@ -377,7 +379,8 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
       const s = slots[row.idxs[0]]
       return y < s.top - dyScroll + s.height / 2 ? row.idxs[0] : row.idxs[0] + 1
     }
-    for (const i of row.idxs) { if (x < slots[i].left + slots[i].width / 2) return i }
+    // 앞삽입 경계 = 슬롯의 75% 지점 — 슬롯 위에 얹으면 대체로 '그 앞'(같은 행 좌우 스왑이 확실히 걸리게)
+    for (const i of row.idxs) { if (x < slots[i].left + slots[i].width * 0.75) return i }
     return row.idxs[row.idxs.length - 1] + 1
   }
 
@@ -517,15 +520,15 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
         )
       })}
 
-      {/* 작성/추가 = 다음 카드가 생길 자리(1열 좁은 너비 기본). itemRefs 등록 = 드래그 중 FLIP으로 함께 이동 */}
+      {/* 작성/추가 = 맨 아래 전폭 얇은 바 — 전폭(span 2)이라 dense가 1열 빈 칸으로 끌어오지 못함(카드 배치 방해 없음) */}
       {canPost && (
-        <Box ref={setItemRef(ADD_KEY)} sx={{ minWidth: 0 }}>
+        <Box ref={setItemRef(ADD_KEY)} sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
           {adding ? (
             <ComposeCard accent={myColor} title={title} body={draft} busy={busy} saveLabel="저장"
               onTitle={setTitle} onBody={setDraft} onCancel={() => { setAdding(false); setTitle(''); setDraft('') }} onSave={() => void save()} />
           ) : (
             <Box role="button" tabIndex={0} onClick={() => setAdding(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdding(true) } }}
-              sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 44, height: '100%', border: `1px dashed ${th.palette.divider}`, borderRadius: '10px', color: 'text.disabled', cursor: 'pointer', fontSize: 12, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
+              sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 36, border: `1px dashed ${th.palette.divider}`, borderRadius: '10px', color: 'text.disabled', cursor: 'pointer', fontSize: 12, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
               <AddIcon sx={{ fontSize: 15 }} /> 코멘트 추가
             </Box>
           )}
