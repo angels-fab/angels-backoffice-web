@@ -10,7 +10,7 @@ import { alpha } from '@mui/material/styles'
 import { MEMBERS, given } from '@/pages/Calendar/members'
 import { RichBodyEditor } from '@/components/richText'
 import { RichBodyView } from '@/utils/richBody'
-import type { DemoChatMsg } from '@/api/demo'
+import { decodeCardWidth, type DemoChatMsg } from '@/api/demo'
 
 /** 카드 날짜 — MM.DD (KST 고정, 다른 포매터들과 동일 관례). ko-KR "07. 08." → "07.08" */
 const fmtDay = (iso: string) => { try { return new Date(iso).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit' }).replace(/\s/g, '').replace(/\.$/, '') } catch { return '' } }
@@ -124,11 +124,14 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
   const memoById = new Map(orderedMemos.map((m) => [m.id, m]))
   const ownOf = (m: DemoChatMsg) => canModerate || (!!user && m.author === user)
 
-  // ── 카드 폭 1↔2열 — 오른쪽 엣지 드래그(스냅). 기본 1열, 부득이하게 넓어야 할 카드만 2열 ──
-  const [wOverride, setWOverride] = useState<Map<number, number>>(new Map()) // 리사이즈 중·저장 대기 낙관값
-  const widthOf = (m: DemoChatMsg) => Math.min(2, Math.max(1, wOverride.get(m.id) ?? (m.width || 1)))
+  // ── 카드 폭 — 좌/우 엣지 드래그. 잡은 반대쪽 엣지가 고정(창 리사이즈 감각):
+  //   오른쪽 핸들 = 왼쪽 고정 / 왼쪽 핸들 = 오른쪽 고정(2열을 왼쪽에서 좁히면 우측 1열이 됨).
+  //   1·2열 폭 ±SNAP 안 = 자석처럼 그 폭에 딱 붙음(놓기 전에 결과가 보임), 사이 구간 = 자유 폭(% 저장).
+  //   인코딩(decodeCardWidth): 1=1열좌 · 2=2열 · 3=1열우 · 1050+pct=자유폭 좌고정 · 2050+pct=자유폭 우고정
+  const [wOverride, setWOverride] = useState<Map<number, number>>(new Map()) // 리사이즈 중·저장 대기 낙관값(인코딩 값)
+  const widthValOf = (m: DemoChatMsg) => wOverride.get(m.id) ?? (m.width || 1)
   const onWidthRef = useRef(onWidth); onWidthRef.current = onWidth
-  const resizing = useRef<null | { id: number; pid: number; startX: number; startW: number; last: number; dir: 1 | -1 }>(null)
+  const resizing = useRef<null | { id: number; pid: number; startX: number; startVal: number; preview: number; livePx: number; snapped: boolean; dir: 1 | -1 }>(null)
   const resizeCleanup = useRef<(() => void) | null>(null)
   useEffect(() => () => { resizeCleanup.current?.() }, []) // 언마운트 시 리스너·커서 정리
   // 서버 데이터가 낙관값을 따라잡으면 오버라이드 해제(리사이즈 중인 카드는 건드리지 않음)
@@ -140,7 +143,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
       memos.forEach((m) => {
         if (resizing.current?.id === m.id) return
         const ov = next.get(m.id)
-        if (ov !== undefined && Math.min(2, Math.max(1, m.width || 1)) === ov) { next.delete(m.id); changed = true }
+        if (ov !== undefined && (m.width || 1) === ov) { next.delete(m.id); changed = true }
       })
       return changed ? next : prev
     })
@@ -151,6 +154,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     const t = window.setTimeout(() => { if (!resizing.current) setWOverride(new Map()) }, 6000)
     return () => window.clearTimeout(t)
   }, [wOverride, memos])
+  const areaCatOf = (val: number) => { const c = decodeCardWidth(val); return c.span === 2 ? 2 : c.right ? 3 : 1 }
   const startResize = (e: React.PointerEvent, id: number, dir: 1 | -1) => {
     e.stopPropagation(); e.preventDefault()
     if (e.pointerType === 'touch') return
@@ -161,20 +165,38 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     if (!m || !cell || !grid) return
     const oneCol = (grid.clientWidth - CARD_GAP) / 2
     const full = grid.clientWidth
-    const startW = widthOf(m)
+    const SNAP = 36 // 1·2열 자동맞춤 반경(px)
+    const startVal = widthValOf(m)
     const startPx = cell.getBoundingClientRect().width
-    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startW, last: startW, dir }
+    resizing.current = { id, pid: e.pointerId, startX: e.clientX, startVal, preview: areaCatOf(startVal), livePx: startPx, snapped: true, dir }
     document.body.style.cursor = 'col-resize'
     cell.style.zIndex = '5' // 실시간 확장 중 이웃 카드 위로
-    const clearCellStyle = () => { cell.style.transition = ''; cell.style.width = ''; cell.style.zIndex = '' }
+    cell.style.justifySelf = dir === -1 ? 'end' : 'start' // 잡은 반대쪽 엣지 고정
+    const clearCellStyle = () => { cell.style.transition = ''; cell.style.width = ''; cell.style.zIndex = ''; cell.style.justifySelf = '' }
+    // live px → 인코딩 값(스냅존 = 1·2·3, 사이 = 자유폭 %)
+    const encodeLive = (live: number): number => {
+      if (live >= full - SNAP) return 2
+      if (live <= oneCol + SNAP) return dir === -1 ? 3 : 1
+      const pct = Math.max(50, Math.min(100, Math.round((live / full) * 100)))
+      return (dir === -1 ? 2000 : 1000) + pct
+    }
     const move = (ev: PointerEvent) => {
       const r = resizing.current
       if (!r || ev.pointerId !== r.pid) return
-      // 창 리사이즈처럼 폭이 포인터를 실시간으로 따라오고(내용도 라이브 리플로우), 중간점을 넘으면 트랙(1↔2열) 전환
-      const live = Math.max(oneCol * 0.55, Math.min(full, startPx + (ev.clientX - r.startX) * r.dir))
+      const raw = Math.max(oneCol * 0.7, Math.min(full, startPx + (ev.clientX - r.startX) * r.dir))
+      // 자석 스냅 — 1열·2열 폭 근처(±SNAP)면 그 폭에 딱 붙어 "이러면 1열/2열이 되겠구나"가 놓기 전에 보임
+      const live = Math.abs(raw - oneCol) < SNAP ? oneCol : Math.abs(raw - full) < SNAP ? full : raw
+      const snapped = live !== raw
+      if (snapped !== r.snapped) {
+        cell.style.transition = 'width .12s cubic-bezier(0.22, 1, 0.36, 1)' // 스냅 진입/이탈만 부드럽게, 자유 구간은 즉시 추적
+        window.setTimeout(() => { if (resizing.current === r) cell.style.transition = '' }, 130)
+        r.snapped = snapped
+      }
+      r.livePx = live
       cell.style.width = `${live}px`
-      const target = live > (oneCol + full) / 2 ? 2 : 1
-      if (target !== r.last) { r.last = target; setWOverride((prev) => new Map(prev).set(r.id, target)) }
+      // 그리드 자리(영역) 미리보기만 상태로 — 자유폭의 미세 % 변화는 인라인 style이 담당(리렌더 없음)
+      const cat = live > oneCol + SNAP ? 2 : (r.dir === -1 ? 3 : 1)
+      if (cat !== r.preview) { r.preview = cat; setWOverride((prev) => new Map(prev).set(r.id, cat)) }
     }
     const cleanup = () => {
       document.removeEventListener('pointermove', move)
@@ -184,25 +206,29 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
       document.body.style.cursor = ''
       resizeCleanup.current = null
     }
-    // commit=true(pointerup)만 저장, 취소(Esc·pointercancel)는 시작 폭으로 복원. 사이드이펙트는 setState 밖에서.
+    // commit=true(pointerup)만 저장, 취소(Esc·pointercancel)·8px 미만 이동은 시작 값 복원. 사이드이펙트는 setState 밖에서.
     const finish = (commit: boolean) => {
       cleanup()
       const r = resizing.current
       resizing.current = null
       if (!r) return
-      const finalSpan = commit ? r.last : r.startW
-      // 놓으면 가까운 열 폭으로 부드럽게 정착 → 정착 후 인라인 스타일 정리(트랙이 이어받음)
+      const moved = Math.abs(r.livePx - startPx) >= 8
+      const finalVal = commit && moved ? encodeLive(r.livePx) : r.startVal
+      const cw = decodeCardWidth(finalVal)
+      const settlePx = cw.pct != null ? (full * cw.pct) / 100 : cw.span === 2 ? full : oneCol
+      // 놓으면 목표 폭으로 부드럽게 정착 → 정착 후 인라인 정리(그리드/sx가 이어받음)
       cell.style.transition = 'width .16s cubic-bezier(0.22, 1, 0.36, 1)'
-      cell.style.width = `${finalSpan === 2 ? full : oneCol}px`
+      cell.style.justifySelf = cw.right ? 'end' : 'start'
+      cell.style.width = `${settlePx}px`
       window.setTimeout(clearCellStyle, 200)
-      const server = Math.min(2, Math.max(1, memosRef.current.find((mm) => mm.id === r.id)?.width || 1))
-      if (commit && finalSpan !== server) { onWidthRef.current(r.id, finalSpan); return } // 저장 — 반영/6s 안전망이 오버라이드 정리
+      const server = memosRef.current.find((mm) => mm.id === r.id)?.width || 1
       setWOverride((prev) => {
         const n = new Map(prev)
-        if (finalSpan !== server) n.set(r.id, finalSpan)
+        if (finalVal !== server) n.set(r.id, finalVal)
         else n.delete(r.id)
         return n
       })
+      if (commit && finalVal !== server) onWidthRef.current(r.id, finalVal) // 저장 — 반영/6s 안전망이 오버라이드 정리
     }
     const up = (ev: PointerEvent) => { if (resizing.current && ev.pointerId !== resizing.current.pid) return; finish(true) }
     const cancel = () => finish(false)
@@ -427,16 +453,21 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
       {displayIds.map((id) => {
         const m = memoById.get(id)
         if (!m) return null
-        const w = widthOf(m)
+        // 폭 인코딩 디코드 → 그리드 자리·정렬·폭: 2열=span 2 / 1열 우측=col 2 명시 / 1열 좌측=auto / 자유폭=span 2 영역 + %폭 + 좌우 고정
+        const cw = decodeCardWidth(widthValOf(m))
+        const wSx = {
+          gridColumn: { xs: 'auto', sm: cw.span === 2 ? 'span 2' : cw.right ? '2' : 'auto' },
+          ...(cw.pct != null ? { justifySelf: { xs: 'stretch', sm: cw.right ? 'end' : 'start' }, width: { xs: '100%', sm: `${cw.pct}%` } } : {}),
+        }
         // 드래그 중인 카드 자리 = 점선 placeholder(그 폭·높이만큼 공간 확보). 카드 본체는 커서 추적 오버레이로 렌더.
         if (dragId === id) {
           return (
-            <Box key={id} aria-hidden sx={(th) => ({ gridColumn: { xs: 'auto', sm: `span ${w}` }, minWidth: 0, minHeight: drag.current?.height ?? 80, border: '2px dashed', borderColor: alpha(th.palette.primary.main, 0.6), bgcolor: alpha(th.palette.primary.main, 0.06), borderRadius: '8px' })} />
+            <Box key={id} aria-hidden sx={(th) => ({ ...wSx, minWidth: 0, minHeight: drag.current?.height ?? 80, border: '2px dashed', borderColor: alpha(th.palette.primary.main, 0.6), bgcolor: alpha(th.palette.primary.main, 0.06), borderRadius: '8px' })} />
           )
         }
         const own = ownOf(m)
         return (
-          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ position: 'relative', gridColumn: { xs: 'auto', sm: `span ${w}` }, minWidth: 0, ...(canDrag ? { cursor: 'grab' } : {}) }}
+          <Box key={id} data-memo-id={id} ref={setItemRef(id)} sx={{ position: 'relative', ...wSx, minWidth: 0, ...(canDrag ? { cursor: 'grab' } : {}) }}
             onPointerDown={canDrag ? (e) => onCellPointerDown(e, id) : undefined}
             onDoubleClick={own && editId == null ? () => { if (Date.now() >= suppressClickUntil.current) startEdit(m) } : undefined}>
             {editId === id ? (

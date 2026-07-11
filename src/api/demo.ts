@@ -29,8 +29,21 @@ export interface DemoRoundRow {
   date: string; place: string; conditions: string; sample: string
   metrics: Record<string, string>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
 }
-/** 코멘트(제목 있는 메모카드) — 장비종류별 보드(순서·너비 1~3열). makers는 구버전 잔존(현재 미사용, 빈 배열) */
+/** 코멘트(제목 있는 메모카드) — 장비종류별 보드(순서·폭). makers는 구버전 잔존(현재 미사용, 빈 배열) */
 export interface DemoChatMsg { id: number; equipment: string; makers: string[]; title: string; body: string; author: string; createdAt: string; sortOrder: number; width: number }
+
+// ── 카드 폭 인코딩(단일 정수, DB demo_chat.width) ──
+//   1 = 1열(좌) · 2 = 2열 · 3 = 1열(우측 정렬)
+//   1050~1100 = 자유 폭, 좌측 고정(pct = 값-1000, 보드 폭 대비 %) · 2050~2100 = 자유 폭, 우측 고정(pct = 값-2000)
+export interface CardWidth { span: 1 | 2; right: boolean; pct: number | null } // pct: 자유 폭 %(null = 열 스냅)
+export function decodeCardWidth(v: number): CardWidth {
+  if (v >= 1050 && v <= 1100) return { span: 2, right: false, pct: v - 1000 }
+  if (v >= 2050 && v <= 2100) return { span: 2, right: true, pct: v - 2000 }
+  if (v === 2) return { span: 2, right: false, pct: null }
+  if (v === 3) return { span: 1, right: true, pct: null }
+  return { span: 1, right: false, pct: null }
+}
+export const isValidCardWidth = (v: number) => (v >= 1 && v <= 3) || (v >= 1050 && v <= 1100) || (v >= 2050 && v <= 2100)
 export interface MetricDefHistory {
   id: number; equipment: string; metricKey: string; action: string
   before: Record<string, unknown> | null; after: Record<string, unknown> | null
@@ -69,7 +82,7 @@ export async function fetchDemoChat(): Promise<DemoChatMsg[]> {
   if (error) fail(error, '메모를 불러오지 못했습니다')
   return ((data || []) as ChatRow[]).map((r) => ({
     id: r.id, equipment: r.equipment, makers: Array.isArray(r.makers) ? r.makers : [], title: r.title || '', body: r.body,
-    author: r.author, createdAt: r.created_at, sortOrder: r.sort_order ?? 0, width: Math.min(3, Math.max(1, r.width || 1)),
+    author: r.author, createdAt: r.created_at, sortOrder: r.sort_order ?? 0, width: isValidCardWidth(r.width || 1) ? (r.width || 1) : 1,
   }))
 }
 /** 지표 정의 변경 이력 — equipment 생략 시 전체(알림 배너용) */
@@ -282,7 +295,7 @@ export async function reorderDemoChat(ids: number[]): Promise<void> {
   const { error } = await withTimeout(supabase.rpc('demo_chat_reorder', { p_ids: ids }), DB_TIMEOUT, '코멘트 순서 변경')
   if (error) throw new Error(error.message || '순서 변경에 실패했습니다')
 }
-/** 코멘트 카드 너비(1~3열) — 팀원 전체 허용(보드 배치 속성) */
+/** 코멘트 카드 폭(인코딩 값 — decodeCardWidth 참조) — 팀원 전체 허용(보드 배치 속성) */
 export async function setDemoChatWidth(id: number, width: number): Promise<void> {
   await ensureSession()
   const { error } = await withTimeout(supabase.rpc('demo_chat_set_width', { p_id: id, p_width: width }), DB_TIMEOUT, '카드 너비 변경')

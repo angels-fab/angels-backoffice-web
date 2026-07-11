@@ -96,9 +96,9 @@ const plusChip = (th: Theme) => ({
  * 인라인 편집 텍스트 — 평소엔 텍스트(또는 display), 호버 시 오른쪽에 연필. 클릭하면 그 항목만 노란 테두리 인풋으로.
  * Enter/blur=저장(변경 시 onCommit), Esc=취소. 헤더·값·샘플·조건 등 공용.
  */
-// 제자리 편집 인풋 — 표시 텍스트와 같은 폰트·크기·자리(박스·배경 없음), 편집 중 표시는 앰버 밑줄만.
-// 저장/취소 버튼은 onMouseDown preventDefault로 인풋 blur 선발생 방지
-const editInputSx = (th: Theme) => ({ font: 'inherit', color: 'inherit', bgcolor: 'transparent', borderBottom: `1px solid ${alpha(th.palette.warning.main, 0.65)}`, borderRadius: 0, p: 0 })
+// 제자리 편집 인풋 — 표시 텍스트와 같은 폰트·크기·자리(레이아웃 무이동)지만 '수정칸'임이 보이게
+// 앰버 틴트 배경 + 안쪽 밑줄(inset boxShadow = 높이 변화 0). 저장/취소는 onMouseDown preventDefault로 blur 선발생 방지
+const editInputSx = (th: Theme) => ({ font: 'inherit', color: 'inherit', bgcolor: alpha(th.palette.warning.main, 0.11), boxShadow: `inset 0 -2px 0 ${alpha(th.palette.warning.main, 0.75)}`, borderRadius: '3px', p: 0 })
 function SaveCancel({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.25 }}>
@@ -133,11 +133,14 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
     )
   }
   return (
-    // 텍스트 클릭 = 바로 수정(연필을 조준할 필요 없음). 연필은 호버 힌트 전용(장식, 클릭 불가·정렬 안 밀림)
-    <Box role={canEdit ? 'button' : undefined} aria-label={canEdit ? '수정' : undefined} onClick={canEdit ? start : undefined}
-      sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', maxWidth: '100%', verticalAlign: 'middle', cursor: canEdit ? 'pointer' : 'default', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.7 : 0 } }}>
+    // 수정 = 연필 클릭. 연필은 텍스트 바로 옆 절대배치(흐름 밖 = 가운데정렬 안 밀림)이고 래퍼와 간극이 없어
+    // 텍스트→연필로 이동해도 호버가 끊기지 않으며(연필도 래퍼의 자식), 연필 위에서도 계속 보인다.
+    <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', maxWidth: '100%', verticalAlign: 'middle', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.8 : 0 } }}>
       <Box component="span" sx={{ minWidth: 0, ...(multiline ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } : {}) }}>{display ?? (text || (canEdit ? placeholder : '-'))}</Box>
-      {canEdit && <Box component="span" className="pen" aria-hidden sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', pl: '2px', display: 'inline-flex', color: 'text.disabled', pointerEvents: 'none' }}><EditIcon sx={{ fontSize: 12 }} /></Box>}
+      {canEdit && <IconButton className="pen" size="small" aria-label="수정" onClick={start}
+        sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', p: '3px', color: 'text.disabled', '&:hover': { color: 'warning.main', opacity: 1 } }}>
+        <EditIcon sx={{ fontSize: 12 }} />
+      </IconButton>}
     </Box>
   )
 }
@@ -184,11 +187,13 @@ function EditLabelUnit({ label, unit, canEdit, onCommit }: { label: string; unit
     )
   }
   return (
-    // 텍스트 클릭 = 바로 수정. 연필은 호버 힌트 전용(장식) — 가운데정렬을 밀지 않음
-    <Box role={canEdit ? 'button' : undefined} aria-label={canEdit ? '지표 수정' : undefined} onClick={canEdit ? start : undefined}
-      sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', maxWidth: '100%', textAlign: 'center', cursor: canEdit ? 'pointer' : 'default', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.7 : 0 } }}>
+    // 수정 = 연필 클릭. 연필은 절대배치(가운데정렬 안 밀림)·간극 0(호버 안 끊김 = 안 숨음)
+    <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', maxWidth: '100%', textAlign: 'center', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.8 : 0 } }}>
       <Box component="span" sx={{ minWidth: 0 }}>{label || (canEdit ? '지표명' : '-')}{unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.4, fontSize: 10 }}>[{unit}]</Box> : null}</Box>
-      {canEdit && <Box component="span" className="pen" aria-hidden sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', pl: '2px', display: 'inline-flex', color: 'text.disabled', pointerEvents: 'none' }}><EditIcon sx={{ fontSize: 12 }} /></Box>}
+      {canEdit && <IconButton className="pen" size="small" aria-label="지표 수정" onClick={start}
+        sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', p: '3px', color: 'text.disabled', '&:hover': { color: 'warning.main', opacity: 1 } }}>
+        <EditIcon sx={{ fontSize: 12 }} />
+      </IconButton>}
     </Box>
   )
 }
