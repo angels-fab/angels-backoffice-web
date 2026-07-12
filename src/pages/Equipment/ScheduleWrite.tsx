@@ -9,6 +9,7 @@ import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import { createSchedule, updateSchedule } from '@/api/eq'
+import { FormField, DateField } from '@/components/ds'
 import { iconSize, radius, typescale } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import type { ScheduleItem } from '@/types'
@@ -126,13 +127,13 @@ export default function ScheduleWrite({ open, onClose, editing, batchCodes, onSa
         </Box>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-          <TextField label="관리번호" size="small" fullWidth value={code} onChange={(e) => setCode(e.target.value)} placeholder="예: PR-001" />
-          <TextField label="진행상태" size="small" fullWidth value={status} onChange={(e) => setStatus(e.target.value)} placeholder="예: 도입예정" />
+          <FormField label="관리번호" value={code} onChange={setCode} placeholder="예: PR-001" />
+          <FormField label="진행상태" value={status} onChange={setStatus} placeholder="예: 도입예정" />
         </Box>
-        <TextField label="장비명" size="small" fullWidth value={name} onChange={(e) => setName(e.target.value)} />
+        <FormField label="장비명" value={name} onChange={setName} />
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-          <TextField label="담당자" size="small" fullWidth value={mgr} onChange={(e) => setMgr(e.target.value)} />
-          <TextField label="시작년월" size="small" fullWidth type="date" value={start} onChange={(e) => setStart(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+          <FormField label="담당자" value={mgr} onChange={setMgr} />
+          <DateField label="시작년월" value={start} onChange={setStart} />
         </Box>
 
         <Box>
@@ -150,8 +151,8 @@ export default function ScheduleWrite({ open, onClose, editing, batchCodes, onSa
         </Box>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-          <TextField label="구분" size="small" fullWidth value={cat} onChange={(e) => setCat(e.target.value)} placeholder="예: 외자/내자" />
-          <TextField label="도입방법" size="small" fullWidth value={method} onChange={(e) => setMethod(e.target.value)} />
+          <FormField label="구분" value={cat} onChange={setCat} placeholder="예: 외자/내자" />
+          <FormField label="도입방법" value={method} onChange={setMethod} />
         </Box>
         <TextField label="도입금액 (원)" size="small" fullWidth type="number" value={price} onChange={(e) => setPrice(e.target.value)} slotProps={{ htmlInput: { min: 0 } }} />
 

@@ -3,7 +3,6 @@ import type { ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Dialog from '@mui/material/Dialog'
@@ -12,7 +11,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import EditIcon from '@mui/icons-material/Edit'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
-import { AppDrawer, StatusChip, LoadingState } from '@/components/ds'
+import { AppDrawer, StatusChip, LoadingState, FormField } from '@/components/ds'
 import { updateEquipment, fetchEqHistory } from '@/api/eq'
 import type { EqHistoryItem } from '@/api/sheets'
 import type { EqGroup, EqStateKey } from '@/types'
@@ -49,7 +48,7 @@ function EditRow({ label, value, onChange, multiline }: { label: string; value: 
   return (
     <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
       <Typography variant="body2" sx={{ width: 76, flexShrink: 0, color: 'text.disabled', pt: 1 }}>{label}</Typography>
-      <TextField value={value} onChange={(e) => onChange(e.target.value)} size="small" fullWidth multiline={multiline} minRows={multiline ? 2 : undefined} sx={{ flex: 1 }} />
+      <FormField variant="modal" value={value} onChange={onChange} fullWidth multiline={multiline} minRows={multiline ? 2 : undefined} sx={{ flex: 1 }} />
     </Box>
   )
 }
@@ -363,7 +362,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
             </Box>
             <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', mt: 0.5 }}>
               <Typography variant="body2" sx={{ width: 64, flexShrink: 0, color: 'text.disabled', pt: 1 }}>사유</Typography>
-              <TextField value={reason} onChange={(e) => setReason(e.target.value)} size="small" fullWidth multiline minRows={2} placeholder="선택 입력" disabled={savingState} sx={{ flex: 1 }} />
+              <FormField variant="modal" value={reason} onChange={setReason} fullWidth multiline minRows={2} placeholder="선택 입력" disabled={savingState} sx={{ flex: 1 }} />
             </Box>
           </Box>
         </DialogContent>

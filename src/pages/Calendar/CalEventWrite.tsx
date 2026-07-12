@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import Box from '@mui/material/Box'
 import Dialog from '@mui/material/Dialog'
-import TextField from '@mui/material/TextField'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
@@ -22,6 +21,7 @@ import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
 import { typescale, iconSize, radius } from '@/theme/tokens'
+import { FormField, DateField, TimeField } from '@/components/ds'
 
 // 제목에서 '@참석자' 부분을 뗀 기본 제목([구분]·내용) — 참석자는 별도 피커가 관리
 const baseTitle = (t: string): string => {
@@ -253,7 +253,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           <IconButton onClick={onClose} disabled={busy} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: iconSize.action }} /></IconButton>
         </Box>
 
-        <TextField label="제목" size="small" fullWidth required value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목 (종류·참석자는 아래에서 선택)" />
+        <FormField label="제목" required value={title} onChange={setTitle} placeholder="일정 제목 (종류·참석자는 아래에서 선택)" />
 
         <Box>
           <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typescale.emphasis.weight, display: 'block', mb: 0.75 }}>일정 종류</Typography>
@@ -322,16 +322,16 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           />
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-            <TextField label="시작일" size="small" fullWidth required type="date" value={date} onChange={e => setDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField label="시작일" required value={date} onChange={setDate} />
             {repeat === 'none' && (
-              <TextField label="종료일 (선택)" size="small" fullWidth type="date" value={endDate} onChange={e => setEndDate(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+              <DateField label="종료일 (선택)" value={endDate} onChange={setEndDate} />
             )}
           </Box>
 
           {!allDay && (
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-              <TextField label="시작 시간" size="small" fullWidth type="time" value={startTime} onChange={e => setStartTime(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-              <TextField label="종료 시간" size="small" fullWidth type="time" value={endTime} onChange={e => setEndTime(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+              <TimeField label="시작 시간" value={startTime} onChange={setStartTime} />
+              <TimeField label="종료 시간" value={endTime} onChange={setEndTime} />
             </Box>
           )}
 
@@ -344,7 +344,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 ))}
               </ToggleButtonGroup>
               {repeat !== 'none' && (
-                <TextField label="반복 종료일 (비우면 6개월)" size="small" fullWidth type="date" value={repeatUntil} onChange={e => setRepeatUntil(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ mt: 1.5 }} />
+                <DateField label="반복 종료일 (비우면 6개월)" value={repeatUntil} onChange={setRepeatUntil} sx={{ mt: 1.5 }} />
               )}
             </Box>
           )}
@@ -354,7 +354,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
             </Typography>
           )}
 
-          <TextField label="장소 (선택)" size="small" fullWidth value={loc} onChange={e => setLoc(e.target.value)} placeholder="예: 본관 3층 회의실" />
+          <FormField label="장소 (선택)" value={loc} onChange={setLoc} placeholder="예: 본관 3층 회의실" />
 
           {error && <Typography color="error" variant="body2">{error}</Typography>}
 

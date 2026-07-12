@@ -14,6 +14,7 @@ import type { Theme } from '@mui/material/styles'
 import { CAT_COLOR, type EventCat } from './eventCard'
 import { radius, iconSize } from '@/theme/tokens'
 import { uploadSubmissionPoster, submitEvent } from '@/api/events'
+import { FormField, DateField } from '@/components/ds'
 
 const CATS: EventCat[] = ['학술', '교육', '전시']
 // 분류별 요약 항목(최대 3) — 분류 선택 시 자동으로 채워짐. 값 안 적은 항목은 게시 시 빠짐.
@@ -146,26 +147,26 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
         {/* 제목 / 날짜 / 장소 / 주관 */}
         <Box sx={{ mt: 1.25 }}>
           <Box sx={label}>제목</Box>
-          <InputBase value={title} onChange={(e) => setTitle(e.target.value)} placeholder="행사명" sx={(th) => ({ ...field(th) })} />
+          <FormField variant="inline" value={title} onChange={setTitle} placeholder="행사명" />
         </Box>
         <Box sx={{ display: 'flex', gap: 1, mt: 1.25 }}>
           <Box sx={{ flex: 1 }}>
             <Box sx={label}>시작일</Box>
-            <Box component="input" type="date" value={start} onChange={(e) => setStart((e.target as HTMLInputElement).value)} sx={(th) => ({ ...field(th), colorScheme: 'dark' })} />
+            <DateField variant="inline" value={start} onChange={setStart} />
           </Box>
           <Box sx={{ flex: 1 }}>
             <Box sx={label}>종료일(선택)</Box>
-            <Box component="input" type="date" value={end} onChange={(e) => setEnd((e.target as HTMLInputElement).value)} sx={(th) => ({ ...field(th), colorScheme: 'dark' })} />
+            <DateField variant="inline" value={end} onChange={setEnd} />
           </Box>
         </Box>
         <Box sx={{ display: 'flex', gap: 1, mt: 1.25 }}>
           <Box sx={{ flex: 1 }}>
             <Box sx={label}>장소</Box>
-            <InputBase value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="장소" sx={(th) => ({ ...field(th) })} />
+            <FormField variant="inline" value={venue} onChange={setVenue} placeholder="장소" />
           </Box>
           <Box sx={{ flex: 1 }}>
             <Box sx={label}>주관</Box>
-            <InputBase value={organizer} onChange={(e) => setOrganizer(e.target.value)} placeholder="주관 기관" sx={(th) => ({ ...field(th) })} />
+            <FormField variant="inline" value={organizer} onChange={setOrganizer} placeholder="주관 기관" />
           </Box>
         </Box>
 
@@ -176,7 +177,9 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
             {summary.map((r, i) => (
               <Box key={i} sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
                 <Box sx={{ width: 92, flex: 'none', fontSize: 13, fontWeight: 700, color: 'text.secondary', textAlign: 'right', pr: 0.5, whiteSpace: 'nowrap' }}>{r.label}</Box>
-                <InputBase value={r.value} onChange={(e) => setSum(i, { value: e.target.value })} placeholder={`${r.label} 내용`} sx={(th) => ({ ...field(th), flex: 1 })} />
+                <Box sx={{ flex: 1 }}>
+                  <FormField variant="inline" value={r.value} onChange={(v) => setSum(i, { value: v })} placeholder={`${r.label} 내용`} />
+                </Box>
               </Box>
             ))}
           </Box>
