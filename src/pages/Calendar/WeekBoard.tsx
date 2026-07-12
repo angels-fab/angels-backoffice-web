@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
-import { accent } from '@/theme/tokens'
+import { accent, radius } from '@/theme/tokens'
 import type { CalEvent } from '@/types'
 import { CAT_META } from './catMeta'
 import { given, memberById, membersForEvent, eventContent, eventParticipants, splitPlacePurpose, type TeamMember } from './members'
@@ -48,7 +48,7 @@ function Chip({ ev }: { ev: CalEvent }) {
       <Box
         sx={{
           p: '2px 7px 2px 8px',
-          borderRadius: '6px',
+          borderRadius: `${radius.chip}px`,
           borderLeft: `3px solid ${color}`,
           bgcolor: alpha(color, 0.18),
           fontSize: 12,
@@ -110,7 +110,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
         bgcolor: 'background.paper',
         border: '1px solid',
         borderColor: 'divider',
-        borderRadius: '12px',
+        borderRadius: `${radius.card}px`,
         overflow: 'hidden',
       }}
     >
@@ -156,7 +156,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                     ? {
                         fontSize: 13,
                         fontWeight: 700,
-                        color: '#fff',
+                        color: 'common.white',
                         bgcolor: 'primary.main',
                         width: 22,
                         height: 22,
@@ -198,7 +198,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                   height: 28,
                   borderRadius: '50%',
                   bgcolor: m.color,
-                  color: '#fff',
+                  color: 'common.white',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -211,11 +211,11 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                 {given(m.name)}
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, minWidth: 0 }}>
-                <Box component="span" sx={{ fontSize: 12.5, fontWeight: 600, color: 'text.primary' }}>
+                <Box component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>
                   {m.name}
                 </Box>
                 {m.role && (
-                  <Box component="span" sx={{ fontSize: 10.5, color: 'text.disabled' }}>
+                  <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>
                     {m.role}
                   </Box>
                 )}

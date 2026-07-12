@@ -3,6 +3,7 @@ import Typography from '@mui/material/Typography'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import { alpha } from '@mui/material/styles'
 import { AppCard, StatusChip } from '@/components/ds'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
 import { W_STATUS, classify, taskTitle, mgrColor, catKind } from './workMeta'
@@ -37,7 +38,7 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
         })}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-          <PushPinIcon sx={{ fontSize: 15, color: 'accent.purple', flexShrink: 0 }} />
+          <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accent.purple', flexShrink: 0 }} />
           <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{taskTitle(t)}</Typography>
           <Box sx={{ flexShrink: 0 }}><StatusChip status={catKind(t.cat)} label={t.cat || '미분류'} /></Box>
         </Box>
@@ -59,10 +60,10 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
         {/* 최상단: 압정 · 상태 · 구분 · 담당자 색칩 · 날짜 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-          <PushPinIcon sx={{ fontSize: 16, color: 'accent.purple', flexShrink: 0 }} />
+          <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accent.purple', flexShrink: 0 }} />
           <StatusChip status={st.status} label={st.label} />
           {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-          <Box component="span" sx={{ ml: 'auto', fontSize: 12, fontWeight: 700, borderRadius: '8px', px: 1, py: 0.3, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>
+          <Box component="span" sx={{ ml: 'auto', fontSize: typescale.small.size, fontWeight: 700, borderRadius: radius.chip, px: 1, py: 0.3, bgcolor: mgrColor(t.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>
             {t.mgr || '미지정'}
           </Box>
           <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>

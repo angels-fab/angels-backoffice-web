@@ -1,5 +1,6 @@
 import { createPortal } from 'react-dom'
 import Box from '@mui/material/Box'
+import { radius, shadow, typescale } from '../../theme/tokens'
 
 /** 드래그(이동/리사이즈) 중 실시간 안내 툴팁 데이터 — 표시 전용(저장·상태 변경 없음) */
 export interface DragTipData {
@@ -27,17 +28,17 @@ export default function DragTip({ tip }: { tip: DragTipData | null }) {
         bgcolor: 'background.paper',
         border: 1,
         borderColor: 'divider',
-        borderRadius: 1,
+        borderRadius: `${radius.card}px`,
         px: 1.25,
         py: 0.75,
-        boxShadow: 6,
+        boxShadow: shadow.md,
       }}
     >
       {tip.lines.map((l, i) => (
         <Box
           key={i}
           sx={{
-            fontSize: 12,
+            fontSize: typescale.small.size,
             lineHeight: 1.5,
             whiteSpace: 'nowrap',
             fontVariantNumeric: 'tabular-nums',

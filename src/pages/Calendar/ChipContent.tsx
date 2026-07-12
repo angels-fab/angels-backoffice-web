@@ -9,6 +9,7 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import BeachAccessIcon from '@mui/icons-material/BeachAccess'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import type { SvgIconComponent } from '@mui/icons-material'
+import { typescale, iconSize, radius } from '@/theme/tokens'
 import type { RealCat } from './catMeta'
 
 /**
@@ -34,7 +35,7 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
 }
 
 const PILL_H = 21
-const CHIP_RADIUS = 8 // 모서리만 둥근 작은 사각형(알약/트랙 형태 아님)
+const CHIP_RADIUS = radius.chip // 모서리만 둥근 작은 사각형(알약/트랙 형태 아님)
 const REST_W = 14 // 이름 없는 뒤쪽 칩의 폭
 const SLIVER = 5 // 겹쳤을 때 보이는 초승달 폭 (REST_W - SLIVER 만큼 겹침)
 
@@ -66,9 +67,9 @@ function NamePill({ text, color }: { text: string; color: string }) {
         px: '5px',
         borderRadius: `${CHIP_RADIUS}px`,
         bgcolor: color,
-        color: '#fff',
-        fontSize: 11.5,
-        fontWeight: 700,
+        color: 'common.white',
+        fontSize: typescale.small.size,
+        fontWeight: typescale.cardTitle.weight,
         lineHeight: 1,
         letterSpacing: '-0.02em',
         whiteSpace: 'nowrap',
@@ -112,9 +113,9 @@ function NameRow({ participants }: { participants: Participant[] }) {
 
 export default function ChipContent({ participants, catKey, catColor, time, title, variant = 'daygrid', multiDay }: ChipContentProps) {
   const Icon = CAT_ICON[catKey]
-  const iconSx = { fontSize: 16, color: catColor, flex: 'none', ...(catKey === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}) }
-  const timeSx = { fontSize: 11.5, fontWeight: 700, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', flex: 'none' } as const
-  const titleSx = { flex: '0 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11.5, fontWeight: 600, lineHeight: 1.4 } as const
+  const iconSx = { fontSize: iconSize.body, color: catColor, flex: 'none', ...(catKey === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}) }
+  const timeSx = { fontSize: typescale.small.size, fontWeight: typescale.cardTitle.weight, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', flex: 'none' } as const
+  const titleSx = { flex: '0 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, lineHeight: 1.4 } as const
 
   const rootRef = useRef<HTMLDivElement | null>(null)
   const groupRef = useRef<HTMLDivElement | null>(null)

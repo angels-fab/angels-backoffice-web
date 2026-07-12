@@ -4,6 +4,7 @@ import Popover from '@mui/material/Popover'
 import GroupsIcon from '@mui/icons-material/Groups'
 import AttendeeSection from './AttendeeSection'
 import type { AttendeeRow } from '@/api/events'
+import { iconSize, typescale } from '@/theme/tokens'
 
 /**
  * 관리자 전용 목록 셀 — 참석자 추가/제거 팝오버.
@@ -17,9 +18,9 @@ export default function AttendeeManageCell({ rows, user, isMember, isAdmin, busy
   return (
     <>
       <Button
-        size="small" variant="text" startIcon={<GroupsIcon sx={{ fontSize: 16 }} />}
+        size="small" variant="text" startIcon={<GroupsIcon sx={{ fontSize: iconSize.body }} />}
         onClick={(e) => { e.stopPropagation(); setAnchor(e.currentTarget) }}
-        sx={{ minWidth: 0, px: 0.75, py: '2px', fontSize: 12, color: 'text.secondary', whiteSpace: 'nowrap' }}
+        sx={{ minWidth: 0, px: 0.75, py: '2px', fontSize: typescale.small.size, color: 'text.secondary', whiteSpace: 'nowrap' }}
       >
         관리 {rows.length}
       </Button>

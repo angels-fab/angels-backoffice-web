@@ -9,6 +9,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Alert from '@mui/material/Alert'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
+import { iconSize } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 
 export interface AdminLoginDialogProps {
@@ -66,7 +67,7 @@ export default function AdminLoginDialog({ open, onClose }: AdminLoginDialogProp
   return (
     <Dialog open={open} onClose={close} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <LockOpenIcon sx={{ fontSize: 20, color: 'primary.main' }} /> {isSignup ? '가입 신청' : '로그인'}
+        <LockOpenIcon sx={{ fontSize: iconSize.header, color: 'primary.main' }} /> {isSignup ? '가입 신청' : '로그인'}
       </DialogTitle>
       <DialogContent>
         {done ? (

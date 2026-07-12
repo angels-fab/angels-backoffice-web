@@ -15,6 +15,7 @@ import { createWork, updateWork } from '@/api/works'
 import { useRole } from '@/auth/role'
 import type { WorkItem } from '@/types'
 import { WORK_STATUS_OPTIONS } from './workMeta'
+import { radius, iconSize, typescale } from '@/theme/tokens'
 
 interface Props {
   open: boolean
@@ -105,16 +106,16 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
           sx: {
             width: 560, maxWidth: '100%', m: 2,
             bgcolor: 'background.paper', backgroundImage: 'none',
-            border: 1, borderColor: 'divider', borderRadius: '16px', p: '22px 24px',
+            border: 1, borderColor: 'divider', borderRadius: radius.modal, p: '22px 24px',
           },
         },
       }}
     >
       <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <EditNoteIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-          <Typography component="span" sx={{ fontSize: 16, fontWeight: 600 }}>{isEdit ? '업무 수정' : '업무 등록'}</Typography>
-          <IconButton onClick={onClose} disabled={saving} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+          <EditNoteIcon sx={{ color: 'text.secondary', fontSize: iconSize.header }} />
+          <Typography component="span" sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.emphasis.weight }}>{isEdit ? '업무 수정' : '업무 등록'}</Typography>
+          <IconButton onClick={onClose} disabled={saving} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: iconSize.action }} /></IconButton>
         </Box>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>

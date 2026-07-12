@@ -14,6 +14,7 @@ import type { SvgIconComponent } from '@mui/icons-material'
 import { type TeamMember } from './members'
 import type { RealCat } from './catMeta'
 import { TintChip, PillChip } from '@/components/FilterChip'
+import { iconSize, radius } from '@/theme/tokens'
 
 export interface FilterMember {
   member: TeamMember
@@ -79,7 +80,7 @@ function CatChip({ icon: Icon, label, color, count, on, rotate, onToggle }: {
       onToggle={onToggle}
       sx={{ p: '4px 9px' }}
     >
-      <Icon sx={{ fontSize: 13, color, ...(rotate ? { transform: 'rotate(45deg)' } : {}) }} />
+      <Icon sx={{ fontSize: iconSize.caption, color, ...(rotate ? { transform: 'rotate(45deg)' } : {}) }} />
       <Box component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>{label.split('/')[0]}</Box>
       <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>{count}</Box>
     </TintChip>
@@ -103,7 +104,7 @@ export default function CalFilterBar({
         p: '10px 14px',
         bgcolor: 'background.paper',
         border: `1px solid ${t.palette.divider}`,
-        borderRadius: '12px',
+        borderRadius: `${radius.card}px`,
         userSelect: 'none',
       })}
     >
@@ -127,7 +128,7 @@ export default function CalFilterBar({
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleMulti() } }}
               sx={(t) => ({
                 ml: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px', height: 26, px: '8px',
-                borderRadius: '8px', fontSize: 11.5, fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', flex: 'none', userSelect: 'none',
+                borderRadius: `${radius.chip}px`, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', flex: 'none', userSelect: 'none',
                 border: '1px solid',
                 ...(multiSelect
                   ? { bgcolor: alpha(t.palette.primary.main, 0.16), color: 'primary.main', borderColor: t.palette.primary.main }
@@ -135,7 +136,7 @@ export default function CalFilterBar({
                 '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
               })}
             >
-              <LibraryAddCheckIcon sx={{ fontSize: 15 }} /> 복수선택
+              <LibraryAddCheckIcon sx={{ fontSize: iconSize.body }} /> 복수선택
             </Box>
           </Tooltip>
         )}

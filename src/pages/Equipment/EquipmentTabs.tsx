@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
+import { radius } from '@/theme/tokens'
 
 // 장비관리 상단 탭 — 장비도입(/equipment) · 장비운영(/equipment-ops) 전환. (업무일정 뷰탭과 동일 톤)
 const TABS = [
@@ -11,7 +12,7 @@ export default function EquipmentTabs() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   return (
-    <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: '9px', mb: 2 }}>
+    <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: radius.button, mb: 2 }}>
       {TABS.map((t) => {
         const active = pathname === t.path
         return (
@@ -20,7 +21,7 @@ export default function EquipmentTabs() {
             component="button"
             onClick={() => navigate(t.path)}
             sx={{
-              px: '18px', py: '6px', borderRadius: '7px', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', border: 'none',
+              px: '18px', py: '6px', borderRadius: radius.chip, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', border: 'none',
               fontWeight: active ? 700 : 600,
               color: active ? 'primary.main' : 'text.secondary',
               bgcolor: active ? 'background.paper' : 'transparent',

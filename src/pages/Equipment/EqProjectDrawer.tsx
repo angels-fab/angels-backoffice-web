@@ -4,6 +4,7 @@ import Button from '@mui/material/Button'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { AppDrawer, StatusChip } from '@/components/ds'
+import { radius, typescale } from '@/theme/tokens'
 import type { EqGroup } from '@/types'
 import { STAGE, STAGE_ORDER, phaseChip, type StageInfo } from './stageMeta'
 import { codeRange, isRegRequired } from './batchUtil'
@@ -84,12 +85,12 @@ export default function EqProjectDrawer({ group, info, onClose, isAdmin, onEdit,
           {/* 다음 조치 안내 박스 */}
           <Box
             sx={{
-              p: 1.5, borderRadius: 2, border: 1,
+              p: 1.5, borderRadius: `${radius.card}px`, border: 1,
               borderColor: late ? 'error.main' : 'warning.main',
               bgcolor: (t) => (late ? t.palette.error.main : t.palette.warning.main) + '1f',
             }}
           >
-            <Typography variant="body2" sx={{ fontWeight: 700, color: late ? 'error.main' : 'warning.main', mb: 0.25 }}>
+            <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight, color: late ? 'error.main' : 'warning.main', mb: 0.25 }}>
               {late ? '지연 · 일정 재조정 필요' : info.phase === 'upcoming' ? '다음 조치 · 도입 일정 확인' : info.phase === 'done' ? '도입 완료' : `진행 단계 · ${chip.label}`}
             </Typography>
             <Typography variant="caption" sx={{ color: 'text.secondary' }}>

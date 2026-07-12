@@ -29,6 +29,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
 import { alpha } from '@mui/material/styles'
+import { radius, shadow, iconSize, typescale } from '@/theme/tokens'
 import {
   PageContainer,
   PageHeader,
@@ -131,14 +132,14 @@ function NewTaskPlusButton({ onClick }: { onClick: () => void }) {
       sx={(th) => ({
         width: 42, height: 28, flexShrink: 0,
         border: '1px solid', borderColor: alpha(th.palette.accent.green, 0.5),
-        borderRadius: '8px', bgcolor: alpha(th.palette.accent.green, 0.12),
+        borderRadius: radius.chip, bgcolor: alpha(th.palette.accent.green, 0.12),
         color: th.palette.accent.green,
         transition: 'background-color .15s, border-color .15s',
         '&:hover': { bgcolor: alpha(th.palette.accent.green, 0.2), borderColor: alpha(th.palette.accent.green, 0.7) },
         '&:focus-visible': { outline: 'none', borderColor: th.palette.accent.green },
       })}
     >
-      <AddIcon sx={{ fontSize: 18 }} />
+      <AddIcon sx={{ fontSize: iconSize.action }} />
     </ButtonBase>
   )
 }
@@ -149,7 +150,7 @@ function BtnGroup({ children }: { children: React.ReactNode }) {
     <Box
       sx={(th) => ({
         display: 'flex', alignItems: 'stretch', height: 30, flexShrink: 0,
-        border: '1px solid', borderColor: 'divider', borderRadius: '8px', overflow: 'hidden',
+        border: '1px solid', borderColor: 'divider', borderRadius: radius.chip, overflow: 'hidden',
         bgcolor: alpha(th.palette.text.primary, 0.03),
         '& > *:not(:first-of-type)': { borderLeft: '1px solid', borderLeftColor: 'divider' },
       })}
@@ -172,7 +173,7 @@ function GroupBtn({ label, icon, selected, disabled, onClick, title }: {
           onClick={onClick}
           sx={(th) => ({
             px: label ? 1.25 : 0, minWidth: label ? 0 : 34, gap: 0.5,
-            fontSize: 12.5, fontWeight: 600, lineHeight: 1,
+            fontSize: typescale.body.size, fontWeight: typescale.emphasis.weight, lineHeight: 1,
             color: selected ? th.palette.primary.main : 'text.secondary',
             bgcolor: selected ? alpha(th.palette.primary.main, 0.14) : 'transparent',
             transition: 'background-color .12s',
@@ -756,7 +757,7 @@ export default function Work() {
   // 정렬 버튼 라벨·화살표 — 활성 버튼에만 방향 화살표
   const sortArrow = (key: 'date' | 'mgr' | 'cat') =>
     listSort?.key === key
-      ? (listSort.dir === 'desc' ? <ArrowDownwardIcon sx={{ fontSize: 13 }} /> : <ArrowUpwardIcon sx={{ fontSize: 13 }} />)
+      ? (listSort.dir === 'desc' ? <ArrowDownwardIcon sx={{ fontSize: iconSize.caption }} /> : <ArrowUpwardIcon sx={{ fontSize: iconSize.caption }} />)
       : undefined
 
   // 구분·담당자 필터 토글 — 일반클릭: 단독 선택/단독 재클릭 해제(전체) · Shift: 기존 유지 + 추가/해제
@@ -1143,7 +1144,7 @@ export default function Work() {
           sx={(th) => ({
             bgcolor: 'background.paper',
             border: `1px solid ${th.palette.divider}`,
-            borderRadius: '12px',
+            borderRadius: radius.card,
             p: '10px 14px',
             mb: 2.5,
             display: 'grid',
@@ -1159,7 +1160,7 @@ export default function Work() {
           {/* 1행 좌: 담당자 필터 — 업무일정 팀원 알약과 동일(선택=고유색 솔리드, 호버에도 선택 모습 유지, 건수 미표시) */}
           {presentMgrs.length > 0 && (
             <Box sx={{ gridArea: 'mgrs', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-              <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44 }}>담당자</Typography>
+              <Typography sx={{ fontSize: typescale.small.size, fontWeight: typescale.pageTitle.weight, color: 'text.disabled', flexShrink: 0, width: 44 }}>담당자</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
                 {presentMgrs.map((m) => (
                   <MgrFilterChip
@@ -1176,7 +1177,7 @@ export default function Work() {
           )}
           {/* 2행 좌: 구분 필터 — 업무일정 종류 칩과 동일(빈 선택=전체가 선택된 모습, 해제=dim) */}
           <Box sx={{ gridArea: 'cats', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.disabled', flexShrink: 0, width: 44 }}>구분</Typography>
+            <Typography sx={{ fontSize: typescale.small.size, fontWeight: typescale.pageTitle.weight, color: 'text.disabled', flexShrink: 0, width: 44 }}>구분</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
               {presentCats.map((c) => (
                 <CatFilterChip
@@ -1200,14 +1201,14 @@ export default function Work() {
             )}
             {isAdmin && (
               <BtnGroup>
-                <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: 16 }} />} disabled={!canUndo} onClick={doUndo} />
-                <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: 16 }} />} disabled={!canRedo} onClick={doRedo} />
+                <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: iconSize.body }} />} disabled={!canUndo} onClick={doUndo} />
+                <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: iconSize.body }} />} disabled={!canRedo} onClick={doRedo} />
               </BtnGroup>
             )}
             {/* 순서 편집 토글 — 모바일 진행중 뷰 전용. 켜면 카드를 끌어 순서변경(그동안 스와이프 비활성) */}
             {isAdmin && isMobile && view === 'inProgress' && (
               <BtnGroup>
-                <GroupBtn title="순서 편집 (카드를 끌어 순서변경)" label="순서" icon={<SwapVertIcon sx={{ fontSize: 16 }} />} selected={reorderMode} onClick={() => { clearSelection(); setReorderMode((v) => !v) }} />
+                <GroupBtn title="순서 편집 (카드를 끌어 순서변경)" label="순서" icon={<SwapVertIcon sx={{ fontSize: iconSize.body }} />} selected={reorderMode} onClick={() => { clearSelection(); setReorderMode((v) => !v) }} />
               </BtnGroup>
             )}
             <BtnGroup>
@@ -1222,14 +1223,14 @@ export default function Work() {
                 onClick={() => setTrashOpen(true)}
                 sx={(th) => ({
                   height: 30, px: 1.25, gap: 0.5, flexShrink: 0,
-                  border: '1px solid', borderColor: 'divider', borderRadius: '8px',
+                  border: '1px solid', borderColor: 'divider', borderRadius: radius.chip,
                   bgcolor: alpha(th.palette.text.primary, 0.03),
                   color: th.palette.accent.red,
-                  fontSize: 12.5, fontWeight: 600, lineHeight: 1,
+                  fontSize: typescale.body.size, fontWeight: typescale.emphasis.weight, lineHeight: 1,
                   '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.06) },
                 })}
               >
-                <DeleteOutlineIcon sx={{ fontSize: 15 }} />
+                <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
                 휴지통 {trashed.length}
               </ButtonBase>
             )}
@@ -1302,7 +1303,7 @@ export default function Work() {
             <AppCard padding={18} sx={{ mb: 2 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>가장 바쁜 담당자</Typography>
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 0.5 }}>
-                <Typography variant="h3" sx={{ fontWeight: 800 }}>{busiest.mgr}</Typography>
+                <Typography variant="h3" sx={{ fontWeight: typescale.pageTitle.weight }}>{busiest.mgr}</Typography>
                 <Typography variant="body2">진행중 {busiest.inProgress}건</Typography>
               </Box>
             </AppCard>
@@ -1351,8 +1352,8 @@ export default function Work() {
             pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
           }}
         >
-          <Typography sx={{ flex: 1, fontSize: 13.5 }}>왼쪽 손잡이(≡)를 끌어 순서를 바꾸세요 · 목록은 그대로 스크롤됩니다</Typography>
-          <Button size="small" variant="contained" onClick={() => setReorderMode(false)} sx={{ bgcolor: '#fff', color: 'primary.main', '&:hover': { bgcolor: '#f0f0f0' } }}>
+          <Typography sx={{ flex: 1, fontSize: typescale.emphasis.size }}>왼쪽 손잡이(≡)를 끌어 순서를 바꾸세요 · 목록은 그대로 스크롤됩니다</Typography>
+          <Button size="small" variant="contained" onClick={() => setReorderMode(false)} sx={{ bgcolor: 'common.white', color: 'primary.main', '&:hover': { bgcolor: '#f0f0f0' } }}>
             완료
           </Button>
         </Box>
@@ -1429,12 +1430,12 @@ export default function Work() {
             return {
               position: 'fixed', zIndex: th.zIndex.modal - 1,
               right: 14, top: trashPanelBox.top,
-              width: 74, height: trashPanelBox.height, borderRadius: '16px',
+              width: 74, height: trashPanelBox.height, borderRadius: radius.modal,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75,
               border: '1.5px solid #f07a74',
               bgcolor: 'rgba(148,43,43,.92)',
-              color: '#fff',
-              fontSize: 11, fontWeight: 800, textAlign: 'center', lineHeight: 1.25,
+              color: 'common.white',
+              fontSize: typescale.caption.size, fontWeight: typescale.pageTitle.weight, textAlign: 'center', lineHeight: 1.25,
               transform: contact ? 'scale(1.02)' : 'none',
               transformOrigin: 'right center',
               boxShadow: contact
@@ -1468,25 +1469,25 @@ export default function Work() {
               left: tk.cx - tk.w / 2, top: tk.cy - tk.h / 2,
               width: tk.w, height: tk.h, pointerEvents: 'none',
               transform: `scale(${tk.scale})`, transformOrigin: '50% 50%',
-              opacity: 0.92, borderRadius: 1,
+              opacity: 0.92, borderRadius: radius.card,
               outline: '2px dashed rgba(224,91,84,.95)', outlineOffset: '3px',
               '--stack-gap': `${Math.max(2, 10 * tk.scale).toFixed(1)}px`,
             })}
           >
             {n > 2 && (
-              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(calc(var(--stack-gap) * 2), calc(var(--stack-gap) * 2))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
+              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(calc(var(--stack-gap) * 2), calc(var(--stack-gap) * 2))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: radius.card })} />
             )}
             {n > 1 && (
-              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
+              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: radius.card })} />
             )}
-            <Box sx={{ position: 'relative', height: '100%', boxShadow: '0 20px 50px rgba(0,0,0,.48)', borderRadius: 1, overflow: 'hidden', '& > *': { height: '100%' } }}>
+            <Box sx={{ position: 'relative', height: '100%', boxShadow: shadow.lg, borderRadius: radius.card, overflow: 'hidden', '& > *': { height: '100%' } }}>
               <TaskAccordion t={t0} tone={tone} />
               {n > 1 && (
                 <Box sx={(th) => ({
                   position: 'absolute', top: 6, right: 6, zIndex: 2,
-                  px: 1, py: 0.4, borderRadius: '999px',
-                  bgcolor: th.palette.accent.blue, color: '#fff',
-                  fontSize: 12.5, fontWeight: 700, lineHeight: 1,
+                  px: 1, py: 0.4, borderRadius: radius.pill,
+                  bgcolor: th.palette.accent.blue, color: 'common.white',
+                  fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1,
                 })}>
                   {n}건
                 </Box>
@@ -1522,8 +1523,8 @@ export default function Work() {
       <Drawer anchor="right" open={trashOpen} onClose={() => { setTrashOpen(false); setTrashSel(new Set()) }}>
         <Box sx={{ width: { xs: '88vw', sm: 400 }, p: 2, display: 'flex', flexDirection: 'column', gap: 1.25, height: '100%' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <DeleteOutlineIcon sx={(th) => ({ fontSize: 20, color: th.palette.accent.red })} />
-            <Typography variant="h3" component="h3" sx={{ fontWeight: 800 }}>휴지통</Typography>
+            <DeleteOutlineIcon sx={(th) => ({ fontSize: iconSize.header, color: th.palette.accent.red })} />
+            <Typography variant="h3" component="h3" sx={{ fontWeight: typescale.pageTitle.weight }}>휴지통</Typography>
             <Typography variant="body2" sx={{ color: 'text.disabled' }}>{trashed.length}건</Typography>
             <Box sx={{ ml: 'auto' }}>
               <Button
@@ -1553,14 +1554,14 @@ export default function Work() {
                     key={t.num}
                     sx={(th) => ({
                       p: 1.25, border: '1px solid', borderColor: checked ? alpha(th.palette.accent.blue, 0.8) : 'divider',
-                      borderRadius: 1.5, bgcolor: checked ? alpha(th.palette.accent.blue, 0.08) : 'background.paper',
+                      borderRadius: radius.modal, bgcolor: checked ? alpha(th.palette.accent.blue, 0.08) : 'background.paper',
                       display: 'flex', gap: 1, alignItems: 'flex-start', cursor: 'pointer',
                     })}
                     onClick={() => setTrashSel((prev) => { const n = new Set(prev); if (n.has(t.num)) n.delete(t.num); else n.add(t.num); return n })}
                   >
                     <Checkbox size="small" checked={checked} sx={{ p: 0.25, mt: 0.1 }} onClick={(e) => e.stopPropagation()} onChange={() => setTrashSel((prev) => { const n = new Set(prev); if (n.has(t.num)) n.delete(t.num); else n.add(t.num); return n })} />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: typescale.emphasis.weight, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, alignItems: 'center' }}>
                         <StatusChip status={classify(t) === 'done' ? 'neutral' : classify(t) === 'hold' ? 'info' : 'success'} label={stateLabel} />
                         {t.cat && <StatusChip status="neutral" label={t.cat} />}

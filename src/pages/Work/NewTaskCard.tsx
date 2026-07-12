@@ -8,6 +8,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import { ComboField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
 import RichContentEditor from './RichContentEditor'
 
@@ -77,8 +78,8 @@ function Field({
       sx={[
         (th) => ({
           bgcolor: alpha(th.palette.text.primary, 0.05),
-          border: '1px solid', borderColor: th.palette.divider, borderRadius: '8px',
-          px: 1, py: 0.4, fontSize: 13, color: 'text.primary',
+          border: '1px solid', borderColor: th.palette.divider, borderRadius: `${radius.chip}px`,
+          px: 1, py: 0.4, fontSize: typescale.body.size, color: 'text.primary',
           transition: 'border-color .12s',
           '&:hover': { borderColor: alpha(th.palette.text.secondary, 0.55) },
           '&.Mui-focused': { borderColor: th.palette.accent.green },
@@ -127,7 +128,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
         bgcolor: alpha(th.palette.accent.green, 0.1),
         border: 1, borderColor: th.palette.accent.green,
         boxShadow: `inset 0 0 0 1px ${th.palette.accent.green}`,
-        borderRadius: 1, overflow: 'hidden',
+        borderRadius: `${radius.card}px`, overflow: 'hidden',
       })}
     >
       {/* 헤더: 구분 · 관련부서 · 담당자 칩 + 우측 링크/첨부/저장/취소. 제목은 아래 전폭 한 줄. */}
@@ -151,14 +152,14 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
           <Tooltip title="저장">
             <span>
               <IconButton size="small" aria-label="저장" onClick={save} disabled={saving} sx={(th) => ({ color: th.palette.accent.green, p: 0.5 })}>
-                <CheckIcon sx={{ fontSize: 19 }} />
+                <CheckIcon sx={{ fontSize: iconSize.action }} />
               </IconButton>
             </span>
           </Tooltip>
           <Tooltip title="취소">
             <span>
               <IconButton size="small" aria-label="취소" onClick={onCancel} disabled={saving} sx={{ color: 'text.secondary', p: 0.5 }}>
-                <CloseIcon sx={{ fontSize: 19 }} />
+                <CloseIcon sx={{ fontSize: iconSize.action }} />
               </IconButton>
             </span>
           </Tooltip>
@@ -196,15 +197,15 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
           sx={(th) => ({
             width: 84, height: 84, flexShrink: 0, alignSelf: 'center',
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-            border: 1, borderRadius: '14px', cursor: 'pointer',
+            border: 1, borderRadius: `${radius.modal}px`, cursor: 'pointer',
             transition: 'border-color .12s, background-color .12s',
             ...(chief
               ? { borderColor: alpha(th.palette.accent.purple, 0.55), bgcolor: alpha(th.palette.accent.purple, 0.16), color: th.palette.accent.purple }
               : { borderColor: th.palette.divider, bgcolor: 'transparent', color: 'text.secondary' }),
           })}
         >
-          <CheckIcon sx={{ fontSize: 20 }} />
-          <Box component="span" sx={{ fontWeight: 700, fontSize: 14 }}>Check</Box>
+          <CheckIcon sx={{ fontSize: iconSize.header }} />
+          <Box component="span" sx={{ fontWeight: typescale.cardTitle.weight, fontSize: typescale.emphasis.size }}>Check</Box>
         </Box>
       </Box>
     </Box>

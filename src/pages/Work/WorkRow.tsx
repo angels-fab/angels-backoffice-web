@@ -1,4 +1,5 @@
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import { iconSize } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
 import { fmtDate } from '@/utils/date'
 import { workCatStyle } from '@/utils/workCat'
@@ -65,7 +66,7 @@ export default function WorkRow({ t }: { t: WorkItem }) {
               title="링크 열기"
               onClick={e => e.stopPropagation()}
             >
-              <OpenInNewIcon sx={{ fontSize: 19 }} />
+              <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
             </a>
           )}
         </span>

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { alpha } from '@mui/material/styles'
+import { typescale, radius } from '@/theme/tokens'
 import { AppCard, StatusChip, EmptyState } from '@/components/ds'
 import { todaySeoul } from '@/utils/date'
 import type { CalEvent } from '@/types'
@@ -21,7 +22,7 @@ function DDayBadge({ diff }: { diff: number }) {
     <Box
       component="span"
       sx={{
-        flexShrink: 0, fontSize: 11, fontWeight: 700, px: 0.75, py: '2px', borderRadius: '8px',
+        flexShrink: 0, fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, px: 0.75, py: '2px', borderRadius: `${radius.chip}px`,
         color: diff <= 2 ? 'warning.main' : 'text.secondary', bgcolor: 'background.elevated',
       }}
     >
@@ -42,11 +43,11 @@ function EventRow({ e, left, leftColor, dday, onPick }: { e: CalEvent; left: str
       sx={{
         display: 'flex', alignItems: 'center', gap: 1, py: 1, cursor: 'pointer',
         borderBottom: 1, borderColor: 'divider', '&:last-of-type': { borderBottom: 0 },
-        '&:hover': { bgcolor: 'background.elevated' }, borderRadius: 1, px: 0.5,
+        '&:hover': { bgcolor: 'background.elevated' }, borderRadius: `${radius.card}px`, px: 0.5,
       }}
     >
-      <Box component="span" sx={{ flexShrink: 0, minWidth: 52, fontSize: 12, fontWeight: 700, fontFamily: 'monospace', color: leftColor || 'text.secondary' }}>{left}</Box>
-      <Typography sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</Typography>
+      <Box component="span" sx={{ flexShrink: 0, minWidth: 52, fontSize: typescale.small.size, fontWeight: typescale.cardTitle.weight, fontFamily: 'monospace', color: leftColor || 'text.secondary' }}>{left}</Box>
+      <Typography sx={{ flex: 1, minWidth: 0, fontSize: typescale.body.size, fontWeight: typescale.caption.weight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.title}</Typography>
       {dday != null && <DDayBadge diff={dday} />}
       <StatusChip status={meta.status} label={meta.label.split('/')[0]} />
     </Box>
@@ -69,10 +70,10 @@ function KpiCard({ label, value, tone, selected, onClick }: { label: string; val
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 0.5 }}>
-        <Typography component="span" sx={{ fontSize: { xs: 26, sm: 32 }, fontWeight: 800, lineHeight: 1 }}>{value}</Typography>
-        <Typography component="span" sx={{ fontSize: 14, fontWeight: 600, color: 'text.secondary' }}>건</Typography>
+        <Typography component="span" sx={{ fontSize: { xs: 26, sm: 32 }, fontWeight: typescale.display.weight, lineHeight: 1 }}>{value}</Typography>
+        <Typography component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>건</Typography>
       </Box>
-      <Typography sx={{ textAlign: 'center', mt: 0.5, fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>{label}</Typography>
+      <Typography sx={{ textAlign: 'center', mt: 0.5, fontSize: typescale.body.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>{label}</Typography>
     </AppCard>
   )
 }

@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { typescale } from '@/theme/tokens'
 import type { EqGroup, EqRawItem } from '@/types'
 import { eqStateKey } from '@/pages/EquipmentOps/eqMeta'
 
@@ -13,9 +14,9 @@ export const codeRange = (g: EqGroup) =>
 export function NameWithQty({ name, count, fontSize = 13, color = 'text.primary' }: { name: string; count: number; fontSize?: number; color?: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, minWidth: 0 }}>
-      <Box component="span" sx={{ fontSize, fontWeight: 700, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</Box>
+      <Box component="span" sx={{ fontSize, fontWeight: typescale.cardTitle.weight, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</Box>
       {count > 1 && (
-        <Box component="span" sx={{ fontSize: '0.82em', fontWeight: 700, color: 'text.secondary', flexShrink: 0 }}>{count}대</Box>
+        <Box component="span" sx={{ fontSize: '0.82em', fontWeight: typescale.cardTitle.weight, color: 'text.secondary', flexShrink: 0 }}>{count}대</Box>
       )}
     </Box>
   )

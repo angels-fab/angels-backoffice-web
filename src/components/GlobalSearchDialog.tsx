@@ -10,6 +10,7 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import MonitorIcon from '@mui/icons-material/Monitor'
 import { SearchBar, StatusChip, EmptyState } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
+import { radius } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
 import { classify, taskTitle, W_STATUS } from '@/pages/Work/workMeta'
 import { noticeCatStatus } from '@/pages/Notice/noticeMeta'
@@ -170,7 +171,7 @@ export default function GlobalSearchDialog({ open, onClose }: GlobalSearchDialog
       sx={{ '& .MuiDialog-container': { alignItems: 'flex-start' } }}
       slotProps={{
         paper: {
-          sx: { bgcolor: 'background.paper', borderRadius: 3, mt: { xs: 3, sm: 8 }, width: '100%' },
+          sx: { bgcolor: 'background.paper', borderRadius: `${radius.modal}px`, mt: { xs: 3, sm: 8 }, width: '100%' },
         },
       }}
     >
@@ -236,7 +237,7 @@ export default function GlobalSearchDialog({ open, onClose }: GlobalSearchDialog
                     gap: 1,
                     px: 1,
                     py: 1,
-                    borderRadius: 1.5,
+                    borderRadius: `${radius.modal}px`,
                     cursor: 'pointer',
                     '&:hover': { bgcolor: 'background.elevated' },
                     '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 },

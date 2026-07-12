@@ -12,6 +12,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
+import { radius, iconSize } from '@/theme/tokens'
 
 /**
  * 인라인 새 업무 폼에서 공용으로 쓰는 입력 위젯 모음.
@@ -26,7 +27,7 @@ export const fieldBase = (th: Theme) => ({
   bgcolor: alpha(th.palette.text.primary, 0.05),
   border: '1px solid',
   borderColor: th.palette.divider,
-  borderRadius: '8px',
+  borderRadius: `${radius.chip}px`,
   px: 1,
   minHeight: 30,
   fontSize: 13,
@@ -39,7 +40,7 @@ const popoverPaperSx = {
   bgcolor: 'background.paper',
   border: '1px solid',
   borderColor: 'divider',
-  borderRadius: '12px',
+  borderRadius: `${radius.card}px`,
   mt: 0.5,
 }
 
@@ -181,7 +182,7 @@ export function DateField({
       >
         {value || label}
       </Box>
-      <CalendarTodayIcon sx={{ fontSize: 15, color: 'text.secondary', flexShrink: 0 }} />
+      <CalendarTodayIcon sx={{ fontSize: iconSize.body, color: 'text.secondary', flexShrink: 0 }} />
       {/* 실제 값/피커는 시각적으로 숨긴 네이티브 date 입력이 담당 */}
       <Box
         component="input"
@@ -318,7 +319,7 @@ function WheelGroup({
           aria-hidden
           sx={(th) => ({
             position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-50%)',
-            height: ITEM_H, borderRadius: '8px', bgcolor: alpha(th.palette.accent.green, 0.14),
+            height: ITEM_H, borderRadius: `${radius.chip}px`, bgcolor: alpha(th.palette.accent.green, 0.14),
             border: 1, borderColor: alpha(th.palette.accent.green, 0.4), pointerEvents: 'none',
           })}
         />
@@ -367,7 +368,7 @@ export function TimeRangeField({
           ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
         ]}
       >
-        <AccessTimeIcon sx={{ fontSize: 15, color: 'text.secondary', flexShrink: 0 }} />
+        <AccessTimeIcon sx={{ fontSize: iconSize.body, color: 'text.secondary', flexShrink: 0 }} />
         <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: value ? 'text.primary' : 'text.disabled' }}>
           {value || '시간'}
         </Box>
@@ -408,7 +409,7 @@ export function LinkButton({ value, onChange }: { value: string; onChange: (v: s
           onClick={(e) => setAnchor(e.currentTarget)}
           sx={(th) => ({ color: active ? th.palette.accent.green : 'text.secondary', p: 0.5 })}
         >
-          <OpenInNewIcon sx={{ fontSize: 18 }} />
+          <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
         </IconButton>
       </Tooltip>
       <Popover
@@ -446,7 +447,7 @@ export function AttachButton() {
     <Tooltip title="첨부 (준비 중)">
       <span>
         <IconButton size="small" disabled aria-label="첨부 (준비 중)" sx={{ color: 'text.disabled', p: 0.5 }}>
-          <AttachFileIcon sx={{ fontSize: 18 }} />
+          <AttachFileIcon sx={{ fontSize: iconSize.action }} />
         </IconButton>
       </span>
     </Tooltip>

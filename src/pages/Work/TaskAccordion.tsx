@@ -3,6 +3,7 @@ import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { alpha } from '@mui/material/styles'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import { isWorkNew } from '@/utils/newPost'
@@ -63,7 +64,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
         }
         return {
           border: 1,
-          borderRadius: 1,
+          borderRadius: radius.card,
           overflow: 'hidden',
           cursor: 'pointer',
           transition: 'border-color .16s ease, background-color .16s ease, box-shadow .16s ease',
@@ -101,13 +102,13 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
         {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}
         {/* 새 업무 N 배지 — 진행중+발의 7일(공지 N칩과 동일 디자인). 제목 말줄임과 안 겹치게 flexShrink:0 */}
         {isWorkNew(t) && (
-          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: '4px', bgcolor: 'error.main', color: '#fff', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: radius.chip, bgcolor: 'error.main', color: 'common.white', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
         )}
         <Typography variant="body1" sx={{ flex: 1, minWidth: 120, fontWeight: 600, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: 12.5, fontWeight: 700, borderRadius: '8px', px: 1.25, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: typescale.small.size, fontWeight: 700, borderRadius: radius.chip, px: 1.25, bgcolor: mgrColor(t.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>
           {t.mgr || '미지정'}
         </Box>
-        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: 12, borderRadius: '8px', px: 1, color: 'text.secondary', bgcolor: alpha(th.palette.text.secondary, 0.14), border: 1, borderColor: alpha(th.palette.text.secondary, 0.3), fontFamily: 'monospace', whiteSpace: 'nowrap' })}>
+        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: typescale.small.size, borderRadius: radius.chip, px: 1, color: 'text.secondary', bgcolor: alpha(th.palette.text.secondary, 0.14), border: 1, borderColor: alpha(th.palette.text.secondary, 0.3), fontFamily: 'monospace', whiteSpace: 'nowrap' })}>
           {fmtDate(t.start)}
         </Box>
         {/* 관심 업무 별 토글(개인화 D-2) — 계정별 저장, 홈 '관심 업무' 섹션에 고정 표시 */}
@@ -138,7 +139,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
           {link && (
             <Box sx={{ mt: 0.25 }}>
               <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련 자료" onClick={(e) => e.stopPropagation()} sx={{ color: 'text.secondary' }}>
-                <OpenInNewIcon sx={{ fontSize: 18 }} />
+                <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
               </IconButton>
             </Box>
           )}
@@ -149,8 +150,8 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
               width: 84, height: 84, flexShrink: 0, alignSelf: 'center',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: 1, borderColor: alpha(th.palette.accent.purple, 0.55), bgcolor: alpha(th.palette.accent.purple, 0.16),
-              borderRadius: '14px',
-              color: th.palette.accent.purple, fontWeight: 800, fontSize: 15,
+              borderRadius: radius.modal,
+              color: th.palette.accent.purple, fontWeight: 800, fontSize: typescale.emphasis.size,
             })}
           >
             Check

@@ -20,6 +20,7 @@ import { alpha, useTheme } from '@mui/material/styles'
 import { keyframes } from '@mui/system'
 import type { Theme } from '@mui/material/styles'
 import { StatusChip } from '@/components/ds'
+import { radius, iconSize, typescale } from '@/theme/tokens'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
 import { taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
@@ -82,7 +83,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
       {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
       {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}
-      <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: typescale.emphasis.weight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {taskTitle(t)}
       </Typography>
       {isAdmin && !hideMenu && (
@@ -92,11 +93,11 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
           onClick={(e) => { e.stopPropagation(); setMenuFor({ el: e.currentTarget, t }) }}
           sx={{ color: 'text.secondary', p: 0.25, flexShrink: 0 }}
         >
-          <MoreVertIcon sx={{ fontSize: 18 }} />
+          <MoreVertIcon sx={{ fontSize: iconSize.action }} />
         </IconButton>
       )}
       {showChevron && (
-        <ExpandMoreIcon sx={(th) => ({ flexShrink: 0, fontSize: 20, color: on ? toneColor(th, tone) : 'text.disabled', transition: 'transform .2s', transform: on ? 'rotate(180deg)' : 'none' })} />
+        <ExpandMoreIcon sx={(th) => ({ flexShrink: 0, fontSize: iconSize.header, color: on ? toneColor(th, tone) : 'text.disabled', transition: 'transform .2s', transform: on ? 'rotate(180deg)' : 'none' })} />
       )}
     </Box>
   )
@@ -105,7 +106,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
     bgcolor: alpha(toneColor(th, tone), on ? 0.2 : 0.08),
     border: 1,
     borderColor: on ? toneColor(th, tone) : 'divider',
-    borderRadius: 1,
+    borderRadius: radius.card,
     px: 1.25, py: 0.9,
     cursor: 'pointer',
     transition: 'border-color .15s, background-color .15s',
@@ -138,9 +139,9 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
     return (
       <>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, wordBreak: 'break-word' }}>{taskTitle(st)}</Typography>
+          <Typography variant="subtitle1" sx={{ fontWeight: typescale.cardTitle.weight, wordBreak: 'break-word' }}>{taskTitle(st)}</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-            <Box component="span" sx={{ fontSize: 12.5, fontWeight: 700, borderRadius: '8px', px: 1, py: 0.3, bgcolor: mgrColor(st.mgr), color: '#fff', whiteSpace: 'nowrap' }}>{st.mgr || '미지정'}</Box>
+            <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, borderRadius: radius.chip, px: 1, py: 0.3, bgcolor: mgrColor(st.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>{st.mgr || '미지정'}</Box>
             <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(st.start)}</Typography>
           </Box>
         </Box>
@@ -155,7 +156,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
             {st.end && <Typography variant="caption" sx={{ color: 'text.secondary' }}>완료 <Box component="span" sx={{ color: 'text.primary' }}>{fmtDate(st.end)}</Box></Typography>}
             {link && (
               <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련 자료" onClick={(e) => e.stopPropagation()} sx={{ color: 'text.secondary' }}>
-                <OpenInNewIcon sx={{ fontSize: 18 }} />
+                <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
               </IconButton>
             )}
           </Box>
@@ -164,16 +165,16 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
             {onEdit && (
               <IconButton size="small" aria-label="수정" onClick={(e) => { e.stopPropagation(); onEdit(st) }} sx={{ color: 'text.secondary' }}>
-                <EditOutlinedIcon sx={{ fontSize: 20 }} />
+                <EditOutlinedIcon sx={{ fontSize: iconSize.header }} />
               </IconButton>
             )}
             {onDelete && (
               <IconButton size="small" aria-label="삭제" onClick={(e) => { e.stopPropagation(); onDelete(st) }} sx={{ color: 'error.main' }}>
-                <DeleteOutlineIcon sx={{ fontSize: 20 }} />
+                <DeleteOutlineIcon sx={{ fontSize: iconSize.header }} />
               </IconButton>
             )}
             {onRevert && (
-              <Button size="small" variant="outlined" color="success" startIcon={<ReplayIcon sx={{ fontSize: 18 }} />} onClick={(e) => { e.stopPropagation(); onRevert(st) }} sx={{ ml: 0.5 }}>진행중</Button>
+              <Button size="small" variant="outlined" color="success" startIcon={<ReplayIcon sx={{ fontSize: iconSize.action }} />} onClick={(e) => { e.stopPropagation(); onRevert(st) }} sx={{ ml: 0.5 }}>진행중</Button>
             )}
           </Box>
         )}
@@ -219,7 +220,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
         sx={(th) => ({
           animation: reduce ? 'none' : `${slideIn} .2s ease both`,
           bgcolor: alpha(toneColor(th, tone), 0.06),
-          border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: 1, p: 1.75,
+          border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: radius.card, p: 1.75,
         })}
       >
         {editingId === selTask.id && renderEdit ? (
@@ -228,7 +229,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
           <>
             {!isSm && (
               <Box sx={{ mb: 1 }}>
-                <Button size="small" startIcon={<ArrowBackIcon sx={{ fontSize: 18 }} />} onClick={() => setSel(null)} sx={{ color: 'text.secondary', minWidth: 0, px: 0.75 }}>목록으로</Button>
+                <Button size="small" startIcon={<ArrowBackIcon sx={{ fontSize: iconSize.action }} />} onClick={() => setSel(null)} sx={{ color: 'text.secondary', minWidth: 0, px: 0.75 }}>목록으로</Button>
               </Box>
             )}
             {detailBody(selTask, true)}
@@ -236,14 +237,14 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
         )}
       </Box>
     ) : (
-      <Box sx={(th) => ({ border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: 1, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120 })}>
+      <Box sx={(th) => ({ border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: radius.card, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120 })}>
         <Typography variant="body2" sx={{ color: 'text.disabled', textAlign: 'center' }}>목록에서 업무를 선택하면 내용이 표시됩니다</Typography>
       </Box>
     )
 
     // 좌측 1열 라인 리스트(간격 축소·메뉴 없음 — 액션은 상세에서)
     const listEl = (
-      <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
+      <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: radius.card, overflow: 'hidden' }}>
         {items.map((t, i) => {
           const on = sel === t.id
           return (
@@ -309,7 +310,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
             gridColumn: '1 / -1',
             bgcolor: alpha(toneColor(th, tone), 0.06),
             border: 1, borderColor: alpha(toneColor(th, tone), 0.3),
-            borderRadius: 1, p: 1.75,
+            borderRadius: radius.card, p: 1.75,
           })}
         >
           {detailBody(selTask)}

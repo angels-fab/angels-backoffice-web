@@ -2,6 +2,7 @@ import type { ChangeEvent } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import SearchIcon from '@mui/icons-material/Search'
+import { typescale, iconSize, radius } from '@/theme/tokens'
 import { given, type TeamMember } from './members'
 import type { RealCat } from './catMeta'
 
@@ -37,7 +38,7 @@ function Avatar({ m, on = true, size = 28, fs = 12 }: { m: TeamMember; on?: bool
         sx={{
           width: size,
           height: size,
-          borderRadius: '50%',
+          borderRadius: radius.circle,
           objectFit: 'cover',
           flex: 'none',
           filter: on ? 'none' : 'grayscale(100%)',
@@ -51,14 +52,14 @@ function Avatar({ m, on = true, size = 28, fs = 12 }: { m: TeamMember; on?: bool
       sx={{
         width: size,
         height: size,
-        borderRadius: '50%',
+        borderRadius: radius.circle,
         bgcolor: m.color,
-        color: '#fff',
+        color: 'common.white',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         fontSize: fs,
-        fontWeight: 700,
+        fontWeight: typescale.cardTitle.weight,
         flex: 'none',
         letterSpacing: '-0.02em',
       }}
@@ -69,8 +70,8 @@ function Avatar({ m, on = true, size = 28, fs = 12 }: { m: TeamMember; on?: bool
 }
 
 const SECTION_LABEL = {
-  fontSize: 11,
-  fontWeight: 700,
+  fontSize: typescale.caption.size,
+  fontWeight: typescale.cardTitle.weight,
   letterSpacing: '0.04em',
   color: 'text.disabled',
   mb: 1,
@@ -93,7 +94,7 @@ export default function CalSidebar({
         alignSelf: 'flex-start',
         bgcolor: 'background.paper',
         border: `1px solid ${t.palette.divider}`,
-        borderRadius: '12px',
+        borderRadius: `${radius.card}px`,
         display: { xs: 'none', md: 'flex' },
         flexDirection: 'column',
         overflow: 'hidden',
@@ -103,7 +104,7 @@ export default function CalSidebar({
       <Box sx={{ p: '14px 14px 10px' }}>
         <Box sx={{ position: 'relative' }}>
           <SearchIcon
-            sx={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 17, color: 'text.disabled' }}
+            sx={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: iconSize.action, color: 'text.disabled' }}
           />
           <Box
             component="input"
@@ -114,9 +115,9 @@ export default function CalSidebar({
               width: '100%',
               height: 36,
               border: `1px solid ${t.palette.divider}`,
-              borderRadius: '9px',
+              borderRadius: `${radius.input}px`,
               p: '0 12px 0 31px',
-              fontSize: 13,
+              fontSize: typescale.body.size,
               fontFamily: 'inherit',
               color: 'text.primary',
               bgcolor: 'background.default',
@@ -148,7 +149,7 @@ export default function CalSidebar({
               alignItems: 'center',
               gap: 1.1,
               p: '7px 8px',
-              borderRadius: '9px',
+              borderRadius: `${radius.button}px`,
               cursor: 'pointer',
               // 사진 아바타 멤버는 흑백 처리로 off를 표현(행은 흐리게 하지 않음)
               opacity: on || member.photo ? 1 : 0.45,
@@ -158,11 +159,11 @@ export default function CalSidebar({
           >
             <Avatar m={member} on={on} />
             <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
-              <Box component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>
+              <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.emphasis.weight, color: 'text.primary' }}>
                 {member.name}
               </Box>
               {member.role && (
-                <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>
+                <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>
                   {member.role}
                 </Box>
               )}
@@ -193,7 +194,7 @@ export default function CalSidebar({
               alignItems: 'center',
               gap: 1.25,
               p: '7px 8px',
-              borderRadius: '9px',
+              borderRadius: `${radius.button}px`,
               cursor: 'pointer',
               opacity: c.on ? 1 : 0.5,
               transition: 'background .12s, opacity .12s',
@@ -204,7 +205,7 @@ export default function CalSidebar({
               sx={{
                 width: 13,
                 height: 13,
-                borderRadius: '4px',
+                borderRadius: `${radius.chip}px`,
                 flex: 'none',
                 bgcolor: c.on ? c.color : 'transparent',
                 border: c.on ? 'none' : '1.5px solid',
@@ -212,10 +213,10 @@ export default function CalSidebar({
                 boxShadow: c.on ? `inset 0 0 0 1px ${alpha('#000', 0.04)}` : 'none',
               }}
             />
-            <Box component="span" sx={{ fontSize: 13, fontWeight: 500, color: 'text.secondary', flex: 1 }}>
+            <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.caption.weight, color: 'text.secondary', flex: 1 }}>
               {c.label}
             </Box>
-            <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>
+            <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>
               {c.count}
             </Box>
           </Box>

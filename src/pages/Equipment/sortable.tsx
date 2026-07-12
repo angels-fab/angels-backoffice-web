@@ -2,6 +2,7 @@ import { useState } from 'react'
 import Box from '@mui/material/Box'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
+import { iconSize } from '../../theme/tokens'
 
 export type SortDir = 'asc' | 'desc'
 
@@ -58,8 +59,8 @@ export function SortTh({ label, colKey, active, dir, onSort, right }: {
       <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, justifyContent: right ? 'flex-end' : 'flex-start' }}>
         {label}
         {active && (dir === 'asc'
-          ? <ArrowUpwardIcon sx={{ fontSize: 13, color: 'primary.main' }} />
-          : <ArrowDownwardIcon sx={{ fontSize: 13, color: 'primary.main' }} />)}
+          ? <ArrowUpwardIcon sx={{ fontSize: iconSize.caption, color: 'primary.main' }} />
+          : <ArrowDownwardIcon sx={{ fontSize: iconSize.caption, color: 'primary.main' }} />)}
       </Box>
     </Box>
   )

@@ -4,6 +4,7 @@ import StarRoundedIcon from '@mui/icons-material/StarRounded'
 import StarBorderRoundedIcon from '@mui/icons-material/StarBorderRounded'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
+import { iconSize } from '@/theme/tokens'
 
 /**
  * 관심 업무 별 토글(개인화 D-2) — user_settings `work.pins`(num 배열)에 계정별 저장.
@@ -31,7 +32,7 @@ export default function WorkPinButton({ num }: { num: string }) {
         }}
         sx={(th) => ({ p: 0.5, color: pinned ? th.palette.accent.amber : 'text.disabled', '&:hover': { color: th.palette.accent.amber } })}
       >
-        {pinned ? <StarRoundedIcon sx={{ fontSize: 19 }} /> : <StarBorderRoundedIcon sx={{ fontSize: 19 }} />}
+        {pinned ? <StarRoundedIcon sx={{ fontSize: iconSize.action }} /> : <StarBorderRoundedIcon sx={{ fontSize: iconSize.action }} />}
       </IconButton>
     </Tooltip>
   )

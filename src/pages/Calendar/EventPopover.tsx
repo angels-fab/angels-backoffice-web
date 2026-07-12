@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
+import { accent, radius, shadow } from '../../theme/tokens'
 
 /** 일정 상세 데이터 — 원본 제목 그대로(장소-목적 분리 안 함) + 시간 + 전체 해당자 + 분류. */
 export interface EventDetail {
@@ -66,14 +67,14 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
         visibility: pos.ready ? 'visible' : 'hidden',
         bgcolor: '#151e2c',
         border: '1px solid #3a485d',
-        borderRadius: '10px',
+        borderRadius: radius.button,
         p: 1.5,
-        color: '#fff',
-        boxShadow: '0 14px 38px rgba(0,0,0,.5)',
+        color: 'common.white',
+        boxShadow: shadow.md,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
-        <Box component="span" sx={{ px: '8px', py: '3px', borderRadius: 999, fontSize: 10.5, fontWeight: 800, color: detail.catColor, bgcolor: alpha(detail.catColor, 0.22) }}>
+        <Box component="span" sx={{ px: '8px', py: '3px', borderRadius: radius.pill, fontSize: 11, fontWeight: 800, color: detail.catColor, bgcolor: alpha(detail.catColor, 0.22) }}>
           {detail.catLabel}
         </Box>
         {detail.time && (
@@ -85,7 +86,7 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
       <Box sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.5, mb: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
         {detail.title}
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1.25, rowGap: '4px', fontSize: 11.5, lineHeight: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1.25, rowGap: '4px', fontSize: 12, lineHeight: 1.5 }}>
         <Box sx={{ color: 'rgba(255,255,255,.5)', fontWeight: 600 }}>해당자</Box>
         <Box sx={{ color: 'rgba(255,255,255,.9)' }}>{detail.members.length ? detail.members.join(' · ') : '센터'}</Box>
       </Box>
@@ -96,10 +97,10 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
             type="button"
             onClick={onEdit}
             sx={{
-              font: 'inherit', fontSize: 11.5, fontWeight: 700, cursor: 'pointer',
-              px: 1.25, py: '5px', borderRadius: '8px',
-              color: '#9ec4f2', bgcolor: 'rgba(84,145,218,.14)', border: '1px solid rgba(84,145,218,.4)',
-              '&:hover': { bgcolor: 'rgba(84,145,218,.24)' },
+              font: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              px: 1.25, py: '5px', borderRadius: radius.chip,
+              color: '#9ec4f2', bgcolor: alpha(accent.blue, 0.14), border: `1px solid ${alpha(accent.blue, 0.4)}`,
+              '&:hover': { bgcolor: alpha(accent.blue, 0.24) },
             }}
           >
             수정

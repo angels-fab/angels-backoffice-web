@@ -2,6 +2,7 @@ import Box from '@mui/material/Box'
 import type { Theme } from '@mui/material/styles'
 import type { StatusKind } from '@/components/ds'
 import { TintChip, PillChip } from '@/components/FilterChip'
+import { typescale } from '@/theme/tokens'
 
 /**
  * 업무현황 구분·담당자 필터 칩 — 공용 FilterChip(TintChip/PillChip) 위에 얹은 얇은 래퍼.
@@ -38,8 +39,8 @@ export function CatFilterChip({ label, count, on, kind, onToggle }: ChipBaseProp
       hover
       sx={{ p: '4px 10px' }}
     >
-      <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary' }}>{label}</Box>
-      <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>{count}</Box>
+      <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>{label}</Box>
+      <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>{count}</Box>
     </TintChip>
   )
 }

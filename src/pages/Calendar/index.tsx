@@ -31,6 +31,7 @@ import ChipContent, { type ChipContentProps } from './ChipContent'
 import EventPopover, { type EventDetail } from './EventPopover'
 import CalEventWrite from './CalEventWrite'
 import { updateCalEvent } from '@/api/calendar'
+import { iconSize, radius } from '@/theme/tokens'
 import AddIcon from '@mui/icons-material/Add'
 import Snackbar from '@mui/material/Snackbar'
 import { useRole } from '@/auth/role'
@@ -408,10 +409,10 @@ export default function Calendar() {
             {isAdmin && (
               <Button
                 size="small"
-                startIcon={<AddIcon sx={{ fontSize: 17 }} />}
+                startIcon={<AddIcon sx={{ fontSize: iconSize.action }} />}
                 onClick={() => setWrite({ mode: 'add', event: null, initialDate: todayKey })}
                 sx={(th) => ({
-                  height: 30, px: 1.25, fontSize: 12.5, fontWeight: 700, borderRadius: '8px',
+                  height: 30, px: 1.25, fontSize: 13, fontWeight: 700, borderRadius: radius.chip,
                   color: th.palette.accent.green, border: `1px solid ${th.palette.accent.green}66`,
                   '&:hover': { bgcolor: `${th.palette.accent.green}1f` },
                 })}
@@ -426,7 +427,7 @@ export default function Calendar() {
               size="small"
               sx={{ color: 'text.secondary' }}
             >
-              <RefreshIcon sx={{ fontSize: 20 }} />
+              <RefreshIcon sx={{ fontSize: iconSize.header }} />
             </IconButton>
           </>
         }
@@ -456,14 +457,14 @@ export default function Calendar() {
         {/* 왼쪽 그룹 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', order: 1 }}>
           {/* 월/주 토글 */}
-          <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: '9px' }}>
+          <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: radius.button }}>
             {([{ k: 'agenda', l: '목록' }, { k: 'month', l: '월' }, { k: 'timeweek', l: '주' }] as const).map((t) => (
               <Box
                 key={t.k}
                 component="button"
                 onClick={() => setView(t.k)}
                 sx={{
-                  px: '16px', py: '6px', borderRadius: '7px', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', border: 'none',
+                  px: '16px', py: '6px', borderRadius: radius.chip, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', border: 'none',
                   fontWeight: view === t.k ? 700 : 600,
                   color: view === t.k ? 'primary.main' : 'text.secondary',
                   bgcolor: view === t.k ? 'background.paper' : 'transparent',
@@ -488,12 +489,12 @@ export default function Calendar() {
             } as const
             const sep = { width: '1px', flex: 'none', bgcolor: 'divider' } as const
             return (
-              <Box role="group" aria-label="기간 이동" sx={{ display: 'inline-flex', alignItems: 'stretch', height: 34, border: '1px solid', borderColor: 'divider', borderRadius: '9px', overflow: 'hidden', bgcolor: 'background.paper' }}>
-                <Box component="button" aria-label="이전" onClick={() => shift(-1)} sx={{ ...navBtn, width: 32 }}><ChevronLeftIcon sx={{ fontSize: 20 }} /></Box>
+              <Box role="group" aria-label="기간 이동" sx={{ display: 'inline-flex', alignItems: 'stretch', height: 34, border: '1px solid', borderColor: 'divider', borderRadius: radius.button, overflow: 'hidden', bgcolor: 'background.paper' }}>
+                <Box component="button" aria-label="이전" onClick={() => shift(-1)} sx={{ ...navBtn, width: 32 }}><ChevronLeftIcon sx={{ fontSize: iconSize.header }} /></Box>
                 <Box sx={sep} />
                 <Box component="button" onClick={goToday} sx={{ ...navBtn, px: '14px', fontSize: 13, fontWeight: 600 }}>오늘</Box>
                 <Box sx={sep} />
-                <Box component="button" aria-label="다음" onClick={() => shift(1)} sx={{ ...navBtn, width: 32 }}><ChevronRightIcon sx={{ fontSize: 20 }} /></Box>
+                <Box component="button" aria-label="다음" onClick={() => shift(1)} sx={{ ...navBtn, width: 32 }}><ChevronRightIcon sx={{ fontSize: iconSize.header }} /></Box>
               </Box>
             )
           })()}
@@ -514,7 +515,7 @@ export default function Calendar() {
           onClick={() => setShowWeekends((s) => !s)}
           sx={{
             order: { xs: 2, sm: 3 }, flex: '0 0 auto',
-            height: 34, px: '14px', borderRadius: '9px', border: '1px solid',
+            height: 34, px: '14px', borderRadius: radius.button, border: '1px solid',
             borderColor: showWeekends ? 'primary.main' : 'divider',
             color: showWeekends ? 'primary.main' : 'text.secondary',
             bgcolor: showWeekends ? 'background.elevated' : 'background.paper',

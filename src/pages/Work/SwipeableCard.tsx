@@ -6,6 +6,7 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 
 /** 스와이프 트레이의 상태 변경 옵션(유효 존만) */
 export interface SwipeStatusOption {
@@ -40,7 +41,7 @@ const BTN_W = 72 // 트레이 버튼 하나 폭(px)
 const AXIS_LOCK = 6 // 축(가로/세로) 판정 임계 이동(px)
 const OPEN_RATIO = 0.4 // 이 비율 이상 열면 스냅 오픈
 const TRANSITION = 'transform .22s cubic-bezier(.22, 1, 0.36, 1)'
-const DANGER = '#E05B54'
+const DANGER = 'error.main'
 
 /**
  * 모바일 업무 카드 왼쪽 스와이프 → 오른쪽에 [상태][수정][삭제] 액션 트레이.
@@ -169,7 +170,7 @@ export default function SwipeableCard({
   if (!enabled) return <>{children}</>
 
   return (
-    <Box sx={{ position: 'relative', borderRadius: 1, overflow: 'hidden', minWidth: 0, height: '100%' }}>
+    <Box sx={{ position: 'relative', borderRadius: `${radius.card}px`, overflow: 'hidden', minWidth: 0, height: '100%' }}>
       {/* 트레이(카드 뒤) — 오른쪽에 고정, 카드가 밀리면 드러남 */}
       <Box
         ref={trayRef}
@@ -180,15 +181,15 @@ export default function SwipeableCard({
         }}
       >
         {hasStatus && (
-          <TrayButton label="상태" color="var(--blue)" onClick={() => setStatusExpanded(true)}>
-            <SwapHorizIcon sx={{ fontSize: 20 }} />
+          <TrayButton label="상태" color="primary.main" onClick={() => setStatusExpanded(true)}>
+            <SwapHorizIcon sx={{ fontSize: iconSize.header }} />
           </TrayButton>
         )}
         <TrayButton label="수정" color="#5b6472" onClick={() => { closeAll(); onEdit() }}>
-          <EditIcon sx={{ fontSize: 20 }} />
+          <EditIcon sx={{ fontSize: iconSize.header }} />
         </TrayButton>
         <TrayButton label="삭제" color={DANGER} onClick={() => { closeAll(); onDelete() }}>
-          <DeleteOutlineIcon sx={{ fontSize: 20 }} />
+          <DeleteOutlineIcon sx={{ fontSize: iconSize.header }} />
         </TrayButton>
       </Box>
 
@@ -211,7 +212,7 @@ export default function SwipeableCard({
         <Box
           sx={{
             position: 'absolute', inset: 0, zIndex: 2,
-            bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1,
+            bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`,
             display: 'flex', alignItems: 'center', gap: 0.75, px: 1, py: 1,
             overflowX: 'auto',
           }}
@@ -219,17 +220,17 @@ export default function SwipeableCard({
           <ButtonBase
             onClick={() => setStatusExpanded(false)}
             aria-label="뒤로"
-            sx={{ flexShrink: 0, width: 34, height: 34, borderRadius: '50%', color: 'text.secondary' }}
+            sx={{ flexShrink: 0, width: 34, height: 34, borderRadius: radius.circle, color: 'text.secondary' }}
           >
-            <ArrowBackIcon sx={{ fontSize: 20 }} />
+            <ArrowBackIcon sx={{ fontSize: iconSize.header }} />
           </ButtonBase>
           {statusOptions.map((o) => (
             <ButtonBase
               key={o.key}
               onClick={() => { o.onPress(); closeAll() }}
               sx={{
-                flexShrink: 0, px: 1.75, height: 34, borderRadius: '17px',
-                bgcolor: 'action.hover', color: 'text.primary', fontSize: 13.5, fontWeight: 600,
+                flexShrink: 0, px: 1.75, height: 34, borderRadius: radius.pill,
+                bgcolor: 'action.hover', color: 'text.primary', fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight,
                 whiteSpace: 'nowrap',
               }}
             >
@@ -250,11 +251,11 @@ function TrayButton({ label, color, onClick, children }: { label: string; color:
       sx={{
         flex: 1, minWidth: 0, height: '100%',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.25,
-        bgcolor: color, color: '#fff',
+        bgcolor: color, color: 'common.white',
       }}
     >
       {children}
-      <Typography component="span" sx={{ fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{label}</Typography>
+      <Typography component="span" sx={{ fontSize: typescale.caption.size, fontWeight: 700, lineHeight: 1 }}>{label}</Typography>
     </ButtonBase>
   )
 }

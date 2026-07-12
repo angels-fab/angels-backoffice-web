@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
-import { layout } from '@/theme/tokens'
+import { iconSize, layout, radius, shadow, typescale } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
 import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 import SwipeableCard, { type WorkSwipeConfig } from './SwipeableCard'
@@ -504,7 +504,7 @@ export default function ReorderableTaskGrid({
               sx={(th) => ({
                 minHeight: drag.current?.height ?? 120,
                 border: '2px dashed', borderColor: alpha(th.palette.accent.green, 0.72),
-                bgcolor: alpha(th.palette.accent.green, 0.06), borderRadius: 1,
+                bgcolor: alpha(th.palette.accent.green, 0.06), borderRadius: `${radius.card}px`,
               })}
             />
           )
@@ -534,7 +534,7 @@ export default function ReorderableTaskGrid({
               // 카드 본문은 항상 세로 스크롤 허용(pan-y). 순서 드래그는 손잡이(≡)만 touch-action:none으로 잡음.
               position: 'relative', minWidth: 0, touchAction: 'pan-y',
               '& > *:first-of-type': { height: '100%' },
-              borderRadius: 1,
+              borderRadius: `${radius.card}px`,
               ...(isDragSource ? { opacity: 0.35 } : {}),
               ...(awaiting ? { opacity: awaitingHidden ? 0 : 0.32, pointerEvents: 'none' } : {}),
               ...(hidingNums.has(num) ? { opacity: 0, pointerEvents: 'none' } : {}),
@@ -547,15 +547,15 @@ export default function ReorderableTaskGrid({
                 aria-label="순서 이동 손잡이"
                 sx={{
                   position: 'absolute', top: 6, left: 6, zIndex: 4,
-                  width: 32, height: 32, borderRadius: 1.5,
+                  width: 32, height: 32, borderRadius: `${radius.modal}px`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  bgcolor: 'rgba(15,17,23,.74)', color: '#fff',
+                  bgcolor: 'rgba(15,17,23,.74)', color: 'common.white',
                   border: '1px solid', borderColor: 'divider',
                   cursor: 'grab', touchAction: 'none',
                   '&:active': { cursor: 'grabbing' },
                 }}
               >
-                <DragIndicatorIcon sx={{ fontSize: 20 }} />
+                <DragIndicatorIcon sx={{ fontSize: iconSize.header }} />
               </Box>
             )}
             {swipe ? (
@@ -592,27 +592,27 @@ export default function ReorderableTaskGrid({
           sx={(th) => ({
             position: 'fixed', zIndex: th.zIndex.modal + 1,
             width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none',
-            opacity: 0.92, borderRadius: 1, transformOrigin: '50% 50%',
+            opacity: 0.92, borderRadius: `${radius.card}px`, transformOrigin: '50% 50%',
             // 휴지통 진입/이탈의 계단식 축소를 부드럽게 잇는 전이(위치 left/top은 즉시 반영)
             transition: `transform .18s ${MOVE_EASING}`,
             '--stack-gap': '10px',
-            ...(overTrash ? { outline: '2px dashed rgba(224,91,84,.95)', outlineOffset: '3px' } : {}),
+            ...(overTrash ? { outline: `2px dashed ${alpha(th.palette.error.main, 0.95)}`, outlineOffset: '3px' } : {}),
           })}
         >
           {multiCount > 2 && (
-            <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(calc(var(--stack-gap) * 2), calc(var(--stack-gap) * 2))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
+            <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(calc(var(--stack-gap) * 2), calc(var(--stack-gap) * 2))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.card}px` })} />
           )}
           {multiCount > 1 && (
-            <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: 1 })} />
+            <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.card}px` })} />
           )}
-          <Box sx={{ position: 'relative', height: '100%', boxShadow: '0 20px 50px rgba(0,0,0,.48)', borderRadius: 1, '& > *': { height: '100%' } }}>
+          <Box sx={{ position: 'relative', height: '100%', boxShadow: shadow.lg, borderRadius: `${radius.card}px`, '& > *': { height: '100%' } }}>
             {renderCard(dragItem)}
             {multiCount > 1 && (
               <Box sx={(th) => ({
                 position: 'absolute', top: -10, right: -10, zIndex: 2,
-                px: 1, py: 0.4, borderRadius: '999px',
-                bgcolor: th.palette.accent.blue, color: '#fff',
-                fontSize: 12.5, fontWeight: 700, lineHeight: 1,
+                px: 1, py: 0.4, borderRadius: `${radius.pill}px`,
+                bgcolor: th.palette.accent.blue, color: th.palette.common.white,
+                fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1,
               })}>
                 {multiCount}건
               </Box>

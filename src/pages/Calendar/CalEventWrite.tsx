@@ -21,6 +21,7 @@ import { useRole } from '@/auth/role'
 import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
+import { typescale, iconSize, radius } from '@/theme/tokens'
 
 // 제목에서 '@참석자' 부분을 뗀 기본 제목([구분]·내용) — 참석자는 별도 피커가 관리
 const baseTitle = (t: string): string => {
@@ -240,22 +241,22 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           sx: {
             width: 560, maxWidth: '100%', m: 2,
             bgcolor: 'background.paper', backgroundImage: 'none',
-            border: 1, borderColor: 'divider', borderRadius: '16px', p: '22px 24px',
+            border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, p: '22px 24px',
           },
         },
       }}
     >
       <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <EventIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-          <Typography component="span" sx={{ fontSize: 16, fontWeight: 600 }}>{mode === 'add' ? '일정 추가' : '일정 수정'}</Typography>
-          <IconButton onClick={onClose} disabled={busy} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+          <EventIcon sx={{ color: 'text.secondary', fontSize: iconSize.header }} />
+          <Typography component="span" variant="h4">{mode === 'add' ? '일정 추가' : '일정 수정'}</Typography>
+          <IconButton onClick={onClose} disabled={busy} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: iconSize.action }} /></IconButton>
         </Box>
 
         <TextField label="제목" size="small" fullWidth required value={title} onChange={e => setTitle(e.target.value)} placeholder="일정 제목 (종류·참석자는 아래에서 선택)" />
 
         <Box>
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>일정 종류</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typescale.emphasis.weight, display: 'block', mb: 0.75 }}>일정 종류</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
             {PICK_CATS.map((c) => {
               const on = cat === c
@@ -267,12 +268,12 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                   type="button"
                   onClick={() => setCat(on ? null : c)}
                   sx={{
-                    px: 1.25, height: 28, borderRadius: '999px', cursor: 'pointer',
-                    fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', lineHeight: 1,
+                    px: 1.25, height: 28, borderRadius: `${radius.pill}px`, cursor: 'pointer',
+                    fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, fontFamily: 'inherit', lineHeight: 1,
                     border: '1.5px solid', transition: 'all .12s',
                     borderColor: on ? color : 'divider',
                     bgcolor: on ? color : 'transparent',
-                    color: on ? '#fff' : 'text.secondary',
+                    color: on ? 'common.white' : 'text.secondary',
                   }}
                 >
                   {CAT_META[c].label}
@@ -288,7 +289,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         </Box>
 
         <Box>
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>참석자</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typescale.emphasis.weight, display: 'block', mb: 0.75 }}>참석자</Typography>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
               {[...new Set([...MEMBERS.filter((m) => m.id !== '센터').map((m) => m.name), ...attendees])].map((name) => {
                 const on = attendees.includes(name)
@@ -300,12 +301,12 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                     type="button"
                     onClick={() => setAttendees((a) => (on ? a.filter((n) => n !== name) : [...a, name]))}
                     sx={{
-                      px: 1.25, height: 28, borderRadius: '999px', cursor: 'pointer',
-                      fontSize: 12.5, fontWeight: 700, fontFamily: 'inherit', lineHeight: 1,
+                      px: 1.25, height: 28, borderRadius: `${radius.pill}px`, cursor: 'pointer',
+                      fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, fontFamily: 'inherit', lineHeight: 1,
                       border: '1.5px solid', transition: 'all .12s',
                       borderColor: on ? c : 'divider',
                       bgcolor: on ? c : 'transparent',
-                      color: on ? '#fff' : 'text.secondary',
+                      color: on ? 'common.white' : 'text.secondary',
                     }}
                   >
                     {given(name)}
@@ -336,7 +337,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
 
           {mode === 'add' && (
             <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 0.75 }}>반복</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typescale.emphasis.weight, display: 'block', mb: 0.75 }}>반복</Typography>
               <ToggleButtonGroup exclusive size="small" value={repeat} onChange={(_, v) => { if (v !== null) setRepeat(v) }}>
                 {REPEAT_LABEL.map(([value, label]) => (
                   <ToggleButton key={value} value={value} sx={{ textTransform: 'none', px: 1.5 }}>{label}</ToggleButton>

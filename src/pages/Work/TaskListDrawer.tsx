@@ -10,6 +10,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { alpha, useTheme } from '@mui/material/styles'
+import { radius, iconSize, typescale } from '@/theme/tokens'
 import { SearchBar, StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
@@ -110,7 +111,7 @@ export default function TaskListDrawer({
 
         {/* 목록(상단, 약 10행 + 스크롤, 라인 리스트) */}
         <Box sx={{ p: 1.25, flexShrink: 0 }}>
-          <Box sx={{ maxHeight: LIST_MAX_HEIGHT, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+          <Box sx={{ maxHeight: LIST_MAX_HEIGHT, overflowY: 'auto', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px` }}>
             {filtered.length === 0 ? (
               <Typography variant="body2" sx={{ color: 'text.disabled', py: 3, textAlign: 'center' }}>{query ? '검색 결과가 없습니다' : '업무가 없습니다'}</Typography>
             ) : (
@@ -136,7 +137,7 @@ export default function TaskListDrawer({
                   >
                     {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
                     {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}
-                    <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: typescale.emphasis.weight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {taskTitle(t)}
                     </Typography>
                   </Box>
@@ -154,9 +155,9 @@ export default function TaskListDrawer({
             ) : (
             <>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 700, wordBreak: 'break-word' }}>{taskTitle(selTask)}</Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: typescale.cardTitle.weight, wordBreak: 'break-word' }}>{taskTitle(selTask)}</Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-                  <Box component="span" sx={{ fontSize: 12.5, fontWeight: 700, borderRadius: '8px', px: 1, py: 0.3, bgcolor: mgrColor(selTask.mgr), color: '#fff', whiteSpace: 'nowrap' }}>{selTask.mgr || '미지정'}</Box>
+                  <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, borderRadius: `${radius.chip}px`, px: 1, py: 0.3, bgcolor: mgrColor(selTask.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>{selTask.mgr || '미지정'}</Box>
                   <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(selTask.start)}</Typography>
                 </Box>
               </Box>
@@ -168,8 +169,8 @@ export default function TaskListDrawer({
                 </Box>
                 {isAdmin && (onEdit || onDelete) && (
                   <Box sx={{ display: 'flex', gap: 0.25, flexShrink: 0 }}>
-                    {onEdit && <IconButton size="small" aria-label="수정" onClick={() => onEdit(selTask)} sx={{ color: 'text.secondary' }}><EditOutlinedIcon sx={{ fontSize: 19 }} /></IconButton>}
-                    {onDelete && <IconButton size="small" aria-label="삭제" onClick={() => onDelete(selTask)} sx={{ color: 'error.main' }}><DeleteOutlineIcon sx={{ fontSize: 19 }} /></IconButton>}
+                    {onEdit && <IconButton size="small" aria-label="수정" onClick={() => onEdit(selTask)} sx={{ color: 'text.secondary' }}><EditOutlinedIcon sx={{ fontSize: iconSize.action }} /></IconButton>}
+                    {onDelete && <IconButton size="small" aria-label="삭제" onClick={() => onDelete(selTask)} sx={{ color: 'error.main' }}><DeleteOutlineIcon sx={{ fontSize: iconSize.action }} /></IconButton>}
                   </Box>
                 )}
               </Box>
@@ -189,7 +190,7 @@ export default function TaskListDrawer({
                         {selTask.end && <Typography variant="caption" sx={{ color: 'text.secondary' }}>완료 <Box component="span" sx={{ color: 'text.primary' }}>{fmtDate(selTask.end)}</Box></Typography>}
                         {link && (
                           <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련 자료" sx={{ color: 'text.secondary' }}>
-                            <OpenInNewIcon sx={{ fontSize: 18 }} />
+                            <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
                           </IconButton>
                         )}
                       </Box>
@@ -199,7 +200,7 @@ export default function TaskListDrawer({
               })()}
               {isAdmin && (selTask.status || '').trim() !== '완료' && onComplete && (
                 <Box sx={{ display: 'flex', gap: 1, mt: 1.5, pt: 1.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
-                  <Button size="small" variant="outlined" color="success" startIcon={<CheckCircleOutlineIcon sx={{ fontSize: 18 }} />} onClick={() => onComplete(selTask)}>완료</Button>
+                  <Button size="small" variant="outlined" color="success" startIcon={<CheckCircleOutlineIcon sx={{ fontSize: iconSize.action }} />} onClick={() => onComplete(selTask)}>완료</Button>
                 </Box>
               )}
             </>

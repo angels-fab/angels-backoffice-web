@@ -5,6 +5,7 @@ import Typography from '@mui/material/Typography'
 import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
 import { ContentSection } from '@/components/ds'
+import { iconSize, shadow, typescale } from '@/theme/tokens'
 import type { DropZone, WorkView } from './dropZones'
 
 /**
@@ -123,11 +124,11 @@ export default function KpiSection({
           <Typography
             key={pulseKey(zone)}
             component="span"
-            sx={{ fontSize: { xs: 26, md: 30 }, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.04em', color: '#fff', ...pulseSx(zone) }}
+            sx={{ fontSize: { xs: 26, md: 30 }, fontWeight: typescale.display.weight, lineHeight: 1, letterSpacing: '-0.04em', color: 'text.primary', ...pulseSx(zone) }}
           >
             {count}
           </Typography>
-          <Typography component="span" sx={{ fontSize: 13, fontWeight: 700, color: 'var(--text2)', lineHeight: 1 }}>건</Typography>
+          <Typography component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, color: 'var(--text2)', lineHeight: 1 }}>건</Typography>
           {checkCount > 0 && (
             <Box
               component="span"
@@ -138,8 +139,8 @@ export default function KpiSection({
                 border: '1px solid rgba(169,138,224,.52)', borderRadius: '999px',
                 bgcolor: '#29233a', color: '#d7c6f6',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: { xs: 11.5, md: 12 }, fontWeight: 800, lineHeight: 1,
-                boxShadow: '0 3px 9px rgba(0,0,0,.2)', pointerEvents: 'none',
+                fontSize: typescale.small.size, fontWeight: typescale.display.weight, lineHeight: 1,
+                boxShadow: shadow.sm, pointerEvents: 'none',
               }}
             >
               {checkCount}
@@ -147,7 +148,7 @@ export default function KpiSection({
           )}
         </Box>
         {/* 상태명(아래) — 상태 대표색 */}
-        <Typography component="span" sx={{ fontSize: { xs: 13.5, md: 15 }, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em', color: LABEL[zone] }}>
+        <Typography component="span" sx={{ fontSize: { xs: typescale.emphasis.size, md: typescale.cardTitle.size }, fontWeight: typescale.display.weight, lineHeight: 1, letterSpacing: '-0.02em', color: LABEL[zone] }}>
           {LABEL_KO[zone]}
         </Typography>
       </Box>
@@ -229,16 +230,16 @@ export default function KpiSection({
                   bgcolor: view === 'check' ? '#413a5a' : '#1b202b',
                   color: '#c5adf0',
                   display: 'flex', alignItems: 'center', gap: '7px',
-                  fontSize: { xs: 10.5, md: 11 }, fontWeight: 800, whiteSpace: 'nowrap', cursor: 'pointer',
-                  boxShadow: '0 5px 14px rgba(0,0,0,.28)',
+                  fontSize: typescale.caption.size, fontWeight: typescale.display.weight, whiteSpace: 'nowrap', cursor: 'pointer',
+                  boxShadow: shadow.sm,
                   transition: 'background-color .14s ease, border-color .14s ease, transform .14s ease',
                   '&:hover': { bgcolor: view === 'check' ? '#4a4266' : '#342e4a', borderColor: 'rgba(169,138,224,.65)', transform: 'translateX(-50%) translateY(-1px)' },
                   '&:focus-visible': { outline: '2px solid #bfa7ef', outlineOffset: '2px' },
                 }}
               >
-                <CheckIcon sx={{ fontSize: 14 }} />
+                <CheckIcon sx={{ fontSize: iconSize.caption }} />
                 <Box component="span">부서장 확인</Box>
-                <Box component="span" sx={{ fontSize: { xs: 12.5, md: 13 }, fontWeight: 800, color: '#d7c6f6' }}>{checkTotal}</Box>
+                <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.display.weight, color: '#d7c6f6' }}>{checkTotal}</Box>
               </Box>
             </Tooltip>
           )}
