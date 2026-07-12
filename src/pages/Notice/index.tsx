@@ -27,6 +27,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import AttachFileIcon from '@mui/icons-material/AttachFile'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
 import SecurityIcon from '@mui/icons-material/Security'
@@ -311,18 +312,14 @@ export default function Notice() {
               <ExpandMoreIcon sx={{ fontSize: 18, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
             </Box>
           </TableCell>
-          {/* 첨부 유무 — 있으면 플로피 아이콘(아코디언 안 열어도 확인), 없으면 공란 */}
+          {/* 첨부 유무 — DS 표준 첨부 표식 = AttachFile 클립(손그림 플로피 SVG 폐지, 사용자 확정 2026-07-13) */}
           <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
             {!!n.attachments?.length && (
               <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
-                {/* 단순 라인아트 플로피(SVG) — 가로줄·상단 슬라이더 제거, 굵은 선으로 작은 크기에서도 또렷. 테마색 */}
-                <Box role="img" aria-label={`첨부파일 ${n.attachments.length}개`} sx={{ display: 'inline-flex', verticalAlign: 'middle', color: 'text.secondary' }}>
-                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round">
-                    <path d="M4.7 3.5 H17 L20.5 7 V19.3 A1.2 1.2 0 0 1 19.3 20.5 H4.7 A1.2 1.2 0 0 1 3.5 19.3 V4.7 A1.2 1.2 0 0 1 4.7 3.5 Z" />
-                    <rect x="7" y="4.1" width="7" height="3.8" rx="0.6" />
-                    <rect x="6.8" y="12.7" width="10.4" height="7" rx="1" />
-                  </svg>
-                </Box>
+                <AttachFileIcon
+                  aria-label={`첨부파일 ${n.attachments.length}개`}
+                  sx={{ fontSize: 16, color: 'text.secondary', verticalAlign: 'middle' }}
+                />
               </Tooltip>
             )}
           </TableCell>

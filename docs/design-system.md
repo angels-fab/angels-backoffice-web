@@ -199,6 +199,12 @@ export default function NewMenuPage() {
 - PC→모바일 변환 4패턴에서 선택: 넓은 표→카드 스택(rtable) / KPI 타일→가로 스와이프 / 카드 그리드→스냅 캐러셀 / 밀도 뷰→목록 뷰
 - 모바일 터치 타겟 최소 `touchTarget` 44px (시각 크기 유지 시 히트영역 padding 확장)
 
+### DataTable 표 규격 (승인 2026-07-12)
+
+- 헤더 12px/600/`text.secondary` · **텍스트 열=좌측 기본** · 번호·상태·액션 열=중앙 · 셀 12px · 행 hover · 모바일 가로 스크롤
+- **날짜 열(작성일·게시일) = 중앙 + `monospace` + `text.disabled`** — 포털 날짜 관례의 표 표준화(자릿수 정렬로 세로 스캔)
+- **첨부 표식 = `AttachFile`(클립) 16px `text.secondary` + Tooltip "첨부파일 N개"** — 손그림 SVG·플로피 은유 금지 (사용자 확정 2026-07-13)
+
 ### Dialog 규격 (테마 MuiDialog + P2 컴포넌트)
 
 - 반경 modal 16 · 배경 `background.paper`(테마 상속) — 개별 지정 금지
