@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { mergeSx } from './sxMerge'
 import Typography from '@mui/material/Typography'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
@@ -40,7 +41,7 @@ export default function KpiCard({
   sx,
 }: KpiCardProps) {
   return (
-    <AppCard onClick={onClick} sx={{ position: 'relative', overflow: 'hidden', ...sx }}>
+    <AppCard onClick={onClick} sx={mergeSx({ position: 'relative', overflow: 'hidden' }, sx)}>
       {icon && (
         <Box
           sx={{

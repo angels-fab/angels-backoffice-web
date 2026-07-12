@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { mergeSx } from './sxMerge'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 import { layout } from '@/theme/tokens'
@@ -25,14 +26,13 @@ export interface FilterBarProps {
 export default function FilterBar({ children, trailing, sx }: FilterBarProps) {
   return (
     <Box
-      sx={{
+      sx={mergeSx({
         display: 'flex',
         alignItems: 'center',
         flexWrap: 'wrap',
         gap: 1,
         mb: `${layout.filterGap}px`,
-        ...sx,
-      }}
+      }, sx)}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, flex: 1, minWidth: 0 }}>
         {children}

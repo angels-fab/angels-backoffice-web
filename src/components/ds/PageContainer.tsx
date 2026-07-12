@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { mergeSx } from './sxMerge'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 import { layout } from '@/theme/tokens'
@@ -44,15 +45,14 @@ export default function PageContainer({
   const mw = maxWidth ?? (variant === 'detail' ? layout.maxWidthDetail : layout.maxWidthWide)
   return (
     <Box
-      sx={{
+      sx={mergeSx({
         width: '100%',
         maxWidth: mw,
         mx: 'auto',
         px: { xs: `${layout.pageXMobile}px`, sm: `${layout.pageX}px` },
         pt: disableTop ? 0 : `${layout.pageTop}px`,
         pb: `${layout.pageBottom}px`,
-        ...sx,
-      }}
+      }, sx)}
     >
       {children}
     </Box>

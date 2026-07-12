@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { mergeSx } from './sxMerge'
 import Typography from '@mui/material/Typography'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
@@ -114,7 +115,7 @@ export default function ListRow({
             },
           }
         : {})}
-      sx={{
+      sx={mergeSx({
         display: 'flex',
         alignItems: 'center',
         gap: `${row.gap}px`,
@@ -128,8 +129,7 @@ export default function ListRow({
           '&:hover': { bgcolor: 'background.elevated' },
           '&:focus-visible': { outline: 'none', bgcolor: 'background.elevated' },
         }),
-        ...sx,
-      }}
+      }, sx)}
     >
       {leading != null && <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}>{leading}</Box>}
 

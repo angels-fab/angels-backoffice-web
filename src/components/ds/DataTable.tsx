@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { mergeSx } from './sxMerge'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
@@ -54,7 +55,7 @@ export default function DataTable<T>({
   sx,
 }: DataTableProps<T>) {
   return (
-    <Box sx={{ overflowX: 'auto', ...sx }}>
+    <Box sx={mergeSx({ overflowX: 'auto' }, sx)}>
       <Table
         size="small"
         sx={{

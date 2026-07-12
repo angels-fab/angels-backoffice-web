@@ -191,6 +191,12 @@ export function SelectField({
       </MenuItem>
     )),
   ]
+  const renderVal = (v: unknown) =>
+    v === '' && placeholder ? (
+      <Box component="span" sx={{ color: 'text.disabled' }}>{placeholder}</Box>
+    ) : (
+      opts.find((o) => o.value === v)?.label ?? String(v)
+    )
   if (variant === 'modal') {
     return (
       <TextField
@@ -201,6 +207,12 @@ export function SelectField({
         required={required}
         disabled={disabled}
         fullWidth={fullWidth}
+        // placeholder를 닫힌 컨트롤에도 표시(displayEmpty) — 라벨 겹침 방지로 shrink 동반 (리뷰 확정 수정)
+        slotProps={
+          placeholder
+            ? { inputLabel: { shrink: true }, select: { displayEmpty: true, renderValue: renderVal } }
+            : undefined
+        }
         sx={sx}
       >
         {items}
@@ -210,17 +222,19 @@ export function SelectField({
   return (
     <Box sx={{ width: fullWidth ? '100%' : undefined }}>
       {label && <InlineLabel>{label}</InlineLabel>}
+      {/* 리뷰 확정 수정: ① Select에 sx를 넘기면 cloneElement가 InputBase의 sx를 클로버 →
+          외부 sx는 InputBase 쪽에 배열 병합 ② variant standard = notched prop 누수 경고 차단 */}
       <Select
+        variant="standard"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         displayEmpty={!!placeholder}
         required={required}
         disabled={disabled}
         fullWidth={fullWidth}
-        input={<InputBase sx={inlineFieldSx as SxProps<Theme>} />}
-        renderValue={(v) => (v === '' && placeholder ? <Box component="span" sx={{ color: 'text.disabled' }}>{placeholder}</Box> : opts.find((o) => o.value === v)?.label ?? String(v))}
+        input={<InputBase sx={[inlineFieldSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])] as SxProps<Theme>} />}
+        renderValue={renderVal}
         MenuProps={{ slotProps: { paper: { sx: { mt: 0.5 } } } }}
-        sx={sx}
       >
         {items}
       </Select>

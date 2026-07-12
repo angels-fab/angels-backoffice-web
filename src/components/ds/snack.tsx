@@ -24,15 +24,18 @@ export function useSnack(): ShowSnack {
 }
 
 export function SnackProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<{ open: boolean; msg: string; severity: AlertColor; duration: number }>({
+  const [state, setState] = useState<{ open: boolean; msg: string; severity: AlertColor; duration: number; id: number }>({
     open: false,
     msg: '',
     severity: 'success',
     duration: 3000,
+    id: 0,
   })
 
+  // id = 호출마다 증가 → Snackbar key로 리마운트해 autoHide 타이머 재시작
+  // (리뷰 확정 수정: 같은 duration 연속 호출 시 MUI 타이머 effect가 재실행되지 않아 두 번째 메시지 조기 소멸)
   const show = useCallback<ShowSnack>((msg, severity = 'success', duration = 3000) => {
-    setState({ open: true, msg, severity, duration })
+    setState((s) => ({ open: true, msg, severity, duration, id: s.id + 1 }))
   }, [])
 
   const handleClose = useCallback((_e?: unknown, reason?: string) => {
@@ -46,6 +49,7 @@ export function SnackProvider({ children }: { children: ReactNode }) {
     <SnackCtx.Provider value={ctx}>
       {children}
       <Snackbar
+        key={state.id}
         open={state.open}
         autoHideDuration={state.duration}
         onClose={handleClose}

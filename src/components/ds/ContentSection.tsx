@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { mergeSx } from './sxMerge'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 import { layout } from '@/theme/tokens'
@@ -42,7 +43,7 @@ export default function ContentSection({
   return (
     <Box
       component="section"
-      sx={{ mb: last ? 0 : `${layout.sectionGap}px`, ...sx }}
+      sx={mergeSx({ mb: last ? 0 : `${layout.sectionGap}px` }, sx)}
     >
       {title && (
         <SectionHeader title={title} description={description} count={count} action={action} />

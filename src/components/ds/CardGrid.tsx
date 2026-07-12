@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { mergeSx } from './sxMerge'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 import { layout } from '@/theme/tokens'
@@ -45,12 +46,11 @@ export default function CardGrid({
       }
   return (
     <Box
-      sx={{
+      sx={mergeSx({
         display: 'grid',
         gridTemplateColumns,
         gap: `${gap}px`,
-        ...sx,
-      }}
+      }, sx)}
     >
       {children}
     </Box>

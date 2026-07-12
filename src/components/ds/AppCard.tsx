@@ -1,4 +1,5 @@
 import Paper from '@mui/material/Paper'
+import { mergeSx } from './sxMerge'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 import { hoverShadow, layout } from '@/theme/tokens'
@@ -59,7 +60,7 @@ export default function AppCard({
             },
           }
         : {})}
-      sx={{
+      sx={mergeSx({
         p: `${padding}px`,
         bgcolor: 'background.paper',
         transition: 'border-color .15s, transform .15s, box-shadow .15s',
@@ -77,8 +78,7 @@ export default function AppCard({
             boxShadow: (t) => `0 0 0 3px ${t.palette.primary.main}55`,
           },
         }),
-        ...sx,
-      }}
+      }, sx)}
     >
       {children}
     </Paper>

@@ -1,4 +1,5 @@
 import Alert from '@mui/material/Alert'
+import { mergeSx } from './sxMerge'
 import Button from '@mui/material/Button'
 import type { SxProps, Theme } from '@mui/material/styles'
 
@@ -32,7 +33,7 @@ export default function ErrorBanner({ message, onRetry, severity = 'error', sx }
           </Button>
         )
       }
-      sx={{ mb: 2, ...sx }}
+      sx={mergeSx({ mb: 2 }, sx)}
     >
       {message}
     </Alert>

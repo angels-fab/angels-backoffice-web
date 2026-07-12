@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { mergeSx } from './sxMerge'
 import CircularProgress from '@mui/material/CircularProgress'
 import Typography from '@mui/material/Typography'
 import type { SxProps, Theme } from '@mui/material/styles'
@@ -27,14 +28,13 @@ export default function LoadingState({ label = '불러오는 중…', size = 'md
     <Box
       role="status"
       aria-live="polite"
-      sx={{
+      sx={mergeSx({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 1,
         py: sm ? 1.5 : 4,
-        ...sx,
-      }}
+      }, sx)}
     >
       <CircularProgress size={sm ? 14 : 18} thickness={5} sx={{ color: 'text.disabled' }} />
       <Typography variant={sm ? 'caption' : 'body2'} sx={{ color: 'text.secondary' }}>

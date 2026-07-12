@@ -1,4 +1,5 @@
 import TextField from '@mui/material/TextField'
+import { mergeSx } from './sxMerge'
 import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
 import SearchIcon from '@mui/icons-material/Search'
@@ -37,7 +38,7 @@ export default function SearchBar({
       placeholder={placeholder}
       size="small"
       autoFocus={autoFocus}
-      sx={{ width, ...sx }}
+      sx={mergeSx({ width }, sx)}
       slotProps={{
         input: {
           startAdornment: (
