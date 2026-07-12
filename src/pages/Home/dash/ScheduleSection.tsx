@@ -7,7 +7,7 @@ import { useAppSelector } from '@/store/hooks'
 import { CAL_CAT_MAP } from '@/constants/calendar'
 import { hexA } from '@/utils/color'
 import { todaySeoul } from '@/utils/date'
-import { accent } from '@/theme/tokens'
+import { accent, radius } from '@/theme/tokens'
 import type { CalEvent } from '@/types'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
@@ -25,7 +25,7 @@ function TypeBadge({ cat }: { cat: CalEvent['cat'] }) {
         fontWeight: 600,
         px: 0.75,
         py: '2px',
-        borderRadius: '8px',
+        borderRadius: `${radius.chip}px`,
         color,
         bgcolor: hexA(color, 0.14),
         border: `1px solid ${hexA(color, 0.32)}`,
@@ -52,7 +52,7 @@ function ScheduleRow({ left, title, right, leftColor }: { left: string; title: s
       >
         {left}
       </Box>
-      <Typography sx={{ flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <Typography sx={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {title}
       </Typography>
       {right}
@@ -147,7 +147,7 @@ export default function ScheduleSection() {
                       fontWeight: 700,
                       px: 0.75,
                       py: '2px',
-                      borderRadius: '8px',
+                      borderRadius: `${radius.chip}px`,
                       color: e.diff <= 2 ? 'warning.main' : 'text.secondary',
                       bgcolor: 'background.elevated',
                     }}

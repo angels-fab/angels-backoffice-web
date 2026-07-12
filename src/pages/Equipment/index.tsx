@@ -39,6 +39,7 @@ import EquipmentTabs from './EquipmentTabs'
 import DemoResults from './DemoResults'
 import { NameWithQty, codeRange } from './batchUtil'
 import { useTableSort, sortRows, SortTh } from './sortable'
+import { iconSize, radius, shadow } from '@/theme/tokens'
 
 const GANTT_NAME_W = 150 // 장비명 열(축소) — 나머지는 간트가 가변폭으로 채움(가로 스크롤 없음)
 // 가변폭 간트에서 반월 1칸의 실제 픽셀폭 = 간트영역 폭 / (월수*2). 드래그/리사이즈 스냅 기준.
@@ -667,10 +668,10 @@ export default function Equipment() {
             {isAdmin && (
               <>
                 <IconButton aria-label="실행취소" title="실행취소 (Ctrl+Z)" onClick={undo} disabled={!undoStack.length} size="small" sx={{ color: 'text.secondary' }}>
-                  <UndoIcon sx={{ fontSize: 20 }} />
+                  <UndoIcon sx={{ fontSize: iconSize.header }} />
                 </IconButton>
                 <IconButton aria-label="다시실행" title="다시실행 (Ctrl+Shift+Z)" onClick={redo} disabled={!redoStack.length} size="small" sx={{ color: 'text.secondary' }}>
-                  <RedoIcon sx={{ fontSize: 20 }} />
+                  <RedoIcon sx={{ fontSize: iconSize.header }} />
                 </IconButton>
                 <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => { setEditBatchCodes([]); setEditTarget(null); setWriteOpen(true) }}>
                   장비 추가
@@ -678,7 +679,7 @@ export default function Equipment() {
               </>
             )}
             <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-              <RefreshIcon sx={{ fontSize: 20 }} />
+              <RefreshIcon sx={{ fontSize: iconSize.header }} />
             </IconButton>
           </Box>
         }
@@ -697,7 +698,7 @@ export default function Equipment() {
       )}
 
       {/* 워크스페이스 */}
-      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper', overflow: 'hidden' }}>
+      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, bgcolor: 'background.paper', overflow: 'hidden' }}>
         <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           {/* 보기 전환 */}
           <Box sx={{ display: 'inline-flex', gap: 0.5 }}>
@@ -726,9 +727,9 @@ export default function Equipment() {
             <Box component="input" className="eq-search" value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} placeholder="장비명·관리번호 검색" aria-label="도입장비 검색" />
             {isAdmin && (
               <Button
-                size="small" variant={editMode ? 'contained' : 'outlined'} startIcon={<EditCalendarIcon sx={{ fontSize: 16 }} />}
+                size="small" variant={editMode ? 'contained' : 'outlined'} startIcon={<EditCalendarIcon sx={{ fontSize: iconSize.body }} />}
                 onClick={() => (editMode ? requestExitEdit() : startEditMode())}
-                sx={{ flexShrink: 0, py: 0.4, fontSize: 12.5, color: editMode ? undefined : 'text.secondary', borderColor: 'divider' }}
+                sx={{ flexShrink: 0, py: 0.4, fontSize: 13, color: editMode ? undefined : 'text.secondary', borderColor: 'divider' }}
               >
                 {editMode ? '편집 종료' : '일정 편집'}
               </Button>
@@ -797,9 +798,9 @@ export default function Equipment() {
           /* ── 단계별 칸반 ── */
           <Box sx={{ display: 'grid', gridAutoFlow: 'column', gridAutoColumns: 'minmax(180px, 1fr)', gap: 1, p: 1.5, overflowX: 'auto' }}>
             {stageBoard.map((col) => (
-              <Box key={col.label} sx={{ minHeight: 360, p: 1, border: 1, borderColor: 'divider', borderRadius: 2, bgcolor: 'background.default' }}>
+              <Box key={col.label} sx={{ minHeight: 360, p: 1, border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`, bgcolor: 'background.default' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, color: 'text.secondary' }}>
-                  <Typography sx={{ fontSize: 11.5, fontWeight: 700 }}>{col.label}</Typography>
+                  <Typography sx={{ fontSize: 12, fontWeight: 700 }}>{col.label}</Typography>
                   <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>{col.items.length}건</Typography>
                 </Box>
                 {col.items.length === 0 ? (
@@ -810,12 +811,12 @@ export default function Equipment() {
                       key={g.repCode || i} role="button" tabIndex={0}
                       onClick={() => setPicked({ g, info })}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicked({ g, info }) } }}
-                      sx={{ p: 1, mb: 0.75, border: 1, borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper', cursor: 'pointer', '&:hover': { borderColor: 'text.disabled' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main' } }}
+                      sx={{ p: 1, mb: 0.75, border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`, bgcolor: 'background.paper', cursor: 'pointer', '&:hover': { borderColor: 'text.disabled' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main' } }}
                     >
                       <Box sx={{ mb: 0.5 }}>
                         <NameWithQty name={g.name} count={g.count} fontSize={12} />
                       </Box>
-                      <Typography sx={{ fontSize: 10.5, color: 'text.disabled' }}>
+                      <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
                         {g.mgr || '미지정'}{info.dueMonth ? ` · ${info.dueMonth}` : ''}{g.variantNames.length ? ` · ${g.variantNames.join('/')}` : ''}
                       </Typography>
                     </Box>
@@ -845,7 +846,7 @@ export default function Equipment() {
                       <Box component="td" className="lg-code" data-label="관리번호">{codeRange(g)}</Box>
                       <Box component="td" className="lg-primary rtable-title" data-label="장비명">
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
-                          <NameWithQty name={g.name} count={g.count} fontSize={11.5} />
+                          <NameWithQty name={g.name} count={g.count} fontSize={12} />
                           {g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400, fontSize: 11, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
                       </Box>
@@ -935,19 +936,19 @@ function PendingConfirm({ p, onApply, onCancel }: { p: PendingChange; onApply: (
         left: p.x + (flipX ? -16 : 16),
         top: p.y + (flipY ? -16 : 16),
         transform: `translate(${flipX ? '-100%' : '0'}, ${flipY ? '-100%' : '0'})`,
-        zIndex: 2100, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1.5,
-        boxShadow: 8, p: 1, minWidth: 150,
+        zIndex: 2100, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`,
+        boxShadow: shadow.md, p: 1, minWidth: 150,
       }}
     >
-      <Typography sx={{ fontSize: 12.5, fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+      <Typography sx={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
         {p.stageName ? `${p.stageName}  ` : ''}<Box component="span" sx={{ color: 'primary.main' }}>{p.delta}</Box>
       </Typography>
       <Typography sx={{ fontSize: 12, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', mt: 0.25 }}>
         {p.before} → {p.after}{p.qty > 1 ? `  (${p.qty}대)` : ''}
       </Typography>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
-        <IconButton size="small" color="success" aria-label="변경 반영" onClick={onApply} sx={{ p: 0.5 }}><CheckIcon sx={{ fontSize: 18 }} /></IconButton>
-        <IconButton size="small" color="error" aria-label="변경 취소" onClick={onCancel} sx={{ p: 0.5 }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+        <IconButton size="small" color="success" aria-label="변경 반영" onClick={onApply} sx={{ p: 0.5 }}><CheckIcon sx={{ fontSize: iconSize.action }} /></IconButton>
+        <IconButton size="small" color="error" aria-label="변경 취소" onClick={onCancel} sx={{ p: 0.5 }}><CloseIcon sx={{ fontSize: iconSize.action }} /></IconButton>
       </Box>
     </Box>,
     document.body,

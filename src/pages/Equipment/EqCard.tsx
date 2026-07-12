@@ -1,10 +1,11 @@
 import type { EqGroup } from '@/types'
+import { accent } from '@/theme/tokens'
 import { eqStateColor } from './EqItem'
 
 // 분류별 구분색 (장비운영관리 시트의 '분류' 열 값 기준) — 배경까지 확실히 구분되는 톤
 const CAT_STYLE: Record<string, { bg: string; border: string; color: string }> = {
-  공정: { bg: '#0d1f33', border: '#1f4068', color: '#5491DA' }, // 파랑
-  분석: { bg: '#1d1433', border: '#3a2a66', color: '#A98AE0' }, // 보라
+  공정: { bg: '#0d1f33', border: '#1f4068', color: accent.blue }, // 파랑
+  분석: { bg: '#1d1433', border: '#3a2a66', color: accent.purple }, // 보라
 }
 const DEFAULT_STYLE = { bg: '#1a1d23', border: '#30363d', color: '#8B949E' }
 export const catStyle = (cat: string) => CAT_STYLE[(cat || '').trim()] || DEFAULT_STYLE
@@ -12,8 +13,8 @@ export const catColor = (cat: string) => catStyle(cat).color
 
 // 도입 장비 카드 — 같은 장비명끼리 묶어 대수·합계 금액 표시
 export default function EqCard({ eq }: { eq: EqGroup }) {
-  const typeColor = eq.type === '외자' ? '#D6A23E' : '#5491DA'
-  const fundColor = (eq.fund || '').includes('국비') ? '#46B7BE' : '#4DA167'
+  const typeColor = eq.type === '외자' ? accent.amber : accent.blue
+  const fundColor = (eq.fund || '').includes('국비') ? accent.teal : accent.green
   const st = catStyle(eq.cat)
   const cColor = st.color
   const codeShort = eq.codes.length > 1 ? eq.codes[0] + '~' : eq.codes[0] || '-'

@@ -14,6 +14,7 @@ import { useRole, ROLE_LABEL } from '@/auth/role'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
 import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
+import { iconSize } from '@/theme/tokens'
 import topbarLogo from '@/assets/topbar-logo.jpg'
 
 export default function TopBar() {
@@ -58,13 +59,13 @@ export default function TopBar() {
                 size="small"
                 sx={{ color: desktopView ? 'primary.main' : 'text.secondary' }}
               >
-                {desktopView ? <PhoneIphoneIcon sx={{ fontSize: 20 }} /> : <DesktopWindowsIcon sx={{ fontSize: 20 }} />}
+                {desktopView ? <PhoneIphoneIcon sx={{ fontSize: iconSize.header }} /> : <DesktopWindowsIcon sx={{ fontSize: iconSize.header }} />}
               </IconButton>
             </Tooltip>
           )}
           <Tooltip title="통합검색 (Ctrl+K)">
             <IconButton aria-label="통합검색" onClick={() => setSearchOpen(true)} size="small" sx={{ color: 'text.secondary' }}>
-              <SearchIcon sx={{ fontSize: 20 }} />
+              <SearchIcon sx={{ fontSize: iconSize.header }} />
             </IconButton>
           </Tooltip>
           {/* 계정 컨트롤(칩·로그아웃·로그인)은 PC 전용 — 모바일은 하단 탭바/메뉴 드로어가 담당(상단바 잘림 방지) */}
@@ -75,12 +76,12 @@ export default function TopBar() {
                   status={isAdmin ? 'success' : role === 'member' ? 'info' : 'neutral'}
                   label={user ? `${ROLE_LABEL[role]} · ${user}` : ROLE_LABEL[role]}
                 />
-                <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: 16 }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
+                <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: iconSize.body }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
                   로그아웃
                 </Button>
               </>
             ) : (
-              <Button size="small" variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: 16 }} />} onClick={() => setLoginOpen(true)}>
+              <Button size="small" variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: iconSize.body }} />} onClick={() => setLoginOpen(true)}>
                 로그인
               </Button>
             )}

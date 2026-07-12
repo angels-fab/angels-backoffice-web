@@ -7,6 +7,7 @@ import Button from '@mui/material/Button'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ImageIcon from '@mui/icons-material/Image'
 import { alpha } from '@mui/material/styles'
+import { typescale, iconSize, radius } from '@/theme/tokens'
 import { fmtEventDate } from '@/constants/events'
 import { CAT_COLOR, type EventCat } from './eventCard'
 import { updateSubmissionStatus, submissionPosterUrl, type EventSubmissionRow } from '@/api/events'
@@ -37,26 +38,26 @@ export default function SubmissionsAdmin({ open, onClose, submissions, onChanged
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
       <DialogTitle>행사 신청 검토</DialogTitle>
       <DialogContent>
-        <Box sx={{ fontSize: 12, color: 'text.secondary', mb: 1.5 }}>
+        <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 1.5 }}>
           팀원이 올린 신청입니다. 실제 게시(카드 등록)는 클로드에게 요청해서 진행하고, 여기서는 처리 상태만 표시하세요.
         </Box>
         {sorted.length === 0 ? (
-          <Box sx={{ textAlign: 'center', color: 'text.disabled', py: 3, fontSize: 13 }}>신청이 없습니다.</Box>
+          <Box sx={{ textAlign: 'center', color: 'text.disabled', py: 3, fontSize: typescale.body.size }}>신청이 없습니다.</Box>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
             {sorted.map((s) => {
               const catColor = CAT_COLOR[(s.category as EventCat)] ?? '#888'
               const stColor = STATUS_COLOR[s.status] ?? '#888'
               return (
-                <Box key={s.id} sx={(th) => ({ border: `1px solid ${th.palette.divider}`, borderRadius: '10px', p: 1.25, bgcolor: alpha(th.palette.text.primary, 0.02) })}>
+                <Box key={s.id} sx={(th) => ({ border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.button}px`, p: 1.25, bgcolor: alpha(th.palette.text.primary, 0.02) })}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 0.75 }}>
-                    {s.category && <Box component="span" sx={{ fontSize: 11, fontWeight: 700, px: '8px', py: '2px', borderRadius: 999, bgcolor: catColor, color: '#fff' }}>{s.category}</Box>}
-                    <Box component="span" sx={{ fontSize: 11, fontWeight: 700, px: '8px', py: '2px', borderRadius: 999, color: stColor, border: `1px solid ${stColor}` }}>{STATUS_LABEL[s.status] ?? s.status}</Box>
+                    {s.category && <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, px: '8px', py: '2px', borderRadius: radius.pill, bgcolor: catColor, color: 'common.white' }}>{s.category}</Box>}
+                    <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, px: '8px', py: '2px', borderRadius: radius.pill, color: stColor, border: `1px solid ${stColor}` }}>{STATUS_LABEL[s.status] ?? s.status}</Box>
                     <Box sx={{ flex: 1 }} />
-                    <Box component="span" sx={{ fontSize: 11.5, color: 'text.disabled' }}>{s.submitter || '-'}</Box>
+                    <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.disabled' }}>{s.submitter || '-'}</Box>
                   </Box>
-                  <Box sx={{ fontSize: 13.5, fontWeight: 700, color: 'text.primary', mb: 0.4 }}>{s.title || '(제목 없음)'}</Box>
-                  <Box sx={{ fontSize: 12, color: 'text.secondary', lineHeight: 1.6 }}>
+                  <Box sx={{ fontSize: typescale.emphasis.size, fontWeight: typescale.cardTitle.weight, color: 'text.primary', mb: 0.4 }}>{s.title || '(제목 없음)'}</Box>
+                  <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', lineHeight: 1.6 }}>
                     {(s.start || s.end) && <Box>일시: {fmtEventDate(s.start, s.end)}</Box>}
                     {s.venue && <Box>장소: {s.venue}</Box>}
                     {s.organizer && <Box>주관: {s.organizer}</Box>}
@@ -65,16 +66,16 @@ export default function SubmissionsAdmin({ open, onClose, submissions, onChanged
                     ))}
                   </Box>
                   <Box sx={{ display: 'flex', gap: 0.75, mt: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                    {s.link && <Button size="small" variant="text" startIcon={<OpenInNewIcon sx={{ fontSize: 15 }} />} onClick={() => window.open(s.link, '_blank', 'noopener,noreferrer')} sx={{ fontSize: 11.5, minWidth: 0 }}>URL</Button>}
-                    {s.poster && <Button size="small" variant="text" startIcon={<ImageIcon sx={{ fontSize: 15 }} />} onClick={() => void openPoster(s.poster)} sx={{ fontSize: 11.5, minWidth: 0 }}>포스터</Button>}
+                    {s.link && <Button size="small" variant="text" startIcon={<OpenInNewIcon sx={{ fontSize: iconSize.body }} />} onClick={() => window.open(s.link, '_blank', 'noopener,noreferrer')} sx={{ fontSize: typescale.small.size, minWidth: 0 }}>URL</Button>}
+                    {s.poster && <Button size="small" variant="text" startIcon={<ImageIcon sx={{ fontSize: iconSize.body }} />} onClick={() => void openPoster(s.poster)} sx={{ fontSize: typescale.small.size, minWidth: 0 }}>포스터</Button>}
                     <Box sx={{ flex: 1 }} />
                     {s.status === 'pending' ? (
                       <>
-                        <Button size="small" color="error" disabled={busy === s.id} onClick={() => void setStatus(s.id, 'rejected')} sx={{ fontSize: 11.5, minWidth: 0 }}>반려</Button>
-                        <Button size="small" variant="contained" color="success" disabled={busy === s.id} onClick={() => void setStatus(s.id, 'published')} sx={{ fontSize: 11.5, minWidth: 0 }}>게시완료 표시</Button>
+                        <Button size="small" color="error" disabled={busy === s.id} onClick={() => void setStatus(s.id, 'rejected')} sx={{ fontSize: typescale.small.size, minWidth: 0 }}>반려</Button>
+                        <Button size="small" variant="contained" color="success" disabled={busy === s.id} onClick={() => void setStatus(s.id, 'published')} sx={{ fontSize: typescale.small.size, minWidth: 0 }}>게시완료 표시</Button>
                       </>
                     ) : (
-                      <Button size="small" disabled={busy === s.id} onClick={() => void setStatus(s.id, 'pending')} sx={{ fontSize: 11.5, minWidth: 0, color: 'text.secondary' }}>대기로</Button>
+                      <Button size="small" disabled={busy === s.id} onClick={() => void setStatus(s.id, 'pending')} sx={{ fontSize: typescale.small.size, minWidth: 0, color: 'text.secondary' }}>대기로</Button>
                     )}
                   </Box>
                 </Box>

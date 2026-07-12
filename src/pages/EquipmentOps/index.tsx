@@ -9,6 +9,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState } from '@/components/ds'
+import { iconSize, radius } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -125,7 +126,7 @@ export default function EquipmentOps() {
         updatedAt={error ? '연결 실패' : updatedAt || undefined}
         actions={
           <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-            <RefreshIcon sx={{ fontSize: 20 }} />
+            <RefreshIcon sx={{ fontSize: iconSize.header }} />
           </IconButton>
         }
       />
@@ -165,7 +166,7 @@ export default function EquipmentOps() {
       </Box>
 
       {/* 장비대장 */}
-      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 3, bgcolor: 'background.paper', overflow: 'hidden' }}>
+      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, bgcolor: 'background.paper', overflow: 'hidden' }}>
         <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           <Typography sx={{ fontSize: 13, fontWeight: 700 }}>장비대장 <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 500 }}>전체 {c.types}종 · {c.total}대</Box></Typography>
           <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -179,7 +180,7 @@ export default function EquipmentOps() {
               {mgrOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 담당자' : o}</option>)}
             </select>
             <Box component="input" className="eq-search" value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} placeholder="장비명·관리번호·제조사 검색" aria-label="운영장비 검색" />
-            <Button size="small" variant={missingOnly ? 'contained' : 'outlined'} onClick={() => setMissingOnly((m) => !m)} sx={{ flexShrink: 0, py: 0.4, fontSize: 12.5, color: missingOnly ? undefined : 'text.secondary', borderColor: 'divider' }}>
+            <Button size="small" variant={missingOnly ? 'contained' : 'outlined'} onClick={() => setMissingOnly((m) => !m)} sx={{ flexShrink: 0, py: 0.4, fontSize: 13, color: missingOnly ? undefined : 'text.secondary', borderColor: 'divider' }}>
               누락정보만
             </Button>
           </Box>
@@ -207,7 +208,7 @@ export default function EquipmentOps() {
                       <Box component="td" className="lg-code">{codeRange(g)}</Box>
                       <Box component="td" className="lg-primary">
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
-                          <NameWithQty name={g.name} count={g.count} fontSize={11.5} />
+                          <NameWithQty name={g.name} count={g.count} fontSize={12} />
                           {g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400, fontSize: 11, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
                       </Box>

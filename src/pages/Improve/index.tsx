@@ -34,6 +34,7 @@ import PushPinIcon from '@mui/icons-material/PushPin'
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
+import { typescale, iconSize, radius } from '@/theme/tokens'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -63,8 +64,8 @@ const kindColor = (t: Theme, kind: StatusKind) =>
 
 const inputSx = (th: Theme) => ({
   bgcolor: alpha(th.palette.text.primary, 0.05),
-  border: '1px solid', borderColor: th.palette.divider, borderRadius: '6px',
-  px: 1, py: 0.4, fontSize: 12.5, color: 'text.primary',
+  border: '1px solid', borderColor: th.palette.divider, borderRadius: `${radius.chip}px`,
+  px: 1, py: 0.4, fontSize: typescale.body.size, color: 'text.primary',
   '&.Mui-focused': { borderColor: th.palette.accent.green },
   '& input::placeholder, & textarea::placeholder': { color: 'text.disabled', opacity: 1 },
 })
@@ -86,12 +87,12 @@ function LinkField({ value, onChange }: { value: string; onChange: (v: string) =
     <>
       <Tooltip title={active ? '관련자료 편집' : '관련자료 추가'}>
         <IconButton size="small" aria-label="관련자료" onClick={(e) => setAnchor(e.currentTarget)} sx={(th) => ({ color: active ? th.palette.accent.blue : 'text.disabled', p: 0.5 })}>
-          <OpenInNewIcon sx={{ fontSize: 18 }} />
+          <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
         </IconButton>
       </Tooltip>
-      <Popover open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: '10px', mt: 0.5 } } }}>
+      <Popover open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: `${radius.button}px`, mt: 0.5 } } }}>
         <Box sx={{ p: 1.5, width: 280 }}>
-          <Box sx={{ fontSize: 12, color: 'text.secondary', mb: 0.5 }}>관련자료 링크</Box>
+          <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 0.5 }}>관련자료 링크</Box>
           <InputBase autoFocus value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://…" inputProps={{ 'aria-label': '관련자료 링크' }} sx={(th) => ({ ...inputSx(th), width: '100%', py: 0.5 })} />
         </Box>
       </Popover>
@@ -112,10 +113,10 @@ function DropField({ value, onChange, options, placeholder }: { value: string; o
       disableUnderline
       IconComponent={() => null}
       MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}
-      renderValue={(v) => (v ? <LocChip label={v} /> : <Box component="span" sx={{ color: 'text.disabled', fontSize: 12.5, border: '1px dashed', borderColor: 'divider', borderRadius: '16px', px: 1, py: '3px' }}>{placeholder}</Box>)}
+      renderValue={(v) => (v ? <LocChip label={v} /> : <Box component="span" sx={{ color: 'text.disabled', fontSize: typescale.body.size, border: '1px dashed', borderColor: 'divider', borderRadius: `${radius.modal}px`, px: 1, py: '3px' }}>{placeholder}</Box>)}
       sx={{ maxWidth: '100%', '& .MuiSelect-select': { p: 0, pr: '0 !important', minHeight: '0 !important', display: 'flex', alignItems: 'center', justifyContent: 'center' } }}
     >
-      {opts.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: 13 }}>{o}</MenuItem>)}
+      {opts.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: typescale.body.size }}>{o}</MenuItem>)}
     </Select>
   )
 }
@@ -134,13 +135,13 @@ function CellSelect({ value, options, onChange, disabled, placeholder }: { value
       disableUnderline
       IconComponent={() => null}
       MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}
-      renderValue={(v) => (v ? <LocChip label={v} /> : <Box component="span" sx={{ color: 'text.disabled', fontSize: 12.5 }}>{placeholder}</Box>)}
+      renderValue={(v) => (v ? <LocChip label={v} /> : <Box component="span" sx={{ color: 'text.disabled', fontSize: typescale.body.size }}>{placeholder}</Box>)}
       sx={{
         maxWidth: '100%',
         '& .MuiSelect-select': { p: '0 !important', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' },
       }}
     >
-      {opts.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: 13 }}>{o}</MenuItem>)}
+      {opts.map((o) => <MenuItem key={o} value={o} sx={{ fontSize: typescale.body.size }}>{o}</MenuItem>)}
     </Select>
   )
 }
@@ -154,11 +155,11 @@ function UrgentBox({ on, onToggle }: { on: boolean; onToggle: () => void }) {
         onClick={onToggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } }}
         sx={(th) => ({
-          width: 24, height: 24, borderRadius: '5px', cursor: 'pointer', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, lineHeight: 1,
+          width: 24, height: 24, borderRadius: `${radius.chip}px`, cursor: 'pointer', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1,
           border: '1px solid',
           ...(on
-            ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: '#fff' }
+            ? { bgcolor: th.palette.accent.red, borderColor: th.palette.accent.red, color: th.palette.common.white }
             : { borderColor: th.palette.divider, color: 'text.disabled', bgcolor: 'transparent' }),
         })}
       >!</Box>
@@ -518,11 +519,11 @@ export default function Improve() {
             sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{user || '-'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{fmtDate(todaySeoul())}</TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{user || '-'}</TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{fmtDate(todaySeoul())}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status="neutral" label="접수" /></TableCell>
         <TableCell sx={{ textAlign: 'center' }}>
-          <Tooltip title="이 요청 삭제"><span><IconButton size="small" color="error" aria-label={`요청 ${idx + 1} 삭제`} onClick={() => removeCard(c.key)} disabled={savingDraft || publishing}><DeleteOutlineIcon sx={{ fontSize: 18 }} /></IconButton></span></Tooltip>
+          <Tooltip title="이 요청 삭제"><span><IconButton size="small" color="error" aria-label={`요청 ${idx + 1} 삭제`} onClick={() => removeCard(c.key)} disabled={savingDraft || publishing}><DeleteOutlineIcon sx={{ fontSize: iconSize.action }} /></IconButton></span></Tooltip>
         </TableCell>
         {memoCol && <TableCell />}
       </TableRow>,
@@ -569,8 +570,8 @@ export default function Improve() {
             sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{author}</TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{author}</TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status={stKind} label={stLabel} /></TableCell>
         <TableCell />
         {memoCol && <TableCell />}
@@ -592,10 +593,10 @@ export default function Improve() {
         <TableCell onClick={stop} sx={{ textAlign: 'center' }}>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Tooltip title="수정 저장">
-              <span><IconButton size="small" color="success" aria-label="저장" onClick={onSave} disabled={saving}><CheckIcon sx={{ fontSize: 19 }} /></IconButton></span>
+              <span><IconButton size="small" color="success" aria-label="저장" onClick={onSave} disabled={saving}><CheckIcon sx={{ fontSize: iconSize.action }} /></IconButton></span>
             </Tooltip>
             <Tooltip title="취소">
-              <span><IconButton size="small" color="error" aria-label="취소" onClick={onCancel} disabled={saving}><CloseIcon sx={{ fontSize: 19 }} /></IconButton></span>
+              <span><IconButton size="small" color="error" aria-label="취소" onClick={onCancel} disabled={saving}><CloseIcon sx={{ fontSize: iconSize.action }} /></IconButton></span>
             </Tooltip>
           </Box>
         </TableCell>
@@ -611,7 +612,7 @@ export default function Improve() {
         updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
         actions={
           <IconButton aria-label="새로고침" onClick={() => dispatch(loadImproveData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-            <RefreshIcon sx={{ fontSize: 20 }} />
+            <RefreshIcon sx={{ fontSize: iconSize.header }} />
           </IconButton>
         }
       />
@@ -631,7 +632,7 @@ export default function Improve() {
                   sx={(t) => {
                     const c = kindColor(t, impKind(s))
                     return {
-                      fontWeight: 500,
+                      fontWeight: typescale.caption.weight,
                       transition: 'background-color .2s ease, color .2s ease, border-color .2s ease',
                       color: on ? t.palette.common.white : c,
                       bgcolor: on ? c : alpha(c, 0.12),
@@ -645,7 +646,7 @@ export default function Improve() {
               )
             })}
             {visibleStatuses.length > 1 && (
-              <Box component="span" sx={{ fontSize: 11.5, color: 'text.disabled', whiteSpace: 'nowrap', ml: 0.5 }}>
+              <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.disabled', whiteSpace: 'nowrap', ml: 0.5 }}>
                 Shift로 다중선택
               </Box>
             )}
@@ -660,7 +661,7 @@ export default function Improve() {
                 const c = th.palette.accent.green
                 const on = composing // 인라인 작성칸이 열리면 초록 채움+흰 글자로 전환
                 return {
-                  fontWeight: 500,
+                  fontWeight: typescale.caption.weight,
                   whiteSpace: 'nowrap',
                   transition: 'background-color .2s ease, color .2s ease, border-color .2s ease',
                   color: on ? th.palette.common.white : c,
@@ -678,7 +679,7 @@ export default function Improve() {
         <AppCard padding={0} sx={{ overflowX: 'auto' }}>
           <Table size="small" sx={{ '& td, & th': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
             <TableHead>
-              <TableRow sx={{ '& th': { textAlign: 'center', color: 'text.secondary', fontWeight: 600, fontSize: 12.5 } }}>
+              <TableRow sx={{ '& th': { textAlign: 'center', color: 'text.secondary', fontWeight: typescale.emphasis.weight, fontSize: typescale.body.size } }}>
                 <TableCell sx={{ width: '1%' }}>번호</TableCell>
                 <TableCell sx={{ width: '1%' }}>개선위치</TableCell>
                 <TableCell sx={{ width: '100%' }}>제목</TableCell>
@@ -742,7 +743,7 @@ export default function Improve() {
                     key={`${t.id}-r`}
                     sx={(th) => ({
                       '& td': {
-                        textAlign: 'center', fontSize: 12.5,
+                        textAlign: 'center', fontSize: typescale.body.size,
                         ...(open
                           ? { bgcolor: alpha(th.palette.accent.blue, 0.22), borderBottomColor: 'transparent' }
                           : { bgcolor: alpha(kindColor(th, kind), 0.07) }),
@@ -759,19 +760,19 @@ export default function Improve() {
                     {/* 제목 — 활성 영역(클릭 시 아코디언 토글). 행 전체가 아니라 이 셀만 포인터 */}
                     <TableCell onClick={toggle} sx={{ textAlign: 'left !important', whiteSpace: 'normal', cursor: 'pointer' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                        {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: 18, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
-                        <Box component="span" sx={{ fontWeight: 500, color: 'text.primary' }}>{t.title}</Box>
+                        {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: iconSize.action, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
+                        <Box component="span" sx={{ fontWeight: typescale.caption.weight, color: 'text.primary' }}>{t.title}</Box>
                         {/* 제목 → 최근글 N칩 → 답글 +N칩 → 링크 순. 모두 줄어들지 않게 flexShrink:0 */}
                         {isNew && (
-                          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: '4px', bgcolor: 'error.main', color: '#fff', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+                          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: 'error.main', color: 'common.white', fontSize: 9.5, fontWeight: typescale.cardTitle.weight, lineHeight: 1 }}>N</Box>
                         )}
                         {/* 답글 +N — 삭제 안 된 답글이 있을 때만. 파란 칩(왼쪽 점 없음), 상태와 무관. 클릭 시 행 토글로 아코디언 펼침 */}
                         {rowReplies.length > 0 && (
-                          <Box component="span" sx={(th) => ({ flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 18, px: '7px', borderRadius: '9px', fontSize: 10.5, fontWeight: 700, lineHeight: 1, whiteSpace: 'nowrap', color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.14), border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}` })}>답글 +{rowReplies.length}</Box>
+                          <Box component="span" sx={(th) => ({ flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 18, px: '7px', borderRadius: `${radius.button}px`, fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1, whiteSpace: 'nowrap', color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.14), border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}` })}>답글 +{rowReplies.length}</Box>
                         )}
                         {t.link && (
                           <IconButton component="a" href={t.link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련자료" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
-                            <OpenInNewIcon sx={{ fontSize: 15 }} />
+                            <OpenInNewIcon sx={{ fontSize: iconSize.body }} />
                           </IconButton>
                         )}
                       </Box>
@@ -790,7 +791,7 @@ export default function Improve() {
                           renderValue={(v) => <StatusChip status={impKind(v)} label={v} />}
                           sx={{ '& .MuiSelect-select': { p: 0, pr: '0 !important' } }}
                         >
-                          {IMP_STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: 13 }}>{s}</MenuItem>)}
+                          {IMP_STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: typescale.body.size }}>{s}</MenuItem>)}
                         </Select>
                       ) : (
                         <Box component="span" sx={{ cursor: 'not-allowed' }}><StatusChip status={impKind(st)} label={st || '-'} /></Box>
@@ -823,7 +824,7 @@ export default function Improve() {
                               onClick={() => void toggleMemo(t, !memoOn)}
                               sx={(th) => ({ color: memoOn ? th.palette.accent.amber : 'text.disabled', p: 0.5 })}
                             >
-                              {memoOn ? <PushPinIcon sx={{ fontSize: 18 }} /> : <PushPinOutlinedIcon sx={{ fontSize: 18 }} />}
+                              {memoOn ? <PushPinIcon sx={{ fontSize: iconSize.action }} /> : <PushPinOutlinedIcon sx={{ fontSize: iconSize.action }} />}
                             </IconButton>
                           </span>
                         </Tooltip>
@@ -836,14 +837,14 @@ export default function Improve() {
                       <TableCell colSpan={detailSpan} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
                         {/* 원문 내용 + (관리자) 개선요청 수정/삭제 */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
-                          <Box sx={{ fontSize: 13, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>
+                          <Box sx={{ fontSize: typescale.body.size, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>
                             {t.content ? <RichBodyView html={t.content} /> : '내용 없음'}
                           </Box>
                           {(editable || removable) && (
                             <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0, pt: 0.25 }} onClick={stop}>
                               {/* 수정 = 로그인 관리자 전체 / 삭제 = 담당자(작성자)만 */}
-                              {editable && <Tooltip title="수정"><IconButton size="small" aria-label="수정" onClick={() => openEdit(t)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>}
-                              {removable && <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="삭제" onClick={() => setDeleteDlg(t)}><DeleteOutlineIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>}
+                              {editable && <Tooltip title="수정"><IconButton size="small" aria-label="수정" onClick={() => openEdit(t)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: iconSize.action }} /></IconButton></Tooltip>}
+                              {removable && <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="삭제" onClick={() => setDeleteDlg(t)}><DeleteOutlineIcon sx={{ fontSize: iconSize.action }} /></IconButton></Tooltip>}
                             </Box>
                           )}
                         </Box>
@@ -872,7 +873,7 @@ export default function Improve() {
       <Dialog open={closeConfirm} onClose={() => !savingDraft && setCloseConfirm(false)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
         <DialogTitle>작성 중인 내용이 있습니다</DialogTitle>
         <DialogContent>
-          <Box sx={{ fontSize: 14, color: 'text.primary', lineHeight: 1.7 }}>작성 중인 요청을 임시저장할까요?<br />저장하지 않으면 이번에 작성한 내용은 사라집니다.</Box>
+          <Box sx={{ fontSize: typescale.emphasis.size, color: 'text.primary', lineHeight: 1.7 }}>작성 중인 요청을 임시저장할까요?<br />저장하지 않으면 이번에 작성한 내용은 사라집니다.</Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
           <Button onClick={() => setCloseConfirm(false)} disabled={savingDraft}>계속 작성</Button>
@@ -904,7 +905,7 @@ export default function Improve() {
       <Dialog open={!!deleteDlg} onClose={() => !saving && setDeleteDlg(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
         <DialogTitle>요청 삭제</DialogTitle>
         <DialogContent>
-          <Box sx={{ fontSize: 14, color: 'text.primary', lineHeight: 1.7 }}>「{deleteDlg?.title}」 요청을 삭제할까요?<br />삭제하면 되돌릴 수 없습니다.</Box>
+          <Box sx={{ fontSize: typescale.emphasis.size, color: 'text.primary', lineHeight: 1.7 }}>「{deleteDlg?.title}」 요청을 삭제할까요?<br />삭제하면 되돌릴 수 없습니다.</Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDeleteDlg(null)} disabled={saving}>취소</Button>
@@ -916,7 +917,7 @@ export default function Improve() {
       <Dialog open={!!delReply} onClose={() => !replyBusy && setDelReply(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
         <DialogTitle>답글 삭제</DialogTitle>
         <DialogContent>
-          <Box sx={{ fontSize: 14, color: 'text.primary', lineHeight: 1.7 }}>이 답글을 삭제할까요?<br />삭제하면 목록과 답글 수에서 제외됩니다.</Box>
+          <Box sx={{ fontSize: typescale.emphasis.size, color: 'text.primary', lineHeight: 1.7 }}>이 답글을 삭제할까요?<br />삭제하면 목록과 답글 수에서 제외됩니다.</Box>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setDelReply(null)} disabled={replyBusy}>취소</Button>

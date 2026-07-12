@@ -9,6 +9,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState } from '@/components/ds'
+import { radius, shadow, typescale } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
 import { fetchAttendees, addAttendee, removeAttendee, fetchSubmissions, type AttendeeRow, type EventSubmissionRow } from '@/api/events'
@@ -29,11 +30,11 @@ function EventCard({ e, open, onToggle }: { e: FabEvent; open: boolean; onToggle
       onClick={onToggle}
       onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onToggle() } }}
       sx={{
-        position: 'relative', borderRadius: '18px', overflow: 'hidden', border: 1, borderColor: 'divider', cursor: 'pointer',
+        position: 'relative', borderRadius: `${radius.modal}px`, overflow: 'hidden', border: 1, borderColor: 'divider', cursor: 'pointer',
         transition: 'box-shadow .18s ease, transform .18s ease',
         ...(open
-          ? { boxShadow: '0 14px 34px rgba(0,0,0,.5)' }
-          : { '&:hover': { transform: 'translateY(-3px) scale(1.012)', boxShadow: '0 12px 30px rgba(0,0,0,.45)' } }),
+          ? { boxShadow: shadow.lg }
+          : { '&:hover': { transform: 'translateY(-3px) scale(1.012)', boxShadow: shadow.sm } }),
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
         '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}
@@ -140,7 +141,7 @@ export default function Events() {
     <Button
       size="small" disableElevation variant={tab === v ? 'contained' : 'text'}
       onClick={() => setTab(v)}
-      sx={{ minWidth: 0, px: 1.75, py: 0.5, fontSize: 13.5, fontWeight: 700, color: tab === v ? undefined : 'text.secondary' }}
+      sx={{ minWidth: 0, px: 1.75, py: 0.5, fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight, color: tab === v ? undefined : 'text.secondary' }}
     >
       {label} {count}
     </Button>
@@ -169,7 +170,7 @@ export default function Events() {
       />
 
       {/* 진행·예정 / 종료 탭 (건수 표시) */}
-      <Box sx={{ display: 'inline-flex', gap: 0.5, p: '4px', mb: 2, border: 1, borderColor: 'divider', borderRadius: '10px', bgcolor: 'background.paper' }}>
+      <Box sx={{ display: 'inline-flex', gap: 0.5, p: '4px', mb: 2, border: 1, borderColor: 'divider', borderRadius: `${radius.button}px`, bgcolor: 'background.paper' }}>
         {tabBtn('active', '진행·예정', active.length)}
         {tabBtn('ended', '종료', ended.length)}
       </Box>
@@ -231,7 +232,7 @@ export default function Events() {
             onClick={() => setEndedDetail(null)}
             aria-label="상세 닫기"
             size="small"
-            sx={{ position: 'absolute', top: 12, right: 12, zIndex: 4, bgcolor: 'rgba(0,0,0,.5)', color: '#fff', '&:hover': { bgcolor: 'rgba(0,0,0,.72)' } }}
+            sx={{ position: 'absolute', top: 12, right: 12, zIndex: 4, bgcolor: 'rgba(0,0,0,.5)', color: 'common.white', '&:hover': { bgcolor: 'rgba(0,0,0,.72)' } }}
           >
             <CloseIcon fontSize="small" />
           </IconButton>

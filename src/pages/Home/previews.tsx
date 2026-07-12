@@ -5,6 +5,7 @@ import { CAL_CAT_MAP } from '@/constants/calendar'
 import { parseStartDate, todaySeoul } from '@/utils/date'
 import { workCatRank, workCatStyle } from '@/utils/workCat'
 import { hexA } from '@/utils/color'
+import { accent } from '@/theme/tokens'
 import PreviewLoading from '@/components/PreviewLoading'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
@@ -78,7 +79,7 @@ export function CalPreview() {
   return (
     <ul className="card-notice-list">
       {upcoming.map((e, i) => {
-        const col = CAL_CAT_MAP[e.cat]?.color || '#5491DA'
+        const col = CAL_CAT_MAP[e.cat]?.color || accent.blue
         const ddayCls = e.diff <= 1 ? 'dday-urgent' : e.diff <= 3 ? 'dday-soon' : 'dday-far'
         return (
           <li key={`${e.date}-${i}`}>

@@ -30,6 +30,7 @@ import type { ImprovementItem } from '@/types'
 import ReplyThread from '@/pages/Improve/ReplyThread'
 import { StatusChip } from '@/components/ds'
 import { IMP_STATUSES, impKind, needsReason, normStatus, isSettled } from '@/pages/Improve/improveMeta'
+import { radius, iconSize } from '@/theme/tokens'
 
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
 
@@ -48,7 +49,7 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
         gap: '6px',
         flexShrink: 0,
         border: `1px solid ${alpha(th.palette.accent.amber, 0.46)}`,
-        borderRadius: 999,
+        borderRadius: radius.pill,
         px: '10px',
         py: '5px',
         cursor: 'pointer',
@@ -62,7 +63,7 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
       })}
     >
-      <PushPinIcon sx={{ fontSize: 15 }} />
+      <PushPinIcon sx={{ fontSize: iconSize.body }} />
       개선 메모
       <Box
         component="span"
@@ -72,8 +73,8 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
           minWidth: 18,
           height: 18,
           px: '4px',
-          borderRadius: 999,
-          fontSize: 10.5,
+          borderRadius: radius.pill,
+          fontSize: 11,
           fontWeight: 800,
           bgcolor: th.palette.accent.amber,
           color: th.palette.getContrastText(th.palette.accent.amber),
@@ -98,12 +99,12 @@ function ReplyCountChip({ count, onClick }: { count: number; onClick: () => void
         alignItems: 'center',
         height: 18,
         px: '7px',
-        borderRadius: '9px',
+        borderRadius: radius.button,
         border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}`,
         bgcolor: alpha(th.palette.accent.blue, 0.14),
         color: th.palette.accent.blue,
         font: 'inherit',
-        fontSize: 10.5,
+        fontSize: 11,
         fontWeight: 700,
         lineHeight: 1,
         whiteSpace: 'nowrap',
@@ -146,10 +147,10 @@ function MemoRow({
         </Box>
         <Box component="span" sx={{ fontSize: 13, fontWeight: 700, color: 'text.primary', minWidth: 0 }}>{t.title}</Box>
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: 'text.secondary' }}>
-          <PersonOutlineIcon sx={{ fontSize: 13 }} />{t.author || '-'}
+          <PersonOutlineIcon sx={{ fontSize: iconSize.caption }} />{t.author || '-'}
         </Box>
-        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: 999 })}>
-          <PlaceOutlinedIcon sx={{ fontSize: 13 }} />{t.loc || '-'}
+        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: radius.pill })}>
+          <PlaceOutlinedIcon sx={{ fontSize: iconSize.caption }} />{t.loc || '-'}
         </Box>
         {/* 상태 — 메인 보드와 동일 값·색. 관리자는 여기서 바로 변경(보류·완료·불가는 확인 팝업). */}
         {isAdmin ? (
@@ -175,11 +176,11 @@ function MemoRow({
             onClick={onToggle}
             aria-expanded={open}
             startIcon={open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-            sx={{ minWidth: 0, fontSize: 11.5, color: 'text.secondary', px: 1 }}
+            sx={{ minWidth: 0, fontSize: 12, color: 'text.secondary', px: 1 }}
           >
             {open ? '접기' : '펼치기'}
           </Button>
-          <Button size="small" color="warning" onClick={onRemove} disabled={removing} sx={{ minWidth: 0, fontSize: 11.5, px: 1 }}>
+          <Button size="small" color="warning" onClick={onRemove} disabled={removing} sx={{ minWidth: 0, fontSize: 12, px: 1 }}>
             메모 해제
           </Button>
         </Box>
@@ -187,7 +188,7 @@ function MemoRow({
       {open && (
         <Box sx={{ mt: 1 }}>
           {/* 1·2: 개선요청 내용 */}
-          <Box sx={{ fontSize: 12.5, color: 'text.secondary', lineHeight: 1.7 }}>
+          <Box sx={{ fontSize: 13, color: 'text.secondary', lineHeight: 1.7 }}>
             {t.content ? <RichBodyView html={t.content} /> : '내용 없음'}
           </Box>
           {/* 3·4·5·6: 답글 +N · 목록 · 입력창 · 등록 (게시판과 동일 데이터/컴포넌트) */}
@@ -378,14 +379,14 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
       sx={(th) => ({
         mt: 1.25,
         border: `1px solid ${alpha(th.palette.accent.amber, 0.35)}`,
-        borderRadius: '12px',
+        borderRadius: radius.card,
         overflow: 'hidden',
         background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.1)}, ${th.palette.background.paper} 52%)`,
       })}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.75, py: 1, borderBottom: '1px solid', borderColor: (th) => alpha(th.palette.accent.amber, 0.18) }}>
         <Box sx={(th) => ({ fontSize: 12, fontWeight: 800, color: th.palette.accent.amber })}>이 화면에서 확인할 개선요청</Box>
-        <Button size="small" onClick={() => setOpen(false)} sx={{ minWidth: 0, fontSize: 11.5, color: 'text.secondary', px: 1 }}>접기</Button>
+        <Button size="small" onClick={() => setOpen(false)} sx={{ minWidth: 0, fontSize: 12, color: 'text.secondary', px: 1 }}>접기</Button>
       </Box>
       <Box sx={{ px: 1.75 }}>
         {memos.map((t) => (

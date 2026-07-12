@@ -9,6 +9,7 @@ import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import { createSchedule, updateSchedule } from '@/api/eq'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import type { ScheduleItem } from '@/types'
 import { STAGE, STAGE_ORDER } from './stageMeta'
@@ -112,16 +113,16 @@ export default function ScheduleWrite({ open, onClose, editing, batchCodes, onSa
           sx: {
             width: 560, maxWidth: '100%', m: 2,
             bgcolor: 'background.paper', backgroundImage: 'none',
-            border: 1, borderColor: 'divider', borderRadius: '16px', p: '22px 24px',
+            border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, p: '22px 24px',
           },
         },
       }}
     >
       <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <LocalShippingIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
-          <Typography component="span" sx={{ fontSize: 16, fontWeight: 600 }}>{isEdit ? '장비 도입 수정' : '장비 추가'}</Typography>
-          <IconButton onClick={onClose} disabled={saving} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton>
+          <LocalShippingIcon sx={{ color: 'text.secondary', fontSize: iconSize.header }} />
+          <Typography component="span" sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.emphasis.weight }}>{isEdit ? '장비 도입 수정' : '장비 추가'}</Typography>
+          <IconButton onClick={onClose} disabled={saving} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: iconSize.action }} /></IconButton>
         </Box>
 
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
@@ -135,7 +136,7 @@ export default function ScheduleWrite({ open, onClose, editing, batchCodes, onSa
         </Box>
 
         <Box>
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, display: 'block', mb: 1 }}>단계별 소요기간 (개월, 0.5 단위)</Typography>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typescale.emphasis.weight, display: 'block', mb: 1 }}>단계별 소요기간 (개월, 0.5 단위)</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 1 }}>
             {STAGE_LABELS.map((label) => (
               <TextField

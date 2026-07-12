@@ -18,6 +18,7 @@ import { useAppSelector } from '@/store/hooks'
 import { NavBadge } from '@/components/ds'
 import { useNavBadges } from './useNavBadges'
 import { memoCountByPath } from '@/utils/improveMemo'
+import { radius } from '@/theme/tokens'
 
 /**
  * 모바일 「메뉴」 바텀시트 — 하단 탭(홈·업무현황·업무일정·공지)에 없는 나머지 목적지 + 계정.
@@ -68,14 +69,14 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
         paper: {
           sx: {
             bgcolor: 'background.paper',
-            borderTopLeftRadius: 18,
-            borderTopRightRadius: 18,
+            borderTopLeftRadius: radius.modal,
+            borderTopRightRadius: radius.modal,
             pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
           },
         },
       }}
     >
-      <Box sx={{ width: 36, height: 4, borderRadius: 2, bgcolor: 'divider', mx: 'auto', mt: 1.25, mb: 0.5 }} />
+      <Box sx={{ width: 36, height: 4, borderRadius: radius.pill, bgcolor: 'divider', mx: 'auto', mt: 1.25, mb: 0.5 }} />
 
       <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>
         이동
@@ -91,7 +92,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
               </ListItemIcon>
               {/* 아이폰식 위첨자 배지(D7 표준) — 메뉴명 우상단, 빨강=새 글·앰버=메모. 행 오른쪽 배지 폐지 */}
               <ListItemText
-                slotProps={{ primary: { sx: { fontSize: 14.5 } } }}
+                slotProps={{ primary: { sx: { fontSize: 14 } } }}
                 primary={
                   <Box component="span" sx={{ position: 'relative', display: 'inline-block' }}>
                     {r.label}
@@ -122,7 +123,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
                 <ListItemIcon sx={{ minWidth: 40, color: isActive('/settings') ? 'primary.main' : 'text.secondary' }}>
                   <SettingsIcon />
                 </ListItemIcon>
-                <ListItemText slotProps={{ primary: { sx: { fontSize: 14.5 } } }} primary="설정" />
+                <ListItemText slotProps={{ primary: { sx: { fontSize: 14 } } }} primary="설정" />
               </ListItemButton>
             )}
             <ListItemButton
@@ -135,7 +136,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
               <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
                 <LogoutIcon />
               </ListItemIcon>
-              <ListItemText slotProps={{ primary: { sx: { fontSize: 14.5 } } }} primary="로그아웃" />
+              <ListItemText slotProps={{ primary: { sx: { fontSize: 14 } } }} primary="로그아웃" />
             </ListItemButton>
           </List>
         </>

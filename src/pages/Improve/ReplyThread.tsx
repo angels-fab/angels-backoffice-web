@@ -6,6 +6,7 @@ import Tooltip from '@mui/material/Tooltip'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import { alpha } from '@mui/material/styles'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import type { ReplyRow } from '@/api/sheets'
 import { RichBodyEditor } from '@/components/richText'
 import { RichBodyView } from '@/utils/richBody'
@@ -58,13 +59,13 @@ export default function ReplyThread({ replies, isAdmin, user, busy, onCreate, on
 
   return (
     <Box sx={{ mt: 2 }} onClick={(e) => e.stopPropagation()}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25, color: 'text.secondary', fontSize: 11.5, fontWeight: 700 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25, color: 'text.secondary', fontSize: typescale.small.size, fontWeight: typescale.cardTitle.weight }}>
         답글 {replies.length}개
         <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
       </Box>
 
       {replies.length === 0 ? (
-        <Box sx={{ color: 'text.disabled', fontSize: 12.5, py: 1.25, textAlign: 'center', border: '1px dashed', borderColor: 'divider', borderRadius: '8px' }}>
+        <Box sx={{ color: 'text.disabled', fontSize: typescale.body.size, py: 1.25, textAlign: 'center', border: '1px dashed', borderColor: 'divider', borderRadius: `${radius.chip}px` }}>
           아직 답글이 없습니다
         </Box>
       ) : (
@@ -73,29 +74,29 @@ export default function ReplyThread({ replies, isAdmin, user, busy, onCreate, on
             const mine = isAdmin && !!user && user === (r.author || '').trim()
             const editing = editingId === r.id
             return (
-              <Box key={r.id} sx={(th) => ({ border: '1px solid', borderColor: 'divider', borderRadius: '10px', p: '10px 12px', bgcolor: alpha(th.palette.text.primary, 0.02) })}>
+              <Box key={r.id} sx={(th) => ({ border: '1px solid', borderColor: 'divider', borderRadius: `${radius.button}px`, p: '10px 12px', bgcolor: alpha(th.palette.text.primary, 0.02) })}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                  <Box component="span" sx={{ fontSize: 12, fontWeight: 800, color: 'text.primary' }}>{r.author || '-'}</Box>
-                  <Box component="span" sx={{ fontSize: 10.5, color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
+                  <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.pageTitle.weight, color: 'text.primary' }}>{r.author || '-'}</Box>
+                  <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
                     {fmtReplyTime(r.created)}{r.edited ? ' · 수정됨' : ''}
                   </Box>
                   {mine && !editing && (
                     <Box sx={{ ml: 'auto', display: 'flex', gap: 0.25, flexShrink: 0 }}>
-                      <Tooltip title="수정"><IconButton size="small" aria-label="답글 수정" onClick={() => startEdit(r)} sx={{ color: 'text.secondary', p: 0.25 }}><EditIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
-                      <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="답글 삭제" onClick={() => onRequestDelete(r)} sx={{ p: 0.25 }}><DeleteOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+                      <Tooltip title="수정"><IconButton size="small" aria-label="답글 수정" onClick={() => startEdit(r)} sx={{ color: 'text.secondary', p: 0.25 }}><EditIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
+                      <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="답글 삭제" onClick={() => onRequestDelete(r)} sx={{ p: 0.25 }}><DeleteOutlineIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
                     </Box>
                   )}
                 </Box>
                 {editing ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                    <RichBodyEditor value={editText} onChange={setEditText} ariaLabel="답글 수정" fontSize={12.5} minHeight={48} framed onCtrlEnter={() => void saveEdit(r)} />
+                    <RichBodyEditor value={editText} onChange={setEditText} ariaLabel="답글 수정" fontSize={typescale.body.size} minHeight={48} framed onCtrlEnter={() => void saveEdit(r)} />
                     <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
                       <Button size="small" color="inherit" onClick={() => setEditingId(null)} disabled={busy}>취소</Button>
                       <Button size="small" variant="contained" color="success" onClick={() => saveEdit(r)} disabled={busy || !editText.trim()}>저장</Button>
                     </Box>
                   </Box>
                 ) : (
-                  <RichBodyView html={r.content} sx={{ fontSize: 12.5, lineHeight: 1.65, color: 'text.primary' }} />
+                  <RichBodyView html={r.content} sx={{ fontSize: typescale.body.size, lineHeight: 1.65, color: 'text.primary' }} />
                 )}
               </Box>
             )
@@ -112,7 +113,7 @@ export default function ReplyThread({ replies, isAdmin, user, busy, onCreate, on
               onChange={setText}
               placeholder="이 요청에 대한 답글을 입력하세요"
               ariaLabel="답글 입력"
-              fontSize={12.5}
+              fontSize={typescale.body.size}
               minHeight={48}
               framed
               onCtrlEnter={() => void submit()}

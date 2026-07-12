@@ -15,6 +15,7 @@ import { downloadNoticeBlob } from '@/api/notices'
 import { AttachmentIcon, formatBytes } from './attachmentUI'
 import { fileTypeRank } from './fileTypeIcons'
 import { noticeBodyHTML } from './noticeMeta'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 
 const refUrl = (n: Notice) => String(n.ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
 
@@ -115,8 +116,8 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
           </Box>
           {canEdit && (
             <Box sx={{ display: 'flex', gap: 0.25, flexShrink: 0 }}>
-              <Tooltip title="수정"><IconButton size="small" aria-label="수정" onClick={() => onEdit?.(notice)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
-              <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="삭제" onClick={() => onDelete?.(notice)}><DeleteOutlineIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+              <Tooltip title="수정"><IconButton size="small" aria-label="수정" onClick={() => onEdit?.(notice)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: iconSize.action }} /></IconButton></Tooltip>
+              <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="삭제" onClick={() => onDelete?.(notice)}><DeleteOutlineIcon sx={{ fontSize: iconSize.action }} /></IconButton></Tooltip>
             </Box>
           )}
         </Box>
@@ -124,16 +125,16 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
 
       <Box
         sx={{
-          fontSize: 14, lineHeight: 1.7, color: 'text.secondary', borderTop: 1, borderColor: 'divider', pt: 2,
+          fontSize: typescale.emphasis.size, lineHeight: 1.7, color: 'text.secondary', borderTop: 1, borderColor: 'divider', pt: 2,
           '& a': { color: 'primary.main' },
-          '& img': { maxWidth: '100%', borderRadius: 1 },
+          '& img': { maxWidth: '100%', borderRadius: `${radius.card}px` },
           '& p': { m: 0, mb: 1 },
           '& ul, & ol': { pl: 3, m: 0, mb: 1 },
           '& ul': { listStyle: 'disc' },
           '& ol': { listStyle: 'decimal' },
           '& li': { mb: 0.5 },
           '& li p': { m: 0 },
-          '& strong, & b': { color: 'text.primary', fontWeight: 700 },
+          '& strong, & b': { color: 'text.primary', fontWeight: typescale.cardTitle.weight },
         }}
         dangerouslySetInnerHTML={{ __html: noticeBodyHTML(notice.body) }}
       />
@@ -141,14 +142,14 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
       {attachments.length > 0 && (
         <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-            <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, letterSpacing: '0.04em' }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: typescale.cardTitle.weight, letterSpacing: '0.04em' }}>
               첨부파일 {attachments.length}
             </Typography>
             {attachments.length > 1 && (
               <Button
                 size="small" variant="text" onClick={downloadAll} disabled={zipping}
-                startIcon={zipping ? <CircularProgress size={14} thickness={5} /> : <DownloadIcon sx={{ fontSize: 16 }} />}
-                sx={{ fontSize: 11.5, py: 0.25, minWidth: 0 }}
+                startIcon={zipping ? <CircularProgress size={14} thickness={5} /> : <DownloadIcon sx={{ fontSize: iconSize.body }} />}
+                sx={{ fontSize: typescale.small.size, py: 0.25, minWidth: 0 }}
               >
                 {zipping ? '압축 중…' : '모두 다운로드'}
               </Button>
@@ -167,7 +168,7 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); download(a) } }}
                 sx={(th) => ({
                   display: 'flex', alignItems: 'center', gap: 0.6, width: '100%', minWidth: 0, pl: 1, pr: 1.1, py: '6px',
-                  borderRadius: '8px', border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper', cursor: 'pointer',
+                  borderRadius: `${radius.chip}px`, border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper', cursor: 'pointer',
                   transition: 'border-color .15s, background-color .15s',
                   '&:hover': { borderColor: th.palette.primary.main, bgcolor: 'action.hover' },
                   '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 1 },
@@ -176,13 +177,13 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
                 {busyPath === a.path
                   ? <CircularProgress size={16} thickness={5} sx={{ flex: 'none' }} />
                   : <AttachmentIcon type={a.type} name={a.name} size={20} />}
-                <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: 12.5, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</Box>
-                <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', flex: 'none' }}>{formatBytes(a.size)}</Box>
-                <DownloadIcon sx={{ fontSize: 15, color: 'text.disabled', flex: 'none' }} />
+                <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: typescale.body.size, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.name}</Box>
+                <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', flex: 'none' }}>{formatBytes(a.size)}</Box>
+                <DownloadIcon sx={{ fontSize: iconSize.body, color: 'text.disabled', flex: 'none' }} />
               </Box>
             ))}
           </Box>
-          {dlErr && <Box sx={{ fontSize: 11.5, color: 'error.main' }}>{dlErr}</Box>}
+          {dlErr && <Box sx={{ fontSize: typescale.small.size, color: 'error.main' }}>{dlErr}</Box>}
         </Box>
       )}
 

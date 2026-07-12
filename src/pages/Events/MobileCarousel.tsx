@@ -3,6 +3,7 @@ import Box from '@mui/material/Box'
 import { EmptyState } from '@/components/ds'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import { type FabEvent } from '@/constants/events'
+import { radius, shadow, typescale } from '@/theme/tokens'
 import { EventCardInner } from './eventCard'
 
 /** 카드 한 장 — 스와이프(드래그)와 짧은 탭을 구분해 토글. 사이트 링크 클릭은 토글로 전파 안 됨. */
@@ -28,12 +29,12 @@ function MobileCard({ e, open, onToggle }: { e: FabEvent; open: boolean; onToggl
       sx={{
         scrollSnapAlign: 'center',
         minWidth: 0,
-        borderRadius: '18px',
+        borderRadius: `${radius.modal}px`,
         overflow: 'hidden',
         border: 1,
         borderColor: 'divider',
         cursor: 'pointer',
-        boxShadow: open ? '0 14px 34px rgba(0,0,0,.5)' : '0 10px 26px rgba(0,0,0,.34)',
+        boxShadow: open ? shadow.lg : shadow.md,
         transition: 'box-shadow .2s ease',
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
         '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
@@ -82,7 +83,7 @@ export default function MobileCarousel({ events }: { events: FabEvent[] }) {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: '4px', pb: '10px', fontSize: 11.5, color: 'text.secondary' }}>카드를 누르면 상세가 열립니다</Box>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: '4px', pb: '10px', fontSize: typescale.small.size, color: 'text.secondary' }}>카드를 누르면 상세가 열립니다</Box>
       <Box
         ref={railRef}
         onScroll={onRailScroll}
@@ -101,7 +102,7 @@ export default function MobileCarousel({ events }: { events: FabEvent[] }) {
         aria-live="polite"
         sx={{
           minHeight: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '9px',
-          color: 'text.secondary', fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums',
+          color: 'text.secondary', fontSize: typescale.small.size, fontWeight: typescale.cardTitle.weight, fontVariantNumeric: 'tabular-nums',
           '&::before, &::after': { content: '""', width: 30, height: '1px', bgcolor: 'divider' },
         }}
       >

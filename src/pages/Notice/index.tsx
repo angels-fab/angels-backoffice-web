@@ -45,6 +45,7 @@ import {
   SearchBar,
 } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
+import { iconSize, radius } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { useMarkSeen } from '@/layouts/useNavBadges'
 import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
@@ -261,14 +262,14 @@ export default function Notice() {
         >
           <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
             {isCopy
-              ? <PushPinIcon sx={(th) => ({ fontSize: 16, color: th.palette.accent.amber })} />
+              ? <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
               : (
                 // 같은 번호의 상단고정 복사본이 펼쳐져 있으면 원본 번호에 동그라미 강조
                 <Box
                   component="span"
                   sx={(th) => ({
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    minWidth: 22, height: 22, px: '4px', borderRadius: '50%', fontVariantNumeric: 'tabular-nums',
+                    minWidth: 22, height: 22, px: '4px', borderRadius: radius.circle, fontVariantNumeric: 'tabular-nums',
                     transition: 'border-color .15s, color .15s',
                     ...(openKey === `pin-${n.num}`
                       ? { border: `1.5px solid ${th.palette.accent.amber}`, color: th.palette.accent.amber, fontWeight: 700 }
@@ -296,11 +297,11 @@ export default function Notice() {
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
               </Typography>
               {n.isNew && (
-                <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: '4px', bgcolor: 'error.main', color: '#fff', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+                <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: radius.chip, bgcolor: 'error.main', color: 'common.white', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
               )}
               {link && (
                 <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
-                  <OpenInNewIcon sx={{ fontSize: 15 }} />
+                  <OpenInNewIcon sx={{ fontSize: iconSize.body }} />
                 </IconButton>
               )}
             </Box>
@@ -309,7 +310,7 @@ export default function Notice() {
           <TableCell sx={{ whiteSpace: 'nowrap' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'flex-end', md: 'space-between' }, gap: 1 }}>
               <Box component="span" sx={{ color: 'text.disabled', fontFamily: 'monospace', display: { xs: 'none', md: 'inline' } }}>{n.date}</Box>
-              <ExpandMoreIcon sx={{ fontSize: 18, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
+              <ExpandMoreIcon sx={{ fontSize: iconSize.action, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
             </Box>
           </TableCell>
           {/* 첨부 유무 — DS 표준 첨부 표식 = AttachFile 클립(손그림 플로피 SVG 폐지, 사용자 확정 2026-07-13) */}
@@ -318,7 +319,7 @@ export default function Notice() {
               <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
                 <AttachFileIcon
                   aria-label={`첨부파일 ${n.attachments.length}개`}
-                  sx={{ fontSize: 16, color: 'text.secondary', verticalAlign: 'middle' }}
+                  sx={{ fontSize: iconSize.body, color: 'text.secondary', verticalAlign: 'middle' }}
                 />
               </Tooltip>
             )}
@@ -344,7 +345,7 @@ export default function Notice() {
         updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
         actions={
           <IconButton aria-label="새로고침" onClick={refresh} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-            <RefreshIcon sx={{ fontSize: 20 }} />
+            <RefreshIcon sx={{ fontSize: iconSize.header }} />
           </IconButton>
         }
       />
@@ -354,7 +355,7 @@ export default function Notice() {
         <Box
           sx={(t) => ({
             display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25, mb: 2,
-            p: '10px 14px', bgcolor: 'background.paper', border: `1px solid ${t.palette.divider}`, borderRadius: '12px',
+            p: '10px 14px', bgcolor: 'background.paper', border: `1px solid ${t.palette.divider}`, borderRadius: radius.card,
           })}
         >
           <Box component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none' }}>분류</Box>
@@ -372,8 +373,8 @@ export default function Notice() {
                   onToggle={() => toggleCat(c)}
                   sx={{ p: '5px 11px', color }}
                 >
-                  {Icon && <Icon sx={{ fontSize: 15, flex: 'none' }} />}
-                  <Box component="span" sx={{ fontSize: 12.5, fontWeight: 600 }}>{c}</Box>
+                  {Icon && <Icon sx={{ fontSize: iconSize.body, flex: 'none' }} />}
+                  <Box component="span" sx={{ fontSize: 13, fontWeight: 600 }}>{c}</Box>
                   <Box component="span" sx={{ fontSize: 11, opacity: 0.7 }}>{catCounts[c] || 0}</Box>
                 </TintChip>
               )
@@ -383,7 +384,7 @@ export default function Notice() {
           <Box sx={{ ml: { sm: 'auto' }, display: 'flex', alignItems: 'center', gap: 1 }}>
             <SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" width={200} />
             {isMember && (
-              <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: 18 }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap' }}>
+              <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: iconSize.action }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap' }}>
                 새 공지
               </Button>
             )}

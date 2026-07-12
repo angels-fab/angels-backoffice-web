@@ -17,6 +17,7 @@ import SwapVertIcon from '@mui/icons-material/SwapVert'
 import TuneIcon from '@mui/icons-material/Tune'
 import StarRoundedIcon from '@mui/icons-material/StarRounded'
 import type { SvgIconComponent } from '@mui/icons-material'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
@@ -67,13 +68,13 @@ export default function WhatsNewDialog() {
         <Box
           sx={(th) => ({
             display: 'flex', alignItems: 'center', gap: 1.25,
-            p: '10px 14px', mb: 2, borderRadius: '10px',
+            p: '10px 14px', mb: 2, borderRadius: `${radius.button}px`,
             bgcolor: alpha(th.palette.accent.green, 0.12),
             border: `1px solid ${alpha(th.palette.accent.green, 0.35)}`,
           })}
         >
-          <ShieldOutlinedIcon sx={(th) => ({ color: th.palette.accent.green, fontSize: 20, flexShrink: 0 })} />
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          <ShieldOutlinedIcon sx={(th) => ({ color: th.palette.accent.green, fontSize: iconSize.header, flexShrink: 0 })} />
+          <Typography variant="body2" sx={{ fontWeight: typescale.emphasis.weight }}>
             아래 기능은 전부 <Box component="span" sx={(th) => ({ color: th.palette.accent.green })}>내 계정에만 적용</Box>됩니다.
             마음껏 바꿔도 팀원 화면과 팀 데이터(업무·일정·공지)에는 영향이 없어요.
           </Typography>
@@ -84,15 +85,15 @@ export default function WhatsNewDialog() {
             <Box key={title} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start' }}>
               <Box
                 sx={(th) => ({
-                  width: 34, height: 34, flexShrink: 0, borderRadius: '9px',
+                  width: 34, height: 34, flexShrink: 0, borderRadius: `${radius.button}px`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   bgcolor: alpha(th.palette.primary.main, 0.13), color: 'primary.main',
                 })}
               >
-                <Icon sx={{ fontSize: 18 }} />
+                <Icon sx={{ fontSize: iconSize.action }} />
               </Box>
               <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>{title}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>{title}</Typography>
                 <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.25 }}>{desc}</Typography>
               </Box>
             </Box>
@@ -102,7 +103,7 @@ export default function WhatsNewDialog() {
       <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
         {/* 체크 + 확인 = 영구(다시 안 뜸) / 체크 없이 확인·닫기 = 다음 접속 때 다시 안내 */}
         <FormControlLabel
-          sx={{ mr: 'auto', '& .MuiFormControlLabel-label': { fontSize: 13.5, color: 'text.secondary' } }}
+          sx={{ mr: 'auto', '& .MuiFormControlLabel-label': { fontSize: typescale.body.size, color: 'text.secondary' } }}
           control={<Checkbox size="small" checked={noMore} onChange={(e) => setNoMore(e.target.checked)} />}
           label="다시 보지 않기"
         />

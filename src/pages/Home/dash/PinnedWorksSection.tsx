@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { AppCard, StatusChip } from '@/components/ds'
+import { typescale, radius } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
 import { taskTitle, catKind, mgrColor, classify, W_STATUS } from '@/pages/Work/workMeta'
 import WorkPinButton from '@/pages/Work/WorkPinButton'
@@ -32,10 +33,10 @@ export default function PinnedWorksSection() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
               <WorkPinButton num={t.num} />
               {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>
+              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: typescale.emphasis.weight }}>
                 {taskTitle(t)}
               </Typography>
-              <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 22, fontSize: 12, fontWeight: 700, borderRadius: '8px', px: 1, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>
+              <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 22, fontSize: typescale.small.size, fontWeight: typescale.cardTitle.weight, borderRadius: `${radius.chip}px`, px: 1, bgcolor: mgrColor(t.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>
                 {t.mgr || '미지정'}
               </Box>
               <Box sx={{ flexShrink: 0 }}>

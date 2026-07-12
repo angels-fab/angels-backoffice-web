@@ -17,6 +17,7 @@ import FormatIndentDecreaseIcon from '@mui/icons-material/FormatIndentDecrease'
 import FormatClearIcon from '@mui/icons-material/FormatClear'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 import { alpha } from '@mui/material/styles'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import { useEditor, EditorContent } from '@tiptap/react'
 import type { Editor } from '@tiptap/react'
 import { Mark, mergeAttributes } from '@tiptap/core'
@@ -126,7 +127,7 @@ function TBtn({ active, disabled, title, onClick, children }: {
         onMouseDown={(e) => e.preventDefault()}
         onClick={onClick}
         sx={(th) => ({
-          p: 0.4, borderRadius: '7px',
+          p: 0.4, borderRadius: `${radius.chip}px`,
           color: active ? th.palette.primary.main : 'text.secondary',
           bgcolor: active ? alpha(th.palette.primary.main, 0.16) : 'transparent',
           '&:hover': { bgcolor: alpha(th.palette.primary.main, active ? 0.22 : 0.1) },
@@ -150,7 +151,7 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
   return (
     // 호버 강조는 컨트롤 전체(본체+화살표)에 한 번에 — PPT처럼 한 덩어리로 반응
     <Box sx={(th) => ({
-      display: 'inline-flex', alignItems: 'stretch', borderRadius: '7px', overflow: 'hidden',
+      display: 'inline-flex', alignItems: 'stretch', borderRadius: `${radius.chip}px`, overflow: 'hidden',
       bgcolor: active ? alpha(th.palette.primary.main, 0.16) : 'transparent',
       '&:hover': { bgcolor: alpha(th.palette.primary.main, active ? 0.22 : 0.1) },
     })}>
@@ -167,7 +168,7 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
       <HintTip title={`${title} 선택`}>
         <IconButton size="small" aria-label={`${title} 선택`} aria-haspopup="menu" onMouseDown={(e) => e.preventDefault()} onClick={() => mainRef.current && onOpen(mainRef.current)}
           sx={{ p: 0, width: 15, borderRadius: 0, color: 'text.secondary' }}>
-          <ArrowDropDownIcon sx={{ fontSize: 16 }} />
+          <ArrowDropDownIcon sx={{ fontSize: iconSize.body }} />
         </IconButton>
       </HintTip>
     </Box>
@@ -254,25 +255,25 @@ export function RichToolbar({ editor, compact = false }: { editor: Editor | null
       onMouseDown={(e) => e.preventDefault()}
       sx={(th) => ({
         display: 'flex', alignItems: 'center', gap: 0.25, flexWrap: 'wrap',
-        mb: 0.5, px: 0.5, py: 0.25, borderRadius: '8px',
+        mb: 0.5, px: 0.5, py: 0.25, borderRadius: `${radius.chip}px`,
         border: '1px solid', borderColor: th.palette.divider,
         bgcolor: alpha(th.palette.text.primary, 0.04),
       })}
     >
       <TBtn title="굵게 (Ctrl+B)" active={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()}>
-        <FormatBoldIcon sx={{ fontSize: 18 }} />
+        <FormatBoldIcon sx={{ fontSize: iconSize.action }} />
       </TBtn>
       <TBtn title="기울임 (Ctrl+I)" active={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()}>
-        <FormatItalicIcon sx={{ fontSize: 18 }} />
+        <FormatItalicIcon sx={{ fontSize: iconSize.action }} />
       </TBtn>
       {/* 밑줄·취소선 — compact(데모 코멘트)에선 숨김 */}
       {!compact && (
         <>
           <TBtn title="밑줄 (Ctrl+U)" active={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()}>
-            <FormatUnderlinedIcon sx={{ fontSize: 18 }} />
+            <FormatUnderlinedIcon sx={{ fontSize: iconSize.action }} />
           </TBtn>
           <TBtn title="취소선" active={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()}>
-            <StrikethroughSIcon sx={{ fontSize: 18 }} />
+            <StrikethroughSIcon sx={{ fontSize: iconSize.action }} />
           </TBtn>
         </>
       )}
@@ -282,7 +283,7 @@ export function RichToolbar({ editor, compact = false }: { editor: Editor | null
       {/* 글자색 — 커서 위치에 따른 선택효과 없음(클릭 딸깍 + 색 적용만). 바=마지막 사용 색 */}
       <SplitBtn
         title={`글자색 (${COLOR_LABEL[lastColor]})`}
-        glyph={<Box component="span" sx={{ fontSize: 11.5, fontWeight: 800, color: 'text.secondary' }}>가</Box>}
+        glyph={<Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: 800, color: 'text.secondary' }}>가</Box>}
         // 기본 글자색이면 실제 기본 글자색(중립)을 바에 그대로 — 비활성처럼 흐려 보이지 않게
         barColor={lastColor === 'default' ? 'text.primary' : COLOR_VAR[lastColor]}
         onApply={() => applyColor(lastColor)}
@@ -291,7 +292,7 @@ export function RichToolbar({ editor, compact = false }: { editor: Editor | null
       {/* 형광펜 — 선택효과 = 칠하기 모드일 때만(커서 위치와 무관) */}
       <SplitBtn
         title={hlMode ? `형광펜 칠하기 모드 (${HL_LABEL[lastHl]}) — 드래그하면 칠해짐, 재클릭·Esc 해제` : `형광펜 (${HL_LABEL[lastHl]})`}
-        glyph={<EditIcon sx={{ fontSize: 12.5 }} />}
+        glyph={<EditIcon sx={{ fontSize: iconSize.caption }} />}
         // 글자색 바와 동일 스타일 — 불투명 색(HL_SOLID)으로 두께·선명도 정렬(HL_VAR은 반투명이라 얇아 보임)
         barColor={HL_SOLID[lastHl]}
         active={hlMode}
@@ -302,19 +303,19 @@ export function RichToolbar({ editor, compact = false }: { editor: Editor | null
       <Divider orientation="vertical" flexItem sx={{ my: 0.25 }} />
 
       <TBtn title="글머리 목록" active={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()}>
-        <FormatListBulletedIcon sx={{ fontSize: 18 }} />
+        <FormatListBulletedIcon sx={{ fontSize: iconSize.action }} />
       </TBtn>
       <TBtn title="번호 목록" active={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()}>
-        <FormatListNumberedIcon sx={{ fontSize: 18 }} />
+        <FormatListNumberedIcon sx={{ fontSize: iconSize.action }} />
       </TBtn>
       {/* 들여쓰기·내어쓰기 — compact(데모 코멘트)에선 숨김 */}
       {!compact && (
         <>
           <TBtn title="들여쓰기 (Tab)" disabled={!canSink} onClick={() => editor.chain().focus().sinkListItem('listItem').run()}>
-            <FormatIndentIncreaseIcon sx={{ fontSize: 18 }} />
+            <FormatIndentIncreaseIcon sx={{ fontSize: iconSize.action }} />
           </TBtn>
           <TBtn title="내어쓰기 (Shift+Tab)" disabled={!canLift} onClick={() => editor.chain().focus().liftListItem('listItem').run()}>
-            <FormatIndentDecreaseIcon sx={{ fontSize: 18 }} />
+            <FormatIndentDecreaseIcon sx={{ fontSize: iconSize.action }} />
           </TBtn>
         </>
       )}
@@ -326,7 +327,7 @@ export function RichToolbar({ editor, compact = false }: { editor: Editor | null
         // 커서만 있을 때는 대기 중(storedMarks) 서식도 비움 — unsetAllMarks는 빈 선택에서 no-op이라 방금 고른 색이 남는 것 방지
         if (editor.state.selection.empty) editor.view.dispatch(editor.state.tr.setStoredMarks([]))
       }}>
-        <FormatClearIcon sx={{ fontSize: 18 }} />
+        <FormatClearIcon sx={{ fontSize: iconSize.action }} />
       </TBtn>
 
       {/* 글자색 팔레트 — 본체('가') 아래, 이름 없이 1행 5열 네모 스와치(기본·빨강·노랑·초록·파랑) */}
@@ -381,8 +382,8 @@ export function RichToolbar({ editor, compact = false }: { editor: Editor | null
 
 // 팔레트 공용 스타일 — 가로 1행 네모 스와치
 const SWATCH_ROW_SX = { display: 'flex', flexDirection: 'row', gap: 0.5, p: 0.5 } as const
-const SWATCH_ITEM_SX = { p: '3px', minWidth: 0, minHeight: 0, borderRadius: '6px' } as const
-const SWATCH_BOX = { display: 'block', width: 20, height: 20, borderRadius: '4px', flexShrink: 0, boxSizing: 'border-box' } as const
+const SWATCH_ITEM_SX = { p: '3px', minWidth: 0, minHeight: 0, borderRadius: `${radius.chip}px` } as const
+const SWATCH_BOX = { display: 'block', width: 20, height: 20, borderRadius: `${radius.chip}px`, flexShrink: 0, boxSizing: 'border-box' } as const
 
 // 초기 콘텐츠 — HTML이면 그대로, 평문이면 줄바꿈→문단(기존 평문 데이터 호환)
 const bodyToContent = (body: string): string => {
@@ -438,7 +439,7 @@ export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSi
         width: '100%',
         ...(framed && {
           bgcolor: alpha(th.palette.text.primary, 0.05),
-          border: '1px solid', borderColor: th.palette.divider, borderRadius: '8px',
+          border: '1px solid', borderColor: th.palette.divider, borderRadius: `${radius.chip}px`,
           px: 1, py: '6px',
           '&:focus-within': { borderColor: th.palette.accent?.green || th.palette.primary.main },
         }),

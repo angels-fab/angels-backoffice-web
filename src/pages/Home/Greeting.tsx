@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import WavingHandIcon from '@mui/icons-material/WavingHand'
+import { accent, iconSize } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { todaySeoul } from '@/utils/date'
 import greetIllust from '@/assets/greet-illust.png'
@@ -35,7 +36,7 @@ export default function Greeting() {
       <div className="greet-text">
         <div className="greet-sub">
           {sub}{' '}
-          <WavingHandIcon htmlColor="#D6A23E" sx={{ fontSize: 15, verticalAlign: 'text-bottom' }} />
+          <WavingHandIcon htmlColor={accent.amber} sx={{ fontSize: iconSize.body, verticalAlign: 'text-bottom' }} />
         </div>
         <div className="greet-main">{main}</div>
         <div className="greet-date">{date}</div>

@@ -2,6 +2,7 @@ import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
+import { radius, typescale } from '@/theme/tokens'
 
 /**
  * 필터 칩 공용 컴포넌트 — 업무현황(Work)·업무일정(Calendar)·공지(Notice) 세 곳이 각자 인라인으로
@@ -45,7 +46,7 @@ export function TintChip({ on, color, ariaLabel, onToggle, hover = false, sx, ch
         (theme: Theme) => {
           const c = typeof color === 'function' ? color(theme) : color
           return {
-            display: 'inline-flex', alignItems: 'center', gap: '5px', borderRadius: '999px',
+            display: 'inline-flex', alignItems: 'center', gap: '5px', borderRadius: radius.pill,
             bgcolor: alpha(c, on ? 0.16 : 0.06), cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none',
             opacity: on ? 1 : 0.45, transition: 'opacity .15s, background .15s',
             ...(hover ? { '&:hover': on ? { bgcolor: alpha(c, 0.22) } : { opacity: 0.7 } } : {}),
@@ -93,9 +94,9 @@ export function PillChip({ label, color, on, ariaLabel, multi = false, onToggle 
         display: 'inline-flex',
         alignItems: 'center',
         px: '8px',
-        borderRadius: '10px',
-        fontSize: 12,
-        fontWeight: 700,
+        borderRadius: radius.button,
+        fontSize: typescale.small.size,
+        fontWeight: typescale.cardTitle.weight,
         letterSpacing: '-0.01em',
         lineHeight: 1,
         whiteSpace: 'nowrap',
@@ -104,7 +105,7 @@ export function PillChip({ label, color, on, ariaLabel, multi = false, onToggle 
         border: '1px solid',
         transition: 'background .15s, color .15s, border-color .15s',
         ...(on
-          ? { bgcolor: color, color: '#fff', borderColor: color }
+          ? { bgcolor: color, color: 'common.white', borderColor: color }
           : { bgcolor: alpha(color, 0.1), color: 'text.secondary', borderColor: alpha(color, 0.3) }),
         '&:hover': on ? { filter: 'brightness(1.08)' } : { bgcolor: alpha(color, 0.2), borderColor: alpha(color, 0.5) },
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },

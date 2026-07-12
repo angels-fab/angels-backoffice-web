@@ -17,6 +17,7 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined'
 import RestartAltIcon from '@mui/icons-material/RestartAlt'
 import { PageContainer, PageHeader, ContentSection } from '@/components/ds'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
@@ -129,7 +130,7 @@ export default function Home() {
         actions={isMember && usLoadedOk ? (
           <Tooltip title="홈 구성 편집 (나에게만 적용)">
             <IconButton aria-label="홈 구성 편집" onClick={(e) => setCfgAnchor(e.currentTarget)} sx={{ color: 'text.secondary' }}>
-              <TuneIcon sx={{ fontSize: 20 }} />
+              <TuneIcon sx={{ fontSize: iconSize.header }} />
             </IconButton>
           </Tooltip>
         ) : undefined}
@@ -150,8 +151,8 @@ export default function Home() {
         {order.map((id, i) => {
           const off = hidden.has(id)
           return (
-            <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 0.25, px: 0.75, py: 0.4, borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}>
-              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, color: off ? 'text.disabled' : 'text.primary' }}>
+            <Box key={id} sx={{ display: 'flex', alignItems: 'center', gap: 0.25, px: 0.75, py: 0.4, borderRadius: `${radius.card}px`, '&:hover': { bgcolor: 'action.hover' } }}>
+              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: typescale.emphasis.weight, color: off ? 'text.disabled' : 'text.primary' }}>
                 {SECTION_LABEL[id]}
                 {id === 'pins' && pinnedWorks.length === 0 && (
                   <Typography component="span" variant="caption" sx={{ color: 'text.disabled', ml: 0.5 }}>
@@ -160,19 +161,19 @@ export default function Home() {
                 )}
               </Typography>
               <IconButton size="small" aria-label={`${SECTION_LABEL[id]} 위로`} disabled={i === 0} onClick={() => move(id, -1)}>
-                <ArrowUpwardIcon sx={{ fontSize: 16 }} />
+                <ArrowUpwardIcon sx={{ fontSize: iconSize.body }} />
               </IconButton>
               <IconButton size="small" aria-label={`${SECTION_LABEL[id]} 아래로`} disabled={i === order.length - 1} onClick={() => move(id, 1)}>
-                <ArrowDownwardIcon sx={{ fontSize: 16 }} />
+                <ArrowDownwardIcon sx={{ fontSize: iconSize.body }} />
               </IconButton>
               <IconButton size="small" aria-label={off ? `${SECTION_LABEL[id]} 표시` : `${SECTION_LABEL[id]} 숨김`} onClick={() => toggleHide(id)} sx={{ color: off ? 'text.disabled' : 'primary.main' }}>
-                {off ? <VisibilityOffOutlinedIcon sx={{ fontSize: 17 }} /> : <VisibilityOutlinedIcon sx={{ fontSize: 17 }} />}
+                {off ? <VisibilityOffOutlinedIcon sx={{ fontSize: iconSize.action }} /> : <VisibilityOutlinedIcon sx={{ fontSize: iconSize.action }} />}
               </IconButton>
             </Box>
           )
         })}
         <Divider sx={{ my: 0.75 }} />
-        <Button size="small" startIcon={<RestartAltIcon sx={{ fontSize: 16 }} />} onClick={resetLayout} sx={{ color: 'text.secondary' }}>
+        <Button size="small" startIcon={<RestartAltIcon sx={{ fontSize: iconSize.body }} />} onClick={resetLayout} sx={{ color: 'text.secondary' }}>
           기본 배치로
         </Button>
       </Popover>

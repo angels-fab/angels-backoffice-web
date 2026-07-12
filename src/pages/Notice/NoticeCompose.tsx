@@ -22,6 +22,7 @@ import { todaySeoul } from '@/utils/date'
 import { ComboField } from '@/pages/Work/inlineFields'
 import { MEMBERS, given } from '@/pages/Calendar/members'
 import { uploadNoticeFile, removeNoticeFiles } from '@/api/notices'
+import { iconSize, radius } from '@/theme/tokens'
 import { AttachmentIcon, formatBytes } from './attachmentUI'
 import { fileTypeRank } from './fileTypeIcons'
 import NoticeBodyEditor from './NoticeBodyEditor'
@@ -55,10 +56,10 @@ function parseTargets(raw: string): string[] {
 
 // 해당자 프리셋 버튼 스타일(센터(전체)/센터(직원)) — 활성=파랑 채움
 const presetSx = (active: boolean) => (th: Theme) => ({
-  fontSize: 11.5, fontWeight: 600, px: 1.1, py: '3px', borderRadius: '999px',
+  fontSize: 12, fontWeight: 600, px: 1.1, py: '3px', borderRadius: `${radius.pill}px`,
   cursor: 'pointer', border: '1px solid', flex: 'none', whiteSpace: 'nowrap', transition: 'background-color .15s',
   ...(active
-    ? { bgcolor: th.palette.primary.main, borderColor: th.palette.primary.main, color: '#fff' }
+    ? { bgcolor: th.palette.primary.main, borderColor: th.palette.primary.main, color: 'common.white' }
     : { borderColor: th.palette.divider, color: 'text.secondary' }),
 })
 
@@ -87,8 +88,8 @@ type Upload = {
 
 const inputSx = (th: Theme) => ({
   bgcolor: alpha(th.palette.text.primary, 0.05),
-  border: '1px solid', borderColor: th.palette.divider, borderRadius: '6px',
-  px: 1, py: 0.4, fontSize: 12.5, color: 'text.primary',
+  border: '1px solid', borderColor: th.palette.divider, borderRadius: `${radius.chip}px`,
+  px: 1, py: 0.4, fontSize: 13, color: 'text.primary',
   '&.Mui-focused': { borderColor: th.palette.primary.main },
   '& input::placeholder, & textarea::placeholder': { color: 'text.disabled', opacity: 1 },
 })
@@ -100,10 +101,10 @@ function LinkField({ value, onChange }: { value: string; onChange: (v: string) =
     <>
       <Tooltip title={active ? '관련자료(첨부) 편집' : '관련자료(첨부) 추가'}>
         <IconButton size="small" aria-label="관련자료" onClick={(e) => setAnchor(e.currentTarget)} sx={(th) => ({ color: active ? th.palette.accent.blue : 'text.disabled', p: 0.5 })}>
-          <OpenInNewIcon sx={{ fontSize: 18 }} />
+          <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
         </IconButton>
       </Tooltip>
-      <Popover open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: '10px', mt: 0.5 } } }}>
+      <Popover open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: `${radius.button}px`, mt: 0.5 } } }}>
         <Box sx={{ p: 1.5, width: 300 }}>
           <Box sx={{ fontSize: 12, color: 'text.secondary', mb: 0.5 }}>관련자료 / 첨부 링크</Box>
           <InputBase autoFocus value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://…" inputProps={{ 'aria-label': '관련자료 링크' }} sx={(th) => ({ ...inputSx(th), width: '100%', py: 0.5 })} />
@@ -232,14 +233,14 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
               onClick={() => setPinned((v) => !v)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPinned((v) => !v) } }}
               sx={(th) => ({
-                width: 26, height: 26, mx: 'auto', borderRadius: '6px', cursor: 'pointer',
+                width: 26, height: 26, mx: 'auto', borderRadius: `${radius.chip}px`, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid',
                 ...(pinned
-                  ? { bgcolor: th.palette.accent.amber, borderColor: th.palette.accent.amber, color: '#fff' }
+                  ? { bgcolor: th.palette.accent.amber, borderColor: th.palette.accent.amber, color: 'common.white' }
                   : { borderColor: th.palette.divider, color: 'text.disabled' }),
               })}
             >
-              <PushPinIcon sx={{ fontSize: 15 }} />
+              <PushPinIcon sx={{ fontSize: iconSize.body }} />
             </Box>
           </Tooltip>
         </TableCell>
@@ -254,8 +255,8 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
             sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5 }}>{mode === 'new' ? author : (notice?.author || '-')}</TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 13 }}>{mode === 'new' ? author : (notice?.author || '-')}</TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell />
       </TableRow>
       <TableRow sx={{ '& td': { borderTop: 0, bgcolor: amber, py: 0.75, verticalAlign: 'top' } }}>
@@ -286,8 +287,8 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTarget(m.name) } }}
                     style={{ backgroundColor: m.color, color: '#fff', filter: on ? 'none' : 'grayscale(1)', opacity: on ? 1 : 0.6 }}
                     sx={{
-                      width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12.5, fontWeight: 700, letterSpacing: '-0.5px', cursor: 'pointer', flex: 'none',
+                      width: 32, height: 32, borderRadius: radius.circle, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 700, letterSpacing: '-0.5px', cursor: 'pointer', flex: 'none',
                       transition: 'opacity .15s, filter .15s',
                     }}
                   >
@@ -308,13 +309,13 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                   onClick={() => fileInputRef.current?.click()}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
                   sx={(th) => ({
-                    display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 1, py: '5px', borderRadius: '999px',
+                    display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 1, py: '5px', borderRadius: `${radius.pill}px`,
                     border: '1px dashed', borderColor: th.palette.divider, color: 'text.secondary', cursor: 'pointer',
-                    fontSize: 11.5, fontWeight: 600, flex: 'none', transition: 'color .15s, border-color .15s',
+                    fontSize: 12, fontWeight: 600, flex: 'none', transition: 'color .15s, border-color .15s',
                     '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main },
                   })}
                 >
-                  <AttachFileIcon sx={{ fontSize: 15 }} />파일 첨부
+                  <AttachFileIcon sx={{ fontSize: iconSize.body }} />파일 첨부
                 </Box>
               </Box>
               {uploads.length > 0 && (
@@ -326,7 +327,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                         <Box
                           sx={(th) => ({
                             display: 'flex', alignItems: 'center', gap: 0.5, width: '100%', minWidth: 0, pl: 0.85, pr: 0.25, py: '3px',
-                            borderRadius: '8px', bgcolor: err ? alpha(th.palette.error.main, 0.08) : alpha(th.palette.text.primary, 0.05),
+                            borderRadius: `${radius.chip}px`, bgcolor: err ? alpha(th.palette.error.main, 0.08) : alpha(th.palette.text.primary, 0.05),
                             border: `1px solid ${err ? alpha(th.palette.error.main, 0.5) : th.palette.divider}`,
                             opacity: u.status === 'uploading' ? 0.7 : 1,
                           })}
@@ -334,16 +335,16 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                           {u.status === 'uploading'
                             ? <CircularProgress size={13} thickness={5} sx={{ flex: 'none' }} />
                             : err
-                              ? <ErrorOutlineIcon sx={{ fontSize: 15, color: 'error.main', flex: 'none' }} />
+                              ? <ErrorOutlineIcon sx={{ fontSize: iconSize.body, color: 'error.main', flex: 'none' }} />
                               : <AttachmentIcon type={u.type} name={u.name} size={17} />}
-                          <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: 11.5, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
-                          <Box component="span" sx={{ fontSize: 10.5, color: 'text.disabled', flex: 'none' }}>
+                          <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: 12, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
+                          <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', flex: 'none' }}>
                             {u.status === 'uploading' ? '업로드 중' : err ? '실패' : formatBytes(u.size)}
                           </Box>
                           {u.status !== 'uploading' && (
                             <Tooltip title="첨부 제거">
                               <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => removeUpload(u.key)} sx={{ p: 0.25, flex: 'none', color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                                <CloseIcon sx={{ fontSize: 14 }} />
+                                <CloseIcon sx={{ fontSize: iconSize.caption }} />
                               </IconButton>
                             </Tooltip>
                           )}
@@ -361,11 +362,11 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
           <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', justifyContent: 'center' }}>
             <Tooltip title={saving ? '저장 중…' : uploading ? '업로드 중…' : mode === 'edit' ? '수정 저장' : '등록'}>
               <span><IconButton size="small" color="success" aria-label="저장" onClick={save} disabled={saving || uploading}>
-                {saving ? <CircularProgress size={17} thickness={5} color="success" /> : <CheckIcon sx={{ fontSize: 19 }} />}
+                {saving ? <CircularProgress size={17} thickness={5} color="success" /> : <CheckIcon sx={{ fontSize: iconSize.action }} />}
               </IconButton></span>
             </Tooltip>
             <Tooltip title="취소">
-              <span><IconButton size="small" color="error" aria-label="취소" onClick={cancel} disabled={saving || uploading}><CloseIcon sx={{ fontSize: 19 }} /></IconButton></span>
+              <span><IconButton size="small" color="error" aria-label="취소" onClick={cancel} disabled={saving || uploading}><CloseIcon sx={{ fontSize: iconSize.action }} /></IconButton></span>
             </Tooltip>
           </Box>
         </TableCell>

@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import { AppCard, AppDrawer, CardGrid, StatusChip, EmptyState } from '@/components/ds'
+import { radius } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
 import type { Notice } from '@/types'
 import { noticeBodyHTML, noticeCatStatus } from '@/pages/Notice/noticeMeta'
@@ -65,7 +66,7 @@ export default function NoticeSection() {
                 bgcolor: 'background.paper',
                 border: 1,
                 borderColor: 'divider',
-                borderRadius: 2,
+                borderRadius: `${radius.card}px`,
                 cursor: 'pointer',
                 transition: 'border-color .15s, background-color .15s, transform .15s',
                 '&:hover': { borderColor: 'background.elevated', bgcolor: 'background.elevated', transform: 'translateY(-1px)' },
@@ -78,9 +79,8 @@ export default function NoticeSection() {
                 </Typography>
               </Box>
               <Typography
+                variant="subtitle1"
                 sx={{
-                  fontSize: 14,
-                  fontWeight: 600,
                   lineHeight: 1.4,
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
@@ -132,7 +132,7 @@ export default function NoticeSection() {
               {sel.author && <StatusChip status="neutral" label={sel.author} />}
             </Box>
             <Box
-              sx={{ fontSize: 14, lineHeight: 1.7, color: 'text.secondary', '& a': { color: 'primary.main' }, '& img': { maxWidth: '100%', borderRadius: 1 }, '& p': { m: 0, mb: 1 } }}
+              sx={{ fontSize: 14, lineHeight: 1.7, color: 'text.secondary', '& a': { color: 'primary.main' }, '& img': { maxWidth: '100%', borderRadius: `${radius.card}px` }, '& p': { m: 0, mb: 1 } }}
               dangerouslySetInnerHTML={{ __html: noticeBodyHTML(sel.body) }}
             />
           </Box>

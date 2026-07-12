@@ -14,6 +14,7 @@ import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '
 import { useRole, ROLE_LABEL } from '@/auth/role'
 import { supabase, padPassword } from '@/api/supabase'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
+import { iconSize } from '@/theme/tokens'
 
 const APP_VERSION = '0.1.0'
 
@@ -178,7 +179,7 @@ function UserManagement() {
                       value={roleVal}
                       disabled={self || busyId === r.id}
                       onChange={(e) => changeRole(r.id, e.target.value)}
-                      sx={{ minWidth: 104, '& .MuiSelect-select': { py: 0.5, fontSize: 13.5 } }}
+                      sx={{ minWidth: 104, '& .MuiSelect-select': { py: 0.5, fontSize: 14 } }}
                     >
                       {MANAGEABLE_ROLES.map((o) => (
                         // 관리자 승격은 팀원(또는 이미 관리자)에게만 — 유관자는 바로 관리자로 못 올림(팀원 거쳐야)
@@ -216,11 +217,11 @@ export default function Settings() {
             value={<StatusChip status={isAdmin ? 'success' : role === 'member' ? 'info' : 'neutral'} label={`${ROLE_LABEL[role]}${user ? ' · ' + user : ''}`} />}
             action={
               loggedIn ? (
-                <Button variant="text" startIcon={<LogoutIcon sx={{ fontSize: 18 }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
+                <Button variant="text" startIcon={<LogoutIcon sx={{ fontSize: iconSize.action }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
                   로그아웃
                 </Button>
               ) : (
-                <Button variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: 18 }} />} onClick={() => setLoginOpen(true)}>
+                <Button variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: iconSize.action }} />} onClick={() => setLoginOpen(true)}>
                   로그인
                 </Button>
               )

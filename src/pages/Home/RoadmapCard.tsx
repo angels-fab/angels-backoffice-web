@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import { alpha } from '@mui/material/styles'
 import { ROADMAP_STEPS, type RoadmapStatus } from '@/constants/roadmap'
-import { domain } from '@/theme/tokens'
+import { domain, radius, iconSize } from '@/theme/tokens'
 
 /**
  * FAB 구축 로드맵 — Claude Design 시안 "FAB Construction Roadmap" 재현.
@@ -39,7 +39,7 @@ const STATUS: Record<RoadmapStatus, StatusStyle> = {
     badgeColor: '#d2f2e4',
     badgeBg: alpha(domain.roadmap.current, 0.3),
     nodeBorder: domain.roadmap.current,
-    nodeColor: '#fff',
+    nodeColor: 'common.white',
     nodeBg: 'linear-gradient(158deg,#43e0a6,#21b381)',
     nodeShadow: `0 0 0 6px ${alpha(domain.roadmap.current, 0.16)},0 8px 18px -4px ${alpha('#21b381', 0.55)}`,
   },
@@ -109,7 +109,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
           sx={{
             width: 48,
             height: 48,
-            borderRadius: '14px',
+            borderRadius: `${radius.modal}px`,
             background: 'linear-gradient(155deg,#2a4a86,#1a2740)',
             display: 'flex',
             alignItems: 'center',
@@ -132,15 +132,15 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
         </Box>
         {showLegend && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '0 0 auto' }}>
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 11.5, color: '#9fb0c4' }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: '#9fb0c4' }}>
               <LegendDot color={domain.roadmap.done} />
               완료
             </Box>
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 11.5, color: '#9fb0c4' }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: '#9fb0c4' }}>
               <LegendDot color={domain.roadmap.current} ring={`0 0 0 3px ${alpha(domain.roadmap.current, 0.22)}`} />
               진행중
             </Box>
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 11.5, color: '#9fb0c4' }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: '#9fb0c4' }}>
               <LegendDot color="#2a3645" border="1.5px solid #45566b" />
               예정
             </Box>
@@ -218,7 +218,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        '& svg': { fontSize: 20 },
+                        '& svg': { fontSize: iconSize.header },
                       }}
                     >
                       {step.icon}
@@ -247,7 +247,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
                   {/* 제목 */}
                   <Box
                     sx={{
-                      fontSize: 15,
+                      fontSize: 16,
                       fontWeight: 700,
                       color: isCurrent ? '#f8fafc' : '#eef3f9',
                       mt: '9px',

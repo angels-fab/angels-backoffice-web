@@ -14,7 +14,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import { alpha, darken } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { eventStatus, fmtEventDate, type FabEvent, type EventAccent } from '@/constants/events'
-import { domain } from '@/theme/tokens'
+import { domain, radius, iconSize } from '@/theme/tokens'
 
 // 포스터 없을 때 카드 배경 그라데이션 — 정본은 tokens.domain.events.grad (P1-2 승격)
 const GRAD: Record<EventAccent, string> = domain.events.grad
@@ -136,7 +136,7 @@ function CardTitle({ title }: { title: string }) {
     if (wrapRef.current) ro.observe(wrapRef.current)
     return () => ro.disconnect()
   }, [title, idx])
-  const fontSx = { fontSize: { xs: 13, sm: 14 }, fontWeight: 800, color: '#fff', lineHeight: 1.3, mb: 1, textShadow: '0 1px 6px rgba(0,0,0,.5)' }
+  const fontSx = { fontSize: { xs: 13, sm: 14 }, fontWeight: 800, color: 'common.white', lineHeight: 1.3, mb: 1, textShadow: '0 1px 6px rgba(0,0,0,.5)' }
   if (idx === -1) {
     return <Box sx={{ ...fontSx, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{title}</Box>
   }
@@ -154,8 +154,8 @@ function CardTitle({ title }: { title: string }) {
 function MiniMeta({ icon, value }: { icon: ReactNode; value: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, textShadow: '0 1px 5px rgba(0,0,0,.75)' }}>
-      <Box sx={{ display: 'flex', flexShrink: 0, color: 'rgba(255,255,255,.62)', '& .MuiSvgIcon-root': { fontSize: { xs: 13, sm: 15 } } }}>{icon}</Box>
-      <Box sx={{ fontSize: { xs: 11, sm: 12.5 }, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</Box>
+      <Box sx={{ display: 'flex', flexShrink: 0, color: 'rgba(255,255,255,.62)', '& .MuiSvgIcon-root': { fontSize: { xs: iconSize.caption, sm: iconSize.body } } }}>{icon}</Box>
+      <Box sx={{ fontSize: { xs: 11, sm: 13 }, color: 'common.white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</Box>
     </Box>
   )
 }
@@ -178,7 +178,7 @@ function InCardDetail({ e }: { e: FabEvent }) {
         <KeyboardArrowDownIcon sx={{ fontSize: { xs: 20, sm: 22 } }} />
       </Box>
       {/* 제목 */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: '0.3em', fontSize: { xs: 12.5, sm: 14.5 }, fontWeight: 800, color: '#fff', lineHeight: 1.3, mb: { xs: 0.7, sm: 1 }, textShadow: '0 1px 6px rgba(0,0,0,.6)', maxHeight: '2.6em', overflow: 'hidden' }}>{splitTitle(e.title)}</Box>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: '0.3em', fontSize: { xs: 13, sm: 14 }, fontWeight: 800, color: 'common.white', lineHeight: 1.3, mb: { xs: 0.7, sm: 1 }, textShadow: '0 1px 6px rgba(0,0,0,.6)', maxHeight: '2.6em', overflow: 'hidden' }}>{splitTitle(e.title)}</Box>
       {/* 메타: 일시·장소·주최 */}
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: '3px', sm: '5px' }, mb: { xs: 0.8, sm: 1.1 } }}>
         <MiniMeta icon={<EventIcon />} value={fmtEventDate(e.start, e.end)} />
@@ -193,12 +193,12 @@ function InCardDetail({ e }: { e: FabEvent }) {
               component="li"
               key={i}
               sx={{
-                fontSize: { xs: 11, sm: 12.5 }, lineHeight: 1.45, color: 'rgba(255,255,255,.88)',
+                fontSize: { xs: 11, sm: 13 }, lineHeight: 1.45, color: 'rgba(255,255,255,.88)',
                 textShadow: '0 1px 5px rgba(0,0,0,.75)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 ...(i === 2 ? { display: { xs: 'none', sm: 'block' } } : null),
               }}
             >
-              {s.label && <Box component="span" sx={{ fontWeight: 700, color: '#fff', mr: 0.6 }}>{s.label}</Box>}
+              {s.label && <Box component="span" sx={{ fontWeight: 700, color: 'common.white', mr: 0.6 }}>{s.label}</Box>}
               {s.speakers && s.speakers.length > 0 ? s.speakers.slice(0, 4).join(' · ') + (s.speakers.length > 4 ? ' 등' : '') : s.value}
             </Box>
           ))}
@@ -215,7 +215,7 @@ function InCardDetail({ e }: { e: FabEvent }) {
         fullWidth
         size="small"
         startIcon={<OpenInNewIcon />}
-        sx={{ bgcolor: KIND_BLUE, color: '#fff', fontSize: { xs: 11.5, sm: 12.5 }, py: { xs: '5px', sm: '6px' }, '&:hover': { bgcolor: darken(KIND_BLUE, 0.14) } }}
+        sx={{ bgcolor: KIND_BLUE, color: 'common.white', fontSize: { xs: 12, sm: 13 }, py: { xs: '5px', sm: '6px' }, '&:hover': { bgcolor: darken(KIND_BLUE, 0.14) } }}
       >
         행사 사이트 바로가기
       </Button>
@@ -249,9 +249,9 @@ export function EventCardInner({ e, open }: { e: FabEvent; open: boolean }) {
 
       {/* 좌상단 칩 — 항상 선명(스크림 위) */}
       <Box sx={{ position: 'absolute', top: 11, left: 11, right: 11, zIndex: 3, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: 11.5, sm: 12.5 }, fontWeight: 800, letterSpacing: '.02em', px: '10px', py: '6px', borderRadius: 999, bgcolor: CAT_COLOR[cat], color: '#fff' }}>{cat}</Box>
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: 12, sm: 13 }, fontWeight: 700, letterSpacing: '.02em', px: '11px', py: '6px', borderRadius: 999, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: '#fff' }}>
-          <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 9, height: 9, borderRadius: '50%', flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: 12, sm: 13 }, fontWeight: 800, letterSpacing: '.02em', px: '10px', py: '6px', borderRadius: radius.pill, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: 12, sm: 13 }, fontWeight: 700, letterSpacing: '.02em', px: '11px', py: '6px', borderRadius: radius.pill, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
+          <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
           {st.label}
         </Box>
       </Box>
@@ -259,8 +259,8 @@ export function EventCardInner({ e, open }: { e: FabEvent; open: boolean }) {
       {/* 기본 하단 오버레이: 제목 + 일시 (열리면 페이드아웃) */}
       <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 2, p: '13px 13px 14px', opacity: open ? 0 : 1, pointerEvents: open ? 'none' : 'auto', transition: 'opacity 160ms ease', '@media (prefers-reduced-motion: reduce)': { transition: 'none' } }}>
         <CardTitle title={e.title} />
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: { xs: 12, sm: 13 }, fontWeight: 500, color: '#fff', bgcolor: 'rgba(255,255,255,.16)', backdropFilter: 'blur(3px)', px: 1.1, py: '4px', borderRadius: 999 }}>
-          <EventIcon sx={{ fontSize: 16 }} /> {fmtEventDate(e.start, e.end)}
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: { xs: 12, sm: 13 }, fontWeight: 500, color: 'common.white', bgcolor: 'rgba(255,255,255,.16)', backdropFilter: 'blur(3px)', px: 1.1, py: '4px', borderRadius: radius.pill }}>
+          <EventIcon sx={{ fontSize: iconSize.body }} /> {fmtEventDate(e.start, e.end)}
         </Box>
       </Box>
 
@@ -284,8 +284,8 @@ export function EventCardInner({ e, open }: { e: FabEvent; open: boolean }) {
 function DrawerMeta({ icon, value }: { icon: ReactNode; value: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75, minWidth: 0 }}>
-      <Box sx={{ display: 'flex', flexShrink: 0, color: 'text.disabled', mt: '1px', '& .MuiSvgIcon-root': { fontSize: 16 } }}>{icon}</Box>
-      <Box sx={{ fontSize: 12.5, color: 'text.secondary', lineHeight: 1.5, wordBreak: 'break-word' }}>{value}</Box>
+      <Box sx={{ display: 'flex', flexShrink: 0, color: 'text.disabled', mt: '1px', '& .MuiSvgIcon-root': { fontSize: iconSize.body } }}>{icon}</Box>
+      <Box sx={{ fontSize: 13, color: 'text.secondary', lineHeight: 1.5, wordBreak: 'break-word' }}>{value}</Box>
     </Box>
   )
 }
@@ -302,7 +302,7 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
   return (
     <Box>
       {/* 포스터 풀사이즈(전체 표시) + 좌상단 분류·상태 칩 */}
-      <Box sx={{ position: 'relative', borderRadius: '14px', overflow: 'hidden', bgcolor: '#0b0e14' }}>
+      <Box sx={{ position: 'relative', borderRadius: radius.modal, overflow: 'hidden', bgcolor: '#0b0e14' }}>
         {url ? (
           <Box component="img" src={url} alt={e.title} sx={{ display: 'block', width: '100%', height: 'auto' }} />
         ) : (
@@ -311,9 +311,9 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
           </Box>
         )}
         <Box sx={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 800, px: '9px', py: '5px', borderRadius: 999, bgcolor: CAT_COLOR[cat], color: '#fff' }}>{cat}</Box>
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 12, fontWeight: 700, px: '10px', py: '5px', borderRadius: 999, bgcolor: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)', color: '#fff' }}>
-            <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 800, px: '9px', py: '5px', borderRadius: radius.pill, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 12, fontWeight: 700, px: '10px', py: '5px', borderRadius: radius.pill, bgcolor: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
+            <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 8, height: 8, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
             {st.label}
           </Box>
         </Box>
@@ -321,7 +321,7 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
 
       {/* 상세 — 일반 배경 */}
       <Box sx={{ pt: 1.5, px: 0.25 }}>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: '0.3em', fontSize: 15, fontWeight: 800, color: 'text.primary', lineHeight: 1.35, mb: 1.25 }}>{splitTitle(e.title)}</Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: '0.3em', fontSize: 16, fontWeight: 800, color: 'text.primary', lineHeight: 1.35, mb: 1.25 }}>{splitTitle(e.title)}</Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1.5 }}>
           <DrawerMeta icon={<EventIcon />} value={fmtEventDate(e.start, e.end)} />
           <DrawerMeta icon={<PlaceIcon />} value={e.venue} />
@@ -330,7 +330,7 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
         {items.length > 0 && (
           <Box component="ul" sx={{ m: 0, mb: 1.5, pl: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px', borderTop: 1, borderColor: 'divider', pt: 1.25 }}>
             {items.map((s, i) => (
-              <Box component="li" key={i} sx={{ fontSize: 12.5, lineHeight: 1.5, color: 'text.secondary', wordBreak: 'break-word' }}>
+              <Box component="li" key={i} sx={{ fontSize: 13, lineHeight: 1.5, color: 'text.secondary', wordBreak: 'break-word' }}>
                 {s.label && <Box component="span" sx={{ fontWeight: 700, color: 'text.primary', mr: 0.6 }}>{s.label}</Box>}
                 {s.speakers && s.speakers.length > 0 ? s.speakers.join(' · ') : s.value}
               </Box>
@@ -340,17 +340,17 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
         {/* 참석자 영역 — 부모(index.tsx)가 조작 가능한 섹션을 끼워 넣음. 없으면 e.attendees 표시 */}
         {attendeeSlot ?? (e.attendees && e.attendees.length > 0 && (
           <Box sx={{ mb: 1.5, borderTop: 1, borderColor: 'divider', pt: 1.25 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 0.7, color: 'text.disabled', fontSize: 11.5, fontWeight: 700, letterSpacing: '.03em' }}>
-              <GroupsIcon sx={{ fontSize: 15 }} /> 참석자 {e.attendees.length}명
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mb: 0.7, color: 'text.disabled', fontSize: 12, fontWeight: 700, letterSpacing: '.03em' }}>
+              <GroupsIcon sx={{ fontSize: iconSize.body }} /> 참석자 {e.attendees.length}명
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
               {e.attendees.map((name, i) => (
-                <Box key={i} component="span" sx={(th) => ({ fontSize: 12, color: 'text.primary', bgcolor: alpha(th.palette.text.primary, 0.06), border: `1px solid ${th.palette.divider}`, borderRadius: '999px', px: 1, py: '2px' })}>{name}</Box>
+                <Box key={i} component="span" sx={(th) => ({ fontSize: 12, color: 'text.primary', bgcolor: alpha(th.palette.text.primary, 0.06), border: `1px solid ${th.palette.divider}`, borderRadius: radius.pill, px: 1, py: '2px' })}>{name}</Box>
               ))}
             </Box>
           </Box>
         ))}
-        <Button component="a" href={e.link} target="_blank" rel="noopener noreferrer" variant="contained" fullWidth size="small" startIcon={<OpenInNewIcon />} sx={{ bgcolor: KIND_BLUE, color: '#fff', fontSize: 12.5, py: '6px', '&:hover': { bgcolor: darken(KIND_BLUE, 0.14) } }}>
+        <Button component="a" href={e.link} target="_blank" rel="noopener noreferrer" variant="contained" fullWidth size="small" startIcon={<OpenInNewIcon />} sx={{ bgcolor: KIND_BLUE, color: 'common.white', fontSize: 13, py: '6px', '&:hover': { bgcolor: darken(KIND_BLUE, 0.14) } }}>
           행사 사이트 바로가기
         </Button>
       </Box>

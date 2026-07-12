@@ -65,7 +65,7 @@ export default function EndedList({ events, selectedId, onPick, attByEvent, user
                   {canToggle ? (
                     <AttendSwitch checked={mine} disabled={busy} onToggle={() => onToggleSelf(e.id)} />
                   ) : (
-                    <Box component="span" sx={{ color: 'text.disabled', fontSize: 12 }}>-</Box>
+                    <Box component="span" sx={(th) => ({ color: 'text.disabled', fontSize: th.typography.small.fontSize })}>-</Box>
                   )}
                 </Box>
                 {/* 관리 — 관리자 참석자 추가/제거 */}

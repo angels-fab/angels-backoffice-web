@@ -18,6 +18,7 @@ import type { EqHistoryItem } from '@/api/sheets'
 import type { EqGroup, EqStateKey } from '@/types'
 import { EQ_STATE, eqStateKey } from './eqMeta'
 import { codeRange, missingLabels, isRegRequired } from '@/pages/Equipment/batchUtil'
+import { radius, typescale } from '@/theme/tokens'
 
 // 수정 가능 필드(11) — 읽기 전용: 관리번호/장비명/장비종류/도입금액/재원
 type FieldKey = 'mgr' | 'maker' | 'model' | 'assetNo' | 'nfec' | 'installLoc' | 'installDate' | 'vendor' | 'mgr2' | 'contact' | 'note'
@@ -226,7 +227,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
               <StatusChip status={meta.status} label={meta.label} />
               {group.cat && <StatusChip status="neutral" label={group.cat} />}
               {isAdmin && !editing && (
-                <Button size="small" variant="outlined" endIcon={<ArrowDropDownIcon />} disabled={savingState} onClick={(e) => setStateAnchor(e.currentTarget)} sx={{ py: 0.1, minWidth: 0, fontSize: 12, lineHeight: 1.6, '& .MuiButton-endIcon': { ml: 0.25 } }}>상태 변경</Button>
+                <Button size="small" variant="outlined" endIcon={<ArrowDropDownIcon />} disabled={savingState} onClick={(e) => setStateAnchor(e.currentTarget)} sx={{ py: 0.1, minWidth: 0, fontSize: typescale.small.size, lineHeight: 1.6, '& .MuiButton-endIcon': { ml: 0.25 } }}>상태 변경</Button>
               )}
               <Typography variant="caption" sx={{ ml: 'auto', color: 'text.disabled', fontFamily: 'monospace', wordBreak: 'break-all' }}>{codes || '관리번호 미등록'}</Typography>
             </Box>
@@ -235,8 +236,8 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
             {(() => {
               if (!regRequired) {
                 return (
-                  <Box sx={{ p: 1.5, borderRadius: 2, border: 1, borderColor: 'divider', bgcolor: 'background.elevated' }}>
-                    <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.secondary', mb: 0.25 }}>도입예정 단계</Typography>
+                  <Box sx={{ p: 1.5, borderRadius: `${radius.card}px`, border: 1, borderColor: 'divider', bgcolor: 'background.elevated' }}>
+                    <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight, color: 'text.secondary', mb: 0.25 }}>도입예정 단계</Typography>
                     <Typography variant="caption" sx={{ color: 'text.disabled' }}>제조사·모델명·설치장소·NFEC 등은 도입 진행 시 등록합니다.</Typography>
                   </Box>
                 )
@@ -244,8 +245,8 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
               const miss = missingLabels(group)
               const ok = miss.length === 0
               return (
-                <Box sx={{ p: 1.5, borderRadius: 2, border: 1, borderColor: ok ? 'success.main' : 'warning.main', bgcolor: (t) => (ok ? t.palette.success.main : t.palette.warning.main) + '1f' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700, color: ok ? 'success.main' : 'warning.main', mb: ok ? 0 : 0.25 }}>
+                <Box sx={{ p: 1.5, borderRadius: `${radius.card}px`, border: 1, borderColor: ok ? 'success.main' : 'warning.main', bgcolor: (t) => (ok ? t.palette.success.main : t.palette.warning.main) + '1f' }}>
+                  <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight, color: ok ? 'success.main' : 'warning.main', mb: ok ? 0 : 0.25 }}>
                     {ok ? '등록정보 확인 완료' : `확인 필요 · 필수정보 ${miss.length}개 누락`}
                   </Typography>
                   {!ok && <Typography variant="caption" sx={{ color: 'text.secondary' }}>{miss.join(' · ')}</Typography>}
@@ -297,7 +298,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
                         <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
                           <Box component="span" sx={{ color: 'text.disabled' }}>{stateLabel(h.prev)}</Box>
                           {' → '}
-                          <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{stateLabel(h.next)}</Box>
+                          <Box component="span" sx={{ color: 'text.primary', fontWeight: typescale.emphasis.weight }}>{stateLabel(h.next)}</Box>
                         </Typography>
                         {sub && (
                           <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>{sub}</Typography>
@@ -327,7 +328,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
                 <Typography variant="body2" sx={{ flex: 1, minWidth: 0, wordBreak: 'break-word' }}>
                   <Box component="span" sx={{ color: 'text.disabled' }}>{c.before || '미등록'}</Box>
                   {' → '}
-                  <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{c.after || '미등록'}</Box>
+                  <Box component="span" sx={{ color: 'text.primary', fontWeight: typescale.emphasis.weight }}>{c.after || '미등록'}</Box>
                 </Typography>
               </Box>
             ))}
@@ -357,7 +358,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
               <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }}>
                 <Box component="span" sx={{ color: 'text.disabled' }}>{rawState || '미지정'}</Box>
                 {' → '}
-                <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{pendingState}</Box>
+                <Box component="span" sx={{ color: 'text.primary', fontWeight: typescale.emphasis.weight }}>{pendingState}</Box>
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', mt: 0.5 }}>
@@ -382,7 +383,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
         slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: 140 } } }}
       >
         {STATE_ORDER.map((s) => (
-          <MenuItem key={s} selected={!!group && s === rawState} onClick={() => pickState(s)} sx={{ fontSize: 14 }}>
+          <MenuItem key={s} selected={!!group && s === rawState} onClick={() => pickState(s)} sx={{ fontSize: typescale.emphasis.size }}>
             {EQ_STATE[s].label}
           </MenuItem>
         ))}
