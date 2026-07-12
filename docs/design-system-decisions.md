@@ -37,7 +37,7 @@
 
 - **P1 토큰 재건**: 정규화 스케일 설계(실측 분포 기반) → tokens.ts v2 · theme.ts v2(breakpoints 주입·MuiDialog 오버라이드·defaultProps) · design-system.md v2 · design-lint 확장. ⚠ 승인 포인트 2개(D3 상태색 배정표, D5 색 통합 시안) 포함
 - **P2 컴포넌트 재건**: ds 신설 — FormField 패밀리·ConfirmDialog/FormDialog·LoadingState·useSnack·ErrorBanner·DataTable·NavBadge(D7 개편 동시)·focusRingSx. 쇼케이스 갱신
-- **P3 페이지 정렬**(worst-first, 세션당 1페이지·라이브 확인·배포): Links → Equipment 계열 → Work → Calendar → Notice → Improve → Events → Home. 각 페이지 이관 시 index.css 해당 블록 제거
+- **P3 페이지 정렬**(worst-first, 세션당 1페이지·라이브 확인·배포): 각 페이지 이관 = ① 스타일 값 정규화(색·글자·radius·shadow·z→토큰/사다리) ② 구조 정돈(팝업·로딩·스낵·폼→ds 부품) ③ **손코딩 카드 표면 → AppCard 전환**(카드 표준을 실제 화면에 적용 — 사용자 확정 2026-07-13, 단 드래그·사진 등 얽힌 특수 표면은 신중/후속) ④ index.css 해당 블록 제거. ※ P3-1 데모 계열은 ①②만 완료, ③(카드 AppCard화)는 데모의 드래그·사진 얽힘으로 후속 이월(잔여 항목).
 - **P4 마감**: index.css 레거시 0 확인 · design-lint strict 전환 · 문서 최종 정정 · 죽은 코드 일괄 삭제
 
 ## 판정 근거 (요약)
