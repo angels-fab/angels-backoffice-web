@@ -132,7 +132,7 @@ export default function NewMenuPage() {
 ### Radius / Hover / Focus
 
 - Radius **6단**(`tokens.radius`, P1 확정): Chip `8` · Control(Button/Input) `10` · Card `12` · **Modal `16`** · Pill `999` · Circle `50%` — 이 밖의 값 금지, sx 숫자 배수(borderRadius:3=36px) 함정 주의
-- Hover(인터랙티브 카드): `translateY(-2px)` + `shadow.sm`(glow 금지)
+- Hover(클릭 카드만, 사용자 확정 2026-07-13): **배경 elevated 전환 + 보더 강조(primary 65%)** — 떠오름·그림자 없음. 정적 카드는 hover 무반응(이 구분 자체가 표준)
 - Focus Ring: 버튼·입력·검색·칩 공통 `0 0 0 3px rgba(84,145,218,.4)` — ThemeProvider가 관리. 커스텀 클릭 요소도 이 링으로 통일(P2 focusRingSx)
 
 ### 레거시 페이지 색 (`src/index.css :root`)
@@ -168,7 +168,7 @@ export default function NewMenuPage() {
 | Filter 영역 아래 | `filterGap` | **16** (P1 정규화) |
 | Section 간 | `sectionGap` | 24 |
 | KPI 그리드 / KPI 스트립 | `kpiGap` / `kpiStripGap` | 16 / 8 |
-| Card padding 3단 | `cardPaddingSm/Md/(기본)` | 12 / 16 / 24 |
+| Card padding | `cardPaddingSm/(기본)/Lg` | 12 / **16** / 24(긴 설명 카드만) · 목록 카드 0 |
 | 목록 행 | `row.padY(Dense)/padX` | 12(8) / 16 |
 | 콘텐츠 최대 폭 | `maxWidthWide` / `maxWidthDetail` | 1400 / 1200 |
 
@@ -229,12 +229,12 @@ Drawer 폭: 480~600 (기본 520).
 | Prop | 타입 | 기본 | 설명 |
 |------|------|------|------|
 | `children` | ReactNode | — | 내용 |
-| `padding` | number | 24 | 내부 padding(px) |
-| `interactive` | boolean | false | hover 떠오름 |
+| `padding` | number | **16** | 내부 padding(px) — 긴 설명 24 · 목록 0 |
+| `interactive` | boolean | false | hover(배경 전환+보더 강조) |
 | `onClick` | () => void | — | 클릭(자동 interactive) |
 | `sx` | SxProps | — | 추가 스타일 |
 
-규칙: 왼쪽 컬러 보더 금지, padding 24px 통일.
+규칙(확정 2026-07-13): 기본 16px·1px 보더 / 긴 설명 카드만 24 / 목록 카드 0 / hover=배경+보더 강조(클릭 카드만) / 왼쪽 컬러 보더 금지.
 
 ```tsx
 <AppCard interactive onClick={() => nav('/equipment')}>…</AppCard>

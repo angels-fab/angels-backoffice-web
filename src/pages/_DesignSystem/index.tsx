@@ -120,7 +120,7 @@ export default function DesignSystemShowcase() {
               <AppCard interactive onClick={() => {}}>
                 <Typography variant="subtitle1">클릭 가능한 카드 (interactive)</Typography>
                 <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  hover 시 살짝 떠오릅니다.
+                  hover 시 배경 전환 + 보더 강조 (확정 표준 — 떠오름·그림자 없음).
                 </Typography>
               </AppCard>
             </Box>

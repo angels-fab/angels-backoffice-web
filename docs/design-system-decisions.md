@@ -15,6 +15,7 @@
 | D5 | 토큰 외 색 | **완료(2026-07-12)** — ① 도메인 토큰 승격 완료(P1-2) ② **A/B 승인 결과 = B(accent 통합)**: Events 분류칩 학술=accent.blue·교육=green·전시=purple, 사이트 버튼=accent.blue (P1-3 적용·실측) |
 | D6 | 콘텐츠 폭 | **1400(wide)/1200(detail) 확정 + 전부 정리** — Links를 PageContainer로 이관(유일 미이관), 죽은 CSS(1180·1320·main 36px)·구문서 표기 삭제, 강제 PC 뷰포트 1280→1400 검토 |
 | D7 | 내비 배지 | **대기 중 개편안 실행 = 표준** — 아이폰식 위첨자 배지(빨강 새글+노랑 메모, 14~16px, `.agents/bridge/outbox/next-claude-prompt.md`)를 ds `NavBadge` 공용 컴포넌트로 구현해 3변형 통합. 색은 토큰(accent.red/amber)만 |
+| 카드 | 카드 표준 | **최종 확정(사용자, 2026-07-13, 실험실 채택)** — 기본 카드 = **16px 패딩 + 1px 보더** / 긴 설명 카드만 24 허용 / 목록 카드 = padding 0 / **hover(클릭 카드만) = 배경 elevated 전환 + 보더 강조(primary 65%)** — 기존 떠오름(translateY -2px)+그림자 폐지, 정적 카드는 hover 무반응. 특례 3종(로드맵·행사 포스터·업무 톤배경 카드)은 도메인 카드로 인정(권장안 기본 채택 — 이의 시 변경), 그 외 전부 AppCard 수렴 |
 | 범위 | 실행 범위 | **전면 재건** — 최종 목표: index.css 레거시 0 · 전 페이지 ds 컴포넌트 조립 · 하드코딩 0(design-lint strict). 토큰→컴포넌트→페이지(worst-first) 순, 각 단계 라이브 검증·배포 |
 
 ## B 패키지 (권장안 일괄 채택 확정)

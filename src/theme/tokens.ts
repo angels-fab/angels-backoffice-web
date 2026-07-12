@@ -97,11 +97,11 @@ export const layout = {
   kpiStripGap: 8,
   /** 일반 카드/그리드 간 간격 */
   cardGap: 16,
-  /** Card 내부 padding — 기본(lg). 콤팩트 카드가 사실상 표준이라 3단 운용 */
-  cardPadding: 24,
-  /** Card 내부 padding — 콤팩트(md, 목록·보조 카드 표준) */
-  cardPaddingMd: 16,
-  /** Card 내부 padding — 최소(sm, 미리보기 타일) */
+  /** Card 내부 padding — 기본 16 (사용자 확정 2026-07-13: 콤팩트가 표준) */
+  cardPadding: 16,
+  /** Card 내부 padding — 여유 24 (긴 설명·텍스트 위주 카드에만 허용) */
+  cardPaddingLg: 24,
+  /** Card 내부 padding — 최소 12 (미리보기 타일). 목록 카드는 0 */
   cardPaddingSm: 12,
   /** Drawer 내부 padding */
   drawerPadding: 24,
