@@ -67,7 +67,7 @@ export function MetricEditorDialog({ open, equipment, defs, author, onClose, onC
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표 관리 · {equipment}</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5 }}>
@@ -137,7 +137,7 @@ export function MetricHistoryDialog({ open, equipment, onClose }: { open: boolea
     fetchMetricDefHistory(equipment).then(setRows).catch(() => setRows([]))
   }, [open, equipment])
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표 변경 이력 · {equipment}</DialogTitle>
       <DialogContent>
         {rows === null ? (
@@ -180,7 +180,7 @@ export function ValueHistoryDialog({ open, equipment, defs, onClose }: { open: b
     return keys.filter((k) => String(b[k] ?? '') !== String(a[k] ?? '')).map((k) => `${labelOf(k)} ${b[k] ?? '-'}→${a[k] ?? '-'}`)
   }
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표값 변경 이력 · {equipment}</DialogTitle>
       <DialogContent>
         {rows === null ? (

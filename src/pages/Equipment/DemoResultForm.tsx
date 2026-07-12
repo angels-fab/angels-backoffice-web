@@ -148,7 +148,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
   }
 
   return (
-    <Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+    <Dialog open={open} onClose={close} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>데모결과 추가</DialogTitle>
       <DialogContent>
         {/* 장비/제조사/모델/회차 */}

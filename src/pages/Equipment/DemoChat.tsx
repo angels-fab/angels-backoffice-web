@@ -91,7 +91,7 @@ function ComposeCard({ accent, title, body, busy, onTitle, onBody, onCancel, onS
           ariaLabel="코멘트 내용" fontSize={typescale.body.size} minHeight={44} onCtrlEnter={onSave} compact />
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 'auto', pt: 0.5 }}>
           <Button size="small" onClick={onCancel} disabled={busy} sx={(th) => ({ color: alpha(th.palette.text.primary, 0.6), fontSize: typescale.small.size, minWidth: 0 })}>취소</Button>
-          <Button size="small" variant="contained" onClick={onSave} disabled={busy || !title.trim()} startIcon={busy ? <CircularProgress size={12} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: typescale.small.size, minWidth: 0 }}>{saveLabel}</Button>
+          <Button size="small" variant="contained" onClick={onSave} disabled={busy || !title.trim()} startIcon={busy ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: typescale.small.size, minWidth: 0 }}>{saveLabel}</Button>
         </Box>
       </Box>
     </Box>
@@ -361,7 +361,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
           <>
             <Button size="small" onClick={cancelSort} disabled={savingSort} sx={{ fontSize: typescale.small.size, minWidth: 0, py: 0.25, color: 'text.secondary' }}>취소</Button>
             <Button size="small" variant="contained" onClick={() => void completeSort()} disabled={savingSort}
-              startIcon={savingSort ? <CircularProgress size={12} thickness={5} color="inherit" /> : <CheckIcon sx={{ fontSize: iconSize.body }} />}
+              startIcon={savingSort ? <CircularProgress size={14} thickness={5} color="inherit" /> : <CheckIcon sx={{ fontSize: iconSize.body }} />}
               sx={{ fontSize: typescale.small.size, minWidth: 0, py: 0.25 }}>완료</Button>
           </>
         )}

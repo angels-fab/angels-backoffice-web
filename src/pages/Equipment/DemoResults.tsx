@@ -5,8 +5,6 @@ import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
 import InputBase from '@mui/material/InputBase'
 import CircularProgress from '@mui/material/CircularProgress'
-import Snackbar from '@mui/material/Snackbar'
-import Alert from '@mui/material/Alert'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -27,6 +25,7 @@ import HistoryIcon from '@mui/icons-material/History'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { iconSize, radius, shadow, typescale } from '@/theme/tokens'
+import { useSnack } from '@/components/ds'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
@@ -458,7 +457,7 @@ function PhotoManageDialog({ round, maker, user, onClose, onSaved }: {
   }
 
   return (
-    <Dialog open onClose={close} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+    <Dialog open onClose={close} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>{maker} · {round.round}차 사진 관리</DialogTitle>
       <DialogContent>
         <input ref={inputRef} type="file" accept="image/*,.tif,.tiff" multiple hidden onChange={(e) => { addFiles(e.target.files); if (inputRef.current) inputRef.current.value = '' }} />
@@ -729,7 +728,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
         onSaved={() => { setRepSel((rs) => { const n = { ...rs }; delete n[photoMg.key]; return n }); onReload() }} />}
 
       {/* 지표값 저장 — 비밀번호 재확인(조작방지 보안강화) */}
-      <Dialog open={!!pwPrompt} onClose={() => !savingVal && setPwPrompt(null)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+      <Dialog open={!!pwPrompt} onClose={() => !savingVal && setPwPrompt(null)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표값 저장 확인</DialogTitle>
         <DialogContent>
           {pwPrompt && (
@@ -749,7 +748,7 @@ function EquipGroup({ equipment, defs, makers, messages, canEdit, canModerate, u
       </Dialog>
 
       {/* 회차 삭제 — 비밀번호 재확인. 사진·파일도 함께 삭제, 이력에 기록됨 */}
-      <Dialog open={!!delPrompt} onClose={() => !deleting && setDelPrompt(null)} maxWidth="xs" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+      <Dialog open={!!delPrompt} onClose={() => !deleting && setDelPrompt(null)} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>데모결과 삭제</DialogTitle>
         <DialogContent>
           {delPrompt && (
@@ -789,13 +788,13 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
   const [valHistEquip, setValHistEquip] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [formPre, setFormPre] = useState<{ equipment: string; maker?: string; model?: string }>({ equipment: '' })
-  const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'error' }>({ open: false, msg: '', sev: 'success' })
+  const snack = useSnack()
 
   const load = useCallback(() => {
     setLoading(true)
     Promise.all([fetchMetricDefs(), fetchDemoResults(), fetchDemoChat(), fetchValueHistory()])
       .then(([d, r, c, v]) => { setDefs(d); setRows(r); setChat(c); setValHist(v) })
-      .catch((e) => setSnack({ open: true, msg: e instanceof Error ? e.message : '불러오기 실패', sev: 'error' }))
+      .catch((e) => snack(e instanceof Error ? e.message : '불러오기 실패', 'error'))
       .finally(() => setLoading(false))
   }, [])
   useEffect(() => { load() }, [load])
@@ -809,45 +808,45 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
     if (!user) throw new Error('로그인이 필요합니다')
     setChatBusy(true)
     try { await postDemoChat({ equipment, title, body, author: user }); refetchChat() }
-    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '메모 저장 실패', sev: 'error' }); throw e }
+    catch (e) { snack(e instanceof Error ? e.message : '메모 저장 실패', 'error'); throw e }
     finally { setChatBusy(false) }
   }
   const onEditChat = async (id: number, title: string, body: string) => {
     setChatBusy(true)
     try { await updateDemoChat(id, { title, body }); refetchChat() }
-    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '메모 수정 실패', sev: 'error' }); throw e }
+    catch (e) { snack(e instanceof Error ? e.message : '메모 수정 실패', 'error'); throw e }
     finally { setChatBusy(false) }
   }
   const onDeleteChat = async (id: number) => {
-    try { await deleteDemoChat(id); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '삭제 실패', sev: 'error' }) }
+    try { await deleteDemoChat(id); refetchChat() } catch (e) { snack(e instanceof Error ? e.message : '삭제 실패', 'error') }
   }
   // 코멘트 정렬 — '완료' 시 한 번만 저장 후 재조회(카드 수 적어 충분히 빠름). 실패는 스낵바 + rethrow(정렬 모드 유지용)
   const onReorderChat = async (ids: number[]) => {
-    try { await reorderDemoChat(ids); refetchChat() } catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '순서 변경 실패', sev: 'error' }); throw e }
+    try { await reorderDemoChat(ids); refetchChat() } catch (e) { snack(e instanceof Error ? e.message : '순서 변경 실패', 'error'); throw e }
   }
 
   const onSaveValues = async (roundId: number, metrics: Record<string, string>) => {
     if (!user) throw new Error('로그인이 필요합니다')
-    try { await updateDemoResult(roundId, { metrics, author: user }); setSnack({ open: true, msg: '지표값을 수정했습니다.', sev: 'success' }); load() }
-    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '값 수정 실패', sev: 'error' }); throw e }
+    try { await updateDemoResult(roundId, { metrics, author: user }); snack('지표값을 수정했습니다.', 'success'); load() }
+    catch (e) { snack(e instanceof Error ? e.message : '값 수정 실패', 'error'); throw e }
   }
   // 샘플·테스트조건 셀 인라인 저장(비밀번호 없이)
   const onSaveMeta = async (roundId: number, patch: { sample?: string; conditions?: string }) => {
     if (!user) throw new Error('로그인이 필요합니다')
     try { await updateDemoResult(roundId, { ...patch, author: user }); load() }
-    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '저장 실패', sev: 'error' }) }
+    catch (e) { snack(e instanceof Error ? e.message : '저장 실패', 'error') }
   }
   // 지표명·단위 셀 인라인 저장(정의 수정 → 변경 이력 자동)
   const onSaveMetricDef = async (defId: number, patch: { label?: string; unit?: string }) => {
     if (!user) throw new Error('로그인이 필요합니다')
-    try { await updateMetricDef(defId, patch, user); setSnack({ open: true, msg: '지표를 수정했습니다.', sev: 'success' }); load() }
-    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '지표 수정 실패', sev: 'error' }) }
+    try { await updateMetricDef(defId, patch, user); snack('지표를 수정했습니다.', 'success'); load() }
+    catch (e) { snack(e instanceof Error ? e.message : '지표 수정 실패', 'error') }
   }
 
   const onDeleteRound = async (roundId: number) => {
     if (!user) throw new Error('로그인이 필요합니다')
-    try { await deleteDemoResult(roundId, user); setSnack({ open: true, msg: '데모결과를 삭제했습니다.', sev: 'success' }); load() }
-    catch (e) { setSnack({ open: true, msg: e instanceof Error ? e.message : '삭제 실패', sev: 'error' }); throw e }
+    try { await deleteDemoResult(roundId, user); snack('데모결과를 삭제했습니다.', 'success'); load() }
+    catch (e) { snack(e instanceof Error ? e.message : '삭제 실패', 'error'); throw e }
   }
 
   // '데모결과 추가' — 뷰탭(…/목록/데모결과) 옆 슬롯에 포탈로 배치되는 + 아이콘 버튼(데모결과 탭에서만 슬롯 존재)
@@ -886,19 +885,16 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
       {editorEquip && (
         <MetricEditorDialog open equipment={editorEquip} defs={defs} author={user}
           onClose={() => setEditorEquip(null)}
-          onChanged={() => { load(); setSnack({ open: true, msg: '지표를 변경했습니다(이력 기록됨).', sev: 'success' }) }}
-          onError={(msg) => setSnack({ open: true, msg, sev: 'error' })}
+          onChanged={() => { load(); snack('지표를 변경했습니다(이력 기록됨).', 'success') }}
+          onError={(msg) => snack(msg, 'error')}
           onViewDefHistory={() => setHistoryEquip(editorEquip)} />
       )}
       {historyEquip && <MetricHistoryDialog open equipment={historyEquip} onClose={() => setHistoryEquip(null)} />}
       {valHistEquip && <ValueHistoryDialog open equipment={valHistEquip} defs={defs} onClose={() => setValHistEquip(null)} />}
       <DemoResultForm open={formOpen} onClose={() => setFormOpen(false)} defs={defs} rows={rows}
         initialEquipment={formPre.equipment} initialMaker={formPre.maker} initialModel={formPre.model} user={user}
-        onSaved={() => { setFormOpen(false); setSnack({ open: true, msg: '데모결과를 추가했습니다.', sev: 'success' }); load() }}
-        onError={(msg) => setSnack({ open: true, msg, sev: 'error' })} />
-      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity={snack.sev} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
-      </Snackbar>
+        onSaved={() => { setFormOpen(false); snack('데모결과를 추가했습니다.', 'success'); load() }}
+        onError={(msg) => snack(msg, 'error')} />
     </Box>
     </>
   )
