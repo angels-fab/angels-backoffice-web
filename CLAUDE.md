@@ -40,7 +40,7 @@ GIST ANGELS FAB(반도체 팹) 구축 프로젝트의 사내 관리 대시보드
 1. FAB 구축 로드맵 — 7단계 타임라인, 아이콘 76px로 확대된 상태
 2. 장비현황 섹션 — `.eq-dash`에 EqPreview(5타일 풀와이드 한 줄), 클릭 시 /equipment
 3. 미리보기 — 공지사항·업무일정 2열 + 업무현황 풀와이드(gridColumn '1 / -1')
-- 콘텐츠 폭: `.dashboard`/`.grid`/`.menu-label` max-width 1180px
+- 콘텐츠 폭: **PageContainer 1400(wide)/1200(detail)** — 정본은 `tokens.layout.maxWidthWide/Detail`. (구 `.dashboard`/`.grid` 1180px는 레거시 죽은 규칙). **디자인시스템 정본 = `docs/design-system-decisions.md`(확정 표준 D1~D7·표·카드 규격)** — UI 작업 전 반드시 참조
 
 ## 학술·교육 행사(Events) 등록 규칙 & 워크플로
 

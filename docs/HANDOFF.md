@@ -3,11 +3,12 @@
 > 갱신: 2026-07-12 · **★ 신규 메인 트랙 = 디자인시스템 전면 재건 (P1-1 완료).** 확정 정본 = `docs/design-system-decisions.md` (D1~D7·B패키지·로드맵 P1~P4 — 이 문서가 이후 모든 디자인 작업의 기준). 다음 = P1-2(도메인 색 승격 + D3 상태색 적용 시안 + D5 Events 칩 A/B 시안 — 승인 포인트 2). 기존 후보(데모 지표수정 논의·FIB 사진 재업로드·개선요청 #11·STEP22 phase2·권한 Phase2·3)는 뒤로.
 > 이 파일은 머신 간 동기화되지 않는 Claude 로컬 메모리를 대신해, 다른 PC에서 맥락을 빠르게 잡기 위한 요약입니다.
 
-## ⏸ P3 자동완주 재개 지점 (2026-07-13, 한도 대비)
-사용자 지시: **남은 P3~P4 전 항목을 무개입 연속 진행해 완주.** 한도 도달 시 리셋 후 이 지점부터 재개.
-- ✅ **완료·푸시**: P3-1(데모 색/구조), **P3 정규화 Wave1+Wave2 전량 완료**(79파일, 적대검증 78/78 무변경 + TitleLoad 무변경, 전체 lint **1171→630**, type-check 통과). 정규화(색·글자·radius·shadow·z 토큰화)는 **끝남**.
-- ⬜ **남은 순서(여기부터 재개)**: (b) **구조 정돈**: 지역 스낵바→useSnack·팝업 `bgcolor:'background.default'` 제거·로딩→LoadingState·손코딩 폼→FormField(파일별, 동작보존 적대검증) → (c) **손코딩 카드 표면→AppCard**(드래그·사진 얽힌 건 신중/후속) → (d) **P4**: 죽은 index.css 클래스(0참조만) 제거·design-lint 정리(의도보존분 제외한 신규파일 strict). 데모 카드 AppCard화(P3-1 이월분)도 (c)에 포함.
-- **원칙**: 로직 무변경(적대검증)·페이지/웨이브 단위 type-check 통과 시에만 커밋·푸시. 도메인색(로드맵 목업·제조사·사진 오버레이·MIME)·초소형 배지 폰트는 의도 보존. lint 목표 대폭감(0 강제 아님 — 의도보존 잔존).
+## ✅ 디자인시스템 대개편 — P0~P3 완주 (2026-07-13)
+전수감사→표준 확정(D1~D7·표·카드 실험실)→토큰/컴포넌트 재건(P1·P2)→**P3 안전 이관 전량**. 커밋 다수·전부 배포.
+- **P3 완료분(전부 type-check+적대검증 통과)**: ① 정규화 스윕 79파일(색→토큰·글자→사다리·radius/shadow/z, 적대검증 78/78 로직무변경) ② 구조-안전 20파일(지역 스낵바→전역 useSnack·팝업 `bgcolor:background.default` 버그 제거·로딩→LoadingState, 20/20 동작보존) ③ 쓰기 다이얼로그 폼→FormField(CalEventWrite·ScheduleWrite·SubmitEventModal·EqDetailDrawer, 11/11 동작보존). 전체 lint **1171→630**.
+- **의도 보존/skip(회귀위험 회피, 정당)**: 도메인색(로드맵 목업·제조사·사진 오버레이·MIME 아이콘)·초소형 배지폰트·값 맞는 fontSize/weight 리터럴 / prop-drilling 스낵(EquipmentOps)·Work 스낵(보수적) / Autocomplete·ComboField·startAdornment·커스텀 date picker·시맨틱틴트/오버레이/다운로드타일 카드표면.
+- **잔여 트랙(별도, 라이브검증 필요 — 급하지 않음)**: (A) **className→ds 레거시 이관**(lint class 200 — Home/previews·EqCard·WorkRow·gantt·EqSummaryInner·EquipmentOps 원장 등 원본 SPA 잔재, index.css 아직 load-bearing) (B) **index.css 죽은 클래스 정리**(0참조 379개 후보 있으나 `fc-*`=FullCalendar 라이브러리 클래스 등 오탐 다수 → 캘린더 라이브검증 후 선별 삭제) (C) 드래그/사진 얽힌 카드표면 AppCard화(데모결과 등) (D) sx fontSize/weight 리터럴→Typography variant 전면화. → lint 630→0은 이 트랙들 완료 시. **새 메뉴는 이미 거버넌스(스타터·lint·ds)로 커버되므로 급하지 않음.**
+- **라이브 확인 권장**(이 세션 브라우저 불안정으로 미검증): 각 페이지 스낵바(저장/삭제 알림)·팝업 배경 밝기·쓰기 폼(일정/장비일정/행사신청/장비상태 수정) 입력·홈/공지 카드 hover.
 
 ## 현재 상태
 - **P3-1 Equipment 데모 계열 이관 (2026-07-13, 첫 페이지 정렬)**: 표·카드 표준까지 사용자 확정 후 P3 착수. **P3-1a 스타일 정규화**(병렬 4에이전트+적대적검증, 로직 무변경 4/4 확증): 데모 4파일 hex→토큰·fontSize→사다리·radius/shadow/z 정규화, 위반 239→39(잔여=사진스크림·별골드·제목띠 등 의도 보존). **P3-1b 구조 정돈**: DemoResults 지역 스낵바(14호출)→전역 useSnack, 다이얼로그 7곳 `bgcolor:background.default`(팝업이 더 어둡던 버그) 제거→테마 paper. **비번확인 다이얼로그 2곳**은 Enter제출·에러·빈값비활성 커스텀 동작 보존 위해 ConfirmDialog 강제 교체 대신 배경만 정상화(이월) / **등록폼 FormDialog 전환**은 ComboField·사진드래그 복잡도로 careful 후속 이월. 전체 lint 1395→1171. type-check·라이브 렌더 확인. ⚠ **미검증**: 스낵바(저장/삭제 시 알림)·다이얼로그 배경 밝기는 배포판에서 사용자 실동작 확인 필요(이 세션 브라우저 콘솔버퍼·스크린샷 불안정). **다음 P3-2 = Events eventCard(위반 61) → Improve(DataTable 이관 첫 적용) → Home 로드맵/미리보기 → Work → …**. ※ notched 콘솔경고는 stale버퍼(서빙 compiled에 variant:standard 확인, P2에서 수정됨). ※ 워크플로 Fable 한도 소진 → Opus로 직접 진행 전환.

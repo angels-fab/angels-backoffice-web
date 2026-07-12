@@ -40,6 +40,11 @@
 - **P3 페이지 정렬**(worst-first, 세션당 1페이지·라이브 확인·배포): 각 페이지 이관 = ① 스타일 값 정규화(색·글자·radius·shadow·z→토큰/사다리) ② 구조 정돈(팝업·로딩·스낵·폼→ds 부품) ③ **손코딩 카드 표면 → AppCard 전환**(카드 표준을 실제 화면에 적용 — 사용자 확정 2026-07-13, 단 드래그·사진 등 얽힌 특수 표면은 신중/후속) ④ index.css 해당 블록 제거. ※ P3-1 데모 계열은 ①②만 완료, ③(카드 AppCard화)는 데모의 드래그·사진 얽힘으로 후속 이월(잔여 항목).
 - **P4 마감**: index.css 레거시 0 확인 · design-lint strict 전환 · 문서 최종 정정 · 죽은 코드 일괄 삭제
 
+## 진행 현황 (2026-07-13)
+- ✅ **P0~P2 완료**: 거버넌스·토큰(v2)·컴포넌트(FormField·ConfirmDialog·FormDialog·LoadingState·useSnack·ErrorBanner·NavBadge·DataTable·ListRow·focusRingSx)·표준 확정(D1~D7·표·카드).
+- ✅ **P3 안전 이관 전량 완료**: 정규화 79파일 + 구조-안전(스낵바/로딩/팝업배경) 20파일 + 쓰기폼→FormField. 전부 적대검증(로직/동작 무변경)·type-check·배포. lint 1171→630.
+- ⬜ **잔여(별도 트랙, 라이브검증 필요·비긴급)**: (A) className→ds 레거시 이관(class 200) (B) index.css 죽은클래스 선별 정리(fc-* 라이브러리 클래스 오탐 주의) (C) 드래그/사진 얽힌 카드표면 AppCard화 (D) sx fontSize/weight→Typography variant 전면화. lint 0은 이 트랙 완료 시. 상세 = HANDOFF.md.
+
 ## 판정 근거 (요약)
 
 - 1차 감사(13항목) 결과: 테마만 확정(다크 전용), 나머지 12개 충돌 — 문서·토큰·실코드 삼자 불일치가 기본 상태였음
