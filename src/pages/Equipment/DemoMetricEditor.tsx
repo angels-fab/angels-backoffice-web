@@ -19,13 +19,14 @@ import AddIcon from '@mui/icons-material/Add'
 import HistoryIcon from '@mui/icons-material/History'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
+import { typescale, iconSize, radius } from '@/theme/tokens'
 import {
   createMetricDef, updateMetricDef, setMetricDefActive, fetchMetricDefHistory, fetchValueHistory, METRIC_ACTION_LABEL,
   type DemoMetricDef, type MetricDirection, type MetricDefHistory, type ValueHistory,
 } from '@/api/demo'
 
 const DIR_LABEL: Record<MetricDirection, string> = { higher: '높을수록 우수', lower: '낮을수록 우수', none: '비교 안 함' }
-const field = (th: Theme) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: '6px', px: 1, py: '5px', fontSize: 12.5, color: 'text.primary' })
+const field = (th: Theme) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`, px: 1, py: '5px', fontSize: typescale.body.size, color: 'text.primary' })
 const fmtTs = (iso: string) => { try { return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) } catch { return iso.slice(0, 16) } }
 
 function DirSelect({ value, onChange }: { value: MetricDirection; onChange: (v: MetricDirection) => void }) {
@@ -33,7 +34,7 @@ function DirSelect({ value, onChange }: { value: MetricDirection; onChange: (v: 
     <Select value={value} onChange={(e) => onChange(e.target.value as MetricDirection)} variant="standard" disableUnderline
       sx={(th) => ({ ...field(th), minWidth: 118, '& .MuiSelect-select': { p: 0, pr: '20px !important' } })}
       MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}>
-      {(['higher', 'lower', 'none'] as MetricDirection[]).map((d) => <MenuItem key={d} value={d} sx={{ fontSize: 12.5 }}>{DIR_LABEL[d]}</MenuItem>)}
+      {(['higher', 'lower', 'none'] as MetricDirection[]).map((d) => <MenuItem key={d} value={d} sx={{ fontSize: typescale.body.size }}>{DIR_LABEL[d]}</MenuItem>)}
     </Select>
   )
 }
@@ -67,39 +68,39 @@ export function MetricEditorDialog({ open, equipment, defs, author, onClose, onC
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
-      <DialogTitle sx={{ fontSize: 15, fontWeight: 800 }}>지표 관리 · {equipment}</DialogTitle>
+      <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표 관리 · {equipment}</DialogTitle>
       <DialogContent>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1, mb: 1.5 }}>
-          <Box sx={{ fontSize: 11.5, color: 'text.secondary', flex: 1 }}>표준 지표는 이 장비의 모든 제조사 비교 기준입니다. 바꾸면 비교표가 함께 바뀌고, <b>변경 이력이 자동 기록</b>됩니다.</Box>
-          {onViewDefHistory && <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: 14 }} />} onClick={onViewDefHistory} sx={{ fontSize: 11, minWidth: 0, color: 'text.secondary', whiteSpace: 'nowrap', flex: 'none' }}>지표 변경 이력</Button>}
+          <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', flex: 1 }}>표준 지표는 이 장비의 모든 제조사 비교 기준입니다. 바꾸면 비교표가 함께 바뀌고, <b>변경 이력이 자동 기록</b>됩니다.</Box>
+          {onViewDefHistory && <Button size="small" startIcon={<HistoryIcon sx={{ fontSize: iconSize.caption }} />} onClick={onViewDefHistory} sx={{ fontSize: typescale.caption.size, minWidth: 0, color: 'text.secondary', whiteSpace: 'nowrap', flex: 'none' }}>지표 변경 이력</Button>}
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
           {eqDefs.map((d) => {
             const editing = editId === d.id
             return (
-              <Box key={d.id} sx={(th) => ({ display: 'flex', alignItems: 'center', gap: 0.75, p: 0.75, borderRadius: '8px', border: `1px solid ${th.palette.divider}`, bgcolor: d.active ? 'background.paper' : alpha(th.palette.text.primary, 0.03), opacity: d.active ? 1 : 0.6 })}>
+              <Box key={d.id} sx={(th) => ({ display: 'flex', alignItems: 'center', gap: 0.75, p: 0.75, borderRadius: `${radius.chip}px`, border: `1px solid ${th.palette.divider}`, bgcolor: d.active ? 'background.paper' : alpha(th.palette.text.primary, 0.03), opacity: d.active ? 1 : 0.6 })}>
                 {editing ? (
                   <>
                     <InputBase value={ef.label} onChange={(e) => setEf((s) => ({ ...s, label: e.target.value }))} placeholder="지표명" sx={(th) => ({ ...field(th), flex: 1 })} />
                     <InputBase value={ef.unit} onChange={(e) => setEf((s) => ({ ...s, unit: e.target.value }))} placeholder="단위" sx={(th) => ({ ...field(th), width: 74 })} />
                     <DirSelect value={ef.direction} onChange={(v) => setEf((s) => ({ ...s, direction: v }))} />
-                    <Tooltip title="저장"><span><IconButton size="small" color="success" disabled={busy || !ef.label.trim()} onClick={saveEdit}><CheckIcon sx={{ fontSize: 18 }} /></IconButton></span></Tooltip>
-                    <Tooltip title="취소"><IconButton size="small" onClick={() => setEditId(null)} sx={{ color: 'text.secondary' }}><CloseIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
+                    <Tooltip title="저장"><span><IconButton size="small" color="success" disabled={busy || !ef.label.trim()} onClick={saveEdit}><CheckIcon sx={{ fontSize: iconSize.action }} /></IconButton></span></Tooltip>
+                    <Tooltip title="취소"><IconButton size="small" onClick={() => setEditId(null)} sx={{ color: 'text.secondary' }}><CloseIcon sx={{ fontSize: iconSize.action }} /></IconButton></Tooltip>
                   </>
                 ) : (
                   <>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Box sx={{ fontSize: 13, fontWeight: 600 }}>{d.label}{d.unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.5, fontSize: 11 }}>{d.unit}</Box> : null}{!d.active && <Box component="span" sx={{ ml: 0.75, fontSize: 10.5, color: 'text.disabled' }}>(비활성)</Box>}</Box>
-                      <Box sx={{ fontSize: 10.5, color: 'text.disabled' }}>{DIR_LABEL[d.direction]}</Box>
+                      <Box sx={{ fontSize: typescale.body.size, fontWeight: typescale.emphasis.weight }}>{d.label}{d.unit ? <Box component="span" sx={{ color: 'text.disabled', ml: 0.5, fontSize: typescale.caption.size }}>{d.unit}</Box> : null}{!d.active && <Box component="span" sx={{ ml: 0.75, fontSize: typescale.caption.size, color: 'text.disabled' }}>(비활성)</Box>}</Box>
+                      <Box sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>{DIR_LABEL[d.direction]}</Box>
                     </Box>
-                    <Tooltip title="수정"><span><IconButton size="small" disabled={busy} onClick={() => startEdit(d)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: 16 }} /></IconButton></span></Tooltip>
-                    <Tooltip title={d.active ? '비활성(비교에서 숨김)' : '재활성'}><span><IconButton size="small" disabled={busy} onClick={() => toggle(d)} sx={{ color: 'text.secondary' }}>{d.active ? <VisibilityOffIcon sx={{ fontSize: 16 }} /> : <VisibilityIcon sx={{ fontSize: 16 }} />}</IconButton></span></Tooltip>
+                    <Tooltip title="수정"><span><IconButton size="small" disabled={busy} onClick={() => startEdit(d)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: iconSize.body }} /></IconButton></span></Tooltip>
+                    <Tooltip title={d.active ? '비활성(비교에서 숨김)' : '재활성'}><span><IconButton size="small" disabled={busy} onClick={() => toggle(d)} sx={{ color: 'text.secondary' }}>{d.active ? <VisibilityOffIcon sx={{ fontSize: iconSize.body }} /> : <VisibilityIcon sx={{ fontSize: iconSize.body }} />}</IconButton></span></Tooltip>
                   </>
                 )}
               </Box>
             )
           })}
-          {eqDefs.length === 0 && <Box sx={{ fontSize: 12, color: 'text.disabled', py: 1 }}>아직 지표가 없습니다. 아래에서 추가하세요.</Box>}
+          {eqDefs.length === 0 && <Box sx={{ fontSize: typescale.small.size, color: 'text.disabled', py: 1 }}>아직 지표가 없습니다. 아래에서 추가하세요.</Box>}
         </Box>
 
         {/* 지표 추가 */}
@@ -107,7 +108,7 @@ export function MetricEditorDialog({ open, equipment, defs, author, onClose, onC
           <InputBase value={af.label} onChange={(e) => setAf((s) => ({ ...s, label: e.target.value }))} placeholder="새 지표명" sx={(th) => ({ ...field(th), flex: 1 })} />
           <InputBase value={af.unit} onChange={(e) => setAf((s) => ({ ...s, unit: e.target.value }))} placeholder="단위" sx={(th) => ({ ...field(th), width: 74 })} />
           <DirSelect value={af.direction} onChange={(v) => setAf((s) => ({ ...s, direction: v }))} />
-          <Button size="small" variant="contained" startIcon={busy ? <CircularProgress size={13} thickness={5} color="inherit" /> : <AddIcon sx={{ fontSize: 16 }} />} disabled={busy || !af.label.trim()} onClick={add} sx={{ whiteSpace: 'nowrap' }}>추가</Button>
+          <Button size="small" variant="contained" startIcon={busy ? <CircularProgress size={13} thickness={5} color="inherit" /> : <AddIcon sx={{ fontSize: iconSize.body }} />} disabled={busy || !af.label.trim()} onClick={add} sx={{ whiteSpace: 'nowrap' }}>추가</Button>
         </Box>
       </DialogContent>
     </Dialog>
@@ -137,24 +138,24 @@ export function MetricHistoryDialog({ open, equipment, onClose }: { open: boolea
   }, [open, equipment])
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
-      <DialogTitle sx={{ fontSize: 15, fontWeight: 800 }}>지표 변경 이력 · {equipment}</DialogTitle>
+      <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표 변경 이력 · {equipment}</DialogTitle>
       <DialogContent>
         {rows === null ? (
-          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: 12.5 }}>불러오는 중…</Box>
+          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>불러오는 중…</Box>
         ) : rows.length === 0 ? (
-          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: 12.5 }}>변경 이력이 없습니다.</Box>
+          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>변경 이력이 없습니다.</Box>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, pb: 1 }}>
             {rows.map((h) => {
               const label = (h.after?.label as string) || (h.before?.label as string) || h.metricKey
               return (
-                <Box key={h.id} sx={(th) => ({ display: 'flex', gap: 1, p: 0.9, borderRadius: '8px', border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper' })}>
-                  <Box component="span" sx={(th) => ({ flex: 'none', alignSelf: 'flex-start', fontSize: 10.5, fontWeight: 700, px: '7px', py: '2px', borderRadius: '999px', bgcolor: alpha(th.palette.primary.main, 0.12), color: 'primary.main' })}>{METRIC_ACTION_LABEL[h.action] ?? h.action}</Box>
+                <Box key={h.id} sx={(th) => ({ display: 'flex', gap: 1, p: 0.9, borderRadius: `${radius.chip}px`, border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper' })}>
+                  <Box component="span" sx={(th) => ({ flex: 'none', alignSelf: 'flex-start', fontSize: typescale.caption.size, fontWeight: 700, px: '7px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: alpha(th.palette.primary.main, 0.12), color: 'primary.main' })}>{METRIC_ACTION_LABEL[h.action] ?? h.action}</Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Box sx={{ fontSize: 12.5, fontWeight: 600 }}>{label}</Box>
-                    <Box sx={{ fontSize: 11.5, color: 'text.secondary' }}>{diffText(h)}</Box>
+                    <Box sx={{ fontSize: typescale.body.size, fontWeight: typescale.emphasis.weight }}>{label}</Box>
+                    <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary' }}>{diffText(h)}</Box>
                   </Box>
-                  <Box sx={{ flex: 'none', textAlign: 'right', color: 'text.disabled', fontSize: 10.5 }}>
+                  <Box sx={{ flex: 'none', textAlign: 'right', color: 'text.disabled', fontSize: typescale.caption.size }}>
                     <Box>{h.changedBy || '-'}</Box><Box>{fmtTs(h.changedAt)}</Box>
                   </Box>
                 </Box>
@@ -180,23 +181,23 @@ export function ValueHistoryDialog({ open, equipment, defs, onClose }: { open: b
   }
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
-      <DialogTitle sx={{ fontSize: 15, fontWeight: 800 }}>지표값 변경 이력 · {equipment}</DialogTitle>
+      <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표값 변경 이력 · {equipment}</DialogTitle>
       <DialogContent>
         {rows === null ? (
-          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: 12.5 }}>불러오는 중…</Box>
+          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>불러오는 중…</Box>
         ) : rows.length === 0 ? (
-          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: 12.5 }}>값 변경 이력이 없습니다.</Box>
+          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>값 변경 이력이 없습니다.</Box>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, pb: 1 }}>
             {rows.map((h) => {
               const ds = diffs(h)
               return (
-                <Box key={h.id} sx={(th) => ({ display: 'flex', gap: 1, p: 0.9, borderRadius: '8px', border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper' })}>
-                  <Box component="span" sx={(th) => ({ flex: 'none', alignSelf: 'flex-start', fontSize: 10.5, fontWeight: 700, px: '7px', py: '2px', borderRadius: '999px', bgcolor: alpha(th.palette.warning.main, 0.14), color: 'warning.main' })}>{h.maker} {h.round}차</Box>
+                <Box key={h.id} sx={(th) => ({ display: 'flex', gap: 1, p: 0.9, borderRadius: `${radius.chip}px`, border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper' })}>
+                  <Box component="span" sx={(th) => ({ flex: 'none', alignSelf: 'flex-start', fontSize: typescale.caption.size, fontWeight: 700, px: '7px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: alpha(th.palette.warning.main, 0.14), color: 'warning.main' })}>{h.maker} {h.round}차</Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Box sx={{ fontSize: 12, color: 'text.primary' }}>{ds.length ? ds.join(' · ') : '변경'}</Box>
+                    <Box sx={{ fontSize: typescale.small.size, color: 'text.primary' }}>{ds.length ? ds.join(' · ') : '변경'}</Box>
                   </Box>
-                  <Box sx={{ flex: 'none', textAlign: 'right', color: 'text.disabled', fontSize: 10.5 }}>
+                  <Box sx={{ flex: 'none', textAlign: 'right', color: 'text.disabled', fontSize: typescale.caption.size }}>
                     <Box>{h.changedBy || '-'}</Box><Box>{fmtTs(h.changedAt)}</Box>
                   </Box>
                 </Box>

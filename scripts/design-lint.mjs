@@ -29,7 +29,8 @@ const EXCLUDE = ['src/components/ds']
 
 const CHECKS = [
   { key: 'hex', re: /['"`]#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})['"`]/g },
-  { key: 'font', re: /fontSize\s*:/g },
+  // 숫자 리터럴만 위반 — 토큰 경유(fontSize: iconSize.body 등)는 합법
+  { key: 'font', re: /fontSize\s*:\s*['"`{]?\s*[\d.]/g },
   { key: 'weight', re: /fontWeight\s*:\s*['"`]?\d{3}/g },
   { key: 'radius', re: /borderRadius\s*:\s*['"`]?\d/g },
   { key: 'shadow', re: /boxShadow\s*:\s*['"`]/g },

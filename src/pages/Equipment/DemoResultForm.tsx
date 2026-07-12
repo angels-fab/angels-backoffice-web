@@ -17,13 +17,14 @@ import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import { ComboField } from '@/pages/Work/inlineFields'
 import { AttachmentIcon, formatBytes } from '@/pages/Notice/attachmentUI'
 import { addDemoResult, uploadDemoFile, createMetricDef, updateMetricDef, type DemoMetricDef, type DemoRoundRow } from '@/api/demo'
 import { prepDemoPhoto, isPhotoFile } from '@/utils/imagePrep'
 
-const field = (th: Theme) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: '8px', px: 1.1, py: '7px', fontSize: 13, color: 'text.primary', width: '100%' })
-const label = { fontSize: 11, fontWeight: 700, color: 'text.disabled', letterSpacing: '.02em', mb: 0.35 }
+const field = (th: Theme) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`, px: 1.1, py: '7px', fontSize: typescale.body.size, color: 'text.primary', width: '100%' })
+const label = { fontSize: typescale.caption.size, fontWeight: 700, color: 'text.disabled', letterSpacing: '.02em', mb: 0.35 }
 
 type Pic = { file: File; url: string; name: string }
 /** 폼 지표 행 — 표준 지표 프리필(수정 가능) + 신규 추가. 저장 시 정의 생성/수정 후 값 매핑 */
@@ -148,7 +149,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
 
   return (
     <Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
-      <DialogTitle sx={{ fontSize: 15, fontWeight: 800 }}>데모결과 추가</DialogTitle>
+      <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>데모결과 추가</DialogTitle>
       <DialogContent>
         {/* 장비/제조사/모델/회차 */}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: '2fr 2fr 2fr 1fr' }, gap: 1, mb: 1 }}>
@@ -158,7 +159,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
           <Box><Box sx={label}>회차</Box><Box component="input" type="number" min={1} value={round} onChange={(e) => setRound(Math.max(1, Number((e.target as HTMLInputElement).value) || 1))} sx={(th) => ({ ...field(th) })} /></Box>
         </Box>
         {makerCapReached && (
-          <Box sx={{ fontSize: 11.5, color: 'warning.main', mb: 1, mt: -0.25 }}>
+          <Box sx={{ fontSize: typescale.small.size, color: 'warning.main', mb: 1, mt: -0.25 }}>
             비교 장비사는 한 장비당 최대 2곳입니다. 기존: {existingMakers.join(', ')} — 이 중 선택하거나 회차를 추가하세요.
           </Box>
         )}
@@ -173,13 +174,13 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
         {/* 테스트 조건 — ⊕로 조건 항목 추가(여러 개) */}
         <Box sx={{ mb: 1.25 }}>
           <Box sx={{ ...label, display: 'flex', alignItems: 'center', gap: 0.5 }}>테스트 조건
-            <Tooltip title="조건 항목 추가"><IconButton size="small" aria-label="테스트 조건 추가" onClick={() => setCondItems((c) => [...c, ''])} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}><AddCircleOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>
+            <Tooltip title="조건 항목 추가"><IconButton size="small" aria-label="테스트 조건 추가" onClick={() => setCondItems((c) => [...c, ''])} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}><AddCircleOutlineIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
             {condItems.map((cv, i) => (
               <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <InputBase value={cv} onChange={(e) => setCondItems((c) => c.map((x, j) => (j === i ? e.target.value : x)))} placeholder={i === 0 ? '예: 챔버압 20mTorr · RF 700W' : '조건 추가…'} sx={(th) => ({ ...field(th), flex: 1 })} />
-                {condItems.length > 1 && <IconButton size="small" aria-label="조건 삭제" onClick={() => setCondItems((c) => c.filter((_, j) => j !== i))} sx={{ p: '2px', color: 'text.disabled' }}><CloseIcon sx={{ fontSize: 13 }} /></IconButton>}
+                {condItems.length > 1 && <IconButton size="small" aria-label="조건 삭제" onClick={() => setCondItems((c) => c.filter((_, j) => j !== i))} sx={{ p: '2px', color: 'text.disabled' }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton>}
               </Box>
             ))}
           </Box>
@@ -187,21 +188,21 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
 
         {/* 핵심 지표 — 표준 지표 프리필(지표명·단위 수정 가능) + ⊕ 지표 추가 */}
         <Box sx={{ mb: 1.25 }}>
-          <Box sx={{ ...label, display: 'flex', alignItems: 'center', gap: 0.5 }}>핵심 지표 {equipment && <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400 }}>· {equipment} 표준(수정 가능)</Box>}
-            {!!equipment && <Tooltip title="지표 추가"><IconButton size="small" aria-label="지표 추가" onClick={addMetricRow} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}><AddCircleOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>}
+          <Box sx={{ ...label, display: 'flex', alignItems: 'center', gap: 0.5 }}>핵심 지표 {equipment && <Box component="span" sx={{ color: 'text.disabled', fontWeight: typescale.body.weight }}>· {equipment} 표준(수정 가능)</Box>}
+            {!!equipment && <Tooltip title="지표 추가"><IconButton size="small" aria-label="지표 추가" onClick={addMetricRow} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'primary.main' } }}><AddCircleOutlineIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>}
           </Box>
           {!equipment ? (
-            <Box sx={{ fontSize: 12, color: 'text.disabled', py: 0.5 }}>장비종류를 먼저 선택하세요.</Box>
+            <Box sx={{ fontSize: typescale.small.size, color: 'text.disabled', py: 0.5 }}>장비종류를 먼저 선택하세요.</Box>
           ) : mrows.length === 0 ? (
-            <Box sx={{ fontSize: 12, color: 'text.disabled', py: 0.5 }}>이 장비의 표준 지표가 없습니다. 위 ⊕로 지표를 추가하세요.</Box>
+            <Box sx={{ fontSize: typescale.small.size, color: 'text.disabled', py: 0.5 }}>이 장비의 표준 지표가 없습니다. 위 ⊕로 지표를 추가하세요.</Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.6 }}>
               {mrows.map((r, i) => (
                 <Box key={r.key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <InputBase value={r.label} onChange={(e) => setMrow(i, { label: e.target.value })} placeholder="지표명" sx={(th) => ({ ...field(th), flex: '0 0 34%', fontSize: 12.5 })} />
-                  <InputBase value={r.unit} onChange={(e) => setMrow(i, { unit: e.target.value })} placeholder="단위" sx={(th) => ({ ...field(th), flex: '0 0 72px', fontSize: 12 })} />
+                  <InputBase value={r.label} onChange={(e) => setMrow(i, { label: e.target.value })} placeholder="지표명" sx={(th) => ({ ...field(th), flex: '0 0 34%' })} />
+                  <InputBase value={r.unit} onChange={(e) => setMrow(i, { unit: e.target.value })} placeholder="단위" sx={(th) => ({ ...field(th), flex: '0 0 72px', fontSize: typescale.small.size })} />
                   <InputBase value={r.value} onChange={(e) => setMrow(i, { value: e.target.value })} placeholder="값" sx={(th) => ({ ...field(th), flex: 1 })} />
-                  {r.isNew && <IconButton size="small" aria-label="지표 행 삭제" onClick={() => setMrows((rows) => rows.filter((_, j) => j !== i))} sx={{ p: '2px', color: 'text.disabled' }}><CloseIcon sx={{ fontSize: 13 }} /></IconButton>}
+                  {r.isNew && <IconButton size="small" aria-label="지표 행 삭제" onClick={() => setMrows((rows) => rows.filter((_, j) => j !== i))} sx={{ p: '2px', color: 'text.disabled' }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton>}
                 </Box>
               ))}
             </Box>
@@ -213,21 +214,21 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
           <Box sx={label}>사진 (여러 장 · 대표 1장 지정)</Box>
           <input ref={photoInput} type="file" accept="image/*,.tif,.tiff" multiple hidden onChange={(e) => { addPics(e.target.files); if (photoInput.current) photoInput.current.value = '' }} />
           <Box onClick={() => photoInput.current?.click()} onDragOver={(e) => { e.preventDefault(); setDrag(true) }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); addPics(e.dataTransfer.files) }}
-            sx={(th) => ({ border: '2px dashed', borderColor: drag ? th.palette.primary.main : th.palette.divider, bgcolor: drag ? alpha(th.palette.primary.main, 0.06) : 'transparent', borderRadius: '10px', p: 1, cursor: 'pointer', textAlign: 'center' })}>
+            sx={(th) => ({ border: '2px dashed', borderColor: drag ? th.palette.primary.main : th.palette.divider, bgcolor: drag ? alpha(th.palette.primary.main, 0.06) : 'transparent', borderRadius: `${radius.input}px`, p: 1, cursor: 'pointer', textAlign: 'center' })}>
             {photos.length === 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, color: 'text.disabled', py: 1 }}>
-                <AddPhotoAlternateOutlinedIcon sx={{ fontSize: 26 }} /><Box sx={{ fontSize: 12 }}>사진을 끌어놓거나 클릭해 추가</Box>
+                <AddPhotoAlternateOutlinedIcon sx={{ fontSize: 26 }} /><Box sx={{ fontSize: typescale.small.size }}>사진을 끌어놓거나 클릭해 추가</Box>
               </Box>
             ) : (
               <Box onClick={(e) => e.stopPropagation()} sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 0.75 }}>
                 {photos.map((p, i) => (
-                  <Box key={i} sx={{ position: 'relative', height: 64, borderRadius: '8px', overflow: 'hidden', border: i === cover ? '2px solid' : '1px solid', borderColor: i === cover ? 'primary.main' : 'divider' }}>
+                  <Box key={i} sx={{ position: 'relative', height: 64, borderRadius: `${radius.chip}px`, overflow: 'hidden', border: i === cover ? '2px solid' : '1px solid', borderColor: i === cover ? 'primary.main' : 'divider' }}>
                     <Box component="img" src={p.url} alt={p.name} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <Tooltip title={i === cover ? '대표사진' : '대표로 지정'}><IconButton size="small" onClick={() => setCover(i)} sx={{ position: 'absolute', top: 1, left: 1, p: '2px', color: '#fff', bgcolor: 'rgba(0,0,0,.4)' }}>{i === cover ? <StarIcon sx={{ fontSize: 14, color: '#ffca28' }} /> : <StarBorderIcon sx={{ fontSize: 14 }} />}</IconButton></Tooltip>
-                    <IconButton size="small" onClick={() => rmPic(i)} sx={{ position: 'absolute', top: 1, right: 1, p: '2px', color: '#fff', bgcolor: 'rgba(0,0,0,.4)' }}><CloseIcon sx={{ fontSize: 13 }} /></IconButton>
+                    <Tooltip title={i === cover ? '대표사진' : '대표로 지정'}><IconButton size="small" onClick={() => setCover(i)} sx={{ position: 'absolute', top: 1, left: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}>{i === cover ? <StarIcon sx={{ fontSize: iconSize.caption, color: '#ffca28' }} /> : <StarBorderIcon sx={{ fontSize: iconSize.caption }} />}</IconButton></Tooltip>
+                    <IconButton size="small" onClick={() => rmPic(i)} sx={{ position: 'absolute', top: 1, right: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton>
                   </Box>
                 ))}
-                <Box onClick={() => photoInput.current?.click()} sx={{ height: 64, borderRadius: '8px', border: '1px dashed', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', cursor: 'pointer' }}><AddPhotoAlternateOutlinedIcon sx={{ fontSize: 20 }} /></Box>
+                <Box onClick={() => photoInput.current?.click()} sx={{ height: 64, borderRadius: `${radius.chip}px`, border: '1px dashed', borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', cursor: 'pointer' }}><AddPhotoAlternateOutlinedIcon sx={{ fontSize: iconSize.header }} /></Box>
               </Box>
             )}
           </Box>
@@ -236,18 +237,18 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
         {/* 파일 첨부 — 버튼 또는 드래그&드롭 */}
         <Box onDragOver={(e) => { e.preventDefault(); setDragDoc(true) }} onDragLeave={() => setDragDoc(false)}
           onDrop={(e) => { e.preventDefault(); setDragDoc(false); const fs = e.dataTransfer.files; if (fs?.length) setDocs((d) => [...d, ...Array.from(fs)]) }}
-          sx={(th) => ({ border: '2px dashed', borderColor: dragDoc ? th.palette.primary.main : th.palette.divider, bgcolor: dragDoc ? alpha(th.palette.primary.main, 0.06) : 'transparent', borderRadius: '10px', p: 1 })}>
+          sx={(th) => ({ border: '2px dashed', borderColor: dragDoc ? th.palette.primary.main : th.palette.divider, bgcolor: dragDoc ? alpha(th.palette.primary.main, 0.06) : 'transparent', borderRadius: `${radius.input}px`, p: 1 })}>
           <Box sx={label}>파일 첨부 (결과 PDF·측정 데이터 등 — 끌어놓기 가능)</Box>
           <input ref={docInput} type="file" multiple hidden onChange={(e) => { const fs = e.target.files; if (fs) setDocs((d) => [...d, ...Array.from(fs)]); if (docInput.current) docInput.current.value = '' }} />
-          <Button size="small" variant="outlined" startIcon={<AttachFileIcon sx={{ fontSize: 16 }} />} onClick={() => docInput.current?.click()} sx={{ color: 'text.secondary', borderColor: 'divider' }}>파일 선택</Button>
+          <Button size="small" variant="outlined" startIcon={<AttachFileIcon sx={{ fontSize: iconSize.body }} />} onClick={() => docInput.current?.click()} sx={{ color: 'text.secondary', borderColor: 'divider' }}>파일 선택</Button>
           {docs.length > 0 && (
             <Box sx={{ mt: 0.75, display: 'flex', flexDirection: 'column', gap: 0.4 }}>
               {docs.map((f, i) => (
-                <Box key={i} sx={(th) => ({ display: 'flex', alignItems: 'center', gap: 0.6, px: 0.75, py: '4px', borderRadius: '7px', border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper' })}>
+                <Box key={i} sx={(th) => ({ display: 'flex', alignItems: 'center', gap: 0.6, px: 0.75, py: '4px', borderRadius: `${radius.chip}px`, border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper' })}>
                   <AttachmentIcon type={f.type} name={f.name} size={16} />
-                  <Box sx={{ flex: 1, minWidth: 0, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</Box>
-                  <Box sx={{ fontSize: 10.5, color: 'text.disabled', flex: 'none' }}>{formatBytes(f.size)}</Box>
-                  <IconButton size="small" onClick={() => setDocs((d) => d.filter((_, j) => j !== i))} sx={{ p: '2px', color: 'text.disabled' }}><CloseIcon sx={{ fontSize: 13 }} /></IconButton>
+                  <Box sx={{ flex: 1, minWidth: 0, fontSize: typescale.small.size, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</Box>
+                  <Box sx={{ fontSize: typescale.caption.size, color: 'text.disabled', flex: 'none' }}>{formatBytes(f.size)}</Box>
+                  <IconButton size="small" onClick={() => setDocs((d) => d.filter((_, j) => j !== i))} sx={{ p: '2px', color: 'text.disabled' }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton>
                 </Box>
               ))}
             </Box>
@@ -255,7 +256,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
-        {busy && prog && <Box sx={{ flex: 1, fontSize: 11.5, color: 'text.secondary' }}>{prog}</Box>}
+        {busy && prog && <Box sx={{ flex: 1, fontSize: typescale.small.size, color: 'text.secondary' }}>{prog}</Box>}
         <Button onClick={close} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
         <Button variant="contained" onClick={() => void save()} disabled={busy || makerCapReached} startIcon={busy ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined}>{busy ? '저장 중…' : '저장'}</Button>
       </DialogActions>

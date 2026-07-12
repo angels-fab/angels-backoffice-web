@@ -10,6 +10,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import ReorderIcon from '@mui/icons-material/Reorder'
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator'
 import { alpha } from '@mui/material/styles'
+import { iconSize, radius, shadow, typescale } from '@/theme/tokens'
 import { MEMBERS, given } from '@/pages/Calendar/members'
 import { RichBodyEditor } from '@/components/richText'
 import { RichBodyView } from '@/utils/richBody'
@@ -41,7 +42,7 @@ const applyOrder = (memos: DemoChatMsg[], order: number[]): DemoChatMsg[] => {
 
 /** 네온 카드 껍데기 — 제목 띠(담당자 색) + 얇은 구분선 + 본문. 작성/수정/표시 카드가 동일 포맷 공유 */
 function neonSx(c: string) {
-  return { borderRadius: '8px', overflow: 'hidden', bgcolor: '#1a1d26', color: '#dfe6f2', border: `1px solid ${alpha(c, 0.85)}`, boxShadow: `0 0 5px ${alpha(c, 0.18)}` } as const
+  return { borderRadius: `${radius.chip}px`, overflow: 'hidden', bgcolor: '#1a1d26', color: '#dfe6f2', border: `1px solid ${alpha(c, 0.85)}`, boxShadow: `0 0 5px ${alpha(c, 0.18)}` } as const
 }
 
 /**
@@ -56,16 +57,16 @@ function MemoCard({ m, own, onDelete }: { m: DemoChatMsg; own: boolean; onDelete
   return (
     <Box sx={{ ...neonSx(c), height: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, p: '6px 10px', bgcolor: alpha(c, 0.14), borderBottom: body ? `1px solid ${alpha(c, 0.28)}` : 'none' }}>
-        <Box sx={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, lineHeight: 1.3, color: liteC(c), textShadow: `0 0 3px ${alpha(c, 0.35)}`, wordBreak: 'break-word' }}>{title}</Box>
-        <Box component="span" sx={{ flex: 'none', display: 'inline-flex', alignItems: 'center', height: 20, px: 1, fontSize: 11, fontWeight: 600, borderRadius: '7px', whiteSpace: 'nowrap', border: `1px solid ${alpha(c, 0.85)}`, color: liteC(c) }}>{m.author || '팀원'}</Box>
-        <Box component="span" sx={{ flex: 'none', fontSize: 10.5, fontFamily: 'monospace', color: '#7e8797', opacity: 0.75 }}>{fmtDay(m.createdAt)}</Box>
+        <Box sx={{ flex: 1, minWidth: 0, fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1.3, color: liteC(c), textShadow: `0 0 3px ${alpha(c, 0.35)}`, wordBreak: 'break-word' }}>{title}</Box>
+        <Box component="span" sx={{ flex: 'none', display: 'inline-flex', alignItems: 'center', height: 20, px: 1, fontSize: typescale.caption.size, fontWeight: 600, borderRadius: `${radius.chip}px`, whiteSpace: 'nowrap', border: `1px solid ${alpha(c, 0.85)}`, color: liteC(c) }}>{m.author || '팀원'}</Box>
+        <Box component="span" sx={{ flex: 'none', fontSize: typescale.caption.size, fontFamily: 'monospace', color: 'text.disabled', opacity: 0.75 }}>{fmtDay(m.createdAt)}</Box>
         {own && (
-          <IconButton size="small" aria-label="코멘트 삭제" onClick={onDelete} sx={{ p: '1px', flex: 'none', color: 'rgba(255,255,255,.45)', '&:hover': { color: '#e05b54' } }}>
-            <CloseIcon sx={{ fontSize: 13 }} />
+          <IconButton size="small" aria-label="코멘트 삭제" onClick={onDelete} sx={(th) => ({ p: '1px', flex: 'none', color: alpha(th.palette.text.primary, 0.45), '&:hover': { color: 'error.main' } })}>
+            <CloseIcon sx={{ fontSize: iconSize.caption }} />
           </IconButton>
         )}
       </Box>
-      {body && <Box sx={{ p: '7px 10px 10px', fontSize: 12.5, lineHeight: 1.5 }}><RichBodyView html={body} /></Box>}
+      {body && <Box sx={{ p: '7px 10px 10px', fontSize: typescale.body.size, lineHeight: 1.5 }}><RichBodyView html={body} /></Box>}
     </Box>
   )
 }
@@ -82,15 +83,15 @@ function ComposeCard({ accent, title, body, busy, onTitle, onBody, onCancel, onS
       {/* 제목 띠 — 표시 카드의 제목 자리에 인풋 */}
       <Box sx={{ flex: 'none', p: '5px 10px', bgcolor: alpha(c, 0.14), borderBottom: `1px solid ${alpha(c, 0.28)}` }}>
         <InputBase autoFocus value={title} onChange={(e) => onTitle(e.target.value)} placeholder="제목"
-          sx={{ width: '100%', fontSize: 13, fontWeight: 700, color: liteC(c), '& input::placeholder': { color: 'rgba(255,255,255,.45)', opacity: 1 } }} />
+          sx={(th) => ({ width: '100%', fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, color: liteC(c), '& input::placeholder': { color: alpha(th.palette.text.primary, 0.45), opacity: 1 } })} />
       </Box>
       {/* 본문 — 공용 리치 에디터(HTML). 어두운 카드라 글자색만 고정. compact=코멘트용 축소 툴바 */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', p: '6px 10px 8px', '& .rb-editor': { color: '#dfe6f2' } }}>
         <RichBodyEditor value={body} onChange={onBody} placeholder="내용 입력… (선택)"
-          ariaLabel="코멘트 내용" fontSize={12.5} minHeight={44} onCtrlEnter={onSave} compact />
+          ariaLabel="코멘트 내용" fontSize={typescale.body.size} minHeight={44} onCtrlEnter={onSave} compact />
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 'auto', pt: 0.5 }}>
-          <Button size="small" onClick={onCancel} disabled={busy} sx={{ color: 'rgba(255,255,255,.6)', fontSize: 11.5, minWidth: 0 }}>취소</Button>
-          <Button size="small" variant="contained" onClick={onSave} disabled={busy || !title.trim()} startIcon={busy ? <CircularProgress size={12} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: 11.5, minWidth: 0 }}>{saveLabel}</Button>
+          <Button size="small" onClick={onCancel} disabled={busy} sx={(th) => ({ color: alpha(th.palette.text.primary, 0.6), fontSize: typescale.small.size, minWidth: 0 })}>취소</Button>
+          <Button size="small" variant="contained" onClick={onSave} disabled={busy || !title.trim()} startIcon={busy ? <CircularProgress size={12} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: typescale.small.size, minWidth: 0 }}>{saveLabel}</Button>
         </Box>
       </Box>
     </Box>
@@ -350,23 +351,23 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
       {/* 헤더 — "검토 메모" + (팀원) 코멘트 정렬 / 정렬 중이면 취소·완료 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minHeight: 28 }}>
-        <Box sx={{ fontSize: 12.5, fontWeight: 800, letterSpacing: '.02em', color: 'text.secondary' }}>검토 메모</Box>
+        <Box sx={{ fontSize: typescale.body.size, fontWeight: 800, letterSpacing: '.02em', color: 'text.secondary' }}>검토 메모</Box>
         <Box sx={{ flex: 1 }} />
         {canSort && !sortMode && (
-          <Button size="small" startIcon={<ReorderIcon sx={{ fontSize: 16 }} />} onClick={enterSort}
-            sx={{ fontSize: 11.5, minWidth: 0, py: 0.25, color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>코멘트 정렬</Button>
+          <Button size="small" startIcon={<ReorderIcon sx={{ fontSize: iconSize.body }} />} onClick={enterSort}
+            sx={{ fontSize: typescale.small.size, minWidth: 0, py: 0.25, color: 'text.secondary', '&:hover': { color: 'text.primary' } }}>코멘트 정렬</Button>
         )}
         {sortMode && (
           <>
-            <Button size="small" onClick={cancelSort} disabled={savingSort} sx={{ fontSize: 11.5, minWidth: 0, py: 0.25, color: 'text.secondary' }}>취소</Button>
+            <Button size="small" onClick={cancelSort} disabled={savingSort} sx={{ fontSize: typescale.small.size, minWidth: 0, py: 0.25, color: 'text.secondary' }}>취소</Button>
             <Button size="small" variant="contained" onClick={() => void completeSort()} disabled={savingSort}
-              startIcon={savingSort ? <CircularProgress size={12} thickness={5} color="inherit" /> : <CheckIcon sx={{ fontSize: 16 }} />}
-              sx={{ fontSize: 11.5, minWidth: 0, py: 0.25 }}>완료</Button>
+              startIcon={savingSort ? <CircularProgress size={12} thickness={5} color="inherit" /> : <CheckIcon sx={{ fontSize: iconSize.body }} />}
+              sx={{ fontSize: typescale.small.size, minWidth: 0, py: 0.25 }}>완료</Button>
           </>
         )}
       </Box>
       {sortMode && (
-        <Box sx={(th) => ({ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 0.5, px: 1, py: 0.75, borderRadius: '8px', bgcolor: alpha(th.palette.primary.main, 0.1), fontSize: 11, lineHeight: 1.5, color: 'text.secondary' })}>
+        <Box sx={(th) => ({ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 0.5, px: 1, py: 0.75, borderRadius: `${radius.chip}px`, bgcolor: alpha(th.palette.primary.main, 0.1), fontSize: typescale.caption.size, lineHeight: 1.5, color: 'text.secondary' })}>
           <Box component="span" sx={{ fontWeight: 700, color: 'primary.main' }}>코멘트 정렬 중</Box>
           <Box component="span">· 카드 핸들을 끌어 순서를 바꾸세요. 완료하면 모든 팀원에게 같은 순서로 보입니다.</Box>
         </Box>
@@ -380,7 +381,7 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
           // 드래그 중인 카드 자리 = 점선 placeholder(그 높이만큼 공간 확보). 카드 본체는 커서 추적 오버레이로 렌더.
           if (dragId === id) {
             return (
-              <Box key={id} aria-hidden sx={(th) => ({ minWidth: 0, minHeight: drag.current?.height ?? 80, border: '2px dashed', borderColor: alpha(th.palette.primary.main, 0.6), bgcolor: alpha(th.palette.primary.main, 0.06), borderRadius: '8px' })} />
+              <Box key={id} aria-hidden sx={(th) => ({ minWidth: 0, minHeight: drag.current?.height ?? 80, border: '2px dashed', borderColor: alpha(th.palette.primary.main, 0.6), bgcolor: alpha(th.palette.primary.main, 0.06), borderRadius: `${radius.chip}px` })} />
             )
           }
           const own = ownOf(m)
@@ -391,8 +392,8 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
                 <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 0.75 }}>
                   {/* 드래그 핸들 — 이 핸들로만 순서 변경. 카드 본문은 드래그 불가 */}
                   <Box role="button" aria-label="드래그하여 순서 변경" onPointerDown={(e) => onHandlePointerDown(e, id)}
-                    sx={(th) => ({ flex: 'none', display: 'flex', alignItems: 'center', px: 0.25, borderRadius: '6px', cursor: 'grab', touchAction: 'none', color: 'text.disabled', '&:hover': { color: 'text.primary', bgcolor: alpha(th.palette.primary.main, 0.12) }, '&:active': { cursor: 'grabbing' } })}>
-                    <DragIndicatorIcon sx={{ fontSize: 20 }} />
+                    sx={(th) => ({ flex: 'none', display: 'flex', alignItems: 'center', px: 0.25, borderRadius: `${radius.chip}px`, cursor: 'grab', touchAction: 'none', color: 'text.disabled', '&:hover': { color: 'text.primary', bgcolor: alpha(th.palette.primary.main, 0.12) }, '&:active': { cursor: 'grabbing' } })}>
+                    <DragIndicatorIcon sx={{ fontSize: iconSize.header }} />
                   </Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}><MemoCard m={m} own={false} onDelete={() => {}} /></Box>
                 </Box>
@@ -414,19 +415,19 @@ export default function DemoChat({ memos, canPost, canModerate = false, user, bu
                 onTitle={setTitle} onBody={setDraft} onCancel={() => { setAdding(false); setTitle(''); setDraft('') }} onSave={() => void save()} />
             ) : (
               <Box role="button" tabIndex={0} onClick={() => setAdding(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdding(true) } }}
-                sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 36, border: `1px dashed ${th.palette.divider}`, borderRadius: '10px', color: 'text.disabled', cursor: 'pointer', fontSize: 12, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
-                <AddIcon sx={{ fontSize: 15 }} /> 코멘트 추가
+                sx={(th) => ({ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 36, border: `1px dashed ${th.palette.divider}`, borderRadius: `${radius.button}px`, color: 'text.disabled', cursor: 'pointer', fontSize: typescale.small.size, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
+                <AddIcon sx={{ fontSize: iconSize.body }} /> 코멘트 추가
               </Box>
             )}
           </Box>
         )}
-        {memos.length === 0 && !adding && !canPost && <Box sx={{ fontSize: 11.5, color: 'text.disabled' }}>코멘트가 없습니다.</Box>}
+        {memos.length === 0 && !adding && !canPost && <Box sx={{ fontSize: typescale.small.size, color: 'text.disabled' }}>코멘트가 없습니다.</Box>}
 
         {/* 들어올린 카드 — 커서 추적 오버레이(위치는 ref로 명령형 갱신). 원본 카드 폭 유지 */}
         {dragItem && (
           <Box ref={(el: HTMLDivElement | null) => { liftedRef.current = el; const d = drag.current; if (el && d) { el.style.left = `${lastPointer.current.x - d.offsetX}px`; el.style.top = `${lastPointer.current.y - d.offsetY}px` } }}
             aria-hidden
-            sx={(th) => ({ position: 'fixed', zIndex: th.zIndex.modal + 1, width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none', opacity: 0.95, borderRadius: '8px', boxShadow: '0 20px 50px rgba(0,0,0,.48)' })}>
+            sx={(th) => ({ position: 'fixed', zIndex: th.zIndex.modal + 1, width: drag.current?.width, height: drag.current?.height, pointerEvents: 'none', opacity: 0.95, borderRadius: `${radius.chip}px`, boxShadow: shadow.lg })}>
             <MemoCard m={dragItem} own={false} onDelete={() => {}} />
           </Box>
         )}
