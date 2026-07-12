@@ -5,9 +5,8 @@
 
 ## ⏸ P3 자동완주 재개 지점 (2026-07-13, 한도 대비)
 사용자 지시: **남은 P3~P4 전 항목을 무개입 연속 진행해 완주.** 한도 도달 시 리셋 후 이 지점부터 재개.
-- ✅ **완료·푸시**: P3-1(데모 색/구조), **P3 정규화 Wave1**(40파일, lint 1171→888, 적대검증 40/40 무변경).
-- ⏳ **진행 중이었음**: P3 정규화 **Wave2**(39파일 = Work 전체·Calendar·Equipment 드래그헬퍼·일부 components/layouts). 워크플로 runId=`wf_dbda7432-891`. **재개 시 먼저 `git status`로 Wave2 부분 편집 유무 확인** → 미커밋 변경 있으면 전체 `npm run type-check` 후 적대검증(변경파일 `git diff` 정독, 로직무변경 확인) → 커밋 `refactor(ds): P3 정규화 Wave2`. 없으면 Wave2 워크플로 재실행(`p3-normalize-sweep-w2`, 파일목록은 스크립트에 인라인).
-- ⬜ **남은 순서**: (a) 정규화 Wave2 마감 → (b) **구조 정돈**: 지역 스낵바→useSnack·팝업 `bgcolor:'background.default'` 제거·로딩→LoadingState·손코딩 폼→FormField(파일별, 동작보존 적대검증) → (c) **손코딩 카드 표면→AppCard**(드래그·사진 얽힌 건 신중/후속) → (d) **P4**: 죽은 index.css 클래스(0참조만) 제거·design-lint 정리(의도보존분 제외한 신규파일 strict). 데모 카드 AppCard화(P3-1 이월분)도 (c)에 포함.
+- ✅ **완료·푸시**: P3-1(데모 색/구조), **P3 정규화 Wave1+Wave2 전량 완료**(79파일, 적대검증 78/78 무변경 + TitleLoad 무변경, 전체 lint **1171→630**, type-check 통과). 정규화(색·글자·radius·shadow·z 토큰화)는 **끝남**.
+- ⬜ **남은 순서(여기부터 재개)**: (b) **구조 정돈**: 지역 스낵바→useSnack·팝업 `bgcolor:'background.default'` 제거·로딩→LoadingState·손코딩 폼→FormField(파일별, 동작보존 적대검증) → (c) **손코딩 카드 표면→AppCard**(드래그·사진 얽힌 건 신중/후속) → (d) **P4**: 죽은 index.css 클래스(0참조만) 제거·design-lint 정리(의도보존분 제외한 신규파일 strict). 데모 카드 AppCard화(P3-1 이월분)도 (c)에 포함.
 - **원칙**: 로직 무변경(적대검증)·페이지/웨이브 단위 type-check 통과 시에만 커밋·푸시. 도메인색(로드맵 목업·제조사·사진 오버레이·MIME)·초소형 배지 폰트는 의도 보존. lint 목표 대폭감(0 강제 아님 — 의도보존 잔존).
 
 ## 현재 상태
