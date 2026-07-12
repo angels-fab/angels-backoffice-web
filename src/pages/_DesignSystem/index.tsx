@@ -24,6 +24,13 @@ import {
   EmptyState,
   SearchBar,
   ListRow,
+  ConfirmDialog,
+  FormDialog,
+  LoadingState,
+  ErrorBanner,
+  FormField,
+  SelectField,
+  DateField,
 } from '@/components/ds'
 import { layout } from '@/theme/tokens'
 
@@ -52,6 +59,11 @@ export default function DesignSystemShowcase() {
   const [q, setQ] = useState('')
   const [region, setRegion] = useState<'all' | 'domestic' | 'foreign'>('all')
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [formOpen, setFormOpen] = useState(false)
+  const [fName, setFName] = useState('')
+  const [fCat, setFCat] = useState('')
+  const [fDate, setFDate] = useState('')
 
   return (
     <ScopedCssBaseline>
@@ -152,6 +164,39 @@ export default function DesignSystemShowcase() {
             </Typography>
           </Demo>
 
+          <Demo name="<FormField> 패밀리" desc="폼 입력 표준 (P2-1) — modal | inline 2 variant, 날짜·Select 각 1방식">
+            <AppCard>
+              <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>variant="modal" — 작성폼 다이얼로그용 (테마 TextField)</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 3 }}>
+                <FormField label="장비명" value={fName} onChange={setFName} placeholder="예: Spin Coater" />
+                <SelectField label="구분" value={fCat} onChange={setFCat} options={['공정', '분석']} placeholder="선택" />
+                <DateField label="설치일" value={fDate} onChange={setFDate} />
+              </Box>
+              <Typography variant="caption" sx={{ display: 'block', mb: 1 }}>variant="inline" — 표 안·카드형 인라인 편집용 (미니멀 룩, 파란 포커스링)</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2 }}>
+                <FormField variant="inline" label="장비명" value={fName} onChange={setFName} placeholder="예: Spin Coater" />
+                <SelectField variant="inline" label="구분" value={fCat} onChange={setFCat} options={['공정', '분석']} placeholder="선택" />
+                <DateField variant="inline" label="설치일" value={fDate} onChange={setFDate} />
+              </Box>
+            </AppCard>
+          </Demo>
+
+          <Demo name="<ConfirmDialog> + <FormDialog>" desc="다이얼로그 2계열 (P2-2) — 위험 작업은 빨간 버튼 강제">
+            <Box sx={ROW}>
+              <Button variant="outlined" size="small" onClick={() => setConfirmOpen(true)}>삭제 확인 열기 (destructive)</Button>
+              <Button variant="outlined" size="small" onClick={() => setFormOpen(true)}>작성폼 열기</Button>
+            </Box>
+          </Demo>
+
+          <Demo name="<LoadingState> + <ErrorBanner>" desc="피드백 표준 (P2-2)">
+            <AppCard padding={0}>
+              <LoadingState />
+            </AppCard>
+            <Box sx={{ mt: 2 }}>
+              <ErrorBanner message="일정을 불러오지 못했습니다." severity="warning" onRetry={() => {}} sx={{ mb: 0 }} />
+            </Box>
+          </Demo>
+
           <Demo name="<EmptyState>" desc="빈 상태">
             <AppCard padding={0}>
               <EmptyState
@@ -169,6 +214,33 @@ export default function DesignSystemShowcase() {
             </Typography>
           </Demo>
         </Box>
+
+        <ConfirmDialog
+          open={confirmOpen}
+          destructive
+          title="일정을 삭제할까요?"
+          description="삭제 후 되돌릴 수 없습니다."
+          confirmLabel="삭제"
+          onConfirm={() => setConfirmOpen(false)}
+          onClose={() => setConfirmOpen(false)}
+        />
+        <FormDialog
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          icon={<AddIcon />}
+          title="데모 항목 등록"
+          footer={
+            <>
+              <Button variant="text" sx={{ color: 'text.secondary' }} onClick={() => setFormOpen(false)}>취소</Button>
+              <Button variant="contained" onClick={() => setFormOpen(false)}>저장</Button>
+            </>
+          }
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <FormField label="이름" value={fName} onChange={setFName} />
+            <SelectField label="구분" value={fCat} onChange={setFCat} options={['공정', '분석']} placeholder="선택" />
+          </Box>
+        </FormDialog>
 
         <AppDrawer
           open={drawerOpen}
