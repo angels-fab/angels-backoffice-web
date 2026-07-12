@@ -891,9 +891,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .snav-text{flex:1;min-width:0;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap}
 .snav-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* 개선 메모 — 메뉴명 우상단 작은 노란 점(숫자 없음, 관리자 전용) */
-.snav-memo-dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--amber);transform:translateY(-1px)}
 /* 새 글 숫자 — 행 오른쪽 끝, 빨강 배경·숫자만(볼드 아님) */
-.snav-num{flex:none;min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:500;line-height:17px;text-align:center;box-sizing:border-box}
 .topbar-bell{margin-left:auto;background:none;border:none;color:var(--text2);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;flex-shrink:0;transition:color .15s,background .15s}
 .topbar-bell:hover{color:var(--text);background:var(--ink2)}
 .topbar-brand{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
@@ -1029,8 +1027,6 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .bnav-item::after{content:"";display:block;width:16px;height:3px;border-radius:2px;background:transparent;margin-top:2px}
 .bnav-item.active::after{background:var(--blue)}
 .bnav-ico-wrap{position:relative;display:inline-flex;line-height:1}
-.bnav-badge{position:absolute;top:-6px;right:-10px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#f04438;color:#fff;font-size:10px;font-weight:700;line-height:16px;text-align:center;box-sizing:border-box;box-shadow:0 0 0 2px var(--ink)}
-.bnav-badge[hidden]{display:none}
 
 /* 업무 카드 셀 — 롱프레스 시 모바일 네이티브 텍스트 선택·iOS 콜아웃 방지(카드는 탭/드래그 대상) */
 .reorder-cell,.sdg-cell{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}

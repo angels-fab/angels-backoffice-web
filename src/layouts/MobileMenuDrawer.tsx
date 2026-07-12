@@ -15,6 +15,7 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
 import { useRole, ROLE_LABEL } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
+import { NavBadge } from '@/components/ds'
 import { useNavBadges } from './useNavBadges'
 import { memoCountByPath } from '@/utils/improveMemo'
 
@@ -88,33 +89,21 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
               <ListItemIcon sx={{ minWidth: 40, color: active ? 'primary.main' : 'text.secondary' }}>
                 {r.icon}
               </ListItemIcon>
-              <ListItemText slotProps={{ primary: { sx: { fontSize: 14.5 } } }} primary={r.label} />
-              {memo > 0 && (
-                <Box
-                  component="span"
-                  aria-label={`개선 메모 ${memo}건`}
-                  sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: 'warning.main', mr: r.badge ? 1 : 0.5 }}
-                />
-              )}
-              {r.badge ? (
-                <Box
-                  component="span"
-                  aria-label={`새 글 ${r.badge}건`}
-                  sx={{
-                    minWidth: 18,
-                    height: 18,
-                    px: 0.5,
-                    borderRadius: '9px',
-                    bgcolor: '#f04438',
-                    color: '#fff',
-                    fontSize: 11,
-                    lineHeight: '18px',
-                    textAlign: 'center',
-                  }}
-                >
-                  {r.badge > 99 ? '99+' : r.badge}
-                </Box>
-              ) : null}
+              {/* 아이폰식 위첨자 배지(D7 표준) — 메뉴명 우상단, 빨강=새 글·앰버=메모. 행 오른쪽 배지 폐지 */}
+              <ListItemText
+                slotProps={{ primary: { sx: { fontSize: 14.5 } } }}
+                primary={
+                  <Box component="span" sx={{ position: 'relative', display: 'inline-block' }}>
+                    {r.label}
+                    {((r.badge || 0) > 0 || memo > 0) && (
+                      <Box component="span" sx={{ position: 'absolute', left: '100%', top: -7, ml: '3px', display: 'inline-flex', gap: '3px' }}>
+                        <NavBadge count={r.badge || 0} kind="new" />
+                        <NavBadge count={memo} kind="memo" />
+                      </Box>
+                    )}
+                  </Box>
+                }
+              />
             </ListItemButton>
           )
         })}

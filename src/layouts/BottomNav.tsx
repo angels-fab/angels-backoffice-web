@@ -7,13 +7,14 @@ import CampaignIcon from '@mui/icons-material/Campaign'
 import MenuIcon from '@mui/icons-material/Menu'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import { useRole } from '@/auth/role'
+import { NavBadge } from '@/components/ds'
 import { useNavBadges } from './useNavBadges'
 import MobileMenuDrawer from './MobileMenuDrawer'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 
+// 아이콘 우상단 위첨자(D7 표준 NavBadge) — 하단탭 배경과 분리용 잉크 링
 function Badge({ n }: { n: number }) {
-  if (n <= 0) return null
-  return <span className="bnav-badge">{n > 99 ? '99+' : String(n)}</span>
+  return <NavBadge count={n} kind="new" sx={{ position: 'absolute', top: -6, right: -10, boxShadow: '0 0 0 2px var(--ink)' }} />
 }
 
 /**

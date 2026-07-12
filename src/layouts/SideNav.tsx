@@ -1,5 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
+import Box from '@mui/material/Box'
 import Tooltip from '@mui/material/Tooltip'
+import { NavBadge } from '@/components/ds'
 import { useRole } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
 import { memoCountByPath } from '@/utils/improveMemo'
@@ -31,7 +33,8 @@ export default function SideNav() {
         <div className="snav-group" key={g.label ?? i}>
           {g.label && <div className="snav-label">{g.label}</div>}
           {g.items.map((item) => {
-            const badge = item.badgeKey ? badges[item.badgeKey] : undefined
+            const newCnt = item.badgeKey ? badges[item.badgeKey] || 0 : 0
+            const memoCnt = isAdmin ? memoCounts[item.path] || 0 : 0
             return (
             <button
               key={item.path}
@@ -39,19 +42,26 @@ export default function SideNav() {
               onClick={() => navigate(item.path)}
             >
               {item.icon}
-              {/* 메뉴명 + 개선 메모 점(메뉴명 우상단, 노란 점·숫자 없음, 관리자 전용) */}
+              {/* 아이폰식 위첨자 배지(D7 표준): 메뉴명 우상단, 빨강=새 글·앰버=개선 메모 나란히.
+                  행 오른쪽 배지·메모 점 폐지 — ds NavBadge 1스펙 */}
               <span className="snav-text">
-                <span className="snav-name">{item.label}</span>
-                {isAdmin && (memoCounts[item.path] || 0) > 0 && (
-                  <Tooltip title={`개선 메모 ${memoCounts[item.path]}건`} placement="top" arrow>
-                    <span className="snav-memo-dot" aria-label={`개선 메모 ${memoCounts[item.path]}건`} />
-                  </Tooltip>
-                )}
+                <Box component="span" className="snav-name" sx={{ position: 'relative', display: 'inline-block' }}>
+                  {item.label}
+                  {(newCnt > 0 || memoCnt > 0) && (
+                    <Box component="span" sx={{ position: 'absolute', left: '100%', top: -7, ml: '3px', display: 'inline-flex', gap: '3px' }}>
+                      <NavBadge count={newCnt} kind="new" />
+                      {memoCnt > 0 && (
+                        <Tooltip title={`개선 메모 ${memoCnt}건`} placement="top" arrow>
+                          {/* Tooltip 자식은 ref 필요 — span 래퍼 */}
+                          <Box component="span" sx={{ display: 'inline-flex' }}>
+                            <NavBadge count={memoCnt} kind="memo" />
+                          </Box>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  )}
+                </Box>
               </span>
-              {/* 새 글 숫자 — 행 오른쪽 끝, 빨강 배경+숫자만(볼드 X). 0 숨김·99초과 99+ */}
-              {badge !== undefined && badge > 0 && (
-                <span className="snav-num" aria-label={`새 글 ${badge}건`}>{badge > 99 ? '99+' : badge}</span>
-              )}
             </button>
             )
           })}
