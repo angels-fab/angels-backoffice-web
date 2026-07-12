@@ -101,7 +101,9 @@ export async function restoreWorks(p: { nums: (string | number)[]; author: strin
   return { orders: (data || {}) as Record<string, number> }
 }
 
-/** 진행중 수동 정렬순서 배치 저장 — 변경분만 갱신(RPC) */
+/** 진행중 수동 정렬순서 배치 저장 — 변경분만 갱신(RPC).
+ *  ⚠ 휴면(개인화 Stage 3, 2026-07-12): 드래그 순서가 계정별(user_settings work.order)로 이동해
+ *  앱에서 더 이상 호출 안 함. works.sort_order·work_update_orders RPC와 함께 롤백·호환용 보존. */
 export async function updateWorkOrder(p: { author: string; key: string; orders: WorkOrderEntry[] }): Promise<void> {
   const { error } = await supabase.rpc('work_update_orders', { orders: p.orders })
   if (error) fail(error, '순서 저장에 실패했습니다')
@@ -116,6 +118,7 @@ export async function updateWorkStatuses(p: { author: string; key: string; chang
 /**
  * 페이지 종료 직전 마지막 순서 best-effort 전송 — sendBeacon은 인증 헤더를 못 실어
  * keepalive fetch로 RPC 직행(브라우저가 페이지 종료 후에도 전송 유지).
+ * ⚠ 휴면(개인화 Stage 3, 2026-07-12): updateWorkOrder와 함께 앱에서 미호출 — 롤백·호환용 보존.
  */
 export function beaconWorkOrder(p: { author: string; key: string; orders: WorkOrderEntry[] }): boolean {
   try {

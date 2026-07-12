@@ -43,9 +43,9 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { isWorkNew } from '@/utils/newPost'
 import { useMarkSeen } from '@/layouts/useNavBadges'
 import { loadWorkData, patchWorkItems, softDeleteWorkItems, restoreWorkItems } from '@/store/slices/workSlice'
-import { createWork, deleteWork, restoreWorks, updateWork, fetchAuthors, updateWorkOrder, beaconWorkOrder, updateWorkStatuses } from '@/api/works'
+import { createWork, deleteWork, restoreWorks, updateWork, fetchAuthors, updateWorkStatuses } from '@/api/works'
 import { putSetting } from '@/store/slices/userSettingsSlice'
-import type { WorkOrderEntry, WorkStatusChange } from '@/api/sheets'
+import type { WorkStatusChange } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
@@ -271,14 +271,12 @@ export default function Work() {
   const [authors, setAuthors] = useState<string[] | null>(null) // 담당자 시트 이름 명단(자동완성)
   const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
 
-  // 진행중 카드 수동 정렬(포털정렬순서) — 낙관적 오버레이(저장 후 재로딩 안 하므로 로컬 유지) + 디바운스 저장
+  // 진행중 카드 수동 정렬 — 팀 공유 순서(works.sort_order)는 '기준선'(신규·복원 시 서버가 부여),
+  // 드래그 순서는 개인화 Stage 3부터 계정별(user_settings 'work.order'). orderMap은 낙관 오버레이
+  // 겸 설정 로드실패 세션의 로컬 폴백.
   const [orderMap, setOrderMap] = useState<Record<string, number>>({})
-  const [orderError, setOrderError] = useState(false)
   // 표시 전용 정렬 — 시트·포털정렬순서 미변경, Undo/Redo 이력 미포함. null=기본(진행중=수동순서, 그 외=최신순)
   const [listSort, setListSort] = useState<{ key: 'date' | 'mgr' | 'cat'; dir: 'asc' | 'desc' } | null>(null)
-  const orderTimer = useRef<number | null>(null)
-  const pendingOrderRef = useRef<WorkOrderEntry[] | null>(null)
-  const savingRef = useRef(false) // 저장 POST 진행 중 여부(동시 저장 방지)
   const authRef = useRef({ user, authKey })
   authRef.current = { user, authKey }
 
@@ -455,10 +453,18 @@ export default function Work() {
     [pool, matchCat, matchMgr, matchQuery, applyListSort],
   )
 
-  // 진행중 카드 표시 순서 = 포털정렬순서(낙관적 orderMap 우선) 오름차순, 미지정은 Check우선·최신순 뒤로.
-  // (진행중 뷰는 필터를 숨기므로 전체 진행중 대상. 드래그 순서변경은 이 목록에만 적용.)
+  // 진행중 카드 표시 순서(개인화 Stage 3) — 내 계정의 저장 순서('work.order', num 배열)가 있으면 그 순서.
+  // 목록에 없는 카드(이후 신규·복원)는 맨 아래(기존 미지정=Infinity 관례와 동일). 개인 순서가 없으면
+  // (한 번도 드래그 안 함·설정 로드실패) 종전 팀 기준선(orderMap 낙관 → works.sort_order) 폴백 — 화면 무변화.
+  const svOrder = useAppSelector((s) => s.userSettings.settings['work.order'] as string[] | undefined)
+  const personalOrder = usLoadedOk && Array.isArray(svOrder) ? svOrder : null
   const inProgressList = useMemo(() => {
+    const pIdx = new Map((personalOrder || []).map((n, i) => [String(n), i]))
     const rank = (t: WorkItem) => {
+      if (personalOrder) {
+        const i = pIdx.get(t.num)
+        return i !== undefined ? i : Infinity
+      }
       const o = orderMap[t.num]
       if (o !== undefined) return o
       const n = Number(t.order)
@@ -467,7 +473,7 @@ export default function Work() {
     return items
       .filter((t) => classify(t) === 'inProgress')
       .sort((a, b) => rank(a) - rank(b) || cmpChief(a, b))
-  }, [items, orderMap])
+  }, [items, orderMap, personalOrder])
   // 진행중 표시 목록 — 탭필터·검색 적용 + 표시 전용 정렬(기본은 포털정렬순서 유지)
   const inProgressListed = useMemo(
     () => applyListSort(inProgressList.filter((t) => matchCat(t) && matchMgr(t) && matchQuery(t))),
@@ -703,42 +709,17 @@ export default function Work() {
   const editOptionsFor = (t: WorkItem) =>
     t.cat && !fieldOptions.cats.includes(t.cat) ? { ...fieldOptions, cats: [t.cat, ...fieldOptions.cats] } : fieldOptions
 
-  // ── 진행중 카드 순서변경 저장 (포털정렬순서만 갱신 · 3초 디바운스 · 성공은 무표시 · 실패만 안내) ──
-  // 동시 저장 방지(savingRef): 저장 중이면 새로 시작하지 않고, 진행 중 요청의 finally가 최신 순서를 이어서 저장.
-  // pendingOrderRef는 저장 성공(그 사이 새 순서 없음) 시에만 비움 → 비행 중 언로드 시 beacon이 그대로 백업.
-  const flushOrderSave = useCallback(async () => {
-    if (orderTimer.current) { clearTimeout(orderTimer.current); orderTimer.current = null }
-    if (savingRef.current) return
-    const orders = pendingOrderRef.current
-    const { user: u, authKey: k } = authRef.current
-    if (!orders || !u || !k) return
-    savingRef.current = true
-    try {
-      await updateWorkOrder({ author: u, key: k, orders })
-      setOrderError(false)
-      if (pendingOrderRef.current === orders) pendingOrderRef.current = null // 비행 중 새 순서 없으면 클리어
-    } catch {
-      setOrderError(true) // pendingOrderRef 유지(재시도)
-    } finally {
-      savingRef.current = false
-      // 비행 중 도착한 최신 순서가 있으면 이어서 저장(항상 마지막 순서가 최종 기록)
-      if (pendingOrderRef.current && pendingOrderRef.current !== orders) void flushOrderSave()
-    }
-  }, [])
-
-  // 최종 순서 확정 → 낙관적 반영(orderMap) + 최종 순서만 3초 뒤 한 번에 저장(재변경 시 타이머 리셋). 드래그·날짜정렬 공용.
+  // ── 진행중 카드 순서변경 확정(드래그·Undo/Redo 공용) — 개인화 Stage 3: 계정별 저장 ──
+  // 팀 works.sort_order는 더 이상 드래그로 갱신하지 않음(신규·복원 시 서버 부여 기준선으로만 유지).
+  // putSetting = 낙관 즉시 반영 + 0.8s 디바운스 병합 저장(work.order 키만 — 타 세션 값 안 건드림).
+  // usLoadedOk 게이트 없음(적대적 리뷰 반영): 드래그는 사용자 명시 조작이라 로드 전/실패여도 저장이
+  // 의도 반영이고, 게이트하면 ① 로드 완료 순간 서버 구 순서가 방금 드래그를 화면에서 되돌리고
+  // ② 그 드래그가 유실됨. setSetting이 로컬 키를 심으므로 fulfilled 병합({...서버,...로컬})도 화면을 보존.
   const commitOrder = (orderedNums: string[]) => {
     const map: Record<string, number> = {}
-    const orders: WorkOrderEntry[] = orderedNums.map((num, i) => {
-      const v = (i + 1) * 10
-      map[num] = v
-      return { num, order: v }
-    })
+    orderedNums.forEach((num, i) => { map[num] = (i + 1) * 10 })
     setOrderMap((prev) => ({ ...prev, ...map }))
-    pendingOrderRef.current = orders
-    setOrderError(false)
-    if (orderTimer.current) clearTimeout(orderTimer.current)
-    orderTimer.current = window.setTimeout(() => { void flushOrderSave() }, 3000)
+    dispatch(putSetting({ key: 'work.order', value: orderedNums }))
   }
 
   // 새 히스토리 항목 적재(다시실행 스택은 비움)
@@ -1078,25 +1059,6 @@ export default function Work() {
   // KPI 뷰가 바뀌면 순서 편집 모드 해제(진행중 전용). 수정 진입 시에도 해제(편집 셀 touch-action 충돌 방지).
   useEffect(() => { setReorderMode(false) }, [view])
   useEffect(() => { if (editingId != null) setReorderMode(false) }, [editingId])
-
-  // 페이지 종료·이탈·라우트 이동 직전 미저장 순서 flush(best-effort, sendBeacon)
-  useEffect(() => {
-    const beacon = () => {
-      const orders = pendingOrderRef.current
-      const { user: u, authKey: k } = authRef.current
-      // sendBeacon이 큐잉을 수락한 경우에만 비움 — 실패 시 유지해 남은 fetch 타이머가 이어서 저장
-      if (orders && u && k && beaconWorkOrder({ author: u, key: k, orders })) pendingOrderRef.current = null
-    }
-    const onVis = () => { if (document.visibilityState === 'hidden') beacon() }
-    window.addEventListener('pagehide', beacon)
-    document.addEventListener('visibilitychange', onVis)
-    return () => {
-      window.removeEventListener('pagehide', beacon)
-      document.removeEventListener('visibilitychange', onVis)
-      if (orderTimer.current) clearTimeout(orderTimer.current)
-      beacon()
-    }
-  }, [])
 
   // 업무 행 — 수정 중이면 그 자리에서 인라인 편집(전폭), 아니면 카드.
   // tone = 상태 계층 색(KPI 대표색), selected = 카드가 직접 상태색으로 선택 효과를 그림(셀 outline 없음)
@@ -1614,19 +1576,6 @@ export default function Work() {
           </Box>
         </Box>
       </Drawer>
-
-      {/* 순서 저장 실패 — 이때만 안내 + 재시도(정상 저장은 무표시) */}
-      <Snackbar open={orderError} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert
-          severity="error"
-          variant="filled"
-          action={<Button color="inherit" size="small" onClick={() => void flushOrderSave()}>다시 시도</Button>}
-          onClose={() => setOrderError(false)}
-          sx={{ width: '100%' }}
-        >
-          카드 순서 저장에 실패했습니다.
-        </Alert>
-      </Snackbar>
     </PageContainer>
   )
 }
