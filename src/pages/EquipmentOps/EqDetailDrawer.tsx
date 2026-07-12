@@ -12,7 +12,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import EditIcon from '@mui/icons-material/Edit'
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
-import { AppDrawer, StatusChip } from '@/components/ds'
+import { AppDrawer, StatusChip, LoadingState } from '@/components/ds'
 import { updateEquipment, fetchEqHistory } from '@/api/eq'
 import type { EqHistoryItem } from '@/api/sheets'
 import type { EqGroup, EqStateKey } from '@/types'
@@ -282,7 +282,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
             {/* STEP22 — 운영 이력(읽기 전용, 최신 먼저) */}
             <Section title="운영 이력">
               {histLoading ? (
-                <Typography variant="body2" sx={{ color: 'text.disabled' }}>불러오는 중…</Typography>
+                <LoadingState size="sm" />
               ) : histError ? (
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>운영 이력을 불러오지 못했습니다</Typography>
               ) : history.length === 0 ? (

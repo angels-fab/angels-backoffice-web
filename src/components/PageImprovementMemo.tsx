@@ -2,8 +2,6 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Snackbar from '@mui/material/Snackbar'
-import Alert from '@mui/material/Alert'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -28,11 +26,9 @@ import { memosForPath } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import ReplyThread from '@/pages/Improve/ReplyThread'
-import { StatusChip } from '@/components/ds'
+import { StatusChip, useSnack } from '@/components/ds'
 import { IMP_STATUSES, impKind, needsReason, normStatus, isSettled } from '@/pages/Improve/improveMeta'
 import { radius, iconSize } from '@/theme/tokens'
-
-type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
 
 /** '개선 메모 N' 칩 — 제목 옆. 클릭 시 패널 토글(열 때 각 항목은 접힌 상태로 시작). */
 function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
@@ -216,6 +212,7 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const { pathname } = useLocation()
   const { isAdmin, user, authKey } = useRole()
   const dispatch = useAppDispatch()
+  const snack = useSnack()
   const items = useAppSelector((s) => s.improve.items)
   const replyItems = useAppSelector((s) => s.reply.items)
 
@@ -224,7 +221,6 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const [removingNum, setRemovingNum] = useState<string | null>(null)
   const [replyBusy, setReplyBusy] = useState(false)
   const [delReply, setDelReply] = useState<ReplyRow | null>(null)
-  const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
   const [savingStatusNum, setSavingStatusNum] = useState<string | null>(null)
   const [statusDlg, setStatusDlg] = useState<{ row: ImprovementItem; status: string; value: string } | null>(null)
 
@@ -237,34 +233,32 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
     return m
   }, [replyItems])
 
-  const showSnack = (msg: string, severity: Snack['severity'] = 'success') => setSnack({ open: true, msg, severity })
-
   // ── 답글 (게시판과 동일 API·낙관적 업데이트 → 두 화면 즉시 동기화) ──
   const createReplyH = async (reqNum: string, content: string) => {
-    if (!user || !authKey) { showSnack('로그인이 필요합니다.', 'error'); throw new Error('no-auth') }
+    if (!user || !authKey) { snack('로그인이 필요합니다.', 'error'); throw new Error('no-auth') }
     setReplyBusy(true)
     try {
       const { id, created } = await createReply({ author: user, key: authKey, reqNum, content })
       dispatch(addReply({ id, reqNum, created: created || `${todaySeoul()} 00:00:00`, author: user, content, edited: '' }))
       setReplyBusy(false)
-      showSnack('답글을 등록했습니다.', 'success')
+      snack('답글을 등록했습니다.', 'success')
     } catch (err) {
       setReplyBusy(false)
-      showSnack(err instanceof Error ? err.message : '답글 등록 실패', 'error')
+      snack(err instanceof Error ? err.message : '답글 등록 실패', 'error')
       throw err
     }
   }
   const editReplyH = async (id: string, content: string) => {
-    if (!user || !authKey) { showSnack('로그인이 필요합니다.', 'error'); throw new Error('no-auth') }
+    if (!user || !authKey) { snack('로그인이 필요합니다.', 'error'); throw new Error('no-auth') }
     setReplyBusy(true)
     try {
       const { edited } = await updateReply({ author: user, key: authKey, id, content })
       dispatch(patchReply({ id, content, edited: edited || `${todaySeoul()} 00:00` }))
       setReplyBusy(false)
-      showSnack('답글을 수정했습니다.', 'success')
+      snack('답글을 수정했습니다.', 'success')
     } catch (err) {
       setReplyBusy(false)
-      showSnack(err instanceof Error ? err.message : '답글 수정 실패', 'error')
+      snack(err instanceof Error ? err.message : '답글 수정 실패', 'error')
       throw err
     }
   }
@@ -276,26 +270,26 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
       dispatch(removeReply(delReply.id))
       setReplyBusy(false)
       setDelReply(null)
-      showSnack('답글을 삭제했습니다.', 'success')
+      snack('답글을 삭제했습니다.', 'success')
     } catch (err) {
       setReplyBusy(false)
-      showSnack(err instanceof Error ? err.message : '답글 삭제 실패', 'error')
+      snack(err instanceof Error ? err.message : '답글 삭제 실패', 'error')
     }
   }
 
   // ── 상태 변경 (메인 보드와 동일 값·색·확인규칙). 저장 후 재로드로 메인 목록·메모 즉시 동기화. ──
   const saveStatus = async (t: ImprovementItem, status: string, reason: string) => {
-    if (!user || !authKey) { showSnack('로그인이 필요합니다.', 'error'); return }
+    if (!user || !authKey) { snack('로그인이 필요합니다.', 'error'); return }
     setSavingStatusNum(t.num)
     try {
       await updateImprovement({ author: user, key: authKey, num: t.num, status, reason })
       setSavingStatusNum(null)
       setStatusDlg(null)
-      showSnack('상태를 변경했습니다.', 'success')
+      snack('상태를 변경했습니다.', 'success')
       dispatch(loadImproveData()) // 종결 전환 시 자동 memo=FALSE → 이 패널에서도 자연스럽게 제외됨
     } catch (err) {
       setSavingStatusNum(null)
-      showSnack(err instanceof Error ? err.message : '변경 실패', 'error')
+      snack(err instanceof Error ? err.message : '변경 실패', 'error')
     }
   }
   // 보류·완료·불가(종결)는 확인 팝업(보류·불가는 사유 입력), 그 외는 즉시 반영
@@ -306,19 +300,14 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   }
   const applyStatusDlg = () => {
     if (!statusDlg) return
-    if (needsReason(statusDlg.status) && !statusDlg.value.trim()) return showSnack('사유를 입력해주세요.', 'error')
+    if (needsReason(statusDlg.status) && !statusDlg.value.trim()) return snack('사유를 입력해주세요.', 'error')
     void saveStatus(statusDlg.row, statusDlg.status, needsReason(statusDlg.status) ? statusDlg.value.trim() : '')
   }
 
   const admin = isAdmin && !!user && !!authKey
-  // 스낵바 + 답글 삭제 + 상태변경 확인 Dialog — 관리자에게 항상 렌더(패널 상태와 무관)
+  // 답글 삭제 + 상태변경 확인 Dialog — 관리자에게 항상 렌더(패널 상태와 무관). 스낵바는 전역 useSnack.
   const snackbar = admin ? (
     <>
-      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>
-          {snack.msg}
-        </Alert>
-      </Snackbar>
       <Dialog open={!!delReply} onClose={() => !replyBusy && setDelReply(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
         <DialogTitle>답글 삭제</DialogTitle>
         <DialogContent>
@@ -359,16 +348,16 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const toggleRow = (num: string) => setOpenNum((prev) => (prev === num ? null : num))
 
   const removeMemo = async (t: ImprovementItem) => {
-    if (!user || !authKey) return setSnack({ open: true, msg: '로그인이 필요합니다.', severity: 'error' })
+    if (!user || !authKey) return snack('로그인이 필요합니다.', 'error')
     setRemovingNum(t.num)
     try {
       await updateImprovement({ author: user, key: authKey, num: t.num, memo: false })
       setRemovingNum(null)
-      setSnack({ open: true, msg: '메모를 해제했습니다.', severity: 'success' })
+      snack('메모를 해제했습니다.', 'success')
       dispatch(loadImproveData())
     } catch (err) {
       setRemovingNum(null)
-      setSnack({ open: true, msg: err instanceof Error ? err.message : '메모 해제 실패', severity: 'error' })
+      snack(err instanceof Error ? err.message : '메모 해제 실패', 'error')
     }
   }
 

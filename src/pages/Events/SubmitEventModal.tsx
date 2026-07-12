@@ -83,7 +83,7 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
   }
 
   return (
-    <Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { bgcolor: 'background.default', borderRadius: `${radius.modal}px` } } }}>
+    <Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: `${radius.modal}px` } } }}>
       <Box sx={{ position: 'relative', p: { xs: 1.5, sm: 2 } }}>
         <IconButton onClick={close} aria-label="닫기" size="small" sx={{ position: 'absolute', top: 8, right: 8, zIndex: 5, color: 'text.secondary' }}><CloseIcon fontSize="small" /></IconButton>
         <Box sx={{ fontSize: 16, fontWeight: 800, color: 'text.primary', mb: 1.5 }}>새 행사 신청</Box>
@@ -185,7 +185,7 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
         {/* 액션 */}
         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end', mt: 2 }}>
           <Button onClick={close} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button variant="contained" color="success" onClick={() => void submit()} disabled={busy} startIcon={busy ? <CircularProgress size={15} thickness={5} color="inherit" /> : undefined}>
+          <Button variant="contained" color="success" onClick={() => void submit()} disabled={busy} startIcon={busy ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined}>
             {busy ? '신청 중…' : '신청하기'}
           </Button>
         </Box>

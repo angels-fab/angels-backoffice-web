@@ -10,7 +10,7 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import LogoutIcon from '@mui/icons-material/Logout'
 import StorageIcon from '@mui/icons-material/Storage'
-import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, LoadingState } from '@/components/ds'
 import { useRole, ROLE_LABEL } from '@/auth/role'
 import { supabase, padPassword } from '@/api/supabase'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
@@ -123,7 +123,7 @@ function UserManagement() {
     void load()
   }
 
-  if (rows === null) return <AppCard padding={18}><Typography variant="body2">불러오는 중…</Typography></AppCard>
+  if (rows === null) return <AppCard padding={18}><LoadingState size="md" /></AppCard>
 
   const pending = rows.filter((r) => r.role === 'pending')
   const active = rows.filter((r) => r.role !== 'pending')

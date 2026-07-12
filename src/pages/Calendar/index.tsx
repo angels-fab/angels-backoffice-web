@@ -18,7 +18,7 @@ import EventNoteIcon from '@mui/icons-material/EventNote'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { PageContainer, PageHeader, SearchBar } from '@/components/ds'
+import { PageContainer, PageHeader, SearchBar, useSnack } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadCalEvents, moveCalEvent } from '@/store/slices/calSlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
@@ -33,7 +33,6 @@ import CalEventWrite from './CalEventWrite'
 import { updateCalEvent } from '@/api/calendar'
 import { iconSize, radius } from '@/theme/tokens'
 import AddIcon from '@mui/icons-material/Add'
-import Snackbar from '@mui/material/Snackbar'
 import { useRole } from '@/auth/role'
 
 
@@ -122,8 +121,8 @@ export default function Calendar() {
   const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number; locked: boolean; evId?: string } | null>(null)
   // 일정 작성/수정 모달(관리자) + 저장 안내 스낵바 — 5단계: 캘린더 쓰기 UI 연결(Supabase·세션 인증)
   const { isAdmin } = useRole()
+  const snack = useSnack()
   const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string; initialEndDate?: string } | null>(null)
-  const [writeSnack, setWriteSnack] = useState<string | null>(null)
   const idMap = useRef(new WeakMap<HTMLElement, string>()) // segment → 일정 id (수정 진입용)
   const dragClickSuppress = useRef(0) // 드래그 드롭 직후 합성 click이 팝오버를 고정하는 것 방지
 
@@ -179,10 +178,10 @@ export default function Calendar() {
         start: startStr,
         end: allDay ? shiftDt(endStr, { days: 1 }) : endStr,
       }))
-      setWriteSnack('일정을 이동했어요')
+      snack('일정을 이동했어요')
     } catch (err) {
       revert()
-      setWriteSnack(err instanceof Error ? err.message : '이동에 실패했어요')
+      snack(err instanceof Error ? err.message : '이동에 실패했어요', 'error')
     }
   }
   const lockedEl = useRef<HTMLElement | null>(null) // 클릭 고정된 .fc-event segment
@@ -694,16 +693,9 @@ export default function Calendar() {
         onClose={() => setWrite(null)}
         onSaved={(msg) => {
           setWrite(null)
-          setWriteSnack(msg)
+          snack(msg)
           dispatch(loadCalEvents())
         }}
-      />
-      <Snackbar
-        open={!!writeSnack}
-        autoHideDuration={3500}
-        onClose={() => setWriteSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        message={writeSnack || ''}
       />
     </PageContainer>
   )

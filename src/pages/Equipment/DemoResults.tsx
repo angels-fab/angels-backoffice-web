@@ -25,7 +25,7 @@ import HistoryIcon from '@mui/icons-material/History'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { iconSize, radius, shadow, typescale } from '@/theme/tokens'
-import { useSnack } from '@/components/ds'
+import { useSnack, LoadingState } from '@/components/ds'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
@@ -866,7 +866,7 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
     <Box sx={{ p: 1.5 }}>
       {isMember && !addSlot && <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1.25 }}>{addBtn}</Box>}
       {loading ? (
-        <Box sx={{ py: 5, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>불러오는 중…</Box>
+        <LoadingState />
       ) : groups.length === 0 ? (
         <Box sx={{ py: 4, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>등록된 데모결과가 없습니다. {isMember && '“데모결과 추가”로 등록하세요.'}</Box>
       ) : (

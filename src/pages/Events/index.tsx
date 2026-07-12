@@ -6,9 +6,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
-import Snackbar from '@mui/material/Snackbar'
-import Alert from '@mui/material/Alert'
-import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, useSnack } from '@/components/ds'
 import { radius, shadow, typescale } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
@@ -59,11 +57,10 @@ export default function Events() {
   const panelRef = useRef<HTMLDivElement>(null)
   const [attendees, setAttendees] = useState<AttendeeRow[]>([])
   const [attBusy, setAttBusy] = useState(false)
-  const [snack, setSnack] = useState<{ open: boolean; msg: string; sev: 'success' | 'error' }>({ open: false, msg: '', sev: 'success' })
+  const snack = useSnack()
   const [submitOpen, setSubmitOpen] = useState(false)
   const [submissions, setSubmissions] = useState<EventSubmissionRow[]>([])
   const [subOpen, setSubOpen] = useState(false)
-  const showSnack = (msg: string, sev: 'success' | 'error' = 'success') => setSnack({ open: true, msg, sev })
 
   // 날짜 기준 분류: 진행중(green)+예정(amber)=진행·예정 / 종료(gray). 진행중 먼저, 예정은 start asc / 종료는 end desc.
   const { active, ended } = useMemo(() => {
@@ -89,7 +86,7 @@ export default function Events() {
   // 종료 목록 표시용 — DB 참석자 이름 병합(없으면 상수값)
   const endedView = useMemo(() => ended.map((e) => ({ ...e, attendees: attByEvent[e.id]?.map((a) => a.name) ?? e.attendees })), [ended, attByEvent])
 
-  const attErr = (err: unknown) => setSnack({ open: true, msg: err instanceof Error ? err.message : '오류가 발생했습니다', sev: 'error' })
+  const attErr = (err: unknown) => snack(err instanceof Error ? err.message : '오류가 발생했습니다', 'error')
   // 본인 참석 토글(팀원) — 이미 있으면 취소, 없으면 추가
   const toggleSelf = async (eventId: string) => {
     if (!user) return
@@ -246,17 +243,13 @@ export default function Events() {
         open={submitOpen}
         onClose={() => setSubmitOpen(false)}
         user={user}
-        onSubmitted={() => { setSubmitOpen(false); showSnack('행사를 신청했습니다. 관리자 검토 후 게시됩니다.'); refetchSubs() }}
-        onError={(m) => showSnack(m, 'error')}
+        onSubmitted={() => { setSubmitOpen(false); snack('행사를 신청했습니다. 관리자 검토 후 게시됩니다.'); refetchSubs() }}
+        onError={(m) => snack(m, 'error')}
       />
       {/* 관리자 — 신청 대기·검토 */}
       {isAdmin && (
-        <SubmissionsAdmin open={subOpen} onClose={() => setSubOpen(false)} submissions={submissions} onChanged={refetchSubs} onError={(m) => showSnack(m, 'error')} />
+        <SubmissionsAdmin open={subOpen} onClose={() => setSubOpen(false)} submissions={submissions} onChanged={refetchSubs} onError={(m) => snack(m, 'error')} />
       )}
-
-      <Snackbar open={snack.open} autoHideDuration={3500} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity={snack.sev} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
-      </Snackbar>
     </PageContainer>
   )
 }

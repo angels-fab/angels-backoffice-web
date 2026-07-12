@@ -6,8 +6,6 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
-import Snackbar from '@mui/material/Snackbar'
-import Alert from '@mui/material/Alert'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -21,7 +19,7 @@ import RedoIcon from '@mui/icons-material/Redo'
 import EditCalendarIcon from '@mui/icons-material/EditCalendar'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { PageContainer, PageHeader, StatTile, EmptyState } from '@/components/ds'
+import { PageContainer, PageHeader, StatTile, EmptyState, useSnack } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -48,7 +46,6 @@ const measureHalfPx = (el: Element | null, monthCount: number): number => {
   return monthCount > 0 && w > 0 ? w / (monthCount * 2) : 28
 }
 const k = (v: number) => Math.round(v / 1000).toLocaleString()
-type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info' }
 type IntroView = 'timeline' | 'stage' | 'list' | 'demo'
 type Batch = { g: EqGroup; info: StageInfo }
 
@@ -135,7 +132,7 @@ export default function Equipment() {
   const [editBatchCodes, setEditBatchCodes] = useState<string[]>([]) // 편집 대상 배치의 전체 관리번호(공통필드 일괄적용용)
   const [deleteTarget, setDeleteTarget] = useState<EqGroup | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
+  const snack = useSnack()
 
   const canEdit = isAdmin && editMode
   const todayHalf = useMemo(() => todayHalfIndex(months), [months])
@@ -199,24 +196,22 @@ export default function Equipment() {
   const sortedList = useMemo(() => sortRows(filtered, listSort.col, listSort.dir, projAccessor), [filtered, listSort.col, listSort.dir])
 
   // ── CRUD ──
-  const showSnack = (msg: string, severity: Snack['severity'] = 'success') => setSnack({ open: true, msg, severity })
-
   const handleSaved = async (code: string, isEdit: boolean, warning?: string) => {
     setWriteOpen(false)
     setEditTarget(null)
     setEditBatchCodes([])
     setPicked(null) // 배치 구성이 바뀔 수 있어 상세는 닫고 재조회
-    if (warning) showSnack(warning, 'error') // 부분실패 안내(성공분은 이미 반영)
-    else showSnack(isEdit ? '장비 도입 정보를 수정했습니다.' : '장비를 추가했습니다.', 'success')
+    if (warning) snack(warning, 'error') // 부분실패 안내(성공분은 이미 반영)
+    else snack(isEdit ? '장비 도입 정보를 수정했습니다.' : '장비를 추가했습니다.', 'success')
     void code
     await dispatch(loadEqData()).unwrap().catch(() => null)
   }
 
   const confirmDelete = async () => {
     if (!deleteTarget || deleting) return
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    if (!user || !authKey) return snack('관리자 로그인이 필요합니다.', 'error')
     const codes = deleteTarget.codes.filter(Boolean)
-    if (!codes.length) return showSnack('관리번호가 없어 삭제할 수 없습니다.', 'error')
+    if (!codes.length) return snack('관리번호가 없어 삭제할 수 없습니다.', 'error')
     setDeleting(true)
     // allSettled — 일부 실패해도 성공분은 이미 삭제됨. 성공/실패 구분해 안내하고 성공분 있으면 재조회.
     const results = await Promise.allSettled(codes.map((code) => deleteSchedule({ code, author: user, key: authKey })))
@@ -224,13 +219,13 @@ export default function Equipment() {
     setDeleting(false)
     if (failed === codes.length) {
       // 전부 실패 = 아무것도 안 지워짐 → 확인창 유지해 재시도 가능
-      showSnack('삭제에 실패했습니다.', 'error')
+      snack('삭제에 실패했습니다.', 'error')
       return
     }
     setDeleteTarget(null)
     setPicked(null)
-    if (failed === 0) showSnack(`장비 ${codes.length}대를 삭제했습니다.`, 'success')
-    else showSnack(`${codes.length}대 중 ${failed}대 삭제 실패 — 나머지는 삭제됨`, 'error')
+    if (failed === 0) snack(`장비 ${codes.length}대를 삭제했습니다.`, 'success')
+    else snack(`${codes.length}대 중 ${failed}대 삭제 실패 — 나머지는 삭제됨`, 'error')
     await dispatch(loadEqData()).unwrap().catch(() => null)
   }
 
@@ -578,7 +573,7 @@ export default function Equipment() {
   // 저장 — 이번 편집의 변경분만 Google Sheets에 한 번에 일괄 저장(현재 로컬 상태 기준)
   const finishEditSave = async () => {
     if (savingEdit) return
-    if (!user || !authKey) { showSnack('관리자 로그인이 필요합니다.', 'error'); return }
+    if (!user || !authKey) { snack('관리자 로그인이 필요합니다.', 'error'); return }
     const codes = changedCodes()
     if (!codes.length) { closeEditSession(); return }
     setSavingEdit(true)
@@ -586,11 +581,11 @@ export default function Equipment() {
       await persistBatch(codes, (it) => ({ start: it.start, stages: it.stages }))
       setSavingEdit(false)
       closeEditSession()
-      showSnack(`일정 변경 ${codes.length}건을 저장했습니다.`, 'success')
+      snack(`일정 변경 ${codes.length}건을 저장했습니다.`, 'success')
       await dispatch(loadEqData()).unwrap().catch(() => {})
     } catch (err) {
       setSavingEdit(false)
-      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+      snack(err instanceof Error ? err.message : '저장 실패', 'error')
       // 부분실패라도 성공분이 DB에 반영됐으므로 재조회해 로컬↔DB 동기화(불일치 방지)
       closeEditSession()
       await dispatch(loadEqData()).unwrap().catch(() => {})
@@ -613,7 +608,7 @@ export default function Equipment() {
       }
     }
     closeEditSession()
-    showSnack('변경을 취소했습니다.', 'info')
+    snack('변경을 취소했습니다.', 'info')
   }
 
   const undoRef = useRef<() => void>(() => {})
@@ -653,7 +648,7 @@ export default function Equipment() {
   const openEdit = (g: EqGroup) => {
     const rep = schedule.find((s) => s.code === g.repCode) ?? schedule.find((s) => g.codes.includes(s.code)) ?? null
     if (rep) { setEditBatchCodes(g.codes.filter(Boolean)); setEditTarget(rep) } // 배치 전체 code를 폼에 전달(대표 1행만 반영되던 버그 방지)
-    else showSnack('도입 일정 정보를 찾을 수 없습니다.', 'error')
+    else snack('도입 일정 정보를 찾을 수 없습니다.', 'error')
   }
 
   return (
@@ -915,10 +910,6 @@ export default function Equipment() {
           <Button variant="contained" color="success" onClick={finishEditSave} disabled={savingEdit}>{savingEdit ? '저장 중…' : '저장'}</Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>{snack.msg}</Alert>
-      </Snackbar>
 
       <DragTip tip={tip} />
     </PageContainer>

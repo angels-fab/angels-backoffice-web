@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import { AppCard, SectionHeader, EmptyState } from '@/components/ds'
+import { AppCard, SectionHeader, EmptyState, LoadingState } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { CAL_CAT_MAP } from '@/constants/calendar'
 import { hexA } from '@/utils/color'
@@ -97,7 +97,7 @@ export default function ScheduleSection() {
       <AppCard>
         <SectionHeader title="오늘 일정" count={`${todayList.length}건`} actionLabel="캘린더" onAction={() => navigate('/calendar')} />
         {!ready ? (
-          <Typography variant="body2">불러오는 중…</Typography>
+          <LoadingState size="md" />
         ) : todayList.length === 0 ? (
           <EmptyState size="sm" title="오늘 예정된 일정이 없습니다" />
         ) : (
@@ -128,7 +128,7 @@ export default function ScheduleSection() {
       <AppCard>
         <SectionHeader title="다가오는 일정" description="향후 7일" />
         {!ready ? (
-          <Typography variant="body2">불러오는 중…</Typography>
+          <LoadingState size="md" />
         ) : upcoming.length === 0 ? (
           <EmptyState size="sm" title="다가오는 일정이 없습니다" />
         ) : (

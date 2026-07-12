@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import { AppCard, AppDrawer, CardGrid, StatusChip, EmptyState } from '@/components/ds'
+import { AppCard, AppDrawer, CardGrid, StatusChip, EmptyState, LoadingState } from '@/components/ds'
 import { radius } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
 import type { Notice } from '@/types'
@@ -28,7 +28,7 @@ export default function NoticeSection() {
   if (!ready) {
     return (
       <AppCard padding={18}>
-        <Typography variant="body2">불러오는 중…</Typography>
+        <LoadingState size="sm" />
       </AppCard>
     )
   }

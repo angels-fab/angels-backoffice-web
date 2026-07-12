@@ -20,6 +20,7 @@ import HistoryIcon from '@mui/icons-material/History'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius } from '@/theme/tokens'
+import { LoadingState } from '@/components/ds'
 import {
   createMetricDef, updateMetricDef, setMetricDefActive, fetchMetricDefHistory, fetchValueHistory, METRIC_ACTION_LABEL,
   type DemoMetricDef, type MetricDirection, type MetricDefHistory, type ValueHistory,
@@ -108,7 +109,7 @@ export function MetricEditorDialog({ open, equipment, defs, author, onClose, onC
           <InputBase value={af.label} onChange={(e) => setAf((s) => ({ ...s, label: e.target.value }))} placeholder="새 지표명" sx={(th) => ({ ...field(th), flex: 1 })} />
           <InputBase value={af.unit} onChange={(e) => setAf((s) => ({ ...s, unit: e.target.value }))} placeholder="단위" sx={(th) => ({ ...field(th), width: 74 })} />
           <DirSelect value={af.direction} onChange={(v) => setAf((s) => ({ ...s, direction: v }))} />
-          <Button size="small" variant="contained" startIcon={busy ? <CircularProgress size={13} thickness={5} color="inherit" /> : <AddIcon sx={{ fontSize: iconSize.body }} />} disabled={busy || !af.label.trim()} onClick={add} sx={{ whiteSpace: 'nowrap' }}>추가</Button>
+          <Button size="small" variant="contained" startIcon={busy ? <CircularProgress size={14} thickness={5} color="inherit" /> : <AddIcon sx={{ fontSize: iconSize.body }} />} disabled={busy || !af.label.trim()} onClick={add} sx={{ whiteSpace: 'nowrap' }}>추가</Button>
         </Box>
       </DialogContent>
     </Dialog>
@@ -141,7 +142,7 @@ export function MetricHistoryDialog({ open, equipment, onClose }: { open: boolea
       <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표 변경 이력 · {equipment}</DialogTitle>
       <DialogContent>
         {rows === null ? (
-          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>불러오는 중…</Box>
+          <LoadingState size="md" />
         ) : rows.length === 0 ? (
           <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>변경 이력이 없습니다.</Box>
         ) : (
@@ -184,7 +185,7 @@ export function ValueHistoryDialog({ open, equipment, defs, onClose }: { open: b
       <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표값 변경 이력 · {equipment}</DialogTitle>
       <DialogContent>
         {rows === null ? (
-          <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>불러오는 중…</Box>
+          <LoadingState size="md" />
         ) : rows.length === 0 ? (
           <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>값 변경 이력이 없습니다.</Box>
         ) : (

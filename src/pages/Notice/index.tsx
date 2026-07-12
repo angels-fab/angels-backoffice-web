@@ -6,8 +6,6 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
-import Snackbar from '@mui/material/Snackbar'
-import Alert from '@mui/material/Alert'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -43,6 +41,8 @@ import {
   StatusChip,
   EmptyState,
   SearchBar,
+  LoadingState,
+  useSnack,
 } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { iconSize, radius } from '@/theme/tokens'
@@ -88,8 +88,6 @@ function isolateToggle(prev: string[], id: string, total: number): string[] {
   return next.length >= total ? [] : next
 }
 
-type Snack = { open: boolean; msg: string; severity: 'success' | 'error' }
-
 export default function Notice() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -108,7 +106,7 @@ export default function Notice() {
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<NoticeItem | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
+  const snack = useSnack()
   const [openKey, setOpenKey] = useState<string | null>(null) // 펼친 행 키('번호' 또는 'pin-번호')
 
   const today = todaySeoul()
@@ -154,22 +152,20 @@ export default function Notice() {
     dispatch(loadNoticeData())
   }
 
-  const showSnack = (msg: string, severity: 'success' | 'error' = 'success') => setSnack({ open: true, msg, severity })
-
   const handleSaveNew = async (v: NoticeFormValues) => {
     if (saving) return
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
-    if (!v.title) return showSnack('제목을 입력해주세요.', 'error')
-    if (!v.body) return showSnack('내용을 입력해주세요.', 'error')
+    if (!user || !authKey) return snack('관리자 로그인이 필요합니다.', 'error')
+    if (!v.title) return snack('제목을 입력해주세요.', 'error')
+    if (!v.body) return snack('내용을 입력해주세요.', 'error')
     setSaving(true)
     try {
       const newNum = await addNotice({ key: authKey, author: user, cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref, attachments: v.attachments, date: todaySeoul() })
       setComposing(false)
       dispatch(loadNoticeData())
-      showSnack('공지를 등록했습니다.', 'success')
+      snack('공지를 등록했습니다.', 'success')
       if (newNum > 0) navigate(`/notice/${newNum}`, { replace: true })
     } catch (err) {
-      showSnack(err instanceof Error ? err.message : '저장 실패', 'error')
+      snack(err instanceof Error ? err.message : '저장 실패', 'error')
     } finally {
       setSaving(false) // 성공·실패·타임아웃 무엇이든 스피너는 반드시 해제(멈춤 방지)
     }
@@ -177,9 +173,9 @@ export default function Notice() {
 
   const handleSaveEdit = async (n: NoticeItem, v: NoticeFormValues) => {
     if (saving) return
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
-    if (!v.title) return showSnack('제목을 입력해주세요.', 'error')
-    if (!v.body) return showSnack('내용을 입력해주세요.', 'error')
+    if (!user || !authKey) return snack('관리자 로그인이 필요합니다.', 'error')
+    if (!v.title) return snack('제목을 입력해주세요.', 'error')
+    if (!v.body) return snack('내용을 입력해주세요.', 'error')
     setSaving(true)
     try {
       await updateNotice({
@@ -193,9 +189,9 @@ export default function Notice() {
       if (removedPaths.length) void removeNoticeFiles(removedPaths).catch(() => {})
       setEditingId(null)
       dispatch(loadNoticeData())
-      showSnack('공지를 수정했습니다.', 'success')
+      snack('공지를 수정했습니다.', 'success')
     } catch (err) {
-      showSnack(err instanceof Error ? err.message : '수정 실패', 'error')
+      snack(err instanceof Error ? err.message : '수정 실패', 'error')
     } finally {
       setSaving(false) // 성공·실패·타임아웃 무엇이든 스피너는 반드시 해제(멈춤 방지)
     }
@@ -203,7 +199,7 @@ export default function Notice() {
 
   const confirmDelete = async () => {
     if (!deleteTarget || deleting) return
-    if (!user || !authKey) { showSnack('관리자 로그인이 필요합니다.', 'error'); return }
+    if (!user || !authKey) { snack('관리자 로그인이 필요합니다.', 'error'); return }
     setDeleting(true)
     try {
       await deleteNotice({ num: deleteTarget.num, author: user, key: authKey })
@@ -213,10 +209,10 @@ export default function Notice() {
       const deletedNum = deleteTarget.num
       setDeleteTarget(null)
       dispatch(loadNoticeData())
-      showSnack('공지를 삭제했습니다.', 'success')
+      snack('공지를 삭제했습니다.', 'success')
       if (String(num) === String(deletedNum)) navigate('/notice', { replace: true })
     } catch (err) {
-      showSnack(err instanceof Error ? err.message : '삭제 실패', 'error')
+      snack(err instanceof Error ? err.message : '삭제 실패', 'error')
     } finally {
       setDeleting(false) // 성공·실패·타임아웃 무엇이든 진행 표시는 반드시 해제
     }
@@ -392,7 +388,7 @@ export default function Notice() {
         </Box>
 
         {!ready ? (
-          <AppCard padding={18}><Typography variant="body2">불러오는 중…</Typography></AppCard>
+          <AppCard padding={18}><LoadingState /></AppCard>
         ) : showEmpty ? (
           <AppCard padding={0}><EmptyState size="sm" title="공지사항이 없습니다" /></AppCard>
         ) : (
@@ -454,17 +450,6 @@ export default function Notice() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snack.open}
-        autoHideDuration={3000}
-        onClose={() => setSnack((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>
-          {snack.msg}
-        </Alert>
-      </Snackbar>
     </PageContainer>
   )
 }

@@ -12,15 +12,12 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import InputBase from '@mui/material/InputBase'
 import Popover from '@mui/material/Popover'
-import Snackbar from '@mui/material/Snackbar'
-import Alert from '@mui/material/Alert'
 import Tooltip from '@mui/material/Tooltip'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import TextField from '@mui/material/TextField'
-import CircularProgress from '@mui/material/CircularProgress'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
@@ -35,7 +32,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius } from '@/theme/tokens'
-import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, LoadingState, useSnack } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
@@ -183,7 +180,7 @@ export default function Improve() {
   const [openId, setOpenId] = useState<number | null>(null) // 아코디언 — 한 번에 하나만 펼침
   const [reasonDlg, setReasonDlg] = useState<ReasonDlg | null>(null)
   const [savingId, setSavingId] = useState<number | null>(null)
-  const [snack, setSnack] = useState<Snack>({ open: false, msg: '', severity: 'success' })
+  const snack = useSnack()
   // 답글 — 요청번호별 그룹화(작성일시 오름차순) + 등록/삭제 진행중 플래그 + 삭제 확인 대상
   const [replyBusy, setReplyBusy] = useState(false)
   const [delReply, setDelReply] = useState<ReplyRow | null>(null)
@@ -217,7 +214,7 @@ export default function Improve() {
   const cardSeq = useRef(0)
   const baselineRef = useRef('') // 마지막 저장본(또는 로드 직후) 스냅샷 — 미저장 변경 판단 기준
 
-  const showSnack = (msg: string, severity: Snack['severity'] = 'success') => setSnack({ open: true, msg, severity })
+  const showSnack = (msg: string, severity: Snack['severity'] = 'success') => snack(msg, severity)
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
@@ -694,7 +691,7 @@ export default function Improve() {
               {/* 새 요청 인라인 작성 — 표 최상단. 요청 추가/임시저장/등록/취소는 하단 컨트롤 행. */}
               {isAdmin && composing && draftsLoading && (
                 <TableRow>
-                  <TableCell colSpan={fullSpan} sx={{ textAlign: 'center', py: 2 }}><CircularProgress size={22} /></TableCell>
+                  <TableCell colSpan={fullSpan} sx={{ textAlign: 'center', py: 2 }}><LoadingState /></TableCell>
                 </TableRow>
               )}
               {isAdmin && composing && !draftsLoading && cards.map((c, idx) => renderComposeCard(c, idx))}
@@ -924,12 +921,6 @@ export default function Improve() {
           <Button variant="contained" color="error" onClick={confirmDelReply} disabled={replyBusy}>{replyBusy ? '삭제 중…' : '삭제'}</Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar open={snack.open} autoHideDuration={3000} onClose={() => setSnack((s) => ({ ...s, open: false }))} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity={snack.severity} variant="filled" onClose={() => setSnack((s) => ({ ...s, open: false }))} sx={{ width: '100%' }}>
-          {snack.msg}
-        </Alert>
-      </Snackbar>
     </PageContainer>
   )
 }
