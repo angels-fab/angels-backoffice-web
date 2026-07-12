@@ -11,6 +11,7 @@ import { taskTitle, taskLink, mgrColor, catKind, deptKind, TONE_RGB } from './wo
 import type { CardTone } from './workMeta'
 import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
+import WorkPinButton from './WorkPinButton'
 
 export type { CardTone } from './workMeta'
 
@@ -46,6 +47,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
       aria-label={`업무: ${taskTitle(t)}`}
       onClick={() => onSelect?.()}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return // 내부 버튼(별·링크)의 Enter/Space를 삼키지 않음(AppCard와 동일 가드)
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           onSelect?.()
@@ -108,6 +110,8 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
         <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: 12, borderRadius: '8px', px: 1, color: 'text.secondary', bgcolor: alpha(th.palette.text.secondary, 0.14), border: 1, borderColor: alpha(th.palette.text.secondary, 0.3), fontFamily: 'monospace', whiteSpace: 'nowrap' })}>
           {fmtDate(t.start)}
         </Box>
+        {/* 관심 업무 별 토글(개인화 D-2) — 계정별 저장, 홈 '관심 업무' 섹션에 고정 표시 */}
+        <WorkPinButton num={t.num} />
       </Box>
 
       {/* 본문 */}

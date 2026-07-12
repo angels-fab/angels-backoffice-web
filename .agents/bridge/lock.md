@@ -2,7 +2,7 @@
 
 status: free
 current_worker: none
-task: (개인화 Stage 3 완료 — 업무 카드 순서 계정별(work.order·팀 기준선 폴백·sort_order 불변). C 개인화 1차 트랙 완료. claude 실측·type-check 통과. 다음=D 개인화 2차)
+task: (개인화 D 완료 — 홈 섹션 순서/숨김(home.order/hidden·톱니 팝오버) + 관심 업무 별 핀(work.pins·홈 섹션). A~D 메인 트랙 완주. claude 실측·type-check·build 통과)
 started_at: 2026-07-12
 
 ## Notes
