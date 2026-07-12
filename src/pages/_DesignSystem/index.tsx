@@ -31,6 +31,7 @@ import {
   FormField,
   SelectField,
   DateField,
+  DataTable,
 } from '@/components/ds'
 import { layout } from '@/theme/tokens'
 
@@ -186,6 +187,27 @@ export default function DesignSystemShowcase() {
               <Button variant="outlined" size="small" onClick={() => setConfirmOpen(true)}>삭제 확인 열기 (destructive)</Button>
               <Button variant="outlined" size="small" onClick={() => setFormOpen(true)}>작성폼 열기</Button>
             </Box>
+          </Demo>
+
+          <Demo name="<DataTable>" desc="다열 데이터표 표준 (P2-3, 시안) — 헤더 12px/600 좌측정렬 · 셀 12px · hover · 모바일 가로스크롤">
+            <AppCard padding={0}>
+              <DataTable
+                columns={[
+                  { key: 'no', label: '관리번호', width: '1%' },
+                  { key: 'name', label: '장비명' },
+                  { key: 'cat', label: '분류', align: 'center', width: 80 },
+                  { key: 'state', label: '상태', align: 'center', width: 100, render: (r: { state: string }) => <StatusChip status={r.state === '운영중' ? 'success' : 'neutral'} label={r.state} /> },
+                  { key: 'mgr', label: '담당자', align: 'center', width: 90 },
+                ]}
+                rows={[
+                  { no: 'PR-001', name: 'Laser Machine', cat: '공정', state: '도입예정', mgr: '박주봉' },
+                  { no: 'AN-002', name: 'SEM-FIB', cat: '분석', state: '운영중', mgr: '박세리' },
+                  { no: 'CL-001', name: 'Spin Coater', cat: '공정', state: '도입예정', mgr: '박주봉' },
+                ]}
+                rowKey={(r) => r.no}
+                onRowClick={() => {}}
+              />
+            </AppCard>
           </Demo>
 
           <Demo name="<LoadingState> + <ErrorBanner>" desc="피드백 표준 (P2-2)">
