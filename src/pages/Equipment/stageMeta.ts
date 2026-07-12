@@ -84,7 +84,7 @@ export function groupStage(timeline: string[], months: TlMonth[], todayHalf: num
 
 /** Phase별 표시 라벨/상태 (요약 칩) */
 export function phaseChip(info: StageInfo): { label: string; status: StatusKind } {
-  if (info.phase === 'done') return { label: '설치완료', status: 'success' }
+  if (info.phase === 'done') return { label: '설치완료', status: 'info' } // D3 전역 배정: 완료=파랑
   if (info.phase === 'upcoming') return { label: '착수 전', status: 'neutral' }
   if (info.phase === 'none') return { label: '미정', status: 'neutral' }
   return info.code ? { label: STAGE[info.code].label, status: STAGE[info.code].status } : { label: '진행중', status: 'info' }

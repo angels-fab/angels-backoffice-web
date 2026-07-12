@@ -6,7 +6,7 @@ import type { EqStateKey } from '@/types'
  * 그 외(오타·빈값·레거시 '가동중' 등)는 '미분류'로 처리. 색은 StatusChip(status)이 테마에서 매핑.
  */
 export const EQ_STATE: Record<EqStateKey, { label: string; status: StatusKind }> = {
-  도입예정: { label: '도입예정', status: 'info' },
+  도입예정: { label: '도입예정', status: 'neutral' }, // D3 전역 배정: 예정=회색
   도입중: { label: '도입중', status: 'teal' },
   운영중: { label: '운영중', status: 'success' },
   비가동: { label: '비가동', status: 'error' },

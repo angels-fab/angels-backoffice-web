@@ -33,11 +33,11 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
         sx={(th) => ({
           bgcolor: 'transparent',
           borderColor: 'transparent',
-          '&:hover': { bgcolor: alpha(th.palette.accent.amber, 0.12) },
+          '&:hover': { bgcolor: alpha(th.palette.accent.purple, 0.12) },
         })}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-          <PushPinIcon sx={{ fontSize: 15, color: 'warning.main', flexShrink: 0 }} />
+          <PushPinIcon sx={{ fontSize: 15, color: 'accent.purple', flexShrink: 0 }} />
           <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{taskTitle(t)}</Typography>
           <Box sx={{ flexShrink: 0 }}><StatusChip status={catKind(t.cat)} label={t.cat || '미분류'} /></Box>
         </Box>
@@ -50,16 +50,16 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
       onClick={() => { onSelect?.(); onPick(t) }}
       padding={16}
       sx={(th) => ({
-        bgcolor: alpha(th.palette.accent.amber, selected ? 0.22 : 0.1),
+        bgcolor: alpha(th.palette.accent.purple, selected ? 0.22 : 0.1),
         borderColor: selected ? th.palette.accent.green : th.palette.divider,
         boxShadow: selected ? `inset 0 0 0 1px ${th.palette.accent.green}` : 'none',
-        '&:hover': { borderColor: th.palette.accent.green, bgcolor: alpha(th.palette.accent.amber, 0.14) },
+        '&:hover': { borderColor: th.palette.accent.green, bgcolor: alpha(th.palette.accent.purple, 0.14) },
       })}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
         {/* 최상단: 압정 · 상태 · 구분 · 담당자 색칩 · 날짜 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-          <PushPinIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
+          <PushPinIcon sx={{ fontSize: 16, color: 'accent.purple', flexShrink: 0 }} />
           <StatusChip status={st.status} label={st.label} />
           {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
           <Box component="span" sx={{ ml: 'auto', fontSize: 12, fontWeight: 700, borderRadius: '8px', px: 1, py: 0.3, bgcolor: mgrColor(t.mgr), color: '#fff', whiteSpace: 'nowrap' }}>

@@ -7,8 +7,8 @@ import { domain } from '@/theme/tokens'
 // r g b 트리플릿. rgb(R G B / a) 알파 사다리로 카드 기본→호버→선택 강도를 표현
 // (시안 docs/mockups/work-status-color-effects.html). 카드 배경·테두리·선택 효과 전용 —
 // 카드 내부 구분/담당자/부서/Check 칩(메타정보 계층)은 이 색을 상속하지 않는다.
-// 정본은 tokens.domain.workTone (P1-2 승격 — D3 적용 시 토큰 값 재검토)
-export type CardTone = 'green' | 'blue' | 'gray' | 'amber'
+// 정본은 tokens.domain.workTone. D3 배정: green=진행중·blue=완료·amber=보류·purple=Remind
+export type CardTone = 'green' | 'blue' | 'gray' | 'amber' | 'purple'
 export const TONE_RGB: Record<CardTone, string> = domain.workTone
 
 // 업무구분 → 칩 색(캡처 기준): 설계적정성=초록·예산=빨강·인사=노랑·행정=파랑·장비=회색·교육세미나=보라
@@ -43,9 +43,10 @@ export function deptKind(dept?: string): StatusKind {
  */
 export type WStatus = 'inProgress' | 'done' | 'hold' | 'cancelled' | 'etc'
 
+// 색은 전역 배정표(tokens.statusMeaning) 준수: 진행중=그린·완료=파랑·보류=앰버·취소=레드
 export const W_STATUS: Record<WStatus, { label: string; status: StatusKind }> = {
   inProgress: { label: '진행중', status: 'success' },
-  done: { label: '완료', status: 'neutral' },
+  done: { label: '완료', status: 'info' },
   hold: { label: '보류', status: 'warning' },
   cancelled: { label: '취소', status: 'error' },
   etc: { label: '미정', status: 'neutral' },

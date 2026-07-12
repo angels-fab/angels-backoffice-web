@@ -249,16 +249,16 @@ export const iconSize = {
  * ※ 형광펜(--hl-*)·에디터색(--ec-*)은 CSS 전용이라 index.css :root가 서식지(P4 재배치).
  */
 export const domain = {
-  /** 행사(Events) — 분류칩·사이트 버튼·포스터 없는 카드 그라데이션 */
+  /** 행사(Events) — 분류칩·사이트 버튼 (D5-2 확정: accent 통합 — 팔레트 1계열화) */
   events: {
     /** 분류칩: 학술 */
-    academic: '#3b82f6',
+    academic: accent.blue,
     /** 분류칩: 교육 */
-    education: '#10b981',
+    education: accent.green,
     /** 분류칩: 전시 */
-    exhibition: '#a855f7',
+    exhibition: accent.purple,
     /** 하단 '행사 사이트' 버튼 */
-    link: '#3b82f6',
+    link: accent.blue,
     /** 포스터 없는 카드 배경 그라데이션(EventAccent별) */
     grad: {
       blue: 'linear-gradient(150deg,#1e3a6b,#2f5fa6 60%,#3f7bd0)',
@@ -269,10 +269,10 @@ export const domain = {
       red: 'linear-gradient(150deg,#5b1f1c,#a23a34 60%,#e05b54)',
     },
   },
-  /** 홈 FAB 로드맵 — 상태 대표색(시안). 카드 크롬 색은 P3 홈 정렬에서 처리 */
+  /** 홈 FAB 로드맵 — 상태 대표색(시안 팔레트 내 D3 맞교환: 완료=파랑·진행중=그린). 카드 크롬은 P3 */
   roadmap: {
-    done: '#35d39a',
-    current: '#4f8bff',
+    done: '#4f8bff',
+    current: '#35d39a',
     plan: '#9fb0c4',
   },
   /** 업무(Work) — 담당자 채움 칩(고정 4인 + 해시 fallback) · 카드 상태톤(rgb 트리플릿) */
@@ -286,12 +286,14 @@ export const domain = {
     palette: ['#b8557e', '#1d8f8f', '#c0572f', '#7a8a2a', '#5a6cc0', '#a04ab0'],
     unknown: '#5f6b7e',
   },
-  /** Work 카드 상태톤 — 'R G B' 트리플릿(알파 사다리용). D3 적용 시 값 재검토 */
+  /** Work 카드 상태톤 — 'R G B' 트리플릿(알파 사다리용). D3 적용 배정:
+   *  green=진행중 · blue=완료 · amber=보류 · purple=Remind(플래그) · gray=예비 */
   workTone: {
     green: '114 199 141',
     blue: '121 169 226',
     gray: '194 202 213',
     amber: '224 188 116',
+    purple: '169 138 224',
   },
   /** 일정(Calendar) — 연차 로즈핑크(accent에 없는 도메인 색) */
   calendar: {
@@ -312,6 +314,8 @@ export const statusMeaning = {
   done: 'info',
   /** 예정·대기 */
   planned: 'neutral',
+  /** 임박(D-N 카운트다운) — 단순 예정과 구분되는 마감 임박 신호 (사용자 확정 2026-07-12) */
+  imminent: 'warning',
   /** 보류 */
   hold: 'warning',
   /** 지연·불가·오류 */

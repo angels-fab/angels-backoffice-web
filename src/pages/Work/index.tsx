@@ -1276,7 +1276,7 @@ export default function Work() {
           <StatusDragGrid
             key={view}
             items={listed}
-            renderCard={(t) => renderTask(t, view === 'remind' ? 'amber' : classify(t) === 'done' ? 'gray' : classify(t) === 'hold' ? 'blue' : 'green')}
+            renderCard={(t) => renderTask(t, view === 'remind' ? 'purple' : classify(t) === 'done' ? 'blue' : classify(t) === 'hold' ? 'amber' : 'green')}
             canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
             selectedNums={selected}
             selMode={selMode}
@@ -1455,7 +1455,8 @@ export default function Work() {
       {/* 휴지통 드롭 후 고정 카드 — 드래그하던 카드가 드롭 자리·축소 크기 그대로 확인창 동안 유지, 동의 시 지니 흡입의 원본 */}
       {deleteReq?.token && deleteReq.phase !== 'clearing' && (() => {
         const t0 = deleteReq.items[0]
-        const tone: CardTone = view === 'remind' ? 'amber' : classify(t0) === 'done' ? 'gray' : classify(t0) === 'hold' ? 'blue' : 'green'
+        // D3 전역 배정: 진행중=그린 · 완료=파랑 · 보류=앰버 · Remind(플래그)=퍼플
+        const tone: CardTone = view === 'remind' ? 'purple' : classify(t0) === 'done' ? 'blue' : classify(t0) === 'hold' ? 'amber' : 'green'
         const n = deleteReq.items.length
         const tk = deleteReq.token
         return (

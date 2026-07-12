@@ -35,12 +35,13 @@ const STATUS: Record<RoadmapStatus, StatusStyle> = {
   },
   current: {
     badge: '진행중',
-    badgeColor: '#cfe0ff',
-    badgeBg: 'rgba(63,125,246,.30)',
+    // D3 맞교환: 진행중=그린 — 크롬(배지·노드 그라데이션·링)도 그린 계열로 동조
+    badgeColor: '#d2f2e4',
+    badgeBg: alpha(domain.roadmap.current, 0.3),
     nodeBorder: domain.roadmap.current,
     nodeColor: '#fff',
-    nodeBg: 'linear-gradient(158deg,#5a93ff,#2f6ae0)',
-    nodeShadow: '0 0 0 6px rgba(63,125,246,.16),0 8px 18px -4px rgba(47,106,224,.55)',
+    nodeBg: 'linear-gradient(158deg,#43e0a6,#21b381)',
+    nodeShadow: `0 0 0 6px ${alpha(domain.roadmap.current, 0.16)},0 8px 18px -4px ${alpha('#21b381', 0.55)}`,
   },
   plan: {
     badge: '예정',
@@ -132,11 +133,11 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
         {showLegend && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '0 0 auto' }}>
             <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 11.5, color: '#9fb0c4' }}>
-              <LegendDot color="#35d39a" />
+              <LegendDot color={domain.roadmap.done} />
               완료
             </Box>
             <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 11.5, color: '#9fb0c4' }}>
-              <LegendDot color="#4f8bff" ring="0 0 0 3px rgba(79,139,255,.22)" />
+              <LegendDot color={domain.roadmap.current} ring={`0 0 0 3px ${alpha(domain.roadmap.current, 0.22)}`} />
               진행중
             </Box>
             <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 11.5, color: '#9fb0c4' }}>
@@ -159,8 +160,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
               top: 23,
               height: 3,
               borderRadius: '3px',
-              background:
-                'linear-gradient(90deg,#35d39a 0%,#35d39a 40%,#4f8bff 50%,#3a4d63 60%,#2a3645 100%)',
+              background: `linear-gradient(90deg,${domain.roadmap.done} 0%,${domain.roadmap.done} 40%,${domain.roadmap.current} 50%,#3a4d63 60%,#2a3645 100%)`,
               opacity: 0.75,
               zIndex: 0,
             }}
@@ -198,7 +198,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
                             width: 48,
                             height: 48,
                             borderRadius: '50%',
-                            border: '2px solid #4f8bff',
+                            border: `2px solid ${domain.roadmap.current}`,
                             animation: 'ringPulse 2.2s ease-out infinite',
                             animationDelay: `${delay}s`,
                             pointerEvents: 'none',

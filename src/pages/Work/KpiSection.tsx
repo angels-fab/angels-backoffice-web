@@ -35,18 +35,20 @@ export interface KpiSectionProps {
 }
 
 // 시안 고정 색상(다크 전용 포털) — 상태명/워시/강조는 경계 2% 혼합 규칙을 그대로 사용
-const LABEL: Record<DropZone, string> = { inProgress: '#72c78d', hold: '#79a9e2', done: '#c2cad5', remind: '#e0bc74' }
+// D3 전역 배정(사용자 확정): 진행중=그린 · 보류=앰버 · 완료=파랑 · Remind(플래그)=퍼플
+// 경계색 = 인접 두 상태색(accent RGB)의 중간값: 그린77,161,103 · 앰버214,162,62 · 파랑84,145,218 · 퍼플169,138,224
+const LABEL: Record<DropZone, string> = { inProgress: '#72c78d', hold: '#e0bc74', done: '#79a9e2', remind: '#bfa7ef' }
 const WASH: Record<DropZone, string> = {
-  inProgress: 'linear-gradient(to right, rgba(77,161,103,.1) 0 98%, rgba(81,153,161,.098) 100%)',
-  hold: 'linear-gradient(to right, rgba(81,153,161,.098) 0%, rgba(84,145,218,.095) 2% 98%, rgba(113,149,194,.09) 100%)',
-  done: 'linear-gradient(to right, rgba(113,149,194,.09) 0%, rgba(141,152,169,.085) 2% 98%, rgba(178,157,116,.078) 100%)',
-  remind: 'linear-gradient(to right, rgba(178,157,116,.078) 0%, rgba(214,162,62,.07) 2% 100%)',
+  inProgress: 'linear-gradient(to right, rgba(77,161,103,.1) 0 98%, rgba(146,162,83,.098) 100%)',
+  hold: 'linear-gradient(to right, rgba(146,162,83,.098) 0%, rgba(214,162,62,.095) 2% 98%, rgba(149,154,140,.09) 100%)',
+  done: 'linear-gradient(to right, rgba(149,154,140,.09) 0%, rgba(84,145,218,.085) 2% 98%, rgba(127,142,221,.078) 100%)',
+  remind: 'linear-gradient(to right, rgba(127,142,221,.078) 0%, rgba(169,138,224,.07) 2% 100%)',
 }
 const STRONG: Record<DropZone, string> = {
-  inProgress: 'linear-gradient(to right, rgba(77,161,103,.34) 0 98%, rgba(81,153,161,.34) 100%)',
-  hold: 'linear-gradient(to right, rgba(81,153,161,.34) 0%, rgba(84,145,218,.34) 2% 98%, rgba(113,149,194,.34) 100%)',
-  done: 'linear-gradient(to right, rgba(113,149,194,.28) 0%, rgba(141,152,169,.28) 2% 98%, rgba(178,157,116,.28) 100%)',
-  remind: 'linear-gradient(to right, rgba(178,157,116,.25) 0%, rgba(214,162,62,.25) 2% 100%)',
+  inProgress: 'linear-gradient(to right, rgba(77,161,103,.34) 0 98%, rgba(146,162,83,.34) 100%)',
+  hold: 'linear-gradient(to right, rgba(146,162,83,.34) 0%, rgba(214,162,62,.34) 2% 98%, rgba(149,154,140,.34) 100%)',
+  done: 'linear-gradient(to right, rgba(149,154,140,.28) 0%, rgba(84,145,218,.28) 2% 98%, rgba(127,142,221,.28) 100%)',
+  remind: 'linear-gradient(to right, rgba(127,142,221,.25) 0%, rgba(169,138,224,.25) 2% 100%)',
 }
 const LABEL_KO: Record<DropZone, string> = { inProgress: '진행중', hold: '보류', done: '완료', remind: 'Remind' }
 const DIVIDER = 'rgba(170,180,195,.22)'
