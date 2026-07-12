@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import TopBar from './TopBar'
 import SideNav from './SideNav'
 import BottomNav from './BottomNav'
+import WhatsNewDialog from '@/components/WhatsNewDialog'
 import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
@@ -65,6 +66,8 @@ export default function MainLayout() {
         </div>
       </div>
       <BottomNav />
+      {/* 새 기능 안내(개인화) — 팀원+ 로그인 후 계정당 1회(whatsnew.seen 버전 저장) */}
+      <WhatsNewDialog />
     </>
   )
 }

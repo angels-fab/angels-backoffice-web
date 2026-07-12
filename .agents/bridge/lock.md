@@ -2,7 +2,7 @@
 
 status: free
 current_worker: none
-task: (개인화 D 완료 — 홈 섹션 순서/숨김(home.order/hidden·톱니 팝오버) + 관심 업무 별 핀(work.pins·홈 섹션). A~D 메인 트랙 완주. claude 실측·type-check·build 통과)
+task: (새 기능 안내 팝업 — 로그인 팀원+ 계정당 1회 What's New Dialog(whatsnew.seen 버전 저장·안심 배너+기능 5행·VERSION 올리면 재안내). A~D 완주 + 안내까지. claude 실측 통과)
 started_at: 2026-07-12
 
 ## Notes
