@@ -17,6 +17,89 @@
 
 ---
 
+## 🧭 새 메뉴/페이지를 만들 때 (필독)
+
+> 새 화면은 **처음부터 이 시스템으로** 만든다. `index.css`에 새 클래스를 추가하거나, `sx`에 hex 색·px 폰트를 직접 박는 순간 포털 전체 일관성이 깨진다.
+
+### 무엇이 필요하면 → 무엇을 쓰나 (결정표)
+
+| 필요한 것 | 써야 할 것 | 쓰면 안 되는 것 |
+|-----------|-----------|----------------|
+| 페이지 전체 골격(폭·여백) | `PageContainer` + `PageHeader` | `.page` / `.dashboard` 새 래퍼, 폭·padding 직접 지정 |
+| 페이지 안 구획 | `ContentSection`(+`SectionHeader`) | `<h2>`+margin 직접 |
+| 카드·패널 표면 | `AppCard` | `.card` / `.dash-panel` / `bgcolor+border` 손코딩 |
+| KPI 숫자 타일 | `KpiCard` / `StatTile` | `.kpi-card` 손코딩 |
+| 카드/KPI 반응형 배치 | `CardGrid` | `display:grid` + gridTemplate 직접 |
+| **목록·표의 한 행** | **`ListRow`** | `.notice-list`/`.task-item`/`.equip-list` 등 손코딩 행 |
+| 상태·분류 라벨(작은 칩) | `StatusChip`(onClick 없이) | `.badge-type`/`.task-badge`/`.eq-badge`/`.hdr-badge` |
+| 필터 토글 칩 | `StatusChip`(`selected`+`onClick`) | 커스텀 토글 버튼 |
+| 필터 영역 가로줄 | `FilterBar` | 손코딩 flex 바 |
+| 검색 입력 | `SearchBar` | 손코딩 TextField+아이콘 |
+| 상세(우측 슬라이드) | `AppDrawer` | `Dialog`/`Modal` (특별한 이유 없으면) |
+| 데이터/검색 결과 없음 | `EmptyState` | "없습니다" 텍스트 손코딩 |
+| 색 | `theme.palette.*` / `accent.*` / 토큰 | hex 직접(`#5491DA` 등) |
+| 간격·폭·반경 | `layout` / `row` / `radius` 토큰 | 매직넘버 px |
+| 아이콘 | `@mui/icons-material` 개별 import | 이모지, 텍스트 화살표(◀▶) |
+
+### 금지 목록 (하면 리뷰에서 되돌림)
+
+- ❌ `sx`/`style`에 **hex 색** 직접 (`#RRGGBB`) — 토큰/`theme.palette` 경유
+- ❌ `sx`에 **하드코딩 `fontSize` 숫자** — `variant="h4|body2|caption"` 등 타이포 위계 사용
+- ❌ **매직넘버 간격/폭** — `layout`/`row` 토큰 사용
+- ❌ **`index.css`에 새 클래스 추가** — 새 화면은 CSS 파일을 건드리지 않는다
+- ❌ 카드 **왼쪽 컬러 보더(색 줄)**
+- ❌ **이모지·텍스트 화살표** 아이콘
+
+### 새 메뉴 스타터 (복사해서 시작)
+
+```tsx
+import { PageContainer, PageHeader, ContentSection, CardGrid, AppCard, ListRow, StatusChip, EmptyState } from '@/components/ds'
+
+export default function NewMenuPage() {
+  return (
+    <PageContainer>                                   {/* 폭·좌우·상단 여백 통일 */}
+      <PageHeader icon={<SomeIcon />} title="새 메뉴" subtitle="한 줄 설명" actions={/* 버튼 */} />
+
+      <ContentSection title="요약">
+        <CardGrid columns={4}>{/* <KpiCard .../> ... */}</CardGrid>
+      </ContentSection>
+
+      <ContentSection title="목록" count={items.length} last>
+        {items.length === 0 ? (
+          <AppCard padding={0}><EmptyState title="항목이 없습니다" /></AppCard>
+        ) : (
+          <AppCard padding={0}>
+            {items.map((it, i) => (
+              <ListRow
+                key={it.id}
+                leading={<StatusChip status={it.tone} label={it.cat} />}
+                title={it.title}
+                subtitle={it.meta}
+                trailing={<StatusChip status="neutral" label={it.owner} />}
+                divider={i < items.length - 1}
+                onClick={() => open(it)}
+              />
+            ))}
+          </AppCard>
+        )}
+      </ContentSection>
+    </PageContainer>
+  )
+}
+```
+
+### 셀프 체크리스트 (PR/커밋 전)
+
+- [ ] `PageContainer`+`PageHeader`로 골격을 잡았다
+- [ ] 카드=`AppCard`, 목록 행=`ListRow`, 라벨=`StatusChip`을 썼다 (손코딩 X)
+- [ ] `sx`에 hex 색·`fontSize` 숫자·매직넘버 px가 없다 (토큰/타이포 위계)
+- [ ] `index.css`에 새 클래스를 추가하지 않았다
+- [ ] 아이콘은 `@mui/icons-material` (이모지·텍스트 화살표 X)
+- [ ] `npm run design-lint` 로 **새 파일 위반 0** 확인
+- [ ] `npm run type-check` 통과
+
+---
+
 ## 색 토큰 (`src/theme/tokens.ts`)
 
 ### 다크(기본) — STEP 2
@@ -191,6 +274,26 @@
 | `placeholder` | string | "검색" | 안내 |
 | `width` | number\|string | 240 | 폭 |
 | `autoFocus` | boolean | — | 자동 포커스 |
+
+### ListRow
+목록·표의 **한 행** 공통 프리미티브. `[leading] [제목·(titleTrailing)/subtitle] [trailing]` 가로 배치. 간격·padding·hover·말줄임 규칙을 한곳으로 통일한다(페이지마다 손코딩 금지).
+
+| Prop | 타입 | 설명 |
+|------|------|------|
+| `leading` | ReactNode | 좌측 고정 요소(아이콘·StatusChip·dot). 안 줄어듦 |
+| `title` | ReactNode | 주 텍스트. 넘치면 말줄임. 문자열이면 자동 Typography |
+| `titleTrailing` | ReactNode | 제목 바로 옆 요소(담당자 칩 등) — 제목이 길어도 항상 보임 |
+| `subtitle` | ReactNode | 제목 아래 보조 텍스트. 넘치면 말줄임 |
+| `trailing` | ReactNode | 우측 끝(날짜·상태칩·액션) |
+| `onClick` | () => void | 지정 시 hover·키보드 접근성 자동 |
+| `selected` | boolean | 선택 강조(배경 유지) |
+| `divider` | boolean | 하단 구분선(AppCard 안 나열용) |
+| `dense` | boolean | 촘촘한 높이(미리보기·조밀 목록) |
+
+규칙: 색·간격은 `row`/theme 토큰만. `titleTrailing`/`trailing`은 안 줄고 제목만 말줄임 → "제목 옆 담당자" 패턴에서 빈 공간이 벌어지지 않는다.
+
+### 배지·라벨은 StatusChip으로 수렴
+`index.css`의 레거시 배지 6종(`badge-type`·`task-badge`·`eq-badge`·`kpi-cat-badge`·`hdr-badge`·`card-badge`)은 모두 "작은 색 라벨"이다 → **`StatusChip`(onClick 없이)** 로 대체한다. 신규 코드는 새 배지 클래스를 만들지 않는다. (알림 카운트 점 배지는 별개 — SideNav/BottomNav 배지 컴포넌트 사용.)
 
 ---
 

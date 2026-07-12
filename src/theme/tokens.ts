@@ -133,5 +133,22 @@ export const drawer = {
   defaultWidth: 520,
 } as const
 
+/**
+ * 리스트 행(ListRow) 간격 — 목록·표 행의 단일 기준.
+ * 페이지마다 gap 7/8/12px·padding 제각각으로 손코딩하지 말 것(→ ds/ListRow 사용).
+ */
+export const row = {
+  /** leading ↔ 내용 ↔ trailing 사이 간격 */
+  gap: 10,
+  /** 행 좌우 padding */
+  padX: 16,
+  /** 행 상하 padding(기본) */
+  padY: 12,
+  /** 행 상하 padding(dense — 미리보기·조밀 목록) */
+  padYDense: 8,
+  /** 제목 ↔ 제목옆요소(담당자 칩 등) 간격 */
+  titleGap: 6,
+} as const
+
 /** 약한 hover 그림자(과도한 glow 금지) */
 export const hoverShadow = '0 2px 10px rgba(0,0,0,.22)'

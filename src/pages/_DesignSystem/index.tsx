@@ -11,6 +11,8 @@ import FactCheck from '@mui/icons-material/FactCheck'
 import AddIcon from '@mui/icons-material/Add'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import type { ReactNode } from 'react'
+import CampaignIcon from '@mui/icons-material/Campaign'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import {
   AppCard,
   KpiCard,
@@ -21,6 +23,7 @@ import {
   AppDrawer,
   EmptyState,
   SearchBar,
+  ListRow,
 } from '@/components/ds'
 import { layout } from '@/theme/tokens'
 
@@ -108,6 +111,45 @@ export default function DesignSystemShowcase() {
                 </Typography>
               </AppCard>
             </Box>
+          </Demo>
+
+          <Demo name="<ListRow>" desc="목록·표의 한 행 (④ 리스트 통일) — 카드 안 divider 나열">
+            <AppCard padding={0}>
+              <ListRow
+                leading={<CampaignIcon sx={{ fontSize: 18, color: 'accent.amber' }} />}
+                title="7월 정기 안전교육 일정 안내드립니다"
+                subtitle="운영지원팀 · 김담당"
+                trailing={
+                  <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                    07.10
+                  </Typography>
+                }
+                divider
+                onClick={() => {}}
+              />
+              <ListRow
+                leading={<StatusChip status="error" label="NEW" />}
+                title="장비 반입 동선 변경 — 클린룸 게이트 B 이용"
+                subtitle="시설관리 · 이엔지니어"
+                trailing={
+                  <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                    07.09
+                  </Typography>
+                }
+                divider
+                onClick={() => {}}
+              />
+              <ListRow
+                leading={<StatusChip status="success" label="국내" />}
+                title="ASML TWINSCAN NXT:1980Di 노광장비 설치 검수 결과 보고 및 후속 조치 사항"
+                titleTrailing={<StatusChip status="neutral" label="박연구" />}
+                trailing={<ChevronRightIcon sx={{ fontSize: 18, color: 'text.disabled' }} />}
+                onClick={() => {}}
+              />
+            </AppCard>
+            <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.disabled' }}>
+              제목이 길어도 담당자 칩(titleTrailing)은 제목 바로 옆에 붙어 항상 보이고, 제목만 말줄임됩니다.
+            </Typography>
           </Demo>
 
           <Demo name="<EmptyState>" desc="빈 상태">

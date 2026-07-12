@@ -49,3 +49,6 @@ export type { EmptyStateProps } from './EmptyState'
 
 export { default as SearchBar } from './SearchBar'
 export type { SearchBarProps } from './SearchBar'
+
+export { default as ListRow } from './ListRow'
+export type { ListRowProps } from './ListRow'

@@ -9,6 +9,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
+    "design-lint": "node scripts/design-lint.mjs",
     "deploy:backend": "clasp -P google-apps-script push -f && clasp -P google-apps-script redeploy AKfycbxwvgPPyZDVTnWl6g7M_Y2vv1U-mrYitz0KUy9SBxfCtSWOzjX1w9oZp90b7don9Fmd -d \"backend deploy (clasp)\""
   },
   "dependencies": {
