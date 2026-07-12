@@ -131,9 +131,9 @@ export default function NewMenuPage() {
 
 ### Radius / Hover / Focus
 
-- Radius: Card `12` · Button `10` · Chip `8` · Input `10` (`tokens.radius`)
-- Hover(인터랙티브 카드): `translateY(-2px)` + 약한 그림자 `hoverShadow`(glow 금지)
-- Focus Ring: 버튼·입력·검색·칩 공통 `0 0 0 3px rgba(84,145,218,.4)` — ThemeProvider가 관리
+- Radius **6단**(`tokens.radius`, P1 확정): Chip `8` · Control(Button/Input) `10` · Card `12` · **Modal `16`** · Pill `999` · Circle `50%` — 이 밖의 값 금지, sx 숫자 배수(borderRadius:3=36px) 함정 주의
+- Hover(인터랙티브 카드): `translateY(-2px)` + `shadow.sm`(glow 금지)
+- Focus Ring: 버튼·입력·검색·칩 공통 `0 0 0 3px rgba(84,145,218,.4)` — ThemeProvider가 관리. 커스텀 클릭 요소도 이 링으로 통일(P2 focusRingSx)
 
 ### 레거시 페이지 색 (`src/index.css :root`)
 
@@ -141,18 +141,70 @@ export default function NewMenuPage() {
 
 ---
 
-## 레이아웃 간격 규칙 (`layout`)
+## ★ 정본 스케일 (P1 확정 — 2026-07-12, docs/design-system-decisions.md)
+
+> 아래 값 밖의 크기·색·간격·그림자·모션은 금지. `npm run design-lint`가 hex·fontSize·fontWeight·borderRadius·boxShadow·zIndex·className 7종을 탐지한다.
+
+### 타이포 사다리 8단 (`tokens.typescale` ↔ MUI variant)
+
+| 슬롯 | px/weight | variant | 용도 |
+|------|-----------|---------|------|
+| caption | 11 / 500 | `caption` | 타임스탬프·캡션 |
+| small | 12 / 400 | `small`(커스텀) | 표 본문·메타 |
+| body | 13 / 400 | `body2` | 기본 본문 |
+| emphasis | 14 / 600 | `subtitle1` | 강조 본문·행 제목 |
+| **카드 제목** | 16 / 700 | `h4` | 카드·패널 제목 |
+| **섹션 제목** | 18 / 700 | `h3` | 페이지 내 구획 제목 |
+| **페이지 제목** | 22 / 800 | `h2` | PageHeader |
+| display | 28 / 800 | `h1` | 대형 숫자·KPI |
+
+잡값 스냅: 10.5→11 · 11.5→12 · 12.5→13 · 13.5→14. `sx`에 fontSize/fontWeight 숫자 금지.
+
+### 간격 (4px 그리드) · 폭
 
 | 항목 | 토큰 | 값 |
 |------|------|----|
-| Page Header 아래 | `pageHeaderGap` | 24px |
-| Filter 영역 아래 | `filterGap` | 24px |
-| Content 상단 | `contentGap` | 32px |
-| Section 간 | `sectionGap` | 24px |
-| Card 내부 padding | `cardPadding` | 24px |
-| 콘텐츠 최대 폭 | `maxWidth` | 1280px |
+| Page Header 아래 | `pageHeaderGap` | 24 |
+| Filter 영역 아래 | `filterGap` | **16** (P1 정규화) |
+| Section 간 | `sectionGap` | 24 |
+| KPI 그리드 / KPI 스트립 | `kpiGap` / `kpiStripGap` | 16 / 8 |
+| Card padding 3단 | `cardPaddingSm/Md/(기본)` | 12 / 16 / 24 |
+| 목록 행 | `row.padY(Dense)/padX` | 12(8) / 16 |
+| 콘텐츠 최대 폭 | `maxWidthWide` / `maxWidthDetail` | 1400 / 1200 |
 
-모서리 반경 `radius`: sm 8 / md 12 / lg 16. Drawer 폭: 480~600 (기본 520).
+### 모션 (`tokens.motion`) · 그림자 (`tokens.shadow`) · z-index
+
+- duration: fast `.12s`(배경·보더 피드백) / base `.15s`(hover·일반) / slow `.2s`(패널 열림) — 이 3값만
+- easing: `ease` 기본 + `spring`(cubic-bezier(0.22,1,0.36,1)) 드래그·카드 이동 — `prefers-reduced-motion` 필수 대응
+- 그림자 3단: `sm` hover / `md` 팝오버 / `lg` 모달·드래그 — 이 밖의 boxShadow 리터럴 금지
+- z-index: `theme.zIndex` 참조 원칙(modal±1 패턴). 로컬 스태킹 0~9만 리터럴 허용. 레거시 셸 저층(10/50/55/60)은 이관 전까지 이원 체계
+
+### 상태 의미색 전역 배정표 (`tokens.statusMeaning` — 사용자 지정)
+
+| 의미 | StatusKind | 색 |
+|------|-----------|----|
+| 진행중·활성 | `success` | 그린 |
+| **완료·처리됨** | `info` | **파랑** |
+| **예정·대기** | `neutral` | **회색** |
+| 보류 | `warning` | 앰버 |
+| 지연·불가·오류 | `error` | 레드 |
+
+어느 페이지에서나 같은 의미 = 같은 색. '예정'과 '종료'가 공존하는 화면(Events)은 종료를 더 흐린 비활성 회색으로 구분. 보조 도메인 상태(도입중 등)는 핵심 5의미와 충돌하지 않는 한 `teal`/`purple` 허용.
+
+### 반응형 2계층 · 터치
+
+- 셸(사이드바↔하단탭·페이지 모드) = **768** — `theme.breakpoints.down('shell')` 또는 `tokens.shellMq`. 문자열 하드코딩 금지
+- 콘텐츠 열수 = sm **600** / md **900** (CardGrid). 769~899 = "PC 셸 + 2열"이 공식 상태
+- PC→모바일 변환 4패턴에서 선택: 넓은 표→카드 스택(rtable) / KPI 타일→가로 스와이프 / 카드 그리드→스냅 캐러셀 / 밀도 뷰→목록 뷰
+- 모바일 터치 타겟 최소 `touchTarget` 44px (시각 크기 유지 시 히트영역 padding 확장)
+
+### Dialog 규격 (테마 MuiDialog + P2 컴포넌트)
+
+- 반경 modal 16 · 배경 `background.paper`(테마 상속) — 개별 지정 금지
+- 2계열: **ConfirmDialog**(확인형 — 제목·본문·확인/취소·busy 가드, **삭제류는 destructive 모드가 빨간 버튼 강제**) / **FormDialog**(작성폼형 — 아이콘+제목+닫기 헤더, width 560)
+- 버튼 색 원칙: 저장·확인=파랑(primary) / 삭제·되돌릴 수 없음=빨강(error) / 취소=text
+
+Drawer 폭: 480~600 (기본 520).
 
 ---
 
