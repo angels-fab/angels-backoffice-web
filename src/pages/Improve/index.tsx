@@ -44,6 +44,7 @@ import type { ReplyRow } from '@/api/sheets'
 import { useRole } from '@/auth/role'
 import { fmtDate, todaySeoul } from '@/utils/date'
 import { isImproveNew } from '@/utils/newPost'
+import { useMarkSeen } from '@/layouts/useNavBadges'
 import { locationToPath } from '@/utils/improveMemo'
 import { NAV_LABELS } from '@/constants/nav'
 import type { ImprovementItem } from '@/types'
@@ -170,9 +171,12 @@ type DraftCard = { key: number; id: string; urgent: boolean; title: string; loc:
 
 export default function Improve() {
   const dispatch = useAppDispatch()
-  const { items, loading, error, updatedAt } = useAppSelector((s) => s.improve)
+  const { items, ready, loading, error, updatedAt } = useAppSelector((s) => s.improve)
   const replies = useAppSelector((s) => s.reply.items)
   const { isAdmin, user, authKey } = useRole()
+  // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 글을 읽음 처리.
+  // error 게이트 필수: rejected가 items=[]·ready=true라, 없으면 재로딩 실패 한 번에 seen이 []로 지워짐
+  useMarkSeen('improve', useMemo(() => items.filter(isImproveNew).map((i) => String(i.num)), [items]), ready && !error)
 
   const [selected, setSelected] = useState<Set<ImpStatus>>(new Set()) // 비었으면 전체
   const [openId, setOpenId] = useState<number | null>(null) // 아코디언 — 한 번에 하나만 펼침

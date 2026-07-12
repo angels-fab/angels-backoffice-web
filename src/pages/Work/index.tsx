@@ -40,6 +40,8 @@ import {
   EmptyState,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { isWorkNew } from '@/utils/newPost'
+import { useMarkSeen } from '@/layouts/useNavBadges'
 import { loadWorkData, patchWorkItems, softDeleteWorkItems, restoreWorkItems } from '@/store/slices/workSlice'
 import { createWork, deleteWork, restoreWorks, updateWork, fetchAuthors, updateWorkOrder, beaconWorkOrder, updateWorkStatuses } from '@/api/works'
 import { putSetting } from '@/store/slices/userSettingsSlice'
@@ -200,7 +202,11 @@ type DeleteReq = {
 export default function Work() {
   const dispatch = useAppDispatch()
   const { items, trashed, error, errorMsg, loading: workLoading, updatedAt } = useAppSelector((s) => s.work)
+  const workReady = useAppSelector((s) => s.work.ready)
   const { isAdmin, user, authKey } = useRole()
+  // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 업무를 읽음 처리.
+  // error 게이트 필수: 로드 실패도 ready=true라, 없으면 실패(빈 목록)를 '새 글 0'으로 오인해 seen을 지움
+  useMarkSeen('work', useMemo(() => items.filter(isWorkNew).map((t) => String(t.num)), [items]), workReady && !error)
   const [searchParams, setSearchParams] = useSearchParams()
   // KPI 버튼이 전환하는 메인 목록 — 마지막 보던 뷰 기억(개인화)
   const [view, setView] = useState<WorkView>(() => {
@@ -224,6 +230,22 @@ export default function Work() {
   // 구분·담당자 필터 — 업무일정 규칙(전체 칩 없음·빈 Set=전체·일반클릭 단독/재클릭 해제·Shift 복수). 구분은 normCat 키.
   const [selCats, setSelCats] = useState<Set<string>>(new Set())
   const [selMgrs, setSelMgrs] = useState<Set<string>>(new Set())
+  // 필터 계정 기억(개인화 Stage 2) — 로드 '성공'(loadedOk) 후 1회 복원(실패 세션은 복원·저장 모두 안 함).
+  // 사용자가 복원 전에 이미 칩을 만졌으면 늦게 온 서버값으로 방금 조작을 되돌리지 않게 스킵.
+  // 저장은 toggleCat/toggleMgr(사용자 토글)에서만 — 복원·0건 프룬의 setSel은 저장 안 함
+  // (프룬이 뷰 따라 계정 저장값을 지우는 회귀 방지: 화면에서만 걷히고 서버값은 보존).
+  const svCats = useAppSelector((s) => s.userSettings.settings['work.filter.cats'] as string[] | undefined)
+  const svMgrs = useAppSelector((s) => s.userSettings.settings['work.filter.mgrs'] as string[] | undefined)
+  const usLoadedOk = useAppSelector((s) => s.userSettings.loadedOk)
+  const svFilterApplied = useRef(false)
+  const filterTouched = useRef(false)
+  useEffect(() => {
+    if (!usLoadedOk || svFilterApplied.current) return
+    svFilterApplied.current = true
+    if (filterTouched.current) return
+    if (Array.isArray(svCats) && svCats.length) setSelCats(new Set(svCats.map(String)))
+    if (Array.isArray(svMgrs) && svMgrs.length) setSelMgrs(new Set(svMgrs.map(String)))
+  }, [usLoadedOk, svCats, svMgrs])
   const [query, setQuery] = useState('')
   const [picked, setPicked] = useState<WorkItem | null>(null)
   const [writeOpen, setWriteOpen] = useState(false)
@@ -757,20 +779,29 @@ export default function Work() {
       : undefined
 
   // 구분·담당자 필터 토글 — 일반클릭: 단독 선택/단독 재클릭 해제(전체) · Shift: 기존 유지 + 추가/해제
-  const toggleFilterValue = (setter: React.Dispatch<React.SetStateAction<Set<string>>>) =>
-    (value: string, additive: boolean) =>
-      setter((prev) => {
-        if (!additive) {
-          if (prev.size === 1 && prev.has(value)) return new Set<string>()
-          return new Set([value])
-        }
-        const next = new Set(prev)
-        if (next.has(value)) next.delete(value)
-        else next.add(value)
-        return next
-      })
-  const toggleCat = toggleFilterValue(setSelCats)
-  const toggleMgr = toggleFilterValue(setSelMgrs)
+  const nextFilterSet = (prev: Set<string>, value: string, additive: boolean): Set<string> => {
+    if (!additive) {
+      if (prev.size === 1 && prev.has(value)) return new Set<string>()
+      return new Set([value])
+    }
+    const next = new Set(prev)
+    if (next.has(value)) next.delete(value)
+    else next.add(value)
+    return next
+  }
+  // 계정 저장은 여기(사용자 토글)에서만. 설정 로드 실패 세션(usLoadedOk=false)은 화면만 바꾸고 저장 안 함.
+  const toggleCat = (value: string, additive: boolean) => {
+    filterTouched.current = true
+    const next = nextFilterSet(selCats, value, additive)
+    setSelCats(next)
+    if (usLoadedOk) dispatch(putSetting({ key: 'work.filter.cats', value: [...next].sort() }))
+  }
+  const toggleMgr = (value: string, additive: boolean) => {
+    filterTouched.current = true
+    const next = nextFilterSet(selMgrs, value, additive)
+    setSelMgrs(next)
+    if (usLoadedOk) dispatch(putSetting({ key: 'work.filter.mgrs', value: [...next].sort() }))
+  }
 
   // ── 상태 배치 저장 — 직렬화 큐(연속 드롭·Undo/Redo 응답 역전 방지). 성공 무표시, 실패만 롤백+재시도 ──
   const enqueueStatusSave = (changes: WorkStatusChange[], onFail: () => void, retry: () => void) => {

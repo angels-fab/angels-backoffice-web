@@ -45,6 +45,7 @@ import {
 } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { useMarkSeen } from '@/layouts/useNavBadges'
 import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
 import { addNotice, updateNotice, deleteNotice, removeNoticeFiles } from '@/api/notices'
 import { useRole } from '@/auth/role'
@@ -94,6 +95,9 @@ export default function Notice() {
   const { items, ready, loading, error, updatedAt } = useAppSelector((s) => s.notice)
   // 공지 작성/수정/삭제 = 팀원(member)+관리자. (게스트·유관자는 열람만)
   const { isMember, user, authKey } = useRole()
+  // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 글을 읽음 처리.
+  // error 게이트 필수: 로드 실패도 ready=true라, 없으면 실패(빈 목록)를 '새 글 0'으로 오인해 seen을 지움
+  useMarkSeen('notice', useMemo(() => items.filter((n) => n.isNew).map((n) => String(n.num)), [items]), ready && !error)
   const theme = useTheme()
   const [selCats, setSelCats] = useState<string[]>([]) // 빈 배열 = 전체
   const [query, setQuery] = useState('')

@@ -14,12 +14,12 @@ export async function fetchMySettings(): Promise<UserSettings> {
 }
 
 /**
- * 개인 설정 저장(전체 덮어쓰기 upsert). user_name = 본인 이름(profiles.name) — RLS check와 일치해야 저장됨.
- * 부분 갱신은 호출 측에서 병합한 전체 객체를 넘긴다(슬라이스가 담당).
+ * 개인 설정 키 단위 병합 저장 — 이 세션이 바꾼 키만 서버에 반영(RPC user_settings_merge, jsonb ||).
+ * ⚠ 전체 덮어쓰기 upsert 금지: 멀티탭/멀티기기에서 stale 스냅샷이 다른 세션의 seen.*·필터·뷰를
+ * 통째로 롤백하는 last-writer-wins 사고가 나므로(적대적 리뷰 확정) 반드시 변경분 패치만 보낸다.
+ * user_name은 서버가 my_name()으로 결정(RLS 동일 기준) — 파라미터로 받지 않는다.
  */
-export async function saveMySettings(userName: string, settings: UserSettings): Promise<void> {
-  const { error } = await supabase
-    .from('user_settings')
-    .upsert({ user_name: userName, settings, updated_at: new Date().toISOString() }, { onConflict: 'user_name' })
+export async function mergeMySettings(patch: UserSettings): Promise<void> {
+  const { error } = await supabase.rpc('user_settings_merge', { p_patch: patch })
   if (error) throw error
 }

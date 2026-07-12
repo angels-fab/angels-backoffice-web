@@ -2,7 +2,7 @@
 
 status: free
 current_worker: none
-task: (코멘트 정렬 모드 적대적 리뷰 후속 수정 2건 — completeSort 기준 serverOrdered 교정(optOrder 창 되돌리기 누락)·onHandlePointerDown savingSort 가드(저장중 드래그 글리치). 라이브 실측. 커밋·자동배포)
+task: (개인화 Stage 2 완료 — 내 기준 새 글 배지(seen num집합·loadedOk 게이트) + 업무 구분·담당자 필터 기억. claude 로그인 실측·type-check·build 통과. 다음=Stage 3 업무 카드 순서 계정별)
 started_at: 2026-07-12
 
 ## Notes
