@@ -14,19 +14,13 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import { alpha, darken } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { eventStatus, fmtEventDate, type FabEvent, type EventAccent } from '@/constants/events'
+import { domain } from '@/theme/tokens'
 
-// 포스터 없을 때 카드 배경 그라데이션
-const GRAD: Record<EventAccent, string> = {
-  blue: 'linear-gradient(150deg,#1e3a6b,#2f5fa6 60%,#3f7bd0)',
-  teal: 'linear-gradient(150deg,#0f3f3a,#15756b 60%,#1fa192)',
-  green: 'linear-gradient(150deg,#1c4a2f,#2f7d4d 60%,#4da167)',
-  purple: 'linear-gradient(150deg,#332a6b,#5a4bb0 60%,#9b8cff)',
-  amber: 'linear-gradient(150deg,#5b4410,#9a7420 60%,#d6a23e)',
-  red: 'linear-gradient(150deg,#5b1f1c,#a23a34 60%,#e05b54)',
-}
+// 포스터 없을 때 카드 배경 그라데이션 — 정본은 tokens.domain.events.grad (P1-2 승격)
+const GRAD: Record<EventAccent, string> = domain.events.grad
 
-// 하단 '행사 사이트' 버튼 색
-export const KIND_BLUE = '#3b82f6'
+// 하단 '행사 사이트' 버튼 색 — 정본은 tokens.domain.events.link
+export const KIND_BLUE = domain.events.link
 
 export const toneColor = (th: Theme, tone: 'green' | 'amber' | 'gray') =>
   tone === 'green' ? th.palette.accent.green : tone === 'amber' ? th.palette.accent.amber : th.palette.text.disabled
@@ -51,7 +45,12 @@ export function eventCategory(kind?: string): EventCat {
   if (/전시|박람|산업전|쇼|show|expo/i.test(k)) return '전시'
   return '학술' // 국제·국내학회·심포지엄·컨퍼런스·포럼 등
 }
-export const CAT_COLOR: Record<EventCat, string> = { 학술: '#3b82f6', 교육: '#10b981', 전시: '#a855f7' }
+// 정본은 tokens.domain.events — D5-2(accent 통합 A/B) 승인 시 토큰 값만 바뀜
+export const CAT_COLOR: Record<EventCat, string> = {
+  학술: domain.events.academic,
+  교육: domain.events.education,
+  전시: domain.events.exhibition,
+}
 
 // 포스터 초점 기본값 (object-position 기준). 동일비율 포스터는 잘릴 여백이 없어 위치 효과는 미미.
 const FOCUS_DEFAULT = { x: 50, y: 40, scale: 1, fit: 'cover' as const }

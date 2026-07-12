@@ -241,6 +241,65 @@ export const iconSize = {
 } as const
 
 /**
+ * 도메인 색 그룹 (P1-2, D5-1 승격 — 값 무변경 이동, 화면 무변화).
+ * accent 6색 밖에서 규칙화된 색의 유일한 서식지. 여기 없는 새 색 추가 금지
+ * (필요하면 accent 재사용 검토 → 그래도 필요할 때만 이 그룹에 등록).
+ * ※ Events 3색·로드맵 색은 D5-2(accent 통합 A/B 시안)·D3(상태색) 승인 결과에 따라
+ *   "이 토큰의 값"만 바뀔 수 있음 — 소비처는 무수정.
+ * ※ 형광펜(--hl-*)·에디터색(--ec-*)은 CSS 전용이라 index.css :root가 서식지(P4 재배치).
+ */
+export const domain = {
+  /** 행사(Events) — 분류칩·사이트 버튼·포스터 없는 카드 그라데이션 */
+  events: {
+    /** 분류칩: 학술 */
+    academic: '#3b82f6',
+    /** 분류칩: 교육 */
+    education: '#10b981',
+    /** 분류칩: 전시 */
+    exhibition: '#a855f7',
+    /** 하단 '행사 사이트' 버튼 */
+    link: '#3b82f6',
+    /** 포스터 없는 카드 배경 그라데이션(EventAccent별) */
+    grad: {
+      blue: 'linear-gradient(150deg,#1e3a6b,#2f5fa6 60%,#3f7bd0)',
+      teal: 'linear-gradient(150deg,#0f3f3a,#15756b 60%,#1fa192)',
+      green: 'linear-gradient(150deg,#1c4a2f,#2f7d4d 60%,#4da167)',
+      purple: 'linear-gradient(150deg,#332a6b,#5a4bb0 60%,#9b8cff)',
+      amber: 'linear-gradient(150deg,#5b4410,#9a7420 60%,#d6a23e)',
+      red: 'linear-gradient(150deg,#5b1f1c,#a23a34 60%,#e05b54)',
+    },
+  },
+  /** 홈 FAB 로드맵 — 상태 대표색(시안). 카드 크롬 색은 P3 홈 정렬에서 처리 */
+  roadmap: {
+    done: '#35d39a',
+    current: '#4f8bff',
+    plan: '#9fb0c4',
+  },
+  /** 업무(Work) — 담당자 채움 칩(고정 4인 + 해시 fallback) · 카드 상태톤(rgb 트리플릿) */
+  manager: {
+    fixed: {
+      박주봉: '#2f6db8',
+      조성범: '#2f8f4e',
+      박세리: '#a8761a',
+      신현진: '#6f5fb0',
+    } as Record<string, string>,
+    palette: ['#b8557e', '#1d8f8f', '#c0572f', '#7a8a2a', '#5a6cc0', '#a04ab0'],
+    unknown: '#5f6b7e',
+  },
+  /** Work 카드 상태톤 — 'R G B' 트리플릿(알파 사다리용). D3 적용 시 값 재검토 */
+  workTone: {
+    green: '114 199 141',
+    blue: '121 169 226',
+    gray: '194 202 213',
+    amber: '224 188 116',
+  },
+  /** 일정(Calendar) — 연차 로즈핑크(accent에 없는 도메인 색) */
+  calendar: {
+    leave: '#D87CA6',
+  },
+} as const
+
+/**
  * 상태 의미색 전역 배정표 (P1 확정, D3 — 사용자 지정 2026-07-12).
  * 값은 ds/StatusChip의 StatusKind. 어느 페이지에서나 같은 의미 = 같은 색.
  *  유의: '예정'과 '종료'가 공존하는 화면(Events)은 종료를 더 흐린 비활성 회색으로 구분.

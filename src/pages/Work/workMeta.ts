@@ -1,18 +1,15 @@
 import type { StatusKind } from '@/components/ds'
 import type { WorkItem } from '@/types'
 import { normCat } from '@/utils/workCat'
+import { domain } from '@/theme/tokens'
 
 // ── 카드 상태 계층 대표색 — KPI 스트립과 동일 계열(밝은 변형) ──────────────────
 // r g b 트리플릿. rgb(R G B / a) 알파 사다리로 카드 기본→호버→선택 강도를 표현
 // (시안 docs/mockups/work-status-color-effects.html). 카드 배경·테두리·선택 효과 전용 —
 // 카드 내부 구분/담당자/부서/Check 칩(메타정보 계층)은 이 색을 상속하지 않는다.
+// 정본은 tokens.domain.workTone (P1-2 승격 — D3 적용 시 토큰 값 재검토)
 export type CardTone = 'green' | 'blue' | 'gray' | 'amber'
-export const TONE_RGB: Record<CardTone, string> = {
-  green: '114 199 141', // 진행중 (#72c78d)
-  blue: '121 169 226', // 보류 (#79a9e2)
-  gray: '194 202 213', // 완료 (#c2cad5)
-  amber: '224 188 116', // Remind (#e0bc74)
-}
+export const TONE_RGB: Record<CardTone, string> = domain.workTone
 
 // 업무구분 → 칩 색(캡처 기준): 설계적정성=초록·예산=빨강·인사=노랑·행정=파랑·장비=회색·교육세미나=보라
 const CAT_KIND: { key: string; kind: StatusKind }[] = [
@@ -124,19 +121,12 @@ export function taskLink(t: WorkItem): string | null {
 }
 
 // 담당자별 채움 칩 색 — 지정 담당자는 고정색, 그 외는 해시로 자동 배정(미지정=회색).
-const MGR_FIXED: Record<string, string> = {
-  박주봉: '#2f6db8', // 파랑
-  조성범: '#2f8f4e', // 초록
-  박세리: '#a8761a', // 주황
-  신현진: '#6f5fb0', // 보라
-}
-// 고정색과 겹치지 않는 fallback 팔레트
-const MGR_PALETTE = ['#b8557e', '#1d8f8f', '#c0572f', '#7a8a2a', '#5a6cc0', '#a04ab0']
+// 정본은 tokens.domain.manager (P1-2 승격)
 export function mgrColor(name: string): string {
   const s = (name || '').trim()
-  if (!s) return '#5f6b7e'
-  if (MGR_FIXED[s]) return MGR_FIXED[s]
+  if (!s) return domain.manager.unknown
+  if (domain.manager.fixed[s]) return domain.manager.fixed[s]
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
-  return MGR_PALETTE[h % MGR_PALETTE.length]
+  return domain.manager.palette[h % domain.manager.palette.length]
 }

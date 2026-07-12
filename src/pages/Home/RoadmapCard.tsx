@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import Box from '@mui/material/Box'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
+import { alpha } from '@mui/material/styles'
 import { ROADMAP_STEPS, type RoadmapStatus } from '@/constants/roadmap'
+import { domain } from '@/theme/tokens'
 
 /**
  * FAB 구축 로드맵 — Claude Design 시안 "FAB Construction Roadmap" 재현.
@@ -19,28 +21,30 @@ interface StatusStyle {
   nodeShadow: string
 }
 
+// 상태 대표색 정본 = tokens.domain.roadmap (P1-2 승격 — D3 승인 시 토큰 값만 교환).
+// 카드 크롬(배경 그라데이션·보더 등)은 P3 홈 정렬에서 처리.
 const STATUS: Record<RoadmapStatus, StatusStyle> = {
   done: {
     badge: '완료',
-    badgeColor: '#35d39a',
-    badgeBg: 'rgba(53,211,154,.14)',
-    nodeBorder: '#35d39a',
-    nodeColor: '#35d39a',
+    badgeColor: domain.roadmap.done,
+    badgeBg: alpha(domain.roadmap.done, 0.14),
+    nodeBorder: domain.roadmap.done,
+    nodeColor: domain.roadmap.done,
     nodeBg: '#13202a',
-    nodeShadow: 'inset 0 0 0 48px rgba(53,211,154,.10)',
+    nodeShadow: `inset 0 0 0 48px ${alpha(domain.roadmap.done, 0.1)}`,
   },
   current: {
     badge: '진행중',
     badgeColor: '#cfe0ff',
     badgeBg: 'rgba(63,125,246,.30)',
-    nodeBorder: '#4f8bff',
+    nodeBorder: domain.roadmap.current,
     nodeColor: '#fff',
     nodeBg: 'linear-gradient(158deg,#5a93ff,#2f6ae0)',
     nodeShadow: '0 0 0 6px rgba(63,125,246,.16),0 8px 18px -4px rgba(47,106,224,.55)',
   },
   plan: {
     badge: '예정',
-    badgeColor: '#9fb0c4',
+    badgeColor: domain.roadmap.plan,
     badgeBg: 'rgba(148,163,184,.13)',
     nodeBorder: '#35465a',
     nodeColor: '#5d6f86',
