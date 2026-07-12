@@ -52,3 +52,20 @@ export type { SearchBarProps } from './SearchBar'
 
 export { default as ListRow } from './ListRow'
 export type { ListRowProps } from './ListRow'
+
+// ── P2: 오버레이·피드백 표준 (B#6·B#7) ──
+export { default as ConfirmDialog } from './ConfirmDialog'
+export type { ConfirmDialogProps } from './ConfirmDialog'
+
+export { default as FormDialog } from './FormDialog'
+export type { FormDialogProps } from './FormDialog'
+
+export { default as LoadingState } from './LoadingState'
+export type { LoadingStateProps } from './LoadingState'
+
+export { default as ErrorBanner } from './ErrorBanner'
+export type { ErrorBannerProps } from './ErrorBanner'
+
+export { SnackProvider, useSnack } from './snack'
+
+export { focusRingSx } from './focus'

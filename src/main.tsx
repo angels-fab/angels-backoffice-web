@@ -6,6 +6,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import { store } from '@/store'
 import { darkTheme } from '@/theme/theme'
 import { RoleProvider } from '@/auth/role'
+import { SnackProvider } from '@/components/ds'
 import App from '@/App'
 import '@/index.css'
 
@@ -18,11 +19,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>
       <ThemeProvider theme={darkTheme}>
-        <RoleProvider>
-          <HashRouter>
-            <App />
-          </HashRouter>
-        </RoleProvider>
+        {/* 전역 스낵바(P2) — 페이지별 Snackbar 보일러플레이트를 useSnack 훅으로 수렴 */}
+        <SnackProvider>
+          <RoleProvider>
+            <HashRouter>
+              <App />
+            </HashRouter>
+          </RoleProvider>
+        </SnackProvider>
       </ThemeProvider>
     </Provider>
   </React.StrictMode>,
