@@ -35,10 +35,13 @@ export interface DataTableProps<T> {
 /**
  * DataTable — 다열 데이터표 표준 (P2-3, B#10).
  *
- * 규격(감사 4표면 4구조 → 1): MUI Table size small · 헤더 = small(12px)/600/text.secondary
- * · 셀 = small(12px) · 행 hover = elevated · 모바일 = 가로 스크롤(기본).
- * 정렬(사용자 확정 2026-07-13): 긴 본문성 텍스트 열(제목·내용)만 align 기본(left),
- * 그 외 짧은 값 열(번호·위치·상태·담당·날짜·첨부)은 align="center" 지정.
+ * 규격(감사 4표면 4구조 → 1, 사용자 최종 확정 2026-07-13):
+ * - 내부선 = 가로선만(세로선·지브라 없음) · 행 hover = elevated · 모바일 = 가로 스크롤(기본)
+ * - 헤더 = small(12px)/600/text.secondary + **배경 채움(background.elevated)** — sticky 시 가림막 겸용
+ * - 셀 = small(12px)
+ * - 정렬 = 헤더는 항상 자기 열의 본문 정렬을 따름:
+ *   긴 본문성 텍스트 열(제목·내용) = left(기본) / 짧은 값 열(번호·위치·상태·담당·날짜·첨부) = center
+ *   / 금액·수량 등 크기 비교 숫자 열(예산 등) = right + 모노스페이스 render.
  * 카드 표면은 소비처가 `<AppCard padding={0}>`로 감싼다.
  * 넓은 표의 모바일 카드 스택 변환(rtable식)은 P3 페이지 이관 시 페이지 단에서 적용.
  *
@@ -70,7 +73,14 @@ export default function DataTable<T>({
               <TableCell
                 key={c.key}
                 align={c.align ?? 'left'}
-                sx={{ width: c.width, fontSize: '0.75rem', fontWeight: 600, color: 'text.secondary' }}
+                sx={{
+                  width: c.width,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'text.secondary',
+                  // 헤더 배경 채움(사용자 확정) — sticky 시 스크롤 가림막 겸용
+                  bgcolor: 'background.elevated',
+                }}
               >
                 {c.label}
               </TableCell>

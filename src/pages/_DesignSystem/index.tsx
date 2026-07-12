@@ -198,11 +198,13 @@ export default function DesignSystemShowcase() {
                   { key: 'cat', label: '분류', align: 'center', width: 80 },
                   { key: 'state', label: '상태', align: 'center', width: 100, render: (r: { state: string }) => <StatusChip status={r.state === '운영중' ? 'success' : 'neutral'} label={r.state} /> },
                   { key: 'mgr', label: '담당자', align: 'center', width: 90 },
+                  // 금액·수량 등 크기 비교 열 = 우측 정렬 + 모노스페이스 (헤더도 우측 — 사용자 확정)
+                  { key: 'price', label: '도입가(백만)', align: 'right', width: 110, render: (r: { price: string }) => <Box component="span" sx={{ fontFamily: 'monospace' }}>{r.price}</Box> },
                 ]}
                 rows={[
-                  { no: 'PR-001', name: 'Laser Machine', cat: '공정', state: '도입예정', mgr: '박주봉' },
-                  { no: 'AN-002', name: 'SEM-FIB', cat: '분석', state: '운영중', mgr: '박세리' },
-                  { no: 'CL-001', name: 'Spin Coater', cat: '공정', state: '도입예정', mgr: '박주봉' },
+                  { no: 'PR-001', name: 'Laser Machine', cat: '공정', state: '도입예정', mgr: '박주봉', price: '1,250' },
+                  { no: 'AN-002', name: 'SEM-FIB', cat: '분석', state: '운영중', mgr: '박세리', price: '980' },
+                  { no: 'CL-001', name: 'Spin Coater', cat: '공정', state: '도입예정', mgr: '박주봉', price: '85' },
                 ]}
                 rowKey={(r) => r.no}
                 onRowClick={() => {}}
