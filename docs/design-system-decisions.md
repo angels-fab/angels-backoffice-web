@@ -28,7 +28,7 @@
 7. **피드백 세트** — ds LoadingState·전역 useSnack(Provider)·ErrorBanner, 로딩 4계열·스낵바 10벌 수렴, '불러오는 중…' 표기 통일
 8. **아이콘 크기 4단** — 13(캡션)/16(본문)/18(액션)/20(헤더), 중간값(17·19 등) 스냅
 9. **버튼 용법** — 주=contained(primary) / 위험=contained(error) / 보조=outlined / 취소=text+text.secondary, '저장' success 혼용 정리. 삭제류 확인 버튼은 ConfirmDialog destructive 모드가 자동 적용(개별 구현 금지)
-10. **데이터표** — ds DataTable 신설 완료 + **시안 승인(사용자, 2026-07-12)**: 헤더 12px/600/좌측 기본 · 셀 12px · hover · 모바일 가로스크롤(숫자·상태·액션 열만 중앙). P3에서 Improve·Notice 이관(Improve는 전열 중앙·12.5px → 좌측·12px 미세 변화)
+10. **데이터표** — ds DataTable 신설 완료 + **시안 승인(2026-07-12) + 정렬 보정(2026-07-13)**: 헤더 12px/600 · 셀 12px · hover · 모바일 가로스크롤. **정렬 = 긴 본문성 텍스트 열(제목·내용)만 좌측, 그 외(번호·위치·상태·담당·날짜·첨부) 전부 중앙**(사용자 지정). 날짜 열=중앙+monospace+text.disabled, 첨부 표식=AttachFile 클립 16px(플로피 손그림 폐지). P3에서 Improve·Notice 이관
 11. **죽은 코드·문서 정정** — 사문 CSS(배지 5종·모바일 5종·1180 계열)·TitleLoad·lightTheme(다크 전용 확정에 따라 정리), CLAUDE.md 스테일 4건, design-system.md 내부 상충 2건, 포스터 비율 표기
 12. **design-lint 확장** — borderRadius·boxShadow·zIndex 리터럴·fontWeight 검사 추가, 최종 단계에서 strict 전환
 

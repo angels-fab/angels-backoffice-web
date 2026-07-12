@@ -193,7 +193,7 @@ export default function DesignSystemShowcase() {
             <AppCard padding={0}>
               <DataTable
                 columns={[
-                  { key: 'no', label: '관리번호', width: '1%' },
+                  { key: 'no', label: '관리번호', align: 'center', width: '1%' },
                   { key: 'name', label: '장비명' },
                   { key: 'cat', label: '분류', align: 'center', width: 80 },
                   { key: 'state', label: '상태', align: 'center', width: 100, render: (r: { state: string }) => <StatusChip status={r.state === '운영중' ? 'success' : 'neutral'} label={r.state} /> },

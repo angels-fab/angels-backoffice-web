@@ -35,8 +35,10 @@ export interface DataTableProps<T> {
 /**
  * DataTable — 다열 데이터표 표준 (P2-3, B#10).
  *
- * 규격(감사 4표면 4구조 → 1): MUI Table size small · 헤더 = small(12px)/600/text.secondary,
- * 좌측 정렬 기본 · 셀 = small(12px) · 행 hover = elevated · 모바일 = 가로 스크롤(기본).
+ * 규격(감사 4표면 4구조 → 1): MUI Table size small · 헤더 = small(12px)/600/text.secondary
+ * · 셀 = small(12px) · 행 hover = elevated · 모바일 = 가로 스크롤(기본).
+ * 정렬(사용자 확정 2026-07-13): 긴 본문성 텍스트 열(제목·내용)만 align 기본(left),
+ * 그 외 짧은 값 열(번호·위치·상태·담당·날짜·첨부)은 align="center" 지정.
  * 카드 표면은 소비처가 `<AppCard padding={0}>`로 감싼다.
  * 넓은 표의 모바일 카드 스택 변환(rtable식)은 P3 페이지 이관 시 페이지 단에서 적용.
  *
