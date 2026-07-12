@@ -4,6 +4,8 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import Button from '@mui/material/Button'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { alpha } from '@mui/material/styles'
@@ -23,17 +25,12 @@ import { putSetting } from '@/store/slices/userSettingsSlice'
  * 새 기능 안내 팝업(What's New) — 로그인(팀원+) 후 계정당 1회.
  * 목적: 개인화 기능은 화면에 조용히 들어와 팀원이 모르거나 "바꾸면 팀에 영향 갈까" 불안해함 →
  * 무엇이 생겼고 전부 '나에게만' 적용된다는 것을 명시.
- * 확인 여부는 user_settings `whatsnew.seen` = 버전 문자열(서버 저장 — 기기 넘나들어도 1회).
- * 새 기능 배포 시 VERSION을 올리고 FEATURES를 교체하면 전원에게 다시 1회 안내됨.
- * 스누즈: `whatsnew.snooze` = 다시 보일 KST 날짜(YYYY-MM-DD, 그 날부터 재표출) — 오늘 하루/일주일 버튼.
- * 명시적 '확인했어요'만 영구 확인, 백드롭/ESC 닫기 = 오늘 하루 스누즈(실수 닫기로 영구 소멸 방지).
+ * 동작(사용자 확정): '다시 보지 않기' 체크 + 확인했어요 = 영구 확인(`whatsnew.seen` = 버전 문자열,
+ * 서버 저장 — 기기 무관). 체크 없이 확인/닫기 = 이번 세션만 닫힘 → 다음 접속(로그인·새 페이지 로드)마다 다시 뜸.
+ * 새 기능 배포 시 VERSION을 올리고 FEATURES를 교체하면 영구 확인자에게도 다시 안내됨.
  * 게이트: loadedOk(설정 로드 성공) 전에는 판단 보류 — 로드 실패 세션은 안 띄움(반복 출현·저장 불가 방지).
  */
 const VERSION = '2026-07-12-personalize'
-
-/** 오늘 KST 기준 +days 날짜(YYYY-MM-DD) — notices.ts todayKst와 동일한 sv-SE/Asia/Seoul 방식 */
-const kstDatePlus = (days: number) =>
-  new Date(Date.now() + days * 86400000).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 
 const FEATURES: { Icon: SvgIconComponent; title: string; desc: string }[] = [
   { Icon: NotificationsActiveIcon, title: '내 기준 새 글 배지', desc: '메뉴의 새 글 숫자가 "내가 안 본 글"만 셉니다. 페이지에 들어가면 자동으로 읽음 처리돼요.' },
@@ -48,24 +45,19 @@ export default function WhatsNewDialog() {
   const { loggedIn, isMember } = useRole()
   const loadedOk = useAppSelector((s) => s.userSettings.loadedOk)
   const seen = useAppSelector((s) => s.userSettings.settings['whatsnew.seen'])
-  const snooze = useAppSelector((s) => s.userSettings.settings['whatsnew.snooze'])
-  // 세션 내 재출현 방지 — 닫으면 저장 성공 여부와 무관하게 이번 세션엔 다시 안 뜸
+  // 세션 내 재출현 방지 — 닫으면 이번 세션엔 다시 안 뜸(체크 안 했으면 다음 접속 때 다시 뜸)
   const [dismissed, setDismissed] = useState(false)
+  // '다시 보지 않기' 체크 — 체크 + 확인했어요일 때만 영구 확인 저장
+  const [noMore, setNoMore] = useState(false)
 
-  // 스누즈 활성 = 저장된 재표출 날짜가 아직 미래(오늘 포함 전) — 값이 이상하면(비문자열 등) 무시
-  const snoozed = typeof snooze === 'string' && kstDatePlus(0) < snooze
-  const open = loggedIn && isMember && loadedOk && !dismissed && seen !== VERSION && !snoozed
+  const open = loggedIn && isMember && loadedOk && !dismissed && seen !== VERSION
   const confirm = () => {
     setDismissed(true)
-    dispatch(putSetting({ key: 'whatsnew.seen', value: VERSION }))
-  }
-  const snoozeDays = (days: number) => {
-    setDismissed(true)
-    dispatch(putSetting({ key: 'whatsnew.snooze', value: kstDatePlus(days) }))
+    if (noMore) dispatch(putSetting({ key: 'whatsnew.seen', value: VERSION }))
   }
 
   return (
-    <Dialog open={open} onClose={() => snoozeDays(1)} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={() => setDismissed(true)} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.25, pb: 1 }}>
         <AutoAwesomeIcon sx={{ color: 'primary.main', fontSize: 22 }} />
         새로워진 포털 — 개인화 기능 안내
@@ -108,13 +100,12 @@ export default function WhatsNewDialog() {
         </Box>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
-        {/* 스누즈(왼쪽, 흐린 텍스트) — 서버 저장이라 기기 무관 적용. '확인했어요'만 영구 확인 */}
-        <Button size="small" onClick={() => snoozeDays(1)} sx={{ color: 'text.disabled', mr: 'auto' }}>
-          오늘 하루 보지 않기
-        </Button>
-        <Button size="small" onClick={() => snoozeDays(7)} sx={{ color: 'text.disabled' }}>
-          일주일 보지 않기
-        </Button>
+        {/* 체크 + 확인 = 영구(다시 안 뜸) / 체크 없이 확인·닫기 = 다음 접속 때 다시 안내 */}
+        <FormControlLabel
+          sx={{ mr: 'auto', '& .MuiFormControlLabel-label': { fontSize: 13.5, color: 'text.secondary' } }}
+          control={<Checkbox size="small" checked={noMore} onChange={(e) => setNoMore(e.target.checked)} />}
+          label="다시 보지 않기"
+        />
         <Button variant="contained" onClick={confirm}>확인했어요</Button>
       </DialogActions>
     </Dialog>
