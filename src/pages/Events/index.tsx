@@ -6,8 +6,8 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
-import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, useSnack } from '@/components/ds'
-import { radius, shadow, typescale } from '@/theme/tokens'
+import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, SegTabs, useSnack } from '@/components/ds'
+import { radius, shadow } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
 import { fetchAttendees, addAttendee, removeAttendee, fetchSubmissions, type AttendeeRow, type EventSubmissionRow } from '@/api/events'
@@ -134,16 +134,6 @@ export default function Events() {
     return () => document.removeEventListener('mousedown', onDown)
   }, [endedDetail])
 
-  const tabBtn = (v: Tab, label: string, count: number) => (
-    <Button
-      size="small" disableElevation variant={tab === v ? 'contained' : 'text'}
-      onClick={() => setTab(v)}
-      sx={{ minWidth: 0, px: 1.75, py: 0.5, fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight, color: tab === v ? undefined : 'text.secondary' }}
-    >
-      {label} {count}
-    </Button>
-  )
-
   return (
     <PageContainer>
       <PageHeader
@@ -167,10 +157,16 @@ export default function Events() {
       />
 
       {/* 진행·예정 / 종료 탭 (건수 표시) */}
-      <Box sx={{ display: 'inline-flex', gap: 0.5, p: '4px', mb: 2, border: 1, borderColor: 'divider', borderRadius: `${radius.button}px`, bgcolor: 'background.paper' }}>
-        {tabBtn('active', '진행·예정', active.length)}
-        {tabBtn('ended', '종료', ended.length)}
-      </Box>
+      <SegTabs
+        ariaLabel="행사 상태 전환"
+        items={[
+          { value: 'active', label: `진행·예정 ${active.length}` },
+          { value: 'ended', label: `종료 ${ended.length}` },
+        ] as const}
+        value={tab}
+        onChange={setTab}
+        sx={{ mb: 2 }}
+      />
 
       <ContentSection last>
         {tab === 'active' ? (
