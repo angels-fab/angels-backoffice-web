@@ -1,6 +1,7 @@
 import Chip from '@mui/material/Chip'
 import { alpha } from '@mui/material/styles'
 import type { ReactNode } from 'react'
+import { typescale } from '@/theme/tokens'
 
 /** 의미 상태 — 색 매핑의 단일 기준 */
 export type StatusKind = 'success' | 'info' | 'warning' | 'error' | 'neutral' | 'purple' | 'teal'
@@ -63,10 +64,14 @@ export default function StatusChip({
       sx={(t) => {
         const c = customColor ?? COLOR[status](t)
         return {
+          // MUI Chip 기본 라벨은 13px(body) → 본문·ManagerChip과 같은 12px(칩=라벨 크기)로 통일.
+          fontSize: typescale.small.size,
           color: selected ? t.palette.common.white : c,
           bgcolor: selected ? c : alpha(c, 0.12),
           borderColor: selected ? c : alpha(c, 0.32),
           '& .MuiChip-icon': { color: 'inherit', fontSize: 16 },
+          // 12px에서 한글 잉크 상단쏠림(-0.5px) 보정 — 라벨만 0.5px 하향(실측 중앙정렬)
+          '& .MuiChip-label': { transform: 'translateY(0.5px)' },
           ...(onClick && {
             cursor: 'pointer',
             // 선택 > 호버 — 선택 칩은 호버에도 솔리드 유지, 미선택 칩만 같은 색으로 조금 더 선명하게

@@ -78,7 +78,8 @@ function NamePill({ text, color }: { text: string; color: string }) {
         boxShadow: '0 0 0 0.5px rgba(0,0,0,.25)',
       }}
     >
-      {text}
+      {/* 한글 잉크 상단쏠림 보정 — ManagerChip과 동일하게 글자만 0.5px 하향(실측 중앙정렬) */}
+      <Box component="span" sx={{ display: 'inline-block', transform: 'translateY(0.5px)' }}>{text}</Box>
     </Box>
   )
 }

@@ -29,7 +29,9 @@ export default function ManagerChip({ name, sx }: ManagerChipProps) {
         sx,
       )}
     >
-      {(name || '').trim() || '미지정'}
+      {/* 한글 글리프는 잉크가 baseline 위로 쏠려(descent 거의 없음) 고정높이 칩에서 0.5px 떠 보임 →
+          글자만 0.5px 하향(실측: -0.5px→0). 배경은 그대로 두려고 텍스트만 감싼다. */}
+      <Box component="span" sx={{ display: 'inline-block', transform: 'translateY(0.5px)' }}>{(name || '').trim() || '미지정'}</Box>
     </Box>
   )
 }
