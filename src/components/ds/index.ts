@@ -38,6 +38,9 @@ export type { FilterBarProps } from './FilterBar'
 export { default as StatusChip } from './StatusChip'
 export type { StatusChipProps, StatusKind } from './StatusChip'
 
+export { default as SegTabs } from './SegTabs'
+export type { SegTabsProps, SegTabItem } from './SegTabs'
+
 export { default as SectionHeader } from './SectionHeader'
 export type { SectionHeaderProps } from './SectionHeader'
 

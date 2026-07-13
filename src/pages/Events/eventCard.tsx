@@ -249,8 +249,8 @@ export function EventCardInner({ e, open }: { e: FabEvent; open: boolean }) {
 
       {/* 좌상단 칩 — 항상 선명(스크림 위) */}
       <Box sx={{ position: 'absolute', top: 11, left: 11, right: 11, zIndex: 3, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: 12, sm: 13 }, fontWeight: 800, letterSpacing: '.02em', px: '10px', py: '6px', borderRadius: radius.pill, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: 12, sm: 13 }, fontWeight: 700, letterSpacing: '.02em', px: '11px', py: '6px', borderRadius: radius.pill, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: 12, sm: 13 }, fontWeight: 800, letterSpacing: '.02em', px: '10px', py: '6px', borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: 12, sm: 13 }, fontWeight: 700, letterSpacing: '.02em', px: '11px', py: '6px', borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
           <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
           {st.label}
         </Box>
@@ -259,7 +259,7 @@ export function EventCardInner({ e, open }: { e: FabEvent; open: boolean }) {
       {/* 기본 하단 오버레이: 제목 + 일시 (열리면 페이드아웃) */}
       <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 2, p: '13px 13px 14px', opacity: open ? 0 : 1, pointerEvents: open ? 'none' : 'auto', transition: 'opacity 160ms ease', '@media (prefers-reduced-motion: reduce)': { transition: 'none' } }}>
         <CardTitle title={e.title} />
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: { xs: 12, sm: 13 }, fontWeight: 500, color: 'common.white', bgcolor: 'rgba(255,255,255,.16)', backdropFilter: 'blur(3px)', px: 1.1, py: '4px', borderRadius: radius.pill }}>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: { xs: 12, sm: 13 }, fontWeight: 500, color: 'common.white', bgcolor: 'rgba(255,255,255,.16)', backdropFilter: 'blur(3px)', px: 1.1, py: '4px', borderRadius: `${radius.pill}px` }}>
           <EventIcon sx={{ fontSize: iconSize.body }} /> {fmtEventDate(e.start, e.end)}
         </Box>
       </Box>
@@ -302,7 +302,7 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
   return (
     <Box>
       {/* 포스터 풀사이즈(전체 표시) + 좌상단 분류·상태 칩 */}
-      <Box sx={{ position: 'relative', borderRadius: radius.modal, overflow: 'hidden', bgcolor: '#0b0e14' }}>
+      <Box sx={{ position: 'relative', borderRadius: `${radius.modal}px`, overflow: 'hidden', bgcolor: '#0b0e14' }}>
         {url ? (
           <Box component="img" src={url} alt={e.title} sx={{ display: 'block', width: '100%', height: 'auto' }} />
         ) : (
@@ -311,8 +311,8 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
           </Box>
         )}
         <Box sx={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 800, px: '9px', py: '5px', borderRadius: radius.pill, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 12, fontWeight: 700, px: '10px', py: '5px', borderRadius: radius.pill, bgcolor: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: 12, fontWeight: 800, px: '9px', py: '5px', borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: 12, fontWeight: 700, px: '10px', py: '5px', borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
             <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 8, height: 8, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
             {st.label}
           </Box>
@@ -345,7 +345,7 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
             </Box>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
               {e.attendees.map((name, i) => (
-                <Box key={i} component="span" sx={(th) => ({ fontSize: 12, color: 'text.primary', bgcolor: alpha(th.palette.text.primary, 0.06), border: `1px solid ${th.palette.divider}`, borderRadius: radius.pill, px: 1, py: '2px' })}>{name}</Box>
+                <Box key={i} component="span" sx={(th) => ({ fontSize: 12, color: 'text.primary', bgcolor: alpha(th.palette.text.primary, 0.06), border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.pill}px`, px: 1, py: '2px' })}>{name}</Box>
               ))}
             </Box>
           </Box>

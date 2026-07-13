@@ -63,7 +63,7 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
           <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accent.purple', flexShrink: 0 }} />
           <StatusChip status={st.status} label={st.label} />
           {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-          <Box component="span" sx={{ ml: 'auto', fontSize: typescale.small.size, fontWeight: 700, borderRadius: radius.chip, px: 1, py: 0.3, bgcolor: mgrColor(t.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>
+          <Box component="span" sx={{ ml: 'auto', fontSize: typescale.small.size, fontWeight: 700, borderRadius: `${radius.chip}px`, px: 1, py: 0.3, bgcolor: mgrColor(t.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>
             {t.mgr || '미지정'}
           </Box>
           <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>

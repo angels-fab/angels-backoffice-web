@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
-import Chip from '@mui/material/Chip'
+import { TintChip } from '@/components/FilterChip'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Table from '@mui/material/Table'
@@ -621,25 +621,18 @@ export default function Improve() {
             {visibleStatuses.map((s) => {
               const on = selected.has(s)
               return (
-                <Chip
+                <TintChip
                   key={s}
-                  label={`${s} ${counts[s] || 0}`}
-                  onClick={(e) => onTab(s, (e as React.MouseEvent).shiftKey)}
-                  variant="outlined"
-                  sx={(t) => {
-                    const c = kindColor(t, impKind(s))
-                    return {
-                      fontWeight: typescale.caption.weight,
-                      transition: 'background-color .2s ease, color .2s ease, border-color .2s ease',
-                      color: on ? t.palette.common.white : c,
-                      bgcolor: on ? c : alpha(c, 0.12),
-                      borderColor: on ? c : alpha(c, 0.32),
-                      cursor: 'pointer',
-                      // &&로 우선순위를 높여 MUI Chip 기본 hover(배경 옅어짐)를 덮어씀 → 선택/호버 모두 채운 상태 유지
-                      '&&:hover': { bgcolor: c, color: t.palette.common.white, borderColor: c },
-                    }
-                  }}
-                />
+                  on={on}
+                  color={(t) => kindColor(t, impKind(s))}
+                  ariaLabel={`${s} ${counts[s] || 0}건${on ? '' : ' (해제됨)'}`}
+                  onToggle={(additive) => onTab(s, additive)}
+                  hover
+                  sx={{ p: '4px 10px' }}
+                >
+                  <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>{s}</Box>
+                  <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>{counts[s] || 0}</Box>
+                </TintChip>
               )
             })}
             {visibleStatuses.length > 1 && (

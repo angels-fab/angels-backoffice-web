@@ -19,7 +19,7 @@ import RedoIcon from '@mui/icons-material/Redo'
 import EditCalendarIcon from '@mui/icons-material/EditCalendar'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { PageContainer, PageHeader, StatTile, EmptyState, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, StatTile, EmptyState, SegTabs, useSnack } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -696,17 +696,17 @@ export default function Equipment() {
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, bgcolor: 'background.paper', overflow: 'hidden' }}>
         <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           {/* 보기 전환 */}
-          <Box sx={{ display: 'inline-flex', gap: 0.5 }}>
-            {([['stage', '단계별'], ['timeline', '타임라인'], ['list', '목록'], ['demo', '데모결과']] as [IntroView, string][]).map(([v, label]) => (
-              <Button
-                key={v} size="small" disableElevation variant={view === v ? 'contained' : 'text'}
-                onClick={() => setView(v)}
-                sx={{ minWidth: 0, px: 1.5, py: 0.5, fontSize: 13, color: view === v ? undefined : 'text.secondary' }}
-              >
-                {label}
-              </Button>
-            ))}
-          </Box>
+          <SegTabs
+            ariaLabel="장비도입 보기 전환"
+            items={[
+              { value: 'stage', label: '단계별' },
+              { value: 'timeline', label: '타임라인' },
+              { value: 'list', label: '목록' },
+              { value: 'demo', label: '데모결과' },
+            ] as const}
+            value={view}
+            onChange={setView}
+          />
           {/* 필터 — 데모결과 뷰에는 도입용 필터(단계·담당자·구분) 미적용이라 숨김 */}
           {view !== 'demo' && (
           <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>

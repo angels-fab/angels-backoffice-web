@@ -106,7 +106,7 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
           sx: {
             width: 560, maxWidth: '100%', m: 2,
             bgcolor: 'background.paper', backgroundImage: 'none',
-            border: 1, borderColor: 'divider', borderRadius: radius.modal, p: '22px 24px',
+            border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, p: '22px 24px',
           },
         },
       }}

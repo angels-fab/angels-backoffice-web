@@ -229,7 +229,7 @@ export default function SwipeableCard({
               key={o.key}
               onClick={() => { o.onPress(); closeAll() }}
               sx={{
-                flexShrink: 0, px: 1.75, height: 34, borderRadius: radius.pill,
+                flexShrink: 0, px: 1.75, height: 34, borderRadius: `${radius.pill}px`,
                 bgcolor: 'action.hover', color: 'text.primary', fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight,
                 whiteSpace: 'nowrap',
               }}

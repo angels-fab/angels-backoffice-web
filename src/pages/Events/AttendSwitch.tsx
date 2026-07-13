@@ -26,7 +26,7 @@ export default function AttendSwitch({ checked, disabled, onToggle }: {
       onClick={(e) => { e.stopPropagation(); if (!disabled) onToggle() }}
       sx={(th) => ({
         position: 'relative', width: W, height: H, flex: 'none', p: 0, border: 0,
-        borderRadius: radius.pill, cursor: disabled ? 'default' : 'pointer',
+        borderRadius: `${radius.pill}px`, cursor: disabled ? 'default' : 'pointer',
         bgcolor: checked ? th.palette.primary.main : alpha(th.palette.text.primary, 0.22),
         opacity: disabled ? 0.5 : 1, transition: 'background-color .2s ease',
         display: 'inline-block', verticalAlign: 'middle',

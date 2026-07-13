@@ -76,7 +76,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
         },
       }}
     >
-      <Box sx={{ width: 36, height: 4, borderRadius: radius.pill, bgcolor: 'divider', mx: 'auto', mt: 1.25, mb: 0.5 }} />
+      <Box sx={{ width: 36, height: 4, borderRadius: `${radius.pill}px`, bgcolor: 'divider', mx: 'auto', mt: 1.25, mb: 0.5 }} />
 
       <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>
         이동

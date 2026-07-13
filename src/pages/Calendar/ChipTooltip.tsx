@@ -20,7 +20,7 @@ function DetailBody({ d }: { d: EventDetail }) {
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.9 }}>
         <Box
           component="span"
-          sx={{ px: '7px', py: '3px', borderRadius: radius.pill, fontSize: typescale.caption.size, fontWeight: 800, color: d.catColor, bgcolor: alpha(d.catColor, 0.22) }}
+          sx={{ px: '7px', py: '3px', borderRadius: `${radius.pill}px`, fontSize: typescale.caption.size, fontWeight: 800, color: d.catColor, bgcolor: alpha(d.catColor, 0.22) }}
         >
           {d.catLabel}
         </Box>
@@ -56,7 +56,7 @@ export default function ChipTooltip({ detail, children }: { detail: EventDetail;
             bgcolor: '#151e2c',
             border: '1px solid #3a485d',
             p: 1.25,
-            borderRadius: radius.button,
+            borderRadius: `${radius.button}px`,
             boxShadow: shadow.md,
           },
         },

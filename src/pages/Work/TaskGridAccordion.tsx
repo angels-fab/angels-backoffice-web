@@ -106,7 +106,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
     bgcolor: alpha(toneColor(th, tone), on ? 0.2 : 0.08),
     border: 1,
     borderColor: on ? toneColor(th, tone) : 'divider',
-    borderRadius: radius.card,
+    borderRadius: `${radius.card}px`,
     px: 1.25, py: 0.9,
     cursor: 'pointer',
     transition: 'border-color .15s, background-color .15s',
@@ -141,7 +141,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1, flexWrap: 'wrap' }}>
           <Typography variant="subtitle1" sx={{ fontWeight: typescale.cardTitle.weight, wordBreak: 'break-word' }}>{taskTitle(st)}</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-            <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, borderRadius: radius.chip, px: 1, py: 0.3, bgcolor: mgrColor(st.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>{st.mgr || '미지정'}</Box>
+            <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, borderRadius: `${radius.chip}px`, px: 1, py: 0.3, bgcolor: mgrColor(st.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>{st.mgr || '미지정'}</Box>
             <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(st.start)}</Typography>
           </Box>
         </Box>
@@ -220,7 +220,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
         sx={(th) => ({
           animation: reduce ? 'none' : `${slideIn} .2s ease both`,
           bgcolor: alpha(toneColor(th, tone), 0.06),
-          border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: radius.card, p: 1.75,
+          border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: `${radius.card}px`, p: 1.75,
         })}
       >
         {editingId === selTask.id && renderEdit ? (
@@ -237,14 +237,14 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
         )}
       </Box>
     ) : (
-      <Box sx={(th) => ({ border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: radius.card, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120 })}>
+      <Box sx={(th) => ({ border: 1, borderColor: alpha(toneColor(th, tone), 0.3), borderRadius: `${radius.card}px`, p: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 120 })}>
         <Typography variant="body2" sx={{ color: 'text.disabled', textAlign: 'center' }}>목록에서 업무를 선택하면 내용이 표시됩니다</Typography>
       </Box>
     )
 
     // 좌측 1열 라인 리스트(간격 축소·메뉴 없음 — 액션은 상세에서)
     const listEl = (
-      <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: radius.card, overflow: 'hidden' }}>
+      <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, overflow: 'hidden' }}>
         {items.map((t, i) => {
           const on = sel === t.id
           return (
@@ -310,7 +310,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
             gridColumn: '1 / -1',
             bgcolor: alpha(toneColor(th, tone), 0.06),
             border: 1, borderColor: alpha(toneColor(th, tone), 0.3),
-            borderRadius: radius.card, p: 1.75,
+            borderRadius: `${radius.card}px`, p: 1.75,
           })}
         >
           {detailBody(selTask)}

@@ -132,7 +132,7 @@ function NewTaskPlusButton({ onClick }: { onClick: () => void }) {
       sx={(th) => ({
         width: 42, height: 28, flexShrink: 0,
         border: '1px solid', borderColor: alpha(th.palette.accent.green, 0.5),
-        borderRadius: radius.chip, bgcolor: alpha(th.palette.accent.green, 0.12),
+        borderRadius: `${radius.chip}px`, bgcolor: alpha(th.palette.accent.green, 0.12),
         color: th.palette.accent.green,
         transition: 'background-color .15s, border-color .15s',
         '&:hover': { bgcolor: alpha(th.palette.accent.green, 0.2), borderColor: alpha(th.palette.accent.green, 0.7) },
@@ -150,7 +150,7 @@ function BtnGroup({ children }: { children: React.ReactNode }) {
     <Box
       sx={(th) => ({
         display: 'flex', alignItems: 'stretch', height: 30, flexShrink: 0,
-        border: '1px solid', borderColor: 'divider', borderRadius: radius.chip, overflow: 'hidden',
+        border: '1px solid', borderColor: 'divider', borderRadius: `${radius.chip}px`, overflow: 'hidden',
         bgcolor: alpha(th.palette.text.primary, 0.03),
         '& > *:not(:first-of-type)': { borderLeft: '1px solid', borderLeftColor: 'divider' },
       })}
@@ -1144,7 +1144,7 @@ export default function Work() {
           sx={(th) => ({
             bgcolor: 'background.paper',
             border: `1px solid ${th.palette.divider}`,
-            borderRadius: radius.card,
+            borderRadius: `${radius.card}px`,
             p: '10px 14px',
             mb: 2.5,
             display: 'grid',
@@ -1223,7 +1223,7 @@ export default function Work() {
                 onClick={() => setTrashOpen(true)}
                 sx={(th) => ({
                   height: 30, px: 1.25, gap: 0.5, flexShrink: 0,
-                  border: '1px solid', borderColor: 'divider', borderRadius: radius.chip,
+                  border: '1px solid', borderColor: 'divider', borderRadius: `${radius.chip}px`,
                   bgcolor: alpha(th.palette.text.primary, 0.03),
                   color: th.palette.accent.red,
                   fontSize: typescale.body.size, fontWeight: typescale.emphasis.weight, lineHeight: 1,
@@ -1430,7 +1430,7 @@ export default function Work() {
             return {
               position: 'fixed', zIndex: th.zIndex.modal - 1,
               right: 14, top: trashPanelBox.top,
-              width: 74, height: trashPanelBox.height, borderRadius: radius.modal,
+              width: 74, height: trashPanelBox.height, borderRadius: `${radius.modal}px`,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75,
               border: '1.5px solid #f07a74',
               bgcolor: 'rgba(148,43,43,.92)',
@@ -1469,23 +1469,23 @@ export default function Work() {
               left: tk.cx - tk.w / 2, top: tk.cy - tk.h / 2,
               width: tk.w, height: tk.h, pointerEvents: 'none',
               transform: `scale(${tk.scale})`, transformOrigin: '50% 50%',
-              opacity: 0.92, borderRadius: radius.card,
+              opacity: 0.92, borderRadius: `${radius.card}px`,
               outline: '2px dashed rgba(224,91,84,.95)', outlineOffset: '3px',
               '--stack-gap': `${Math.max(2, 10 * tk.scale).toFixed(1)}px`,
             })}
           >
             {n > 2 && (
-              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(calc(var(--stack-gap) * 2), calc(var(--stack-gap) * 2))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: radius.card })} />
+              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(calc(var(--stack-gap) * 2), calc(var(--stack-gap) * 2))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.card}px` })} />
             )}
             {n > 1 && (
-              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: radius.card })} />
+              <Box sx={(th) => ({ position: 'absolute', inset: 0, transform: 'translate(var(--stack-gap), var(--stack-gap))', bgcolor: 'background.elevated', border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.card}px` })} />
             )}
-            <Box sx={{ position: 'relative', height: '100%', boxShadow: shadow.lg, borderRadius: radius.card, overflow: 'hidden', '& > *': { height: '100%' } }}>
+            <Box sx={{ position: 'relative', height: '100%', boxShadow: shadow.lg, borderRadius: `${radius.card}px`, overflow: 'hidden', '& > *': { height: '100%' } }}>
               <TaskAccordion t={t0} tone={tone} />
               {n > 1 && (
                 <Box sx={(th) => ({
                   position: 'absolute', top: 6, right: 6, zIndex: 2,
-                  px: 1, py: 0.4, borderRadius: radius.pill,
+                  px: 1, py: 0.4, borderRadius: `${radius.pill}px`,
                   bgcolor: th.palette.accent.blue, color: 'common.white',
                   fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1,
                 })}>
@@ -1554,7 +1554,7 @@ export default function Work() {
                     key={t.num}
                     sx={(th) => ({
                       p: 1.25, border: '1px solid', borderColor: checked ? alpha(th.palette.accent.blue, 0.8) : 'divider',
-                      borderRadius: radius.modal, bgcolor: checked ? alpha(th.palette.accent.blue, 0.08) : 'background.paper',
+                      borderRadius: `${radius.modal}px`, bgcolor: checked ? alpha(th.palette.accent.blue, 0.08) : 'background.paper',
                       display: 'flex', gap: 1, alignItems: 'flex-start', cursor: 'pointer',
                     })}
                     onClick={() => setTrashSel((prev) => { const n = new Set(prev); if (n.has(t.num)) n.delete(t.num); else n.add(t.num); return n })}

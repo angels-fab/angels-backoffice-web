@@ -18,7 +18,7 @@ import EventNoteIcon from '@mui/icons-material/EventNote'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { PageContainer, PageHeader, SearchBar, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, SearchBar, SegTabs, useSnack } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadCalEvents, moveCalEvent } from '@/store/slices/calSlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
@@ -411,7 +411,7 @@ export default function Calendar() {
                 startIcon={<AddIcon sx={{ fontSize: iconSize.action }} />}
                 onClick={() => setWrite({ mode: 'add', event: null, initialDate: todayKey })}
                 sx={(th) => ({
-                  height: 30, px: 1.25, fontSize: 13, fontWeight: 700, borderRadius: radius.chip,
+                  height: 30, px: 1.25, fontSize: 13, fontWeight: 700, borderRadius: `${radius.chip}px`,
                   color: th.palette.accent.green, border: `1px solid ${th.palette.accent.green}66`,
                   '&:hover': { bgcolor: `${th.palette.accent.green}1f` },
                 })}
@@ -456,25 +456,16 @@ export default function Calendar() {
         {/* 왼쪽 그룹 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', order: 1 }}>
           {/* 월/주 토글 */}
-          <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: radius.button }}>
-            {([{ k: 'agenda', l: '목록' }, { k: 'month', l: '월' }, { k: 'timeweek', l: '주' }] as const).map((t) => (
-              <Box
-                key={t.k}
-                component="button"
-                onClick={() => setView(t.k)}
-                sx={{
-                  px: '16px', py: '6px', borderRadius: radius.chip, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', border: 'none',
-                  fontWeight: view === t.k ? 700 : 600,
-                  color: view === t.k ? 'primary.main' : 'text.secondary',
-                  bgcolor: view === t.k ? 'background.paper' : 'transparent',
-                  boxShadow: view === t.k ? '0 1px 2px rgba(0,0,0,.35)' : 'none',
-                  transition: 'all .12s',
-                }}
-              >
-                {t.l}
-              </Box>
-            ))}
-          </Box>
+          <SegTabs
+            ariaLabel="달력 보기 전환"
+            items={[
+              { value: 'agenda', label: '목록' },
+              { value: 'month', label: '월' },
+              { value: 'timeweek', label: '주' },
+            ] as const}
+            value={view}
+            onChange={setView}
+          />
 
           {/* 이전 · 오늘 · 다음 — 하나의 외곽선 버튼 그룹(바깥 모서리만 둥글게, 사이 얇은 구분선) */}
           {(() => {
@@ -488,7 +479,7 @@ export default function Calendar() {
             } as const
             const sep = { width: '1px', flex: 'none', bgcolor: 'divider' } as const
             return (
-              <Box role="group" aria-label="기간 이동" sx={{ display: 'inline-flex', alignItems: 'stretch', height: 34, border: '1px solid', borderColor: 'divider', borderRadius: radius.button, overflow: 'hidden', bgcolor: 'background.paper' }}>
+              <Box role="group" aria-label="기간 이동" sx={{ display: 'inline-flex', alignItems: 'stretch', height: 34, border: '1px solid', borderColor: 'divider', borderRadius: `${radius.button}px`, overflow: 'hidden', bgcolor: 'background.paper' }}>
                 <Box component="button" aria-label="이전" onClick={() => shift(-1)} sx={{ ...navBtn, width: 32 }}><ChevronLeftIcon sx={{ fontSize: iconSize.header }} /></Box>
                 <Box sx={sep} />
                 <Box component="button" onClick={goToday} sx={{ ...navBtn, px: '14px', fontSize: 13, fontWeight: 600 }}>오늘</Box>
@@ -514,7 +505,7 @@ export default function Calendar() {
           onClick={() => setShowWeekends((s) => !s)}
           sx={{
             order: { xs: 2, sm: 3 }, flex: '0 0 auto',
-            height: 34, px: '14px', borderRadius: radius.button, border: '1px solid',
+            height: 34, px: '14px', borderRadius: `${radius.button}px`, border: '1px solid',
             borderColor: showWeekends ? 'primary.main' : 'divider',
             color: showWeekends ? 'primary.main' : 'text.secondary',
             bgcolor: showWeekends ? 'background.elevated' : 'background.paper',

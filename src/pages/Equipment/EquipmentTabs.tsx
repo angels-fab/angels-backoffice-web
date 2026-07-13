@@ -1,38 +1,23 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import Box from '@mui/material/Box'
-import { radius } from '@/theme/tokens'
+import { SegTabs } from '@/components/ds'
 
-// 장비관리 상단 탭 — 장비도입(/equipment) · 장비운영(/equipment-ops) 전환. (업무일정 뷰탭과 동일 톤)
+// 장비관리 상단 탭 — 장비도입(/equipment) · 장비운영(/equipment-ops) 전환. 공용 SegTabs.
 const TABS = [
-  { label: '장비도입', path: '/equipment' },
-  { label: '장비운영', path: '/equipment-ops' },
-]
+  { value: '/equipment', label: '장비도입' },
+  { value: '/equipment-ops', label: '장비운영' },
+] as const
 
 export default function EquipmentTabs() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const active = pathname === '/equipment-ops' ? '/equipment-ops' : '/equipment'
   return (
-    <Box sx={{ display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: radius.button, mb: 2 }}>
-      {TABS.map((t) => {
-        const active = pathname === t.path
-        return (
-          <Box
-            key={t.path}
-            component="button"
-            onClick={() => navigate(t.path)}
-            sx={{
-              px: '18px', py: '6px', borderRadius: radius.chip, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer', border: 'none',
-              fontWeight: active ? 700 : 600,
-              color: active ? 'primary.main' : 'text.secondary',
-              bgcolor: active ? 'background.paper' : 'transparent',
-              boxShadow: active ? '0 1px 2px rgba(0,0,0,.35)' : 'none',
-              transition: 'all .12s',
-            }}
-          >
-            {t.label}
-          </Box>
-        )
-      })}
-    </Box>
+    <SegTabs
+      ariaLabel="장비 도입/운영 전환"
+      items={TABS}
+      value={active}
+      onChange={(v) => navigate(v)}
+      sx={{ mb: 2 }}
+    />
   )
 }

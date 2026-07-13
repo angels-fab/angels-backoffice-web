@@ -46,7 +46,7 @@ export function TintChip({ on, color, ariaLabel, onToggle, hover = false, sx, ch
         (theme: Theme) => {
           const c = typeof color === 'function' ? color(theme) : color
           return {
-            display: 'inline-flex', alignItems: 'center', gap: '5px', borderRadius: radius.pill,
+            display: 'inline-flex', alignItems: 'center', gap: '5px', borderRadius: `${radius.pill}px`,
             bgcolor: alpha(c, on ? 0.16 : 0.06), cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none',
             opacity: on ? 1 : 0.45, transition: 'opacity .15s, background .15s',
             ...(hover ? { '&:hover': on ? { bgcolor: alpha(c, 0.22) } : { opacity: 0.7 } } : {}),
@@ -93,8 +93,8 @@ export function PillChip({ label, color, on, ariaLabel, multi = false, onToggle 
         height: 26,
         display: 'inline-flex',
         alignItems: 'center',
-        px: '8px',
-        borderRadius: radius.button,
+        px: '10px',
+        borderRadius: `${radius.pill}px`,
         fontSize: typescale.small.size,
         fontWeight: typescale.cardTitle.weight,
         letterSpacing: '-0.01em',

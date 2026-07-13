@@ -128,7 +128,7 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
                   onClick={() => chooseCat(c)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chooseCat(c) } }}
                   sx={{
-                    fontSize: 12, fontWeight: 800, px: '10px', py: '5px', borderRadius: radius.pill, cursor: 'pointer', userSelect: 'none',
+                    fontSize: 12, fontWeight: 800, px: '10px', py: '5px', borderRadius: `${radius.pill}px`, cursor: 'pointer', userSelect: 'none',
                     border: `1.5px solid ${color}`,
                     ...(on ? { bgcolor: color, color: 'common.white' } : { bgcolor: 'rgba(0,0,0,.5)', color: 'common.white' }),
                   }}

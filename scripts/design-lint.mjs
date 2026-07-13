@@ -9,7 +9,7 @@
  *   - hex    : sx/style 에 hex 색 직접 (#RRGGBB) — 토큰/theme.palette 경유해야 함
  *   - font   : sx 에 fontSize 숫자 직접 — 타이포 사다리(variant/typescale) 사용
  *   - weight : sx 에 fontWeight 3자리 숫자 직접 — variant 굵기 위계 사용
- *   - radius : borderRadius 숫자/px 직접 — radius 토큰 6단만 허용
+ *   - radius : borderRadius 숫자/px 직접, 또는 bare `radius.X`(sx에서 ×shape.borderRadius=12배 부풀림 함정) — 안전형 `${radius.X}px`만 허용
  *   - shadow : boxShadow 문자열 리터럴 — shadow 3단 토큰만 허용
  *   - z      : zIndex 2자리 이상 리터럴 — theme.zIndex/토큰 참조 (0~9 로컬 스태킹 허용)
  *   - class  : className= 사용 — 새 화면은 index.css 클래스에 의존하지 않음
@@ -32,7 +32,8 @@ const CHECKS = [
   // 숫자 리터럴만 위반 — 토큰 경유(fontSize: iconSize.body 등)는 합법
   { key: 'font', re: /fontSize\s*:\s*['"`{]?\s*[\d.]/g },
   { key: 'weight', re: /fontWeight\s*:\s*['"`]?\d{3}/g },
-  { key: 'radius', re: /borderRadius\s*:\s*['"`]?\d/g },
+  // 리터럴 숫자/px + bare `radius.X`(sx에서 12배 함정) 둘 다 위반. 안전형 `${radius.X}px`는 통과.
+  { key: 'radius', re: /borderRadius\s*:\s*(?:['"`]?\d|radius\.)/g },
   { key: 'shadow', re: /boxShadow\s*:\s*['"`]/g },
   { key: 'z', re: /zIndex\s*:\s*['"`]?\d{2,}/g },
   { key: 'class', re: /className\s*=/g },

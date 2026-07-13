@@ -6,7 +6,7 @@ import { radius, typescale } from '@/theme/tokens'
 const cardStyle: CSSProperties = {
   background: 'var(--ink2)',
   border: '1px solid var(--border)',
-  borderRadius: radius.modal,
+  borderRadius: `${radius.modal}px`,
   padding: '28px 12px 20px',
   display: 'flex',
   flexDirection: 'column',
@@ -27,7 +27,7 @@ export default function Links() {
           <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" style={cardStyle}>
             <div
               style={{
-                width: 64, height: 64, borderRadius: radius.modal, background: l.bg,
+                width: 64, height: 64, borderRadius: `${radius.modal}px`, background: l.bg,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: typescale.display.size,
               }}
             >

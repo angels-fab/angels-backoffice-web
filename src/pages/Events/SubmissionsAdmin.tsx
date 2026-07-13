@@ -51,8 +51,8 @@ export default function SubmissionsAdmin({ open, onClose, submissions, onChanged
               return (
                 <Box key={s.id} sx={(th) => ({ border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.button}px`, p: 1.25, bgcolor: alpha(th.palette.text.primary, 0.02) })}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 0.75 }}>
-                    {s.category && <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, px: '8px', py: '2px', borderRadius: radius.pill, bgcolor: catColor, color: 'common.white' }}>{s.category}</Box>}
-                    <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, px: '8px', py: '2px', borderRadius: radius.pill, color: stColor, border: `1px solid ${stColor}` }}>{STATUS_LABEL[s.status] ?? s.status}</Box>
+                    {s.category && <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, px: '8px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: catColor, color: 'common.white' }}>{s.category}</Box>}
+                    <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, px: '8px', py: '2px', borderRadius: `${radius.pill}px`, color: stColor, border: `1px solid ${stColor}` }}>{STATUS_LABEL[s.status] ?? s.status}</Box>
                     <Box sx={{ flex: 1 }} />
                     <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.disabled' }}>{s.submitter || '-'}</Box>
                   </Box>

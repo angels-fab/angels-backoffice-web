@@ -45,7 +45,7 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
         gap: '6px',
         flexShrink: 0,
         border: `1px solid ${alpha(th.palette.accent.amber, 0.46)}`,
-        borderRadius: radius.pill,
+        borderRadius: `${radius.pill}px`,
         px: '10px',
         py: '5px',
         cursor: 'pointer',
@@ -69,7 +69,7 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
           minWidth: 18,
           height: 18,
           px: '4px',
-          borderRadius: radius.pill,
+          borderRadius: `${radius.pill}px`,
           fontSize: 11,
           fontWeight: 800,
           bgcolor: th.palette.accent.amber,
@@ -95,7 +95,7 @@ function ReplyCountChip({ count, onClick }: { count: number; onClick: () => void
         alignItems: 'center',
         height: 18,
         px: '7px',
-        borderRadius: radius.button,
+        borderRadius: `${radius.button}px`,
         border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}`,
         bgcolor: alpha(th.palette.accent.blue, 0.14),
         color: th.palette.accent.blue,
@@ -145,7 +145,7 @@ function MemoRow({
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: 'text.secondary' }}>
           <PersonOutlineIcon sx={{ fontSize: iconSize.caption }} />{t.author || '-'}
         </Box>
-        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: radius.pill })}>
+        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: `${radius.pill}px` })}>
           <PlaceOutlinedIcon sx={{ fontSize: iconSize.caption }} />{t.loc || '-'}
         </Box>
         {/* 상태 — 메인 보드와 동일 값·색. 관리자는 여기서 바로 변경(보류·완료·불가는 확인 팝업). */}
@@ -368,7 +368,7 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
       sx={(th) => ({
         mt: 1.25,
         border: `1px solid ${alpha(th.palette.accent.amber, 0.35)}`,
-        borderRadius: radius.card,
+        borderRadius: `${radius.card}px`,
         overflow: 'hidden',
         background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.1)}, ${th.palette.background.paper} 52%)`,
       })}

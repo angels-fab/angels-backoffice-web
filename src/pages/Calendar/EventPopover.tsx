@@ -67,14 +67,14 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
         visibility: pos.ready ? 'visible' : 'hidden',
         bgcolor: '#151e2c',
         border: '1px solid #3a485d',
-        borderRadius: radius.button,
+        borderRadius: `${radius.button}px`,
         p: 1.5,
         color: 'common.white',
         boxShadow: shadow.md,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
-        <Box component="span" sx={{ px: '8px', py: '3px', borderRadius: radius.pill, fontSize: 11, fontWeight: 800, color: detail.catColor, bgcolor: alpha(detail.catColor, 0.22) }}>
+        <Box component="span" sx={{ px: '8px', py: '3px', borderRadius: `${radius.pill}px`, fontSize: 11, fontWeight: 800, color: detail.catColor, bgcolor: alpha(detail.catColor, 0.22) }}>
           {detail.catLabel}
         </Box>
         {detail.time && (
@@ -98,7 +98,7 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
             onClick={onEdit}
             sx={{
               font: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-              px: 1.25, py: '5px', borderRadius: radius.chip,
+              px: 1.25, py: '5px', borderRadius: `${radius.chip}px`,
               color: '#9ec4f2', bgcolor: alpha(accent.blue, 0.14), border: `1px solid ${alpha(accent.blue, 0.4)}`,
               '&:hover': { bgcolor: alpha(accent.blue, 0.24) },
             }}
