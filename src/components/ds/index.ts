@@ -79,6 +79,8 @@ export type { NavBadgeProps } from './NavBadge'
 export { default as DataTable } from './DataTable'
 export type { DataTableProps, DataColumn } from './DataTable'
 
+export { dataTableHeadSx, dataTableSx } from './tableStyle'
+
 // ── P2-1: 폼 필드 표준 (D4 — 단일 구현 + modal|inline variant) ──
 export { FormField, SelectField, DateField, TimeField, inlineFieldSx } from './fields'
 export type { FormFieldProps, SelectFieldProps, FieldVariant } from './fields'

@@ -32,7 +32,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius } from '@/theme/tokens'
-import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, LoadingState, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, LoadingState, dataTableHeadSx, dataTableSx, useSnack } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
@@ -667,16 +667,16 @@ export default function Improve() {
         </Box>
 
         <AppCard padding={0} sx={{ overflowX: 'auto' }}>
-          <Table size="small" sx={{ '& td, & th': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
+          <Table size="small" sx={{ ...dataTableSx, '& th, & td': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
             <TableHead>
-              <TableRow sx={{ '& th': { textAlign: 'center', color: 'text.secondary', fontWeight: typescale.emphasis.weight, fontSize: typescale.body.size } }}>
+              <TableRow sx={dataTableHeadSx}>
                 <TableCell sx={{ width: '1%' }}>번호</TableCell>
                 <TableCell sx={{ width: '1%' }}>개선위치</TableCell>
-                <TableCell sx={{ width: '100%' }}>제목</TableCell>
+                <TableCell sx={{ width: '100%', textAlign: 'left !important' }}>제목</TableCell>
                 <TableCell sx={{ width: '1%' }}>작성자</TableCell>
                 <TableCell sx={{ width: '1%' }}>제안일자</TableCell>
                 <TableCell sx={{ width: '1%' }}>상태</TableCell>
-                <TableCell sx={{ width: '1%' }}>비고</TableCell>
+                <TableCell sx={{ width: '1%', textAlign: 'left !important' }}>비고</TableCell>
                 {memoCol && <TableCell sx={{ width: '1%' }}>작업 메모</TableCell>}
               </TableRow>
             </TableHead>
@@ -733,7 +733,7 @@ export default function Improve() {
                     key={`${t.id}-r`}
                     sx={(th) => ({
                       '& td': {
-                        textAlign: 'center', fontSize: typescale.body.size,
+                        textAlign: 'center',
                         ...(open
                           ? { bgcolor: alpha(th.palette.accent.blue, 0.22), borderBottomColor: 'transparent' }
                           : { bgcolor: alpha(kindColor(th, kind), 0.07) }),

@@ -42,6 +42,8 @@ import {
   EmptyState,
   SearchBar,
   LoadingState,
+  dataTableHeadSx,
+  dataTableSx,
   useSnack,
 } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
@@ -276,7 +278,7 @@ export default function Notice() {
                 </Box>
               )}
           </TableCell>
-          <TableCell><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
+          <TableCell sx={{ textAlign: 'center' }}><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
           {/* 아코디언 활성 영역 = 제목 셀만(행 전체 아님) */}
           <TableCell
             role="button"
@@ -394,12 +396,12 @@ export default function Notice() {
         ) : (
           <AppCard padding={0}>
             <Box sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: { xs: 0, md: 640 }, '& td, & th': { borderColor: 'divider' } }}>
+              <Table size="small" sx={{ minWidth: { xs: 0, md: 640 }, ...dataTableSx }}>
                 <TableHead>
-                  <TableRow sx={{ '& th': { color: 'text.secondary', fontWeight: 600, whiteSpace: 'nowrap' } }}>
-                    <TableCell sx={{ width: 48, textAlign: 'center' }}>번호</TableCell>
+                  <TableRow sx={dataTableHeadSx}>
+                    <TableCell sx={{ width: 48 }}>번호</TableCell>
                     <TableCell sx={{ width: 68 }}>분류</TableCell>
-                    <TableCell>제목</TableCell>
+                    <TableCell sx={{ textAlign: 'left !important' }}>제목</TableCell>
                     <TableCell sx={{ width: 100, textAlign: 'center', display: { xs: 'none', sm: 'table-cell' } }}>작성자</TableCell>
                     <TableCell sx={{ width: { xs: 44, md: 120 }, textAlign: { xs: 'right', md: 'left' } }}>작성일</TableCell>
                     <TableCell sx={{ width: 52, textAlign: 'center' }}>첨부</TableCell>
