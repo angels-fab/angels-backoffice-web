@@ -249,8 +249,8 @@ export function EventCardInner({ e, open }: { e: FabEvent; open: boolean }) {
 
       {/* 좌상단 칩 — 항상 선명(스크림 위) */}
       <Box sx={{ position: 'absolute', top: 11, left: 11, right: 11, zIndex: 3, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: 12, sm: 13 }, fontWeight: 800, letterSpacing: '.02em', px: '10px', py: '6px', borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: 12, sm: 13 }, fontWeight: 700, letterSpacing: '.02em', px: '11px', py: '6px', borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: 12, sm: 13 }, fontWeight: 800, letterSpacing: '.02em', px: '10px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: 12, sm: 13 }, fontWeight: 700, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
           <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
           {st.label}
         </Box>

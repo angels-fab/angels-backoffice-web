@@ -711,7 +711,6 @@ export default function Improve() {
                 const open = openId === t.id
                 const rm = remarkOf(t)
                 const st = normStatus(t.status)
-                const kind = impKind(st) // 행 배경 상태색 틴트용
                 const editable = canEdit // 상태·위치·유형·내용·사유 수정 = 로그인 관리자 전체
                 const removable = canDelete(t) // 삭제 = 해당 글 담당자(작성자)만
                 const isNew = isImproveNew(t) // 접수·검토중·보류 + 제안일자 최근 7일(사이드바와 동일 판정)
@@ -731,12 +730,14 @@ export default function Improve() {
                 return [
                   <TableRow
                     key={`${t.id}-r`}
+                    hover
                     sx={(th) => ({
+                      // 표준(DataTable): 기본행=투명+행 hover / 펼침=블루 틴트. (상태색 줄무늬 폐지 — 상태는 상태칩으로만)
                       '& td': {
                         textAlign: 'center',
                         ...(open
-                          ? { bgcolor: alpha(th.palette.accent.blue, 0.22), borderBottomColor: 'transparent' }
-                          : { bgcolor: alpha(kindColor(th, kind), 0.07) }),
+                          ? { bgcolor: alpha(th.palette.accent.blue, 0.12), borderBottomColor: 'transparent' }
+                          : {}),
                       },
                     })}
                   >
@@ -822,7 +823,7 @@ export default function Improve() {
                     )}
                   </TableRow>,
                   open ? (
-                    <TableRow key={`${t.id}-a`} sx={(th) => ({ '& td': { borderTop: 0, bgcolor: alpha(th.palette.accent.blue, 0.09) } })}>
+                    <TableRow key={`${t.id}-a`} sx={(th) => ({ '& td': { borderTop: 0, bgcolor: alpha(th.palette.accent.blue, 0.06) } })}>
                       <TableCell />
                       <TableCell colSpan={detailSpan} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
                         {/* 원문 내용 + (관리자) 개선요청 수정/삭제 */}

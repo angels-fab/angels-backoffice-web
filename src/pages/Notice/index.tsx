@@ -248,12 +248,13 @@ export default function Notice() {
     return (
       <Fragment key={rowKey}>
         <TableRow
+          hover
           sx={(th) => ({
             // 종료글은 더 흐리게(0.3) · 진행중은 그대로(상대 대비로 더 또렷)
             opacity: isExpired(n) ? 0.3 : 1,
             '& > td': {
-              // 상단고정 그룹은 떠오른 표면(elevated), 일반 목록은 더 어두운 배경(default)으로 대비
-              bgcolor: open ? 'action.hover' : isCopy ? th.palette.background.elevated : th.palette.background.default,
+              // 표준(DataTable): 기본행=투명(카드면 비침)+행 hover / 펼침=블루 틴트 / 상단고정만 예외로 살짝 떠오른 표면
+              bgcolor: open ? alpha(th.palette.accent.blue, 0.12) : isCopy ? th.palette.background.elevated : 'transparent',
               borderBottom: open ? 0 : undefined,
             },
           })}
