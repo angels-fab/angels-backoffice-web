@@ -70,10 +70,9 @@ const inputSx = (th: Theme) => ({
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info' }
 type ReasonDlg = { row: ImprovementItem; status: string; value: string }
 
-// 개선위치 칩 — 상태칩과 동일한 모양, 색은 흰색으로 통일(위치별 색 구분 없음)
-const LOC_WHITE = '#ffffff'
+// 개선위치 칩 — 일반 중립 상태칩(회색). 흰색은 너무 무거워 상태칩 텍스트 톤으로 맞춤(사용자 요청).
 function LocChip({ label }: { label: string }) {
-  return <StatusChip status="neutral" customColor={LOC_WHITE} label={label} />
+  return <StatusChip status="neutral" label={label} />
 }
 
 // 관련자료 — 박스 없는 아이콘 + 입력 팝업 (값 있으면 파랑)
