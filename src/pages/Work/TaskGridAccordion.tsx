@@ -23,7 +23,8 @@ import { StatusChip } from '@/components/ds'
 import { radius, iconSize, typescale } from '@/theme/tokens'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { taskTitle, taskLink, mgrColor, catKind, deptKind } from './workMeta'
+import { taskTitle, taskLink, catKind, deptKind } from './workMeta'
+import ManagerChip from '@/components/ds/ManagerChip'
 import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
 
@@ -141,7 +142,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1, flexWrap: 'wrap' }}>
           <Typography variant="subtitle1" sx={{ fontWeight: typescale.cardTitle.weight, wordBreak: 'break-word' }}>{taskTitle(st)}</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>
-            <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, borderRadius: `${radius.chip}px`, px: 1, py: 0.3, bgcolor: mgrColor(st.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>{st.mgr || '미지정'}</Box>
+            <ManagerChip name={st.mgr} />
             <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(st.start)}</Typography>
           </Box>
         </Box>

@@ -41,6 +41,9 @@ export type { StatusChipProps, StatusKind } from './StatusChip'
 export { default as SegTabs } from './SegTabs'
 export type { SegTabsProps, SegTabItem } from './SegTabs'
 
+export { default as ManagerChip } from './ManagerChip'
+export type { ManagerChipProps } from './ManagerChip'
+
 export { default as SectionHeader } from './SectionHeader'
 export type { SectionHeaderProps } from './SectionHeader'
 

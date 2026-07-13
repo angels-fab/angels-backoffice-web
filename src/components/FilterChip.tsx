@@ -90,7 +90,7 @@ export function PillChip({ label, color, on, ariaLabel, multi = false, onToggle 
       onClick={toggle}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e) } }}
       sx={{
-        height: 26,
+        height: 24,
         display: 'inline-flex',
         alignItems: 'center',
         px: '10px',

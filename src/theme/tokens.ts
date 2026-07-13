@@ -278,6 +278,7 @@ export const domain = {
   /** 업무(Work) — 담당자 채움 칩(고정 4인 + 해시 fallback) · 카드 상태톤(rgb 트리플릿) */
   manager: {
     fixed: {
+      센터: '#1d8f8f',
       박주봉: '#2f6db8',
       조성범: '#2f8f4e',
       박세리: '#a8761a',
@@ -300,6 +301,21 @@ export const domain = {
     leave: '#D87CA6',
   },
 } as const
+
+/**
+ * 담당자(사람) → 색 단일 진실 공급원. Work(mgrColor)·Calendar(members)가 모두 이 함수로
+ * 색을 얻어 "같은 사람 = 같은 색"을 보장한다(예전엔 Work=domain·Calendar=accent로 어긋났음).
+ * 지정 담당자=고정색 / 미지정(빈값)=unknown 회색 / 그 외=이름 해시 자동배정(솔리드 칩 흰글자 대비 고려).
+ */
+export function managerColor(name: string): string {
+  const s = (name || '').trim()
+  if (!s) return domain.manager.unknown
+  const fixed = domain.manager.fixed[s]
+  if (fixed) return fixed
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return domain.manager.palette[h % domain.manager.palette.length]
+}
 
 /**
  * 상태 의미색 전역 배정표 (P1 확정, D3 — 사용자 지정 2026-07-12).

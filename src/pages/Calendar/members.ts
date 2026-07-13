@@ -1,4 +1,4 @@
-import { accent } from '@/theme/tokens'
+import { managerColor } from '@/theme/tokens'
 
 /**
  * 팀원(담당자) — 캘린더 데이터에는 사람 필드가 없어 일정 제목에서 추출한다.
@@ -17,12 +17,13 @@ export interface TeamMember {
   photo?: string
 }
 
+// 색은 managerColor(단일 출처)에서 — Work 담당자칩과 같은 사람=같은 색.
 export const MEMBERS: TeamMember[] = [
-  { id: '센터', name: '센터', role: '공통', color: accent.teal },
-  { id: '신현진', name: '신현진', color: accent.blue },
-  { id: '박주봉', name: '박주봉', color: accent.purple },
-  { id: '박세리', name: '박세리', color: accent.amber },
-  { id: '조성범', name: '조성범', color: accent.green },
+  { id: '센터', name: '센터', role: '공통', color: managerColor('센터') },
+  { id: '신현진', name: '신현진', color: managerColor('신현진') },
+  { id: '박주봉', name: '박주봉', color: managerColor('박주봉') },
+  { id: '박세리', name: '박세리', color: managerColor('박세리') },
+  { id: '조성범', name: '조성범', color: managerColor('조성범') },
 ]
 
 /**

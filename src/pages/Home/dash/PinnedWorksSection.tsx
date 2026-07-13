@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import { AppCard, StatusChip } from '@/components/ds'
-import { typescale, radius } from '@/theme/tokens'
+import { AppCard, StatusChip, ManagerChip } from '@/components/ds'
+import { typescale } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
-import { taskTitle, catKind, mgrColor, classify, W_STATUS } from '@/pages/Work/workMeta'
+import { taskTitle, catKind, classify, W_STATUS } from '@/pages/Work/workMeta'
 import WorkPinButton from '@/pages/Work/WorkPinButton'
 
 /** 홈 '관심 업무' 데이터 훅 — 핀(num) 순서대로 실제 업무 매칭(삭제·미존재는 자동 제외) */
@@ -36,9 +36,7 @@ export default function PinnedWorksSection() {
               <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: typescale.emphasis.weight }}>
                 {taskTitle(t)}
               </Typography>
-              <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 22, fontSize: typescale.small.size, fontWeight: typescale.cardTitle.weight, borderRadius: `${radius.chip}px`, px: 1, bgcolor: mgrColor(t.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>
-                {t.mgr || '미지정'}
-              </Box>
+              <ManagerChip name={t.mgr} />
               <Box sx={{ flexShrink: 0 }}>
                 <StatusChip status={st.status} label={st.label} />
               </Box>

@@ -121,13 +121,5 @@ export function taskLink(t: WorkItem): string | null {
   return m ? m[0] : null
 }
 
-// 담당자별 채움 칩 색 — 지정 담당자는 고정색, 그 외는 해시로 자동 배정(미지정=회색).
-// 정본은 tokens.domain.manager (P1-2 승격)
-export function mgrColor(name: string): string {
-  const s = (name || '').trim()
-  if (!s) return domain.manager.unknown
-  if (domain.manager.fixed[s]) return domain.manager.fixed[s]
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
-  return domain.manager.palette[h % domain.manager.palette.length]
-}
+// 담당자별 채움 칩 색 — 단일 출처 managerColor(tokens)에 위임(Work·Calendar 동일색 보장).
+export { managerColor as mgrColor } from '@/theme/tokens'

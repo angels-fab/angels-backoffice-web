@@ -8,7 +8,8 @@ import { StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import { isWorkNew } from '@/utils/newPost'
 import type { WorkItem } from '@/types'
-import { taskTitle, taskLink, mgrColor, catKind, deptKind, TONE_RGB } from './workMeta'
+import { taskTitle, taskLink, catKind, deptKind, TONE_RGB } from './workMeta'
+import ManagerChip from '@/components/ds/ManagerChip'
 import type { CardTone } from './workMeta'
 import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
@@ -105,9 +106,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
           <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: 'error.main', color: 'common.white', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
         )}
         <Typography variant="body1" sx={{ flex: 1, minWidth: 120, fontWeight: 600, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: typescale.small.size, fontWeight: 700, borderRadius: `${radius.chip}px`, px: 1.25, bgcolor: mgrColor(t.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>
-          {t.mgr || '미지정'}
-        </Box>
+        <ManagerChip name={t.mgr} />
         <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', fontSize: typescale.small.size, borderRadius: `${radius.chip}px`, px: 1, color: 'text.secondary', bgcolor: alpha(th.palette.text.secondary, 0.14), border: 1, borderColor: alpha(th.palette.text.secondary, 0.3), fontFamily: 'monospace', whiteSpace: 'nowrap' })}>
           {fmtDate(t.start)}
         </Box>

@@ -3,10 +3,11 @@ import Typography from '@mui/material/Typography'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import { alpha } from '@mui/material/styles'
 import { AppCard, StatusChip } from '@/components/ds'
-import { iconSize, radius, typescale } from '@/theme/tokens'
+import { iconSize } from '@/theme/tokens'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { W_STATUS, classify, taskTitle, mgrColor, catKind } from './workMeta'
+import { W_STATUS, classify, taskTitle, catKind } from './workMeta'
+import ManagerChip from '@/components/ds/ManagerChip'
 
 export interface TaskCardProps {
   t: WorkItem
@@ -63,9 +64,7 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
           <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accent.purple', flexShrink: 0 }} />
           <StatusChip status={st.status} label={st.label} />
           {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-          <Box component="span" sx={{ ml: 'auto', fontSize: typescale.small.size, fontWeight: 700, borderRadius: `${radius.chip}px`, px: 1, py: 0.3, bgcolor: mgrColor(t.mgr), color: 'common.white', whiteSpace: 'nowrap' }}>
-            {t.mgr || '미지정'}
-          </Box>
+          <ManagerChip name={t.mgr} sx={{ ml: 'auto' }} />
           <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>
         </Box>
         <Typography

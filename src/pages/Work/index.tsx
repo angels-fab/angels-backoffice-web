@@ -52,6 +52,7 @@ import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
 import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS, catKind, mgrColor } from './workMeta'
+import ManagerChip from '@/components/ds/ManagerChip'
 import type { CardTone } from './workMeta'
 import { CatFilterChip, MgrFilterChip } from './FilterChips'
 import TaskAccordion from './TaskAccordion'
@@ -1565,7 +1566,7 @@ export default function Work() {
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, alignItems: 'center' }}>
                         <StatusChip status={classify(t) === 'done' ? 'neutral' : classify(t) === 'hold' ? 'info' : 'success'} label={stateLabel} />
                         {t.cat && <StatusChip status="neutral" label={t.cat} />}
-                        {t.mgr && <StatusChip status="info" label={t.mgr} />}
+                        {t.mgr && <ManagerChip name={t.mgr} />}
                       </Box>
                       <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 0.5 }}>삭제 {t.deletedAt}</Typography>
                     </Box>
