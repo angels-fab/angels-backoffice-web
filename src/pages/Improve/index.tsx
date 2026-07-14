@@ -32,7 +32,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius } from '@/theme/tokens'
-import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, LoadingState, dataTableHeadSx, dataTableSx, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, LoadingState, FilterToolbar, SearchBar, dataTableHeadSx, dataTableSx, useSnack } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
@@ -215,6 +215,8 @@ export default function Improve() {
 
   const showSnack = (msg: string, severity: Snack['severity'] = 'success') => snack(msg, severity)
 
+  const [query, setQuery] = useState('')
+
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
     for (const t of items) { const s = normStatus(t.status); c[s] = (c[s] || 0) + 1 }
@@ -228,12 +230,14 @@ export default function Improve() {
   )
 
   const listed = useMemo(() => {
-    const base = selected.size === 0 ? items : items.filter((t) => selected.has(normStatus(t.status) as ImpStatus))
+    let base = selected.size === 0 ? items : items.filter((t) => selected.has(normStatus(t.status) as ImpStatus))
+    const q = query.trim().toLowerCase()
+    if (q) base = base.filter((t) => `${t.title || ''} ${t.mgr || ''} ${t.loc || ''}`.toLowerCase().includes(q))
     // 1순위 번호 내림차순(높은 번호=최신 위), 2순위 상태(접수→검토중→보류→완료→불가).
     return [...base].sort((a, b) =>
       (Number(b.num) || 0) - (Number(a.num) || 0) ||
       statusRank(a.status) - statusRank(b.status))
-  }, [items, selected])
+  }, [items, selected, query])
 
   // 개선위치 드롭다운 — 현재 내비게이션 메뉴(@/constants/nav)에서 파생 + '포털'(포털 전체) 항목.
   // 메뉴를 추가/삭제하면 이 목록에 즉시 반영된다(미리 정해둔 목록·시트 불필요).
@@ -614,56 +618,45 @@ export default function Improve() {
       />
 
       <ContentSection last>
-        {/* 상태 필터 탭 (0건 상태 숨김 · 재클릭=전체 · Shift=중복) + 우측 Shift 안내 */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            {visibleStatuses.map((s) => {
-              const on = selected.has(s)
-              return (
-                <TintChip
-                  key={s}
-                  on={on}
-                  color={(t) => kindColor(t, impKind(s))}
-                  ariaLabel={`${s} ${counts[s] || 0}건${on ? '' : ' (해제됨)'}`}
-                  onToggle={(additive) => onTab(s, additive)}
-                  hover
-                  sx={{ p: '4px 10px' }}
-                >
-                  <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>{s}</Box>
-                  <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>{counts[s] || 0}</Box>
-                </TintChip>
-              )
-            })}
-            {visibleStatuses.length > 1 && (
-              <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.disabled', whiteSpace: 'nowrap', ml: 0.5 }}>
-                Shift로 다중선택
-              </Box>
-            )}
-          </Box>
-          {isAdmin && (
+        {/* 상태 필터 — 공용 FilterToolbar(공지와 동일 박스+검색+새글). 0건 상태 숨김·재클릭=전체·Shift=중복. */}
+        <FilterToolbar
+          label="상태"
+          search={<SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·위치 검색" width={200} />}
+          actions={isAdmin ? (
             <Button
               onClick={() => (composing ? requestClose() : void openCompose())}
               startIcon={<AddIcon />}
-              variant="outlined"
+              variant={composing ? 'contained' : 'outlined'}
               size="small"
-              sx={(th) => {
-                const c = th.palette.accent.green
-                const on = composing // 인라인 작성칸이 열리면 초록 채움+흰 글자로 전환
-                return {
-                  fontWeight: typescale.caption.weight,
-                  whiteSpace: 'nowrap',
-                  transition: 'background-color .2s ease, color .2s ease, border-color .2s ease',
-                  color: on ? th.palette.common.white : c,
-                  bgcolor: on ? c : alpha(c, 0.12),
-                  borderColor: on ? c : alpha(c, 0.32),
-                  '&:hover': { bgcolor: on ? c : alpha(c, 0.2), borderColor: on ? c : alpha(c, 0.32) },
-                }
-              }}
+              sx={{ whiteSpace: 'nowrap' }}
             >
               새 요청
             </Button>
+          ) : undefined}
+        >
+          {visibleStatuses.map((s) => {
+            const on = selected.has(s)
+            return (
+              <TintChip
+                key={s}
+                on={on}
+                color={(t) => kindColor(t, impKind(s))}
+                ariaLabel={`${s} ${counts[s] || 0}건${on ? '' : ' (해제됨)'}`}
+                onToggle={(additive) => onTab(s, additive)}
+                hover
+                sx={{ p: '4px 10px' }}
+              >
+                <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>{s}</Box>
+                <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>{counts[s] || 0}</Box>
+              </TintChip>
+            )
+          })}
+          {visibleStatuses.length > 1 && (
+            <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.disabled', whiteSpace: 'nowrap', ml: 0.5 }}>
+              Shift로 다중선택
+            </Box>
           )}
-        </Box>
+        </FilterToolbar>
 
         <AppCard padding={0} sx={{ overflowX: 'auto' }}>
           <Table size="small" sx={{ ...dataTableSx, '& th, & td': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
