@@ -13,8 +13,8 @@ export default function SideNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const badges = useNavBadges()
-  const { isMember, isAdmin } = useRole()
-  // 경로별 활성 개선 메모 건수(장비도입/장비운영은 /equipment로 합산) — 관리자 전용 앰버 배지
+  const { isMember, isAdmin, isMaintainer } = useRole()
+  // 경로별 활성 개선 메모 건수(장비도입/장비운영은 /equipment로 합산) — 유지보수자(조성범) 전용 앰버 배지
   const improveItems = useAppSelector((s) => s.improve.items)
   const memoCounts = memoCountByPath(improveItems)
 
@@ -34,7 +34,7 @@ export default function SideNav() {
           {g.label && <div className="snav-label">{g.label}</div>}
           {g.items.map((item) => {
             const newCnt = item.badgeKey ? badges[item.badgeKey] || 0 : 0
-            const memoCnt = isAdmin ? memoCounts[item.path] || 0 : 0
+            const memoCnt = isMaintainer ? memoCounts[item.path] || 0 : 0
             return (
             <button
               key={item.path}
@@ -42,25 +42,23 @@ export default function SideNav() {
               onClick={() => navigate(item.path)}
             >
               {item.icon}
-              {/* 아이폰식 위첨자 배지(D7 표준): 메뉴명 우상단, 빨강=새 글·앰버=개선 메모 나란히.
-                  행 오른쪽 배지·메모 점 폐지 — ds NavBadge 1스펙 */}
+              {/* 아이폰식 위첨자 배지(D7 표준): 메뉴명 뒤 위첨자, 빨강=새 글·앰버=개선 메모 나란히.
+                  배지는 .snav-name(overflow:hidden 말줄임) 밖 형제로 둬야 잘리지 않음 — ds NavBadge 1스펙 */}
               <span className="snav-text">
-                <Box component="span" className="snav-name" sx={{ position: 'relative', display: 'inline-block' }}>
-                  {item.label}
-                  {(newCnt > 0 || memoCnt > 0) && (
-                    <Box component="span" sx={{ position: 'absolute', left: '100%', top: -7, ml: '3px', display: 'inline-flex', gap: '3px' }}>
-                      <NavBadge count={newCnt} kind="new" />
-                      {memoCnt > 0 && (
-                        <Tooltip title={`개선 메모 ${memoCnt}건`} placement="top" arrow>
-                          {/* Tooltip 자식은 ref 필요 — span 래퍼 */}
-                          <Box component="span" sx={{ display: 'inline-flex' }}>
-                            <NavBadge count={memoCnt} kind="memo" />
-                          </Box>
-                        </Tooltip>
-                      )}
-                    </Box>
-                  )}
-                </Box>
+                <Box component="span" className="snav-name">{item.label}</Box>
+                {(newCnt > 0 || memoCnt > 0) && (
+                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0, mt: '-2px' }}>
+                    <NavBadge count={newCnt} kind="new" />
+                    {memoCnt > 0 && (
+                      <Tooltip title={`개선 메모 ${memoCnt}건`} placement="top" arrow>
+                        {/* Tooltip 자식은 ref 필요 — span 래퍼 */}
+                        <Box component="span" sx={{ display: 'inline-flex' }}>
+                          <NavBadge count={memoCnt} kind="memo" />
+                        </Box>
+                      </Tooltip>
+                    )}
+                  </Box>
+                )}
               </span>
             </button>
             )

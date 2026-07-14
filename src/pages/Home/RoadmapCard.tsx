@@ -59,6 +59,8 @@ export interface RoadmapCardProps {
   pulse?: boolean
   /** 헤더 우측 범례 표시 (기본 true) */
   showLegend?: boolean
+  /** 각 단계 아래 상태 배지(완료/진행중/예정) 표시 (기본 true) */
+  showBadges?: boolean
 }
 
 function LegendDot({ color, ring, border }: { color: string; ring?: string; border?: string }) {
@@ -78,7 +80,7 @@ function LegendDot({ color, ring, border }: { color: string; ring?: string; bord
   )
 }
 
-export default function RoadmapCard({ pulse = true, showLegend = true }: RoadmapCardProps) {
+export default function RoadmapCard({ pulse = true, showLegend = true, showBadges = true }: RoadmapCardProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const currentRef = useRef<HTMLDivElement>(null)
   // 모바일 등 가로 스크롤 시, 마운트 때 '진행중' 단계를 가운데로 스크롤(안 그러면 화면 밖이라 안 보임).
@@ -225,24 +227,26 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
                     </Box>
                   </Box>
 
-                  {/* 상태 배지 */}
-                  <Box
-                    component="span"
-                    sx={{
-                      display: 'inline-block',
-                      whiteSpace: 'nowrap',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      p: '3px 10px',
-                      borderRadius: '999px',
-                      letterSpacing: '0.2px',
-                      mt: '13px',
-                      color: s.badgeColor,
-                      background: s.badgeBg,
-                    }}
-                  >
-                    {s.badge}
-                  </Box>
+                  {/* 상태 배지 — 노드 색으로 구분되므로 옵션(사용자 요청 시 숨김) */}
+                  {showBadges && (
+                    <Box
+                      component="span"
+                      sx={{
+                        display: 'inline-block',
+                        whiteSpace: 'nowrap',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        p: '3px 10px',
+                        borderRadius: '999px',
+                        letterSpacing: '0.2px',
+                        mt: '13px',
+                        color: s.badgeColor,
+                        background: s.badgeBg,
+                      }}
+                    >
+                      {s.badge}
+                    </Box>
+                  )}
 
                   {/* 제목 */}
                   <Box
@@ -250,7 +254,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true }: Roadmap
                       fontSize: 16,
                       fontWeight: 700,
                       color: isCurrent ? '#f8fafc' : '#eef3f9',
-                      mt: '9px',
+                      mt: showBadges ? '9px' : '15px',
                       lineHeight: 1.3,
                       textWrap: 'balance',
                     }}

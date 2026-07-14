@@ -16,6 +16,12 @@ const SESSION_MARK = 'session' // authKey 표식 — 비밀 아님(값 미사용
 // admin은 member의 상위 집합 — 관리자도 팀원 기능 전부 + 사용자·포털 관리.
 export type Role = 'guest' | 'associate' | 'member' | 'admin'
 
+/**
+ * 포털 유지보수자 이름 — 개선 메모(제목 옆 칩·패널·사이드바 배지)는 이 사람에게만 노출.
+ * (유지보수는 조성범 1인. profiles.name 기준 — 이름 바뀌면 여기만 수정.)
+ */
+export const MAINTAINER = '조성범'
+
 /** 역할 표시명 — UI 라벨 단일 출처(칩·설정·메뉴 공용) */
 export const ROLE_LABEL: Record<Role, string> = {
   guest: '게스트',
@@ -30,6 +36,8 @@ interface RoleContextValue {
   role: Role
   /** 관리자 — 사용자 승인·관리·포털관리 등 관리 기능 전용 게이트 */
   isAdmin: boolean
+  /** 포털 유지보수자(조성범) — 개선 메모 노출 게이트 */
+  isMaintainer: boolean
   /** 팀원 이상(member 또는 admin) — 팀 콘텐츠 열람·작성 게이트 */
   isMember: boolean
   /** 유관자 — 제한 열람(장비 일부·행사·바로가기) */
@@ -52,6 +60,7 @@ interface RoleContextValue {
 const RoleContext = createContext<RoleContextValue>({
   role: 'guest',
   isAdmin: false,
+  isMaintainer: false,
   isMember: false,
   isAssociate: false,
   loggedIn: false,
@@ -170,7 +179,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', isMember: role === 'member' || role === 'admin', isAssociate: role === 'associate', loggedIn: role !== 'guest', ready, user, authKey, login, signUp, logout }}>
+    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', isMaintainer: user === MAINTAINER, isMember: role === 'member' || role === 'admin', isAssociate: role === 'associate', loggedIn: role !== 'guest', ready, user, authKey, login, signUp, logout }}>
       {children}
     </RoleContext.Provider>
   )

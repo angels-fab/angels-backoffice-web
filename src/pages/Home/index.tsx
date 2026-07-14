@@ -21,7 +21,6 @@ import { iconSize, radius, typescale } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
-import Greeting from './Greeting'
 import RoadmapCard from './RoadmapCard'
 import KpiOverview from './dash/KpiOverview'
 import ScheduleSection from './dash/ScheduleSection'
@@ -117,9 +116,6 @@ export default function Home() {
 
   return (
     <PageContainer>
-      {/* 최상단 인사말 — 로그인 주체별 랜덤 인사말 + 로고(웹/모바일 공통) */}
-      <Greeting />
-
       <PageHeader
         icon={<SpaceDashboardIcon />}
         title="운영 대시보드"
@@ -174,9 +170,10 @@ export default function Home() {
         </Button>
       </Popover>
 
-      {/* FAB 구축 로드맵 — 전체 공개 · 항상 최상단(개인화 제외) */}
-      <ContentSection title="FAB 구축 로드맵" last={!isMember || visible.length === 0}>
-        <RoadmapCard />
+      {/* FAB 구축 로드맵 — 전체 공개 · 항상 최상단(개인화 제외). 소제목은 카드 자체 제목과 중복이라 생략,
+          범례·단계 상태칩은 노드 색으로 충분해 제거(사용자 요청) */}
+      <ContentSection last={!isMember || visible.length === 0}>
+        <RoadmapCard showLegend={false} showBadges={false} />
       </ContentSection>
 
       {/* 팀원(이상) 대시보드 — 계정별 순서·숨김 적용 */}

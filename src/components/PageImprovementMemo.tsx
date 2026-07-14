@@ -210,7 +210,7 @@ function MemoRow({
  */
 export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; snackbar: ReactNode } {
   const { pathname } = useLocation()
-  const { isAdmin, user, authKey } = useRole()
+  const { isAdmin, isMaintainer, user, authKey } = useRole()
   const dispatch = useAppDispatch()
   const snack = useSnack()
   const items = useAppSelector((s) => s.improve.items)
@@ -304,8 +304,9 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
     void saveStatus(statusDlg.row, statusDlg.status, needsReason(statusDlg.status) ? statusDlg.value.trim() : '')
   }
 
-  const admin = isAdmin && !!user && !!authKey
-  // 답글 삭제 + 상태변경 확인 Dialog — 관리자에게 항상 렌더(패널 상태와 무관). 스낵바는 전역 useSnack.
+  // 개선 메모(칩·패널·답글/상태 관리)는 포털 유지보수자(조성범)에게만 — 다른 관리자에겐 미노출
+  const admin = isAdmin && isMaintainer && !!authKey
+  // 답글 삭제 + 상태변경 확인 Dialog — 유지보수자에게 항상 렌더(패널 상태와 무관). 스낵바는 전역 useSnack.
   const snackbar = admin ? (
     <>
       <Dialog open={!!delReply} onClose={() => !replyBusy && setDelReply(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
