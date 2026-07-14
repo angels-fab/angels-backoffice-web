@@ -96,7 +96,7 @@ export function PillChip({ label, color, on, ariaLabel, multi = false, onToggle 
         px: '10px',
         borderRadius: `${radius.pill}px`,
         fontSize: typescale.small.size,
-        fontWeight: typescale.cardTitle.weight,
+        fontWeight: typescale.emphasis.weight,
         letterSpacing: '-0.01em',
         lineHeight: 1,
         whiteSpace: 'nowrap',

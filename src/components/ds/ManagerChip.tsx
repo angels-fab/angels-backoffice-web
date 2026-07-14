@@ -23,7 +23,7 @@ export default function ManagerChip({ name, sx }: ManagerChipProps) {
         {
           display: 'inline-flex', alignItems: 'center', flexShrink: 0, height: 24, boxSizing: 'border-box',
           px: '10px', borderRadius: `${radius.chip}px`, bgcolor: managerColor(name || ''),
-          color: 'common.white', fontSize: typescale.small.size, fontWeight: typescale.cardTitle.weight,
+          color: 'common.white', fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight,
           lineHeight: 1, whiteSpace: 'nowrap',
         },
         sx,

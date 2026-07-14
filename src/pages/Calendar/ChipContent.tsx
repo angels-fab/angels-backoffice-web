@@ -69,7 +69,7 @@ function NamePill({ text, color }: { text: string; color: string }) {
         bgcolor: color,
         color: 'common.white',
         fontSize: typescale.small.size,
-        fontWeight: typescale.cardTitle.weight,
+        fontWeight: typescale.emphasis.weight,
         lineHeight: 1,
         letterSpacing: '-0.02em',
         whiteSpace: 'nowrap',
