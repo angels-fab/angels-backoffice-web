@@ -80,7 +80,7 @@ export default function Notice() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const { num } = useParams()
-  const { items, ready, loading, error, updatedAt } = useAppSelector((s) => s.notice)
+  const { items, ready, loading, error } = useAppSelector((s) => s.notice)
   // 공지 작성/수정/삭제 = 팀원(member)+관리자. (게스트·유관자는 열람만)
   const { isMember, user, authKey } = useRole()
   // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 글을 읽음 처리.
@@ -324,8 +324,7 @@ export default function Notice() {
       <PageHeader
         icon={<CampaignIcon />}
         title="공지사항"
-        subtitle="팀 공지 허브"
-        updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
+        updatedAt={error ? '불러오기 실패' : undefined}
         actions={
           <IconButton aria-label="새로고침" onClick={refresh} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
             <RefreshIcon sx={{ fontSize: iconSize.header }} />

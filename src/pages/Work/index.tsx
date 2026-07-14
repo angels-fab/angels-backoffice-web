@@ -1083,7 +1083,7 @@ export default function Work() {
       <PageHeader
         icon={<AssessmentIcon />}
         title="업무현황"
-        updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
+        updatedAt={error ? '불러오기 실패' : undefined}
       />
 
       {/* 업무 목록 불러오기 최종 실패 — 빈 화면 대신 오류 안내 + 다시 시도. 기존 목록이 있으면 유지 표시 */}

@@ -208,7 +208,7 @@ export default function Settings() {
 
   return (
     <PageContainer variant="detail">
-      <PageHeader icon={<SettingsIcon />} title="설정" subtitle="포털 정보 및 권한" />
+      <PageHeader icon={<SettingsIcon />} title="설정" />
 
       <ContentSection title="권한">
         <AppCard padding={18}>

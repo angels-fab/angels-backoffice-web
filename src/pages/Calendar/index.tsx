@@ -402,7 +402,6 @@ export default function Calendar() {
       <PageHeader
         icon={<EventNoteIcon />}
         title="업무 일정"
-        updatedAt={updatedAt || undefined}
         actions={
           <>
             {isAdmin && (

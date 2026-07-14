@@ -168,7 +168,7 @@ type DraftCard = { key: number; id: string; urgent: boolean; title: string; loc:
 
 export default function Improve() {
   const dispatch = useAppDispatch()
-  const { items, ready, loading, error, updatedAt } = useAppSelector((s) => s.improve)
+  const { items, ready, loading, error } = useAppSelector((s) => s.improve)
   const replies = useAppSelector((s) => s.reply.items)
   const { isAdmin, user, authKey } = useRole()
   // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 글을 읽음 처리.
@@ -609,7 +609,7 @@ export default function Improve() {
       <PageHeader
         icon={<LightbulbOutlinedIcon />}
         title="포털개선요청"
-        updatedAt={error ? '불러오기 실패' : updatedAt || undefined}
+        updatedAt={error ? '불러오기 실패' : undefined}
         actions={
           <IconButton aria-label="새로고침" onClick={() => dispatch(loadImproveData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
             <RefreshIcon sx={{ fontSize: iconSize.header }} />

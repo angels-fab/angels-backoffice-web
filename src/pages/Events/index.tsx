@@ -139,7 +139,6 @@ export default function Events() {
       <PageHeader
         icon={<CoPresentIcon />}
         title="학술·교육·전시"
-        subtitle="학회 · 교육 · 전시 행사"
         actions={
           isMember ? (
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>

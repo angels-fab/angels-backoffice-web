@@ -55,9 +55,6 @@ export default function Home() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { isMember } = useRole()
-  const updatedAt = useAppSelector(
-    (s) => s.cal.updatedAt || s.work.updatedAt || s.notice.updatedAt || s.eq.updatedAt || '',
-  )
   // 홈 배치 개인화 — 저장 순서(모르는 id 무시 + 누락 id는 기본 순서로 뒤에 병합)와 숨김 집합.
   // 저장/편집 UI는 설정 로드 '성공'(loadedOk) 세션에서만(서버 상태 모르고 덮어쓰기 방지 — 필터와 동일 기준).
   const usLoadedOk = useAppSelector((s) => s.userSettings.loadedOk)
@@ -126,7 +123,6 @@ export default function Home() {
       <PageHeader
         icon={<SpaceDashboardIcon />}
         title="운영 대시보드"
-        updatedAt={updatedAt || undefined}
         actions={isMember && usLoadedOk ? (
           <Tooltip title="홈 구성 편집 (나에게만 적용)">
             <IconButton aria-label="홈 구성 편집" onClick={(e) => setCfgAnchor(e.currentTarget)} sx={{ color: 'text.secondary' }}>

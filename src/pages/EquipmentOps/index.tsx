@@ -45,7 +45,7 @@ const opsAccessor = (g: EqGroup, c: OpsCol): string | number | null => {
 
 export default function EquipmentOps() {
   const dispatch = useAppDispatch()
-  const { raw, groups, loading, error, updatedAt } = useAppSelector((s) => s.eq)
+  const { raw, groups, loading, error } = useAppSelector((s) => s.eq)
   const c = useAppSelector(selectEqCounts)
   const [searchParams, setSearchParams] = useSearchParams()
   const [stateF, setStateF] = useState('전체')
@@ -122,8 +122,7 @@ export default function EquipmentOps() {
       <PageHeader
         icon={<MonitorIcon />}
         title="장비 관리"
-        subtitle="장비 총괄 — 자산정보·운영상태·이력"
-        updatedAt={error ? '연결 실패' : updatedAt || undefined}
+        updatedAt={error ? '연결 실패' : undefined}
         actions={
           <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
             <RefreshIcon sx={{ fontSize: iconSize.header }} />

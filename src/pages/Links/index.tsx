@@ -9,7 +9,7 @@ import { radius, typescale } from '@/theme/tokens'
 export default function Links() {
   return (
     <PageContainer>
-      <PageHeader icon={<LinkIcon />} title="바로가기" subtitle="자주 쓰는 사이트 모음" />
+      <PageHeader icon={<LinkIcon />} title="바로가기" />
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' }, gap: 1.75 }}>
         {QUICK_LINKS.map((l) => (
           <Box

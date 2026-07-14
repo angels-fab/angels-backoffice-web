@@ -113,7 +113,7 @@ function isPastMonth(due: string): boolean {
 
 export default function Equipment() {
   const dispatch = useAppDispatch()
-  const { groups, schedule, months, loading, error, updatedAt } = useAppSelector((s) => s.eq)
+  const { groups, schedule, months, loading, error } = useAppSelector((s) => s.eq)
   const counts = useAppSelector(selectEqCounts)
   const { isAdmin, user, authKey } = useRole()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -656,8 +656,7 @@ export default function Equipment() {
       <PageHeader
         icon={<LocalShippingIcon />}
         title="장비 관리"
-        subtitle="장비 도입 프로젝트 — 도입배치 일정·단계"
-        updatedAt={error ? '연결 실패' : updatedAt || undefined}
+        updatedAt={error ? '연결 실패' : undefined}
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {isAdmin && (
