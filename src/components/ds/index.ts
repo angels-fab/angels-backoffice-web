@@ -38,6 +38,9 @@ export type { FilterBarProps } from './FilterBar'
 export { default as FilterToolbar } from './FilterToolbar'
 export type { FilterToolbarProps } from './FilterToolbar'
 
+export { default as Select } from './Select'
+export type { SelectProps, SelectOption } from './Select'
+
 export { default as StatusChip } from './StatusChip'
 export type { StatusChipProps, StatusKind } from './StatusChip'
 

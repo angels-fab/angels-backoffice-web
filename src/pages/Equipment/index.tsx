@@ -19,7 +19,7 @@ import RedoIcon from '@mui/icons-material/Redo'
 import EditCalendarIcon from '@mui/icons-material/EditCalendar'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { PageContainer, PageHeader, StatTile, EmptyState, SegTabs, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, StatTile, EmptyState, SegTabs, Select, SearchBar, useSnack } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -710,16 +710,13 @@ export default function Equipment() {
           {/* 필터 — 데모결과 뷰에는 도입용 필터(단계·담당자·구분) 미적용이라 숨김 */}
           {view !== 'demo' && (
           <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <select className="eq-select" value={fltStage} onChange={(e) => setFltStage(e.target.value)} aria-label="단계">
-              {stageOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 단계' : o}</option>)}
-            </select>
-            <select className="eq-select" value={fltMgr} onChange={(e) => setFltMgr(e.target.value)} aria-label="담당자">
-              {mgrOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 담당자' : o}</option>)}
-            </select>
-            <select className="eq-select" value={fltType} onChange={(e) => setFltType(e.target.value)} aria-label="내자/외자">
-              {typeOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 구분' : o}</option>)}
-            </select>
-            <Box component="input" className="eq-search" value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} placeholder="장비명·관리번호 검색" aria-label="도입장비 검색" />
+            <Select value={fltStage} onChange={setFltStage} ariaLabel="단계"
+              options={stageOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 단계' : o }))} />
+            <Select value={fltMgr} onChange={setFltMgr} ariaLabel="담당자"
+              options={mgrOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 담당자' : o }))} />
+            <Select value={fltType} onChange={setFltType} ariaLabel="내자/외자"
+              options={typeOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 구분' : o }))} />
+            <SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호 검색" width={200} />
             {isAdmin && (
               <Button
                 size="small" variant={editMode ? 'contained' : 'outlined'} startIcon={<EditCalendarIcon sx={{ fontSize: iconSize.body }} />}

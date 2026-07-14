@@ -8,7 +8,7 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
-import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState } from '@/components/ds'
+import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, Select, SearchBar } from '@/components/ds'
 import { iconSize, radius } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
@@ -170,16 +170,13 @@ export default function EquipmentOps() {
         <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           <Typography sx={{ fontSize: 13, fontWeight: 700 }}>장비대장 <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 500 }}>전체 {c.types}종 · {c.total}대</Box></Typography>
           <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <select className="eq-select" value={stateF} onChange={(e) => setStateF(e.target.value)} aria-label="운영상태">
-              {stateOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 상태' : EQ_STATE[o as EqStateKey]?.label || o}</option>)}
-            </select>
-            <select className="eq-select" value={catF} onChange={(e) => setCatF(e.target.value)} aria-label="분류">
-              {catOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 분류' : o}</option>)}
-            </select>
-            <select className="eq-select" value={mgrF} onChange={(e) => setMgrF(e.target.value)} aria-label="담당자">
-              {mgrOpts.map((o) => <option key={o} value={o}>{o === '전체' ? '전체 담당자' : o}</option>)}
-            </select>
-            <Box component="input" className="eq-search" value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} placeholder="장비명·관리번호·제조사 검색" aria-label="운영장비 검색" />
+            <Select value={stateF} onChange={setStateF} ariaLabel="운영상태"
+              options={stateOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 상태' : (EQ_STATE[o as EqStateKey]?.label || o) }))} />
+            <Select value={catF} onChange={setCatF} ariaLabel="분류"
+              options={catOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 분류' : o }))} />
+            <Select value={mgrF} onChange={setMgrF} ariaLabel="담당자"
+              options={mgrOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 담당자' : o }))} />
+            <SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호·제조사 검색" width={220} />
             <Button size="small" variant={missingOnly ? 'contained' : 'outlined'} onClick={() => setMissingOnly((m) => !m)} sx={{ flexShrink: 0, py: 0.4, fontSize: 13, color: missingOnly ? undefined : 'text.secondary', borderColor: 'divider' }}>
               누락정보만
             </Button>
