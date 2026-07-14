@@ -70,8 +70,8 @@ export default function StatusChip({
           bgcolor: selected ? c : alpha(c, 0.12),
           borderColor: selected ? c : alpha(c, 0.32),
           '& .MuiChip-icon': { color: 'inherit', fontSize: 16 },
-          // 12px에서 한글 잉크 상단쏠림(-0.5px) 보정 — 라벨만 0.5px 하향(실측 중앙정렬)
-          '& .MuiChip-label': { transform: 'translateY(0.5px)' },
+          // lineHeight:1 통일 + 글자 0.5px 하향 — 다른 칩과 동일 규격으로 한글 정중앙(실측)
+          '& .MuiChip-label': { lineHeight: 1, transform: 'translateY(0.5px)' },
           ...(onClick && {
             cursor: 'pointer',
             // 선택 > 호버 — 선택 칩은 호버에도 솔리드 유지, 미선택 칩만 같은 색으로 조금 더 선명하게

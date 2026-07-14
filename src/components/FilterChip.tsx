@@ -46,10 +46,10 @@ export function TintChip({ on, color, ariaLabel, onToggle, hover = false, sx, ch
         (theme: Theme) => {
           const c = typeof color === 'function' ? color(theme) : color
           return {
-            display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', gap: '5px', borderRadius: `${radius.pill}px`,
+            display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', lineHeight: 1, gap: '5px', borderRadius: `${radius.pill}px`,
             bgcolor: alpha(c, on ? 0.16 : 0.06), cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none',
             opacity: on ? 1 : 0.45, transition: 'opacity .15s, background .15s',
-            // 아이콘(svg)은 두고 글자 span만 0.5px 하향 — 한글 잉크 상단쏠림 보정(다른 칩과 정렬 일치)
+            // lineHeight:1 통일 후, 글자 span만 0.5px 하향(아이콘 svg 제외) — 다른 칩과 동일 보정으로 정중앙
             '& > span': { transform: 'translateY(0.5px)' },
             ...(hover ? { '&:hover': on ? { bgcolor: alpha(c, 0.22) } : { opacity: 0.7 } } : {}),
             '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
