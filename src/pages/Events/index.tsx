@@ -11,14 +11,14 @@ import { radius, shadow } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
 import { fetchAttendees, addAttendee, removeAttendee, fetchSubmissions, type AttendeeRow, type EventSubmissionRow } from '@/api/events'
-import { EventCardInner, EventDrawerDetail } from './eventCard'
+import { EventCardInner, EventDrawerDetail, type AttendControl } from './eventCard'
 import MobileCarousel from './MobileCarousel'
 import EndedList from './EndedList'
 import SubmitEventModal from './SubmitEventModal'
 import SubmissionsAdmin from './SubmissionsAdmin'
 
 // PC 카드 — 인터랙션(클릭/포커스/hover) 래퍼 + 공용 비주얼(EventCardInner).
-function EventCard({ e, open, onToggle }: { e: FabEvent; open: boolean; onToggle: () => void }) {
+function EventCard({ e, open, onToggle, attend }: { e: FabEvent; open: boolean; onToggle: () => void; attend?: AttendControl }) {
   return (
     <Box
       role="button"
@@ -37,7 +37,7 @@ function EventCard({ e, open, onToggle }: { e: FabEvent; open: boolean; onToggle
         '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}
     >
-      <EventCardInner e={e} open={open} />
+      <EventCardInner e={e} open={open} attend={attend} />
     </Box>
   )
 }
@@ -107,6 +107,12 @@ export default function Events() {
     setAttBusy(true)
     try { await removeAttendee(id); refetchAtt() } catch (err) { attErr(err) } finally { setAttBusy(false) }
   }
+  // 진행·예정 카드 얼굴 참석 버튼용(개인) — 로그인 팀원만. 게스트·비로그인은 undefined(버튼 미표시).
+  const attendFor = (e: FabEvent): AttendControl | undefined => {
+    if (!isMember || !user) return undefined
+    const mine = !!attByEvent[e.id]?.some((r) => r.memberUid && r.name === user)
+    return { mine, busy: attBusy, onToggle: () => void toggleSelf(e.id) }
+  }
 
   // 관리자 — 신청(제출) 대기 목록. 마운트·제출 후 로드.
   const refetchSubs = () => { if (isAdmin) void fetchSubmissions().then(setSubmissions).catch(() => {}) }
@@ -174,11 +180,11 @@ export default function Events() {
               <EmptyState icon={<CoPresentIcon />} title="진행 중이거나 예정된 행사가 없습니다" description="새 행사가 등록되면 여기에 표시됩니다." />
             </AppCard>
           ) : isMobile ? (
-            <MobileCarousel events={active} />
+            <MobileCarousel events={active} getAttend={attendFor} />
           ) : (
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' }, gap: '14px', alignItems: 'start' }}>
               {active.map((e) => (
-                <EventCard key={e.id} e={e} open={openId === e.id} onToggle={() => setOpenId((prev) => (prev === e.id ? null : e.id))} />
+                <EventCard key={e.id} e={e} open={openId === e.id} onToggle={() => setOpenId((prev) => (prev === e.id ? null : e.id))} attend={attendFor(e)} />
               ))}
             </Box>
           )

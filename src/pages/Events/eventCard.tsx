@@ -11,6 +11,7 @@ import GroupsIcon from '@mui/icons-material/Groups'
 import ForumIcon from '@mui/icons-material/Forum'
 import StorefrontIcon from '@mui/icons-material/Storefront'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import CheckIcon from '@mui/icons-material/Check'
 import { alpha, darken } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { eventStatus, fmtEventDate, type FabEvent, type EventAccent } from '@/constants/events'
@@ -223,16 +224,41 @@ function InCardDetail({ e }: { e: FabEvent }) {
   )
 }
 
+/** 카드 얼굴 참석 버튼(개인) — 부모가 로그인·역할·참석여부를 판단해 전달. 없으면 버튼 미표시(게스트). */
+export interface AttendControl {
+  /** 현재 로그인 사용자가 이 행사에 참석 표시했는지 */
+  mine: boolean
+  /** 참석 토글 진행 중(중복클릭 방지) */
+  busy: boolean
+  /** 참석/취소 토글 */
+  onToggle: () => void
+}
+
 /**
  * 카드 내부 비주얼(포스터 + 칩 + 기본 제목/일시 + 슬라이드업 상세).
  * 카드 비율(800/1122) 고정, 상세는 absolute로만 처리(레이아웃 불변).
  * 바깥 인터랙션 박스(클릭/포커스/hover/스냅)는 PC·모바일이 각각 감싼다.
  */
-export function EventCardInner({ e, open }: { e: FabEvent; open: boolean }) {
+export function EventCardInner({ e, open, attend }: { e: FabEvent; open: boolean; attend?: AttendControl }) {
   const st = eventStatus(e.start, e.end)
   const cat = eventCategory(e.kind)
+  // 참석 버튼 라벨 — 진행중이면 '참석 중', 예정이면 '참석 예정'(종료는 목록형이라 여기 안 옴)
+  const attendLabel = st.tone === 'green' ? '참석 중' : '참석 예정'
   return (
-    <Box sx={{ position: 'relative', aspectRatio: '800 / 1122', overflow: 'hidden' }}>
+    <Box
+      sx={{
+        position: 'relative', aspectRatio: '800 / 1122', overflow: 'hidden',
+        // 미참석 버튼은 평소 숨김 → 카드 hover/포커스 시 노출. 터치기기(hover 없음)는 항상 노출.
+        ...(attend && !attend.mine
+          ? {
+              '& .att-reveal': { opacity: 0, transition: 'opacity .16s ease' },
+              '&:hover .att-reveal, &:focus-within .att-reveal': { opacity: 1 },
+              '@media (hover: none)': { '& .att-reveal': { opacity: 1 } },
+              '@media (prefers-reduced-motion: reduce)': { '& .att-reveal': { transition: 'none' } },
+            }
+          : null),
+      }}
+    >
       <PosterBg e={e} />
 
       {/* 열림 시 포스터 전체 반투명 스크림(원본 색감 보존) */}
@@ -247,13 +273,41 @@ export function EventCardInner({ e, open }: { e: FabEvent; open: boolean }) {
         }}
       />
 
-      {/* 좌상단 칩 — 항상 선명(스크림 위) */}
-      <Box sx={{ position: 'absolute', top: 11, left: 11, right: 11, zIndex: 3, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: 12, sm: 13 }, fontWeight: 800, letterSpacing: '.02em', px: '10px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: 12, sm: 13 }, fontWeight: 700, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
-          <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
-          {st.label}
+      {/* 좌상단 칩(분류·상태) + 우상단 참석 버튼 — 항상 선명(스크림 위) */}
+      <Box sx={{ position: 'absolute', top: 11, left: 11, right: 11, zIndex: 3, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: 12, sm: 13 }, fontWeight: 800, letterSpacing: '.02em', px: '10px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: 12, sm: 13 }, fontWeight: 700, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
+            <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
+            {st.label}
+          </Box>
         </Box>
+        {/* 참석 버튼(개인) — 참석 시 초록 배지(상시), 미참석은 hover 노출. 게스트는 attend 미전달 → 없음 */}
+        {attend && (
+          <Box
+            component="button"
+            type="button"
+            className={attend.mine ? undefined : 'att-reveal'}
+            disabled={attend.busy}
+            aria-pressed={attend.mine}
+            aria-label={attend.mine ? `${attendLabel} 취소` : `${attendLabel}으로 표시`}
+            onClick={(ev) => { ev.stopPropagation(); if (!attend.busy) attend.onToggle() }}
+            onKeyDown={(ev) => { ev.stopPropagation() }}
+            sx={{
+              flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '4px',
+              height: 24, boxSizing: 'border-box', px: '11px', borderRadius: `${radius.pill}px`,
+              fontFamily: 'inherit', fontSize: { xs: 12, sm: 13 }, fontWeight: 700, lineHeight: 1, whiteSpace: 'nowrap',
+              cursor: attend.busy ? 'default' : 'pointer',
+              ...(attend.mine
+                ? { bgcolor: '#16a34a', color: 'common.white', border: '1px solid #16a34a' }
+                : { bgcolor: 'rgba(0,0,0,.42)', backdropFilter: 'blur(4px)', color: '#c9f4dc', border: '1px solid rgba(52,211,153,.7)', '&:hover': { bgcolor: 'rgba(16,120,70,.55)' } }),
+              '&:focus-visible': { outline: '2px solid #34d399', outlineOffset: 2 },
+            }}
+          >
+            {attend.mine && <CheckIcon sx={{ fontSize: 15 }} />}
+            {attendLabel}
+          </Box>
+        )}
       </Box>
 
       {/* 기본 하단 오버레이: 제목 + 일시 (열리면 페이드아웃) */}

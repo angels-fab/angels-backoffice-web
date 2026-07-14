@@ -4,10 +4,10 @@ import { EmptyState } from '@/components/ds'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import { type FabEvent } from '@/constants/events'
 import { radius, shadow, typescale } from '@/theme/tokens'
-import { EventCardInner } from './eventCard'
+import { EventCardInner, type AttendControl } from './eventCard'
 
-/** 카드 한 장 — 스와이프(드래그)와 짧은 탭을 구분해 토글. 사이트 링크 클릭은 토글로 전파 안 됨. */
-function MobileCard({ e, open, onToggle }: { e: FabEvent; open: boolean; onToggle: () => void }) {
+/** 카드 한 장 — 스와이프(드래그)와 짧은 탭을 구분해 토글. 사이트 링크·참석 버튼 클릭은 토글로 전파 안 됨. */
+function MobileCard({ e, open, onToggle, attend }: { e: FabEvent; open: boolean; onToggle: () => void; attend?: AttendControl }) {
   const drag = useRef({ x: 0, y: 0, moved: false })
   return (
     <Box
@@ -40,7 +40,7 @@ function MobileCard({ e, open, onToggle }: { e: FabEvent; open: boolean; onToggl
         '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}
     >
-      <EventCardInner e={e} open={open} />
+      <EventCardInner e={e} open={open} attend={attend} />
     </Box>
   )
 }
@@ -49,7 +49,7 @@ function MobileCard({ e, open, onToggle }: { e: FabEvent; open: boolean; onToggl
  * 모바일(<=768px) 진행·예정 캐러셀 — 단일 스냅 레일 + 인카드 상세 리빌.
  * 상태 분류(진행·예정 / 종료)는 상위 페이지 탭이 담당하므로 내부 상태탭 없음.
  */
-export default function MobileCarousel({ events }: { events: FabEvent[] }) {
+export default function MobileCarousel({ events, getAttend }: { events: FabEvent[]; getAttend?: (e: FabEvent) => AttendControl | undefined }) {
   const [openIds, setOpenIds] = useState<Set<string>>(() => new Set())
   const [pager, setPager] = useState(0)
   const railRef = useRef<HTMLDivElement | null>(null)
@@ -95,7 +95,7 @@ export default function MobileCarousel({ events }: { events: FabEvent[] }) {
         }}
       >
         {events.map((e) => (
-          <MobileCard key={e.id} e={e} open={openIds.has(e.id)} onToggle={() => toggleOpen(e.id)} />
+          <MobileCard key={e.id} e={e} open={openIds.has(e.id)} onToggle={() => toggleOpen(e.id)} attend={getAttend?.(e)} />
         ))}
       </Box>
       <Box
