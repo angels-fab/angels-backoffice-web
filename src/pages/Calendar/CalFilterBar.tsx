@@ -81,7 +81,7 @@ function CatChip({ icon: Icon, label, color, count, on, rotate, onToggle }: {
       sx={{ p: '4px 9px' }}
     >
       <Icon sx={{ fontSize: iconSize.caption, color, ...(rotate ? { transform: 'rotate(45deg)' } : {}) }} />
-      <Box component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>{label.split('/')[0]}</Box>
+      <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: 'text.secondary' }}>{label.split('/')[0]}</Box>
       <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>{count}</Box>
     </TintChip>
   )
