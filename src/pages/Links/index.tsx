@@ -1,43 +1,44 @@
-import type { CSSProperties } from 'react'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import { alpha } from '@mui/material/styles'
 import LinkIcon from '@mui/icons-material/Link'
+import { PageContainer, PageHeader } from '@/components/ds'
 import { QUICK_LINKS } from '@/constants/links'
 import { radius, typescale } from '@/theme/tokens'
 
-const cardStyle: CSSProperties = {
-  background: 'var(--ink2)',
-  border: '1px solid var(--border)',
-  borderRadius: `${radius.modal}px`,
-  padding: '28px 12px 20px',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: 10,
-  textDecoration: 'none',
-  transition: 'transform .15s, box-shadow .15s',
-}
-
 export default function Links() {
   return (
-    <div className="page active" id="page-바로가기">
-      <div className="page-header">
-        <div className="page-title"><LinkIcon /> 바로가기</div>
-      </div>
-      <div style={{ width: '100%', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-        {QUICK_LINKS.map(l => (
-          <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" style={cardStyle}>
-            <div
-              style={{
+    <PageContainer>
+      <PageHeader icon={<LinkIcon />} title="바로가기" subtitle="자주 쓰는 사이트 모음" />
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' }, gap: 1.75 }}>
+        {QUICK_LINKS.map((l) => (
+          <Box
+            key={l.url}
+            component="a"
+            href={l.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            sx={(t) => ({
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.25,
+              p: '28px 12px 20px', textDecoration: 'none',
+              bgcolor: 'background.paper', border: `1px solid ${t.palette.divider}`, borderRadius: `${radius.card}px`,
+              transition: 'border-color .15s, background-color .15s',
+              '&:hover': { bgcolor: 'background.elevated', borderColor: alpha(t.palette.primary.main, 0.65) },
+            })}
+          >
+            <Box
+              sx={{
                 width: 64, height: 64, borderRadius: `${radius.modal}px`, background: l.bg,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: typescale.display.size,
               }}
             >
               {l.icon}
-            </div>
-            <div style={{ fontSize: typescale.emphasis.size, fontWeight: 700, color: 'var(--text)' }}>{l.name}</div>
-            <div style={{ fontSize: typescale.caption.size, color: 'var(--text3)' }}>{l.host}</div>
-          </a>
+            </Box>
+            <Typography sx={{ fontSize: typescale.emphasis.size, fontWeight: typescale.cardTitle.weight, color: 'text.primary' }}>{l.name}</Typography>
+            <Typography sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>{l.host}</Typography>
+          </Box>
         ))}
-      </div>
-    </div>
+      </Box>
+    </PageContainer>
   )
 }
