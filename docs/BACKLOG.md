@@ -4,8 +4,9 @@
 > 로컬(`~/.claude`)에만 있어 git으로 안 넘어가서, 핵심 진행상황·백로그·결정사항을 여기에 옮겨 둡니다.
 > (비밀키·비밀번호 미포함. Supabase anon key는 원래 공개 키로 `src/api/supabase.ts`에 있음.)
 >
-> 최종 갱신: 2026-07-07. 배포 브랜치 = **main** (main에 push → GitHub Actions가 빌드→`angels-fab.github.io` 배포).
+> 최종 갱신: 2026-07-14. 배포 브랜치 = **main** (main에 push → GitHub Actions가 빌드→`angels-fab.github.io` 배포).
 > **feat/work-hold-archive 등 다른 브랜치에서 작업 금지**(배포 안 됨). `git checkout main && git pull` 후 작업.
+> ★ **2026-07-14: 포털 전체 감사(19에이전트) 실시 → [7. 포털 전체 감사 백로그](#7-포털-전체-감사-백로그-2026-07-14) 신설.** 저장 멈춤 안전장치·CSS 경고는 즉시 수정 완료, 나머지 26건은 거기 정리.
 
 ---
 
@@ -88,6 +89,56 @@ GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vit
 ### 안 하기로 함
 - **W5 공개 소개페이지** — 사용자가 안 함 결정.
 - **사진 갤러리 메뉴(별도 팀 사진첩)** — 오해로 판명(2026-07-12 사용자): 원래 의도는 **데모결과의 이미지 갤러리**(이미 구현됨)였음. 별도 메뉴 안 만듦. (참고용 용량 검토: Storage 1GB ≈ 웹최적화 2~3천 장, egress 여유.)
+
+---
+
+## 7. 포털 전체 감사 백로그 (2026-07-14)
+
+업무포털 전체를 6관점(기능버그·모바일UX·미완성·접근성·데이터권한·성능코드) 19에이전트로 병렬 점검 + 버그성 항목 적대 검증. 총 29건 발견(적대검증 통과, 오탐 0). 심각도 = 데이터유실/오작동 위험 순.
+
+### ✅ 즉시 수정 완료 (2026-07-14, 커밋 `cd02b77`)
+- **[A1] 저장 멈춤 안전장치 전면 적용**(감사 최상위 = high×2, 기능버그+데이터권한 중복 발견). 공지·데모에만 있던 `ensureSession()+withTimeout(20s)` 안전장치를 **works·improve·calendar·eq·userSettings·events 전 write + demo 이력 insert**에 전부 적용. 사무실망 토큰갱신 스톨로 저장이 무한정 멈추던 문제(메모리 `supabase-write-session-stall`) 근본 차단. 특히 낙관적 UI(업무 상태 드래그·캘린더 일정 이동)는 저장 실패해도 "저장된 것처럼" 보이다 새로고침 시 유실됐는데, 이제 타임아웃 오류로 드러남.
+- **[A2] index.css:854 주석 `*/` 조기종료**(low, 성능코드). 주석 안 `.modal-*/`의 `*/`가 주석을 조기 종료해 뒤 텍스트가 CSS로 새어나가 esbuild 경고 + `.post-wrap` 규칙 무효화. 문구 수정으로 경고 제거.
+
+### 🔴 우선순위 높음 (데이터 유실·기능 고장 — 다음 후보)
+- **[B1] 상세 드로어 '수정'이 서식 업무 본문을 사라지게 함**(high, 기능버그). 업무 수정 경로가 둘(카드 연필=리치편집기 / 상세창 '수정'=구형 WorkWrite 밋밋한 입력창)인데 서로 다름. 구형 입력창은 본문을 '글자만' 저장하는데 화면은 서식본(contentFmt) 우선 표시라, 여기서 본문 고쳐 저장하면 **제목만 바뀌고 본문 수정이 화면에 안 나타남**(사라진 것처럼 보임). 서식 없는 평문 업무는 정상. 관리자만 해당. → 상세 드로어 '수정'도 인라인 리치편집기로 통일하거나 WorkWrite 폐기(신규등록 경로는 이미 죽어 있고 편집만 실사용). `Work/index.tsx:1337`·`TaskDetailDrawer.tsx:65`·`WorkWrite.tsx:131`
+- **[B2] 장비 로드 한 번 실패 → 목록 통째로 사라짐 + 오류배너·재시도 없음**(med, 기능버그). 업무·공지·캘린더는 로드 실패해도 마지막 목록 유지 + 빨간 배너를 띄우는데, 장비관리(eqSlice)는 정반대로 데이터를 전부 비우고 배너·자동재시도도 없음 → 네트워크 잠깐 끊긴 채 새로고침 1회 실패하면 장비 목록이 통째로 없어지고 "조건에 맞는 장비 없음"(사실과 다름)만 남음. → rejected에서 기존 데이터 유지 + Alert(다시 시도) + 마운트 시 1회 자동재시도. `eqSlice.ts:183`·`Equipment/index.tsx:116`·`EquipmentOps/index.tsx:48`
+- **[B3] 일정 편집 중 새로고침하면 미저장 드래그/리사이즈 변경 소실**(med, 기능버그). 장비 '일정 편집'은 끌어 바꾼 뒤 '편집 종료→저장'을 눌러야 실제 저장인데, 편집 도중 헤더 새로고침 버튼을 누르면 서버 원본이 편집 내용을 경고 없이 덮어씀. 새로고침 버튼이 편집 중에도 눌리는 위치라 오조작 쉬움. → 편집 모드일 때 새로고침 비활성 또는 '저장 안 된 변경 사라짐' 확인. `Equipment/index.tsx:561,676`
+- **[B4] 60일 초과 멀티데이 일정은 61일째부터 막대 안 그려짐**(low지만 명확한 버그). 캘린더가 여러 날 일정을 하루씩 펼치는 로직이 최대 60칸까지만 만듦 → 두 달 넘는 긴 일정은 중간에 끊긴 것처럼 보임. → `calSlice.ts:44` `expandRawEvent` 상한 60→366.
+
+### 🟠 안정성·오류 처리
+- **[C1] React ErrorBoundary 부재 → 렌더 오류 시 앱 전체 백지**(med, UX). 화면 그리다 한 곳이라도 예외(예: 서버가 예상과 다른 모양 데이터) 나면 그 페이지만이 아니라 포털 전체가 흰 화면. 안내·복구 UI 없음. → App 감싸는 ErrorBoundary('일시적 문제·새로고침'). `main.tsx:18`·`App.tsx:3`
+- **[C2] 로드 실패를 '데이터 없음'으로 오인 + 준비된 ErrorBanner 미사용**(med, UX). 공지·개선·장비는 로드 실패 시 "○○ 없습니다" 빈 상태만 뜸(실패인데 원래 빈 것처럼). Work는 제대로 '다시 시도'를 보여줌. 만들어 둔 `ds/ErrorBanner`가 실제 페이지엔 안 쓰이고 예시 화면에만 있음. → 각 목록 empty 분기 전 error 먼저 검사해 ErrorBanner(onRetry)로. `Notice:366`·`Equipment:739`·`Improve:679`
+- **[C3] 설정>사용자 관리: 성공/실패 스낵바·확인창 전무**(med, UX). 관리자가 권한 변경·승인/거절·강퇴해도 확인 메시지 없음(목록만 조용히 재로드). 실패해도 무표시 → 바뀐 줄 알지만 안 바뀐 상태 가능. 권한 드롭다운은 확인창도 없이 즉시 반영. → useSnack 부착 + error 확인 + 권한변경 확인 스텝. `Settings/index.tsx:109,115`
+
+### 🔵 보안·권한 (일부는 Supabase 대시보드 직접 조작 필요)
+- **[D1] ★ 읽기 RLS가 로그인 전원 `true` — 유관자에게 백엔드 개방**(med, 데이터권한). 화면/주소창에선 유관자(associate)가 업무·공지·개선·일정·데모 페이지에 못 들어가게 막았지만, DB 규칙은 이 표들이 "로그인만 하면 누구나 읽기(true)"라 유관자 계정이 API로 직접 요청하면 전부 읽힘(화면만 숨긴 상태). 장비·도입일정은 이미 `is_member()`로 제대로 막힘. **지금 유관자 계정이 없으면 당장 새는 건 아니지만, 외부 유관자에게 계정 주는 순간 사내 전 업무 노출.** (비로그인은 전부 차단돼 안전.) → 해당 표 SELECT 정책 `true`→`is_member()`. **DB 마이그레이션 필요.**
+- **[D2] profiles 사번(로그인 ID) 노출**(low, 데이터권한). 직원 명단(profiles)도 '로그인 전원 읽기'라 유관자 포함 누구나 전 팀원 이름+사번을 뽑을 수 있음. 자동완성엔 이름만 필요(fetchAuthors는 이미 name만 조회). → 이름만 뷰로 제한하거나 emp_no는 관리자만. **DB 정책.**
+- **[D3] 비밀번호 정책 약함**(low, 데이터권한). ① Supabase '유출된 비밀번호 차단(HaveIBeenPwned)' 꺼짐(켜면 무료로 흔한 유출 비번 차단) ② 고정 `.angels` 접미사는 코드·문서 공개라 보안 효과 0(사번 UX용, 없앨 순 없지만 '보안 아님' 인지 필요) ③ 설정 비번변경이 4자만 넘으면 통과. → **①은 Supabase Auth 대시보드에서 클릭 한 번**, ②③은 코드/문서. `supabase.ts:45`·`Settings:58`
+- **[D4] DB 함수 search_path·정책 role 하드닝**(low, 데이터권한). ① 여러 DB 함수 search_path 미고정(보안 어드바이저 WARN) ② demo_chat_update 정책 대상이 `public`(조건식 덕에 지금 새진 않으나 `authenticated`로 명시 권장). → **DB.** 지금 뚫리는 건 아님.
+
+### ♿ 접근성 (키보드·스크린리더)
+- **[E1] 캘린더 월/주 그리드가 마우스 좌표로만 동작 — 키보드/스크린리더로 일정 열람·편집 불가**(high, 접근성). 일정 칸을 clientX/Y 히트테스트로만 감지 → 마우스 없이는 달력 일정을 못 엶. 상단 요약 목록으로 일부만 조회 가능. → FullCalendar eventClick/키보드 포커스 활용 또는 tabIndex·Enter 핸들러. `Calendar/index.tsx:536,554`
+- **[E2] `<main>` 랜드마크·'본문 바로가기' 스킵링크 부재**(med). 매 페이지 왼쪽 메뉴를 Tab으로 전부 통과해야 본문 도달, 낭독기 '본문 점프' 불가. → app-content를 `<main>`으로 + 스킵링크. `MainLayout.tsx:61,64`
+- **[E3] 파일 드롭존이 onClick만 — 키보드로 첨부 불가**(med). 포스터·사진 첨부 네모가 마우스 클릭 전용(진짜 input은 hidden). → role="button"·tabIndex=0·onKeyDown. `SubmitEventModal.tsx:94`·`DemoResults.tsx:464`
+- **[E4] 주 메뉴가 `<nav>` 아님·aria-current 없음**(med). 사이드바가 `<aside>`라 낭독기 '내비게이션 이동' 안 됨, 현재 페이지를 색으로만 표시. → `<nav aria-label="주 메뉴">` + 활성 버튼 aria-current="page"(BottomNav도). `SideNav.tsx:31,39`
+- **[E5] 토글 선택 칩 aria-pressed 없음**(low). 일정 작성의 종류·참석자 칩이 선택 여부를 색으로만 표시(행사 신청 칩엔 이미 있음). → aria-pressed. `CalEventWrite.tsx:267,300`
+- **[E6] 일부 입력창 프로그램적 라벨 없음**(low). 데모 비번확인·행사 URL·참석자 이름 칸이 placeholder/시각 라벨만. → aria-label 또는 label htmlFor. `DemoResults.tsx:739,760`·`SubmitEventModal.tsx:144`·`AttendeeSection.tsx:53`
+
+### 📱 모바일·마감
+- **[F1] 하단 탭바가 페이지 맨 아래 내용 가림 (safe-area 부족)**(med, 모바일). 본문 하단 여백 60px 고정이 아이폰 제스처 바 높이를 감안 안 함 → 노치 아이폰서 마지막 줄/버튼이 탭바에 가림. 원래 막으려던 CSS(main 84px)는 대상 요소가 없어 무용. → PageContainer 하단 패딩 `calc(60px + env(safe-area-inset-bottom))`. `index.css:1058,1022`
+- **[F2] 메뉴 경유 페이지(장비·개선·행사·바로가기)에선 하단 탭 활성표시 없음**(low, 모바일). 이 페이지들은 '메뉴'로 들어가는데 도착하면 하단 탭 어디도 강조 안 됨 → 현재 위치 파악 어려움. → 해당 경로면 '메뉴' 탭 active. `BottomNav.tsx:47,67`
+- **[F3] window.confirm(브라우저 기본 확인창) 3곳 잔존**(low, UX). 강퇴·일정 삭제·작성 중 이탈이 투박한 회색 시스템 팝업(다른 삭제는 앱 디자인 ConfirmDialog). → ds ConfirmDialog(destructive)로 교체. `Settings:119`·`CalEventWrite:216`·`Work/index.tsx:505`
+
+### 🧩 미완성·정리
+- **[G1] /settings가 RequireAdmin이라 팀원·유관자 본인 비번변경 불가**(med, 미완성). 비번변경 카드는 'loggedIn 전원' 대상으로 이미 구현됐는데 설정 페이지 자체가 관리자 전용 문이라 못 들어감(만들어놓고 잠금). → 라우트 `RequireAdmin`→`RequireAuth`(내부가 이미 비번=loggedIn·사용자관리=isAdmin 분기라 안전). 권한 Phase 2와 함께 확정 권장. `AppRouter.tsx:43`
+- **[G2] 행사 '게시완료' 상태변경이 실제 카드 게시로 안 이어짐**(med, 미완성). 팀원 신청→관리자 '게시완료' 표시해도 이름표만 바뀌고 실제 카드는 안 올라옴(FAB_EVENTS가 코드 상수라 수동 편집=클로드에게 요청 필요). 신청자는 "승인됐다는데 화면에 없다" 혼란 가능. → 수동 발행이 의도라면 신청/검토 화면에 '게시는 담당자가 별도 반영' 안내 문구. 장기적으로 자동 발행 경로 검토. `SubmissionsAdmin.tsx:31`
+- **[G3] 새 업무 첨부(클립) 아이콘 영구 비활성('첨부 준비 중')**(low, 미완성). 공지엔 첨부 완비인데 업무는 자리만 있고 안 됨 → 혼란. → 공지 Storage 패턴 재사용해 동작시키거나, 계획 없으면 버튼 렌더 제거. `inlineFields.tsx:445`
+- **[G4] api/sheets.ts 죽은 함수 ~34개(~700줄)·index.css `.post-*` 블록 미사용**(low, 정리). Supabase 이관 후 미호출(타입 6개만 실사용 → 빌드서 자동 제외라 성능 피해는 없음, 가독성 문제). → 실사용 타입만 분리 후 죽은 함수 삭제, `.post-*`(856~880줄) 제거, type-check. (CLAUDE.md에 'sheets.ts는 타입용 잔존' 명시돼 있으니 삭제 아닌 '타입 분리'가 안전.)
+
+### ⚡ 성능 (큰 작업 — 별도 착수)
+- **[H1] 코드 스플리팅 전무 — 단일 JS 번들 2.11MB(gzip 655KB)**(high, 성능). 모든 라우트 + FullCalendar·TipTap×2·JSZip·UTIF가 한 청크. 게스트가 홈 로드맵만 봐도 안 쓰는 무거운 것 전부 다운(빌드 시 Vite가 500KB 초과 경고). → ① 라우트별 `React.lazy`+`Suspense`(특히 Calendar·편집기) ② JSZip·UTIF는 `await import()`로 쓸 때만 ③ vite manualChunks로 react/mui/fullcalendar/tiptap 분리. 홈 첫 로딩 절반↓ 기대. `AppRouter.tsx`·`vite.config.ts`
+- **[H2] topbar-logo.jpg 98KB 과대**(low, 성능). 모든 페이지 상단바 로고치고 큼(보통 10~20KB나 SVG면 충분). → SVG 교체 또는 축소·재압축 20KB↓. (근본 개선은 H1이 체감 효과 훨씬 큼.) `assets/topbar-logo.jpg`
 
 ---
 
