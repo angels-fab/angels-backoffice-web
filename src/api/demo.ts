@@ -248,10 +248,10 @@ export async function updateDemoResult(id: number, p: Partial<DemoResultInput> &
   if (error) throw new Error(error.message || '데모결과 수정에 실패했습니다')
   // 값 변경 이력 기록(조작방지). 실제 값이 바뀐 경우만(변경 없으면 알림·이력 없음). best-effort
   if (p.metrics !== undefined && prev && !sameMetrics(prev.metrics || {}, p.metrics)) {
-    await supabase.from('demo_value_history').insert({
+    await withTimeout(supabase.from('demo_value_history').insert({
       equipment: prev.equipment, maker: prev.maker, model: prev.model, round: prev.round,
       before: prev.metrics || {}, after: p.metrics, changed_by: p.author,
-    })
+    }), DB_TIMEOUT, '데모결과 이력')
   }
 }
 /** 데모결과(회차) 삭제 — 삭제 이력(after=null) 기록 + 사진/파일 저장소 정리(best-effort) */
@@ -263,10 +263,10 @@ export async function deleteDemoResult(id: number, author: string): Promise<void
   if (prev) {
     const p = prev as ResRow
     // 조작방지 — 삭제도 이력에 남긴다(before=삭제 전 값, after=null)
-    await supabase.from('demo_value_history').insert({
+    await withTimeout(supabase.from('demo_value_history').insert({
       equipment: p.equipment, maker: p.maker, model: p.model, round: p.round,
       before: p.metrics || {}, after: null, changed_by: author,
-    })
+    }), DB_TIMEOUT, '데모결과 이력')
     const paths = [...(p.photos || []), ...(p.files || [])].map((x) => (x as { path?: string }).path).filter(Boolean) as string[]
     void removeDemoFiles(paths).catch(() => {})
   }
@@ -328,7 +328,7 @@ export async function createMetricDef(p: MetricDefInput, author: string): Promis
   const row = { equipment: p.equipment, metric_key: p.key, label: p.label, unit: p.unit, direction: p.direction, sort: p.sort, active: true, created_by: author, updated_by: author }
   const { error } = await withTimeout(supabase.from('demo_metric_defs').insert(row), DB_TIMEOUT, '지표 신설')
   if (error) throw new Error(error.message || '지표 신설에 실패했습니다')
-  await supabase.from('demo_metric_def_history').insert({ equipment: p.equipment, metric_key: p.key, action: 'create', after: defSnapshot({ ...p, active: true }), changed_by: author })
+  await withTimeout(supabase.from('demo_metric_def_history').insert({ equipment: p.equipment, metric_key: p.key, action: 'create', after: defSnapshot({ ...p, active: true }), changed_by: author }), DB_TIMEOUT, '지표 이력')
 }
 
 /** 지표 수정 + 이력('update', before→after) 기록 */
@@ -340,10 +340,10 @@ export async function updateMetricDef(id: number, patch: Partial<MetricDefInput>
   const next = { label: patch.label ?? c.label, unit: patch.unit ?? c.unit, direction: (patch.direction ?? c.direction) as MetricDirection, sort: patch.sort ?? c.sort }
   const { error } = await withTimeout(supabase.from('demo_metric_defs').update({ ...next, updated_by: author, updated_at: new Date().toISOString() }).eq('id', id), DB_TIMEOUT, '지표 수정')
   if (error) throw new Error(error.message || '지표 수정에 실패했습니다')
-  await supabase.from('demo_metric_def_history').insert({
+  await withTimeout(supabase.from('demo_metric_def_history').insert({
     equipment: c.equipment, metric_key: c.metric_key, action: 'update',
     before: defSnapshot(c), after: defSnapshot({ ...next, active: c.active }), changed_by: author,
-  })
+  }), DB_TIMEOUT, '지표 이력')
 }
 
 /** 지표 활성/비활성 전환 + 이력 기록 */
@@ -354,8 +354,8 @@ export async function setMetricDefActive(id: number, active: boolean, author: st
   const c = cur as DefRow
   const { error } = await withTimeout(supabase.from('demo_metric_defs').update({ active, updated_by: author, updated_at: new Date().toISOString() }).eq('id', id), DB_TIMEOUT, '지표 상태 변경')
   if (error) throw new Error(error.message || '지표 상태 변경에 실패했습니다')
-  await supabase.from('demo_metric_def_history').insert({
+  await withTimeout(supabase.from('demo_metric_def_history').insert({
     equipment: c.equipment, metric_key: c.metric_key, action: active ? 'reactivate' : 'deactivate',
     before: defSnapshot(c), after: defSnapshot({ ...c, active }), changed_by: author,
-  })
+  }), DB_TIMEOUT, '지표 이력')
 }

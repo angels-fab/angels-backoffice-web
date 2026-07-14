@@ -1,9 +1,13 @@
 import { supabase } from './supabase'
+import { ensureSession, withTimeout } from './session'
 
 /**
  * 행사 참석자(event_attendees) + 행사 제출/요청(event_submissions) API.
  * 행사 자체는 아직 상수(FAB_EVENTS)에 있고, 참석자만 행사 id로 DB에서 실시간 집계한다.
  */
+
+// 사무실망 토큰갱신 스톨 대비 — 모든 write는 ensureSession + withTimeout (공지와 동일 안전장치)
+const DB_TIMEOUT = 20_000
 
 export const EVENT_SUB_BUCKET = 'event-submissions'
 const SUB_FILE_MAX = 20 * 1024 * 1024
@@ -28,18 +32,23 @@ async function currentUid(): Promise<string | null> {
 /** 참석자 추가 — self=true면 본인(로그인 팀원) 참석(memberUid=본인), false면 관리자 수기추가(memberUid=null) */
 export async function addAttendee(p: { eventId: string; name: string; self: boolean }): Promise<AttendeeRow> {
   const memberUid = p.self ? await currentUid() : null
-  const { data, error } = await supabase
-    .from('event_attendees')
-    .insert({ event_id: p.eventId, name: p.name.trim(), member_uid: memberUid })
-    .select('id, event_id, name, member_uid')
-    .single()
+  await ensureSession()
+  const { data, error } = await withTimeout(
+    supabase
+      .from('event_attendees')
+      .insert({ event_id: p.eventId, name: p.name.trim(), member_uid: memberUid })
+      .select('id, event_id, name, member_uid')
+      .single(),
+    DB_TIMEOUT, '참석자 추가',
+  )
   if (error) attFail(error, '참석자 추가에 실패했습니다')
   const r = data as AttTable
   return { id: r.id, eventId: r.event_id, name: r.name, memberUid: r.member_uid }
 }
 
 export async function removeAttendee(id: number): Promise<void> {
-  const { error } = await supabase.from('event_attendees').delete().eq('id', id)
+  await ensureSession()
+  const { error } = await withTimeout(supabase.from('event_attendees').delete().eq('id', id), DB_TIMEOUT, '참석자 삭제')
   if (error) attFail(error, '참석자 삭제에 실패했습니다')
 }
 
@@ -56,9 +65,13 @@ export async function uploadSubmissionPoster(file: File): Promise<string> {
   const i = file.name.lastIndexOf('.')
   const ext = i > 0 ? file.name.slice(i).toLowerCase() : ''
   const path = `sub/${crypto.randomUUID()}${ext}`
-  const { error } = await supabase.storage
-    .from(EVENT_SUB_BUCKET)
-    .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false })
+  await ensureSession()
+  const { error } = await withTimeout(
+    supabase.storage
+      .from(EVENT_SUB_BUCKET)
+      .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false }),
+    DB_TIMEOUT, '포스터 업로드',
+  )
   if (error) throw new Error(error.message || '포스터 업로드에 실패했습니다')
   return path
 }
@@ -71,11 +84,12 @@ export async function submissionPosterUrl(path: string): Promise<string> {
 }
 
 export async function submitEvent(p: EventSubmissionInput & { submitter: string }): Promise<void> {
-  const { error } = await supabase.from('event_submissions').insert({
+  await ensureSession()
+  const { error } = await withTimeout(supabase.from('event_submissions').insert({
     category: p.category, title: p.title.trim(), start_date: p.start, end_date: p.end, venue: p.venue.trim(),
     organizer: p.organizer.trim(), link: p.link.trim(), poster: p.poster,
     summary: p.summary.filter((s) => s.value.trim()), submitter: p.submitter, status: 'pending',
-  })
+  }), DB_TIMEOUT, '행사 신청')
   if (error) throw new Error(error.message || '행사 신청에 실패했습니다')
 }
 
@@ -98,6 +112,7 @@ export async function fetchSubmissions(): Promise<EventSubmissionRow[]> {
 export async function updateSubmissionStatus(id: number, status: string, note?: string): Promise<void> {
   const patch: Record<string, unknown> = { status }
   if (note !== undefined) patch.note = note
-  const { error } = await supabase.from('event_submissions').update(patch).eq('id', id)
+  await ensureSession()
+  const { error } = await withTimeout(supabase.from('event_submissions').update(patch).eq('id', id), DB_TIMEOUT, '상태 변경')
   if (error) throw new Error(error.message || '상태 변경에 실패했습니다')
 }

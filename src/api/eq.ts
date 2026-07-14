@@ -1,6 +1,10 @@
 import { supabase } from './supabase'
+import { ensureSession, withTimeout } from './session'
 import type { ScheduleInput, EquipmentUpdateInput, EqHistoryItem } from './sheets'
 import type { EqRawItem, ScheduleItem } from '@/types'
+
+// 사무실망 토큰갱신 스톨 대비 — 모든 write는 ensureSession + withTimeout (공지와 동일 안전장치)
+const DB_TIMEOUT = 20_000
 
 /**
  * 장비 도입·운영·이력 API — Supabase 전환(4단계). 계약은 sheets.ts와 동일.
@@ -71,7 +75,8 @@ export async function createSchedule(p: ScheduleInput): Promise<string> {
     duration: sumDuration(p.stages),
   }
   for (const [, label] of STAGE_DB) payload[label] = p.stages?.[label] || ''
-  const { data, error } = await supabase.rpc('sched_create', { p: payload })
+  await ensureSession()
+  const { data, error } = await withTimeout(supabase.rpc('sched_create', { p: payload }), DB_TIMEOUT, '도입일정 등록')
   if (error) fail(error, '등록에 실패했습니다')
   return String(data || p.code || '')
 }
@@ -89,18 +94,20 @@ export async function updateSchedule(p: ScheduleInput & { origCode: string }): P
     기술협상: 'stage_nego', 장비제작: 'stage_make', 장비설치: 'stage_install',
   }
   for (const [label, col] of Object.entries(dbStage)) patch[col] = p.stages?.[label] || ''
-  const { error } = await supabase.from('schedules').update(patch).eq('code', p.origCode || p.code)
+  await ensureSession()
+  const { error } = await withTimeout(supabase.from('schedules').update(patch).eq('code', p.origCode || p.code), DB_TIMEOUT, '도입일정 수정')
   if (error) fail(error, '수정에 실패했습니다')
   // 관리번호(code)가 바뀌면 짝 운영관리 행의 code도 함께 이동해 짝을 유지(도입↔운영 연결 보존)
   if (p.code && p.origCode && p.code !== p.origCode) {
-    const { error: eqErr } = await supabase.from('equipments').update({ code: p.code }).eq('code', p.origCode)
+    const { error: eqErr } = await withTimeout(supabase.from('equipments').update({ code: p.code }).eq('code', p.origCode), DB_TIMEOUT, '도입일정 수정')
     if (eqErr) fail(eqErr, '수정에 실패했습니다')
   }
 }
 
 /** 도입일정 삭제 — 짝 운영관리 행도 함께 삭제(RPC 원자 처리). */
 export async function deleteSchedule(p: { code: string; author: string; key: string }): Promise<void> {
-  const { error } = await supabase.rpc('sched_delete', { p_code: p.code })
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('sched_delete', { p_code: p.code }), DB_TIMEOUT, '도입일정 삭제')
   if (error) fail(error, '삭제에 실패했습니다')
 }
 
@@ -110,7 +117,8 @@ export async function updateEquipment(p: EquipmentUpdateInput): Promise<void> {
   for (const k of ['mgr', 'maker', 'model', 'assetNo', 'nfec', 'installLoc', 'installDate', 'vendor', 'mgr2', 'contact', 'note', 'state', 'reason'] as const) {
     if (p[k] !== undefined) payload[k] = p[k]
   }
-  const { error } = await supabase.rpc('eq_update', { p: payload })
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('eq_update', { p: payload }), DB_TIMEOUT, '장비 저장')
   if (error) fail(error, '저장에 실패했습니다')
 }
 

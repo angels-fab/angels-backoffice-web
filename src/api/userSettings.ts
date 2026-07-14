@@ -1,4 +1,8 @@
 import { supabase } from './supabase'
+import { ensureSession, withTimeout } from './session'
+
+// 사무실망 토큰갱신 스톨 대비 — write는 ensureSession + withTimeout (공지와 동일 안전장치)
+const DB_TIMEOUT = 20_000
 
 /** 개인화 설정 — 로그인 사용자별 JSON(user_settings.settings). 키는 점표기('cal.view' 등). */
 export type UserSettings = Record<string, unknown>
@@ -20,6 +24,7 @@ export async function fetchMySettings(): Promise<UserSettings> {
  * user_name은 서버가 my_name()으로 결정(RLS 동일 기준) — 파라미터로 받지 않는다.
  */
 export async function mergeMySettings(patch: UserSettings): Promise<void> {
-  const { error } = await supabase.rpc('user_settings_merge', { p_patch: patch })
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('user_settings_merge', { p_patch: patch }), DB_TIMEOUT, '개인 설정 저장')
   if (error) throw error
 }

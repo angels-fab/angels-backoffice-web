@@ -1,4 +1,8 @@
 import { supabase } from './supabase'
+import { ensureSession, withTimeout } from './session'
+
+// 사무실망 토큰갱신 스톨 대비 — 모든 write는 ensureSession + withTimeout (공지와 동일 안전장치)
+const DB_TIMEOUT = 20_000
 
 /**
  * 구글캘린더 동기화 즉시 깨우기(nudge) — 일정 저장/삭제 성공 직후 GAS 동기화를 fire-and-forget으로 호출.
@@ -154,9 +158,10 @@ export type CalScope = 'one' | 'following' | 'all'
 const genSeriesId = () => `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 
 export async function addCalEvent(p: CalWriteInput): Promise<{ note?: string }> {
+  await ensureSession()
   // 단독 일정 — 한 행 삽입
   if (!p.repeat || p.repeat === 'none') {
-    const { error } = await supabase.from('calendar_events').insert({ ...toPatch(p), series_id: '', created_by: p.createdBy || '' })
+    const { error } = await withTimeout(supabase.from('calendar_events').insert({ ...toPatch(p), series_id: '', created_by: p.createdBy || '' }), DB_TIMEOUT, '일정 추가')
     if (error) throw new Error(error.message || '일정 추가에 실패했습니다')
     nudgeCalendarSync()
     return {}
@@ -174,7 +179,7 @@ export async function addCalEvent(p: CalWriteInput): Promise<{ note?: string }> 
     start_at: `${d}${st}`, end_at: `${d}${et}`,
     repeat: 'none', repeat_until: '', series_id: sid, created_by: p.createdBy || '',
   }))
-  const { error } = await supabase.from('calendar_events').insert(rows)
+  const { error } = await withTimeout(supabase.from('calendar_events').insert(rows), DB_TIMEOUT, '반복 일정 추가')
   if (error) throw new Error(error.message || '반복 일정 추가에 실패했습니다')
   nudgeCalendarSync()
   const truncated = dates.length >= 400 && dates[dates.length - 1] < until
@@ -201,9 +206,10 @@ async function seriesRows(seriesId: string, fromDate?: string): Promise<{ id: nu
 export async function updateCalEvent(
   p: CalWriteInput & { id: string; scope?: CalScope; seriesId?: string; occDate?: string },
 ): Promise<{ note?: string }> {
+  await ensureSession()
   const scope = p.scope || 'one'
   if (scope === 'one' || !p.seriesId) {
-    const { error } = await supabase.from('calendar_events').update(toPatch(p)).eq('id', seriesIdOf(p.id))
+    const { error } = await withTimeout(supabase.from('calendar_events').update(toPatch(p)).eq('id', seriesIdOf(p.id)), DB_TIMEOUT, '일정 수정')
     if (error) throw new Error(error.message || '일정 수정에 실패했습니다')
     nudgeCalendarSync()
     return {}
@@ -232,9 +238,10 @@ export async function updateCalEvent(
 export async function deleteCalEvent(
   p: { id: string; scope?: CalScope; seriesId?: string; occDate?: string },
 ): Promise<{ note?: string }> {
+  await ensureSession()
   const scope = p.scope || 'one'
   if (scope === 'one' || !p.seriesId) {
-    const { error } = await supabase.from('calendar_events').delete().eq('id', seriesIdOf(p.id))
+    const { error } = await withTimeout(supabase.from('calendar_events').delete().eq('id', seriesIdOf(p.id)), DB_TIMEOUT, '일정 삭제')
     if (error) throw new Error(error.message || '일정 삭제에 실패했습니다')
     nudgeCalendarSync()
     return {}
@@ -242,7 +249,7 @@ export async function deleteCalEvent(
   if (scope === 'following' && !p.occDate) throw new Error('기준 발생일이 없어 이후 삭제를 진행할 수 없습니다')
   let q = supabase.from('calendar_events').delete().eq('series_id', p.seriesId)
   if (scope === 'following') q = q.gte('start_at', p.occDate as string)
-  const { error } = await q
+  const { error } = await withTimeout(q, DB_TIMEOUT, '반복 일정 삭제')
   if (error) throw new Error(error.message || '반복 일정 삭제에 실패했습니다')
   nudgeCalendarSync()
   return { note: scope === 'all' ? '반복 일정 전체를 삭제했어요' : '이 일정 및 이후를 삭제했어요' }

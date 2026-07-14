@@ -1,5 +1,9 @@
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, currentAccessToken } from './supabase'
+import { ensureSession, withTimeout } from './session'
 import type { WorkRow, WorkInput, WorkOrderEntry, WorkStatusChange } from './sheets'
+
+// 사무실망 토큰갱신 스톨 대비 — 모든 write는 ensureSession + withTimeout (공지와 동일 안전장치)
+const DB_TIMEOUT = 20_000
 
 /**
  * 업무현황 API — Supabase 전환(2단계). 시그니처·반환 계약은 기존 sheets.ts와 동일해서
@@ -51,17 +55,21 @@ export async function getWorks(): Promise<WorkRow[]> {
 /** 업무 신규 등록 → 새 번호 반환(자동 채번) */
 export async function createWork(p: WorkInput): Promise<number> {
   const rules = applyStatusRules(p)
-  const { data, error } = await supabase
-    .from('works')
-    .insert({
-      cat: p.cat, task: p.task, dept: p.dept || '', mat: p.mat || '',
-      start: p.start || '', plan: p.plan || '', plan_time: p.time || '', loc: p.loc || '',
-      mgr: p.mgr || '', status: p.status || '진행중', end_date: rules.end_date,
-      link: p.link || '', remind: !!p.remind, chief: rules.chief,
-      content_fmt: p.contentFmt ?? '',
-    })
-    .select('num')
-    .single()
+  await ensureSession()
+  const { data, error } = await withTimeout(
+    supabase
+      .from('works')
+      .insert({
+        cat: p.cat, task: p.task, dept: p.dept || '', mat: p.mat || '',
+        start: p.start || '', plan: p.plan || '', plan_time: p.time || '', loc: p.loc || '',
+        mgr: p.mgr || '', status: p.status || '진행중', end_date: rules.end_date,
+        link: p.link || '', remind: !!p.remind, chief: rules.chief,
+        content_fmt: p.contentFmt ?? '',
+      })
+      .select('num')
+      .single(),
+    DB_TIMEOUT, '업무 등록',
+  )
   if (error) fail(error, '업무 등록에 실패했습니다')
   return Number(data!.num)
 }
@@ -78,25 +86,31 @@ export async function updateWork(p: WorkInput & { num: string | number }): Promi
   // 완료가 아닌 상태에서 end 미전달이면 기존 완료일자 유지(기존 백엔드 동작) — 완료 전환만 자동 채움
   if (p.status !== '완료' && p.end === undefined) delete patch.end_date
   if (p.contentFmt !== undefined) patch.content_fmt = p.contentFmt
-  const { error } = await supabase.from('works').update(patch).eq('num', Number(p.num))
+  await ensureSession()
+  const { error } = await withTimeout(supabase.from('works').update(patch).eq('num', Number(p.num)), DB_TIMEOUT, '업무 수정')
   if (error) fail(error, '업무 수정에 실패했습니다')
 }
 
 /** 소프트 삭제 — 삭제일시(KST) 기록. 이미 삭제된 행은 건드리지 않음 */
 export async function deleteWork(p: { nums: (string | number)[]; author: string; key: string }): Promise<{ deletedAt: string }> {
   const stamp = new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).slice(0, 16)
-  const { error } = await supabase
-    .from('works')
-    .update({ deleted_at: stamp, updated_at: new Date().toISOString() })
-    .in('num', p.nums.map(Number))
-    .eq('deleted_at', '')
+  await ensureSession()
+  const { error } = await withTimeout(
+    supabase
+      .from('works')
+      .update({ deleted_at: stamp, updated_at: new Date().toISOString() })
+      .in('num', p.nums.map(Number))
+      .eq('deleted_at', ''),
+    DB_TIMEOUT, '업무 삭제',
+  )
   if (error) fail(error, '삭제 기록에 실패했습니다')
   return { deletedAt: stamp }
 }
 
 /** 휴지통 복원 — 진행중은 수동정렬 맨 아래(RPC가 새 정렬값 맵 반환) */
 export async function restoreWorks(p: { nums: (string | number)[]; author: string; key: string }): Promise<{ orders: Record<string, number> }> {
-  const { data, error } = await supabase.rpc('work_restore', { nums: p.nums.map(Number) })
+  await ensureSession()
+  const { data, error } = await withTimeout(supabase.rpc('work_restore', { nums: p.nums.map(Number) }), DB_TIMEOUT, '휴지통 복원')
   if (error) fail(error, '복원에 실패했습니다')
   return { orders: (data || {}) as Record<string, number> }
 }
@@ -105,13 +119,15 @@ export async function restoreWorks(p: { nums: (string | number)[]; author: strin
  *  ⚠ 휴면(개인화 Stage 3, 2026-07-12): 드래그 순서가 계정별(user_settings work.order)로 이동해
  *  앱에서 더 이상 호출 안 함. works.sort_order·work_update_orders RPC와 함께 롤백·호환용 보존. */
 export async function updateWorkOrder(p: { author: string; key: string; orders: WorkOrderEntry[] }): Promise<void> {
-  const { error } = await supabase.rpc('work_update_orders', { orders: p.orders })
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('work_update_orders', { orders: p.orders }), DB_TIMEOUT, '순서 저장')
   if (error) fail(error, '순서 저장에 실패했습니다')
 }
 
 /** 상태 배치 변경 — RPC 트랜잭션(전검증·prevStatus 낙관잠금·자동규칙·원자성) */
 export async function updateWorkStatuses(p: { author: string; key: string; changes: WorkStatusChange[] }): Promise<void> {
-  const { error } = await supabase.rpc('work_update_statuses', { changes: p.changes })
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('work_update_statuses', { changes: p.changes }), DB_TIMEOUT, '상태 변경')
   if (error) fail(error, '상태 변경에 실패했습니다')
 }
 

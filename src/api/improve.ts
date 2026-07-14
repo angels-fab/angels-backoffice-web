@@ -1,5 +1,9 @@
 import { supabase } from './supabase'
+import { ensureSession, withTimeout } from './session'
 import type { ImprovementRow, ImprovementsData, ImprovementInput, ReplyRow, DraftRow, DraftInput } from './sheets'
+
+// 사무실망 토큰갱신 스톨 대비 — 모든 write는 ensureSession + withTimeout (공지와 동일 안전장치)
+const DB_TIMEOUT = 20_000
 
 /**
  * 포털개선요청·답글·임시저장 API — Supabase 전환(3단계). 계약은 sheets.ts와 동일.
@@ -45,15 +49,19 @@ const todayKst = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/
 /** 개선요청 단건 등록 → 새 번호 */
 export async function createImprovement(p: ImprovementInput): Promise<number> {
   if (!p.title.trim()) throw new Error('제목을 입력해주세요')
-  const { data, error } = await supabase
-    .from('improvements')
-    .insert({
-      urgent: !!p.urgent, type: p.type || '', loc: p.loc || '', title: p.title.trim(),
-      content: p.content || '', author: p.author, mgr: p.mgr || '',
-      proposed_date: p.date || todayKst(), link: p.link || '', status: '접수', memo: false,
-    })
-    .select('num')
-    .single()
+  await ensureSession()
+  const { data, error } = await withTimeout(
+    supabase
+      .from('improvements')
+      .insert({
+        urgent: !!p.urgent, type: p.type || '', loc: p.loc || '', title: p.title.trim(),
+        content: p.content || '', author: p.author, mgr: p.mgr || '',
+        proposed_date: p.date || todayKst(), link: p.link || '', status: '접수', memo: false,
+      })
+      .select('num')
+      .single(),
+    DB_TIMEOUT, '개선요청 등록',
+  )
   if (error) rpcFail(error, '등록에 실패했습니다')
   return Number(data!.num)
 }
@@ -69,13 +77,15 @@ export async function updateImprovement(p: {
   for (const k of ['status', 'reason', 'end', 'urgent', 'type', 'loc', 'title', 'content', 'link', 'memo'] as const) {
     if (p[k] !== undefined) payload[k] = p[k]
   }
-  const { error } = await supabase.rpc('improve_update', { p: payload })
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('improve_update', { p: payload }), DB_TIMEOUT, '개선요청 수정')
   if (error) rpcFail(error, '수정에 실패했습니다')
 }
 
 /** 개선요청 삭제 — 담당자만(서버가 세션 이름으로 검증) */
 export async function deleteImprovement(p: { author: string; key: string; num: string | number }): Promise<void> {
-  const { error } = await supabase.rpc('improve_delete', { p_num: Number(p.num) })
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('improve_delete', { p_num: Number(p.num) }), DB_TIMEOUT, '개선요청 삭제')
   if (error) rpcFail(error, '삭제에 실패했습니다')
 }
 
@@ -84,7 +94,8 @@ export async function createImprovements(p: {
   author: string; key: string
   items: { urgent: boolean; loc: string; title: string; content: string; link: string }[]
 }): Promise<number[]> {
-  const { data, error } = await supabase.rpc('improve_create_batch', { items: p.items })
+  await ensureSession()
+  const { data, error } = await withTimeout(supabase.rpc('improve_create_batch', { items: p.items }), DB_TIMEOUT, '일괄등록')
   if (error) rpcFail(error, '일괄등록에 실패했습니다')
   return ((data || []) as number[]).map(Number)
 }
@@ -107,20 +118,23 @@ export async function fetchReplies(): Promise<ReplyRow[]> {
 }
 
 export async function createReply(p: { author: string; key: string; reqNum: string | number; content: string }): Promise<{ id: string; created: string }> {
-  const { data, error } = await supabase.rpc('reply_create', { p_req: Number(p.reqNum), p_content: p.content })
+  await ensureSession()
+  const { data, error } = await withTimeout(supabase.rpc('reply_create', { p_req: Number(p.reqNum), p_content: p.content }), DB_TIMEOUT, '답글 등록')
   if (error) rpcFail(error, '답글 등록에 실패했습니다')
   const res = data as { id: string; created: string }
   return { id: String(res.id), created: res.created }
 }
 
 export async function updateReply(p: { author: string; key: string; id: string | number; content: string }): Promise<{ edited: string }> {
-  const { data, error } = await supabase.rpc('reply_update', { p_id: Number(p.id), p_content: p.content })
+  await ensureSession()
+  const { data, error } = await withTimeout(supabase.rpc('reply_update', { p_id: Number(p.id), p_content: p.content }), DB_TIMEOUT, '답글 수정')
   if (error) rpcFail(error, '답글 수정에 실패했습니다')
   return { edited: String(data || '') }
 }
 
 export async function deleteReply(p: { author: string; key: string; id: string | number }): Promise<void> {
-  const { error } = await supabase.rpc('reply_delete', { p_id: Number(p.id) })
+  await ensureSession()
+  const { error } = await withTimeout(supabase.rpc('reply_delete', { p_id: Number(p.id) }), DB_TIMEOUT, '답글 삭제')
   if (error) rpcFail(error, '답글 삭제에 실패했습니다')
 }
 
@@ -138,7 +152,8 @@ export async function fetchDrafts(_p: { author: string; key: string }): Promise<
 
 /** 본인 임시저장 전체 대치 — 저장할 카드 0건이면 기존 유지(유실 방지, 서버 가드) */
 export async function saveDrafts(p: { author: string; key: string; drafts: DraftInput[] }): Promise<DraftRow[]> {
-  const { data, error } = await supabase.rpc('drafts_save', { p_drafts: p.drafts })
+  await ensureSession()
+  const { data, error } = await withTimeout(supabase.rpc('drafts_save', { p_drafts: p.drafts }), DB_TIMEOUT, '임시저장')
   if (error) rpcFail(error, '임시저장에 실패했습니다')
   return (data || []) as DraftRow[]
 }
@@ -147,6 +162,7 @@ export async function deleteDrafts(p: { author: string; key: string; ids?: (stri
   let q = supabase.from('improvement_drafts').delete()
   if (p.ids && p.ids.length > 0) q = q.in('id', p.ids.map(Number))
   else q = q.gte('id', 0)
-  const { error } = await q
+  await ensureSession()
+  const { error } = await withTimeout(q, DB_TIMEOUT, '임시저장 삭제')
   if (error) rpcFail(error, '임시저장 삭제에 실패했습니다')
 }
