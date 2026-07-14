@@ -35,6 +35,9 @@ export type { StatTileProps } from './StatTile'
 export { default as FilterBar } from './FilterBar'
 export type { FilterBarProps } from './FilterBar'
 
+export { default as FilterToolbar } from './FilterToolbar'
+export type { FilterToolbarProps } from './FilterToolbar'
+
 export { default as StatusChip } from './StatusChip'
 export type { StatusChipProps, StatusKind } from './StatusChip'
 

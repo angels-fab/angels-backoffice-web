@@ -27,12 +27,6 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import PushPinIcon from '@mui/icons-material/PushPin'
-import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety'
-import SecurityIcon from '@mui/icons-material/Security'
-import ApartmentIcon from '@mui/icons-material/Apartment'
-import SchoolIcon from '@mui/icons-material/School'
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
-import type { SvgIconComponent } from '@mui/icons-material'
 import {
   PageContainer,
   PageHeader,
@@ -42,6 +36,7 @@ import {
   EmptyState,
   SearchBar,
   LoadingState,
+  FilterToolbar,
   dataTableHeadSx,
   dataTableSx,
   useSnack,
@@ -60,15 +55,6 @@ import NoticeDetail from './NoticeDetail'
 import NoticeCompose, { NOTICE_CATS, type NoticeFormValues } from './NoticeCompose'
 
 const refUrl = (ref: string) => String(ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
-
-// 분류 필터 아이콘(업무일정 탭처럼) — 안전/보안/시설/교육/일반
-const CAT_ICON: Record<string, SvgIconComponent> = {
-  안전: HealthAndSafetyIcon,
-  보안: SecurityIcon,
-  시설: ApartmentIcon,
-  교육: SchoolIcon,
-  일반: InfoOutlinedIcon,
-}
 
 function kindColor(th: Theme, kind: StatusKind): string {
   switch (kind) {
@@ -239,12 +225,10 @@ export default function Notice() {
     const rowKey = isCopy ? `pin-${n.num}` : String(n.num)
     const open = openKey === rowKey
     const link = refUrl(n.ref)
-    const toggle = () => {
-      if (isCopy) { setOpenKey(open ? null : rowKey); return }
-      // openKey를 직접 설정(URL이 같아 num 효과가 안 도는 경우에도 펼침 보장 — 상단고정 복사본과 원본의 num 충돌)
-      if (open) { setOpenKey(null); navigate('/notice', { replace: true }) }
-      else { setOpenKey(rowKey); navigate(`/notice/${n.num}`) }
-    }
+    // 아코디언은 openKey state로만 토글 — 예전엔 클릭 시 navigate로 URL을 바꿔 컴포넌트가 리셋되며
+    // 스크롤이 최상단으로 튀는 버그가 있었음(rowKey가 pin-X/X를 구분하므로 URL 없이도 정확히 펼침).
+    // 주소로 직접 /notice/:num 진입하는 딥링크는 상단 useEffect(num)가 계속 처리.
+    const toggle = () => setOpenKey(open ? null : rowKey)
     return (
       <Fragment key={rowKey}>
         <TableRow
@@ -350,52 +334,41 @@ export default function Notice() {
       />
 
       <ContentSection title="공지 목록" count={`${filtered.length}건`} last>
-        {/* 상단 필터 바 — 업무일정 방식(부드러운 색 칩, 전체↔개별 토글). 분류 5개 항상 노출. 우측: 검색 + 새 공지 */}
-        <Box
-          sx={(t) => ({
-            display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25, mb: 2,
-            p: '10px 14px', bgcolor: 'background.paper', border: `1px solid ${t.palette.divider}`, borderRadius: `${radius.card}px`,
-          })}
+        {/* 상단 필터 바 — 공용 FilterToolbar(박스+칩+검색+새글). 분류 칩은 아이콘 없이(사용자 확정). */}
+        <FilterToolbar
+          label="분류"
+          search={<SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" width={200} />}
+          actions={isMember ? (
+            <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: iconSize.action }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap' }}>
+              새 공지
+            </Button>
+          ) : undefined}
         >
-          <Box component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none' }}>분류</Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-            {NOTICE_CATS.map((c) => {
-              const on = catSelected(c)
-              const color = catColor(theme, c)
-              const Icon = CAT_ICON[c]
-              return (
-                <TintChip
-                  key={c}
-                  on={on}
-                  color={color}
-                  ariaLabel={`${c} ${catCounts[c] || 0}건${on ? '' : ' (해제됨)'}`}
-                  onToggle={() => toggleCat(c)}
-                  sx={{ p: '5px 11px', color }}
-                >
-                  {Icon && <Icon sx={{ fontSize: iconSize.body, flex: 'none' }} />}
-                  <Box component="span" sx={{ fontSize: 13, fontWeight: 600 }}>{c}</Box>
-                  <Box component="span" sx={{ fontSize: 11, opacity: 0.7 }}>{catCounts[c] || 0}</Box>
-                </TintChip>
-              )
-            })}
-          </Box>
-
-          <Box sx={{ ml: { sm: 'auto' }, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" width={200} />
-            {isMember && (
-              <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: iconSize.action }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap' }}>
-                새 공지
-              </Button>
-            )}
-          </Box>
-        </Box>
+          {NOTICE_CATS.map((c) => {
+            const on = catSelected(c)
+            const color = catColor(theme, c)
+            return (
+              <TintChip
+                key={c}
+                on={on}
+                color={color}
+                ariaLabel={`${c} ${catCounts[c] || 0}건${on ? '' : ' (해제됨)'}`}
+                onToggle={() => toggleCat(c)}
+                sx={{ p: '4px 10px', color }}
+              >
+                <Box component="span" sx={{ fontSize: 12, fontWeight: 600 }}>{c}</Box>
+                <Box component="span" sx={{ fontSize: 11, opacity: 0.7 }}>{catCounts[c] || 0}</Box>
+              </TintChip>
+            )
+          })}
+        </FilterToolbar>
 
         {!ready ? (
           <AppCard padding={18}><LoadingState /></AppCard>
         ) : showEmpty ? (
           <AppCard padding={0}><EmptyState size="sm" title="공지사항이 없습니다" /></AppCard>
         ) : (
-          <AppCard padding={0}>
+          <AppCard padding={0} sx={{ overflow: 'hidden' }}>
             <Box sx={{ overflowX: 'auto' }}>
               <Table size="small" sx={{ minWidth: { xs: 0, md: 640 }, ...dataTableSx }}>
                 <TableHead>
