@@ -7,6 +7,7 @@ import { store } from '@/store'
 import { darkTheme } from '@/theme/theme'
 import { RoleProvider } from '@/auth/role'
 import { SnackProvider } from '@/components/ds'
+import ErrorBoundary from '@/components/ErrorBoundary'
 import App from '@/App'
 import '@/index.css'
 
@@ -19,14 +20,17 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>
       <ThemeProvider theme={darkTheme}>
-        {/* 전역 스낵바(P2) — 페이지별 Snackbar 보일러플레이트를 useSnack 훅으로 수렴 */}
-        <SnackProvider>
-          <RoleProvider>
-            <HashRouter>
-              <App />
-            </HashRouter>
-          </RoleProvider>
-        </SnackProvider>
+        {/* 최상위 오류 경계 — 렌더 예외 시 백지 대신 복구 화면(감사 C1). 테마 안쪽·앱 바깥에 둔다 */}
+        <ErrorBoundary>
+          {/* 전역 스낵바(P2) — 페이지별 Snackbar 보일러플레이트를 useSnack 훅으로 수렴 */}
+          <SnackProvider>
+            <RoleProvider>
+              <HashRouter>
+                <App />
+              </HashRouter>
+            </RoleProvider>
+          </SnackProvider>
+        </ErrorBoundary>
       </ThemeProvider>
     </Provider>
   </React.StrictMode>,
