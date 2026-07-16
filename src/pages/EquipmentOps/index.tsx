@@ -8,7 +8,7 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
-import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, Select, SearchBar } from '@/components/ds'
+import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, Select, SearchBar } from '@/components/ds'
 import { iconSize, radius } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
@@ -62,6 +62,12 @@ export default function EquipmentOps() {
     const payload = await dispatch(loadEqData()).unwrap().catch(() => null)
     if (payload && Array.isArray(payload.groups)) setPicked(payload.groups.find((g) => g.name === name) ?? null)
   }
+
+  // 실패 상태로 페이지 진입 시 자동 재시도(마운트 1회) — 잠깐 끊겼던 거면 사용자가 아무것도 안 해도 복구됨
+  useEffect(() => {
+    if (error && !loading) dispatch(loadEqData())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // 딥링크(/equipment-ops?focus=<장비명|관리번호>)
   useEffect(() => {
@@ -129,6 +135,20 @@ export default function EquipmentOps() {
           </IconButton>
         }
       />
+
+      {/* 불러오기 실패 — 빈 목록을 '장비 없음'으로 오해하지 않게 정직하게 알리고 재시도 제공(백로그 B2·C2).
+          기존 목록이 남아 있으면 경고(갱신만 실패), 아예 없으면 오류. */}
+      {error && (
+        <ErrorBanner
+          severity={raw.length > 0 ? 'warning' : 'error'}
+          message={
+            raw.length > 0
+              ? '장비 정보 새로고침에 실패했습니다. 마지막으로 불러온 목록을 표시 중입니다.'
+              : '장비 정보를 불러오지 못했습니다.'
+          }
+          onRetry={() => dispatch(loadEqData())}
+        />
+      )}
 
       <EquipmentTabs />
 

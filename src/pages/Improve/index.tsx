@@ -32,7 +32,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius } from '@/theme/tokens'
-import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, LoadingState, FilterToolbar, SearchBar, dataTableHeadSx, dataTableSx, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableHeadSx, dataTableSx, useSnack } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
@@ -616,6 +616,20 @@ export default function Improve() {
           </IconButton>
         }
       />
+
+      {/* 불러오기 실패 — '요청 없음'으로 오해하지 않게 정직하게 알리고 재시도 제공(백로그 C2).
+          기존 목록이 남아 있으면 경고(갱신만 실패), 아예 없으면 오류. */}
+      {error && (
+        <ErrorBanner
+          severity={items.length > 0 ? 'warning' : 'error'}
+          message={
+            items.length > 0
+              ? '개선요청 새로고침에 실패했습니다. 마지막으로 불러온 목록을 표시 중입니다.'
+              : '개선요청을 불러오지 못했습니다.'
+          }
+          onRetry={() => dispatch(loadImproveData())}
+        />
+      )}
 
       <ContentSection last>
         {/* 상태 필터 — 공용 FilterToolbar(공지와 동일 박스+검색+새글). 0건 상태 숨김·재클릭=전체·Shift=중복. */}

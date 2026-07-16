@@ -181,13 +181,12 @@ const eqSlice = createSlice({
         state.updatedAt = nowStamp()
       })
       .addCase(loadEqData.rejected, state => {
-        state.raw = []
-        state.groups = []
-        state.schedule = []
+        // 실패해도 마지막으로 불러온 데이터는 그대로 둔다(업무·공지·캘린더와 동일 방침).
+        // 비우면 멀쩡한 장비가 "조건에 맞는 장비 없음"으로 보여 사용자가 데이터가 사라진 줄 오해한다(백로그 B2).
+        // 첫 로드 실패면 어차피 초기값이 빈 배열이라 결과는 같다. updatedAt도 유지 = '언제 기준 목록인지' 표시용.
         state.ready = true
         state.loading = false
         state.error = true
-        state.updatedAt = null
       })
   },
 })

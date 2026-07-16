@@ -34,6 +34,7 @@ import {
   AppCard,
   StatusChip,
   EmptyState,
+  ErrorBanner,
   SearchBar,
   LoadingState,
   FilterToolbar,
@@ -332,6 +333,20 @@ export default function Notice() {
         }
       />
 
+      {/* 불러오기 실패 — '공지 없음'으로 오해하지 않게 정직하게 알리고 재시도 제공(백로그 C2).
+          기존 목록이 남아 있으면 경고(갱신만 실패), 아예 없으면 오류. */}
+      {error && (
+        <ErrorBanner
+          severity={items.length > 0 ? 'warning' : 'error'}
+          message={
+            items.length > 0
+              ? '공지 새로고침에 실패했습니다. 마지막으로 불러온 목록을 표시 중입니다.'
+              : '공지사항을 불러오지 못했습니다.'
+          }
+          onRetry={refresh}
+        />
+      )}
+
       <ContentSection title="공지 목록" count={`${filtered.length}건`} last>
         {/* 상단 필터 바 — 공용 FilterToolbar(박스+칩+검색+새글). 분류 칩은 아이콘 없이(사용자 확정). */}
         <FilterToolbar
@@ -365,7 +380,8 @@ export default function Notice() {
         {!ready ? (
           <AppCard padding={18}><LoadingState /></AppCard>
         ) : showEmpty ? (
-          <AppCard padding={0}><EmptyState size="sm" title="공지사항이 없습니다" /></AppCard>
+          // 불러오기 실패로 비었으면 위 배너가 이미 설명 — '없습니다'를 겹쳐 띄우면 데이터가 원래 없는 걸로 오해됨
+          error && items.length === 0 ? null : <AppCard padding={0}><EmptyState size="sm" title="공지사항이 없습니다" /></AppCard>
         ) : (
           <AppCard padding={0} sx={{ overflow: 'hidden' }}>
             <Box sx={{ overflowX: 'auto' }}>

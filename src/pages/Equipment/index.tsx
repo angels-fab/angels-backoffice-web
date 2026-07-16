@@ -19,7 +19,7 @@ import RedoIcon from '@mui/icons-material/Redo'
 import EditCalendarIcon from '@mui/icons-material/EditCalendar'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { PageContainer, PageHeader, StatTile, EmptyState, SegTabs, Select, SearchBar, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, StatTile, EmptyState, ErrorBanner, SegTabs, Select, SearchBar, useSnack } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -133,6 +133,12 @@ export default function Equipment() {
   const [deleteTarget, setDeleteTarget] = useState<EqGroup | null>(null)
   const [deleting, setDeleting] = useState(false)
   const snack = useSnack()
+
+  // 실패 상태로 페이지 진입 시 자동 재시도(마운트 1회) — 잠깐 끊겼던 거면 사용자가 아무것도 안 해도 복구됨
+  useEffect(() => {
+    if (error && !loading) dispatch(loadEqData())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const canEdit = isAdmin && editMode
   const todayHalf = useMemo(() => todayHalfIndex(months), [months])
@@ -672,12 +678,37 @@ export default function Equipment() {
                 </Button>
               </>
             )}
-            <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-              <RefreshIcon sx={{ fontSize: iconSize.header }} />
-            </IconButton>
+            {/* 편집 중 새로고침 금지 — 서버 원본이 미저장 드래그/리사이즈를 경고 없이 덮어쓰던 문제(백로그 B3).
+                「편집 종료」는 이미 저장/취소를 묻는데 새로고침만 그 보호를 우회했다.
+                disabled 버튼은 title이 안 뜨므로 span으로 감싸 이유를 보여준다. */}
+            <Box
+              component="span"
+              title={editMode
+                ? '편집 중에는 새로고침할 수 없습니다 — 저장 안 된 변경이 사라지지 않도록 막아둡니다. 먼저 「편집 종료」로 저장하거나 취소하세요.'
+                : '새로고침'}
+              sx={{ display: 'inline-flex' }}
+            >
+              <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading || editMode} size="small" sx={{ color: 'text.secondary' }}>
+                <RefreshIcon sx={{ fontSize: iconSize.header }} />
+              </IconButton>
+            </Box>
           </Box>
         }
       />
+
+      {/* 불러오기 실패 — 빈 목록을 '장비 없음'으로 오해하지 않게 정직하게 알리고 재시도 제공(백로그 B2·C2).
+          기존 목록이 남아 있으면 경고(갱신만 실패), 아예 없으면 오류. */}
+      {error && (
+        <ErrorBanner
+          severity={groups.length > 0 ? 'warning' : 'error'}
+          message={
+            groups.length > 0
+              ? '장비 정보 새로고침에 실패했습니다. 마지막으로 불러온 목록을 표시 중입니다.'
+              : '장비 정보를 불러오지 못했습니다.'
+          }
+          onRetry={() => dispatch(loadEqData())}
+        />
+      )}
 
       <EquipmentTabs />
 
