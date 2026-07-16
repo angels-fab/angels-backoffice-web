@@ -24,6 +24,7 @@
     "@mui/icons-material": "^9.1.0",
     "@mui/material": "^9.1.0",
     "@reduxjs/toolkit": "^2.3.0",
+    "@sentry/react": "^10.65.0",
     "@supabase/supabase-js": "^2.110.0",
     "@tiptap/core": "^2.27.2",
     "@tiptap/extension-bold": "^2.27.2",

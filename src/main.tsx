@@ -8,8 +8,12 @@ import { darkTheme } from '@/theme/theme'
 import { RoleProvider } from '@/auth/role'
 import { SnackProvider } from '@/components/ds'
 import ErrorBoundary from '@/components/ErrorBoundary'
+import { initSentry } from '@/utils/sentry'
 import App from '@/App'
 import '@/index.css'
+
+// 오류 추적 시작 — 렌더보다 먼저 켜야 초기 오류까지 잡는다(운영에서만 전송)
+initSentry()
 
 // GitHub Pages(정적 호스팅) 배포를 고려해 HashRouter 사용 — 원본도 해시 기반 라우팅
 //
