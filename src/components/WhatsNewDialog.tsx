@@ -10,12 +10,9 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { alpha } from '@mui/material/styles'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined'
-import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive'
-import FilterAltIcon from '@mui/icons-material/FilterAlt'
-import SwapVertIcon from '@mui/icons-material/SwapVert'
-import TuneIcon from '@mui/icons-material/Tune'
-import StarRoundedIcon from '@mui/icons-material/StarRounded'
+import GroupsIcon from '@mui/icons-material/Groups'
+import EventAvailableIcon from '@mui/icons-material/EventAvailable'
+import AttachFileIcon from '@mui/icons-material/AttachFile'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { iconSize, radius, typescale } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
@@ -24,21 +21,26 @@ import { putSetting } from '@/store/slices/userSettingsSlice'
 
 /**
  * 새 기능 안내 팝업(What's New) — 로그인(팀원+) 후 계정당 1회.
- * 목적: 개인화 기능은 화면에 조용히 들어와 팀원이 모르거나 "바꾸면 팀에 영향 갈까" 불안해함 →
- * 무엇이 생겼고 전부 '나에게만' 적용된다는 것을 명시.
+ * 목적: 새 기능은 화면에 조용히 들어와 팀원이 모르고 지나침 → 무엇이 생겼고 어떻게 쓰는지 안내.
+ * (2026-07-20 회차: 행사 사전 참석 표시 + 업무현황 첨부파일 — 팀 공유 기능이라 배너 문구도 교체)
  * 동작(사용자 확정): '다시 보지 않기' 체크 + 확인했어요 = 영구 확인(`whatsnew.seen` = 버전 문자열,
  * 서버 저장 — 기기 무관). 체크 없이 확인/닫기 = 이번 세션만 닫힘 → 다음 접속(로그인·새 페이지 로드)마다 다시 뜸.
  * 새 기능 배포 시 VERSION을 올리고 FEATURES를 교체하면 영구 확인자에게도 다시 안내됨.
  * 게이트: loadedOk(설정 로드 성공) 전에는 판단 보류 — 로드 실패 세션은 안 띄움(반복 출현·저장 불가 방지).
  */
-const VERSION = '2026-07-12-personalize'
+const VERSION = '2026-07-20-attend-attach'
 
 const FEATURES: { Icon: SvgIconComponent; title: string; desc: string }[] = [
-  { Icon: NotificationsActiveIcon, title: '내 기준 새 글 배지', desc: '메뉴의 새 글 숫자가 "내가 안 본 글"만 셉니다. 페이지에 들어가면 자동으로 읽음 처리돼요.' },
-  { Icon: FilterAltIcon, title: '업무현황 필터 기억', desc: '구분·담당자 필터를 걸어두면 나갔다 와도, 다른 기기에서도 그대로 유지됩니다.' },
-  { Icon: SwapVertIcon, title: '업무 카드 순서 = 내 화면에만', desc: '카드를 드래그해 순서를 바꿔도 팀원 화면 순서는 바뀌지 않습니다. 각자 자기 순서로 봐요.' },
-  { Icon: TuneIcon, title: '홈 화면 내 마음대로', desc: '홈 "운영 대시보드" 제목 옆 조절 아이콘으로 섹션 순서를 바꾸거나 숨길 수 있습니다.' },
-  { Icon: StarRoundedIcon, title: '관심 업무 별(★)', desc: '업무 카드의 별을 켜면 홈 "관심 업무"에 고정됩니다. 내 화면에만 보여요.' },
+  {
+    Icon: EventAvailableIcon,
+    title: '행사 참석, 미리 표시하세요',
+    desc: '학술·교육·전시의 진행중·예정 행사 카드 오른쪽 위에 참석 버튼이 생겼어요(PC는 카드에 마우스를 올리면 나타납니다). 한 번 누르면 "참석 예정/참석 중" 초록 배지가 켜지고 행사 상세의 참석자 명단에 내 이름이 올라가요. 다시 누르면 취소됩니다.',
+  },
+  {
+    Icon: AttachFileIcon,
+    title: '업무에 파일을 첨부하세요',
+    desc: '업무현황에서 새 업무를 만들거나 카드를 더블클릭(수정)하면 클립 아이콘·[파일 첨부] 버튼으로 파일을 올릴 수 있어요(파일당 최대 10MB). 파일을 카드 위로 끌어다 놓아도 됩니다. 첨부는 업무카드 아래 전용 구역에 표시되고, 누르면 바로 내려받아요.',
+  },
 ]
 
 export default function WhatsNewDialog() {
@@ -61,22 +63,22 @@ export default function WhatsNewDialog() {
     <Dialog open={open} onClose={() => setDismissed(true)} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.25, pb: 1 }}>
         <AutoAwesomeIcon sx={{ color: 'primary.main', fontSize: 22 }} />
-        새로워진 포털 — 개인화 기능 안내
+        새로워진 포털 — 새 기능 안내
       </DialogTitle>
       <DialogContent sx={{ pb: 1 }}>
-        {/* 핵심 안심 문구 — 팀 영향 없음을 가장 먼저 */}
+        {/* 핵심 안내 문구 — 이번 회차는 팀이 함께 쓰는 기능임을 먼저 */}
         <Box
           sx={(th) => ({
             display: 'flex', alignItems: 'center', gap: 1.25,
             p: '10px 14px', mb: 2, borderRadius: `${radius.button}px`,
-            bgcolor: alpha(th.palette.accent.green, 0.12),
-            border: `1px solid ${alpha(th.palette.accent.green, 0.35)}`,
+            bgcolor: alpha(th.palette.primary.main, 0.12),
+            border: `1px solid ${alpha(th.palette.primary.main, 0.35)}`,
           })}
         >
-          <ShieldOutlinedIcon sx={(th) => ({ color: th.palette.accent.green, fontSize: iconSize.header, flexShrink: 0 })} />
+          <GroupsIcon sx={{ color: 'primary.main', fontSize: iconSize.header, flexShrink: 0 }} />
           <Typography variant="body2" sx={{ fontWeight: typescale.emphasis.weight }}>
-            아래 기능은 전부 <Box component="span" sx={(th) => ({ color: th.palette.accent.green })}>내 계정에만 적용</Box>됩니다.
-            마음껏 바꿔도 팀원 화면과 팀 데이터(업무·일정·공지)에는 영향이 없어요.
+            이번에는 <Box component="span" sx={{ color: 'primary.main' }}>팀이 함께 쓰는 기능</Box> 두 가지가 생겼어요.
+            내가 표시한 참석과 올린 첨부는 팀원 모두에게 보입니다.
           </Typography>
         </Box>
 
