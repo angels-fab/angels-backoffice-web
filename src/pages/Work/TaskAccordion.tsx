@@ -69,6 +69,9 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
           borderRadius: `${radius.card}px`,
           overflow: 'hidden',
           cursor: 'pointer',
+          // 푸터 트레이(첨부)가 늘어난 카드에서도 바닥에 붙도록 — 본문(flex:1)이 남는 높이를 흡수
+          display: 'flex',
+          flexDirection: 'column',
           transition: 'border-color .16s ease, background-color .16s ease, box-shadow .16s ease',
           // 선택 > 호버 — 선택 시 :hover에도 선택 스타일을 재선언해 유지(.selected:hover에서 호버로 안 돌아감)
           ...(selected
@@ -115,8 +118,8 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
         <WorkPinButton num={t.num} />
       </Box>
 
-      {/* 본문 */}
-      <Box sx={{ px: 1.75, py: 1.5, display: 'flex', alignItems: 'stretch', gap: 1.5 }}>
+      {/* 본문 — flex:1로 남는 높이 흡수(푸터 트레이를 카드 바닥에 고정) */}
+      <Box sx={{ flex: 1, px: 1.75, py: 1.5, display: 'flex', alignItems: 'stretch', gap: 1.5 }}>
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
           {metas.length > 0 && (
             <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
@@ -143,11 +146,6 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
               </IconButton>
             </Box>
           )}
-          {t.attachments && t.attachments.length > 0 && (
-            <Box sx={{ mt: 0.25 }}>
-              <WorkAttachments attachments={t.attachments} variant="card" />
-            </Box>
-          )}
         </Box>
         {t.chief && (
           <Box
@@ -163,6 +161,20 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
           </Box>
         )}
       </Box>
+
+      {/* 첨부 푸터 트레이(시안 A) — 풀와이드, 살짝 가라앉은 배경으로 본문과 구역 분리 */}
+      {t.attachments && t.attachments.length > 0 && (
+        <Box
+          onClick={(e) => e.stopPropagation()}
+          sx={(th) => ({
+            borderTop: `1px solid rgb(${TONE_RGB[tone]} / 0.14)`,
+            bgcolor: alpha(th.palette.common.black, 0.16),
+            px: 1.75, pt: 1.25, pb: 1.5,
+          })}
+        >
+          <WorkAttachments attachments={t.attachments} variant="card" />
+        </Box>
+      )}
     </Box>
   )
 }

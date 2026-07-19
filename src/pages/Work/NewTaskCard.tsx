@@ -8,9 +8,11 @@ import CircularProgress from '@mui/material/CircularProgress'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
+import AttachFileIcon from '@mui/icons-material/AttachFile'
+import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
-import { iconSize, radius, typescale } from '@/theme/tokens'
+import { iconSize, motion, radius, typescale } from '@/theme/tokens'
 import { ComboField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
 import RichContentEditor from './RichContentEditor'
 import { uploadWorkFile, removeWorkFiles } from '@/api/works'
@@ -144,6 +146,57 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
   // 언마운트 시점이 얽혀 저장된 파일을 오삭제하지 않도록 언마운트 정리는 두지 않는다.
   const sessionPaths = useRef<Set<string>>(new Set())
   const attachCount = uploads.filter((u) => u.status !== 'error').length
+  // 첨부 구역의 [파일 첨부] 추가 칩용 파일 입력(헤더 클립 버튼과 병행 — 발견성)
+  const bodyFileRef = useRef<HTMLInputElement | null>(null)
+  // 드래그&드롭 업로드 — 파일을 카드 위로 끌면 드롭 오버레이. dragDepth로 자식 enter/leave 상쇄
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const [dragOver, setDragOver] = useState(false)
+  const dragDepth = useRef(0)
+  const hasFiles = (e: React.DragEvent) => Array.from(e.dataTransfer?.types || []).includes('Files')
+  // 전역 드롭 가드(적대 리뷰 반영) — 카드가 드롭을 유도하는 동안, 카드에서 몇 px 빗나간 드롭이
+  // 브라우저 기본동작(탭이 로컬 파일로 내비게이션 → SPA 언로드·작성 내용 전체 유실)으로 빠지지 않게
+  // window 레벨에서 파일 드래그의 dragover/drop 기본동작을 차단한다. 카드 밖은 '놓을 수 없음' 커서.
+  useEffect(() => {
+    const isFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types || []).includes('Files')
+    const onWinDragOver = (e: DragEvent) => {
+      if (!isFiles(e)) return
+      e.preventDefault()
+      const inCard = !!(rootRef.current && e.target instanceof Node && rootRef.current.contains(e.target))
+      if (!inCard && e.dataTransfer) e.dataTransfer.dropEffect = 'none'
+    }
+    const onWinDrop = (e: DragEvent) => {
+      if (isFiles(e)) e.preventDefault() // 카드 밖 드롭 = 무해한 no-op(내비게이션 차단)
+    }
+    window.addEventListener('dragover', onWinDragOver)
+    window.addEventListener('drop', onWinDrop)
+    return () => {
+      window.removeEventListener('dragover', onWinDragOver)
+      window.removeEventListener('drop', onWinDrop)
+    }
+  }, [])
+  const onDragEnter = (e: React.DragEvent) => {
+    if (!hasFiles(e) || saving) return
+    e.preventDefault()
+    dragDepth.current += 1
+    setDragOver(true)
+  }
+  const onDragOver = (e: React.DragEvent) => {
+    if (!hasFiles(e)) return
+    e.preventDefault() // drop 허용에 필수 — saving 중에도 호출(미호출 시 드롭이 브라우저 기본동작으로 빠짐)
+    if (saving && e.dataTransfer) e.dataTransfer.dropEffect = 'none' // 저장 중엔 '놓을 수 없음' 표시
+  }
+  const onDragLeave = (e: React.DragEvent) => {
+    if (!hasFiles(e)) return
+    dragDepth.current = Math.max(0, dragDepth.current - 1)
+    if (dragDepth.current === 0) setDragOver(false)
+  }
+  const onDrop = (e: React.DragEvent) => {
+    if (!hasFiles(e)) return
+    e.preventDefault()
+    dragDepth.current = 0
+    setDragOver(false)
+    if (!saving) void onPickFiles(e.dataTransfer.files)
+  }
 
   // 파일 선택 → 자리표시 후 순차 업로드(성공=done+경로, 실패=error). 한 건 실패해도 나머지 진행.
   const onPickFiles = async (list: FileList | null) => {
@@ -196,13 +249,34 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
 
   return (
     <Box
+      ref={rootRef}
+      onDragEnter={onDragEnter}
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
       sx={(th) => ({
+        position: 'relative',
         bgcolor: alpha(th.palette.accent.green, 0.1),
         border: 1, borderColor: th.palette.accent.green,
         boxShadow: `inset 0 0 0 1px ${th.palette.accent.green}`,
         borderRadius: `${radius.card}px`, overflow: 'hidden',
       })}
     >
+      {/* 드롭 오버레이 — 파일을 끌어온 동안만. pointerEvents:none이라 드롭은 루트가 받음 */}
+      {dragOver && (
+        <Box
+          sx={(th) => ({
+            position: 'absolute', inset: 6, zIndex: 2, pointerEvents: 'none',
+            border: '2px dashed', borderColor: th.palette.accent.green, borderRadius: `${radius.card}px`,
+            bgcolor: alpha(th.palette.accent.green, 0.14), backdropFilter: 'blur(1.5px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
+            fontSize: typescale.emphasis.size, fontWeight: typescale.cardTitle.weight, color: th.palette.accent.green,
+          })}
+        >
+          <CloudUploadIcon sx={{ fontSize: iconSize.header }} />
+          여기에 놓으면 업로드
+        </Box>
+      )}
       {/* 헤더: 구분 · 관련부서 · 담당자 칩 + 우측 링크/첨부/저장/취소. 제목은 아래 전폭 한 줄. */}
       <Box
         sx={(th) => ({
@@ -257,8 +331,18 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
             disabled={saving}
             ariaLabel="업무 내용"
           />
-          {/* 첨부 목록 — 제목줄 클립 버튼으로 추가. 파일별 상태 칩(업로드중/완료/실패)·그리드 정렬·말줄임·반응형 */}
-          {uploads.length > 0 && (
+          {/* 첨부 구역(시안 A 계열) — 점선 상단 경계 + 라벨 + 파일칩 + [파일 첨부] 추가 칩(헤더 클립과 병행).
+              드래그&드롭으로도 추가 가능(카드 전체가 드롭존) */}
+          <Box sx={(th) => ({ mt: 0.25, pt: 1.25, borderTop: `1px dashed ${alpha(th.palette.accent.green, 0.35)}`, display: 'flex', flexDirection: 'column', gap: 0.75 })}>
+            {uploads.length > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <AttachFileIcon sx={{ fontSize: iconSize.caption, color: 'text.disabled' }} />
+                <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.emphasis.weight, letterSpacing: '0.04em', color: 'text.disabled' }}>첨부파일</Box>
+                {/* 건수 = 화면의 칩 수(실패 포함) — 라벨 0인데 실패 칩이 보이는 불일치 방지(적대 리뷰) */}
+                <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>{uploads.length}</Box>
+              </Box>
+            )}
+            {uploads.length > 0 && (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 200px), 1fr))', gap: 0.75 }}>
               {sortedUploads.map((u) => {
                 const err = u.status === 'error'
@@ -283,8 +367,8 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
                       </Box>
                       {u.status !== 'uploading' && (
                         <Tooltip title="첨부 제거">
-                          <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => removeUpload(u.key)} sx={{ p: 0.25, flex: 'none', color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                            <CloseIcon sx={{ fontSize: typescale.caption.size }} />
+                          <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => removeUpload(u.key)} sx={{ p: 0.75, my: -0.5, flex: 'none', color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
+                            <CloseIcon sx={{ fontSize: iconSize.caption }} />
                           </IconButton>
                         </Tooltip>
                       )}
@@ -293,7 +377,34 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
                 )
               })}
             </Box>
-          )}
+            )}
+            {/* [파일 첨부] 추가 칩 — 상시 노출(발견성). 드래그&드롭 안내는 툴팁으로.
+                span 래핑 = disabled 자식 Tooltip 에러 방지(저장/취소 버튼과 동일 패턴) */}
+            <Tooltip title="파일을 카드 위로 끌어와도 업로드됩니다">
+              <Box component="span" sx={{ display: 'inline-flex', width: 'fit-content' }}>
+                <Box
+                  component="button"
+                  type="button"
+                  aria-label="파일 첨부"
+                  disabled={saving}
+                  onClick={() => bodyFileRef.current?.click()}
+                  sx={{
+                    display: 'inline-flex', alignItems: 'center', gap: 0.5, width: 'fit-content',
+                    px: 1.25, py: '4px', borderRadius: `${radius.pill}px`,
+                    border: '1px dashed', borderColor: 'divider', bgcolor: 'transparent',
+                    color: 'text.secondary', font: 'inherit', fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight,
+                    cursor: 'pointer', transition: `color ${motion.base}, border-color ${motion.base}`,
+                    '&:hover': { color: 'primary.main', borderColor: 'primary.main' },
+                    '&:disabled': { opacity: 0.5, cursor: 'default' },
+                  }}
+                >
+                  <AttachFileIcon sx={{ fontSize: iconSize.body }} />
+                  파일 첨부
+                </Box>
+              </Box>
+            </Tooltip>
+            <input ref={bodyFileRef} type="file" multiple hidden onChange={(e) => { void onPickFiles(e.target.files); if (bodyFileRef.current) bodyFileRef.current.value = '' }} />
+          </Box>
         </Box>
         {/* Check 토글 — 보라(활성)/회색(비활성), 업무 카드의 Check 칩과 동일 크기 */}
         <Box
