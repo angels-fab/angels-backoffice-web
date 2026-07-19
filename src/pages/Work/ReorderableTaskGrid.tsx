@@ -529,11 +529,12 @@ export default function ReorderableTaskGrid({
               onCardDoubleClickRef.current?.(num)
             }}
             // 카드가 늘어난 셀 높이를 채우도록(높이 통일 시 하단 여백이 카드 내부로) — 자식(카드) height:100%
+            // 순서편집 땐 손잡이 Box가 첫 자식이라 first-of-type 불가 — 손잡이(절대배치·32px 고정)만 제외
             // 선택 표시는 카드(TaskAccordion)가 상태 대표색으로 직접 그림 — 셀 래퍼의 공통 파란 outline 제거
             sx={{
               // 카드 본문은 항상 세로 스크롤 허용(pan-y). 순서 드래그는 손잡이(≡)만 touch-action:none으로 잡음.
               position: 'relative', minWidth: 0, touchAction: 'pan-y',
-              '& > *:first-of-type': { height: '100%' },
+              '& > *:not([data-reorder-handle])': { height: '100%' },
               borderRadius: `${radius.card}px`,
               ...(isDragSource ? { opacity: 0.35 } : {}),
               ...(awaiting ? { opacity: awaitingHidden ? 0 : 0.32, pointerEvents: 'none' } : {}),
