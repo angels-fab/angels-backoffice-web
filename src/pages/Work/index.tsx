@@ -44,7 +44,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { isWorkNew } from '@/utils/newPost'
 import { useMarkSeen } from '@/layouts/useNavBadges'
 import { loadWorkData, patchWorkItems, softDeleteWorkItems, restoreWorkItems } from '@/store/slices/workSlice'
-import { createWork, deleteWork, restoreWorks, updateWork, fetchAuthors, updateWorkStatuses } from '@/api/works'
+import { createWork, deleteWork, restoreWorks, updateWork, fetchAuthors, updateWorkStatuses, removeWorkFiles } from '@/api/works'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import type { WorkStatusChange } from '@/api/sheets'
 import { useRole } from '@/auth/role'
@@ -108,6 +108,7 @@ function toForm(t: WorkItem): NewTaskForm {
     loc: t.loc || '',
     link: t.link || '',
     chief: !!t.chief,
+    attachments: t.attachments || [],
   }
 }
 
@@ -554,6 +555,7 @@ export default function Work() {
         status: '진행중', link: form.link.trim(),
         remind: false, chief: form.chief,
         contentFmt: cf.value,
+        attachments: form.attachments,
       })
       setSavingNew(false)
       setComposing(false)
@@ -568,6 +570,8 @@ export default function Work() {
   // 줄 끝 공백 무시 비교용 정규화 (업무 내용 변경 여부 판정)
   const normTask = (s: string) =>
     String(s || '').split(/\r?\n/).map((l) => l.replace(/\s+$/, '')).join('\n').replace(/\s+$/, '')
+  // 첨부 변경 판정 — 저장 경로(path) 집합 기준(순서 무관)
+  const attachKey = (a?: { path: string }[]) => (a || []).map((f) => f.path).sort().join('|')
 
   // 폼이 원본과 달라졌는지 (변경 없으면 확인 팝업/저장 생략)
   const isEditDirty = (item: WorkItem, form: NewTaskForm) => {
@@ -585,7 +589,8 @@ export default function Work() {
       form.loc.trim() !== (item.loc || '') ||
       form.mgr.trim() !== (item.mgr || '') ||
       form.link.trim() !== (item.link || '') ||
-      form.chief !== !!item.chief
+      form.chief !== !!item.chief ||
+      attachKey(form.attachments) !== attachKey(item.attachments)
     )
   }
 
@@ -616,7 +621,12 @@ export default function Work() {
         time: form.time.trim(), loc: form.loc.trim(), mgr: form.mgr.trim(),
         link: form.link.trim(), remind: item.remind, chief: form.chief,
         contentFmt: cf.value,
+        attachments: form.attachments,
       })
+      // 수정 성공 후: 기존 첨부 중 제거된 파일을 스토리지에서 정리(best-effort, 공지와 동일)
+      const keptPaths = new Set(form.attachments.map((a) => a.path))
+      const removedPaths = (item.attachments || []).filter((a) => !keptPaths.has(a.path)).map((a) => a.path)
+      if (removedPaths.length) void removeWorkFiles(removedPaths).catch(() => {})
       setSavingEdit(false)
       setPendingEdit(null)
       setEditingId(null)

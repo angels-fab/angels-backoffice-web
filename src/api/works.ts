@@ -1,9 +1,16 @@
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, currentAccessToken } from './supabase'
 import { ensureSession, withTimeout } from './session'
 import type { WorkRow, WorkInput, WorkOrderEntry, WorkStatusChange } from './sheets'
+import type { NoticeFile } from '@/types'
 
 // 사무실망 토큰갱신 스톨 대비 — 모든 write는 ensureSession + withTimeout (공지와 동일 안전장치)
 const DB_TIMEOUT = 20_000
+/** 업로드 1건 타임아웃(ms) — 스톨 시 무한 대기 방지(공지 UPLOAD_TIMEOUT과 동일) */
+const UPLOAD_TIMEOUT = 30_000
+/** 첨부 저장 버킷(비공개) — 업로드=팀원(member)+, 열람=인증 사용자. 마이그레이션 work_attachments_column_and_bucket */
+export const WORK_BUCKET = 'work-files'
+/** 파일당 최대 크기(10MB) — 버킷 file_size_limit과 일치. 초과 시 업로드 전 클라이언트 차단 */
+export const WORK_FILE_MAX = 10 * 1024 * 1024
 
 /**
  * 업무현황 API — Supabase 전환(2단계). 시그니처·반환 계약은 기존 sheets.ts와 동일해서
@@ -20,6 +27,7 @@ interface WorksTableRow {
   sort_order: number | null
   content_fmt: string
   deleted_at: string
+  attachments: NoticeFile[] | null
 }
 
 const toWorkRow = (r: WorksTableRow): WorkRow => ({
@@ -31,6 +39,7 @@ const toWorkRow = (r: WorksTableRow): WorkRow => ({
   order: r.sort_order == null ? '' : String(r.sort_order),
   contentFmt: r.content_fmt,
   deletedAt: r.deleted_at,
+  attachments: Array.isArray(r.attachments) ? r.attachments : [],
 })
 
 const todayKst = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
@@ -65,6 +74,7 @@ export async function createWork(p: WorkInput): Promise<number> {
         mgr: p.mgr || '', status: p.status || '진행중', end_date: rules.end_date,
         link: p.link || '', remind: !!p.remind, chief: rules.chief,
         content_fmt: p.contentFmt ?? '',
+        attachments: p.attachments || [],
       })
       .select('num')
       .single(),
@@ -86,6 +96,8 @@ export async function updateWork(p: WorkInput & { num: string | number }): Promi
   // 완료가 아닌 상태에서 end 미전달이면 기존 완료일자 유지(기존 백엔드 동작) — 완료 전환만 자동 채움
   if (p.status !== '완료' && p.end === undefined) delete patch.end_date
   if (p.contentFmt !== undefined) patch.content_fmt = p.contentFmt
+  // 첨부는 명시적으로 전달될 때만 갱신(undefined=기존 보존) — WorkWrite 등 미전달 경로에서 첨부 유실 방지
+  if (p.attachments !== undefined) patch.attachments = p.attachments
   await ensureSession()
   const { error } = await withTimeout(supabase.from('works').update(patch).eq('num', Number(p.num)), DB_TIMEOUT, '업무 수정')
   if (error) fail(error, '업무 수정에 실패했습니다')
@@ -159,4 +171,47 @@ export function beaconWorkOrder(p: { author: string; key: string; orders: WorkOr
 export async function fetchAuthors(): Promise<string[]> {
   const { data } = await supabase.from('profiles').select('name').order('name')
   return (data || []).map((r: { name: string }) => r.name)
+}
+
+// ── 첨부파일 (Storage: work-files 비공개 버킷) — 공지(notices.ts)와 동일한 계약 ──
+
+/** 파일명에서 확장자 추출(점 포함, 없으면 빈 문자열) */
+const fileExt = (name: string) => {
+  const i = name.lastIndexOf('.')
+  return i > 0 ? name.slice(i).toLowerCase() : ''
+}
+
+/**
+ * 첨부파일 1건 업로드 → 메타데이터 반환. 저장 키는 충돌 방지용 UUID(원본 파일명은 name에 보존).
+ * 10MB 초과는 업로드 전에 차단, 30초 스톨 시 타임아웃. 업로드 권한은 RLS(is_member)가 최종 검증.
+ */
+export async function uploadWorkFile(file: File): Promise<NoticeFile> {
+  if (file.size > WORK_FILE_MAX) {
+    throw new Error(`파일이 너무 큽니다(최대 10MB): ${file.name}`)
+  }
+  await ensureSession()
+  const path = `work/${crypto.randomUUID()}${fileExt(file.name)}`
+  const { error } = await withTimeout(
+    supabase.storage
+      .from(WORK_BUCKET)
+      .upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false }),
+    UPLOAD_TIMEOUT, `업로드(${file.name})`,
+  )
+  if (error) throw new Error(error.message || `업로드 실패: ${file.name}`)
+  return { name: file.name, path, size: file.size, type: file.type || 'application/octet-stream' }
+}
+
+/** 첨부파일 원본 Blob 다운로드 — 앵커 download로 한글 파일명 그대로 저장하기 위함 */
+export async function downloadWorkBlob(path: string): Promise<Blob> {
+  const { data, error } = await supabase.storage.from(WORK_BUCKET).download(path)
+  if (error || !data) throw new Error(error?.message || '파일 다운로드 실패')
+  return data
+}
+
+/** 첨부파일 삭제 — 정리(orphan 제거)용. 실패해도 상위 작업을 막지 않도록 best-effort */
+export async function removeWorkFiles(paths: string[]): Promise<void> {
+  const list = paths.filter(Boolean)
+  if (list.length === 0) return
+  const { error } = await supabase.storage.from(WORK_BUCKET).remove(list)
+  if (error) throw new Error(error.message || '첨부파일 삭제 실패')
 }

@@ -12,14 +12,14 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
-import { radius, iconSize } from '@/theme/tokens'
+import { radius, iconSize, typescale } from '@/theme/tokens'
 
 /**
  * 인라인 새 업무 폼에서 공용으로 쓰는 입력 위젯 모음.
  * - ComboField: 히스토리 기반 드롭다운 + 자유입력(자동완성)
  * - DateField: 네이티브 date 피커(아이콘 클릭으로 열기) + 빈값일 때 한글 라벨 표시('연도-월-일' 대체)
  * - TimeRangeField: 시작/종료 시각을 wheel picker로 선택 → "HH:MM ~ HH:MM"
- * - LinkButton / AttachButton: 제목줄 우측 아이콘(관련링크 팝업 / 첨부 준비중)
+ * - LinkButton / AttachButton: 제목줄 우측 아이콘(관련링크 팝업 / 파일 첨부 선택)
  */
 
 // 모든 입력의 미니멀 보더 룩 (NewTaskCard의 Field와 동일 톤)
@@ -440,16 +440,40 @@ export function LinkButton({ value, onChange }: { value: string; onChange: (v: s
   )
 }
 
-// ───────────────────────────── AttachButton (준비중 · 기능 없음) ─────────────────────────────
+// ───────────────────────────── AttachButton (파일 첨부 · 다중 선택) ─────────────────────────────
 
-export function AttachButton() {
+/** 제목줄 우측 첨부 아이콘 — 클릭 시 파일 선택창. 첨부가 있으면 개수 배지 + 활성색. 업로드/목록은 상위(NewTaskCard)가 담당 */
+export function AttachButton({ count = 0, onFiles, disabled }: {
+  count?: number
+  onFiles: (files: FileList | null) => void
+  disabled?: boolean
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const active = count > 0
   return (
-    <Tooltip title="첨부 (준비 중)">
-      <span>
-        <IconButton size="small" disabled aria-label="첨부 (준비 중)" sx={{ color: 'text.disabled', p: 0.5 }}>
-          <AttachFileIcon sx={{ fontSize: iconSize.action }} />
-        </IconButton>
-      </span>
-    </Tooltip>
+    <>
+      <input ref={inputRef} type="file" multiple hidden onChange={(e) => { onFiles(e.target.files); if (inputRef.current) inputRef.current.value = '' }} />
+      <Tooltip title={active ? `첨부파일 ${count}개 (추가 선택)` : '파일 첨부'}>
+        <span>
+          <IconButton
+            size="small"
+            aria-label={active ? `파일 첨부 (${count}개)` : '파일 첨부'}
+            disabled={disabled}
+            onClick={() => inputRef.current?.click()}
+            sx={(th) => ({ color: active ? th.palette.accent.green : 'text.secondary', p: 0.5, position: 'relative' })}
+          >
+            <AttachFileIcon sx={{ fontSize: iconSize.action }} />
+            {active && (
+              <Box component="span" sx={(th) => ({
+                position: 'absolute', top: -1, right: -1, minWidth: 14, height: 14, px: '3px',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: `${radius.pill}px`, bgcolor: th.palette.accent.green, color: th.palette.common.white,
+                fontSize: typescale.caption.size, fontWeight: 700, lineHeight: 1,
+              })}>{count}</Box>
+            )}
+          </IconButton>
+        </span>
+      </Tooltip>
+    </>
   )
 }

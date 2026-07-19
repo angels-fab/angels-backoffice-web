@@ -14,6 +14,7 @@ import type { CardTone } from './workMeta'
 import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
 import WorkPinButton from './WorkPinButton'
+import WorkAttachments from './WorkAttachments'
 
 export type { CardTone } from './workMeta'
 
@@ -140,6 +141,11 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect }: T
               <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련 자료" onClick={(e) => e.stopPropagation()} sx={{ color: 'text.secondary' }}>
                 <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
               </IconButton>
+            </Box>
+          )}
+          {t.attachments && t.attachments.length > 0 && (
+            <Box sx={{ mt: 0.25 }}>
+              <WorkAttachments attachments={t.attachments} variant="card" />
             </Box>
           )}
         </Box>

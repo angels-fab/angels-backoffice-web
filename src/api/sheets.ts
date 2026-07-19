@@ -190,6 +190,8 @@ export interface WorkRow {
   contentFmt: string
   /** 삭제일시(소프트 삭제) — 값이 있으면 휴지통 항목 */
   deletedAt: string
+  /** 첨부파일 목록 — Storage 비공개 버킷(work-files) 저장. 없으면 [] */
+  attachments: NoticeFile[]
 }
 
 /** 업무 목록 읽기 — 백엔드가 헤더명으로 행을 객체로 변환해 반환 */
@@ -227,6 +229,11 @@ export interface WorkInput {
    * 빈 문자열('')은 '서식 없음'을 의도적으로 저장하는 값으로 취급한다.
    */
   contentFmt?: string
+  /**
+   * 첨부파일 목록 — **명시적으로 전달할 때만** 저장/갱신된다(contentFmt와 동일 규칙).
+   * undefined(미전달)면 백엔드는 기존 첨부를 보존한다(빈 배열로 덮어쓰지 않음).
+   */
+  attachments?: NoticeFile[]
 }
 
 async function postWork(payload: Record<string, unknown>): Promise<{ num?: number }> {

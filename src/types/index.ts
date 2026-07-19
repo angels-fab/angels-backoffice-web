@@ -33,6 +33,8 @@ export interface WorkItem {
   contentFmt: string
   /** 삭제일시(소프트 삭제) — 값이 있으면 휴지통 항목(yyyy-MM-dd HH:mm). 빈값=정상 */
   deletedAt: string
+  /** 첨부파일 목록 — Storage 비공개 버킷(work-files) 저장. 공지와 동일한 파일 형태(NoticeFile) */
+  attachments?: NoticeFile[]
 }
 
 /** 개선제안 ('개선사항' 시트) */

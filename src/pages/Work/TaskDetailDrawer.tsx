@@ -10,6 +10,7 @@ import type { WorkItem } from '@/types'
 import { W_STATUS, classify, taskTitle, taskLink } from './workMeta'
 import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
+import WorkAttachments from './WorkAttachments'
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
@@ -101,6 +102,10 @@ export default function TaskDetailDrawer({ task, onClose, isAdmin, onEdit, onDel
                 ))}
               </Box>
             </Box>
+          )}
+
+          {task.attachments && task.attachments.length > 0 && (
+            <WorkAttachments attachments={task.attachments} variant="detail" />
           )}
         </Box>
       )}

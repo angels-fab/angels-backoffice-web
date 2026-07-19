@@ -1,16 +1,22 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import InputBase from '@mui/material/InputBase'
 import Tooltip from '@mui/material/Tooltip'
+import CircularProgress from '@mui/material/CircularProgress'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
 import { iconSize, radius, typescale } from '@/theme/tokens'
 import { ComboField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
 import RichContentEditor from './RichContentEditor'
+import { uploadWorkFile, removeWorkFiles } from '@/api/works'
+import { AttachmentIcon, formatBytes } from '@/pages/Notice/attachmentUI'
+import { fileTypeRank } from '@/pages/Notice/fileTypeIcons'
+import type { NoticeFile } from '@/types'
 
 /** 인라인 새 업무 작성 폼 값 — 저장 시 index에서 createWork/updateWork 페이로드로 변환 */
 export interface NewTaskForm {
@@ -28,6 +34,19 @@ export interface NewTaskForm {
   loc: string
   link: string
   chief: boolean
+  /** 첨부파일 — 업로드 완료된 항목만(Storage work-files 저장). 미변경 시 기존 값 유지 */
+  attachments: NoticeFile[]
+}
+
+/** 작성 중 첨부 1건의 로컬 상태 — 완료(done)만 저장 대상, 업로드중/실패는 UI 표시용 */
+type Upload = {
+  key: string
+  name: string
+  size: number
+  type: string
+  status: 'uploading' | 'done' | 'error'
+  path?: string
+  error?: string
 }
 
 /** 드롭다운/자동완성 후보 */
@@ -109,17 +128,70 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
   const [loc, setLoc] = useState(initial?.loc ?? '')
   const [link, setLink] = useState(initial?.link ?? '')
   const [chief, setChief] = useState(initial?.chief ?? false)
+  // 첨부파일 — 파일별 업로드 상태 추적(업로드중/완료/실패). 완료 항목만 저장.
+  // 수정 모드면 기존 첨부를 done으로 복원(그 경로는 sessionPaths에 넣지 않아 취소 시 삭제되지 않음).
+  const [uploads, setUploads] = useState<Upload[]>(
+    (initial?.attachments || []).map((a) => ({ key: a.path, name: a.name, size: a.size, type: a.type, status: 'done' as const, path: a.path })),
+  )
+  const uploading = uploads.some((u) => u.status === 'uploading')
+  // 유형별 정렬(pdf→hwp→docx→xlsx→pptx→txt→image→zip→기타) — 표시용. 같은 유형은 기존 순서 유지
+  const sortedUploads = useMemo(
+    () => [...uploads].sort((a, b) => fileTypeRank(a.type, a.name) - fileTypeRank(b.type, b.name)),
+    [uploads],
+  )
+  // 이번 세션에 새로 올린 경로 — 취소·저장 시 스토리지 정리(기존 첨부는 미포함이라 보존).
+  // 정리는 명시적 취소/저장에서만(NoticeCompose와 동일) — 수정 확인 다이얼로그(저장 2단계)와
+  // 언마운트 시점이 얽혀 저장된 파일을 오삭제하지 않도록 언마운트 정리는 두지 않는다.
+  const sessionPaths = useRef<Set<string>>(new Set())
+  const attachCount = uploads.filter((u) => u.status !== 'error').length
+
+  // 파일 선택 → 자리표시 후 순차 업로드(성공=done+경로, 실패=error). 한 건 실패해도 나머지 진행.
+  const onPickFiles = async (list: FileList | null) => {
+    if (!list || list.length === 0) return
+    const picked = Array.from(list).map((file) => ({ file, key: crypto.randomUUID() }))
+    setUploads((prev) => [
+      ...prev,
+      ...picked.map(({ file, key }) => ({ key, name: file.name, size: file.size, type: file.type || '', status: 'uploading' as const })),
+    ])
+    for (const { file, key } of picked) {
+      try {
+        const meta = await uploadWorkFile(file)
+        sessionPaths.current.add(meta.path)
+        setUploads((prev) => prev.map((u) => (u.key === key ? { ...u, status: 'done', path: meta.path } : u)))
+      } catch (e) {
+        setUploads((prev) => prev.map((u) => (u.key === key ? { ...u, status: 'error', error: e instanceof Error ? e.message : '업로드 실패' } : u)))
+      }
+    }
+  }
+  // 목록에서 제거(스토리지 정리는 저장/취소 시) — 화면에서 즉시 제외
+  const removeUpload = (key: string) => setUploads((prev) => prev.filter((u) => u.key !== key))
 
   // 입력값 존재 여부를 부모에 보고 — 뷰 전환 시 작성 중 내용 손실 방지(확인 안내). body=일반 텍스트(빈값 판정용)
-  const dirty = !!(cat || title || body || mgr || start || plan || dept || time || loc || link || chief)
+  const dirty = !!(cat || title || body || mgr || start || plan || dept || time || loc || link || chief) || uploads.length > 0
   useEffect(() => {
     onDirtyChange?.(dirty)
   }, [dirty, onDirtyChange])
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
 
   const save = () => {
-    if (saving) return
-    onSave({ cat, title, body, bodyFmt, mgr, start, plan, dept, time, loc, link, chief })
+    if (saving || uploading) return
+    // 완료 파일만 저장 + 이번 세션에 올렸다 뺀 파일(orphan) 정리
+    const attachments: NoticeFile[] = uploads
+      .filter((u) => u.status === 'done' && u.path)
+      .map((u) => ({ name: u.name, path: u.path as string, size: u.size, type: u.type }))
+      .sort((a, b) => fileTypeRank(a.type, a.name) - fileTypeRank(b.type, b.name))
+    const finalPaths = new Set(attachments.map((a) => a.path))
+    const orphans = [...sessionPaths.current].filter((p) => !finalPaths.has(p))
+    if (orphans.length) void removeWorkFiles(orphans).catch(() => {})
+    orphans.forEach((p) => sessionPaths.current.delete(p))
+    onSave({ cat, title, body, bodyFmt, mgr, start, plan, dept, time, loc, link, chief, attachments })
+  }
+
+  // 취소 — 저장 안 하므로 이번 세션에 새로 올린 파일 전부 정리(기존 첨부는 보존)
+  const cancel = () => {
+    if (sessionPaths.current.size) void removeWorkFiles([...sessionPaths.current]).catch(() => {})
+    sessionPaths.current.clear()
+    onCancel()
   }
 
   return (
@@ -146,19 +218,19 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
         <Box sx={{ flex: 1, minWidth: 4 }} />
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <LinkButton value={link} onChange={setLink} />
-          <AttachButton />
+          <AttachButton count={attachCount} onFiles={onPickFiles} disabled={saving} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
-          <Tooltip title="저장">
+          <Tooltip title={uploading ? '업로드 중…' : '저장'}>
             <span>
-              <IconButton size="small" aria-label="저장" onClick={save} disabled={saving} sx={(th) => ({ color: th.palette.accent.green, p: 0.5 })}>
-                <CheckIcon sx={{ fontSize: iconSize.action }} />
+              <IconButton size="small" aria-label="저장" onClick={save} disabled={saving || uploading} sx={(th) => ({ color: th.palette.accent.green, p: 0.5 })}>
+                {saving ? <CircularProgress size={iconSize.action} thickness={5} sx={{ color: 'accent.green' }} /> : <CheckIcon sx={{ fontSize: iconSize.action }} />}
               </IconButton>
             </span>
           </Tooltip>
           <Tooltip title="취소">
             <span>
-              <IconButton size="small" aria-label="취소" onClick={onCancel} disabled={saving} sx={{ color: 'text.secondary', p: 0.5 }}>
+              <IconButton size="small" aria-label="취소" onClick={cancel} disabled={saving || uploading} sx={{ color: 'text.secondary', p: 0.5 }}>
                 <CloseIcon sx={{ fontSize: iconSize.action }} />
               </IconButton>
             </span>
@@ -185,6 +257,43 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
             disabled={saving}
             ariaLabel="업무 내용"
           />
+          {/* 첨부 목록 — 제목줄 클립 버튼으로 추가. 파일별 상태 칩(업로드중/완료/실패)·그리드 정렬·말줄임·반응형 */}
+          {uploads.length > 0 && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 200px), 1fr))', gap: 0.75 }}>
+              {sortedUploads.map((u) => {
+                const err = u.status === 'error'
+                return (
+                  <Tooltip key={u.key} title={err ? (u.error || '업로드 실패') : u.name}>
+                    <Box
+                      sx={(th) => ({
+                        display: 'flex', alignItems: 'center', gap: 0.5, width: '100%', minWidth: 0, pl: 0.85, pr: 0.25, py: '3px',
+                        borderRadius: `${radius.chip}px`, bgcolor: err ? alpha(th.palette.error.main, 0.08) : alpha(th.palette.text.primary, 0.05),
+                        border: `1px solid ${err ? alpha(th.palette.error.main, 0.5) : th.palette.divider}`,
+                        opacity: u.status === 'uploading' ? 0.7 : 1,
+                      })}
+                    >
+                      {u.status === 'uploading'
+                        ? <CircularProgress size={13} thickness={5} sx={{ flex: 'none' }} />
+                        : err
+                          ? <ErrorOutlineIcon sx={{ fontSize: iconSize.body, color: 'error.main', flex: 'none' }} />
+                          : <AttachmentIcon type={u.type} name={u.name} size={17} />}
+                      <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: typescale.small.size, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
+                      <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', flex: 'none', fontVariantNumeric: 'tabular-nums' }}>
+                        {u.status === 'uploading' ? '업로드 중' : err ? '실패' : formatBytes(u.size)}
+                      </Box>
+                      {u.status !== 'uploading' && (
+                        <Tooltip title="첨부 제거">
+                          <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => removeUpload(u.key)} sx={{ p: 0.25, flex: 'none', color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
+                            <CloseIcon sx={{ fontSize: typescale.caption.size }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </Tooltip>
+                )
+              })}
+            </Box>
+          )}
         </Box>
         {/* Check 토글 — 보라(활성)/회색(비활성), 업무 카드의 Check 칩과 동일 크기 */}
         <Box
