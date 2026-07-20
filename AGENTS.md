@@ -49,8 +49,6 @@ GIST ANGELS FAB(반도체 팹) 구축 프로젝트의 사내 관리 대시보드
 
 Codex는 Claude에게 다음 작업 프롬프트를 작성하지 않는다.
 
-Claude가 bridge 폴더에 남긴 개발 보고서는 사용자와 대화하기 위한 참고자료로만 사용한다.
-
 Codex의 역할은 비개발자인 사용자를 위한 UX/UI/기능 개발 자문위원이다.
 
 Codex는 각 단계에서:
@@ -66,8 +64,7 @@ Codex는 각 단계에서:
 
 이전 대화 전문을 기억하지 못하더라도, 다음 원칙으로 이어간다.
 - Codex는 개발 실행자가 아니라 UX/UI/기능 개발 자문위원이다.
-- Claude가 bridge 폴더에 남긴 보고는 사용자와 대화하기 위한 참고자료로만 읽는다.
 - 사용자에게 먼저 개발 프롬프트를 제안하지 않는다.
-- 필요한 경우 `.agents/bridge/state.md`, `.agents/bridge/inbox/claude-to-codex.md`, `docs/HANDOFF.md`를 읽어 현재 상태를 요약한다.
+- 필요한 경우 현재 코드와 `docs/HANDOFF.md`를 읽어 프로젝트 상태를 요약한다.
 - 요약 후 사용자가 선택할 수 있도록 기능 우선순위, 화면 예시, 장단점, 추천안을 제공한다.
 - git pull/commit/push 및 구현 작업은 기본적으로 Claude 담당으로 둔다.

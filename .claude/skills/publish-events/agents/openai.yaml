@@ -1,0 +1,4 @@
+interface:
+  display_name: "행사 게시"
+  short_description: "행사 신청을 검증하고 포털 카드로 안전하게 게시"
+  default_prompt: "Use $publish-events to verify an event submission and publish it to the ANGELS portal."

@@ -139,7 +139,7 @@ src/
 - **프론트 배포**(자동): 소스 repo `.github/workflows/deploy.yml`(peaceiris/actions-gh-pages) — **main push 시** 클라우드 빌드 후 `angels-fab.github.io`(GitHub Pages)에 자동 배포. 실서비스 https://angels-fab.github.io/.
   - ⚠️ **main push = 즉시 실서비스 배포.**
 - **백엔드 배포**: `npm run deploy:backend`(clasp) — 동일 배포ID에 덮어써 URL 유지.
-- **동기화**: 집↔사무실 GitHub로 동기화. 작업 전 `git pull`(또는 `/출근`), 후 `git add/commit/push`.
+- **동기화**: 집↔사무실 GitHub로 동기화. 작업 전 `git pull`, 후 `git add/commit/push`.
 
 ---
 
