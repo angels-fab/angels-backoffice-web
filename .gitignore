@@ -8,3 +8,4 @@ vite.config.d.ts
 *.local
 .claude/settings.local.json
 .design-import/
+__pycache__/
