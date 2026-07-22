@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import Box from '@mui/material/Box'
-import Popover from '@mui/material/Popover'
+import Popper from '@mui/material/Popper'
+import Grow from '@mui/material/Grow'
+import ClickAwayListener from '@mui/material/ClickAwayListener'
 import Dialog from '@mui/material/Dialog'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -33,7 +35,7 @@ import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
 import { iconSize, radius } from '@/theme/tokens'
-import { TimeField, DateField, SelectField, ConfirmDialog } from '@/components/ds'
+import { DateField, SelectField, ConfirmDialog } from '@/components/ds'
 import { todaySeoul } from '@/utils/date'
 
 // 제목에서 '@참석자' 부분을 뗀 기본 제목([구분]·내용) — 참석자는 별도 피커가 관리
@@ -255,6 +257,51 @@ function SummaryChip({ label, active, ariaLabel, onClick }: { label: ReactNode; 
 }
 
 /**
+ * 24시간제 시간 목록 컬럼 — 휠 스크롤·클릭 선택(15분 간격), 열릴 때 선택값을 가운데로.
+ * 목록에 없는 값(구글 동기화 일정의 임의 분 등)은 제자리에 끼워 그대로 보존한다.
+ */
+function TimeColumn({ label, value, onPick }: { label: string; value: string; onPick: (v: string) => void }) {
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const opts: string[] = []
+  for (let h = 0; h < 24; h++) for (const mm of ['00', '15', '30', '45']) opts.push(`${pad2(h)}:${mm}`)
+  if (value && !opts.includes(value)) { opts.push(value); opts.sort() }
+  useEffect(() => {
+    const list = listRef.current
+    const sel = list?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (list && sel) list.scrollTop = sel.offsetTop - (list.clientHeight - sel.offsetHeight) / 2
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // 팝업이 열릴 때 1회만 — 이후 선택은 스크롤 위치 유지
+  return (
+    <Box>
+      <Typography variant="caption" sx={{ display: 'block', color: 'text.disabled', fontWeight: 700, textAlign: 'center', pb: 0.5 }}>{label}</Typography>
+      <Box ref={listRef} data-timelist="" sx={{ position: 'relative', width: 88, height: 216, overflowY: 'auto', overscrollBehavior: 'contain', borderRadius: `${radius.input}px` }}>
+        {opts.map((t) => {
+          const on = t === value
+          return (
+            <Box
+              key={t}
+              component="button"
+              type="button"
+              onClick={() => onPick(t)}
+              aria-pressed={on}
+              sx={{
+                display: 'block', width: '100%', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                py: '5px', fontSize: 13, fontVariantNumeric: 'tabular-nums', textAlign: 'center', borderRadius: `${radius.input}px`,
+                ...(on
+                  ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: 700 }
+                  : { bgcolor: 'transparent', color: 'text.secondary', '&:hover': { bgcolor: 'action.hover', color: 'text.primary' } }),
+              }}
+            >
+              {t}
+            </Box>
+          )
+        })}
+      </Box>
+    </Box>
+  )
+}
+
+/**
  * 캘린더 일정 추가/수정/삭제 모달 — 구글캘린더식 컴팩트 폼 v2(사용자 확정).
  * 제목이 주인공, 종류=아이콘 원(선택 시 가로 확장 + 이름), 기간=칩+미니달력 클릭-클릭(숙소예약식),
  * 시간=칩+펼침 피커(잘림 없음). 반복 일정의 수정·삭제는 범위 선택(이 일정만/이후/전체)을 먼저 묻는다.
@@ -413,6 +460,10 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
+    // 열려 있던 피커는 접는다 — 반복 범위 확인창 위에 피커가 떠 있는 z순서 꼬임 방지(리뷰 부수 관찰)
+    setCalAnchor(null)
+    setTimeAnchor(null)
+    setPicking(false)
     if (!isAdmin || !user) return setError('관리자 로그인이 필요합니다')
     if (!title.trim()) return setError('제목을 입력해주세요')
     if (!date) return setError('날짜를 선택해주세요')
@@ -481,7 +532,12 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     <>
     <Dialog
       open={open}
-      onClose={() => { if (!busy) onClose() }}
+      onClose={(_, reason) => {
+        if (busy) return
+        // 피커가 열린 채 백드롭 클릭 → 피커만 닫는다(Popover 시절 동작 보존 — 작성 중 입력 유실 방지)
+        if (reason === 'backdropClick' && (calAnchor || timeAnchor)) { setCalAnchor(null); setTimeAnchor(null); setPicking(false); return }
+        onClose()
+      }}
       slotProps={{
         paper: {
           sx: {
@@ -492,7 +548,20 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         },
       }}
     >
-      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column' }}>
+      <Box
+        component="form"
+        onSubmit={submit}
+        onKeyDown={(e) => {
+          // Escape는 피커만 닫는다(모달까지 닫히지 않게) — Popper는 Popover와 달리 키를 스스로 안 받음
+          if (e.key === 'Escape' && (calAnchor || timeAnchor)) {
+            e.stopPropagation()
+            setCalAnchor(null)
+            setTimeAnchor(null)
+            setPicking(false)
+          }
+        }}
+        sx={{ display: 'flex', flexDirection: 'column' }}
+      >
         {/* 헤더 — 모드 캡션(작게) + 닫기 */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
           <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, letterSpacing: '.06em' }}>
@@ -572,48 +641,64 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
               label={rangeLabel}
               active={!!calAnchor}
               ariaLabel="기간 선택"
-              onClick={(e) => { setCalAnchor((a) => (a ? null : e.currentTarget)); setTimeAnchor(null); setPicking(false) }}
+              onClick={(e) => { const el = e.currentTarget; setCalAnchor((a) => (a ? null : el)); setTimeAnchor(null); setPicking(false) }}
             />
             {!allDay && (
               <SummaryChip
                 label={`${startTime} – ${endTime}`}
                 active={!!timeAnchor}
                 ariaLabel="시간 선택"
-                onClick={(e) => { setTimeAnchor((a) => (a ? null : e.currentTarget)); setCalAnchor(null) }}
+                onClick={(e) => { const el = e.currentTarget; setTimeAnchor((a) => (a ? null : el)); setCalAnchor(null) }}
               />
             )}
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>종일</Typography>
-              <Switch size="small" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} slotProps={{ input: { 'aria-label': '종일' } }} />
+              <Switch size="small" checked={allDay} onChange={(e) => { setAllDay(e.target.checked); setTimeAnchor(null) }} slotProps={{ input: { 'aria-label': '종일' } }} />
             </Box>
           </FieldRow>
 
-          {/* 기간 미니달력(클릭-클릭) — 칩에 붙는 미니팝업(모달 크기 불변) */}
-          <Popover
-            open={!!calAnchor}
-            anchorEl={calAnchor}
-            onClose={() => { setCalAnchor(null); setPicking(false) }}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            slotProps={{ paper: { sx: { mt: 0.5, p: 0, bgcolor: 'transparent', backgroundImage: 'none', borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' } } }}
-          >
-            <MiniCalendar ym={calYm || (date || todaySeoul()).slice(0, 7)} onYm={setCalYm} start={date} end={endDate} picking={picking} onPick={pickDay} />
-          </Popover>
-          {/* 시간 피커 — 동일한 미니팝업 */}
-          <Popover
-            open={!!timeAnchor && !allDay}
-            anchorEl={timeAnchor}
-            onClose={() => setTimeAnchor(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-            slotProps={{ paper: { sx: { mt: 0.5, p: 1.25, bgcolor: 'background.elevated', backgroundImage: 'none', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' } } }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-              <TimeField variant="inline" ariaLabel="시작 시간" value={startTime} onChange={setStartTime} fullWidth={false} sx={{ width: 120 }} />
-              <Box component="span" sx={{ color: 'text.disabled' }}>–</Box>
-              <TimeField variant="inline" ariaLabel="종료 시간" value={endTime} onChange={setEndTime} fullWidth={false} sx={{ width: 120 }} />
-            </Box>
-          </Popover>
+          {/* 기간 미니달력(클릭-클릭) — 칩에 붙는 미니팝업(모달 크기 불변).
+              Popover(차단형) → Popper(비차단형): 팝업이 열린 채로도 밖의 버튼이 첫 클릭에 눌린다(사용자 요청).
+              onMouseDown 방지 = 팝업이 포커스를 뺏지 않아 Dialog 포커스 트랩과 충돌 없음 */}
+          <Popper open={!!calAnchor} anchorEl={calAnchor} placement="bottom-start" transition sx={{ zIndex: (th) => th.zIndex.modal + 1 }}>
+            {({ TransitionProps }) => (
+              <Grow {...TransitionProps} style={{ transformOrigin: 'top left' }}>
+                <Box onMouseDown={(e) => e.preventDefault()} sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' }}>
+                  {/* mousedown 기준 감지 — 팝업을 연 클릭 자체가 새 팝업을 도로 닫는 레이스 차단(칩 전환 원클릭).
+                      앵커 칩 위는 제외: 닫기/열기 토글은 칩 onClick이 담당(mousedown 닫힘+click 재열림 이중동작 방지) */}
+                  <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (e.target instanceof Element && e.target.closest('.MuiBackdrop-root')) return; if (calAnchor && e.target instanceof Node && calAnchor.contains(e.target)) return; setCalAnchor(null); setPicking(false) }}>
+                    <Box>
+                      <MiniCalendar ym={calYm || (date || todaySeoul()).slice(0, 7)} onYm={setCalYm} start={date} end={endDate} picking={picking} onPick={pickDay} />
+                    </Box>
+                  </ClickAwayListener>
+                </Box>
+              </Grow>
+            )}
+          </Popper>
+          {/* 시간 피커 — 24시간제 스크롤 목록(시작·종료 2열, 휠 스크롤) */}
+          <Popper open={!!timeAnchor && !allDay} anchorEl={timeAnchor} placement="bottom-start" transition sx={{ zIndex: (th) => th.zIndex.modal + 1 }}>
+            {({ TransitionProps }) => (
+              <Grow {...TransitionProps} style={{ transformOrigin: 'top left' }}>
+                <Box
+                  onMouseDown={(e) => {
+                    // 캡션·여백 클릭이 포커스를 body로 흘리면 Dialog 포커스트랩이 개입해 Escape가 모달을 닫아버림(리뷰 확정) — 표면 전체에서 포커스 이탈 방지.
+                    // 스크롤 리스트 자체(스크롤바 드래그)만 예외로 두되, 포커스는 칩으로 되돌린다.
+                    const t = e.target as HTMLElement
+                    if (t.hasAttribute('data-timelist')) { requestAnimationFrame(() => timeAnchor?.focus()); return }
+                    e.preventDefault()
+                  }}
+                  sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' }}
+                >
+                  <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (e.target instanceof Element && e.target.closest('.MuiBackdrop-root')) return; if (timeAnchor && e.target instanceof Node && timeAnchor.contains(e.target)) return; setTimeAnchor(null) }}>
+                    <Box sx={{ display: 'flex', gap: 0.75, p: 1, bgcolor: 'background.elevated', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px` }}>
+                      <TimeColumn label="시작" value={startTime} onPick={setStartTime} />
+                      <TimeColumn label="종료" value={endTime} onPick={setEndTime} />
+                    </Box>
+                  </ClickAwayListener>
+                </Box>
+              </Grow>
+            )}
+          </Popper>
 
           {mode === 'add' && (
             <FieldRow icon={<RepeatIcon />} wrap>
