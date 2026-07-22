@@ -41,7 +41,8 @@ export interface GanttBoardProps {
 }
 
 export default function GanttBoard({ items, curIdx, onOpen }: GanttBoardProps) {
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  // 첫 레인은 기본 펼침 — "레인은 펼쳐진다"를 첫 화면에서 시연(UX 진단 반영)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({ [CATEGORIES[0].full]: true })
   const allExpanded = CATEGORIES.every((c) => expanded[c.full])
   const toggleAll = () => {
     const next = !allExpanded
@@ -89,8 +90,31 @@ export default function GanttBoard({ items, curIdx, onOpen }: GanttBoardProps) {
             </Box>
           </Box>
 
-          {/* 레인 영역 */}
-          <Box sx={{ position: 'relative' }}>
+          {/* 범례 + 전체 펼치기 — 기능 안내가 기능보다 먼저 보이도록 상단 배치 */}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
+            {LEGEND.map((s) => (
+              <Box key={s} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Box sx={{ width: 8, height: 8, borderRadius: `${radius.pill}px`, bgcolor: (t) => statusColor(t, s) }} />
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  {s}
+                </Typography>
+              </Box>
+            ))}
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+              · 점선 = 추정 기간 · 분야 클릭 = 업무별 막대 펼침
+            </Typography>
+            <Button
+              size="small"
+              onClick={toggleAll}
+              startIcon={allExpanded ? <UnfoldLessIcon /> : <UnfoldMoreIcon />}
+              sx={{ ml: 'auto', color: 'text.secondary' }}
+            >
+              {allExpanded ? '전체 접기' : '전체 펼치기'}
+            </Button>
+          </Box>
+
+          {/* 레인 영역 — 상단 여백은 '오늘' 라벨 자리 */}
+          <Box sx={{ position: 'relative', pt: '22px' }}>
             {/* 지나온 시간(오늘선 왼쪽) — 면으로 어둡게 */}
             <Box
               sx={{
@@ -122,7 +146,7 @@ export default function GanttBoard({ items, curIdx, onOpen }: GanttBoardProps) {
             <Box
               sx={{
                 position: 'absolute',
-                top: -4,
+                top: '18px',
                 bottom: 0,
                 left: xAt(todayFrac),
                 width: '2px',
@@ -135,7 +159,7 @@ export default function GanttBoard({ items, curIdx, onOpen }: GanttBoardProps) {
                 variant="caption"
                 sx={{
                   position: 'absolute',
-                  top: -2,
+                  top: 0,
                   left: '50%',
                   transform: 'translate(-50%, -100%)',
                   px: 0.75,
@@ -272,28 +296,6 @@ export default function GanttBoard({ items, curIdx, onOpen }: GanttBoardProps) {
             })}
           </Box>
 
-          {/* 범례 + 전체 펼치기 */}
-          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.5, mt: 1.5, pt: 1, borderTop: 1, borderColor: 'divider' }}>
-            {LEGEND.map((s) => (
-              <Box key={s} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: `${radius.pill}px`, bgcolor: (t) => statusColor(t, s) }} />
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  {s}
-                </Typography>
-              </Box>
-            ))}
-            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-              · 점선 막대 = 원문이 "착공 전" 등이라 추정 매핑된 기간
-            </Typography>
-            <Button
-              size="small"
-              onClick={toggleAll}
-              startIcon={allExpanded ? <UnfoldLessIcon /> : <UnfoldMoreIcon />}
-              sx={{ ml: 'auto', color: 'text.secondary' }}
-            >
-              {allExpanded ? '전체 접기' : '전체 펼치기'}
-            </Button>
-          </Box>
         </Box>
       </Box>
     </AppCard>

@@ -66,6 +66,20 @@ export default function JourneyTimeline({ items, curIdx, selectedQ, onSelectQuar
 
   return (
     <AppCard>
+      {/* 상시 범례 — 스택바 색 해독을 툴팁·추측에 맡기지 않는다(UX 진단 반영) */}
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, mb: 1 }}>
+        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+          막대 = 그 분기까지 끝내야 하는 업무량 · 분기 클릭 = 해당 목록 보기
+        </Typography>
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 1.25 }}>
+          {(['완료', '진행중', '보류', '지연', '예정'] as DerivedStatus[]).map((s) => (
+            <Box key={s} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ width: 7, height: 7, borderRadius: `${radius.pill}px`, bgcolor: (t) => statusColor(t, s) }} />
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>{s}</Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
       <Box sx={{ overflowX: 'auto' }}>
         <Box sx={{ display: 'flex', alignItems: 'stretch', gap: 2, minWidth: 640 }}>
           {/* 프롤로그 — 이미 지나온 설계 여정(홈 로드맵과 연결) */}
@@ -126,9 +140,11 @@ export default function JourneyTimeline({ items, curIdx, selectedQ, onSelectQuar
                         flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'flex-end',
-                        height: BAR_AREA + 34,
+                        height: BAR_AREA + 50,
                         cursor: 'pointer',
                         borderRadius: `${radius.chip}px`,
+                        border: '1px solid',
+                        borderColor: selected ? 'primary.main' : 'transparent',
                         bgcolor: (t) =>
                           selected
                             ? alpha(t.palette.primary.main, 0.12)
@@ -162,6 +178,15 @@ export default function JourneyTimeline({ items, curIdx, selectedQ, onSelectQuar
                         <Box sx={{ position: 'absolute', top: 0, display: 'flex', fontSize: iconSize.header, color: 'accent.purple' }}>
                           <RocketLaunchIcon fontSize="inherit" />
                         </Box>
+                      )}
+                      {/* 마감 건수 — 색이 전부 회색인 초기에도 정보가 살아있게 상시 표시 */}
+                      {c.total > 0 && (
+                        <Typography
+                          variant="caption"
+                          sx={{ mb: 0.25, color: isCur ? 'accent.amber' : 'text.secondary' }}
+                        >
+                          {c.total}
+                        </Typography>
                       )}
                       {/* 상태 스택 바 */}
                       <Box sx={{ width: '58%', display: 'flex', flexDirection: 'column-reverse', overflow: 'hidden' }}>
