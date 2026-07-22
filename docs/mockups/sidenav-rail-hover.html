@@ -1,0 +1,367 @@
+<title>사이드 메뉴 레일+호버 시안</title>
+<style>
+  /* ── 페이지 크롬 토큰 (라이트/다크) ─────────────────────────── */
+  :root{
+    --bg:#F4F6F9; --surface:#FFFFFF; --text:#1B2434; --text2:#5C6879;
+    --line:#DFE4EC; --accent:#3E77C2; --on-accent:#FFFFFF; --chip:#E9EEF5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0B0D12; --surface:#141821; --text:#EEF2F8; --text2:#9FA9B9;
+      --line:#28303F; --accent:#5C9AE0; --on-accent:#0B0D12; --chip:#1C2230;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0B0D12; --surface:#141821; --text:#EEF2F8; --text2:#9FA9B9;
+    --line:#28303F; --accent:#5C9AE0; --on-accent:#0B0D12; --chip:#1C2230;
+  }
+  :root[data-theme="light"]{
+    --bg:#F4F6F9; --surface:#FFFFFF; --text:#1B2434; --text2:#5C6879;
+    --line:#DFE4EC; --accent:#3E77C2; --on-accent:#FFFFFF; --chip:#E9EEF5;
+  }
+
+  html,body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+    line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto;padding:28px 20px 60px;display:flex;flex-direction:column;gap:18px}
+
+  /* 헤더 */
+  .hd h1{font-size:21px;font-weight:700;letter-spacing:-.3px;margin:0 0 4px;text-wrap:balance}
+  .hd p{margin:0;font-size:13.5px;color:var(--text2)}
+  .hd .tag{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);
+    border:1px solid var(--accent);border-radius:999px;padding:1px 9px;margin-bottom:10px;letter-spacing:.04em}
+
+  /* 컨트롤 바 */
+  .bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;
+    background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .grp{display:flex;align-items:center;gap:8px}
+  .grp>label{font-size:11.5px;font-weight:700;color:var(--text2);letter-spacing:.03em;white-space:nowrap}
+  .seg{display:inline-flex;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
+  .seg button{border:none;background:none;color:var(--text2);font:inherit;font-size:12.5px;font-weight:600;
+    padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+  .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .fit{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text2);cursor:pointer;user-select:none}
+  .readout{margin-left:auto;font-size:12.5px;color:var(--text2);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .readout b{color:var(--text);font-weight:700}
+  .readout .plus{color:var(--accent);font-weight:700}
+
+  /* 스테이지 (실물 재현 프레임) */
+  .stage{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;overflow:auto}
+  .scaler{transform-origin:0 0}
+
+  /* ── 프레임 내부 = 실제 포털 재현 (앱 고유 다크 팔레트 고정) ── */
+  .frame{
+    --f-ink:#0F1117; --f-ink2:#161B22; --f-ink3:#1D2635;
+    --f-border:#293244; --f-border2:#232C3A;
+    --f-text:#FFFFFF; --f-text2:#AAB4C3; --f-text3:#7D8899;
+    --f-blue:#5491DA; --f-red:#E05B54; --f-amber:#D6A23E;
+    width:1366px;height:700px;background:var(--f-ink);border:1px solid var(--f-border2);
+    border-radius:10px;overflow:hidden;position:relative;display:flex;flex-direction:column;
+    font-size:13px;color:var(--f-text)}
+  .frame *{box-sizing:border-box}
+
+  .f-topbar{height:53px;flex-shrink:0;display:flex;align-items:center;gap:10px;
+    padding:0 16px;border-bottom:1px solid var(--f-border2);background:var(--f-ink)}
+  .f-mark{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#3d6fb0,#5491DA);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff}
+  .f-appname{font-weight:700;font-size:14.5px;letter-spacing:-.2px}
+  .f-apptitle{font-size:13.5px;color:var(--f-text2);padding-left:12px;border-left:1px solid var(--f-border)}
+  .f-homehint{margin-left:2px;font-size:11px;color:var(--f-text3)}
+  .f-bell{margin-left:auto;color:var(--f-text2);display:flex}
+  .f-body{flex:1;display:flex;min-height:0;position:relative}
+
+  /* 사이드 메뉴 공통 */
+  .f-sidenav{flex-shrink:0;position:relative;height:100%}
+  .f-panel{display:flex;flex-direction:column;gap:14px;padding:14px 10px;height:100%;
+    background:var(--f-ink);border-right:1px solid var(--f-border)}
+  .f-group{display:flex;flex-direction:column;gap:2px}
+  .f-glabel{height:20px;display:flex;align-items:center;padding:0 12px;position:relative}
+  .f-glabel span{font-size:10.5px;font-weight:700;color:var(--f-text3);letter-spacing:.09em;white-space:nowrap;
+    transition:opacity .12s}
+  .f-glabel::before{content:"";position:absolute;left:12px;right:12px;top:50%;height:1px;
+    background:var(--f-border2);opacity:0;transition:opacity .12s}
+  .f-item{display:flex;align-items:center;gap:10px;width:100%;height:38px;padding:0 12px;border:none;
+    border-radius:8px;background:none;color:var(--f-text2);font:inherit;font-size:13px;font-weight:500;
+    cursor:pointer;text-align:left;white-space:nowrap;-webkit-tap-highlight-color:transparent;
+    transition:background .12s,color .12s}
+  .f-item:hover{background:var(--f-ink2);color:var(--f-text)}
+  .f-item.active{background:rgba(84,145,218,.12);color:var(--f-blue);font-weight:700}
+  .f-item:focus-visible{outline:2px solid var(--f-blue);outline-offset:-2px}
+  .f-ico{width:24px;flex-shrink:0;display:flex;justify-content:center;position:relative}
+  .f-ico svg{width:18px;height:18px;fill:currentColor}
+  .f-name{overflow:hidden;text-overflow:ellipsis;transition:opacity .12s .05s}
+  .f-bads{display:inline-flex;align-items:center;gap:3px;flex-shrink:0;margin-top:-8px;transition:opacity .12s .05s}
+
+  /* 배지 — NavBadge 1스펙 재현 (15px, 빨강=새 글 / 앰버=개선 메모) */
+  .nb{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;
+    padding:0 4px;border-radius:999px;font-size:10px;font-weight:700;line-height:1;font-style:normal}
+  .nb.new{background:var(--f-red);color:#fff}
+  .nb.memo{background:var(--f-amber);color:#1b1c22}
+  /* 레일 접힘 상태용 아이콘 모서리 배지 */
+  .f-cnew{position:absolute;top:-7px;right:-9px;opacity:0;transition:opacity .12s}
+  .f-cmemo{position:absolute;bottom:-4px;right:-7px;width:8px;height:8px;border-radius:50%;
+    background:var(--f-amber);border:2px solid var(--f-ink);opacity:0;transition:opacity .12s}
+
+  /* ── 모드: 현재(208px 고정) ── */
+  .m-current .f-sidenav{width:208px}
+  .m-current .f-panel{width:208px}
+  .m-current .f-glabel:not(.has-label){display:none}
+
+  /* ── 모드: 레일(64px) ── */
+  .m-rail .f-sidenav{width:64px}
+  .m-rail .f-panel{width:64px;transition:width .18s cubic-bezier(.2,.7,.3,1),box-shadow .18s}
+  .m-rail .f-item[data-home]{display:none}          /* 확정: 홈 메뉴 제거(로고=홈) */
+  .m-rail .f-panel:not(.expanded) .f-name,
+  .m-rail .f-panel:not(.expanded) .f-bads,
+  .m-rail .f-panel:not(.expanded) .f-glabel span{opacity:0}
+  .m-rail .f-panel:not(.expanded) .f-glabel.has-label::before{opacity:1}
+  .m-rail .f-panel:not(.expanded) .f-glabel:not(.has-label){display:none}
+  .m-rail .f-panel:not(.expanded) .f-cnew{opacity:1}
+  .m-rail .f-panel:not(.expanded) .f-cmemo{opacity:1}
+  .m-rail .f-glabel:not(.has-label){display:none}
+  .m-rail .f-panel.expanded{width:208px}
+  /* 오버레이: 레일 폭은 그대로, 패널만 위로 떠서 펼쳐짐 */
+  .b-overlay .f-panel{position:absolute;left:0;top:0;bottom:0;z-index:30}
+  .b-overlay .f-panel.expanded{box-shadow:14px 0 34px rgba(0,0,0,.45)}
+  /* 밀어내기(비교용): 사이드 폭 자체가 늘어나 콘텐츠가 밀림 */
+  .b-push .f-sidenav{transition:width .18s cubic-bezier(.2,.7,.3,1)}
+  .b-push .f-sidenav:has(.f-panel.expanded){width:208px}
+
+  /* 본문(데모결과풍 사진 그리드) */
+  .f-main{flex:1;min-width:0;padding:20px 24px;overflow:hidden;display:flex;flex-direction:column;gap:14px}
+  .f-pagehead{display:flex;align-items:baseline;gap:10px}
+  .f-pagehead h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.3px}
+  .f-crumb{font-size:13px;color:var(--f-text3)}
+  .f-cardw{margin-left:auto;font-size:11.5px;color:var(--f-text3);font-variant-numeric:tabular-nums}
+  .f-cardw b{color:var(--f-text2)}
+  .f-grid{flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;
+    align-content:start;overflow:hidden}
+  .f-card{border:1px solid var(--f-border2);border-radius:10px;overflow:hidden;background:var(--f-ink2)}
+  .f-photo{aspect-ratio:4/3;background:
+    linear-gradient(160deg,rgba(84,145,218,.16),rgba(84,145,218,0) 46%),
+    linear-gradient(320deg,rgba(70,183,190,.10),rgba(70,183,190,0) 52%),
+    linear-gradient(135deg,#232e42,#151b28)}
+  .f-cap{padding:8px 11px 9px}
+  .f-cap b{display:block;font-size:12.5px;font-weight:600;color:var(--f-text)}
+  .f-cap span{font-size:11px;color:var(--f-text3)}
+
+  /* 호버 유도 힌트 */
+  .f-hint{position:absolute;left:76px;top:110px;z-index:40;font-size:12px;color:var(--f-text2);
+    background:var(--f-ink3);border:1px solid var(--f-border);border-radius:8px;padding:6px 10px;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);pointer-events:none;transition:opacity .2s}
+  .m-current .f-hint,.f-hint.seen{opacity:0}
+
+  /* 설명 노트 */
+  .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:12px}
+  .note{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  .note h3{margin:0 0 5px;font-size:13px;font-weight:700}
+  .note h3 em{font-style:normal;color:var(--accent);margin-right:6px}
+  .note p{margin:0;font-size:12.5px;color:var(--text2)}
+
+  /* 폭 회수 표 */
+  .tblwrap{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;background:var(--surface);border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;font-size:12.5px}
+  th,td{padding:9px 14px;text-align:left;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+  thead th{border-top:none;font-size:11.5px;color:var(--text2);letter-spacing:.03em;background:var(--chip)}
+  td.num{text-align:right}
+  tr.pick td{color:var(--text);font-weight:700}
+  tr.dim td{color:var(--text2)}
+  .foot{font-size:12px;color:var(--text2);margin:2px 2px 0}
+
+  @media (prefers-reduced-motion: reduce){
+    .f-panel,.f-sidenav,.f-name,.f-bads,.f-glabel span,.f-cnew,.f-cmemo{transition:none !important}
+  }
+</style>
+
+<div class="wrap">
+  <div class="hd">
+    <span class="tag">시안 · 2026-07-22</span>
+    <h1>사이드 메뉴 — 아이콘 레일 + 호버 펼침</h1>
+    <p>상단 메뉴 전환 대신, 사이드 메뉴를 유지하되 평소 64px 아이콘 레일로 접고 마우스를 올리면 메뉴명까지 펼칩니다. 아래 프레임에서 직접 마우스를 올려 확인하세요.</p>
+  </div>
+
+  <div class="bar">
+    <div class="grp"><label>모드</label>
+      <div class="seg" id="segMode">
+        <button data-mode="current" aria-pressed="false">현재 (208px)</button>
+        <button data-mode="overlay" aria-pressed="true">레일+호버 · 오버레이 (추천)</button>
+        <button data-mode="push" aria-pressed="false">레일+호버 · 밀어내기 (비교)</button>
+      </div>
+    </div>
+    <div class="grp"><label>화면 폭</label>
+      <div class="seg" id="segW">
+        <button data-w="1366" aria-pressed="true">1366 노트북</button>
+        <button data-w="1920" aria-pressed="false">1920 모니터</button>
+      </div>
+    </div>
+    <label class="fit"><input type="checkbox" id="fit" checked> 화면에 맞춰 축소</label>
+    <div class="readout" id="readout"></div>
+  </div>
+
+  <div class="stage" id="stageBox">
+    <div class="scaler" id="scaler">
+      <div class="frame m-rail b-overlay" id="frame">
+        <div class="f-topbar">
+          <span class="f-mark">A</span><span class="f-appname">ANGELS FAB</span>
+          <span class="f-apptitle">구축 관리 대시보드</span>
+          <span class="f-homehint">· 로고 클릭 = 홈 (홈 메뉴 제거 확정 반영)</span>
+          <span class="f-bell"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2m6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1z"/></svg></span>
+        </div>
+        <div class="f-body">
+          <aside class="f-sidenav" id="sidenav" aria-label="주 메뉴">
+            <div class="f-panel" id="panel"></div>
+          </aside>
+          <main class="f-main">
+            <div class="f-pagehead">
+              <h2>장비관리</h2><span class="f-crumb">데모결과 · 사진 갤러리 예시</span>
+              <span class="f-cardw" id="cardw"></span>
+            </div>
+            <div class="f-grid" id="grid"></div>
+          </main>
+          <div class="f-hint" id="hint">◀ 레일에 마우스를 올려보세요</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="note"><h3><em>1</em>오버레이로 펼친다 (밀어내기와 비교)</h3>
+      <p>펼침 패널이 콘텐츠 위로 떠서, 메뉴를 오갈 때 본문·사진이 흔들리지 않습니다. '밀어내기' 모드를 켜서 화면이 출렁이는 차이를 직접 비교해 보세요.</p></div>
+    <div class="note"><h3><em>2</em>스치면 안 열리고, 올리면 열린다</h3>
+      <p>마우스가 140ms 이상 머물 때만 펼쳐져 지나가는 스침에 반응하지 않습니다. 키보드 Tab 포커스에도 펼쳐지고, 모션 최소화 설정을 존중합니다.</p></div>
+    <div class="note"><h3><em>3</em>배지는 아이콘 모서리로</h3>
+      <p>접힘: 빨강 새 글 숫자는 아이콘 우상단, 앰버 개선 메모는 우하단 점. 펼치면 지금처럼 메뉴명 뒤 위첨자 숫자(D7 표준 그대로)로 돌아옵니다.</p></div>
+    <div class="note"><h3><em>4</em>터치 화면 유의점</h3>
+      <p>터치 노트북엔 호버가 없어 탭 = 바로 이동(라벨은 못 봄). 내부 도구 메뉴 9개 수준이라 수용 가능하고, 필요하면 나중에 '항상 펼침' 고정 핀을 추가할 수 있습니다.</p></div>
+  </div>
+
+  <div class="tblwrap">
+    <table>
+      <thead><tr><th>방식</th><th class="num">메뉴 폭</th><th class="num">콘텐츠 폭 (1366 기준)</th><th class="num">사진 폭 이득</th></tr></thead>
+      <tbody>
+        <tr class="dim"><td>현재 사이드바</td><td class="num">208px</td><td class="num">1,110px</td><td class="num">—</td></tr>
+        <tr class="pick"><td>레일 + 호버 펼침 (이 시안)</td><td class="num">64px</td><td class="num">1,254px</td><td class="num">+144px (+13%)</td></tr>
+        <tr class="dim"><td>상단 메뉴 전환 (기각)</td><td class="num">0px</td><td class="num">1,318px</td><td class="num">+208px (+19%)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="foot">상단 전환이 가져가려던 폭 이득의 약 7할을, 사이드 구조를 유지한 채 회수합니다. 모바일(하단 탭바)은 이 변경과 무관합니다.</p>
+</div>
+
+<script>
+  // ── 메뉴 데이터: src/constants/nav.tsx 그대로 (아이콘 = MUI 원본 패스) ──
+  const P = {
+    home:"M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z",
+    campaign:"M18 11v2h4v-2zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61M20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4M4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34",
+    calendar:"M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2m0 16H5V10h14zM9 14H7v-2h2zm4 0h-2v-2h2zm4 0h-2v-2h2zm-8 4H7v-2h2zm4 0h-2v-2h2zm4 0h-2v-2h2z",
+    assessment:"M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2M9 17H7v-7h2zm4 0h-2V7h2zm4 0h-2v-4h2z",
+    monitor:"M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h3l-1 1v2h12v-2l-1-1h3c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 13H4V5h16z",
+    flag:"M14.4 6 14 4H5v17h2v-7h5.6l.4 2h7V6z",
+    copresent:["M21 3H3c-1.1 0-2 .9-2 2v8h2V5h18v16c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2","M15.39 16.56C13.71 15.7 11.53 15 9 15s-4.71.7-6.39 1.56C1.61 17.07 1 18.1 1 19.22V22h16v-2.78c0-1.12-.61-2.15-1.61-2.66","M9 13c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4"],
+    bulb:"M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7m2.85 11.1-.85.6V16h-4v-2.3l-.85-.6C7.8 12.16 7 10.63 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.63-.8 3.16-2.15 4.1",
+    link:"M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1M8 13h8v-2H8zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5",
+    settings:"M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6"
+  };
+  const GROUPS = [
+    { label:null, items:[ {icon:P.home, label:"홈", home:true} ] },
+    { label:"업무", items:[
+      {icon:P.campaign, label:"공지사항", nnew:3},
+      {icon:P.calendar, label:"업무일정"},
+      {icon:P.assessment, label:"업무현황", nnew:5},
+      {icon:P.monitor, label:"장비관리", active:true},
+      {icon:P.flag, label:"마일스톤"} ] },
+    { label:"정보", items:[
+      {icon:P.copresent, label:"학술·교육·전시"},
+      {icon:P.bulb, label:"포털개선요청", nnew:2, memo:3},
+      {icon:P.link, label:"바로가기"},
+      {icon:P.settings, label:"설정"} ] }
+  ];
+
+  const svg = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true">${(Array.isArray(d)?d:[d]).map(p=>`<path d="${p}"/>`).join("")}</svg>`;
+  const panel = document.getElementById("panel");
+  panel.innerHTML = GROUPS.map(g => `
+    <div class="f-group">
+      <div class="f-glabel${g.label?" has-label":""}">${g.label?`<span>${g.label}</span>`:""}</div>
+      ${g.items.map(it => `
+        <button class="f-item${it.active?" active":""}"${it.home?" data-home":""}>
+          <span class="f-ico">${svg(it.icon)}
+            ${it.nnew?`<i class="nb new f-cnew">${it.nnew}</i>`:""}${it.memo?`<i class="f-cmemo"></i>`:""}
+          </span>
+          <span class="f-name">${it.label}</span>
+          ${(it.nnew||it.memo)?`<span class="f-bads">
+            ${it.nnew?`<i class="nb new">${it.nnew}</i>`:""}${it.memo?`<i class="nb memo">${it.memo}</i>`:""}
+          </span>`:""}
+        </button>`).join("")}
+    </div>`).join("");
+
+  // 사진 카드 12장
+  document.getElementById("grid").innerHTML = Array.from({length:12},(_,i)=>`
+    <div class="f-card"><div class="f-photo"></div>
+      <div class="f-cap"><b>장비 데모 사진 ${i+1}</b><span>2026-07-${String(8+i).padStart(2,"0")} · PVD 라인</span></div>
+    </div>`).join("");
+
+  // ── 모드/폭/배율 컨트롤 ──
+  const frame = document.getElementById("frame");
+  const sidenav = document.getElementById("sidenav");
+  const hint = document.getElementById("hint");
+  let mode = "overlay", frameW = 1366;
+
+  function setSeg(seg, btn){ seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b===btn ? "true":"false")); }
+  document.getElementById("segMode").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    mode = b.dataset.mode; setSeg(e.currentTarget, b);
+    frame.classList.toggle("m-current", mode==="current");
+    frame.classList.toggle("m-rail", mode!=="current");
+    frame.classList.toggle("b-overlay", mode==="overlay");
+    frame.classList.toggle("b-push", mode==="push");
+    collapse(0); update();
+  });
+  document.getElementById("segW").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    frameW = +b.dataset.w; setSeg(e.currentTarget, b);
+    frame.style.width = frameW + "px"; rescale(); update();
+  });
+
+  const fitChk = document.getElementById("fit"), scaler = document.getElementById("scaler"), stageBox = document.getElementById("stageBox");
+  function rescale(){
+    const avail = stageBox.clientWidth - 28;
+    // 패널이 폭 0으로 열리는 초기 순간엔 배율 계산을 건너뜀 (scale(0) 방지)
+    const s = (fitChk.checked && avail > 40) ? Math.min(1, avail / frameW) : 1;
+    scaler.style.transform = `scale(${s})`;
+    scaler.style.width = frameW + "px";
+    stageBox.style.height = (frame.offsetHeight * s + 28) + "px";
+  }
+  fitChk.addEventListener("change", rescale);
+  addEventListener("resize", rescale);
+  // CDP 프리뷰는 창 resize 이벤트가 안 오는 경우가 있어 컨테이너 관찰로 보강
+  new ResizeObserver(rescale).observe(stageBox);
+
+  // ── 호버 의도 지연 (진입 140ms / 이탈 160ms) + 키보드 포커스 ──
+  let tIn, tOut;
+  const expand = () => { document.getElementById("panel").classList.add("expanded"); hint.classList.add("seen"); };
+  const collapse = (delay=160) => { clearTimeout(tIn); clearTimeout(tOut);
+    tOut = setTimeout(()=>document.getElementById("panel").classList.remove("expanded"), delay); };
+  sidenav.addEventListener("pointerenter", () => { if(mode==="current") return; clearTimeout(tOut); tIn = setTimeout(expand, 140); });
+  sidenav.addEventListener("pointerleave", () => { if(mode==="current") return; collapse(); });
+  sidenav.addEventListener("focusin", () => { if(mode!=="current"){ clearTimeout(tOut); expand(); } });
+  sidenav.addEventListener("focusout", () => { if(mode!=="current" && !sidenav.contains(document.activeElement)) collapse(); });
+
+  // ── 수치 리드아웃 ──
+  const fmt = n => n.toLocaleString("ko-KR");
+  function update(){
+    const cur = frameW - 208 - 48, rail = frameW - 64 - 48;
+    const r = document.getElementById("readout");
+    if(mode==="current"){
+      r.innerHTML = `콘텐츠 폭 <b>${fmt(cur)}px</b> · 레일 전환 시 <span class="plus">+${fmt(rail-cur)}px</span>`;
+    } else {
+      r.innerHTML = `콘텐츠 폭 <b>${fmt(cur)}px → ${fmt(rail)}px</b> <span class="plus">(+${fmt(rail-cur)}px, +${Math.round((rail-cur)/cur*100)}%)</span>`;
+    }
+    requestAnimationFrame(() => {
+      const c = document.querySelector(".f-card");
+      if(c) document.getElementById("cardw").innerHTML = `사진 카드 폭 <b>${Math.round(c.getBoundingClientRect().width / (fitChk.checked ? (scaler.getBoundingClientRect().width/frameW) : 1))}px</b>`;
+    });
+  }
+  rescale(); update();
+</script>
