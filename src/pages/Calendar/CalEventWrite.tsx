@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, ReactNode } from 'react'
 import Box from '@mui/material/Box'
+import Popover from '@mui/material/Popover'
 import Dialog from '@mui/material/Dialog'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -157,7 +158,7 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
   const bandSx = { position: 'absolute' as const, top: 4, bottom: 4, left: 0, right: 0, bgcolor: 'rgba(84,145,218,.2)' }
   const n = start && endEff ? dayDiff(start, endEff) + 1 : 1
   return (
-    <Box sx={{ bgcolor: 'background.elevated', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, p: '10px 12px 8px', width: 306, maxWidth: '100%', mt: 1 }}>
+    <Box sx={{ bgcolor: 'background.elevated', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, p: '10px 12px 8px', width: 306, maxWidth: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: '2px', pb: 0.75 }}>
         <IconButton size="small" aria-label="이전 달" onClick={() => move(-1)} sx={{ color: 'text.secondary' }}><ChevronLeftIcon sx={{ fontSize: 18 }} /></IconButton>
         <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{y}년 {m}월</Typography>
@@ -229,8 +230,8 @@ function FieldRow({ icon, wrap, children }: { icon: ReactNode; wrap?: boolean; c
   )
 }
 
-/** 기간·시간 칩 — 누르면 아래로 피커가 열리는 요약 버튼 */
-function SummaryChip({ label, active, ariaLabel, onClick }: { label: ReactNode; active?: boolean; ariaLabel: string; onClick: () => void }) {
+/** 기간·시간 칩 — 누르면 미니팝업 피커가 열리는 요약 버튼 */
+function SummaryChip({ label, active, ariaLabel, onClick }: { label: ReactNode; active?: boolean; ariaLabel: string; onClick: (e: React.MouseEvent<HTMLElement>) => void }) {
   return (
     <Box
       component="button"
@@ -277,9 +278,9 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   const [error, setError] = useState<string | null>(null)
   const [scopeAsk, setScopeAsk] = useState<null | 'save' | 'delete'>(null) // 반복 시리즈 범위 선택 대기
   const [delAsk, setDelAsk] = useState(false) // 단일 일정 삭제 확인(표준 ConfirmDialog)
-  // 기간/시간 피커 펼침 — 서로 배타(모달이 길어지지 않게)
-  const [calOpen, setCalOpen] = useState(false)
-  const [timeOpen, setTimeOpen] = useState(false)
+  // 기간/시간 피커 — 칩에 붙는 미니팝업(모달 크기 불변, 사용자 확정). 날짜는 그리드에서 이미 정했으니 기본 닫힘.
+  const [calAnchor, setCalAnchor] = useState<HTMLElement | null>(null)
+  const [timeAnchor, setTimeAnchor] = useState<HTMLElement | null>(null)
   const [picking, setPicking] = useState(false) // 미니달력: 시작 찍고 종료 대기 중
   const [calYm, setCalYm] = useState('') // 미니달력 표시 달 'yyyy-MM'
 
@@ -306,7 +307,8 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     setRepeat('none')
     setRepeatUntil('')
     setPicking(false)
-    setTimeOpen(false)
+    setCalAnchor(null)
+    setTimeAnchor(null)
     if (mode === 'edit' && event) {
       const parsed = parseTitleTag(baseTitle(event.title))
       setTitle(parsed.content)
@@ -317,7 +319,6 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       setAllDay(event.allDay)
       setDate(dateOnly(event.start))
       setLoc(event.loc && event.loc !== '-' ? event.loc : '')
-      setCalOpen(false) // 수정은 보통 다른 걸 고침 — 기간 칩을 누르면 열림
       setCalYm(dateOnly(event.start).slice(0, 7))
       if (event.allDay) {
         const inc = inclusiveEndDate(event.end)
@@ -341,7 +342,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       setStartTime('09:00')
       setEndTime('10:00')
       setLoc('')
-      setCalOpen(true) // 추가는 날짜 확인·조정이 흔함 — 미니달력 기본 펼침(시안과 동일)
+      // 날짜는 그리드에서 이미 골라 들어옴 — 달력은 기본 접힘, 수정할 때만 칩을 눌러 팝업(사용자 확정)
       setCalYm((initialDate || todaySeoul()).slice(0, 7))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -363,13 +364,15 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, date, endDate, title])
 
-  // 미니달력 클릭-클릭: 한 번=시작(종료 대기) → 한 번 더=종료(같은 날=하루, 앞 날짜면 구간 뒤집기)
+  // 미니달력 클릭-클릭: 한 번=시작(종료 대기) → 한 번 더=종료(같은 날=하루, 앞 날짜면 구간 뒤집기).
+  // 선택이 완성되면 팝업을 닫는다(숙소예약 UX).
   const pickDay = (key: string) => {
     if (repeat !== 'none') {
       // 반복 일정은 단일 날짜 기준 — 항상 하루 선택
       setDate(key)
       setEndDate('')
       setPicking(false)
+      setCalAnchor(null)
       return
     }
     if (!picking) {
@@ -384,6 +387,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         setEndDate(key === date ? '' : key)
       }
       setPicking(false)
+      setCalAnchor(null)
     }
   }
 
@@ -566,16 +570,16 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           <FieldRow icon={<AccessTimeIcon />} wrap>
             <SummaryChip
               label={rangeLabel}
-              active={calOpen}
+              active={!!calAnchor}
               ariaLabel="기간 선택"
-              onClick={() => { setCalOpen((o) => !o); setTimeOpen(false) }}
+              onClick={(e) => { setCalAnchor((a) => (a ? null : e.currentTarget)); setTimeAnchor(null); setPicking(false) }}
             />
             {!allDay && (
               <SummaryChip
                 label={`${startTime} – ${endTime}`}
-                active={timeOpen}
+                active={!!timeAnchor}
                 ariaLabel="시간 선택"
-                onClick={() => { setTimeOpen((o) => !o); setCalOpen(false) }}
+                onClick={(e) => { setTimeAnchor((a) => (a ? null : e.currentTarget)); setCalAnchor(null) }}
               />
             )}
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
@@ -584,17 +588,32 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
             </Box>
           </FieldRow>
 
-          {/* 기간 미니달력(클릭-클릭) / 시간 피커 — 칩 아래 펼침(배타) */}
-          {calOpen && (
+          {/* 기간 미니달력(클릭-클릭) — 칩에 붙는 미니팝업(모달 크기 불변) */}
+          <Popover
+            open={!!calAnchor}
+            anchorEl={calAnchor}
+            onClose={() => { setCalAnchor(null); setPicking(false) }}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            slotProps={{ paper: { sx: { mt: 0.5, p: 0, bgcolor: 'transparent', backgroundImage: 'none', borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' } } }}
+          >
             <MiniCalendar ym={calYm || (date || todaySeoul()).slice(0, 7)} onYm={setCalYm} start={date} end={endDate} picking={picking} onPick={pickDay} />
-          )}
-          {timeOpen && !allDay && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1, flexWrap: 'wrap' }}>
+          </Popover>
+          {/* 시간 피커 — 동일한 미니팝업 */}
+          <Popover
+            open={!!timeAnchor && !allDay}
+            anchorEl={timeAnchor}
+            onClose={() => setTimeAnchor(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+            slotProps={{ paper: { sx: { mt: 0.5, p: 1.25, bgcolor: 'background.elevated', backgroundImage: 'none', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' } } }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
               <TimeField variant="inline" ariaLabel="시작 시간" value={startTime} onChange={setStartTime} fullWidth={false} sx={{ width: 120 }} />
               <Box component="span" sx={{ color: 'text.disabled' }}>–</Box>
               <TimeField variant="inline" ariaLabel="종료 시간" value={endTime} onChange={setEndTime} fullWidth={false} sx={{ width: 120 }} />
             </Box>
-          )}
+          </Popover>
 
           {mode === 'add' && (
             <FieldRow icon={<RepeatIcon />} wrap>

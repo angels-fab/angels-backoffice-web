@@ -130,8 +130,12 @@ export default function Calendar() {
   const { isAdmin } = useRole()
   const snack = useSnack()
   const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string; initialEndDate?: string } | null>(null)
-  // 새 일정 초안 — 모달(add)이 열려 있는 동안 달력에 '(새 일정)' 막대로 미리보기(임시 일정이라 기존 일정을 안 덮음)
+  // 새 일정 초안 — 누르는 순간부터 '(새 일정)' 막대로 미리보기(임시 일정이라 기존 일정을 안 덮음).
+  // 그리드 제스처(월간): pointerdown=막대 생성 → 드래그로 기간 확장 → pointerup=모달. 모달이 열린 뒤에도 이어서 표시.
   const [draft, setDraft] = useState<CalDraft | null>(null)
+  const draftRef = useRef<CalDraft | null>(null)
+  draftRef.current = draft
+  const createDrag = useRef<{ startDate: string; pointerId: number; touch: boolean; x0: number; y0: number } | null>(null)
   const idMap = useRef(new WeakMap<HTMLElement, string>()) // segment → 일정 id (수정 진입용)
   const dragClickSuppress = useRef(0) // 드래그 드롭 직후 합성 click이 팝오버를 고정하는 것 방지
 
@@ -211,6 +215,15 @@ export default function Calendar() {
     }
     return null
   }
+  // 포인터 (x,y)가 가리키는 날짜 칸의 날짜 — 제스처 드래그용(포인터 캡처 중엔 e.target이 고정이라 좌표로 찾음)
+  const findDayAt = (x: number, y: number): string | null => {
+    const stack = document.elementsFromPoint(x, y) as HTMLElement[]
+    for (const el of stack) {
+      const d = el.closest?.('[data-date]') as HTMLElement | null
+      if (d) return (d.getAttribute('data-date') || '').slice(0, 10) || null
+    }
+    return null
+  }
 
   // 일정 열기(마우스 클릭·키보드 Enter 공용) — 관리자=수정 모달 바로, 열람=그 자리 고정 상세(재실행=닫기)
   const openEventAt = (el: HTMLElement, x: number, y: number) => {
@@ -244,7 +257,14 @@ export default function Calendar() {
   useEffect(() => {
     const onDocClick = () => closePop()
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closePop()
+      if (e.key === 'Escape') {
+        closePop()
+        // 진행 중인 새 일정 드래그 제스처도 취소
+        if (createDrag.current) {
+          createDrag.current = null
+          setDraft(null)
+        }
+      }
     }
     document.addEventListener('click', onDocClick)
     document.addEventListener('keydown', onKey)
@@ -590,9 +610,63 @@ export default function Calendar() {
       <Box sx={{ minWidth: 0, position: 'relative' }}>
         <Box
           className="fc-theme-angels fc-team"
+          // 새 일정 제스처(월간·관리자): 빈 날짜 칸을 누르는 순간 '(새 일정)' 막대 생성 → 드래그로 기간 확장 → 놓으면 모달.
+          // 사용자 확정: "누를 때부터 막대" — 셀 틴트(FC selectable) 대신 임시 일정 막대가 처음부터 보인다.
+          onPointerDown={(e) => {
+            if (!isAdmin || view !== 'month' || e.button !== 0) return
+            if (lockedEl.current) return // 상세 팝오버 열림 중엔 기존처럼 '닫기'만(생성 시작 안 함)
+            const t = e.target as HTMLElement
+            if (findEvAt(e.clientX, e.clientY)) return // 일정 위 — 열기/이동 제스처에 양보
+            if (t.closest('a, button, .fc-more-link, .fc-popover')) return
+            const dayEl = t.closest('[data-date]')
+            const d = dayEl?.getAttribute('data-date')?.slice(0, 10)
+            if (!d) return
+            const touch = e.pointerType !== 'mouse'
+            createDrag.current = { startDate: d, pointerId: e.pointerId, touch, x0: e.clientX, y0: e.clientY }
+            if (!touch) {
+              e.preventDefault() // 드래그 중 텍스트 선택 방지(마우스만 — 터치는 스크롤 보존)
+              try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* 미지원 무시 */ }
+            }
+            setDraft({ start: d, end: d, title: '' })
+          }}
+          onPointerUp={(e) => {
+            const cd = createDrag.current
+            if (!cd || e.pointerId !== cd.pointerId) return
+            createDrag.current = null
+            try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* no-op */ }
+            // 드래그를 일정 칩 위에서 놓아도 뒤따르는 합성 click이 그 일정의 수정 모달로 덮어쓰지 않게 억제
+            dragClickSuppress.current = Date.now() + 400
+            const cur = draftRef.current
+            const s = cur?.start ?? cd.startDate
+            const en = cur?.end ?? cd.startDate
+            setWrite({ mode: 'add', event: null, initialDate: s, initialEndDate: en !== s ? en : undefined })
+          }}
+          onPointerCancel={() => {
+            if (createDrag.current) {
+              createDrag.current = null
+              setDraft(null)
+            }
+          }}
           onPointerMove={(e) => {
             const x = e.clientX
             const y = e.clientY
+            // 새 일정 드래그 중 — 기간 확장(마우스) / 이동 크면 스크롤로 간주해 취소(터치)
+            const cd = createDrag.current
+            if (cd) {
+              if (cd.touch) {
+                if (Math.abs(x - cd.x0) > 8 || Math.abs(y - cd.y0) > 8) {
+                  createDrag.current = null
+                  setDraft(null)
+                }
+              } else {
+                const dd = findDayAt(x, y)
+                if (dd) {
+                  const [s, en] = dd < cd.startDate ? [dd, cd.startDate] : [cd.startDate, dd]
+                  setDraft((p) => (p && p.start === s && p.end === en ? p : { start: s, end: en, title: '' }))
+                }
+              }
+              return // 제스처 중엔 호버 팝오버 갱신 안 함
+            }
             const el = findEvAt(x, y)
             // 손가락 포인터 — 일정 위(가려진 멀티데이 중간·마지막 구간 포함)에서만 pointer, 그 외엔 기본 커서.
             // 가려진 구간은 위 칸의 day-events 컨테이너가 덮어 .fc-event의 cursor:pointer가 안 보이므로 컨테이너에 직접 지정.
@@ -611,8 +685,9 @@ export default function Calendar() {
           onClick={(e) => {
             const el = findEvAt(e.clientX, e.clientY)
             if (!el) {
-              // 빈 날짜 칸 클릭(관리자) = 그 날짜로 작성 모달 — 일정·링크·팝오버 열림 상태는 제외
+              // 빈 날짜 칸 클릭 = 작성 모달. 월간은 pointer 제스처(누를 때부터 막대)가 담당하므로 그 외 뷰만 여기서 처리
               if (
+                view !== 'month' &&
                 isAdmin &&
                 !lockedEl.current &&
                 Date.now() >= dragClickSuppress.current &&
@@ -676,9 +751,8 @@ export default function Calendar() {
               if (!ev || !info.event.start) return info.revert()
               void commitEventChange(ev, info.event.start, info.event.end, () => info.revert())
             }}
-            // 범위 드래그 선택 — 하이라이트 미리보기(FC 기본) 후 놓으면 그 구간으로 작성 모달.
-            // 하루짜리 선택(단일 클릭)은 위임 클릭 경로가 담당하므로 무시(이중 오픈 방지).
-            selectable={isAdmin}
+            // 범위 드래그 선택 — 월간은 자체 제스처('(새 일정)' 막대)가 대체하므로 주(시간표) 뷰에서만 FC selectable.
+            selectable={isAdmin && view === 'timeweek'}
             select={(info) => {
               const spanDays = Math.round((info.end.getTime() - info.start.getTime()) / 86400000)
               if (!info.allDay || spanDays <= 1) return
