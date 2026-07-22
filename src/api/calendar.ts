@@ -82,8 +82,11 @@ const toRaw = (r: CalTableRow, startDate: string, idSuffix = ''): CalRawEvent =>
   }
 }
 
-/** 반복 발생일 목록(yyyy-MM-dd). monthly는 그 달에 없는 일자(31일 등) 건너뜀. cap로 폭주 방지. */
-function occurrenceDates(s0: string, repeat: 'daily' | 'weekly' | 'monthly', until: string, cap: number): string[] {
+/** 반복 종류 — monthly(같은 날짜, 레거시 로더 호환)·monthly_nth(N번째 요일)·monthly_last(마지막 요일)·yearly */
+export type CalRepeat = 'none' | 'daily' | 'weekly' | 'monthly' | 'monthly_nth' | 'monthly_last' | 'yearly'
+
+/** 반복 발생일 목록(yyyy-MM-dd). monthly류는 그 달에 없는 일자(31일 등) 말일 앵커. cap로 폭주 방지. */
+function occurrenceDates(s0: string, repeat: Exclude<CalRepeat, 'none'>, until: string, cap: number): string[] {
   const out: string[] = []
   if (repeat === 'monthly') {
     const day = Number(s0.slice(8, 10))
@@ -96,6 +99,32 @@ function occurrenceDates(s0: string, repeat: 'daily' | 'weekly' | 'monthly', unt
       if (occ >= s0) out.push(occ)
       m += 1
       if (m > 12) { m = 1; y += 1 }
+    }
+  } else if (repeat === 'monthly_nth' || repeat === 'monthly_last') {
+    // 시작일의 요일·서수(몇 번째 그 요일인지)를 앵커로 매달 같은 자리 요일에 생성 — 구글캘린더식
+    const d0 = Number(s0.slice(8, 10))
+    const dow = new Date(Number(s0.slice(0, 4)), Number(s0.slice(5, 7)) - 1, d0).getDay()
+    const nth = Math.ceil(d0 / 7) // monthly_nth는 UI에서 1~4만 제공(N번째는 어느 달에나 존재)
+    let [y, m] = [Number(s0.slice(0, 4)), Number(s0.slice(5, 7))]
+    for (let i = 0; i < 600 && out.length < cap; i++) {
+      const lastDay = new Date(y, m, 0).getDate()
+      const day = repeat === 'monthly_last'
+        ? lastDay - ((new Date(y, m - 1, lastDay).getDay() - dow + 7) % 7)
+        : 1 + ((dow - new Date(y, m - 1, 1).getDay() + 7) % 7) + (nth - 1) * 7
+      const occ = iso(new Date(y, m - 1, day))
+      if (occ > until) break
+      if (occ >= s0) out.push(occ)
+      m += 1
+      if (m > 12) { m = 1; y += 1 }
+    }
+  } else if (repeat === 'yearly') {
+    const m0 = Number(s0.slice(5, 7))
+    const d0 = Number(s0.slice(8, 10))
+    for (let y = Number(s0.slice(0, 4)), i = 0; i < 600 && out.length < cap; y++, i++) {
+      const lastDay = new Date(y, m0, 0).getDate()
+      const occ = iso(new Date(y, m0 - 1, Math.min(d0, lastDay))) // 2/29는 비윤년에 2/28(말일 앵커 관례)
+      if (occ > until) break
+      if (occ >= s0) out.push(occ)
     }
   } else {
     const step = repeat === 'daily' ? 1 : 7
@@ -138,7 +167,7 @@ export interface CalWriteInput {
   /** 시작/종료 — 종일 'yyyy-MM-dd'(종료 포함), 시간 'yyyy-MM-ddTHH:mm' */
   start: string
   end: string
-  repeat?: 'none' | 'daily' | 'weekly' | 'monthly'
+  repeat?: CalRepeat
   repeatUntil?: string
   createdBy?: string
 }
@@ -166,9 +195,9 @@ export async function addCalEvent(p: CalWriteInput): Promise<{ note?: string }> 
     nudgeCalendarSync()
     return {}
   }
-  // 반복 — 발생일별 개별 행으로 펼쳐 저장(series_id로 묶음). 종료일 비우면 6개월, 상한 400건.
+  // 반복 — 발생일별 개별 행으로 펼쳐 저장(series_id로 묶음). 종료일 비우면 6개월(매년은 5년), 상한 400건.
   const s0 = p.start.slice(0, 10)
-  const until = p.repeatUntil || monthsLater(s0, 6)
+  const until = p.repeatUntil || monthsLater(s0, p.repeat === 'yearly' ? 60 : 6)
   const dates = occurrenceDates(s0, p.repeat, until, 400)
   if (!dates.length) throw new Error('반복 발생일이 없습니다 (시작일·종료일을 확인해주세요)')
   const sid = genSeriesId()

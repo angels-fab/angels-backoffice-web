@@ -102,10 +102,8 @@ interface Props {
   onDraftChange?: (draft: CalDraft | null) => void
 }
 
-type Repeat = 'none' | 'daily' | 'weekly' | 'monthly'
-const REPEAT_LABEL: [Repeat, string][] = [
-  ['none', '반복 안 함'], ['daily', '매일'], ['weekly', '매주'], ['monthly', '매월'],
-]
+type Repeat = 'none' | 'daily' | 'weekly' | 'monthly_nth' | 'monthly_last' | 'yearly'
+const ORDINALS = ['첫번째', '두번째', '세번째', '네번째']
 
 const dateOnly = (dt: string) => (dt || '').slice(0, 10)
 const timeOnly = (dt: string) => (dt || '').slice(11, 16)
@@ -134,6 +132,28 @@ function fmtK(key: string, sameMonthOf?: string): string {
 }
 const dayDiff = (a: string, b: string) =>
   Math.round((new Date(b).getTime() - new Date(a).getTime()) / 86400000)
+
+/**
+ * 시작일에서 파생되는 반복 옵션(구글캘린더식) — 매일 / 매주 X요일 / 매월 N번째 X요일 /
+ * 매월 마지막 X요일(그 달의 마지막 해당 요일일 때만) / 매년 M월 D일.
+ */
+function repeatOptions(dateKey: string): { value: Repeat; label: string }[] {
+  const opts: { value: Repeat; label: string }[] = [
+    { value: 'none', label: '반복 안 함' },
+    { value: 'daily', label: '매일' },
+  ]
+  if (!dateKey) return [...opts, { value: 'weekly', label: '매주' }]
+  const m = Number(dateKey.slice(5, 7))
+  const d = Number(dateKey.slice(8, 10))
+  const w = WEEKDAYS[dowOf(dateKey)]
+  const nth = Math.ceil(d / 7)
+  const daysInMonth = new Date(Number(dateKey.slice(0, 4)), m, 0).getDate()
+  opts.push({ value: 'weekly', label: `매주 ${w}요일` })
+  if (nth <= 4) opts.push({ value: 'monthly_nth', label: `매월 ${ORDINALS[nth - 1]} ${w}요일` })
+  if (d + 7 > daysInMonth) opts.push({ value: 'monthly_last', label: `매월 마지막 ${w}요일` })
+  opts.push({ value: 'yearly', label: `매년 ${m}월 ${d}일` })
+  return opts
+}
 
 /**
  * 미니 달력 — 숙소예약식 클릭-클릭 기간 선택(사용자 확정).
@@ -411,6 +431,11 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode, date, endDate, title])
 
+  // 날짜가 바뀌어 현재 반복 옵션이 성립하지 않으면(예: '매월 마지막 X요일'인데 마지막 요일이 아닌 날로 이동) 해제
+  useEffect(() => {
+    if (repeat !== 'none' && !repeatOptions(date).some((o) => o.value === repeat)) setRepeat('none')
+  }, [date, repeat])
+
   // 미니달력 클릭-클릭: 한 번=시작(종료 대기) → 한 번 더=종료(같은 날=하루, 앞 날짜면 구간 뒤집기).
   // 선택이 완성되면 팝업을 닫는다(숙소예약 UX).
   const pickDay = (key: string) => {
@@ -576,7 +601,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         <InputBase
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="제목 추가"
+          placeholder="일정 제목"
           autoFocus
           fullWidth
           inputProps={{ 'aria-label': '제목' }}
@@ -627,11 +652,6 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
               </Box>
             )
           })}
-          {!cat && (
-            <Typography variant="caption" sx={{ color: 'text.disabled', ml: '2px' }}>
-              고르지 않으면 제목 문구로 자동 분류
-            </Typography>
-          )}
         </Box>
 
         {/* 아이콘 행 스택 — 언제 / 반복 / 누구 / 어디 */}
@@ -710,14 +730,14 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                   setRepeat(v as Repeat)
                   if (v !== 'none') { setEndDate(''); setPicking(false) } // 반복은 단일 날짜 기준
                 }}
-                options={REPEAT_LABEL.map(([value, label]) => ({ value, label }))}
+                options={repeatOptions(date)}
                 fullWidth={false}
-                sx={{ width: 118 }}
+                sx={{ width: 178 }}
               />
               {repeat !== 'none' && (
                 <>
                   <DateField variant="inline" ariaLabel="반복 종료일" value={repeatUntil} onChange={setRepeatUntil} fullWidth={false} sx={{ width: 138 }} />
-                  <Typography variant="caption" sx={{ color: 'text.disabled' }}>비우면 6개월 반복</Typography>
+                  <Typography variant="caption" sx={{ color: 'text.disabled' }}>{repeat === 'yearly' ? '비우면 5년 반복' : '비우면 6개월 반복'}</Typography>
                 </>
               )}
             </FieldRow>
