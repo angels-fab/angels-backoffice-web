@@ -1,0 +1,355 @@
+<title>상단 메뉴 시안 2종 — 플랫 vs 계층</title>
+<style>
+:root{
+  --ground:#0F1117;--surface:#131722;--card:#161B22;--border:#293244;--divider:#232C3A;
+  --ink:#FFFFFF;--ink2:#AAB4C3;--ink3:#7D8899;--accent:#5491DA;
+  --sans:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:1400px;margin:0 auto;padding:36px 24px 90px}
+.eyebrow{font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin:0 0 9px}
+h1{font-size:24px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em}
+.intro{font-size:14px;line-height:1.75;color:var(--ink2);margin:0 0 4px;max-width:76ch;word-break:keep-all}
+.bar-ui{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:10px;padding:10px 0;margin:14px 0 10px;background:linear-gradient(var(--ground) 72%,rgba(15,17,23,0))}
+.bar-ui .lbl{font-size:12px;color:var(--ink3)}
+.seg{display:inline-flex;gap:3px;padding:3px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+.seg button{font:inherit;font-size:12px;font-weight:500;color:var(--ink2);background:none;border:0;padding:5px 14px;border-radius:999px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button:hover:not(.on){color:var(--ink)}
+.opt{min-width:0;margin-top:30px}
+.ohd{display:flex;align-items:baseline;gap:9px;margin:0 0 10px}
+.okey{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:8px;background:rgba(84,145,218,.16);border:1px solid rgba(84,145,218,.42);color:var(--accent);font-size:11px;font-weight:700;align-self:center}
+.ohd b{font-size:15px;font-weight:600}
+.ohd s{text-decoration:none;font-size:12px;color:var(--ink3)}
+.mockwrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px}
+.mock{width:100%;min-width:0;background:var(--ground);overflow:hidden;border-radius:12px}
+body.w1366 .mock{width:1366px}
+body.w1024 .mock{width:1024px}
+body.w1366 .mock,body.w1024 .mock{border-radius:0}
+.note{font-size:12px;line-height:1.75;color:var(--ink2);margin:10px 0 0;word-break:keep-all;max-width:92ch}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.s-ta{container-type:inline-size;container-name:ta-root;color:#FFFFFF;font-family:system-ui,-apple-system,'Segoe UI','Malgun Gothic','Apple SD Gothic Neo',sans-serif;-webkit-font-smoothing:antialiased}
+.s-ta *,.s-ta *::before,.s-ta *::after{box-sizing:border-box}
+
+/* ── 상단바 53px ── */
+.s-ta .ta-top{height:53px;background:#131722;border-bottom:1px solid #293244;display:flex;align-items:stretch;padding:0 20px;white-space:nowrap}
+
+/* 로고 = 홈 버튼 */
+.s-ta .ta-logo{align-self:center;display:flex;align-items:center;gap:8px;flex:none;padding:6px 8px;margin:0 10px 0 -8px;border-radius:8px;text-decoration:none;cursor:pointer;transition:background .15s ease}
+.s-ta .ta-logo:hover{background:rgba(255,255,255,.05)}
+.s-ta .ta-logo svg{width:22px;height:22px;color:#5491DA;flex:none}
+.s-ta .ta-logo-name{font-size:16px;font-weight:700;color:#FFFFFF;letter-spacing:.2px}
+.s-ta .ta-logo-sub{font-size:12px;font-weight:400;color:#7D8899;transition:color .15s ease}
+.s-ta .ta-logo:hover .ta-logo-sub{color:#AAB4C3}
+
+/* 플랫 메뉴 한 줄 */
+.s-ta .ta-nav{display:flex;align-items:stretch;flex:1 1 auto;min-width:0}
+.s-ta .ta-item{position:relative;display:flex;align-items:center;flex:none;padding:0 13px;font-size:13px;font-weight:400;line-height:1;color:#AAB4C3;text-decoration:none;cursor:pointer;transition:color .15s ease}
+.s-ta .ta-item:hover{color:#FFFFFF}
+.s-ta .ta-item:focus-visible{outline:2px solid #5491DA;outline-offset:-4px;border-radius:8px}
+.s-ta .ta-on{color:#FFFFFF;font-weight:600}
+.s-ta .ta-on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:999px 999px 0 0;background:#5491DA}
+.s-ta .ta-adm{color:#7D8899}
+.s-ta .ta-adm:hover{color:#AAB4C3}
+.s-ta .ta-div{flex:none;width:1px;margin:17px 6px;background:#232C3A}
+
+/* D7 위첨자 배지 — 알약 배경 없음 */
+.s-ta .ta-sup{position:relative;top:-6px;margin-left:2px;font-size:10px;font-weight:700;line-height:1;letter-spacing:0}
+.s-ta .ta-sup-red{color:#E05B54}
+.s-ta .ta-sup-amb{color:#D6A23E}
+
+/* 우측: 검색 · 계정 칩 · 로그아웃 */
+.s-ta .ta-right{display:flex;align-items:center;gap:10px;margin-left:12px;flex:none}
+.s-ta .ta-icnbtn{width:32px;height:32px;display:flex;align-items:center;justify-content:center;padding:0;background:transparent;border:0;border-radius:10px;color:#AAB4C3;cursor:pointer;transition:background .15s ease,color .15s ease}
+.s-ta .ta-icnbtn:hover{background:rgba(255,255,255,.06);color:#FFFFFF}
+.s-ta .ta-icnbtn svg{width:19px;height:19px}
+.s-ta .ta-acct{display:flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:999px;background:rgba(77,161,103,.12);border:1px solid rgba(77,161,103,.35);color:#4DA167;font-size:12px;font-weight:400}
+.s-ta .ta-acct-dot{width:6px;height:6px;border-radius:999px;background:#4DA167;flex:none}
+.s-ta .ta-lgout{padding:6px 8px;background:transparent;border:0;border-radius:8px;font-size:12px;font-weight:400;color:#AAB4C3;cursor:pointer;transition:background .15s ease,color .15s ease}
+.s-ta .ta-lgout:hover{background:rgba(255,255,255,.05);color:#FFFFFF}
+
+/* 좁아질 때 1단계(~1240): 간격만 축소 */
+@container ta-root (max-width:1240px){
+  .s-ta .ta-top{padding:0 16px}
+  .s-ta .ta-logo{margin-right:6px}
+  .s-ta .ta-item{padding:0 8px}
+  .s-ta .ta-div{margin:17px 3px}
+  .s-ta .ta-right{gap:8px}
+}
+/* 2단계(~1160): 라벨 전부 유지, 자간·여백 압축 + 로고 부제만 접기 */
+@container ta-root (max-width:1160px){
+  .s-ta .ta-top{padding:0 12px}
+  .s-ta .ta-logo{margin-right:4px}
+  .s-ta .ta-logo-sub{display:none}
+  .s-ta .ta-item{padding:0 5px;letter-spacing:-.2px}
+  .s-ta .ta-on::after{left:4px;right:4px}
+  .s-ta .ta-right{gap:6px;margin-left:8px}
+  .s-ta .ta-acct{padding:0 9px;gap:5px}
+}
+/* 3단계(~1060): 1024px 안전 마진 */
+@container ta-root (max-width:1060px){
+  .s-ta .ta-top{padding:0 10px}
+  .s-ta .ta-item{padding:0 4px}
+}
+
+/* ── 흐린 페이지 스켈레톤(맥락용) ── */
+.s-ta .ta-page{background:#0F1117;padding:26px 28px 40px;min-height:300px}
+.s-ta .ta-pg-head{display:flex;align-items:center;gap:10px;margin-bottom:18px;opacity:.55}
+.s-ta .ta-pg-title{font-size:16px;font-weight:700;color:#FFFFFF}
+.s-ta .ta-pg-chip{width:72px;height:20px;border-radius:8px;background:#161B22;border:1px solid #293244}
+.s-ta .ta-pg-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;opacity:.55}
+.s-ta .ta-pg-card{height:150px;padding:16px;background:#161B22;border:1px solid #293244;border-radius:12px}
+.s-ta .ta-pg-bar{height:12px;border-radius:8px;background:rgba(255,255,255,.07);margin-bottom:10px}
+.s-ta .ta-w40{width:40%}
+.s-ta .ta-w60{width:60%}
+.s-ta .ta-w80{width:80%}
+
+.s-tb{container-type:inline-size;container-name:tb-scope;background:#0F1117;color:#FFFFFF;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR','Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased;min-width:0;}
+.s-tb *{box-sizing:border-box;margin:0;padding:0;}
+.s-tb button{font-family:inherit;}
+.s-tb button:focus-visible{outline:2px solid rgba(84,145,218,.6);outline-offset:-2px;border-radius:8px;}
+
+/* ── 상단바 ───────────────────────── */
+.s-tb .tb-top{position:relative;z-index:20;display:flex;align-items:stretch;height:53px;padding:0 20px;background:#131722;border-bottom:1px solid #293244;white-space:nowrap;}
+
+/* 로고 = 홈 버튼 */
+.s-tb .tb-logo{display:flex;align-items:center;gap:8px;background:none;border:0;cursor:pointer;padding:0 6px;border-radius:8px;filter:brightness(1);transition:filter .15s ease,background .15s ease;}
+.s-tb .tb-logo:hover{filter:brightness(1.25);background:rgba(255,255,255,.03);}
+.s-tb .tb-logo-ic{color:#5491DA;flex:none;}
+.s-tb .tb-logo-name{font-size:14px;font-weight:600;color:#FFFFFF;letter-spacing:.3px;}
+.s-tb .tb-logo-sub{font-size:12px;font-weight:400;color:#7D8899;margin-left:2px;}
+
+/* 메뉴 영역 */
+.s-tb .tb-nav{display:flex;align-items:stretch;margin-left:26px;gap:2px;min-width:0;}
+.s-tb .tb-group{position:relative;display:flex;align-items:stretch;}
+.s-tb .tb-btn{position:relative;display:flex;align-items:center;background:none;border:0;cursor:pointer;padding:0 12px;color:#AAB4C3;font-size:13px;font-weight:400;transition:color .12s ease,background .12s ease;}
+.s-tb .tb-btn:hover{color:#FFFFFF;background:rgba(255,255,255,.03);}
+.s-tb .tb-btn .tb-chev{margin-left:3px;opacity:.7;transition:transform .15s ease;}
+.s-tb .tb-group.tb-open .tb-btn{color:#FFFFFF;background:rgba(255,255,255,.04);}
+.s-tb .tb-group.tb-open .tb-chev{transform:rotate(180deg);}
+/* 활성 페이지(업무현황)가 든 그룹 표시 = 파란 점 */
+.s-tb .tb-btn.tb-here{color:#FFFFFF;font-weight:600;}
+.s-tb .tb-btn.tb-here::after{content:'';position:absolute;left:50%;transform:translateX(-50%);bottom:7px;width:4px;height:4px;border-radius:999px;background:#5491DA;}
+
+/* D7 위첨자 배지 */
+.s-tb .tb-sup{position:relative;top:-6px;margin-left:2px;font-size:10px;font-weight:700;line-height:1;}
+.s-tb .tb-sup.tb-red{color:#E05B54;}
+.s-tb .tb-sup.tb-amber{color:#D6A23E;}
+
+/* 드롭다운 패널 */
+.s-tb .tb-panel{position:absolute;top:100%;left:0;padding-top:8px;display:none;z-index:30;}
+.s-tb .tb-group.tb-open .tb-panel{display:block;animation:tb-drop .15s ease;}
+@keyframes tb-drop{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+.s-tb .tb-menu{min-width:198px;background:#161B22;border:1px solid #293244;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.3);padding:6px;}
+.s-tb .tb-item{display:flex;align-items:center;width:100%;background:none;border:0;cursor:pointer;text-align:left;padding:9px 12px;border-radius:8px;color:#AAB4C3;font-size:13px;font-weight:400;transition:background .12s ease,color .12s ease;}
+.s-tb .tb-item:hover{background:#131722;color:#FFFFFF;}
+.s-tb .tb-item.tb-active{color:#5491DA;font-weight:600;background:rgba(84,145,218,.10);}
+.s-tb .tb-item.tb-active:hover{background:rgba(84,145,218,.14);color:#5491DA;}
+.s-tb .tb-div{height:1px;background:#232C3A;margin:6px 4px;}
+/* 딥링크(장비관리 하위 탭) */
+.s-tb .tb-item.tb-sub{font-size:12px;color:#7D8899;padding:7px 12px;}
+.s-tb .tb-item.tb-sub:hover{color:#AAB4C3;background:#131722;}
+.s-tb .tb-subic{flex:none;margin-right:6px;opacity:.8;}
+/* 설정(관리자 전용) 흐림 */
+.s-tb .tb-item.tb-dim{color:#7D8899;}
+.s-tb .tb-item.tb-dim:hover{color:#AAB4C3;}
+.s-tb .tb-tag{margin-left:auto;padding-left:12px;font-size:11px;font-weight:500;color:#7D8899;}
+
+/* 우측 컨트롤: 검색 · 계정 칩 · 로그아웃 */
+.s-tb .tb-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.s-tb .tb-iconbtn{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border:0;border-radius:8px;background:none;cursor:pointer;color:#AAB4C3;transition:background .12s ease,color .12s ease;}
+.s-tb .tb-iconbtn:hover{background:rgba(255,255,255,.05);color:#FFFFFF;}
+.s-tb .tb-acct{display:flex;align-items:center;gap:7px;height:28px;padding:0 12px;border-radius:999px;background:rgba(77,161,103,.12);border:1px solid rgba(77,161,103,.35);color:#4DA167;font-size:12px;font-weight:400;}
+.s-tb .tb-acct-dot{width:6px;height:6px;border-radius:999px;background:#4DA167;flex:none;}
+.s-tb .tb-logout{background:none;border:0;cursor:pointer;padding:6px 4px;color:#7D8899;font-size:12px;font-weight:400;transition:color .12s ease;}
+.s-tb .tb-logout:hover{color:#FFFFFF;}
+
+/* 좁은 폭(1024px대): 간격만 축소, 라벨 유지 — 계층형은 여유 */
+@container tb-scope (max-width:1100px){
+  .s-tb .tb-top{padding:0 12px;}
+  .s-tb .tb-nav{margin-left:14px;gap:0;}
+  .s-tb .tb-btn{padding:0 9px;}
+  .s-tb .tb-right{gap:7px;}
+}
+
+/* ── 맥락용 페이지 스켈레톤 ───────── */
+.s-tb .tb-page{padding:24px 20px 32px;opacity:.5;pointer-events:none;user-select:none;}
+.s-tb .tb-ph-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.s-tb .tb-ph-title{font-size:16px;font-weight:700;color:#FFFFFF;}
+.s-tb .tb-ph-pill{width:120px;height:30px;border-radius:8px;background:#161B22;border:1px solid #293244;}
+.s-tb .tb-ph-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.s-tb .tb-ph-card{background:#161B22;border:1px solid #293244;border-radius:12px;padding:16px;min-height:110px;}
+.s-tb .tb-ph-l1{width:55%;height:12px;border-radius:8px;background:#232C3A;margin-bottom:12px;}
+.s-tb .tb-ph-l2{width:100%;height:9px;border-radius:8px;background:#232C3A;opacity:.7;margin-bottom:8px;}
+.s-tb .tb-ph-l2.tb-short{width:70%;margin-bottom:0;}
+</style>
+<div class="page">
+  <h2 class="sr-only">포털 상단 메뉴 시안 2종 — 전 메뉴 노출형과 그룹 드롭다운형. 홈 메뉴 없이 로고가 홈 역할. 폭 토글로 1366·1024px 밀도 비교.</h2>
+  <p class="eyebrow">포털 셸 · 상단 메뉴</p>
+  <h1>사이드바 대신 상단 메뉴라면</h1>
+  <p class="intro">두 시안 모두 <b>홈 메뉴 없음(로고 클릭 = 홈)</b>이고 실제 메뉴 8개 + 관리자 설정, 실제 배지(빨강 새 글 · 앰버 개선 메모)를 그대로 얹었습니다. 1번은 지금 사이드바처럼 전부 보이는 안, 2번은 메뉴가 늘어날 때를 대비한 그룹 드롭다운 안입니다. 위 폭 토글로 좁은 노트북(1366)과 최악 폭(1024)에서 각 안이 어떻게 버티는지 비교해 보세요. 2번의 그룹 버튼은 실제로 클릭·호버로 열립니다.</p>
+  <div class="bar-ui">
+    <span class="lbl">화면 폭</span>
+    <div class="seg" role="group" aria-label="화면 폭 전환">
+      <button type="button" class="on">맞춤</button>
+      <button type="button" data-w="w1366">1366</button>
+      <button type="button" data-w="w1024">1024</button>
+    </div>
+  </div>
+
+<section class="opt" id="opt-ta">
+  <div class="ohd"><span class="okey">1</span><b>플랫 한줄 메뉴</b><s>플랫 — 전 메뉴 한 줄 노출</s></div>
+  <div class="mockwrap"><div class="mock s-ta"><div class="ta-top">
+  <a class="ta-logo" href="#" title="메인화면으로" aria-label="ANGELS FAB 메인화면으로">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg>
+    <span class="ta-logo-name">ANGELS FAB</span>
+    <span class="ta-logo-sub">구축 현황</span>
+  </a>
+  <nav class="ta-nav" aria-label="주 메뉴">
+    <a class="ta-item" href="#">공지사항<span class="ta-sup ta-sup-red">3</span></a>
+    <a class="ta-item" href="#">업무일정</a>
+    <a class="ta-item ta-on" href="#" aria-current="page">업무현황<span class="ta-sup ta-sup-red">2</span></a>
+    <a class="ta-item" href="#">장비관리<span class="ta-sup ta-sup-amb">1</span></a>
+    <a class="ta-item" href="#">마일스톤</a>
+    <span class="ta-div" aria-hidden="true"></span>
+    <a class="ta-item" href="#">학술·교육·전시</a>
+    <a class="ta-item" href="#">포털개선요청<span class="ta-sup ta-sup-red">1</span></a>
+    <a class="ta-item" href="#">바로가기</a>
+    <a class="ta-item ta-adm" href="#" title="관리자 전용">설정</a>
+  </nav>
+  <div class="ta-right">
+    <button class="ta-icnbtn" type="button" title="통합검색" aria-label="통합검색">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 5L20.49 19l-5-4.99zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+    </button>
+    <span class="ta-acct"><span class="ta-acct-dot" aria-hidden="true"></span>관리자 · 조성범</span>
+    <button class="ta-lgout" type="button">로그아웃</button>
+  </div>
+</div>
+<div class="ta-page" aria-hidden="true">
+  <div class="ta-pg-head">
+    <div class="ta-pg-title">업무현황</div>
+    <div class="ta-pg-chip"></div>
+  </div>
+  <div class="ta-pg-cards">
+    <div class="ta-pg-card"><div class="ta-pg-bar ta-w60"></div><div class="ta-pg-bar ta-w80"></div><div class="ta-pg-bar ta-w40"></div></div>
+    <div class="ta-pg-card"><div class="ta-pg-bar ta-w40"></div><div class="ta-pg-bar ta-w60"></div><div class="ta-pg-bar ta-w80"></div></div>
+    <div class="ta-pg-card"><div class="ta-pg-bar ta-w80"></div><div class="ta-pg-bar ta-w40"></div><div class="ta-pg-bar ta-w60"></div></div>
+  </div>
+</div></div></div>
+  <p class="note">장점: 메뉴 9개가 항상 한 줄에 다 보여서 어디로 가든 클릭 한 번이면 됩니다. 단점: 화면이 좁아지면 메뉴 사이 여백이 눈에 띄게 빽빽해지고, 1160px 아래에서는 로고 옆 '구축 현황' 글자를 접어야 겨우 들어갑니다. 메뉴가 10개 이상으로 늘면: 한 줄에 다 담기 어려워 자간을 더 줄이거나 결국 일부 메뉴를 '더보기' 뒤로 숨기는 구조 변경이 필요합니다.</p>
+</section>
+
+<section class="opt" id="opt-tb">
+  <div class="ohd"><span class="okey">2</span><b>계층형 상단메뉴</b><s>계층 — 그룹 드롭다운(확장 대비)</s></div>
+  <div class="mockwrap"><div class="mock s-tb"><div class="s-tb">
+  <div class="tb-top">
+    <button class="tb-logo" type="button" title="메인화면으로">
+      <svg class="tb-logo-ic" viewBox="0 0 24 24" fill="currentColor" width="22" height="22" aria-hidden="true"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg>
+      <span class="tb-logo-name">ANGELS FAB</span>
+      <span class="tb-logo-sub">구축 현황</span>
+    </button>
+
+    <nav class="tb-nav" aria-label="주 메뉴">
+      <div class="tb-group tb-open">
+        <button class="tb-btn tb-here" type="button" aria-haspopup="true" aria-expanded="true">
+          <span class="tb-lbl">업무</span><span class="tb-sup tb-red">5</span>
+          <svg class="tb-chev" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </button>
+        <div class="tb-panel">
+          <div class="tb-menu" role="menu">
+            <button class="tb-item" type="button" role="menuitem"><span class="tb-lbl">공지사항</span><span class="tb-sup tb-red">3</span></button>
+            <button class="tb-item tb-active" type="button" role="menuitem" aria-current="page"><span class="tb-lbl">업무현황</span><span class="tb-sup tb-red">2</span></button>
+            <button class="tb-item" type="button" role="menuitem"><span class="tb-lbl">마일스톤</span></button>
+          </div>
+        </div>
+      </div>
+
+      <button class="tb-btn" type="button"><span class="tb-lbl">업무일정</span></button>
+
+      <div class="tb-group">
+        <button class="tb-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="tb-lbl">장비</span><span class="tb-sup tb-amber">1</span>
+          <svg class="tb-chev" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </button>
+        <div class="tb-panel">
+          <div class="tb-menu" role="menu">
+            <button class="tb-item" type="button" role="menuitem"><span class="tb-lbl">장비관리</span><span class="tb-sup tb-amber">1</span></button>
+            <div class="tb-div" role="separator"></div>
+            <button class="tb-item tb-sub" type="button" role="menuitem"><svg class="tb-subic" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true"><path d="m19 15-6 6-1.42-1.42L15.17 16H4V4h2v10h9.17l-3.59-3.58L13 9l6 6z"/></svg><span class="tb-lbl">장비도입</span></button>
+            <button class="tb-item tb-sub" type="button" role="menuitem"><svg class="tb-subic" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true"><path d="m19 15-6 6-1.42-1.42L15.17 16H4V4h2v10h9.17l-3.59-3.58L13 9l6 6z"/></svg><span class="tb-lbl">장비운영</span></button>
+            <button class="tb-item tb-sub" type="button" role="menuitem"><svg class="tb-subic" viewBox="0 0 24 24" fill="currentColor" width="14" height="14" aria-hidden="true"><path d="m19 15-6 6-1.42-1.42L15.17 16H4V4h2v10h9.17l-3.59-3.58L13 9l6 6z"/></svg><span class="tb-lbl">데모결과</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="tb-group">
+        <button class="tb-btn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span class="tb-lbl">정보</span><span class="tb-sup tb-red">1</span>
+          <svg class="tb-chev" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+        </button>
+        <div class="tb-panel">
+          <div class="tb-menu" role="menu">
+            <button class="tb-item" type="button" role="menuitem"><span class="tb-lbl">학술·교육·전시</span></button>
+            <button class="tb-item" type="button" role="menuitem"><span class="tb-lbl">포털개선요청</span><span class="tb-sup tb-red">1</span></button>
+            <button class="tb-item" type="button" role="menuitem"><span class="tb-lbl">바로가기</span></button>
+            <button class="tb-item tb-dim" type="button" role="menuitem"><span class="tb-lbl">설정</span><span class="tb-tag">관리자</span></button>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="tb-right">
+      <button class="tb-iconbtn" type="button" title="통합검색" aria-label="통합검색">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="19" height="19" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      </button>
+      <span class="tb-acct"><span class="tb-acct-dot"></span>관리자 · 조성범</span>
+      <button class="tb-logout" type="button">로그아웃</button>
+    </div>
+  </div>
+
+  <div class="tb-page" aria-hidden="true">
+    <div class="tb-ph-head">
+      <span class="tb-ph-title">업무현황</span>
+      <span class="tb-ph-pill"></span>
+    </div>
+    <div class="tb-ph-grid">
+      <div class="tb-ph-card"><div class="tb-ph-l1"></div><div class="tb-ph-l2"></div><div class="tb-ph-l2 tb-short"></div></div>
+      <div class="tb-ph-card"><div class="tb-ph-l1"></div><div class="tb-ph-l2"></div><div class="tb-ph-l2 tb-short"></div></div>
+      <div class="tb-ph-card"><div class="tb-ph-l1"></div><div class="tb-ph-l2"></div><div class="tb-ph-l2 tb-short"></div></div>
+    </div>
+  </div>
+</div></div></div>
+  <p class="note">장점: 상단에 버튼이 4개뿐이라 한눈에 깔끔하고, 1024px처럼 좁은 화면에서도 거의 그대로 여유 있게 버팁니다. 단점: 공지사항처럼 자주 가는 메뉴도 그룹을 한 번 열고 들어가야 해서 클릭이 한 번 더 듭니다. 메뉴가 10개 이상으로 늘면: 상단바 모양은 그대로 두고 각 그룹 목록 안에 줄만 추가되므로 두 시안 중 가장 잘 견딥니다.</p>
+</section>
+</div>
+<script>try{ (function(){
+  var root=document.querySelector('.s-tb'); if(!root) return;
+  var groups=[].slice.call(root.querySelectorAll('.tb-group'));
+  function setAria(g,on){var b=g.querySelector('.tb-btn');if(b)b.setAttribute('aria-expanded',on?'true':'false');}
+  function close(g){g.classList.remove('tb-open');setAria(g,false);}
+  function open(g){groups.forEach(function(o){if(o!==g)close(o);});g.classList.add('tb-open');setAria(g,true);}
+  groups.forEach(function(g){
+    var t=null;
+    g.addEventListener('mouseenter',function(){if(t){clearTimeout(t);t=null;}open(g);});
+    g.addEventListener('mouseleave',function(){t=setTimeout(function(){close(g);},150);});
+    var btn=g.querySelector('.tb-btn');
+    if(btn)btn.addEventListener('click',function(e){e.stopPropagation();if(g.classList.contains('tb-open'))close(g);else open(g);});
+  });
+  document.addEventListener('click',function(e){
+    var el=e.target;
+    if(!el||!el.closest||!el.closest('.tb-group'))groups.forEach(close);
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')groups.forEach(close);});
+})() }catch(e){ console.warn('init fail', e); }
+document.querySelectorAll('.seg button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.seg button').forEach(function(x){ x.classList.toggle('on', x === b); });
+    document.body.classList.remove('w1366', 'w1024');
+    if(b.dataset.w) document.body.classList.add(b.dataset.w);
+  });
+});
+</script>
