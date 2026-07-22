@@ -5,7 +5,8 @@
       "name": "angels-backoffice-web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3600
+      "port": 3600,
+      "autoPort": true
     }
   ]
 }

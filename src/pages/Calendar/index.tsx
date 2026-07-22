@@ -12,13 +12,12 @@ import type { EventContentArg } from '@fullcalendar/core'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
-import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import EventNoteIcon from '@mui/icons-material/EventNote'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { PageContainer, PageHeader, SearchBar, SegTabs, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, SearchBar, SegTabs, ErrorBanner, LoadingState, useSnack } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadCalEvents, moveCalEvent } from '@/store/slices/calSlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
@@ -98,7 +97,7 @@ function renderEventContent(arg: EventContentArg) {
 
 export default function Calendar() {
   const dispatch = useAppDispatch()
-  const { events: allEvents, loading, error, errorMsg, updatedAt } = useAppSelector((s) => s.cal)
+  const { events: allEvents, loading, error, errorMsg, updatedAt, ready } = useAppSelector((s) => s.cal)
 
   // 복수선택 버튼·모바일 기본뷰 판정. 폰(≤768px)은 월 그리드 대신 목록(아젠다) 뷰가 기본.
   const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true })
@@ -201,6 +200,24 @@ export default function Calendar() {
       if (fe && detailMap.current.has(fe)) return fe
     }
     return null
+  }
+
+  // 일정 열기(마우스 클릭·키보드 Enter 공용) — 관리자=수정 모달 바로, 열람=그 자리 고정 상세(재실행=닫기)
+  const openEventAt = (el: HTMLElement, x: number, y: number) => {
+    const evId = idMap.current.get(el)
+    if (isAdmin && evId) {
+      const ev = allEvents.find((e2) => e2.id === evId)
+      closePop()
+      if (ev) setWrite({ mode: 'edit', event: ev, initialDate: ev.start.slice(0, 10) })
+      return
+    }
+    const detail = detailMap.current.get(el)
+    if (lockedEl.current === el) {
+      closePop()
+    } else if (detail) {
+      lockedEl.current = el
+      setPop({ detail, x, y, locked: true, evId })
+    }
   }
 
   const todayKey = todaySeoul()
@@ -311,6 +328,22 @@ export default function Calendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allEvents, visRange, showWeekends, selMembers, searchTrim])
 
+  // 현재 화면 범위에서 실제로 보이는(모든 필터 통과) 일정 수 — 빈 상태 안내용(캘린더 UI 점검 #6)
+  const visibleCount = useMemo(() => {
+    const seen = new Set<string>()
+    const { start, end } = visRange
+    for (const ev of allEvents) {
+      if (seen.has(ev.id)) continue
+      const d = parseKey(ev.date)
+      if (d < start || d >= end) continue
+      if (!showWeekends && (d.getDay() === 0 || d.getDay() === 6)) continue
+      if (!eventActive(ev)) continue
+      seen.add(ev.id)
+    }
+    return seen.size
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allEvents, visRange, showWeekends, selMembers, selCats, searchTrim])
+
   const sidebarMembers = useMemo(
     () => MEMBERS.map((m) => ({ member: m, on: memberSelected(m.id) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -407,13 +440,9 @@ export default function Calendar() {
             {isAdmin && (
               <Button
                 size="small"
+                variant="contained"
                 startIcon={<AddIcon sx={{ fontSize: iconSize.action }} />}
                 onClick={() => setWrite({ mode: 'add', event: null, initialDate: todayKey })}
-                sx={(th) => ({
-                  height: 30, px: 1.25, fontSize: 13, fontWeight: 700, borderRadius: `${radius.chip}px`,
-                  color: th.palette.accent.green, border: `1px solid ${th.palette.accent.green}66`,
-                  '&:hover': { bgcolor: `${th.palette.accent.green}1f` },
-                })}
               >
                 일정 추가
               </Button>
@@ -431,22 +460,19 @@ export default function Calendar() {
         }
       />
 
-      {/* 일정 불러오기 최종 실패 — 빈 화면 대신 오류 안내 + 다시 시도. 기존 일정이 있으면 유지 표시 중임을 알림 */}
+      {/* 일정 불러오기 최종 실패 — 표준 ErrorBanner(다른 페이지와 동일 부품). 기존 일정이 있으면 유지 표시 중임을 알림 */}
       {error && (
-        <Alert
+        <ErrorBanner
           severity={allEvents.length > 0 ? 'warning' : 'error'}
-          sx={{ mb: 2 }}
-          action={
-            <Button color="inherit" size="small" onClick={() => dispatch(loadCalEvents())} disabled={loading}>
-              {loading ? '불러오는 중…' : '다시 시도'}
-            </Button>
+          message={
+            (allEvents.length > 0
+              ? `일정 새로고침에 실패했습니다. 마지막으로 불러온 일정(${updatedAt || '이전'})을 표시 중입니다.`
+              : '일정을 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.') +
+            (errorMsg ? ` — ${errorMsg}` : '')
           }
-        >
-          {allEvents.length > 0
-            ? `일정 새로고침에 실패했습니다. 마지막으로 불러온 일정(${updatedAt || '이전'})을 표시 중입니다.`
-            : '일정을 불러오지 못했습니다. 네트워크 상태를 확인한 뒤 다시 시도해 주세요.'}
-          {errorMsg ? ` — ${errorMsg}` : ''}
-        </Alert>
+          onRetry={() => dispatch(loadCalEvents())}
+          busy={loading}
+        />
       )}
 
       {/* 툴바 — 한 행(space-between): 왼쪽=[월/주]·[‹|오늘|›] 그룹·년월 / 오른쪽=검색·주말.
@@ -529,7 +555,7 @@ export default function Calendar() {
       {/* 달력 (풀폭) — 컨테이너 위임: 포인터 위치의 .fc-event를 elementsFromPoint로 찾아
           모든 멀티데이 segment(시작·중간·마지막, 텍스트 없는 빈 영역 포함)에서 호버·클릭 동작.
           호버 상세는 포인터를 따라다니고(기존 동작 유지), 클릭은 그 자리에 고정. */}
-      <Box sx={{ minWidth: 0 }}>
+      <Box sx={{ minWidth: 0, position: 'relative' }}>
         <Box
           className="fc-theme-angels fc-team"
           onPointerMove={(e) => {
@@ -568,22 +594,18 @@ export default function Calendar() {
             }
             e.stopPropagation() // 바깥-클릭 닫기로 전파 방지(하나의 클릭 경로)
             if (Date.now() < dragClickSuppress.current) return // 드래그 드롭 직후 클릭 무시
-            const evId = idMap.current.get(el)
-            // 관리자: 일정 클릭 = 수정 모달 바로 열기(상세 팝오버 단계 생략)
-            if (isAdmin && evId) {
-              const ev = allEvents.find((e2) => e2.id === evId)
-              closePop()
-              if (ev) setWrite({ mode: 'edit', event: ev, initialDate: ev.start.slice(0, 10) })
-              return
-            }
-            // 열람 사용자: 기존 잠금 상세 팝오버(재클릭=닫기)
-            const detail = detailMap.current.get(el)
-            if (lockedEl.current === el) {
-              closePop()
-            } else if (detail) {
-              lockedEl.current = el
-              setPop({ detail, x: e.clientX, y: e.clientY, locked: true, evId })
-            }
+            openEventAt(el, e.clientX, e.clientY)
+          }}
+          // 키보드 접근(감사 E1) — Tab으로 일정(.fc-event, eventInteractive) 포커스 후 Enter/Space로 열기.
+          // 위치는 포커스된 일정 막대 아래 중앙(마우스 좌표 대체).
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return
+            const el = (e.target as HTMLElement).closest?.('.fc-event, .fc-list-event') as HTMLElement | null
+            if (!el || !detailMap.current.has(el)) return
+            e.preventDefault()
+            e.stopPropagation()
+            const r = el.getBoundingClientRect()
+            openEventAt(el, Math.round(r.left + r.width / 2), Math.round(r.bottom))
           }}
         >
           <FullCalendar
@@ -651,8 +673,28 @@ export default function Calendar() {
             moreLinkContent={(arg) => `+${arg.num}건`}
             height="auto"
             dayCellContent={(arg) => String(arg.date.getDate())}
+            // 키보드 접근 — 일정에 tabindex 부여(Tab 순회 가능). 열기는 컨테이너 onKeyDown이 담당
+            eventInteractive
           />
         </Box>
+
+        {/* 첫 로드 — 격자 위 표준 로딩 오버레이(캘린더 UI 점검 #7) */}
+        {!ready && (
+          <Box sx={{ position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(15,17,23,.45)', borderRadius: `${radius.card}px` }}>
+            <LoadingState label="일정을 불러오는 중…" />
+          </Box>
+        )}
+        {/* 빈 상태 — 이 범위·조건에 일정 0건(캘린더 UI 점검 #6). 목록(agenda) 뷰는 FC 자체 빈 안내가 있어 제외.
+            첫 로드 실패(오류배너 표시 중·데이터 0)에는 '없어요' 안내가 모순이라 숨김(적대 리뷰 확정) */}
+        {ready && !(error && allEvents.length === 0) && visibleCount === 0 && view !== 'agenda' && (
+          <Box sx={{ position: 'absolute', left: 0, right: 0, top: '42%', display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 4 }}>
+            <Box sx={{ px: 2, py: 1, borderRadius: `${radius.pill}px`, bgcolor: 'background.elevated', border: 1, borderColor: 'divider', fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>
+              {selCats.length > 0 || selMembers.length > 0 || searchTrim
+                ? '조건에 맞는 일정이 없어요 — 필터·검색을 확인해 보세요'
+                : '이 기간에는 일정이 없어요'}
+            </Box>
+          </Box>
+        )}
       </Box>
 
       {pop && (

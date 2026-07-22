@@ -134,7 +134,7 @@ GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vit
 - **[D4] DB 함수 search_path·정책 role 하드닝**(low, 데이터권한). ① 여러 DB 함수 search_path 미고정(보안 어드바이저 WARN) ② demo_chat_update 정책 대상이 `public`(조건식 덕에 지금 새진 않으나 `authenticated`로 명시 권장). → **DB.** 지금 뚫리는 건 아님.
 
 ### ♿ 접근성 (키보드·스크린리더)
-- **[E1] 캘린더 월/주 그리드가 마우스 좌표로만 동작 — 키보드/스크린리더로 일정 열람·편집 불가**(high, 접근성). 일정 칸을 clientX/Y 히트테스트로만 감지 → 마우스 없이는 달력 일정을 못 엶. 상단 요약 목록으로 일부만 조회 가능. → FullCalendar eventClick/키보드 포커스 활용 또는 tabIndex·Enter 핸들러. `Calendar/index.tsx:536,554`
+- ~~**[E1] 캘린더 월/주 그리드 키보드 접근 불가**~~ → **✅ 완료(2026-07-21)**: FC `eventInteractive`(일정 tabindex) + 컨테이너 onKeyDown(Enter/Space)으로 Tab 순회·열기 가능. 클릭·키보드가 openEventAt 공용 경로.
 - **[E2] `<main>` 랜드마크·'본문 바로가기' 스킵링크 부재**(med). 매 페이지 왼쪽 메뉴를 Tab으로 전부 통과해야 본문 도달, 낭독기 '본문 점프' 불가. → app-content를 `<main>`으로 + 스킵링크. `MainLayout.tsx:61,64`
 - **[E3] 파일 드롭존이 onClick만 — 키보드로 첨부 불가**(med). 포스터·사진 첨부 네모가 마우스 클릭 전용(진짜 input은 hidden). → role="button"·tabIndex=0·onKeyDown. `SubmitEventModal.tsx:94`·`DemoResults.tsx:464`
 - **[E4] 주 메뉴가 `<nav>` 아님·aria-current 없음**(med). 사이드바가 `<aside>`라 낭독기 '내비게이션 이동' 안 됨, 현재 페이지를 색으로만 표시. → `<nav aria-label="주 메뉴">` + 활성 버튼 aria-current="page"(BottomNav도). `SideNav.tsx:31,39`
@@ -144,7 +144,7 @@ GIST ANGELS FAB(반도체 팹) 구축 관리 사내 대시보드. React18+TS+Vit
 ### 📱 모바일·마감
 - **[F1] 하단 탭바가 페이지 맨 아래 내용 가림 (safe-area 부족)**(med, 모바일). 본문 하단 여백 60px 고정이 아이폰 제스처 바 높이를 감안 안 함 → 노치 아이폰서 마지막 줄/버튼이 탭바에 가림. 원래 막으려던 CSS(main 84px)는 대상 요소가 없어 무용. → PageContainer 하단 패딩 `calc(60px + env(safe-area-inset-bottom))`. `index.css:1058,1022`
 - **[F2] 메뉴 경유 페이지(장비·개선·행사·바로가기)에선 하단 탭 활성표시 없음**(low, 모바일). 이 페이지들은 '메뉴'로 들어가는데 도착하면 하단 탭 어디도 강조 안 됨 → 현재 위치 파악 어려움. → 해당 경로면 '메뉴' 탭 active. `BottomNav.tsx:47,67`
-- **[F3] window.confirm(브라우저 기본 확인창) 3곳 잔존**(low, UX). 강퇴·일정 삭제·작성 중 이탈이 투박한 회색 시스템 팝업(다른 삭제는 앱 디자인 ConfirmDialog). → ds ConfirmDialog(destructive)로 교체. `Settings:119`·`CalEventWrite:216`·`Work/index.tsx:505`
+- **[F3] window.confirm(브라우저 기본 확인창) 잔존**(low, UX). ~~일정 삭제(CalEventWrite)~~ ✅ 2026-07-21 ConfirmDialog로 교체 완료. **남은 2곳**: 강퇴 `Settings:119` · 작성 중 이탈 `Work/index.tsx:505`
 
 ### 🧩 미완성·정리
 - **[G1] /settings가 RequireAdmin이라 팀원·유관자 본인 비번변경 불가**(med, 미완성). 비번변경 카드는 'loggedIn 전원' 대상으로 이미 구현됐는데 설정 페이지 자체가 관리자 전용 문이라 못 들어감(만들어놓고 잠금). → 라우트 `RequireAdmin`→`RequireAuth`(내부가 이미 비번=loggedIn·사용자관리=isAdmin 분기라 안전). 권한 Phase 2와 함께 확정 권장. `AppRouter.tsx:43`

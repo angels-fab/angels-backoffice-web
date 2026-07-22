@@ -67,7 +67,8 @@ function MemberPill({ m, on, multi, onToggle }: { m: TeamMember; on: boolean; mu
   )
 }
 
-// 종류 칩 (아이콘+이름+건수) — 공용 TintChip. on이면 강조, 아니면 dim. (호버 피드백 없음: 현행 유지)
+// 종류 칩 (아이콘+이름+건수) — 공용 TintChip. on이면 강조, 아니면 dim.
+// hover: 팀원 알약과 동일하게 반응(클릭 가능함을 전달 — 캘린더 UI 점검 #8)
 function CatChip({ icon: Icon, label, color, count, on, rotate, onToggle }: {
   icon: SvgIconComponent; label: string; color: string; count: number; on: boolean; rotate?: boolean
   onToggle: (additive: boolean) => void
@@ -76,6 +77,7 @@ function CatChip({ icon: Icon, label, color, count, on, rotate, onToggle }: {
     <TintChip
       on={on}
       color={color}
+      hover
       ariaLabel={`${label} ${count}건${on ? '' : ' (해제됨)'}`}
       onToggle={onToggle}
       sx={{ p: '4px 9px' }}
@@ -99,14 +101,8 @@ export default function CalFilterBar({
   return (
     <Box
       className="cal-fb"
-      sx={(t) => ({
-        mb: 2,
-        p: '10px 14px',
-        bgcolor: 'background.paper',
-        border: `1px solid ${t.palette.divider}`,
-        borderRadius: `${radius.card}px`,
-        userSelect: 'none',
-      })}
+      // 박스 경량화(캘린더 UI 점검 #9) — 테두리 카드였던 것을 투명 스트립으로: 달력이 위로 올라와 시원해짐
+      sx={{ mb: 1.75, px: '2px', userSelect: 'none' }}
     >
       {/* 팀원 */}
       <Box className="cal-fb__team">

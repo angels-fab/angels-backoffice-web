@@ -65,11 +65,13 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
         width: 300,
         maxWidth: 'calc(100vw - 20px)',
         visibility: pos.ready ? 'visible' : 'hidden',
-        bgcolor: '#151e2c',
-        border: '1px solid #3a485d',
+        // 포털 표준 표면색(팝오버만 하드코딩 남색이던 것을 토큰으로 통일 — 캘린더 UI 점검 #1)
+        bgcolor: 'background.elevated',
+        border: 1,
+        borderColor: 'divider',
         borderRadius: `${radius.button}px`,
         p: 1.5,
-        color: 'common.white',
+        color: 'text.primary',
         boxShadow: shadow.md,
       }}
     >
@@ -78,7 +80,7 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
           {detail.catLabel}
         </Box>
         {detail.time && (
-          <Box component="span" sx={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.7)', fontVariantNumeric: 'tabular-nums' }}>
+          <Box component="span" sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
             {detail.time}
           </Box>
         )}
@@ -87,8 +89,8 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
         {detail.title}
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1.25, rowGap: '4px', fontSize: 12, lineHeight: 1.5 }}>
-        <Box sx={{ color: 'rgba(255,255,255,.5)', fontWeight: 600 }}>해당자</Box>
-        <Box sx={{ color: 'rgba(255,255,255,.9)' }}>{detail.members.length ? detail.members.join(' · ') : '센터'}</Box>
+        <Box sx={{ color: 'text.disabled', fontWeight: 600 }}>해당자</Box>
+        <Box sx={{ color: 'text.primary' }}>{detail.members.length ? detail.members.join(' · ') : '센터'}</Box>
       </Box>
       {locked && onEdit && (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.25 }}>
@@ -99,7 +101,7 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
             sx={{
               font: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer',
               px: 1.25, py: '5px', borderRadius: `${radius.chip}px`,
-              color: '#9ec4f2', bgcolor: alpha(accent.blue, 0.14), border: `1px solid ${alpha(accent.blue, 0.4)}`,
+              color: accent.blue, bgcolor: alpha(accent.blue, 0.14), border: `1px solid ${alpha(accent.blue, 0.4)}`,
               '&:hover': { bgcolor: alpha(accent.blue, 0.24) },
             }}
           >

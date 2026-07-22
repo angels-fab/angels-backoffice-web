@@ -1,27 +1,29 @@
 import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import Dialog from '@mui/material/Dialog'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
+import InputBase from '@mui/material/InputBase'
+import Switch from '@mui/material/Switch'
 import Typography from '@mui/material/Typography'
-import Checkbox from '@mui/material/Checkbox'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import ToggleButton from '@mui/material/ToggleButton'
-import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import CloseIcon from '@mui/icons-material/Close'
-import EventIcon from '@mui/icons-material/Event'
+import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import RepeatIcon from '@mui/icons-material/Repeat'
+import GroupsIcon from '@mui/icons-material/Groups'
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
+import { alpha } from '@mui/material/styles'
 import { addCalEvent, updateCalEvent, deleteCalEvent, type CalScope } from '@/api/calendar'
 import { useRole } from '@/auth/role'
 import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { typescale, iconSize, radius } from '@/theme/tokens'
-import { FormField, DateField, TimeField } from '@/components/ds'
+import { iconSize, radius } from '@/theme/tokens'
+import { DateField, TimeField, SelectField, ConfirmDialog } from '@/components/ds'
 
 // 제목에서 '@참석자' 부분을 뗀 기본 제목([구분]·내용) — 참석자는 별도 피커가 관리
 const baseTitle = (t: string): string => {
@@ -88,10 +90,21 @@ function inclusiveEndDate(endDt: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+/** 아이콘이 라벨을 대신하는 폼 행 — 구글캘린더식(제목 아래 언제/반복/누구/어디 스택) */
+function FieldRow({ icon, wrap, children }: { icon: ReactNode; wrap?: boolean; children: ReactNode }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 1.1, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 'none' } }}>
+      <Box sx={{ display: 'flex', color: 'text.disabled', flex: 'none', '& svg': { fontSize: 20 } }}>{icon}</Box>
+      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: wrap ? 'wrap' : 'nowrap' }}>{children}</Box>
+    </Box>
+  )
+}
+
 /**
- * 캘린더 일정 추가/수정/삭제 모달 — 구글캘린더식 폼(Supabase, 세션 인증).
+ * 캘린더 일정 추가/수정/삭제 모달 — 구글캘린더식 컴팩트 폼(사용자 확정 시안 A).
+ * 제목이 주인공(크게·첫 포커스), 종류=색 점, 언제/반복/누구/어디는 아이콘 행으로 라벨 없이 전달.
  * 이름·비밀번호 재입력 없음(로그인 관리자만 진입). 반복 = 없음/매일/매주/매월 + 종료일(lite).
- * 반복 일정의 수정·삭제는 시리즈 전체에 반영된다(개별 예외 미지원 — 폼에 안내).
+ * 반복 일정의 수정·삭제는 범위 선택(이 일정만/이후/전체)을 먼저 묻는다.
  */
 export default function CalEventWrite({ open, mode, event, initialDate, initialEndDate, onClose, onSaved }: Props) {
   const { user, isAdmin } = useRole()
@@ -111,6 +124,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scopeAsk, setScopeAsk] = useState<null | 'save' | 'delete'>(null) // 반복 시리즈 범위 선택 대기
+  const [delAsk, setDelAsk] = useState(false) // 단일 일정 삭제 확인(표준 ConfirmDialog — window.confirm 대체)
 
   const isSeries = !!(event && event.seriesId) // 반복 시리즈의 한 발생일(materialize) — 수정/삭제 시 범위 선택
 
@@ -120,6 +134,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     setError(null)
     setBusy(false)
     setScopeAsk(null)
+    setDelAsk(false)
     setRepeat('none')
     setRepeatUntil('')
     if (mode === 'edit' && event) {
@@ -213,8 +228,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     if (busy || !event) return
     if (!isAdmin || !user) return setError('관리자 로그인이 필요합니다')
     if (isSeries) { setScopeAsk('delete'); return }
-    if (!window.confirm('이 일정을 삭제할까요? 되돌릴 수 없습니다.')) return
-    void doDelete('one')
+    setDelAsk(true) // 표준 ConfirmDialog로 확인(캘린더 UI 점검 #4 — window.confirm 대체)
   }
 
   const doDelete = async (scope: CalScope) => {
@@ -224,12 +238,17 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     try {
       const res = await deleteCalEvent({ id: event!.id, scope, seriesId: event!.seriesId, occDate: dateOnly(event!.start) })
       setBusy(false)
+      setDelAsk(false) // 확인창은 결과가 난 뒤에 닫음(진행 중엔 busy로 잠금 — ConfirmDialog 표준 패턴)
       onSaved(res.note || '일정을 삭제했어요')
     } catch (err) {
       setError(err instanceof Error ? err.message : '삭제 실패')
       setBusy(false)
+      setDelAsk(false) // 실패 시 확인창 닫고 본 모달의 오류 문구로 안내
     }
   }
+
+  // 참석자 후보 — 팀원(센터 제외) + 이미 제목에 있던 이름(팀원 목록 밖 이름 보존)
+  const attendeeNames = [...new Set([...MEMBERS.filter((m) => m.id !== '센터').map((m) => m.name), ...attendees])]
 
   return (
     <>
@@ -239,134 +258,179 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       slotProps={{
         paper: {
           sx: {
-            width: 560, maxWidth: '100%', m: 2,
+            width: 540, maxWidth: '100%', m: 2,
             bgcolor: 'background.paper', backgroundImage: 'none',
-            border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, p: '22px 24px',
+            border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, p: '18px 24px 20px',
           },
         },
       }}
     >
-      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <EventIcon sx={{ color: 'text.secondary', fontSize: iconSize.header }} />
-          <Typography component="span" variant="h4">{mode === 'add' ? '일정 추가' : '일정 수정'}</Typography>
-          <IconButton onClick={onClose} disabled={busy} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}><CloseIcon sx={{ fontSize: iconSize.action }} /></IconButton>
+      <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column' }}>
+        {/* 헤더 — 모드 캡션(작게) + 닫기 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+          <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, letterSpacing: '.06em' }}>
+            {mode === 'add' ? '일정 추가' : '일정 수정'}
+          </Typography>
+          <IconButton onClick={onClose} disabled={busy} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}>
+            <CloseIcon sx={{ fontSize: iconSize.action }} />
+          </IconButton>
         </Box>
 
-        <FormField label="제목" required value={title} onChange={setTitle} placeholder="일정 제목 (종류·참석자는 아래에서 선택)" />
+        {/* 제목 — 주인공(크게·첫 포커스·밑줄 포커스) */}
+        <InputBase
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="제목 추가"
+          autoFocus
+          fullWidth
+          inputProps={{ 'aria-label': '제목' }}
+          sx={{
+            fontSize: 19, fontWeight: 700, pb: '6px',
+            borderBottom: '2px solid', borderColor: 'divider', borderRadius: 0,
+            transition: 'border-color .15s',
+            '&.Mui-focused': { borderColor: 'primary.main' },
+            '& input::placeholder': { color: 'text.disabled', opacity: 1 },
+          }}
+        />
 
+        {/* 종류 — 색 점(선택 시 라벨 노출·재클릭 해제). 미선택이면 제목 문구 자동 분류 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px', mt: 1.25, mb: 0.5 }}>
+          {PICK_CATS.map((c) => {
+            const on = cat === c
+            const color = CAT_META[c].color
+            return (
+              <Box
+                key={c}
+                component="button"
+                type="button"
+                onClick={() => setCat(on ? null : c)}
+                aria-pressed={on}
+                aria-label={`종류 ${CAT_META[c].label}`}
+                title={CAT_META[c].label}
+                sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', p: '2px', border: 'none', bgcolor: 'transparent', cursor: 'pointer', fontFamily: 'inherit', '&:hover [data-dot]': { opacity: 1 }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2, borderRadius: '6px' } }}
+              >
+                <Box data-dot sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: color, opacity: on ? 1 : 0.4, boxShadow: on ? `0 0 0 3px ${alpha(color, 0.26)}` : 'none', transition: 'opacity .15s, box-shadow .15s' }} />
+                {on && <Box component="span" sx={{ fontSize: 12, fontWeight: 700, color }}>{CAT_META[c].label}</Box>}
+              </Box>
+            )
+          })}
+          {!cat && (
+            <Typography variant="caption" sx={{ color: 'text.disabled', ml: '2px' }}>
+              고르지 않으면 제목 문구로 자동 분류
+            </Typography>
+          )}
+        </Box>
+
+        {/* 아이콘 행 스택 — 언제 / 반복 / 누구 / 어디 */}
         <Box>
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typescale.emphasis.weight, display: 'block', mb: 0.75 }}>일정 종류</Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-            {PICK_CATS.map((c) => {
-              const on = cat === c
-              const color = CAT_META[c].color
+          <FieldRow icon={<AccessTimeIcon />} wrap>
+            <DateField variant="inline" ariaLabel="시작일" required value={date} onChange={setDate} fullWidth={false} sx={{ width: 138 }} />
+            {!allDay && <TimeField variant="inline" ariaLabel="시작 시간" value={startTime} onChange={setStartTime} fullWidth={false} sx={{ width: 96 }} />}
+            {/* 구분 대시 — 뒤따르는 필드(종료시간·종료일)가 있을 때만(종일+반복 조합에서 홀로 남지 않게) */}
+            {(!allDay || repeat === 'none') && <Box component="span" sx={{ color: 'text.disabled', px: '2px' }}>–</Box>}
+            {!allDay && <TimeField variant="inline" ariaLabel="종료 시간" value={endTime} onChange={setEndTime} fullWidth={false} sx={{ width: 96 }} />}
+            {repeat === 'none' && (
+              <DateField variant="inline" ariaLabel="종료일 (비우면 하루)" value={endDate} onChange={setEndDate} fullWidth={false} sx={{ width: 138 }} />
+            )}
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>종일</Typography>
+              <Switch size="small" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} slotProps={{ input: { 'aria-label': '종일' } }} />
+            </Box>
+          </FieldRow>
+
+          {mode === 'add' && (
+            <FieldRow icon={<RepeatIcon />} wrap>
+              <SelectField
+                variant="inline"
+                ariaLabel="반복"
+                value={repeat}
+                onChange={(v) => setRepeat(v as Repeat)}
+                options={REPEAT_LABEL.map(([value, label]) => ({ value, label }))}
+                fullWidth={false}
+                sx={{ width: 118 }}
+              />
+              {repeat !== 'none' && (
+                <>
+                  <DateField variant="inline" ariaLabel="반복 종료일" value={repeatUntil} onChange={setRepeatUntil} fullWidth={false} sx={{ width: 138 }} />
+                  <Typography variant="caption" sx={{ color: 'text.disabled' }}>비우면 6개월 반복</Typography>
+                </>
+              )}
+            </FieldRow>
+          )}
+          {mode === 'edit' && isSeries && (
+            <FieldRow icon={<RepeatIcon />}>
+              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                반복 일정 — 저장·삭제 시 범위(이 일정만/이후/전체)를 선택해요. 날짜 변경은 '이 일정만'에서만 반영.
+              </Typography>
+            </FieldRow>
+          )}
+
+          <FieldRow icon={<GroupsIcon />} wrap>
+            {attendeeNames.map((name) => {
+              const on = attendees.includes(name)
+              const c = memberColor(name)
               return (
                 <Box
-                  key={c}
+                  key={name}
                   component="button"
                   type="button"
-                  onClick={() => setCat(on ? null : c)}
+                  onClick={() => setAttendees((a) => (on ? a.filter((n) => n !== name) : [...a, name]))}
+                  aria-pressed={on}
+                  aria-label={`참석자 ${name}`}
+                  title={name}
                   sx={{
-                    px: 1.25, height: 28, borderRadius: `${radius.pill}px`, cursor: 'pointer',
-                    fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, fontFamily: 'inherit', lineHeight: 1,
-                    border: '1.5px solid', transition: 'all .12s',
-                    borderColor: on ? color : 'divider',
-                    bgcolor: on ? color : 'transparent',
-                    color: on ? 'common.white' : 'text.secondary',
+                    width: 30, height: 30, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700, lineHeight: 1,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'background .15s, box-shadow .15s, color .15s',
+                    ...(on
+                      ? { bgcolor: c, color: 'common.white', boxShadow: `0 0 0 2px ${alpha(c, 0.35)}` }
+                      : { bgcolor: alpha(c, 0.15), color: 'text.secondary', '&:hover': { bgcolor: alpha(c, 0.3), color: 'text.primary' } }),
+                    '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
                   }}
                 >
-                  {CAT_META[c].label}
+                  {given(name)}
                 </Box>
               )
             })}
-          </Box>
-          {!cat && (
-            <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block', mt: 0.5 }}>
-              선택하지 않으면 제목 문구로 자동 분류돼요
-            </Typography>
-          )}
+          </FieldRow>
+
+          <FieldRow icon={<PlaceOutlinedIcon />}>
+            <InputBase
+              value={loc}
+              onChange={(e) => setLoc(e.target.value)}
+              placeholder="장소 추가"
+              fullWidth
+              inputProps={{ 'aria-label': '장소' }}
+              sx={{ fontSize: 13.5, '& input::placeholder': { color: 'text.disabled', opacity: 1 } }}
+            />
+          </FieldRow>
         </Box>
 
-        <Box>
-          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typescale.emphasis.weight, display: 'block', mb: 0.75 }}>참석자</Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
-              {[...new Set([...MEMBERS.filter((m) => m.id !== '센터').map((m) => m.name), ...attendees])].map((name) => {
-                const on = attendees.includes(name)
-                const c = memberColor(name)
-                return (
-                  <Box
-                    key={name}
-                    component="button"
-                    type="button"
-                    onClick={() => setAttendees((a) => (on ? a.filter((n) => n !== name) : [...a, name]))}
-                    sx={{
-                      px: 1.25, height: 28, borderRadius: `${radius.pill}px`, cursor: 'pointer',
-                      fontSize: typescale.body.size, fontWeight: typescale.cardTitle.weight, fontFamily: 'inherit', lineHeight: 1,
-                      border: '1.5px solid', transition: 'all .12s',
-                      borderColor: on ? c : 'divider',
-                      bgcolor: on ? c : 'transparent',
-                      color: on ? 'common.white' : 'text.secondary',
-                    }}
-                  >
-                    {given(name)}
-                  </Box>
-                )
-              })}
-            </Box>
-          </Box>
+        {/* role=alert — 검증·저장 실패를 스크린리더에도 즉시 안내 */}
+        {error && <Typography role="alert" color="error" variant="body2" sx={{ mt: 1 }}>{error}</Typography>}
 
-          <FormControlLabel
-            control={<Checkbox size="small" checked={allDay} onChange={e => setAllDay(e.target.checked)} />}
-            label="종일"
-          />
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-            <DateField label="시작일" required value={date} onChange={setDate} />
-            {repeat === 'none' && (
-              <DateField label="종료일 (선택)" value={endDate} onChange={setEndDate} />
-            )}
-          </Box>
-
-          {!allDay && (
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-              <TimeField label="시작 시간" value={startTime} onChange={setStartTime} />
-              <TimeField label="종료 시간" value={endTime} onChange={setEndTime} />
-            </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.5 }}>
+          {mode === 'edit' && (
+            <Button color="error" onClick={remove} disabled={busy} sx={{ mr: 'auto' }}>삭제</Button>
           )}
-
-          {mode === 'add' && (
-            <Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: typescale.emphasis.weight, display: 'block', mb: 0.75 }}>반복</Typography>
-              <ToggleButtonGroup exclusive size="small" value={repeat} onChange={(_, v) => { if (v !== null) setRepeat(v) }}>
-                {REPEAT_LABEL.map(([value, label]) => (
-                  <ToggleButton key={value} value={value} sx={{ textTransform: 'none', px: 1.5 }}>{label}</ToggleButton>
-                ))}
-              </ToggleButtonGroup>
-              {repeat !== 'none' && (
-                <DateField label="반복 종료일 (비우면 6개월)" value={repeatUntil} onChange={setRepeatUntil} sx={{ mt: 1.5 }} />
-              )}
-            </Box>
-          )}
-          {mode === 'edit' && isSeries && (
-            <Typography variant="caption" sx={{ color: 'text.disabled', display: 'block' }}>
-              반복 일정입니다 — 저장·삭제 시 범위(이 일정만 / 이후 / 전체)를 선택합니다. 날짜 변경은 '이 일정만'에서만 반영돼요.
-            </Typography>
-          )}
-
-          <FormField label="장소 (선택)" value={loc} onChange={setLoc} placeholder="예: 본관 3층 회의실" />
-
-          {error && <Typography color="error" variant="body2">{error}</Typography>}
-
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 0.5 }}>
-            {mode === 'edit' && (
-              <Button color="error" onClick={remove} disabled={busy} sx={{ mr: 'auto' }}>삭제</Button>
-            )}
-            <Button onClick={onClose} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
-            <Button type="submit" variant="contained" disabled={busy}>{busy ? '처리 중...' : mode === 'add' ? '추가' : '수정'}</Button>
-          </Box>
+          <Button onClick={onClose} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button type="submit" variant="contained" disabled={busy}>{busy ? '저장 중…' : '저장'}</Button>
         </Box>
+      </Box>
     </Dialog>
+
+    {/* 단일 일정 삭제 확인 — 표준 ConfirmDialog(destructive) */}
+    <ConfirmDialog
+      open={delAsk}
+      destructive
+      title="일정을 삭제할까요?"
+      description="삭제 후 되돌릴 수 없습니다."
+      confirmLabel="삭제"
+      busy={busy}
+      onConfirm={() => void doDelete('one')}
+      onClose={() => setDelAsk(false)}
+    />
 
     {/* 반복 시리즈 범위 선택 — 저장·삭제 시 이 일정만 / 이후 / 전체 */}
     <Dialog open={!!scopeAsk} onClose={() => !busy && setScopeAsk(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 340 } } } }}>

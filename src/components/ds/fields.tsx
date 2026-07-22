@@ -56,6 +56,8 @@ export interface FormFieldProps {
   onChange: (v: string) => void
   variant?: FieldVariant
   label?: string
+  /** label 없이 컴팩트하게 쓸 때의 스크린리더 이름 — 라벨 생략 시 필수로 넘길 것(접근성) */
+  ariaLabel?: string
   type?: 'text' | 'date' | 'time'
   placeholder?: string
   multiline?: boolean
@@ -82,6 +84,7 @@ export function FormField({
   onChange,
   variant = 'modal',
   label,
+  ariaLabel,
   type = 'text',
   placeholder,
   multiline,
@@ -113,7 +116,7 @@ export function FormField({
         slotProps={{
           // date/time은 값이 없어도 라벨이 겹치지 않게 항상 축소
           inputLabel: type !== 'text' ? { shrink: true } : undefined,
-          htmlInput: { style: { colorScheme: 'dark' } },
+          htmlInput: { style: { colorScheme: 'dark' }, ...(ariaLabel ? { 'aria-label': ariaLabel } : null) },
         }}
         sx={sx}
       />
@@ -134,6 +137,7 @@ export function FormField({
         autoFocus={autoFocus}
         error={error}
         fullWidth={fullWidth}
+        inputProps={ariaLabel ? { 'aria-label': ariaLabel } : undefined}
         sx={[inlineFieldSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])] as SxProps<Theme>}
       />
       {helperText && (
@@ -152,6 +156,8 @@ export interface SelectFieldProps {
   options: Array<string | { value: string; label: string }>
   variant?: FieldVariant
   label?: string
+  /** label 없이 컴팩트하게 쓸 때의 스크린리더 이름 */
+  ariaLabel?: string
   /** 빈 값일 때 표시(선택 안내) */
   placeholder?: string
   required?: boolean
@@ -170,6 +176,7 @@ export function SelectField({
   options,
   variant = 'modal',
   label,
+  ariaLabel,
   placeholder,
   required,
   disabled,
@@ -198,6 +205,12 @@ export function SelectField({
       opts.find((o) => o.value === v)?.label ?? String(v)
     )
   if (variant === 'modal') {
+    // placeholder를 닫힌 컨트롤에도 표시(displayEmpty) — 라벨 겹침 방지로 shrink 동반 (리뷰 확정 수정)
+    // ariaLabel은 combobox 표시 요소(SelectDisplayProps)에 배선 — inline 분기와 동일 계약(리뷰 확정 수정)
+    const selectSlot = {
+      ...(placeholder ? { displayEmpty: true, renderValue: renderVal } : null),
+      ...(ariaLabel ? { SelectDisplayProps: { 'aria-label': ariaLabel } } : null),
+    }
     return (
       <TextField
         select
@@ -207,12 +220,10 @@ export function SelectField({
         required={required}
         disabled={disabled}
         fullWidth={fullWidth}
-        // placeholder를 닫힌 컨트롤에도 표시(displayEmpty) — 라벨 겹침 방지로 shrink 동반 (리뷰 확정 수정)
-        slotProps={
-          placeholder
-            ? { inputLabel: { shrink: true }, select: { displayEmpty: true, renderValue: renderVal } }
-            : undefined
-        }
+        slotProps={{
+          ...(placeholder ? { inputLabel: { shrink: true } } : null),
+          ...(Object.keys(selectSlot).length ? { select: selectSlot } : null),
+        }}
         sx={sx}
       >
         {items}
@@ -232,7 +243,7 @@ export function SelectField({
         required={required}
         disabled={disabled}
         fullWidth={fullWidth}
-        input={<InputBase sx={[inlineFieldSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])] as SxProps<Theme>} />}
+        input={<InputBase inputProps={ariaLabel ? { 'aria-label': ariaLabel } : undefined} sx={[inlineFieldSx, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])] as SxProps<Theme>} />}
         renderValue={renderVal}
         MenuProps={{ slotProps: { paper: { sx: { mt: 0.5 } } } }}
       >

@@ -411,22 +411,13 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   flex:1;min-height:0;display:flex;flex-direction:column;
 }
 .fc-theme-angels .fc{flex:1;min-height:480px;background:var(--ink2);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.25)}
-.fc-theme-angels .fc-toolbar.fc-header-toolbar{margin:0 0 12px}
-.fc-theme-angels .fc-toolbar-title{color:var(--text);font-size:20px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
-.fc-theme-angels .fc-button{text-transform:none;box-shadow:none !important;border-radius:8px}
-.fc-theme-angels .fc-button-primary:not(:disabled).fc-button-active{color:#fff}
-.fc-theme-angels .fc-button-group .fc-button{border-radius:0}
-.fc-theme-angels .fc-button-group .fc-button:first-child{border-top-left-radius:8px;border-bottom-left-radius:8px}
-.fc-theme-angels .fc-button-group .fc-button:last-child{border-top-right-radius:8px;border-bottom-right-radius:8px}
-.fc-theme-angels .fc-button-group .fc-button:not(:first-child){margin-left:-1px}
-.fc-theme-angels .fc-button-group .fc-button:hover,.fc-theme-angels .fc-button-group .fc-button.fc-button-active{z-index:1;position:relative}
+/* (정리) FC 자체 툴바·버튼 스타일 9줄 삭제 — headerToolbar={false}라 렌더된 적 없는 사문 */
 .fc-theme-angels .fc-scrollgrid{border-color:var(--border)}
 .fc-theme-angels .fc-col-header-cell{background:var(--ink2);border-bottom:1px solid var(--border)}
 .fc-theme-angels .fc-col-header-cell-cushion{color:var(--text2);text-decoration:none;font-size:12px;font-weight:600;letter-spacing:.02em;padding:8px 4px}
 .fc-theme-angels .fc-day-sun .fc-col-header-cell-cushion{color:var(--red)}
 .fc-theme-angels .fc-day-sat .fc-col-header-cell-cushion{color:var(--blue)}
-.fc-theme-angels .fc-daygrid-day-frame{min-height:96px}
-.fc-theme-angels .fc-daygrid-day-top{flex-direction:row;justify-content:flex-start}
+/* (정리) day-frame min-height·day-top 정렬은 아래 .fc-team이 전면 재정의라 여기선 삭제 */
 .fc-theme-angels .fc-daygrid-day-number{color:var(--text);text-decoration:none;font-size:13px;font-weight:500;line-height:1;padding:6px 8px 2px;font-variant-numeric:tabular-nums}
 .fc-theme-angels .fc-day-other .fc-daygrid-day-number{color:var(--text3);font-weight:400}
 .fc-theme-angels .fc-day-other.fc-daygrid-day{background:rgba(0,0,0,.16)}
@@ -436,15 +427,11 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-theme-angels .fc-day-sun .fc-daygrid-day-number{color:var(--red)}
 .fc-theme-angels .fc-day-other.fc-day-sat .fc-daygrid-day-number,.fc-theme-angels .fc-day-other.fc-day-sun .fc-daygrid-day-number{color:var(--text3)}
 .fc-theme-angels .fc-day-today{box-shadow:inset 0 2px 0 0 var(--blue)}
-.fc-theme-angels .fc-day-today .fc-daygrid-day-number{color:#fff;background:var(--blue);font-weight:600;min-width:22px;height:22px;padding:0 6px;margin:4px 6px 0 2px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;line-height:1}
+/* (정리) today 날짜 원은 .fc-team 쪽이 정본 — 여기 중복 정의 삭제(line-height:1은 .fc-team으로 이동) */
 .fc-theme-angels .fc-day-today .fc-col-header-cell-cushion{color:#fff}
 .fc-theme-angels .fc-daygrid-day-events{margin-top:2px;padding:0 2px}
 .fc-theme-angels .fc-daygrid-event-harness{margin-top:2px}
-.fc-theme-angels .fc-daygrid-dot-event{padding:2px 6px;border-radius:6px;align-items:center;transition:background-color .12s ease}
-.fc-theme-angels .fc-daygrid-dot-event:hover{background:var(--ink3)}
-.fc-theme-angels .fc-daygrid-dot-event .fc-event-title{color:var(--text);font-weight:500;font-size:12px}
-.fc-theme-angels .fc-daygrid-dot-event .fc-event-time{color:var(--text2);font-weight:600;font-size:11px;margin-right:2px}
-.fc-theme-angels .fc-daygrid-event-dot{border-width:5px;margin-right:5px}
+/* (정리) dot-event 5줄 삭제 — eventDisplay="block"이라 dot 렌더 자체가 없음 */
 .fc-theme-angels .fc-daygrid-block-event{padding:1px 7px;border-radius:5px;font-size:12px;line-height:1.35;transition:filter .12s ease,box-shadow .12s ease}
 .fc-theme-angels .fc-daygrid-block-event .fc-event-main{padding:0}
 .fc-theme-angels .fc-daygrid-block-event .fc-event-title{color:#fff;font-weight:600}
@@ -481,7 +468,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-team .fc-daygrid-day-frame{min-height:114px}
 .fc-team .fc-daygrid-day-top{flex-direction:row;justify-content:flex-end;min-height:26px;align-items:center}
 .fc-team .fc-daygrid-day-number{font-size:13px;font-weight:600;padding:6px 8px 2px}
-.fc-team .fc-day-today .fc-daygrid-day-number{color:#fff;background:var(--blue);min-width:22px;height:22px;padding:0 5px;margin:4px 4px 0 0;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+.fc-team .fc-day-today .fc-daygrid-day-number{color:#fff;background:var(--blue);min-width:22px;height:22px;padding:0 5px;margin:4px 4px 0 0;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;line-height:1}
 /* 당일일정 간격은 원래값(margin-top:3) 복구. 멀티데이↔당일 간격은 아래 abs transform이 담당. */
 .fc-team .fc-daygrid-event-harness{margin-top:3px}
 /* 멀티데이(abs) 바: FullCalendar가 reserve를 render보다 2px 짧게 잡아 아래 당일일정과 겹침 → transform으로 시각적 위로 올려 간격 확보(측정엔 영향 없음) */
@@ -508,6 +495,10 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-team .fc-timegrid .fc-day-today{box-shadow:none}
 /* 주 시간표 본문 컬럼 상단의 날짜 숫자(.fc-timegrid-col-misc) 제거 — 날짜는 헤더에만 */
 .fc-team .fc-timegrid .fc-timegrid-col-misc{display:none}
+/* eventInteractive(키보드 접근)가 켠 FC 기본 :focus 오버레이(25% 검은 막) — 마우스 클릭 포커스에선 숨기고,
+   키보드 포커스(:focus-visible)에서만 남겨 접근성 표시는 유지(적대 리뷰 확정 수정) */
+.fc-team .fc-event:focus:not(:focus-visible){box-shadow:none}
+.fc-team .fc-event:focus:not(:focus-visible)::after{background:transparent}
 
 .gcal-detail{position:relative;background:var(--ink2);border:1px solid var(--border);border-radius:12px;width:min(92vw,380px);padding:20px 22px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
 .gcal-detail-x{position:absolute;top:10px;right:10px}
@@ -1067,6 +1058,6 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .cal-fb__chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
 .cal-fb__sep{display:none}
 
-/* 업무일정 범위 드래그 미리보기 — 셀 채움 대신 실제로 만들어질 일정 바 모양('(제목 없음)' 바, 월간 한정) */
-.fc-team .fc-daygrid-bg-harness .fc-highlight{background:rgba(84,145,218,.88);border:1px solid #5491DA;border-radius:6px;height:23px;margin-top:29px;position:relative;overflow:hidden}
-.fc-team .fc-daygrid-bg-harness .fc-highlight::after{content:'(제목 없음)';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11.5px;font-weight:700;color:#fff;white-space:nowrap}
+/* 업무일정 날짜 클릭·범위 드래그 미리보기 — 칸 전체 옅은 강조(구글식).
+   (구) 고정 위치 '(제목 없음)' 가짜 바는 그 칸 첫 일정을 덮는 결함이 있어 폐지 — 기존 일정이 그대로 보인다. */
+.fc-team .fc-highlight{background:rgba(84,145,218,.14);border-radius:6px;box-shadow:inset 0 0 0 2px rgba(84,145,218,.5)}

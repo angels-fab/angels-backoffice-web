@@ -8,6 +8,8 @@ export interface ErrorBannerProps {
   message: string
   /** 재시도 콜백 — 있으면 '다시 시도' 버튼 표시 */
   onRetry?: () => void
+  /** 재시도 진행 중 — 버튼을 유지한 채 비활성 + '불러오는 중…' 라벨(버튼 언마운트로 인한 포커스 소실·레이아웃 점프 방지) */
+  busy?: boolean
   /**
    * 기존 데이터를 유지한 채 갱신만 실패 = warning(강등),
    * 표시할 데이터 자체가 없음 = error. (Calendar·Work의 검증된 설계 승격)
@@ -22,14 +24,14 @@ export interface ErrorBannerProps {
  * @example
  * {error && <ErrorBanner message="일정을 불러오지 못했습니다." severity={items.length ? 'warning' : 'error'} onRetry={reload} />}
  */
-export default function ErrorBanner({ message, onRetry, severity = 'error', sx }: ErrorBannerProps) {
+export default function ErrorBanner({ message, onRetry, busy, severity = 'error', sx }: ErrorBannerProps) {
   return (
     <Alert
       severity={severity}
       action={
         onRetry && (
-          <Button color="inherit" size="small" onClick={onRetry}>
-            다시 시도
+          <Button color="inherit" size="small" onClick={onRetry} disabled={busy}>
+            {busy ? '불러오는 중…' : '다시 시도'}
           </Button>
         )
       }
