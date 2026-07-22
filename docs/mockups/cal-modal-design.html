@@ -1,0 +1,241 @@
+<title>업무일정 모달 시안</title>
+<style>
+  :root{
+    --bg:#0F1117; --paper:#161B22; --elev:#1D2635; --hover:#243044;
+    --border:#293244; --divider:#232C3A;
+    --text:#FFFFFF; --text2:#AAB4C3; --text3:#7D8899;
+    --blue:#5491DA; --teal:#46B7BE; --green:#4DA167; --amber:#D6A23E; --rose:#D87CA6; --gray:#7D8899;
+  }
+  .cm-stage{background:var(--bg);min-height:640px;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px 16px;font-family:'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+  .cm-note{color:var(--text3);font-size:12.5px;margin:0;letter-spacing:.01em}
+  .cm-modal{width:420px;max-width:100%;background:var(--paper);border:1px solid var(--divider);border-radius:16px;padding:18px 24px 20px;color:var(--text);box-shadow:0 24px 64px rgba(0,0,0,.55);position:relative}
+  .cm-head{display:flex;align-items:center;margin-bottom:4px}
+  .cm-cap{color:var(--text3);font-size:11px;font-weight:700;letter-spacing:.06em}
+  .cm-x{margin-left:auto;background:none;border:none;color:var(--text2);font-size:17px;line-height:1;cursor:pointer;padding:5px;border-radius:8px}
+  .cm-x:hover{background:var(--hover)}
+  .cm-title{width:100%;background:none;border:none;border-bottom:2px solid var(--divider);color:var(--text);font-size:19px;font-weight:700;padding:2px 0 6px;outline:none;font-family:inherit}
+  .cm-title::placeholder{color:var(--text3)}
+  .cm-title:focus{border-color:var(--blue)}
+  .cm-cats{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 4px}
+  .cm-cat{height:30px;min-width:30px;padding:0 7px;border-radius:15px;border:none;display:inline-flex;align-items:center;cursor:pointer;opacity:.5;transition:opacity .15s,box-shadow .2s;font-family:inherit}
+  .cm-cat svg{width:16px;height:16px;flex:none}
+  .cm-cat .lb{max-width:0;opacity:0;overflow:hidden;white-space:nowrap;font-size:12px;font-weight:700;color:var(--text);transition:max-width .24s ease,opacity .18s ease,margin-left .24s ease}
+  .cm-cat.on{opacity:1}
+  .cm-cat.on .lb{max-width:96px;opacity:1;margin-left:6px}
+  .cm-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--divider);position:relative}
+  .cm-row:last-of-type{border-bottom:none}
+  .cm-ric{color:var(--text3);flex:none;display:flex}
+  .cm-ric svg{width:20px;height:20px}
+  .cm-chip{display:inline-flex;align-items:center;background:var(--elev);border:1px solid var(--divider);border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+  .cm-chip:hover{border-color:var(--text3)}
+  .cm-chip.on{border-color:var(--blue);box-shadow:0 0 0 3px rgba(84,145,218,.22)}
+  .cm-allday{margin-left:auto;display:flex;align-items:center;gap:6px;flex:none}
+  .cm-allday span{font-size:12px;color:var(--text2)}
+  .cm-sw{width:32px;height:18px;border-radius:9px;background:#3a4456;border:none;position:relative;cursor:pointer;transition:background .15s;flex:none;padding:0}
+  .cm-sw::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#cfd6e0;transition:left .15s,background .15s}
+  .cm-sw.on{background:rgba(84,145,218,.5)}
+  .cm-sw.on::after{left:16px;background:var(--blue)}
+  .cm-att{width:30px;height:30px;border-radius:50%;border:none;font-size:11.5px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit;transition:background .15s,box-shadow .15s,color .15s}
+  .cm-att.on{color:#fff}
+  .cm-loc{flex:1;background:none;border:none;color:var(--text);font-size:13.5px;outline:none;font-family:inherit}
+  .cm-loc::placeholder{color:var(--text3)}
+  .cm-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+  .cm-btn{border:none;border-radius:10px;padding:7px 16px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .cm-btn.ghost{background:none;color:var(--text2)}
+  .cm-btn.ghost:hover{background:var(--hover)}
+  .cm-btn.solid{background:var(--blue);color:#fff}
+  .cm-pop{position:absolute;top:calc(100% - 4px);left:30px;z-index:30;background:var(--elev);border:1px solid var(--divider);border-radius:12px;box-shadow:0 10px 32px rgba(0,0,0,.5);display:none}
+  .cm-pop.open{display:block}
+  .cm-menu{padding:4px;min-width:176px}
+  .cm-mi{display:block;width:100%;text-align:left;background:none;border:none;color:var(--text);font-size:13px;padding:7px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .cm-mi:hover{background:var(--hover)}
+  .cm-mi.on{background:var(--blue);color:#fff;font-weight:700}
+  .cm-time{display:flex;gap:6px;padding:8px}
+  .cm-tcol{width:84px}
+  .cm-tcol p{margin:0 0 4px;text-align:center;font-size:11px;font-weight:700;color:var(--text3)}
+  .cm-tlist{height:200px;overflow-y:auto;border-radius:8px;position:relative;overscroll-behavior:contain}
+  .cm-ti{display:block;width:100%;background:none;border:none;color:var(--text2);font-size:13px;padding:5px 0;text-align:center;border-radius:8px;cursor:pointer;font-variant-numeric:tabular-nums;font-family:inherit}
+  .cm-ti:hover{background:var(--hover);color:var(--text)}
+  .cm-ti.on{background:var(--blue);color:#fff;font-weight:700}
+  .cm-cal{padding:10px 12px 8px;width:286px}
+  .cm-cal .nav{display:flex;align-items:center;justify-content:space-between;padding-bottom:6px}
+  .cm-cal .nav b{font-size:13px}
+  .cm-cal .nav button{background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px;padding:4px 8px;border-radius:8px}
+  .cm-cal .nav button:hover{background:var(--hover)}
+  .cm-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+  .cm-wd{font-size:10.5px;font-weight:700;text-align:center;padding-bottom:5px;color:var(--text3)}
+  .cm-wd.su{color:#E05B54}.cm-wd.sa{color:var(--blue)}
+  .cm-d{height:32px;background:none;border:none;color:var(--text2);font-size:12.5px;cursor:pointer;border-radius:50%;font-variant-numeric:tabular-nums;font-family:inherit}
+  .cm-d:hover{background:var(--hover)}
+  .cm-d.sel{background:var(--blue);color:#fff;font-weight:700}
+  .cm-d.band{background:rgba(84,145,218,.2);border-radius:0}
+</style>
+
+<div class="cm-stage">
+  <p class="cm-note">업무일정 '일정 추가' 모달 — 배포본 실물 재현. 바꾸고 싶은 부분을 말로 지시하면 이 시안을 고쳐가며 확정합니다.</p>
+
+  <div class="cm-modal">
+    <div class="cm-head">
+      <span class="cm-cap">일정 추가</span>
+      <button class="cm-x" aria-label="닫기">✕</button>
+    </div>
+    <input class="cm-title" placeholder="일정 제목" aria-label="제목">
+
+    <div class="cm-cats" id="cats"></div>
+
+    <div class="cm-row">
+      <span class="cm-ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2" stroke-linecap="round"/></svg></span>
+      <button class="cm-chip" id="dateChip">7월 24일 (금)</button>
+      <button class="cm-chip" id="timeChip">09:00 – 10:00</button>
+      <div class="cm-pop" id="calPop">
+        <div class="cm-cal">
+          <div class="nav"><button>‹</button><b>2026년 7월</b><button>›</button></div>
+          <div class="cm-grid" id="calGrid"></div>
+        </div>
+      </div>
+      <div class="cm-pop" id="timePop" style="left:210px">
+        <div class="cm-time">
+          <div class="cm-tcol"><p>시작</p><div class="cm-tlist" id="tStart"></div></div>
+          <div class="cm-tcol"><p>종료</p><div class="cm-tlist" id="tEnd"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cm-row">
+      <span class="cm-ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg></span>
+      <button class="cm-chip" id="rptChip">반복 안 함</button>
+      <div class="cm-allday"><span>종일</span><button class="cm-sw" id="adSw" role="switch" aria-checked="false" aria-label="종일"></button></div>
+      <div class="cm-pop" id="rptPop"><div class="cm-menu" id="rptMenu"></div></div>
+    </div>
+
+    <div class="cm-row">
+      <span class="cm-ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M2.8 19c.6-3.2 3.1-5 6.2-5s5.6 1.8 6.2 5"/><circle cx="17" cy="9.5" r="2.6"/><path d="M16.4 14.2c2.6.2 4.3 1.8 4.8 4.3"/></svg></span>
+      <div id="atts" style="display:flex;gap:6px"></div>
+    </div>
+
+    <div class="cm-row">
+      <span class="cm-ric"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-5.8-7-11a7 7 0 1 1 14 0c0 5.2-7 11-7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span>
+      <input class="cm-loc" placeholder="장소 추가" aria-label="장소">
+    </div>
+
+    <div class="cm-foot">
+      <button class="cm-btn ghost">취소</button>
+      <button class="cm-btn solid">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var CATS = [
+    { k:'meeting', c:'#5491DA', label:'회의/미팅', icon:'<circle cx="9" cy="8.5" r="3.2"/><path d="M2.8 19c.6-3.2 3.1-5 6.2-5s5.6 1.8 6.2 5"/><circle cx="17" cy="9.5" r="2.6"/><path d="M16.4 14.2c2.6.2 4.3 1.8 4.8 4.3"/>' },
+    { k:'work', c:'#46B7BE', label:'업무', icon:'<rect x="3.5" y="8" width="17" height="11" rx="2"/><path d="M9 8V6.5A1.5 1.5 0 0 1 10.5 5h3A1.5 1.5 0 0 1 15 6.5V8"/>' },
+    { k:'edu', c:'#4DA167', label:'교육/세미나', icon:'<path d="M2.5 9.5 12 5l9.5 4.5L12 14 2.5 9.5z"/><path d="M6.5 11.8V16c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5v-4.2"/>' },
+    { k:'trip_dom', c:'#D6A23E', label:'국내출장', icon:'<path d="M5 16.5 6.3 11a2 2 0 0 1 2-1.5h7.4a2 2 0 0 1 2 1.5L19 16.5"/><rect x="4" y="15.5" width="16" height="4" rx="1.4"/><circle cx="7.5" cy="19.6" r="1.3"/><circle cx="16.5" cy="19.6" r="1.3"/>' },
+    { k:'trip_intl', c:'#D6A23E', label:'국외출장', icon:'<path d="M10.5 20.5 12.8 14l6.7-6.7a1.8 1.8 0 0 0-2.5-2.5L10.2 11.5 3.7 13.8l1.8 1.8 4.4-1.2 1.4 1.4-1.2 4.4 1.8 1.8-.4-1.5z"/>' },
+    { k:'leave', c:'#D87CA6', label:'연차', icon:'<path d="M12 4a8 8 0 0 0-8 8h16a8 8 0 0 0-8-8z"/><path d="M12 12v7a1.8 1.8 0 0 0 3.6 0"/><path d="M12 4v0"/>' },
+    { k:'etc', c:'#7D8899', label:'기타', icon:'<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>' },
+  ]
+  var catsEl = document.getElementById('cats')
+  CATS.forEach(function (c, i) {
+    var b = document.createElement('button')
+    b.className = 'cm-cat'; b.title = c.label
+    b.style.background = 'rgba(' + hx(c.c) + ',.13)'
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="' + c.c + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' + c.icon + '</svg><span class="lb">' + c.label + '</span>'
+    b.onclick = function () {
+      var was = b.classList.contains('on')
+      catsEl.querySelectorAll('.cm-cat').forEach(function (x, j) { x.classList.remove('on'); x.style.background = 'rgba(' + hx(CATS[j].c) + ',.13)'; x.style.boxShadow = 'none' })
+      if (!was) { b.classList.add('on'); b.style.background = 'rgba(' + hx(c.c) + ',.22)'; b.style.boxShadow = 'inset 0 0 0 1px rgba(' + hx(c.c) + ',.55)' }
+    }
+    catsEl.appendChild(b)
+  })
+  function hx(h) { return parseInt(h.slice(1, 3), 16) + ',' + parseInt(h.slice(3, 5), 16) + ',' + parseInt(h.slice(5, 7), 16) }
+
+  var ATTS = [{ n:'현진', c:'#6f5fb0' }, { n:'주봉', c:'#2f6db8' }, { n:'세리', c:'#a8761a' }, { n:'성범', c:'#2f8f4e' }]
+  var attsEl = document.getElementById('atts')
+  ATTS.forEach(function (a) {
+    var b = document.createElement('button')
+    b.className = 'cm-att'; b.textContent = a.n
+    b.style.background = 'rgba(' + hx(a.c) + ',.15)'
+    b.onclick = function () {
+      var on = b.classList.toggle('on')
+      b.style.background = on ? a.c : 'rgba(' + hx(a.c) + ',.15)'
+      b.style.boxShadow = on ? '0 0 0 2px rgba(' + hx(a.c) + ',.35)' : 'none'
+    }
+    attsEl.appendChild(b)
+  })
+
+  var RPTS = ['반복 안 함', '매일', '매주 금요일', '매월 네번째 금요일', '매년 7월 24일']
+  var rptMenu = document.getElementById('rptMenu'), rptChip = document.getElementById('rptChip')
+  RPTS.forEach(function (r, i) {
+    var b = document.createElement('button')
+    b.className = 'cm-mi' + (i === 0 ? ' on' : ''); b.textContent = r
+    b.onclick = function () {
+      rptMenu.querySelectorAll('.cm-mi').forEach(function (x) { x.classList.remove('on') })
+      b.classList.add('on'); rptChip.textContent = r; closeAll()
+    }
+    rptMenu.appendChild(b)
+  })
+
+  var tS = document.getElementById('tStart'), tE = document.getElementById('tEnd')
+  for (var h = 0; h < 24; h++) for (var q = 0; q < 4; q++) {
+    var t = String(h).padStart(2, '0') + ':' + ['00', '15', '30', '45'][q]
+    tS.appendChild(tItem(t, t === '09:00', 'start')); tE.appendChild(tItem(t, t === '10:00', 'end'))
+  }
+  function tItem(t, on, which) {
+    var b = document.createElement('button')
+    b.className = 'cm-ti' + (on ? ' on' : ''); b.textContent = t
+    b.onclick = function () {
+      b.parentElement.querySelectorAll('.cm-ti').forEach(function (x) { x.classList.remove('on') })
+      b.classList.add('on'); updTime()
+    }
+    return b
+  }
+  function updTime() {
+    var s = tS.querySelector('.on'), e = tE.querySelector('.on')
+    document.getElementById('timeChip').textContent = (s ? s.textContent : '09:00') + ' – ' + (e ? e.textContent : '10:00')
+  }
+
+  var grid = document.getElementById('calGrid')
+  ;['일','월','화','수','목','금','토'].forEach(function (w, i) {
+    var d = document.createElement('div'); d.className = 'cm-wd' + (i === 0 ? ' su' : i === 6 ? ' sa' : ''); d.textContent = w; grid.appendChild(d)
+  })
+  for (var b = 0; b < 3; b++) grid.appendChild(document.createElement('div'))
+  for (var d = 1; d <= 31; d++) (function (d) {
+    var el = document.createElement('button')
+    el.className = 'cm-d' + (d === 24 ? ' sel' : ''); el.textContent = d
+    el.onclick = function () {
+      grid.querySelectorAll('.cm-d').forEach(function (x) { x.classList.remove('sel') })
+      el.classList.add('sel')
+      document.getElementById('dateChip').textContent = '7월 ' + d + '일 (' + ['수','목','금','토','일','월','화'][(d - 1) % 7] + ')'
+      closeAll()
+    }
+    grid.appendChild(el)
+  })(d)
+
+  var pops = { dateChip: 'calPop', timeChip: 'timePop', rptChip: 'rptPop' }
+  function closeAll() {
+    document.querySelectorAll('.cm-pop').forEach(function (p) { p.classList.remove('open') })
+    document.querySelectorAll('.cm-chip').forEach(function (c) { c.classList.remove('on') })
+  }
+  Object.keys(pops).forEach(function (cid) {
+    var chip = document.getElementById(cid), pop = document.getElementById(pops[cid])
+    chip.addEventListener('click', function (e) {
+      e.stopPropagation()
+      var was = pop.classList.contains('open')
+      closeAll()
+      if (!was) {
+        pop.classList.add('open'); chip.classList.add('on')
+        if (cid === 'timeChip') [tS, tE].forEach(function (l) { var s = l.querySelector('.on'); if (s) l.scrollTop = s.offsetTop - (l.clientHeight - s.offsetHeight) / 2 })
+      }
+    })
+  })
+  document.addEventListener('click', function (e) { if (!e.target.closest('.cm-pop')) closeAll() })
+
+  var sw = document.getElementById('adSw'), timeChip = document.getElementById('timeChip')
+  sw.onclick = function () {
+    var on = sw.classList.toggle('on')
+    sw.setAttribute('aria-checked', on ? 'true' : 'false')
+    timeChip.style.display = on ? 'none' : ''
+    if (on) { document.getElementById('timePop').classList.remove('open') }
+  }
+</script>
