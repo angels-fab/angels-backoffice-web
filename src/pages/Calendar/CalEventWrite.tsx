@@ -668,10 +668,13 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 onClick={(e) => { const el = e.currentTarget; setTimeAnchor((a) => (a ? null : el)); setCalAnchor(null); setRepeatAnchor(null) }}
               />
             )}
-            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>종일</Typography>
-              <Switch size="small" checked={allDay} onChange={(e) => { setAllDay(e.target.checked); setTimeAnchor(null) }} slotProps={{ input: { 'aria-label': '종일' } }} />
-            </Box>
+            {/* 종일 토글 — add에선 반복 행으로 이동(긴 범위 라벨의 줄바꿈 방지, 사용자 확정 배치). edit은 반복 행이 없어 여기 유지 */}
+            {mode === 'edit' && (
+              <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>종일</Typography>
+                <Switch size="small" checked={allDay} onChange={(e) => { setAllDay(e.target.checked); setTimeAnchor(null) }} slotProps={{ input: { 'aria-label': '종일' } }} />
+              </Box>
+            )}
           </FieldRow>
 
           {/* 기간 미니달력(클릭-클릭) — 칩에 붙는 미니팝업(모달 크기 불변).
@@ -726,6 +729,10 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 ariaLabel="반복"
                 onClick={(e) => { const el = e.currentTarget; setRepeatAnchor((a) => (a ? null : el)); setCalAnchor(null); setTimeAnchor(null); setPicking(false) }}
               />
+              <Box sx={{ ml: 1, display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>종일</Typography>
+                <Switch size="small" checked={allDay} onChange={(e) => { setAllDay(e.target.checked); setTimeAnchor(null) }} slotProps={{ input: { 'aria-label': '종일' } }} />
+              </Box>
             </FieldRow>
           )}
           {/* 반복 드롭다운 — 기간/시간 피커와 동일한 비차단 미니팝업(모달 안 클릭=드롭다운만 닫힘·원클릭) */}

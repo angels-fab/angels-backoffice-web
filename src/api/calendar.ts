@@ -197,9 +197,9 @@ export async function addCalEvent(p: CalWriteInput): Promise<{ note?: string }> 
     nudgeCalendarSync()
     return {}
   }
-  // 반복 — 발생일별 개별 행으로 펼쳐 저장(series_id로 묶음). 종료일 비우면 6개월(매년은 5년), 상한 400건.
+  // 반복 — 발생일별 개별 행으로 펼쳐 저장(series_id로 묶음). 기본 기간 1년(매년은 5년), 상한 400건.
   const s0 = p.start.slice(0, 10)
-  const until = p.repeatUntil || monthsLater(s0, p.repeat === 'yearly' ? 60 : 6)
+  const until = p.repeatUntil || monthsLater(s0, p.repeat === 'yearly' ? 60 : 12)
   const dates = occurrenceDates(s0, p.repeat, until, 400)
   if (!dates.length) throw new Error('반복 발생일이 없습니다 (시작일·종료일을 확인해주세요)')
   const sid = genSeriesId()
