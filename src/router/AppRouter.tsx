@@ -10,6 +10,7 @@ import Links from '@/pages/Links'
 import Events from '@/pages/Events'
 import Settings from '@/pages/Settings'
 import Improve from '@/pages/Improve'
+import Milestone from '@/pages/Milestone'
 import RequireAdmin from '@/auth/RequireAdmin'
 import RequireAuth from '@/auth/RequireAuth'
 import RequireMember from '@/auth/RequireMember'
@@ -34,6 +35,8 @@ export function AppRouter() {
         {/* 장비관리 — 팀원 이상 열람(편집은 페이지 내 관리자 게이트). 유관자 제한열람은 추후 */}
         <Route path="/equipment" element={<RequireMember><Equipment /></RequireMember>} />
         <Route path="/equipment-ops" element={<RequireMember><EquipmentOps /></RequireMember>} />
+        {/* 마일스톤(팹 구축~개소 실행계획 현황판) — 팀원 이상 열람, 상태 편집은 관리자 */}
+        <Route path="/milestone" element={<RequireMember><Milestone /></RequireMember>} />
         {/* 행사·바로가기 — 로그인(유관자 포함) 열람 */}
         <Route path="/links" element={<RequireAuth><Links /></RequireAuth>} />
         <Route path="/improve" element={<RequireMember><Improve /></RequireMember>} />

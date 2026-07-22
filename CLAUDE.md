@@ -35,7 +35,7 @@ GIST ANGELS FAB(반도체 팹) 구축 프로젝트의 사내 관리 대시보드
 ## 구조 요약
 
 - `src/layouts/` — TopBar(로고만), **SideNav(PC 좌측 사이드바, 내비 주체)**, BottomNav(모바일 하단 탭바), MainLayout(app-shell 플렉스 구조), useNavBadges(배지 건수 공용 훅)
-- `src/pages/` — Home(대시보드), Notice, Calendar, Work, Equipment, Links
+- `src/pages/` — Home(대시보드), Notice, Calendar, Work, Equipment, Links, Milestone(팹 구축~개소 실행계획 현황판 — Supabase `milestones` 62건, 상태 4종 수동+임박·지연 자동파생, 퍼지 분기 매핑은 model.tsx·시딩 스크립트 주석 참조)
 - `src/constants/` — links.tsx, roadmap.tsx (아이콘이 ReactNode라서 .tsx)
 - 스타일은 전부 `src/index.css` 단일 파일 (CSS 변수 --ink/--ink2/--border/--blue 등)
 - 반응형 분기점 768px: `.d-only`는 PC 전용 (사이드바 등), 모바일은 하단 탭바 + menu-stack

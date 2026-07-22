@@ -16,6 +16,7 @@ export const MEMO_LOCATION_PATH: Record<string, string> = {
   '장비도입관리': '/equipment',
   '장비운영관리': '/equipment',
   '장비관리': '/equipment',
+  '마일스톤': '/milestone',
   '학술·교육·전시': '/events',
   '포털개선요청': '/improve',
   '구축 로드맵': '/', // 전용 페이지 폐지 — 홈으로 이관되어 홈 경로에 메모 표시

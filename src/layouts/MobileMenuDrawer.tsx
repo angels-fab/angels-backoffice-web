@@ -8,6 +8,7 @@ import ListItemText from '@mui/material/ListItemText'
 import Divider from '@mui/material/Divider'
 import Typography from '@mui/material/Typography'
 import MonitorIcon from '@mui/icons-material/Monitor'
+import FlagIcon from '@mui/icons-material/Flag'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import LinkIcon from '@mui/icons-material/Link'
@@ -55,6 +56,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
   // 장비·개선요청 = 팀원 이상 / 행사·바로가기 = 유관자 포함 전체 로그인
   const rows: NavRow[] = [
     { icon: <MonitorIcon />, label: '장비관리', path: '/equipment', memberOnly: true },
+    { icon: <FlagIcon />, label: '마일스톤', path: '/milestone', memberOnly: true },
     { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve, memberOnly: true },
     { icon: <CoPresentIcon />, label: '학술·교육·전시', path: '/events' },
     { icon: <LinkIcon />, label: '바로가기', path: '/links' },
