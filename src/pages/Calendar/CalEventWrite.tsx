@@ -8,7 +8,6 @@ import Dialog from '@mui/material/Dialog'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import InputBase from '@mui/material/InputBase'
-import Switch from '@mui/material/Switch'
 import Typography from '@mui/material/Typography'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -239,16 +238,6 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
           ? <>종료일을 누르세요 <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>(같은 날 = 하루)</Box></>
           : n > 1 ? `${n}일 일정 — 다시 누르면 새로 선택` : '하루 일정 — 다시 누르면 새로 선택'}
       </Box>
-    </Box>
-  )
-}
-
-/** 아이콘이 라벨을 대신하는 폼 행 — 구글캘린더식(제목 아래 언제/반복/누구/어디 스택) */
-function FieldRow({ icon, wrap, children }: { icon: ReactNode; wrap?: boolean; children: ReactNode }) {
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 1.1, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 'none' } }}>
-      <Box sx={{ display: 'flex', color: 'text.disabled', flex: 'none', '& svg': { fontSize: 20 } }}>{icon}</Box>
-      <Box sx={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: wrap ? 'wrap' : 'nowrap' }}>{children}</Box>
     </Box>
   )
 }
@@ -562,9 +551,9 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       slotProps={{
         paper: {
           sx: {
-            width: 420, maxWidth: '100%', m: 2,
+            width: 356, maxWidth: '100%', m: 2,
             bgcolor: 'background.paper', backgroundImage: 'none',
-            border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, p: '18px 24px 20px',
+            border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, p: '16px 18px 16px',
           },
         },
       }}
@@ -611,8 +600,40 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           }}
         />
 
-        {/* 종류 — 아이콘 원. 선택하면 가로로 늘어나며 이름이 안으로(사용자 확정 모션). 재클릭=해제 */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '7px', mt: 1.25, mb: 0.5 }}>
+        {/* C-컴팩트 레이아웃(사용자 확정 시안): 제목 → 참석자 → 종류 → 언제 → 반복·장소. 아이콘 기둥·구분선 없음 */}
+        {/* 참석자 — 제목 바로 아래(무엇→누구→언제 흐름) */}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', mt: 1.25 }}>
+          {attendeeNames.map((name) => {
+            const on = attendees.includes(name)
+            const c = memberColor(name)
+            return (
+              <Box
+                key={name}
+                component="button"
+                type="button"
+                onClick={() => setAttendees((a) => (on ? a.filter((n) => n !== name) : [...a, name]))}
+                aria-pressed={on}
+                aria-label={`참석자 ${name}`}
+                title={name}
+                sx={{
+                  width: 28, height: 28, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 11, fontWeight: 700, lineHeight: 1,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background .15s, box-shadow .15s, color .15s',
+                  ...(on
+                    ? { bgcolor: c, color: 'common.white', boxShadow: `0 0 0 2px ${alpha(c, 0.35)}` }
+                    : { bgcolor: alpha(c, 0.15), color: 'text.secondary', '&:hover': { bgcolor: alpha(c, 0.3), color: 'text.primary' } }),
+                  '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+                }}
+              >
+                {given(name)}
+              </Box>
+            )
+          })}
+        </Box>
+
+        {/* 종류 — 아이콘 원. 선택하면 가로로 늘어나며 이름이 안으로(확장까지 폭 안에 들도록 28px로 조임) */}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px', mt: 1.25 }}>
           {PICK_CATS.map((c) => {
             const on = cat === c
             const color = CAT_META[c].color
@@ -627,21 +648,21 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 aria-label={`종류 ${CAT_META[c].label}`}
                 title={CAT_META[c].label}
                 sx={{
-                  height: 30, minWidth: 30, px: '7px', borderRadius: `${radius.pill}px`, border: 'none',
+                  height: 28, minWidth: 28, px: '6px', borderRadius: `${radius.pill}px`, border: 'none',
                   display: 'inline-flex', alignItems: 'center', cursor: 'pointer', fontFamily: 'inherit',
                   bgcolor: alpha(color, on ? 0.22 : 0.13),
                   opacity: on ? 1 : 0.5,
                   boxShadow: on ? `inset 0 0 0 1px ${alpha(color, 0.55)}` : 'none',
                   transition: 'opacity .15s, background-color .2s, box-shadow .2s',
                   '&:hover': { opacity: on ? 1 : 0.85 },
-                  '& svg': { fontSize: 16, color, flex: 'none', ...(c === 'trip_intl' ? { transform: 'rotate(45deg)' } : null) },
+                  '& svg': { fontSize: 15, color, flex: 'none', ...(c === 'trip_intl' ? { transform: 'rotate(45deg)' } : null) },
                   '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
                 }}
               >
                 <Icon />
                 <Box component="span" sx={{
-                  maxWidth: on ? 96 : 0, opacity: on ? 1 : 0, ml: on ? '6px' : 0,
-                  overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700, color: 'text.primary',
+                  maxWidth: on ? 88 : 0, opacity: on ? 1 : 0, ml: on ? '5px' : 0,
+                  overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 11.5, fontWeight: 700, color: 'text.primary',
                   transition: 'max-width .24s ease, opacity .18s ease, margin-left .24s ease',
                 }}>
                   {CAT_META[c].label}
@@ -651,11 +672,11 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           })}
         </Box>
 
-        {/* 아이콘 행 스택 — 언제 / 반복 / 누구 / 어디 */}
-        <Box>
-          <FieldRow icon={<AccessTimeIcon />} wrap>
+        {/* 속성 칩 스택 — 언제(날짜·시간·종일) / 반복·장소. 아이콘은 칩 안에 */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, mt: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
             <SummaryChip
-              label={rangeLabel}
+              label={<><AccessTimeIcon sx={{ fontSize: 14, color: 'text.disabled', mr: '5px' }} />{rangeLabel}</>}
               active={!!calAnchor}
               ariaLabel="기간 선택"
               onClick={(e) => { const el = e.currentTarget; setCalAnchor((a) => (a ? null : el)); setTimeAnchor(null); setRepeatAnchor(null); setPicking(false) }}
@@ -668,14 +689,26 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 onClick={(e) => { const el = e.currentTarget; setTimeAnchor((a) => (a ? null : el)); setCalAnchor(null); setRepeatAnchor(null) }}
               />
             )}
-            {/* 종일 토글 — add에선 반복 행으로 이동(긴 범위 라벨의 줄바꿈 방지, 사용자 확정 배치). edit은 반복 행이 없어 여기 유지 */}
-            {mode === 'edit' && (
-              <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>종일</Typography>
-                <Switch size="small" checked={allDay} onChange={(e) => { setAllDay(e.target.checked); setTimeAnchor(null) }} slotProps={{ input: { 'aria-label': '종일' } }} />
-              </Box>
-            )}
-          </FieldRow>
+            {/* 종일 — 스위치 대신 칩(문법 통일, 사용자 확정). 누르면 켜지고 시간칩이 접힘 */}
+            <Box
+              component="button"
+              type="button"
+              onClick={() => { setAllDay(!allDay); setTimeAnchor(null) }}
+              aria-pressed={allDay}
+              sx={(th) => ({
+                display: 'inline-flex', alignItems: 'center', fontFamily: 'inherit', cursor: 'pointer',
+                bgcolor: allDay ? alpha(th.palette.primary.main, 0.18) : 'transparent',
+                border: 1, borderColor: allDay ? 'primary.main' : 'divider',
+                borderRadius: `${radius.chip}px`, px: 1.25, py: '6px', fontSize: 13, fontWeight: 600,
+                color: allDay ? 'text.primary' : 'text.disabled', whiteSpace: 'nowrap',
+                transition: 'border-color .15s, color .15s, background-color .15s',
+                '&:hover': { borderColor: allDay ? 'primary.main' : th.palette.text.disabled },
+                '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+              })}
+            >
+              종일
+            </Box>
+          </Box>
 
           {/* 기간 미니달력(클릭-클릭) — 칩에 붙는 미니팝업(모달 크기 불변).
               Popover(차단형) → Popper(비차단형): 팝업이 열린 채로도 밖의 버튼이 첫 클릭에 눌린다(사용자 요청).
@@ -720,22 +753,29 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
             )}
           </Popper>
 
-          {mode === 'add' && (
-            <FieldRow icon={<RepeatIcon />} wrap>
-              {/* 반복은 옵션 선택만으로 끝(사용자 확정) — 종료일 입력 없음, 기간은 기본 6개월(매년 5년) */}
+          {/* 반복(add) + 장소 한 줄 — 반복은 옵션 선택만으로 끝(종료일 입력 없음, 기간은 기본 1년·매년 5년) */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            {mode === 'add' && (
               <SummaryChip
-                label={repeatOptions(date).find((o) => o.value === repeat)?.label ?? '반복 안 함'}
+                label={<><RepeatIcon sx={{ fontSize: 14, color: 'text.disabled', mr: '5px' }} />{repeatOptions(date).find((o) => o.value === repeat)?.label ?? '반복 안 함'}</>}
                 active={!!repeatAnchor}
                 ariaLabel="반복"
                 onClick={(e) => { const el = e.currentTarget; setRepeatAnchor((a) => (a ? null : el)); setCalAnchor(null); setTimeAnchor(null); setPicking(false) }}
               />
-              {/* 종일 — 오른쪽 끝 고정(반복 라벨 길이가 변해도 위치 불변) */}
-              <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>종일</Typography>
-                <Switch size="small" checked={allDay} onChange={(e) => { setAllDay(e.target.checked); setTimeAnchor(null) }} slotProps={{ input: { 'aria-label': '종일' } }} />
-              </Box>
-            </FieldRow>
-          )}
+            )}
+            {/* 장소 — 대시 보더 칩형 입력(남는 폭 채움) */}
+            <Box sx={{ flex: 1, minWidth: 110, display: 'flex', alignItems: 'center', gap: '5px', border: '1px dashed', borderColor: 'divider', borderRadius: `${radius.chip}px`, px: 1.25, py: '5px', '&:focus-within': { borderColor: 'primary.main', borderStyle: 'solid' } }}>
+              <PlaceOutlinedIcon sx={{ fontSize: 14, color: 'text.disabled', flex: 'none' }} />
+              <InputBase
+                value={loc}
+                onChange={(e) => setLoc(e.target.value)}
+                placeholder="장소 추가"
+                fullWidth
+                inputProps={{ 'aria-label': '장소' }}
+                sx={{ fontSize: 13, p: 0, '& input': { p: 0 }, '& input::placeholder': { color: 'text.disabled', opacity: 1 } }}
+              />
+            </Box>
+          </Box>
           {/* 반복 드롭다운 — 기간/시간 피커와 동일한 비차단 미니팝업(모달 안 클릭=드롭다운만 닫힘·원클릭) */}
           <Popper open={!!repeatAnchor} anchorEl={repeatAnchor} placement="bottom-start" transition sx={{ zIndex: (th) => th.zIndex.modal + 1 }}>
             {({ TransitionProps }) => (
@@ -775,53 +815,10 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
             )}
           </Popper>
           {mode === 'edit' && isSeries && (
-            <FieldRow icon={<RepeatIcon />}>
-              <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                반복 일정 — 저장·삭제 시 범위(이 일정만/이후/전체)를 선택해요. 날짜 변경은 '이 일정만'에서만 반영.
-              </Typography>
-            </FieldRow>
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+              반복 일정 — 저장·삭제 시 범위(이 일정만/이후/전체)를 선택해요. 날짜 변경은 '이 일정만'에서만 반영.
+            </Typography>
           )}
-
-          <FieldRow icon={<GroupsIcon />} wrap>
-            {attendeeNames.map((name) => {
-              const on = attendees.includes(name)
-              const c = memberColor(name)
-              return (
-                <Box
-                  key={name}
-                  component="button"
-                  type="button"
-                  onClick={() => setAttendees((a) => (on ? a.filter((n) => n !== name) : [...a, name]))}
-                  aria-pressed={on}
-                  aria-label={`참석자 ${name}`}
-                  title={name}
-                  sx={{
-                    width: 30, height: 30, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                    fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700, lineHeight: 1,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background .15s, box-shadow .15s, color .15s',
-                    ...(on
-                      ? { bgcolor: c, color: 'common.white', boxShadow: `0 0 0 2px ${alpha(c, 0.35)}` }
-                      : { bgcolor: alpha(c, 0.15), color: 'text.secondary', '&:hover': { bgcolor: alpha(c, 0.3), color: 'text.primary' } }),
-                    '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
-                  }}
-                >
-                  {given(name)}
-                </Box>
-              )
-            })}
-          </FieldRow>
-
-          <FieldRow icon={<PlaceOutlinedIcon />}>
-            <InputBase
-              value={loc}
-              onChange={(e) => setLoc(e.target.value)}
-              placeholder="장소 추가"
-              fullWidth
-              inputProps={{ 'aria-label': '장소' }}
-              sx={{ fontSize: 13.5, '& input::placeholder': { color: 'text.disabled', opacity: 1 } }}
-            />
-          </FieldRow>
         </Box>
 
         {/* role=alert — 검증·저장 실패를 스크린리더에도 즉시 안내 */}
