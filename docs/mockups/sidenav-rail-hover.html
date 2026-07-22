@@ -129,7 +129,10 @@
   .b-push .f-sidenav:has(.f-panel.expanded){width:208px}
 
   /* 본문(데모결과풍 사진 그리드) */
-  .f-main{flex:1;min-width:0;padding:20px 24px;overflow:hidden;display:flex;flex-direction:column;gap:14px}
+  .f-main{flex:1;min-width:0;padding:20px 24px;overflow:hidden;display:flex}
+  /* 실제 앱 PageContainer 규격: wide 페이지 콘텐츠 폭 상한 1400px 중앙정렬 */
+  .f-inner{flex:1;min-height:0;width:100%;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .capoff .f-inner{max-width:none}
   .f-pagehead{display:flex;align-items:baseline;gap:10px}
   .f-pagehead h2{margin:0;font-size:19px;font-weight:700;letter-spacing:-.3px}
   .f-crumb{font-size:13px;color:var(--f-text3)}
@@ -197,6 +200,7 @@
       </div>
     </div>
     <label class="fit"><input type="checkbox" id="fit" checked> 화면에 맞춰 축소</label>
+    <label class="fit"><input type="checkbox" id="cap" checked> 페이지 폭 상한 1400px (현재 규격)</label>
     <div class="readout" id="readout"></div>
   </div>
 
@@ -214,11 +218,13 @@
             <div class="f-panel" id="panel"></div>
           </aside>
           <main class="f-main">
-            <div class="f-pagehead">
-              <h2>장비관리</h2><span class="f-crumb">데모결과 · 사진 갤러리 예시</span>
-              <span class="f-cardw" id="cardw"></span>
+            <div class="f-inner">
+              <div class="f-pagehead">
+                <h2>장비관리</h2><span class="f-crumb">데모결과 · 사진 갤러리 예시</span>
+                <span class="f-cardw" id="cardw"></span>
+              </div>
+              <div class="f-grid" id="grid"></div>
             </div>
-            <div class="f-grid" id="grid"></div>
           </main>
           <div class="f-hint" id="hint">◀ 레일에 마우스를 올려보세요</div>
         </div>
@@ -229,8 +235,8 @@
   <div class="notes">
     <div class="note"><h3><em>1</em>오버레이로 펼친다 (밀어내기와 비교)</h3>
       <p>펼침 패널이 콘텐츠 위로 떠서, 메뉴를 오갈 때 본문·사진이 흔들리지 않습니다. '밀어내기' 모드를 켜서 화면이 출렁이는 차이를 직접 비교해 보세요.</p></div>
-    <div class="note"><h3><em>2</em>스치면 안 열리고, 올리면 열린다</h3>
-      <p>마우스가 140ms 이상 머물 때만 펼쳐져 지나가는 스침에 반응하지 않습니다. 키보드 Tab 포커스에도 펼쳐지고, 모션 최소화 설정을 존중합니다.</p></div>
+    <div class="note"><h3><em>2</em>닿는 즉시 열린다 (Supabase식)</h3>
+      <p>Supabase 사이드 메뉴처럼 마우스가 스치는 순간 바로 펼쳐지고, 벗어나면 120ms 뒤 닫힙니다. 키보드 Tab 포커스에도 펼쳐지고, 모션 최소화 설정을 존중합니다.</p></div>
     <div class="note"><h3><em>3</em>배지는 아이콘 모서리로</h3>
       <p>접힘: 빨강 새 글 숫자는 아이콘 우상단, 앰버 개선 메모는 우하단 점. 펼치면 지금처럼 메뉴명 뒤 위첨자 숫자(D7 표준 그대로)로 돌아옵니다.</p></div>
     <div class="note"><h3><em>4</em>터치 화면 유의점</h3>
@@ -248,6 +254,7 @@
     </table>
   </div>
   <p class="foot">상단 전환이 가져가려던 폭 이득의 약 7할을, 사이드 구조를 유지한 채 회수합니다. 모바일(하단 탭바)은 이 변경과 무관합니다.</p>
+  <p class="foot"><b>1920 모니터 주의</b>: 페이지 콘텐츠는 폭 상한 1400px(현재 규격)에 이미 도달해 있어, 레일만으로는 1920에서 더 넓어지지 않습니다(레일의 이득은 1366 노트북에서 큼). 1920에서도 꽉 채우려면 위 "페이지 폭 상한" 체크를 꺼 보세요 — 사진 페이지 한정 상한 확대(울트라 폭 검토)와 세트로 가야 하는 별도 결정입니다.</p>
 </div>
 
 <script>
@@ -338,25 +345,34 @@
   // CDP 프리뷰는 창 resize 이벤트가 안 오는 경우가 있어 컨테이너 관찰로 보강
   new ResizeObserver(rescale).observe(stageBox);
 
-  // ── 호버 의도 지연 (진입 140ms / 이탈 160ms) + 키보드 포커스 ──
+  // ── 호버: Supabase식 즉시 펼침(스쳐도 열림) / 이탈 120ms 후 닫힘 + 키보드 포커스 ──
   let tIn, tOut;
   const expand = () => { document.getElementById("panel").classList.add("expanded"); hint.classList.add("seen"); };
-  const collapse = (delay=160) => { clearTimeout(tIn); clearTimeout(tOut);
+  const collapse = (delay=120) => { clearTimeout(tIn); clearTimeout(tOut);
     tOut = setTimeout(()=>document.getElementById("panel").classList.remove("expanded"), delay); };
-  sidenav.addEventListener("pointerenter", () => { if(mode==="current") return; clearTimeout(tOut); tIn = setTimeout(expand, 140); });
+  sidenav.addEventListener("pointerenter", () => { if(mode==="current") return; clearTimeout(tOut); expand(); });
   sidenav.addEventListener("pointerleave", () => { if(mode==="current") return; collapse(); });
   sidenav.addEventListener("focusin", () => { if(mode!=="current"){ clearTimeout(tOut); expand(); } });
   sidenav.addEventListener("focusout", () => { if(mode!=="current" && !sidenav.contains(document.activeElement)) collapse(); });
 
-  // ── 수치 리드아웃 ──
+  // ── 수치 리드아웃 (페이지 폭 상한 1400px 반영) ──
   const fmt = n => n.toLocaleString("ko-KR");
+  const capChk = document.getElementById("cap");
+  capChk.addEventListener("change", () => { frame.classList.toggle("capoff", !capChk.checked); update(); });
   function update(){
-    const cur = frameW - 208 - 48, rail = frameW - 64 - 48;
+    const eff = a => capChk.checked ? Math.min(a, 1400) : a;
+    const cur = eff(frameW - 208 - 48), rail = eff(frameW - 64 - 48);
+    const d = rail - cur;
     const r = document.getElementById("readout");
+    const gain = d > 0
+      ? `<span class="plus">(+${fmt(d)}px, +${Math.round(d/cur*100)}%)</span>`
+      : `<span>— 상한 1,400px에 이미 도달, 이득 없음</span>`;
     if(mode==="current"){
-      r.innerHTML = `콘텐츠 폭 <b>${fmt(cur)}px</b> · 레일 전환 시 <span class="plus">+${fmt(rail-cur)}px</span>`;
+      r.innerHTML = d > 0
+        ? `콘텐츠 폭 <b>${fmt(cur)}px</b> · 레일 전환 시 <span class="plus">+${fmt(d)}px</span>`
+        : `콘텐츠 폭 <b>${fmt(cur)}px</b> — 상한 1,400px 도달, 레일 이득 없음`;
     } else {
-      r.innerHTML = `콘텐츠 폭 <b>${fmt(cur)}px → ${fmt(rail)}px</b> <span class="plus">(+${fmt(rail-cur)}px, +${Math.round((rail-cur)/cur*100)}%)</span>`;
+      r.innerHTML = `콘텐츠 폭 <b>${fmt(cur)}px → ${fmt(rail)}px</b> ${gain}`;
     }
     requestAnimationFrame(() => {
       const c = document.querySelector(".f-card");

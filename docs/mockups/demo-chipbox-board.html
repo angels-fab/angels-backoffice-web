@@ -1,0 +1,242 @@
+<title>데모결과 칩박스 시안</title>
+<style>
+  :root{
+    --bg:#F4F6F9; --surface:#FFFFFF; --text:#1B2434; --text2:#5C6879; --line:#DFE4EC; --accent:#3E77C2;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0B0D12; --surface:#141821; --text:#EEF2F8; --text2:#9FA9B9; --line:#28303F; --accent:#5C9AE0; }
+  }
+  :root[data-theme="dark"]{ --bg:#0B0D12; --surface:#141821; --text:#EEF2F8; --text2:#9FA9B9; --line:#28303F; --accent:#5C9AE0; }
+  :root[data-theme="light"]{ --bg:#F4F6F9; --surface:#FFFFFF; --text:#1B2434; --text2:#5C6879; --line:#DFE4EC; --accent:#3E77C2; }
+
+  html,body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.55}
+  .wrap{max-width:1240px;margin:0 auto;padding:26px 20px 60px;display:flex;flex-direction:column;gap:16px}
+  .hd h1{font-size:20px;font-weight:700;letter-spacing:-.3px;margin:0 0 4px}
+  .hd p{margin:0;font-size:13px;color:var(--text2)}
+  .hd .tag{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);border:1px solid var(--accent);
+    border-radius:999px;padding:1px 9px;margin-bottom:9px;letter-spacing:.04em}
+
+  /* ── 스테이지: 실제 포털 다크 팔레트 재현 ── */
+  .stage{
+    --f-ink:#0F1117; --f-ink2:#161B22; --f-panel:#131722; --f-border:#293244; --f-border2:#232C3A;
+    --f-text:#FFFFFF; --f-text2:#AAB4C3; --f-text3:#7D8899; --f-blue:#5491DA;
+    background:var(--f-ink);border:1px solid var(--f-border2);border-radius:12px;
+    padding:22px;color:var(--f-text);font-size:13px}
+  .stage *{box-sizing:border-box}
+  .sec{max-width:1160px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+
+  .band{display:flex;align-items:center;gap:10px;background:#39415a;border-radius:12px;padding:12px 16px}
+  .band svg{width:20px;height:20px;fill:currentColor;flex-shrink:0}
+  .band b{font-size:17px;font-weight:700}
+  .band span{margin-left:auto;font-size:12px;color:var(--f-text2)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .col{display:flex;flex-direction:column;gap:9px;min-width:0}
+
+  /* 사진 카드 (캐러셀 자리 — 시네마 스크림 + 오버레이 조작부, 정적 재현) */
+  .pcard{border:1px solid var(--f-border2);border-radius:12px;overflow:hidden;background:var(--f-ink2)}
+  .pband{padding:9px 13px;font-size:13.5px;font-weight:700;border-bottom:1px solid var(--f-border2)}
+  .pband span{font-weight:400;color:var(--f-text3);margin-left:6px}
+  .pstage{position:relative;aspect-ratio:16/10;background:
+    linear-gradient(160deg,rgba(84,145,218,.18),rgba(84,145,218,0) 45%),
+    linear-gradient(320deg,rgba(70,183,190,.12),rgba(70,183,190,0) 50%),
+    linear-gradient(135deg,#232e42,#151b28)}
+  .scrim{position:absolute;left:0;right:0;bottom:0;height:44%;
+    background:linear-gradient(180deg,rgba(15,17,23,0),rgba(15,17,23,.88))}
+  .pcap{position:absolute;left:14px;right:14px;bottom:11px}
+  .pcap-h{display:flex;align-items:baseline;gap:8px}
+  .pcap-l{font-size:13.5px;font-weight:700}
+  .pcap-n{margin-left:auto;font-size:11px;color:var(--f-text2)}
+  .pcap-d{margin:2px 0 0;font-size:12px;color:var(--f-text2)}
+  .pnav{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;
+    border:none;background:rgba(15,17,23,.55);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .pnav svg{width:18px;height:18px;fill:currentColor}
+  .pnav.l{left:10px}.pnav.r{right:10px}
+  .pround{position:absolute;top:10px;left:12px;display:flex;gap:4px}
+  .pround b{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(15,17,23,.55);color:var(--f-text2)}
+  .pround b.on{color:#fff;outline:1px solid rgba(255,255,255,.4)}
+  .pdate{position:absolute;top:10px;right:12px;font-size:11px;color:var(--f-text2);background:rgba(15,17,23,.55);
+    padding:2px 8px;border-radius:999px}
+
+  /* ── 지표 칩박스: 높이 고정 72px · 내용 따라 가변폭 ── */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{height:72px;display:inline-flex;flex-direction:column;justify-content:center;gap:3px;
+    padding:0 16px;background:var(--f-panel);border:1px solid var(--f-border);border-radius:12px;
+    color:var(--f-text);font-family:inherit;text-align:left;cursor:pointer;white-space:nowrap;
+    transition:border-color .15s}
+  .chip:hover{border-color:var(--f-blue)}
+  .chip:focus-visible{outline:2px solid var(--f-blue);outline-offset:2px}
+  .chip-k{font-size:11px;color:var(--f-text3);display:flex;align-items:center;gap:5px}
+  .chip-k svg{width:11px;height:11px;fill:var(--f-blue);opacity:0;transition:opacity .15s}
+  .chip:hover .chip-k svg{opacity:1}
+  .chip-v{font-size:21px;font-weight:700;color:#FFFFFF;line-height:1.1;font-variant-numeric:tabular-nums}
+  .chip-v small{font-size:14px;font-weight:600;color:#FFFFFF;margin-left:3px}
+  .chip-c{font-size:11px;color:var(--f-text3)}
+  .chip-add{height:72px;display:inline-flex;align-items:center;gap:6px;padding:0 16px;background:none;
+    border:1px dashed var(--f-border);border-radius:12px;color:var(--f-text3);font-size:12px;font-family:inherit;cursor:pointer;
+    transition:color .15s,border-color .15s}
+  .chip-add:hover{color:var(--f-blue);border-color:var(--f-blue)}
+  .chip-add svg{width:14px;height:14px;fill:currentColor}
+
+  .xnote{display:flex;align-items:flex-start;gap:7px;color:var(--f-text3);font-size:12px;padding:0 2px}
+  .xnote svg{width:14px;height:14px;fill:currentColor;flex-shrink:0;margin-top:2px}
+
+  /* ── 기록 보드: 제목 없음 · 메모 전용 · 2열 카드(빈공간 최소화) ── */
+  .board{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .m{display:flex;gap:11px;padding:12px 14px;background:var(--f-ink2);border:1px solid var(--f-border);border-radius:12px;min-width:0}
+  .ava{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:600;color:#fff;margin-top:1px}
+  .mb{flex:1;min-width:0}
+  .mh{display:flex;align-items:baseline;gap:8px}
+  .mh b{font-size:12.5px;font-weight:600;color:var(--f-text2)}
+  .mh time{margin-left:auto;font-size:11px;color:var(--f-text3)}
+  .mt{margin:2px 0 0;font-size:13px;color:var(--f-text)}
+  .minput{grid-column:1 / -1;display:flex;align-items:center;gap:9px;padding:11px 16px;background:var(--f-ink2);border:1px dashed var(--f-border);border-radius:12px;color:var(--f-text3);cursor:text}
+  .minput svg{width:16px;height:16px;fill:currentColor;flex-shrink:0}
+  .minput span{font-size:12.5px}
+
+  .notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+  .note{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 15px}
+  .note h3{margin:0 0 5px;font-size:13px;font-weight:700}
+  .note h3 em{font-style:normal;color:var(--accent);margin-right:6px}
+  .note p{margin:0;font-size:12.5px;color:var(--text2)}
+
+  @media (max-width:760px){ .cols{grid-template-columns:1fr} .board{grid-template-columns:1fr} }
+</style>
+
+<div class="wrap">
+  <div class="hd">
+    <span class="tag">이해 확인용 시안 · 2026-07-23</span>
+    <h1>데모결과 — 지표 칩박스 + 무제목 기록 보드</h1>
+    <p>지표는 보드에서 빼서 사진 바로 아래 칩박스로, 기록 보드는 제목 없이 메모 전용으로. 칩박스 = 높이 72px 고정 · 내용 따라 폭 가변.</p>
+  </div>
+
+  <div class="stage"><div class="sec">
+
+    <div class="band">
+      <svg viewBox="0 0 24 24"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg>
+      <b>건식식각기</b><span>데모 2건 · AMAT · Lam</span>
+    </div>
+
+    <div class="cols">
+      <div class="col">
+        <div class="pcard">
+          <div class="pband">AMAT <span>Producer GT</span></div>
+          <div class="pstage">
+            <div class="scrim"></div>
+            <div class="pround"><b class="on">1차</b></div><div class="pdate">05.14</div>
+            <div class="pcap">
+              <div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div>
+              <p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p>
+            </div>
+            <button class="pnav l" aria-label="이전 사진"><svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+            <button class="pnav r" aria-label="다음 사진"><svg viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          </div>
+        </div>
+        <div class="chips">
+          <button class="chip">
+            <span class="chip-k">식각률<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+            <span class="chip-v">385<small>nm/min</small></span>
+            <span class="chip-c">8인치 Si 베어 · CF4 80sccm · 1차 05.14</span>
+          </button>
+          <button class="chip">
+            <span class="chip-k">균일도<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+            <span class="chip-v">±1.8<small>%</small></span>
+            <span class="chip-c">5포인트 · 엣지 3mm</span>
+          </button>
+          <button class="chip">
+            <span class="chip-k">파티클<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+            <span class="chip-v">3<small>ea</small></span>
+            <span class="chip-c">0.1µm↑ · 첨가 전 기준</span>
+          </button>
+          <button class="chip-add"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>지표</button>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="pcard">
+          <div class="pband">Lam <span>Kiyo45</span></div>
+          <div class="pstage">
+            <div class="scrim"></div>
+            <div class="pround"><b>1차</b><b class="on">2차</b></div><div class="pdate">06.02</div>
+            <div class="pcap">
+              <div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div>
+              <p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p>
+            </div>
+            <button class="pnav l" aria-label="이전 사진"><svg viewBox="0 0 24 24"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+            <button class="pnav r" aria-label="다음 사진"><svg viewBox="0 0 24 24"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          </div>
+        </div>
+        <div class="chips">
+          <button class="chip">
+            <span class="chip-k">식각률<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+            <span class="chip-v">412<small>nm/min</small></span>
+            <span class="chip-c">8인치 SiO2 패턴 · C4F8 60sccm · 2차 06.02</span>
+          </button>
+          <button class="chip">
+            <span class="chip-k">균일도<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+            <span class="chip-v">±1.4<small>%</small></span>
+            <span class="chip-c">5포인트 · 전 구간</span>
+          </button>
+          <button class="chip">
+            <span class="chip-k">선택비<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+            <span class="chip-v">25<small>:1</small></span>
+            <span class="chip-c">SiO2/Si · 2차</span>
+          </button>
+          <button class="chip">
+            <span class="chip-k">처리량<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+            <span class="chip-v">52<small>wph</small></span>
+            <span class="chip-c">연속 25장 평균</span>
+          </button>
+          <button class="chip-add"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>지표</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="xnote">
+      <svg viewBox="0 0 24 24"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+      <span>두 데모는 샘플·레시피 조건이 달라 지표를 각 사 기준으로만 표기합니다. 교차 우수 판정 없음.</span>
+    </div>
+
+    <div class="board">
+      <div class="m">
+        <span class="ava" style="background:#2f8f4e">조</span>
+        <div class="mb">
+          <div class="mh"><b>조성범</b><time>07.11</time></div>
+          <p class="mt">Lam 균일도, 5포인트 전 구간 ±1.5% 이내. 엣지 3mm까지 유지되는 게 큼.</p>
+        </div>
+      </div>
+      <div class="m">
+        <span class="ava" style="background:#2f6db8">박</span>
+        <div class="mb">
+          <div class="mh"><b>박주봉</b><time>07.12</time></div>
+          <p class="mt">파티클은 AMAT 3ea로 우위. 다만 처리량이 45wph로 Lam보다 낮아 트레이드오프.</p>
+        </div>
+      </div>
+      <div class="m">
+        <span class="ava" style="background:#a8761a">박</span>
+        <div class="mb">
+          <div class="mh"><b>박세리</b><time>07.14</time></div>
+          <p class="mt">AMAT 2차 데모에서 선택비 재측정 요청함. 1차 조건과 챔버 상태가 달랐음.</p>
+        </div>
+      </div>
+      <div class="minput">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+        <span>메모 남기기…</span>
+      </div>
+    </div>
+
+  </div></div>
+
+  <div class="notes">
+    <div class="note"><h3><em>1</em>지표 = 사진 바로 아래 칩박스</h3>
+      <p>보드에서 지표를 빼고, 각 제조사 사진 밑에 칩박스 행으로. 소속은 열 위치로 구분(왼쪽 AMAT · 오른쪽 Lam), 그 열의 "+ 지표"는 그 제조사 것.</p></div>
+    <div class="note"><h3><em>2</em>칩박스 규격</h3>
+      <p>높이 72px 고정, 폭은 내용 따라 가변(줄바꿈으로 여러 행). 흰색 큰 폰트 지표값+단위가 메인, 조건은 하단 회색 작은 글씨. 지표명은 상단에 아주 작게 — 빼길 원하시면 제거 가능.</p></div>
+    <div class="note"><h3><em>3</em>기록 보드 = 제목 없는 메모 전용 · 2열 카드</h3>
+      <p>보드 섹션 제목도, 글마다 붙던 제목도 없음. 메모는 2열 카드로 흘러 빈공간 최소화(작성자·날짜·본문만), 맨 아래 전폭 입력줄. 지표는 칩 "+", 메모는 여기.</p></div>
+    <div class="note"><h3><em>4</em>유지되는 것</h3>
+      <p>사진 = 가로스크롤 캐러셀 + 시네마 스크림 + 오버레이 조작부(괜찮다고 하신 그대로). 교차 판정 없음 안내 한 줄. 칩 클릭 = 값 수정(호버 시 연필).</p></div>
+  </div>
+</div>
