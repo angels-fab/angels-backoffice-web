@@ -1,0 +1,1630 @@
+<title>데모결과 UX 후보 5종 — 지표×코멘트</title>
+<style>
+:root{
+  --ground:#0F1117;--surface:#131722;--card:#161B22;--border:#293244;--divider:#232C3A;
+  --ink:#FFFFFF;--ink2:#AAB4C3;--ink3:#7D8899;--accent:#5491DA;
+  --sans:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:1240px;margin:0 auto;padding:36px 24px 90px}
+.eyebrow{font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin:0 0 9px}
+h1{font-size:24px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em}
+.intro{font-size:14px;line-height:1.75;color:var(--ink2);margin:0 0 4px;max-width:72ch;word-break:keep-all}
+.bar-ui{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:10px;padding:10px 0;margin:14px 0 10px;background:linear-gradient(var(--ground) 72%,rgba(15,17,23,0))}
+.bar-ui .lbl{font-size:12px;color:var(--ink3)}
+.seg{display:inline-flex;gap:3px;padding:3px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+.seg button{font:inherit;font-size:12px;font-weight:500;color:var(--ink2);background:none;border:0;padding:5px 14px;border-radius:999px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button:hover:not(.on){color:var(--ink)}
+.jump{display:flex;gap:6px;margin-left:auto}
+.jump a{font-size:12px;color:var(--ink2);text-decoration:none;padding:5px 11px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+.jump a:hover{color:var(--ink);border-color:var(--accent)}
+.stack{display:flex;flex-direction:column;gap:40px}
+.opt{min-width:0;scroll-margin-top:64px}
+.ohd{display:flex;align-items:baseline;gap:9px;margin:0 0 10px}
+.okey{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:8px;background:rgba(84,145,218,.16);border:1px solid rgba(84,145,218,.42);color:var(--accent);font-size:11px;font-weight:700;align-self:center}
+.ohd b{font-size:15px;font-weight:600}
+.ohd s{text-decoration:none;font-size:12px;color:var(--ink3)}
+.mock{container-type:inline-size;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;overflow:hidden}
+.mob .mock{max-width:390px;margin:0 auto;padding:10px}
+.note{font-size:12px;line-height:1.75;color:var(--ink2);margin:10px 0 0;word-break:keep-all;max-width:88ch}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.pcard{min-width:0;display:flex;flex-direction:column}
+.pband{display:flex;align-items:center;justify-content:center;gap:5px;background:#5491DA;color:#fff;font-size:12px;font-weight:500;padding:5px 12px;border-radius:8px 8px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pband span{opacity:.85;font-weight:400}
+.pstage{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:#0F1117;border:1px solid #293244;border-top:0;border-radius:0 0 8px 8px}
+.ph{position:absolute;inset:0}
+.pchips{position:absolute;top:8px;left:8px;z-index:4;display:flex;gap:3px}
+.pchips b{font-size:11px;font-weight:500;color:#fff;background:rgba(0,0,0,.5);border-radius:8px;padding:2px 7px}
+.pchips b.on{background:#5491DA}
+.pdate{position:absolute;top:8px;right:8px;z-index:4;font-size:11px;font-weight:500;color:#fff;background:rgba(0,0,0,.5);border-radius:8px;padding:2px 7px}
+
+.scrim{position:absolute;left:0;right:0;bottom:0;height:44%;z-index:2;pointer-events:none}
+.scrim::before{content:'';position:absolute;inset:0;-webkit-backdrop-filter:brightness(.86) saturate(1.04);backdrop-filter:brightness(.86) saturate(1.04);-webkit-mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.96) 22%,rgba(0,0,0,.85) 41%,rgba(0,0,0,.65) 57%,rgba(0,0,0,.42) 71.5%,rgba(0,0,0,.21) 84%,rgba(0,0,0,.07) 93%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.96) 22%,rgba(0,0,0,.85) 41%,rgba(0,0,0,.65) 57%,rgba(0,0,0,.42) 71.5%,rgba(0,0,0,.21) 84%,rgba(0,0,0,.07) 93%,rgba(0,0,0,0) 100%)}
+.scrim::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.880) 0%,rgba(0,0,0,.868) 12%,rgba(0,0,0,.842) 22%,rgba(0,0,0,.800) 32%,rgba(0,0,0,.742) 41%,rgba(0,0,0,.668) 49%,rgba(0,0,0,.578) 57%,rgba(0,0,0,.478) 64.5%,rgba(0,0,0,.374) 71.5%,rgba(0,0,0,.274) 78%,rgba(0,0,0,.185) 84%,rgba(0,0,0,.112) 89%,rgba(0,0,0,.058) 93%,rgba(0,0,0,.024) 96.2%,rgba(0,0,0,.006) 98.6%,rgba(0,0,0,0) 100%)}
+
+.pcap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:0 16px 14px;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.pcap-h{display:flex;align-items:baseline;gap:10px}
+.pcap-l{flex:1 1 auto;min-width:0;font-size:14px;font-weight:600;line-height:1.35;letter-spacing:-.01em;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 14px rgba(0,0,0,.35)}
+.pcap-n{flex:0 0 auto;font-size:11px;font-weight:500;line-height:1.4;letter-spacing:.04em;color:#7D8899;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.pcap-d{margin:0;font-size:12px;font-weight:400;line-height:1.5;color:#AAB4C3;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+
+.ph-0{background:radial-gradient(circle at 50% 42%,#5b6b80 0%,#3a4657 22%,#232c3a 48%,#12161f 78%,#0b0e14 100%),repeating-radial-gradient(circle at 50% 42%,rgba(255,255,255,.05) 0 2px,transparent 2px 13px)}
+.ph-1{background:radial-gradient(circle at 50% 50%,#fdfefe 0%,#eef4f9 30%,#dbe6f0 48%,#c3d3e2 58%,#9fb2c6 70%,#6f8296 100%),conic-gradient(from 210deg at 50% 50%,rgba(120,190,255,.5),rgba(190,255,220,.42),rgba(255,225,170,.42),rgba(255,175,205,.42),rgba(120,190,255,.5))}
+.ph-2{background:linear-gradient(118deg,#8e9aa8 0%,#6d7a8a 26%,#49525f 52%,#5f6b7a 72%,#2f3743 100%),repeating-linear-gradient(62deg,rgba(255,255,255,.09) 0 3px,transparent 3px 22px)}
+.ph-3{background:linear-gradient(#0d1117,#0d1117),repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 34px),radial-gradient(ellipse 22% 46% at 32% 62%,rgba(77,161,103,.85),transparent 70%),radial-gradient(ellipse 9% 34% at 58% 70%,rgba(77,161,103,.7),transparent 70%),radial-gradient(ellipse 5% 22% at 76% 78%,rgba(214,162,62,.6),transparent 70%)}
+
+.pchips,.pdate{pointer-events:none}
+
+/* ── 가로 스크롤 캐러셀(공통 메커니즘 — 검증 완료본) ── */
+.pscroll{position:absolute;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;cursor:grab;user-select:none;-webkit-user-select:none;overscroll-behavior-x:contain}
+.pscroll::-webkit-scrollbar{display:none}
+.pscroll.dragging{scroll-snap-type:none;cursor:grabbing}
+.pslide{position:relative;flex:0 0 100%;min-width:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden}
+.pslide .ph{position:absolute;inset:0}
+.pprev,.pnext{position:absolute;top:0;bottom:22px;width:18%;z-index:6;display:flex;align-items:center;padding:0 4px;border:0;color:#fff;opacity:0;cursor:pointer;transition:opacity .15s ease;background:linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.04) 55%,transparent 80%)}
+.pprev{left:0;justify-content:flex-start}
+.pnext{right:0;justify-content:flex-end;background:linear-gradient(270deg,rgba(255,255,255,.16),rgba(255,255,255,.04) 55%,transparent 80%)}
+.pstage:hover .pprev,.pstage:hover .pnext,.pprev:focus-visible,.pnext:focus-visible{opacity:1}
+.pprev svg,.pnext svg{width:30px;height:30px;fill:currentColor;filter:drop-shadow(0 1px 4px rgba(0,0,0,.7))}
+.pbar{position:absolute;left:12px;right:12px;bottom:4px;height:14px;z-index:7;cursor:pointer;touch-action:none}
+.pbar::before{content:'';position:absolute;left:0;right:0;bottom:3px;height:3px;border-radius:999px;background:rgba(255,255,255,.22);transition:height .12s ease}
+.pbar-thumb{position:absolute;bottom:3px;height:3px;border-radius:999px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.4);transition:height .12s ease}
+.pstage:hover .pbar::before,.pstage:hover .pbar-thumb,.pbar.scrubbing::before,.pbar.scrubbing .pbar-thumb{height:6px}
+.pcap{padding-bottom:20px}
+@media (hover:none){.pprev,.pnext{display:none}}
+@container (max-width:640px){.pbar{height:20px}}
+
+/* ===== 후보 1 : 지표 비교형 + 코멘트 상시 ===== */
+.s-q1{container-type:inline-size;container-name:q1-root;display:flex;flex-direction:column;gap:14px;color:#FFFFFF;font-size:13px;line-height:1.5;word-break:keep-all;}
+.s-q1 .q1-band svg,.s-q1 .q1-mx svg,.s-q1 .q1-cm svg{display:block;flex:none;}
+.s-q1 button{font-family:inherit;}
+
+/* 제목띠 */
+.s-q1 .q1-band{background:#39415a;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(0,0,0,.22);}
+.s-q1 .q1-band-ic{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;color:#FFFFFF;flex:none;}
+.s-q1 .q1-band-tt{font-size:18px;font-weight:700;line-height:1.25;}
+.s-q1 .q1-band-sub{font-size:11px;font-weight:500;color:#AAB4C3;margin-top:2px;}
+.s-q1 .q1-band-chips{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;}
+.s-q1 .q1-bchip{font-size:11px;font-weight:500;color:#AAB4C3;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:5px 10px;line-height:1;}
+
+/* 사진 2열 */
+.s-q1 .q1-photos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+
+/* 하단: 비교표(좌) + 코멘트(우) — 표 보면서 의견을 대조해 읽는 배치 */
+.s-q1 .q1-main{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:14px;align-items:start;}
+.s-q1 .q1-card{background:#161B22;border:1px solid #293244;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.22);}
+
+/* 지표 비교 카드 */
+.s-q1 .q1-mx-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 16px 0;}
+.s-q1 .q1-mx-tt{margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.s-q1 .q1-mx-tt svg{color:#5491DA;}
+.s-q1 .q1-verdict{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:#4DA167;background:rgba(77,161,103,.12);border:1px solid rgba(77,161,103,.35);border-radius:999px;padding:4px 10px;line-height:1;}
+.s-q1 .q1-hint{margin-left:auto;font-size:11px;font-weight:500;color:#7D8899;}
+
+/* 조건 상이 주의 (앰버, 과하지 않게) */
+.s-q1 .q1-notice{margin:12px 16px 0;display:flex;gap:8px;align-items:flex-start;background:rgba(214,162,62,.09);border:1px solid rgba(214,162,62,.30);border-radius:10px;padding:9px 12px;}
+.s-q1 .q1-notice svg{color:#D6A23E;margin-top:1px;}
+.s-q1 .q1-notice p{margin:0;font-size:12px;line-height:1.5;}
+.s-q1 .q1-notice-strong{color:#D6A23E;}
+.s-q1 .q1-notice-rest{color:#AAB4C3;}
+
+/* 비교표 */
+.s-q1 .q1-table{margin:12px 16px 16px;border:1px solid #232C3A;border-radius:10px;overflow:hidden;background:#131722;}
+.s-q1 .q1-tr{display:grid;grid-template-columns:132px minmax(0,1fr) minmax(0,1fr);}
+.s-q1 .q1-tr + .q1-tr{border-top:1px solid #232C3A;}
+.s-q1 .q1-tr > * + *{border-left:1px solid #232C3A;}
+.s-q1 .q1-th,.s-q1 .q1-td{padding:12px 14px;min-width:0;}
+.s-q1 .q1-thead{background:rgba(255,255,255,.02);}
+.s-q1 .q1-th-metric{display:flex;align-items:flex-end;font-size:11px;font-weight:500;color:#7D8899;}
+.s-q1 .q1-vh-name{font-size:14px;font-weight:600;}
+.s-q1 .q1-vh-name span{font-size:12px;font-weight:400;color:#AAB4C3;}
+.s-q1 .q1-vh-visit{display:flex;align-items:center;gap:6px;margin:6px 0 8px;}
+.s-q1 .q1-vh-visit i{font-style:normal;font-size:11px;font-weight:500;color:#5491DA;background:rgba(84,145,218,.14);border-radius:999px;padding:3px 8px;line-height:1;}
+.s-q1 .q1-vh-visit span{font-size:11px;font-weight:500;color:#7D8899;}
+.s-q1 .q1-vh-cond{font-size:11px;font-weight:500;color:#AAB4C3;line-height:1.6;}
+.s-q1 .q1-vh-cond span{color:#7D8899;margin-right:6px;}
+
+.s-q1 .q1-row{transition:background .12s ease;}
+.s-q1 .q1-row:hover{background:rgba(255,255,255,.02);}
+.s-q1 .q1-mn{font-size:13px;}
+.s-q1 .q1-md{display:flex;align-items:center;gap:4px;margin-top:3px;font-size:11px;font-weight:500;color:#7D8899;}
+.s-q1 .q1-md svg{flex:none;}
+.s-q1 .q1-val{position:relative;display:flex;align-items:center;gap:6px;}
+.s-q1 .q1-num{font-size:16px;font-weight:700;letter-spacing:.01em;}
+.s-q1 .q1-unit{font-size:11px;font-weight:500;color:#7D8899;}
+.s-q1 .q1-win{background:rgba(77,161,103,.08);}
+.s-q1 .q1-row:hover .q1-win{background:rgba(77,161,103,.11);}
+.s-q1 .q1-wtag{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:500;color:#4DA167;background:rgba(77,161,103,.16);border-radius:999px;padding:3px 8px;line-height:1;white-space:nowrap;}
+.s-q1 .q1-wtag svg{flex:none;}
+
+/* 인라인 수정 진입점(호버 연필) */
+.s-q1 .q1-edit{margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border:0;border-radius:8px;background:transparent;color:#7D8899;cursor:pointer;opacity:0;transition:opacity .15s ease,background .15s ease,color .15s ease;}
+.s-q1 .q1-edit svg{flex:none;}
+.s-q1 .q1-row:hover .q1-edit,.s-q1 .q1-edit:focus-visible{opacity:1;}
+.s-q1 .q1-edit:hover{color:#5491DA;background:rgba(84,145,218,.12);}
+.s-q1 .q1-edit:focus-visible{outline:2px solid rgba(84,145,218,.6);outline-offset:1px;}
+
+/* 종합 행 */
+.s-q1 .q1-tr.q1-sum{background:rgba(255,255,255,.02);border-top:1px solid #293244;}
+.s-q1 .q1-sum-l{display:flex;align-items:center;gap:7px;font-size:12px;color:#AAB4C3;}
+.s-q1 .q1-sum-l svg{color:#D6A23E;flex:none;}
+.s-q1 .q1-sum-v{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.s-q1 .q1-sum-n{font-size:16px;font-weight:700;}
+.s-q1 .q1-sum-d{font-size:11px;font-weight:500;color:#7D8899;}
+.s-q1 .q1-sum-win{background:rgba(77,161,103,.10);}
+.s-q1 .q1-sum-win .q1-sum-n{color:#4DA167;}
+
+/* 코멘트 상시 보드 */
+.s-q1 .q1-cm-head{display:flex;align-items:center;gap:8px;padding:16px 16px 12px;flex-wrap:wrap;}
+.s-q1 .q1-cm-tt{margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.s-q1 .q1-cm-tt svg{color:#5491DA;}
+.s-q1 .q1-cnt{font-size:11px;font-weight:500;color:#5491DA;background:rgba(84,145,218,.14);border-radius:999px;padding:3px 8px;line-height:1;}
+.s-q1 .q1-add{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#FFFFFF;background:#5491DA;border:0;border-radius:10px;padding:8px 12px;line-height:1;cursor:pointer;transition:filter .15s ease,transform .12s ease;}
+.s-q1 .q1-add svg{flex:none;}
+.s-q1 .q1-add:hover{filter:brightness(1.1);}
+.s-q1 .q1-add:active{transform:translateY(1px);}
+.s-q1 .q1-add:focus-visible{outline:2px solid rgba(84,145,218,.6);outline-offset:2px;}
+.s-q1 .q1-cm-list{display:flex;flex-direction:column;gap:10px;padding:0 16px 16px;}
+.s-q1 .q1-cmt{background:#131722;border:1px solid #232C3A;border-radius:10px;padding:12px 14px;transition:border-color .15s ease;}
+.s-q1 .q1-cmt:hover{border-color:#293244;}
+.s-q1 .q1-cmt-h{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.s-q1 .q1-av{width:24px;height:24px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#FFFFFF;flex:none;}
+.s-q1 .q1-av.q1-a1{background:#2f8f4e;}
+.s-q1 .q1-av.q1-a2{background:#2f6db8;}
+.s-q1 .q1-av.q1-a3{background:#a8761a;}
+.s-q1 .q1-cmt-nm{font-size:12px;color:#AAB4C3;}
+.s-q1 .q1-cmt-dt{margin-left:auto;font-size:11px;font-weight:500;color:#7D8899;}
+.s-q1 .q1-cmt-tt{margin:0 0 4px;font-size:14px;font-weight:600;}
+.s-q1 .q1-cmt-bd{margin:0;font-size:13px;color:#AAB4C3;line-height:1.55;}
+
+/* 중간 폭: 표 풀폭 + 코멘트 2열 보드로 하강 */
+@container q1-root (max-width:980px){
+  .s-q1 .q1-main{grid-template-columns:1fr;}
+  .s-q1 .q1-cm-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+
+/* 모바일 390px: 전부 세로 스택, 표는 3열 유지(축약), 연필 상시 노출 */
+@container q1-root (max-width:640px){
+  .s-q1 .q1-band{padding:12px 14px;}
+  .s-q1 .q1-band-chips{display:none;}
+  .s-q1 .q1-photos{grid-template-columns:1fr;}
+  .s-q1 .q1-cm-list{grid-template-columns:1fr;}
+  .s-q1 .q1-hint{display:none;}
+  .s-q1 .q1-tr{grid-template-columns:96px minmax(0,1fr) minmax(0,1fr);}
+  .s-q1 .q1-th,.s-q1 .q1-td{padding:10px 8px;}
+  .s-q1 .q1-num,.s-q1 .q1-sum-n{font-size:14px;font-weight:600;}
+  .s-q1 .q1-val{flex-wrap:wrap;padding-right:32px;}
+  .s-q1 .q1-edit{position:absolute;top:7px;right:5px;margin-left:0;opacity:.55;}
+  .s-q1 .q1-sum-l{font-size:11px;font-weight:500;gap:5px;}
+}
+
+.s-q2{display:flex;flex-direction:column;gap:14px;color:#FFFFFF;}
+.s-q2 *{box-sizing:border-box;}
+.s-q2 button{font-family:inherit;}
+.s-q2 button:focus-visible{outline:2px solid rgba(84,145,218,.6);outline-offset:2px;}
+
+/* ---------- 제목띠 ---------- */
+.s-q2 .q2-band{display:flex;align-items:center;gap:12px;background:#39415a;border-radius:12px;padding:12px 18px;box-shadow:0 2px 10px rgba(0,0,0,.22);}
+.s-q2 .q2-band-ic{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.10);display:flex;align-items:center;justify-content:center;color:#FFFFFF;flex:none;}
+.s-q2 .q2-band-ic svg{width:22px;height:22px;}
+.s-q2 .q2-band-t{min-width:0;}
+.s-q2 .q2-band-cap{display:block;font-size:11px;font-weight:500;color:rgba(255,255,255,.62);letter-spacing:.02em;}
+.s-q2 .q2-band-name{margin:1px 0 0;font-size:18px;font-weight:700;line-height:1.2;color:#FFFFFF;}
+.s-q2 .q2-band-sub{margin-left:auto;font-size:12px;font-weight:400;color:rgba(255,255,255,.66);white-space:nowrap;}
+
+/* ---------- 사진 2열 ---------- */
+.s-q2 .q2-photos{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+/* ---------- 지표 카드 ---------- */
+.s-q2 .q2-metrics{background:#161B22;border:1px solid #293244;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.22);padding:16px 18px 8px;display:flex;flex-direction:column;gap:12px;}
+.s-q2 .q2-mhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.s-q2 .q2-mic{width:30px;height:30px;border-radius:8px;background:rgba(84,145,218,.14);color:#5491DA;display:flex;align-items:center;justify-content:center;flex:none;}
+.s-q2 .q2-mic svg{width:18px;height:18px;}
+.s-q2 .q2-mtitle{margin:0;font-size:16px;font-weight:700;color:#FFFFFF;}
+.s-q2 .q2-verdict{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.s-q2 .q2-vchip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:500;background:rgba(125,136,153,.14);color:#AAB4C3;border:1px solid rgba(125,136,153,.25);white-space:nowrap;}
+.s-q2 .q2-vchip svg{width:13px;height:13px;}
+.s-q2 .q2-vchip-win{background:rgba(77,161,103,.16);color:#4DA167;border-color:rgba(77,161,103,.35);}
+
+/* 조건 상이 경고 */
+.s-q2 .q2-warn{display:flex;align-items:flex-start;gap:8px;background:rgba(214,162,62,.09);border:1px solid rgba(214,162,62,.28);border-radius:10px;padding:9px 12px;}
+.s-q2 .q2-warn svg{width:15px;height:15px;color:#D6A23E;flex:none;margin-top:2px;}
+.s-q2 .q2-warn p{margin:0;font-size:12px;font-weight:400;line-height:1.5;color:#AAB4C3;}
+.s-q2 .q2-warn-em{color:#D6A23E;}
+
+/* 제조사별 조건 요약 */
+.s-q2 .q2-cond{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.s-q2 .q2-cond-item{background:#131722;border:1px solid #232C3A;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;min-width:0;}
+.s-q2 .q2-cond-top{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;}
+.s-q2 .q2-cond-name{font-size:14px;font-weight:600;color:#FFFFFF;}
+.s-q2 .q2-cond-model{font-size:12px;font-weight:400;color:#AAB4C3;}
+.s-q2 .q2-cond-visit{margin-left:auto;font-size:11px;font-weight:500;color:#5491DA;background:rgba(84,145,218,.12);border-radius:999px;padding:2px 8px;white-space:nowrap;}
+.s-q2 .q2-cond-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.s-q2 .q2-cond-chips span{font-size:11px;font-weight:500;color:#AAB4C3;background:#161B22;border:1px solid #293244;border-radius:8px;padding:3px 8px;white-space:nowrap;}
+
+/* 비교표 */
+.s-q2 .q2-table{--q2-cols:minmax(150px,1.25fr) minmax(90px,1fr) minmax(90px,1fr) minmax(110px,.9fr);}
+.s-q2 .q2-thead,.s-q2 .q2-trow{display:grid;grid-template-columns:var(--q2-cols);gap:8px;align-items:center;}
+.s-q2 .q2-thead{padding:2px 6px 8px;border-bottom:1px solid #232C3A;}
+.s-q2 .q2-trow{padding:8px 6px;border-bottom:1px solid #232C3A;transition:background .15s ease;}
+.s-q2 .q2-trow:last-child{border-bottom:0;}
+.s-q2 .q2-trow:hover{background:rgba(84,145,218,.04);}
+.s-q2 .q2-h-metric{font-size:11px;font-weight:500;color:#7D8899;}
+.s-q2 .q2-h-v{display:flex;flex-direction:column;align-items:flex-end;font-size:14px;font-weight:600;color:#FFFFFF;line-height:1.25;padding-right:9px;}
+.s-q2 .q2-h-v i{font-style:normal;font-size:11px;font-weight:500;color:#7D8899;}
+.s-q2 .q2-h-j{font-size:11px;font-weight:500;color:#7D8899;text-align:center;}
+.s-q2 .q2-c-metric b{display:block;font-size:14px;font-weight:600;color:#FFFFFF;line-height:1.3;}
+.s-q2 .q2-dir{display:inline-flex;align-items:center;gap:3px;margin-top:2px;font-size:11px;font-weight:500;color:#7D8899;white-space:nowrap;}
+.s-q2 .q2-dir svg{width:12px;height:12px;flex:none;}
+.s-q2 .q2-vcell{position:relative;display:flex;align-items:center;justify-content:flex-end;gap:6px;padding:6px 8px;border-radius:8px;border:1px solid transparent;min-height:36px;}
+.s-q2 .q2-val{font-size:16px;font-weight:700;color:#FFFFFF;font-variant-numeric:tabular-nums;line-height:1;}
+.s-q2 .q2-win{background:rgba(77,161,103,.08);border-color:rgba(77,161,103,.22);}
+.s-q2 .q2-win .q2-val{color:#4DA167;}
+.s-q2 .q2-wic{width:15px;height:15px;color:#4DA167;flex:none;}
+.s-q2 .q2-edit{position:absolute;left:5px;top:50%;transform:translateY(-50%);width:24px;height:24px;border:0;border-radius:8px;background:transparent;color:#7D8899;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .12s ease,background .12s ease,color .12s ease;}
+.s-q2 .q2-vcell:hover .q2-edit,.s-q2 .q2-edit:focus-visible{opacity:1;}
+.s-q2 .q2-edit:hover{background:rgba(84,145,218,.14);color:#5491DA;}
+.s-q2 .q2-edit svg{width:14px;height:14px;}
+.s-q2 .q2-jcell{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.s-q2 .q2-jpill{font-size:11px;font-weight:500;color:#4DA167;background:rgba(77,161,103,.14);border:1px solid rgba(77,161,103,.3);border-radius:999px;padding:3px 10px;white-space:nowrap;}
+.s-q2 .q2-jdiff{font-size:11px;font-weight:500;color:#7D8899;white-space:nowrap;}
+
+/* ---------- 코멘트 접힘 바 ---------- */
+.s-q2 .q2-cbar{background:#161B22;border:1px solid #293244;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.22);}
+.s-q2 .q2-chead{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 6px;flex-wrap:wrap;}
+.s-q2 .q2-ctoggle{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;padding:8px 10px;background:transparent;border:0;border-radius:10px;cursor:pointer;color:#FFFFFF;text-align:left;transition:background .15s ease;}
+.s-q2 .q2-ctoggle:hover{background:rgba(84,145,218,.07);}
+.s-q2 .q2-cico{width:30px;height:30px;border-radius:8px;background:rgba(84,145,218,.14);color:#5491DA;display:flex;align-items:center;justify-content:center;flex:none;}
+.s-q2 .q2-cico svg{width:16px;height:16px;}
+.s-q2 .q2-ctitle{font-size:16px;font-weight:700;white-space:nowrap;}
+.s-q2 .q2-cbadge{font-size:11px;font-weight:500;color:#5491DA;background:rgba(84,145,218,.16);border-radius:999px;padding:2px 8px;flex:none;}
+.s-q2 .q2-cprev{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:7px;overflow:hidden;transition:opacity .15s ease;}
+.s-q2.q2-open .q2-cprev{opacity:0;pointer-events:none;}
+.s-q2 .q2-cdot{width:7px;height:7px;border-radius:999px;flex:none;}
+.s-q2 .q2-cprev-l{font-size:13px;font-weight:400;color:#FFFFFF;white-space:nowrap;flex:none;}
+.s-q2 .q2-cprev-t{flex:1 1 auto;min-width:0;font-size:13px;font-weight:400;color:#7D8899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.s-q2 .q2-cprev-d{font-size:11px;font-weight:500;color:#7D8899;flex:none;}
+.s-q2 .q2-cchev{width:20px;height:20px;color:#7D8899;flex:none;transition:transform .2s cubic-bezier(0.22,1,0.36,1);}
+.s-q2.q2-open .q2-cchev{transform:rotate(180deg);}
+.s-q2 .q2-cadd{flex:none;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:10px;border:1px solid #293244;background:#131722;color:#AAB4C3;font-size:12px;font-weight:400;cursor:pointer;white-space:nowrap;transition:border-color .15s ease,color .15s ease,background .15s ease;}
+.s-q2 .q2-cadd:hover{border-color:#5491DA;color:#5491DA;background:rgba(84,145,218,.08);}
+.s-q2 .q2-cadd svg{width:14px;height:14px;}
+
+/* 펼침 패널 */
+.s-q2 .q2-cpanel{display:grid;grid-template-rows:0fr;transition:grid-template-rows .2s cubic-bezier(0.22,1,0.36,1);}
+.s-q2 .q2-cpanel-in{overflow:hidden;min-height:0;opacity:0;transform:translateY(-4px);transition:opacity .2s ease,transform .2s cubic-bezier(0.22,1,0.36,1);padding:0 16px;}
+.s-q2.q2-open .q2-cpanel{grid-template-rows:1fr;}
+.s-q2.q2-open .q2-cpanel-in{opacity:1;transform:none;}
+.s-q2 .q2-clist{border-top:1px solid #232C3A;}
+.s-q2 .q2-citem{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;padding:12px 0;}
+.s-q2 .q2-citem+.q2-citem{border-top:1px solid #232C3A;}
+.s-q2 .q2-cava{width:28px;height:28px;border-radius:999px;color:#FFFFFF;font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;margin-top:2px;flex:none;}
+.s-q2 .q2-crow1{display:flex;align-items:baseline;gap:8px;min-width:0;}
+.s-q2 .q2-ctit{font-size:14px;font-weight:600;color:#FFFFFF;}
+.s-q2 .q2-cname{font-size:12px;font-weight:400;}
+.s-q2 .q2-cdate{margin-left:auto;font-size:11px;font-weight:500;color:#7D8899;flex:none;}
+.s-q2 .q2-cbody{margin:3px 0 0;font-size:13px;font-weight:400;line-height:1.55;color:#AAB4C3;}
+.s-q2 .q2-composer{display:flex;align-items:center;gap:8px;margin:2px 0 14px;background:#131722;border:1px solid #293244;border-radius:10px;padding:6px 6px 6px 12px;transition:border-color .15s ease;}
+.s-q2 .q2-composer:focus-within{border-color:#5491DA;}
+.s-q2 .q2-cinput{flex:1 1 auto;min-width:0;background:transparent;border:0;outline:0;color:#FFFFFF;font-size:13px;font-weight:400;font-family:inherit;}
+.s-q2 .q2-cinput::placeholder{color:#7D8899;}
+.s-q2 .q2-csubmit{flex:none;border:0;border-radius:8px;background:#5491DA;color:#FFFFFF;font-size:14px;font-weight:600;padding:6px 14px;cursor:pointer;transition:opacity .12s ease;}
+.s-q2 .q2-csubmit:hover{opacity:.88;}
+
+/* ---------- 모바일(컨테이너 640 이하) ---------- */
+@container (max-width:640px){
+  .s-q2 .q2-photos{grid-template-columns:1fr;}
+  .s-q2 .q2-band-sub{display:none;}
+  .s-q2 .q2-cond{grid-template-columns:1fr;}
+  .s-q2 .q2-metrics{padding:14px 12px 4px;}
+  .s-q2 .q2-table{--q2-cols:minmax(0,1.3fr) minmax(76px,1fr) minmax(76px,1fr);}
+  .s-q2 .q2-h-j,.s-q2 .q2-jcell{display:none;}
+  .s-q2 .q2-vcell{padding:6px 6px;}
+  .s-q2 .q2-edit{opacity:.45;}
+  .s-q2 .q2-ctoggle{flex-wrap:wrap;row-gap:6px;}
+  .s-q2 .q2-cchev{margin-left:auto;}
+  .s-q2 .q2-cprev{order:9;flex:1 1 100%;}
+}
+
+.s-q3{container-type:inline-size;display:flex;flex-direction:column;gap:16px;color:#FFFFFF;font-size:13px;line-height:1.5;}
+.s-q3 [class^="q3-"],.s-q3 [class*=" q3-"]{box-sizing:border-box;}
+
+/* 제목띠 */
+.s-q3 .q3-band{display:flex;align-items:center;gap:10px;background:#39415a;border-radius:12px;padding:12px 16px;box-shadow:0 2px 10px rgba(0,0,0,.22);}
+.s-q3 .q3-band-ic{width:20px;height:20px;color:#FFFFFF;flex:none;}
+.s-q3 .q3-band-t{margin:0;font-size:16px;font-weight:700;color:#FFFFFF;}
+.s-q3 .q3-band-sub{margin-left:auto;font-size:11px;font-weight:500;color:#AAB4C3;}
+
+/* 각 사 기준 표기 안내 — 한 줄 절제 */
+.s-q3 .q3-notice{display:flex;align-items:flex-start;gap:7px;padding:0 2px;font-size:12px;font-weight:400;color:#7D8899;}
+.s-q3 .q3-notice svg{width:14px;height:14px;flex:none;margin-top:2px;color:#7D8899;}
+
+/* 제조사 기둥: 사진카드 + 바로 아래 칩 패널 (열 간격은 넓게, 기둥 내부는 좁게 = 소속감) */
+.s-q3 .q3-lanes{display:grid;grid-template-columns:1fr 1fr;column-gap:20px;row-gap:16px;align-items:start;}
+.s-q3 .q3-lane{display:flex;flex-direction:column;gap:10px;min-width:0;}
+
+/* 칩 패널 — 사진 밑 메모판 */
+.s-q3 .q3-chipdock{background:#161B22;border:1px solid #293244;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.22);padding:11px 14px 13px;display:flex;flex-direction:column;gap:9px;}
+.s-q3 .q3-cline{margin:0;font-size:11px;font-weight:500;color:#7D8899;letter-spacing:.01em;overflow-wrap:anywhere;}
+.s-q3 .q3-chiprow{display:flex;flex-wrap:wrap;gap:8px;}
+
+/* 지표 칩 = 이름(흐림) + 값(강조) + 단위(흐림), 클릭 = 값 수정 */
+.s-q3 .q3-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 11px;background:#131722;border:1px solid #293244;border-radius:8px;color:#FFFFFF;font-family:inherit;line-height:1.2;cursor:pointer;transition:border-color .15s ease,background .15s ease;}
+.s-q3 .q3-chip-k{font-size:12px;font-weight:400;color:#7D8899;}
+.s-q3 .q3-chip-v{font-size:14px;font-weight:600;color:#FFFFFF;font-variant-numeric:tabular-nums;}
+.s-q3 .q3-chip-u{font-size:11px;font-weight:500;color:#7D8899;}
+.s-q3 .q3-chip-pen{width:12px;height:12px;flex:none;margin-left:-1px;color:#5491DA;opacity:0;transition:opacity .15s ease;}
+.s-q3 .q3-chip:hover{border-color:#5491DA;background:#161B22;}
+.s-q3 .q3-chip:hover .q3-chip-pen,.s-q3 .q3-chip:focus-visible .q3-chip-pen{opacity:1;}
+.s-q3 .q3-chip:focus-visible{outline:2px solid #5491DA;outline-offset:2px;}
+
+/* + 지표 추가 칩 — 점선, 흐림 → 호버 파랑 */
+.s-q3 .q3-chip-add{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;background:transparent;border:1px dashed #293244;border-radius:8px;color:#7D8899;font-size:12px;font-weight:500;font-family:inherit;line-height:1.2;cursor:pointer;transition:color .15s ease,border-color .15s ease;}
+.s-q3 .q3-chip-add svg{width:13px;height:13px;flex:none;}
+.s-q3 .q3-chip-add:hover{color:#5491DA;border-color:#5491DA;}
+.s-q3 .q3-chip-add:focus-visible{outline:2px solid #5491DA;outline-offset:2px;}
+
+/* 코멘트 — 상시 펼침, 판단의 본진 */
+.s-q3 .q3-comments{background:#161B22;border:1px solid #293244;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.22);padding:16px;display:flex;flex-direction:column;gap:12px;}
+.s-q3 .q3-chead{display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap;}
+.s-q3 .q3-ctitle{margin:0;display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;color:#FFFFFF;}
+.s-q3 .q3-cico{width:18px;height:18px;color:#5491DA;flex:none;}
+.s-q3 .q3-ccount{font-size:11px;font-weight:500;color:#AAB4C3;background:#131722;border:1px solid #293244;border-radius:999px;padding:3px 9px;}
+.s-q3 .q3-chint{font-size:12px;font-weight:400;color:#7D8899;}
+.s-q3 .q3-cadd{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:#5491DA;color:#FFFFFF;border:none;border-radius:10px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;transition:transform .15s cubic-bezier(0.22,1,0.36,1),box-shadow .15s ease;}
+.s-q3 .q3-cadd svg{width:16px;height:16px;flex:none;}
+.s-q3 .q3-cadd:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.s-q3 .q3-cadd:focus-visible{outline:2px solid #FFFFFF;outline-offset:2px;}
+.s-q3 .q3-clist{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.s-q3 .q3-cmt{background:#131722;border:1px solid #232C3A;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0;}
+.s-q3 .q3-cmt-top{display:flex;align-items:center;gap:9px;}
+.s-q3 .q3-avatar{flex:none;width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#FFFFFF;}
+.s-q3 .q3-cmt-who{min-width:0;}
+.s-q3 .q3-cmt-title{font-size:14px;font-weight:600;color:#FFFFFF;}
+.s-q3 .q3-cmt-meta{margin-top:1px;font-size:11px;font-weight:500;color:#7D8899;}
+.s-q3 .q3-cmt-body{margin:0;font-size:13px;font-weight:400;color:#AAB4C3;line-height:1.55;}
+
+/* 좁은 컨테이너(≤640px): [사진+칩] 기둥 세로 스택, 칩 줄바꿈, 연필 상시 옅게 */
+@container (max-width:640px){
+  .s-q3 .q3-lanes{grid-template-columns:1fr;row-gap:20px;}
+  .s-q3 .q3-clist{grid-template-columns:1fr;}
+  .s-q3 .q3-chip-pen{opacity:.65;}
+  .s-q3 .q3-band{flex-wrap:wrap;row-gap:2px;}
+  .s-q3 .q3-band-sub{margin-left:30px;flex-basis:100%;}
+  .s-q3 .q3-chint{order:3;flex-basis:100%;}
+}
+
+.s-q4{container-type:inline-size;container-name:q4-root;display:flex;flex-direction:column;gap:16px;color:#FFFFFF;font-size:13px;line-height:1.5}
+.s-q4 [class^="q4-"],.s-q4 [class*=" q4-"]{box-sizing:border-box}
+
+/* 제목띠 */
+.s-q4 .q4-band{display:flex;align-items:center;gap:10px;background:#39415a;border-radius:12px;padding:13px 18px}
+.s-q4 .q4-band>svg{width:20px;height:20px;flex:none;color:#FFFFFF}
+.s-q4 .q4-band-title{font-size:18px;font-weight:700;line-height:1.3}
+.s-q4 .q4-band-sub{margin-left:auto;font-size:12px;font-weight:400;color:#AAB4C3;white-space:nowrap}
+
+/* [사진+칩] 두 기둥 */
+.s-q4 .q4-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.s-q4 .q4-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+
+/* 사진 밑 칩 패널 */
+.s-q4 .q4-chippanel{background:#161B22;border:1px solid #293244;border-radius:12px;padding:12px 14px;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+.s-q4 .q4-chipcond{margin:0 0 10px;font-size:12px;font-weight:400;color:#7D8899;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.s-q4 .q4-chips{display:flex;flex-wrap:wrap;gap:8px}
+.s-q4 .q4-chip{display:inline-flex;align-items:baseline;gap:6px;padding:7px 12px;background:#131722;border:1px solid #293244;border-radius:999px;color:#FFFFFF;font-family:inherit;cursor:pointer;transition:border-color .15s ease}
+.s-q4 .q4-chip:hover{border-color:#5491DA}
+.s-q4 .q4-chip-k{font-size:12px;font-weight:400;color:#AAB4C3;white-space:nowrap}
+.s-q4 .q4-chip-v{font-size:14px;font-weight:600;line-height:1.2;color:#FFFFFF;font-variant-numeric:tabular-nums;white-space:nowrap}
+.s-q4 .q4-chip-u{font-size:11px;font-weight:500;color:#7D8899;white-space:nowrap}
+.s-q4 .q4-chip-pen{align-self:center;width:12px;height:12px;flex:none;color:#5491DA;opacity:0;transition:opacity .15s ease}
+.s-q4 .q4-chip:hover .q4-chip-pen,.s-q4 .q4-chip:focus-visible .q4-chip-pen{opacity:1}
+.s-q4 .q4-chip-add{display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:none;border:1px dashed #293244;border-radius:999px;color:#7D8899;font-size:12px;font-weight:400;font-family:inherit;cursor:pointer;transition:border-color .15s ease,color .15s ease}
+.s-q4 .q4-chip-add:hover{border-color:#5491DA;color:#5491DA}
+.s-q4 .q4-chip-add>svg{width:14px;height:14px;flex:none}
+
+/* 개별형 안내 한 줄 */
+.s-q4 .q4-note{display:flex;align-items:flex-start;gap:7px;padding:0 2px;color:#7D8899;font-size:12px;font-weight:400}
+.s-q4 .q4-note>svg{width:14px;height:14px;flex:none;margin-top:2px;color:#7D8899}
+
+/* 코멘트 — 접힌 바 + 펼침 */
+.s-q4 .q4-cmts{background:#161B22;border:1px solid #293244;border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+.s-q4 .q4-cmt-bar{display:flex;align-items:center}
+.s-q4 .q4-cmt-toggle{flex:1;min-width:0;display:flex;align-items:center;gap:10px;padding:13px 16px;background:none;border:0;color:#FFFFFF;font:inherit;text-align:left;cursor:pointer;transition:background .12s ease}
+.s-q4 .q4-cmt-toggle:hover{background:#131722}
+.s-q4 .q4-cmt-ic{width:18px;height:18px;flex:none;color:#AAB4C3}
+.s-q4 .q4-cmt-title{font-size:14px;font-weight:600;white-space:nowrap}
+.s-q4 .q4-cmt-badge{flex:none;font-size:11px;font-weight:500;color:#5491DA;background:#131722;border:1px solid #293244;border-radius:999px;padding:2px 9px;line-height:1.5}
+.s-q4 .q4-cmt-preview{flex:1;min-width:0;font-size:12px;font-weight:400;color:#7D8899;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-q4 .q4-chev{margin-left:auto;flex:none;width:20px;height:20px;color:#7D8899;transition:transform .15s ease}
+.s-q4 .q4-cmts.is-open .q4-chev{transform:rotate(180deg)}
+.s-q4 .q4-cmt-add{flex:none;display:inline-flex;align-items:center;gap:6px;margin-right:12px;padding:7px 12px;border-radius:10px;border:1px solid #293244;background:#131722;color:#AAB4C3;font-size:12px;font-weight:400;font-family:inherit;cursor:pointer;white-space:nowrap;transition:border-color .15s ease,color .15s ease}
+.s-q4 .q4-cmt-add:hover{border-color:#5491DA;color:#FFFFFF}
+.s-q4 .q4-cmt-add>svg{width:14px;height:14px}
+.s-q4 .q4-cmt-wrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .2s cubic-bezier(0.22,1,0.36,1)}
+.s-q4 .q4-cmts.is-open .q4-cmt-wrap{grid-template-rows:1fr}
+.s-q4 .q4-cmt-inner{overflow:hidden;min-height:0}
+.s-q4 .q4-clist{border-top:1px solid #232C3A}
+.s-q4 .q4-citem{display:flex;gap:11px;padding:13px 16px}
+.s-q4 .q4-citem+.q4-citem{border-top:1px solid #232C3A}
+.s-q4 .q4-cava{flex:none;width:26px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#FFFFFF;margin-top:1px}
+.s-q4 .q4-cbody{flex:1;min-width:0}
+.s-q4 .q4-chead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.s-q4 .q4-ctitle{font-size:14px;font-weight:600}
+.s-q4 .q4-cauthor{font-size:12px;font-weight:400;color:#AAB4C3}
+.s-q4 .q4-cdate{margin-left:auto;font-size:11px;font-weight:500;color:#7D8899;white-space:nowrap}
+.s-q4 .q4-ctext{margin:3px 0 0;font-size:13px;font-weight:400;color:#AAB4C3}
+
+.s-q4 .q4-chip:focus-visible,.s-q4 .q4-chip-add:focus-visible,.s-q4 .q4-cmt-toggle:focus-visible,.s-q4 .q4-cmt-add:focus-visible{outline:2px solid #5491DA;outline-offset:2px}
+
+/* 390px 반응형 — [사진+칩] 기둥 세로 쌓임 */
+@container q4-root (max-width:640px){
+  .s-q4 .q4-cols{grid-template-columns:1fr}
+  .s-q4 .q4-band-sub{display:none}
+  .s-q4 .q4-cmt-preview{display:none}
+  .s-q4 .q4-chip-pen{opacity:1}
+}
+
+.s-q5{container-type:inline-size;container-name:q5-root;display:flex;flex-direction:column;gap:16px;color:#FFFFFF;font-size:13px;line-height:1.5;word-break:keep-all}
+.s-q5 [class^="q5-"],.s-q5 [class*=" q5-"]{box-sizing:border-box}
+.s-q5 button{font-family:inherit}
+
+/* 제목띠 */
+.s-q5 .q5-band{display:flex;align-items:center;gap:10px;background:#39415a;border-radius:12px;padding:13px 18px;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+.s-q5 .q5-band>svg{width:20px;height:20px;flex:none;color:#FFFFFF}
+.s-q5 .q5-band-t{margin:0;font-size:18px;font-weight:700;line-height:1.3}
+.s-q5 .q5-band-sub{margin-left:auto;font-size:12px;font-weight:400;color:#AAB4C3;white-space:nowrap}
+
+/* 사진 2열 — 아래 지표 열과 같은 16px 간격 */
+.s-q5 .q5-photos{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+
+/* 통합 보드 카드 */
+.s-q5 .q5-board{background:#161B22;border:1px solid #293244;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.22);overflow:hidden}
+.s-q5 .q5-bhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 18px;border-bottom:1px solid #232C3A}
+.s-q5 .q5-bico{width:18px;height:18px;flex:none;color:#5491DA}
+.s-q5 .q5-btitle{margin:0;font-size:16px;font-weight:700}
+.s-q5 .q5-bcount{font-size:11px;font-weight:500;color:#7D8899;white-space:nowrap}
+.s-q5 .q5-seg{margin-left:auto;display:flex;align-items:center;gap:8px}
+.s-q5 .q5-seg-cap{font-size:11px;font-weight:500;color:#7D8899}
+.s-q5 .q5-seg-box{display:flex;gap:2px;background:#131722;border:1px solid #293244;border-radius:10px;padding:3px}
+.s-q5 .q5-seg-btn{border:0;background:transparent;color:#AAB4C3;font-size:12px;font-weight:400;line-height:1;padding:6px 12px;border-radius:8px;cursor:pointer;transition:background .15s ease,color .15s ease}
+.s-q5 .q5-seg-btn:hover{color:#FFFFFF}
+.s-q5 .q5-seg-btn.on{background:rgba(84,145,218,.16);color:#5491DA}
+
+/* 지표 구역 — 사진 열이 그대로 내려온 2열, 열 위치 = 제조사 소속 */
+.s-q5 .q5-mwrap{padding:14px 18px 16px}
+.s-q5 .q5-mnote{display:flex;align-items:center;gap:6px;margin:0 0 10px;font-size:11px;font-weight:500;color:#7D8899}
+.s-q5 .q5-mnote svg{width:13px;height:13px;flex:none}
+.s-q5 .q5-mcols{position:relative;display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+.s-q5 .q5-mcols::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:#232C3A;transform:translateX(-.5px)}
+.s-q5 .q5-mcol{min-width:0;display:flex;flex-direction:column}
+.s-q5 .q5-mcol-head{display:flex;align-items:baseline;gap:6px;padding-bottom:9px;border-bottom:1px solid #293244}
+.s-q5 .q5-mcol-head b{font-size:14px;font-weight:600;color:#FFFFFF}
+.s-q5 .q5-mcol-head span{font-size:12px;font-weight:400;color:#7D8899}
+
+/* 지표 항목: 이름(보통) + 값(강조) + 단위(흐림) / 조건 / 작성자·날짜 */
+.s-q5 .q5-mitem{padding:11px 0 10px}
+.s-q5 .q5-mitem+.q5-mitem{border-top:1px solid #232C3A}
+.s-q5 .q5-mrow{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.s-q5 .q5-mk{font-size:13px;font-weight:400;color:#AAB4C3}
+.s-q5 .q5-mv{font-size:16px;font-weight:700;color:#FFFFFF;font-variant-numeric:tabular-nums;line-height:1.2}
+.s-q5 .q5-mu{font-size:11px;font-weight:500;color:#7D8899}
+.s-q5 .q5-medit{margin-left:auto;align-self:center;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:0;border-radius:8px;background:transparent;color:#5491DA;cursor:pointer;opacity:0;transition:opacity .15s ease,background .15s ease}
+.s-q5 .q5-medit svg{width:13px;height:13px}
+.s-q5 .q5-mitem:hover .q5-medit,.s-q5 .q5-medit:focus-visible{opacity:1}
+.s-q5 .q5-medit:hover{background:rgba(84,145,218,.12)}
+.s-q5 .q5-mcond{margin:3px 0 0;font-size:12px;font-weight:400;color:#7D8899;overflow-wrap:anywhere}
+.s-q5 .q5-mmeta{display:flex;align-items:center;gap:5px;margin-top:5px;font-size:11px;font-weight:500;color:#7D8899}
+.s-q5 .q5-mdot{width:6px;height:6px;border-radius:999px;flex:none}
+
+/* "+ 지표" 점선 칩 — 이 열에 추가 = 이 제조사 지표 */
+.s-q5 .q5-madd{margin-top:10px;align-self:flex-start;display:inline-flex;align-items:center;gap:5px;padding:6px 12px;background:transparent;border:1px dashed #293244;border-radius:8px;color:#7D8899;font-size:12px;font-weight:400;line-height:1.2;cursor:pointer;transition:color .15s ease,border-color .15s ease}
+.s-q5 .q5-madd svg{width:13px;height:13px;flex:none}
+.s-q5 .q5-madd:hover{color:#5491DA;border-color:#5491DA}
+
+/* 메모 스트림 */
+.s-q5 .q5-memos{border-top:1px solid #232C3A;padding:14px 18px 18px;display:flex;flex-direction:column;gap:12px}
+.s-q5 .q5-msub{display:flex;align-items:center;gap:8px}
+.s-q5 .q5-msub svg{width:15px;height:15px;flex:none;color:#AAB4C3}
+.s-q5 .q5-msub b{font-size:14px;font-weight:600}
+.s-q5 .q5-mcnt{font-size:11px;font-weight:500;color:#AAB4C3;background:#131722;border:1px solid #293244;border-radius:999px;padding:2px 8px;line-height:1.5}
+.s-q5 .q5-mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.s-q5 .q5-cmt{background:#131722;border:1px solid #232C3A;border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.s-q5 .q5-cmt-top{display:flex;align-items:center;gap:9px}
+.s-q5 .q5-avatar{flex:none;width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#FFFFFF}
+.s-q5 .q5-cmt-who{min-width:0}
+.s-q5 .q5-cmt-title{font-size:14px;font-weight:600;color:#FFFFFF}
+.s-q5 .q5-cmt-meta{margin-top:1px;font-size:11px;font-weight:500;color:#7D8899}
+.s-q5 .q5-cmt-body{margin:0;font-size:13px;font-weight:400;color:#AAB4C3;line-height:1.55}
+.s-q5 .q5-cadd{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;background:transparent;border:1px dashed #293244;border-radius:10px;color:#7D8899;font-size:13px;font-weight:400;cursor:pointer;transition:color .15s ease,border-color .15s ease}
+.s-q5 .q5-cadd svg{width:14px;height:14px;flex:none}
+.s-q5 .q5-cadd:hover{color:#5491DA;border-color:#5491DA}
+
+/* 세그먼트 선택에 따른 진입점 강조 (절제) */
+.s-q5.q5-write-metric .q5-madd{border-color:rgba(84,145,218,.45);color:#5491DA}
+.s-q5.q5-write-memo .q5-cadd{border-color:rgba(84,145,218,.45);color:#5491DA}
+
+.s-q5 .q5-seg-btn:focus-visible,.s-q5 .q5-medit:focus-visible,.s-q5 .q5-madd:focus-visible,.s-q5 .q5-cadd:focus-visible{outline:2px solid #5491DA;outline-offset:2px}
+
+/* 390px: 사진은 세로 스택, 지표는 좌=AMAT/우=Lam 2열 유지, 메모 1열 */
+@container q5-root (max-width:640px){
+  .s-q5 .q5-photos{grid-template-columns:1fr}
+  .s-q5 .q5-band-sub{display:none}
+  .s-q5 .q5-bhead{padding:12px 14px;row-gap:8px}
+  .s-q5 .q5-mwrap{padding:12px 14px 14px}
+  .s-q5 .q5-memos{padding:12px 14px 16px}
+  .s-q5 .q5-mgrid{grid-template-columns:1fr}
+  .s-q5 .q5-medit{opacity:.65}
+  .s-q5 .q5-mcol-head{flex-wrap:wrap;row-gap:2px}
+  .s-q5 .q5-mcond{font-size:11px;font-weight:500}
+}
+</style>
+<div class="page">
+  <h2 class="sr-only">데모결과 페이지 UX 후보 4종 — 지표(비교표/제조사별 독립)와 코멘트(상시/접힘) 조합 비교. PC/모바일 폭 전환 가능.</h2>
+  <p class="eyebrow">데모결과 · UX 후보</p>
+  <h1>지표 × 코멘트, 다섯 후보</h1>
+  <p class="intro">다섯 번째 후보가 추가됐습니다 — <b>5번 통합 보드</b>: 별도 지표란 없이 보드 하나에서 지표와 메모를 함께 쓰되, 지표는 조건까지 담아 항상 상단에, 제조사 소속은 색이 아니라 <b>사진과 같은 좌우 열 위치</b>로 표현합니다. 1·2번=비교표, 3·4번=사진 밑 칩(대조용 유지), 코멘트는 1·3·5번 상시 / 2·4번 버튼 열림. 사진은 모두 동일한 가로 스크롤입니다.</p>
+  <div class="bar-ui">
+    <span class="lbl">보기 폭</span>
+    <div class="seg" role="group" aria-label="보기 폭 전환">
+      <button type="button" class="on" data-v="p">PC</button>
+      <button type="button" data-v="m">모바일 390px</button>
+    </div>
+    <nav class="jump" aria-label="후보 바로가기">
+      <a href="#opt-q1">1</a><a href="#opt-q2">2</a><a href="#opt-q3">3</a><a href="#opt-q4">4</a><a href="#opt-q5">5</a>
+    </nav>
+  </div>
+  <div class="stack">
+
+<article class="opt" id="opt-q1">
+  <div class="ohd">
+    <span class="okey">1</span>
+    <b>비교표·상시 코멘트</b>
+    <s>지표 비교표 · 코멘트 상시</s>
+  </div>
+  <div class="mock s-q1"><div class="s-q1">
+  <div class="q1-band">
+    <div class="q1-band-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.8 18.4 14 10.67V6.5l1.35-1.69c.26-.33.03-.81-.39-.81H9.04c-.42 0-.65.48-.39.81L10 6.5v4.17L4.2 18.4c-.49.66-.02 1.6.8 1.6h14c.82 0 1.29-.94.8-1.6z"/></svg></div>
+    <div class="q1-band-tx">
+      <div class="q1-band-tt">건식식각기</div>
+      <div class="q1-band-sub">제조사 데모센터 테스트 결과 · 2개사</div>
+    </div>
+    <div class="q1-band-chips">
+      <span class="q1-bchip">AMAT · Lam</span>
+      <span class="q1-bchip">지표 5종</span>
+      <span class="q1-bchip">코멘트 4건</span>
+    </div>
+  </div>
+
+  <div class="q1-photos">
+    <div class="pcard">
+      <div class="pband">AMAT <span>Producer GT</span></div>
+      <div class="pstage">
+        <div class="pscroll" data-start="0">
+          <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+          <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+          <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+          <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+        </div>
+        <div class="pchips"><b class="on">1차</b></div>
+        <div class="pdate">05.14</div>
+        <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+        <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+        <div class="pbar"><div class="pbar-thumb"></div></div>
+      </div>
+    </div>
+    <div class="pcard">
+      <div class="pband">Lam <span>Kiyo45</span></div>
+      <div class="pstage">
+        <div class="pscroll" data-start="1">
+          <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+          <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+          <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+          <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+        </div>
+        <div class="pchips"><b>1차</b><b class="on">2차</b></div>
+        <div class="pdate">06.02</div>
+        <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+        <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+        <div class="pbar"><div class="pbar-thumb"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="q1-main">
+    <section class="q1-card q1-mx">
+      <div class="q1-mx-head">
+        <h3 class="q1-mx-tt"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.01 14H2v2h7.01v3L13 15l-3.99-4v3zm5.98-1v-3H22V8h-7.01V5L11 9l3.99 4z"/></svg>지표 비교</h3>
+        <span class="q1-verdict"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>종합 Lam 4/5 우수</span>
+        <span class="q1-hint">행 위에 마우스를 올리면 값 수정</span>
+      </div>
+      <div class="q1-notice">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 5.99 19.53 19H4.47L12 5.99M12 2 1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2v-4z"/></svg>
+        <p><span class="q1-notice-strong">테스트 조건 상이</span><span class="q1-notice-rest"> — 두 데모는 샘플·가스·파워 조건이 서로 달랐습니다. 수치의 직접 비교는 참고용으로 확인하세요.</span></p>
+      </div>
+      <div class="q1-table" role="table" aria-label="AMAT·Lam 지표 비교표">
+        <div class="q1-tr q1-thead" role="row">
+          <div class="q1-th q1-th-metric" role="columnheader"><span>지표</span></div>
+          <div class="q1-th q1-vh" role="columnheader">
+            <div class="q1-vh-name">AMAT <span>Producer GT</span></div>
+            <div class="q1-vh-visit"><i>1차</i><span>05.14 방문</span></div>
+            <div class="q1-vh-cond"><span>샘플</span>8인치 Si 베어</div>
+            <div class="q1-vh-cond"><span>조건</span>CF4 80sccm · 20mTorr · 1200W</div>
+          </div>
+          <div class="q1-th q1-vh" role="columnheader">
+            <div class="q1-vh-name">Lam <span>Kiyo45</span></div>
+            <div class="q1-vh-visit"><i>2차</i><span>06.02 방문</span></div>
+            <div class="q1-vh-cond"><span>샘플</span>8인치 SiO2 패턴</div>
+            <div class="q1-vh-cond"><span>조건</span>C4F8 60sccm · 15mTorr · 1500W</div>
+          </div>
+        </div>
+        <div class="q1-tr q1-row" role="row">
+          <div class="q1-td" role="rowheader">
+            <div class="q1-mn">식각률</div>
+            <div class="q1-md"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>높을수록 우수</div>
+          </div>
+          <div class="q1-td q1-val" role="cell">
+            <span class="q1-num">385</span><span class="q1-unit">nm/min</span>
+            <button type="button" class="q1-edit" aria-label="AMAT 식각률 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+          <div class="q1-td q1-val q1-win" role="cell">
+            <span class="q1-num">412</span><span class="q1-unit">nm/min</span>
+            <span class="q1-wtag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>우수</span>
+            <button type="button" class="q1-edit" aria-label="Lam 식각률 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+        </div>
+        <div class="q1-tr q1-row" role="row">
+          <div class="q1-td" role="rowheader">
+            <div class="q1-mn">균일도</div>
+            <div class="q1-md"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/></svg>낮을수록 우수</div>
+          </div>
+          <div class="q1-td q1-val" role="cell">
+            <span class="q1-num">±1.8</span><span class="q1-unit">%</span>
+            <button type="button" class="q1-edit" aria-label="AMAT 균일도 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+          <div class="q1-td q1-val q1-win" role="cell">
+            <span class="q1-num">±1.4</span><span class="q1-unit">%</span>
+            <span class="q1-wtag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>우수</span>
+            <button type="button" class="q1-edit" aria-label="Lam 균일도 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+        </div>
+        <div class="q1-tr q1-row" role="row">
+          <div class="q1-td" role="rowheader">
+            <div class="q1-mn">선택비</div>
+            <div class="q1-md"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>높을수록 우수</div>
+          </div>
+          <div class="q1-td q1-val" role="cell">
+            <span class="q1-num">22</span><span class="q1-unit">:1</span>
+            <button type="button" class="q1-edit" aria-label="AMAT 선택비 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+          <div class="q1-td q1-val q1-win" role="cell">
+            <span class="q1-num">25</span><span class="q1-unit">:1</span>
+            <span class="q1-wtag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>우수</span>
+            <button type="button" class="q1-edit" aria-label="Lam 선택비 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+        </div>
+        <div class="q1-tr q1-row" role="row">
+          <div class="q1-td" role="rowheader">
+            <div class="q1-mn">파티클</div>
+            <div class="q1-md"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/></svg>낮을수록 우수</div>
+          </div>
+          <div class="q1-td q1-val q1-win" role="cell">
+            <span class="q1-num">3</span><span class="q1-unit">ea</span>
+            <span class="q1-wtag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>우수</span>
+            <button type="button" class="q1-edit" aria-label="AMAT 파티클 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+          <div class="q1-td q1-val" role="cell">
+            <span class="q1-num">5</span><span class="q1-unit">ea</span>
+            <button type="button" class="q1-edit" aria-label="Lam 파티클 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+        </div>
+        <div class="q1-tr q1-row" role="row">
+          <div class="q1-td" role="rowheader">
+            <div class="q1-mn">처리량</div>
+            <div class="q1-md"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>높을수록 우수</div>
+          </div>
+          <div class="q1-td q1-val" role="cell">
+            <span class="q1-num">45</span><span class="q1-unit">wph</span>
+            <button type="button" class="q1-edit" aria-label="AMAT 처리량 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+          <div class="q1-td q1-val q1-win" role="cell">
+            <span class="q1-num">52</span><span class="q1-unit">wph</span>
+            <span class="q1-wtag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>우수</span>
+            <button type="button" class="q1-edit" aria-label="Lam 처리량 값 수정"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+        </div>
+        <div class="q1-tr q1-sum" role="row">
+          <div class="q1-td q1-sum-l" role="rowheader"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>우수 판정</div>
+          <div class="q1-td q1-sum-v" role="cell"><span class="q1-sum-n">1</span><span class="q1-sum-d">/ 5 · 파티클 우수</span></div>
+          <div class="q1-td q1-sum-v q1-sum-win" role="cell"><span class="q1-sum-n">4</span><span class="q1-sum-d">/ 5</span><span class="q1-wtag"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>종합 우수</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="q1-card q1-cm">
+      <div class="q1-cm-head">
+        <h3 class="q1-cm-tt"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>코멘트</h3>
+        <span class="q1-cnt">4</span>
+        <button type="button" class="q1-add"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>코멘트 추가</button>
+      </div>
+      <div class="q1-cm-list">
+        <article class="q1-cmt">
+          <div class="q1-cmt-h"><span class="q1-av q1-a1">조</span><span class="q1-cmt-nm">조성범</span><span class="q1-cmt-dt">07.15</span></div>
+          <h4 class="q1-cmt-tt">가격·납기 별도 확인</h4>
+          <p class="q1-cmt-bd">지표만으로 결정 불가. 구매팀에 2사 견적·납기 요청 완료.</p>
+        </article>
+        <article class="q1-cmt">
+          <div class="q1-cmt-h"><span class="q1-av q1-a3">박</span><span class="q1-cmt-nm">박세리</span><span class="q1-cmt-dt">07.14</span></div>
+          <h4 class="q1-cmt-tt">AMAT 재방문 필요</h4>
+          <p class="q1-cmt-bd">2차 데모에서 선택비 재측정 요청함. 1차 조건과 챔버 상태가 달랐음.</p>
+        </article>
+        <article class="q1-cmt">
+          <div class="q1-cmt-h"><span class="q1-av q1-a2">박</span><span class="q1-cmt-nm">박주봉</span><span class="q1-cmt-dt">07.12</span></div>
+          <h4 class="q1-cmt-tt">파티클 트레이드오프</h4>
+          <p class="q1-cmt-bd">AMAT 3ea로 우위. 다만 처리량이 45wph로 Lam보다 낮아 트레이드오프.</p>
+        </article>
+        <article class="q1-cmt">
+          <div class="q1-cmt-h"><span class="q1-av q1-a1">조</span><span class="q1-cmt-nm">조성범</span><span class="q1-cmt-dt">07.11</span></div>
+          <h4 class="q1-cmt-tt">Lam 균일도 우위</h4>
+          <p class="q1-cmt-bd">5포인트 측정 전 구간 ±1.5% 이내. 엣지 3mm까지 유지되는 게 큼.</p>
+        </article>
+      </div>
+    </section>
+  </div>
+</div></div>
+  <p class="note">장점: 두 회사 수치가 한 표에 나란히 있고 우수 표시와 종합 판정(Lam 4/5)까지 붙어 있어서, 회의에서 화면을 그대로 띄워 놓고 어디가 왜 나은지 바로 이야기할 수 있고 코멘트도 항상 펼쳐져 있어 스크롤만으로 팀 의견까지 한 번에 읽혀요. 단점: 모든 내용이 다 펼쳐져 있어 화면이 길어지고, 조건이 달랐던 테스트를 나란히 보여주는 방식이라 표 위의 노란 주의 문구를 지나치면 숫자를 그대로 믿을 위험이 있어요. 모바일: 아무것도 접지 않고 사진 2장→비교표→코멘트 순서로 세로 한 줄로 쌓이며, 표는 3열을 유지하되 수치·여백을 줄이고 수정 연필은 호버가 없으니 항상 살짝 보이게 바꿉니다.</p>
+</article>
+
+<article class="opt" id="opt-q2">
+  <div class="ohd">
+    <span class="okey">2</span>
+    <b>판정 비교표+접힘 코멘트</b>
+    <s>지표 비교표 · 코멘트 접힘</s>
+  </div>
+  <div class="mock s-q2"><section class="s-q2">
+  <header class="q2-band">
+    <span class="q2-band-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg></span>
+    <div class="q2-band-t">
+      <span class="q2-band-cap">장비종류</span>
+      <h2 class="q2-band-name">건식식각기</h2>
+    </div>
+    <span class="q2-band-sub">AMAT · Lam — 데모 2회 비교</span>
+  </header>
+
+  <div class="q2-photos">
+    <div class="pcard">
+      <div class="pband">AMAT <span>Producer GT</span></div>
+      <div class="pstage">
+        <div class="pscroll" data-start="0">
+          <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+          <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+          <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+          <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+        </div>
+        <div class="pchips"><b class="on">1차</b></div>
+        <div class="pdate">05.14</div>
+        <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+        <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+        <div class="pbar"><div class="pbar-thumb"></div></div>
+      </div>
+    </div>
+
+    <div class="pcard">
+      <div class="pband">Lam <span>Kiyo45</span></div>
+      <div class="pstage">
+        <div class="pscroll" data-start="1">
+          <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+          <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+          <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+          <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+        </div>
+        <div class="pchips"><b>1차</b><b class="on">2차</b></div>
+        <div class="pdate">06.02</div>
+        <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+        <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+        <div class="pbar"><div class="pbar-thumb"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="q2-metrics">
+    <div class="q2-mhead">
+      <span class="q2-mic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg></span>
+      <h3 class="q2-mtitle">지표 비교</h3>
+      <div class="q2-verdict">
+        <span class="q2-vchip q2-vchip-win"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 5h-2V3H7v2H5c-1.1 0-2 .9-2 2v1c0 2.55 1.92 4.63 4.39 4.94.63 1.5 1.98 2.63 3.61 2.96V19H7v2h10v-2h-4v-3.1c1.63-.33 2.98-1.46 3.61-2.96C19.08 12.63 21 10.55 21 8V7c0-1.1-.9-2-2-2zM5 8V7h2v3.82C5.84 10.4 5 9.3 5 8zm14 0c0 1.3-.84 2.4-2 2.82V7h2v1z"/></svg>Lam 4/5 우수</span>
+        <span class="q2-vchip">AMAT 1/5 · 파티클</span>
+      </div>
+    </div>
+
+    <div class="q2-warn">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+      <p><span class="q2-warn-em">데모 조건 상이</span> — 두 데모는 샘플·레시피 조건이 서로 달라 절대값 직접 비교에는 주의가 필요합니다. 우수 판정은 참고용입니다.</p>
+    </div>
+
+    <div class="q2-cond">
+      <div class="q2-cond-item">
+        <div class="q2-cond-top"><span class="q2-cond-name">AMAT</span><span class="q2-cond-model">Producer GT</span><span class="q2-cond-visit">1차 방문 · 05.14</span></div>
+        <div class="q2-cond-chips"><span>8인치 Si 베어</span><span>CF4 80sccm · 20mTorr · 1200W</span></div>
+      </div>
+      <div class="q2-cond-item">
+        <div class="q2-cond-top"><span class="q2-cond-name">Lam</span><span class="q2-cond-model">Kiyo45</span><span class="q2-cond-visit">2차 방문 · 06.02</span></div>
+        <div class="q2-cond-chips"><span>8인치 SiO2 패턴</span><span>C4F8 60sccm · 15mTorr · 1500W</span></div>
+      </div>
+    </div>
+
+    <div class="q2-table">
+      <div class="q2-thead">
+        <span class="q2-h-metric">지표</span>
+        <span class="q2-h-v">AMAT<i>Producer GT</i></span>
+        <span class="q2-h-v">Lam<i>Kiyo45</i></span>
+        <span class="q2-h-j">판정</span>
+      </div>
+
+      <div class="q2-trow">
+        <div class="q2-c-metric"><b>식각률</b><span class="q2-dir"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>nm/min · 높을수록 우수</span></div>
+        <div class="q2-vcell"><button type="button" class="q2-edit" aria-label="AMAT 식각률 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><span class="q2-val">385</span></div>
+        <div class="q2-vcell q2-win"><button type="button" class="q2-edit" aria-label="Lam 식각률 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><svg class="q2-wic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg><span class="q2-val">412</span></div>
+        <div class="q2-jcell"><span class="q2-jpill">Lam 우수</span><span class="q2-jdiff">+27 nm/min</span></div>
+      </div>
+
+      <div class="q2-trow">
+        <div class="q2-c-metric"><b>균일도</b><span class="q2-dir"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/></svg>% · 낮을수록 우수</span></div>
+        <div class="q2-vcell"><button type="button" class="q2-edit" aria-label="AMAT 균일도 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><span class="q2-val">±1.8</span></div>
+        <div class="q2-vcell q2-win"><button type="button" class="q2-edit" aria-label="Lam 균일도 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><svg class="q2-wic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg><span class="q2-val">±1.4</span></div>
+        <div class="q2-jcell"><span class="q2-jpill">Lam 우수</span><span class="q2-jdiff">0.4%p 낮음</span></div>
+      </div>
+
+      <div class="q2-trow">
+        <div class="q2-c-metric"><b>선택비</b><span class="q2-dir"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>:1 · 높을수록 우수</span></div>
+        <div class="q2-vcell"><button type="button" class="q2-edit" aria-label="AMAT 선택비 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><span class="q2-val">22</span></div>
+        <div class="q2-vcell q2-win"><button type="button" class="q2-edit" aria-label="Lam 선택비 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><svg class="q2-wic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg><span class="q2-val">25</span></div>
+        <div class="q2-jcell"><span class="q2-jpill">Lam 우수</span><span class="q2-jdiff">+3</span></div>
+      </div>
+
+      <div class="q2-trow">
+        <div class="q2-c-metric"><b>파티클</b><span class="q2-dir"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 12l-1.41-1.41L13 16.17V4h-2v12.17l-5.58-5.59L4 12l8 8 8-8z"/></svg>ea · 낮을수록 우수</span></div>
+        <div class="q2-vcell q2-win"><button type="button" class="q2-edit" aria-label="AMAT 파티클 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><svg class="q2-wic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg><span class="q2-val">3</span></div>
+        <div class="q2-vcell"><button type="button" class="q2-edit" aria-label="Lam 파티클 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><span class="q2-val">5</span></div>
+        <div class="q2-jcell"><span class="q2-jpill">AMAT 우수</span><span class="q2-jdiff">2ea 적음</span></div>
+      </div>
+
+      <div class="q2-trow">
+        <div class="q2-c-metric"><b>처리량</b><span class="q2-dir"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.59 5.58L20 12l-8-8-8 8z"/></svg>wph · 높을수록 우수</span></div>
+        <div class="q2-vcell"><button type="button" class="q2-edit" aria-label="AMAT 처리량 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><span class="q2-val">45</span></div>
+        <div class="q2-vcell q2-win"><button type="button" class="q2-edit" aria-label="Lam 처리량 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button><svg class="q2-wic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg><span class="q2-val">52</span></div>
+        <div class="q2-jcell"><span class="q2-jpill">Lam 우수</span><span class="q2-jdiff">+7 wph</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="q2-cbar">
+    <div class="q2-chead">
+      <button type="button" class="q2-ctoggle" aria-expanded="false" aria-controls="q2-cpanel">
+        <span class="q2-cico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></span>
+        <span class="q2-ctitle">검토 코멘트</span>
+        <span class="q2-cbadge">4</span>
+        <span class="q2-cprev"><i class="q2-cdot" style="background:#2f8f4e"></i><span class="q2-cprev-l">가격·납기 별도 확인</span><span class="q2-cprev-t">지표만으로 결정 불가. 구매팀에 2사 견적·납기 요청 완료.</span><span class="q2-cprev-d">07.15</span></span>
+        <svg class="q2-cchev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+      </button>
+      <button type="button" class="q2-cadd"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>코멘트 추가</button>
+    </div>
+
+    <div class="q2-cpanel" id="q2-cpanel" role="region" aria-label="검토 코멘트 목록">
+      <div class="q2-cpanel-in">
+        <div class="q2-clist">
+          <div class="q2-citem">
+            <span class="q2-cava" style="background:#2f8f4e">조</span>
+            <div class="q2-cmain">
+              <div class="q2-crow1"><span class="q2-ctit">가격·납기 별도 확인</span><span class="q2-cname" style="color:#2f8f4e">조성범</span><span class="q2-cdate">07.15</span></div>
+              <p class="q2-cbody">지표만으로 결정 불가. 구매팀에 2사 견적·납기 요청 완료.</p>
+            </div>
+          </div>
+          <div class="q2-citem">
+            <span class="q2-cava" style="background:#a8761a">박</span>
+            <div class="q2-cmain">
+              <div class="q2-crow1"><span class="q2-ctit">AMAT 재방문 필요</span><span class="q2-cname" style="color:#a8761a">박세리</span><span class="q2-cdate">07.14</span></div>
+              <p class="q2-cbody">2차 데모에서 선택비 재측정 요청함. 1차 조건과 챔버 상태가 달랐음.</p>
+            </div>
+          </div>
+          <div class="q2-citem">
+            <span class="q2-cava" style="background:#2f6db8">박</span>
+            <div class="q2-cmain">
+              <div class="q2-crow1"><span class="q2-ctit">파티클 트레이드오프</span><span class="q2-cname" style="color:#2f6db8">박주봉</span><span class="q2-cdate">07.12</span></div>
+              <p class="q2-cbody">AMAT 3ea로 우위. 다만 처리량이 45wph로 Lam보다 낮아 트레이드오프.</p>
+            </div>
+          </div>
+          <div class="q2-citem">
+            <span class="q2-cava" style="background:#2f8f4e">조</span>
+            <div class="q2-cmain">
+              <div class="q2-crow1"><span class="q2-ctit">Lam 균일도 우위</span><span class="q2-cname" style="color:#2f8f4e">조성범</span><span class="q2-cdate">07.11</span></div>
+              <p class="q2-cbody">5포인트 측정 전 구간 ±1.5% 이내. 엣지 3mm까지 유지되는 게 큼.</p>
+            </div>
+          </div>
+        </div>
+        <div class="q2-composer">
+          <input class="q2-cinput" type="text" placeholder="코멘트를 입력하세요" aria-label="코멘트 입력">
+          <button type="button" class="q2-csubmit">등록</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section></div>
+  <p class="note">장점: 두 회사 값을 한 표에서 바로 견주고 이긴 쪽이 초록 표시·판정 알약으로 보여 결론이 빨리 잡히며, 코멘트를 접어두어 화면이 지표에서 끝나 세로가 짧습니다. 단점: 데모 조건이 서로 달라 '우수' 표시가 실제보다 단정적으로 읽힐 수 있고(노란 주의 문구와 조건 요약 패널로 보완), 코멘트는 한 번 눌러야 보여 그냥 지나칠 수 있습니다. 모바일: 좁은 화면에서는 판정 열을 숨기고 이긴 값의 초록색+체크 아이콘이 그 역할을 대신하며, 코멘트 바의 미리보기 한 줄은 둘째 줄로 내려가고 누르면 아래로 부드럽게 펼쳐지는 접힘 방식은 그대로입니다.</p>
+</article>
+
+<article class="opt" id="opt-q3">
+  <div class="ohd">
+    <span class="okey">3</span>
+    <b>사진 밑 지표 칩</b>
+    <s>지표 칩(사진 밑) · 코멘트 상시</s>
+  </div>
+  <div class="mock s-q3"><section class="s-q3">
+  <header class="q3-band">
+    <svg class="q3-band-ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.8 18.4 14 10.67V6.5l1.35-1.69c.26-.33.03-.81-.39-.81H9.04c-.42 0-.65.48-.39.81L10 6.5v4.17L4.2 18.4c-.49.66-.02 1.6.8 1.6h14c.82 0 1.29-.94.8-1.6z"/></svg>
+    <h2 class="q3-band-t">건식식각기</h2>
+    <span class="q3-band-sub">데모 2건 · 제조사별 개별 지표</span>
+  </header>
+
+  <div class="q3-notice" role="note">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+    <span>두 데모는 샘플·공정 조건이 서로 달라 지표를 각 사 기준으로만 표기합니다. 교차 우수 판정 없음.</span>
+  </div>
+
+  <div class="q3-lanes">
+    <div class="q3-lane">
+      <div class="pcard">
+        <div class="pband">AMAT <span>Producer GT</span></div>
+        <div class="pstage">
+          <div class="pscroll" data-start="0">
+            <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+            <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+            <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+            <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+          </div>
+          <div class="pchips"><b class="on">1차</b></div>
+          <div class="pdate">05.14</div>
+          <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <div class="pbar"><div class="pbar-thumb"></div></div>
+        </div>
+      </div>
+
+      <div class="q3-chipdock">
+        <p class="q3-cline">8인치 Si 베어 · CF4 80sccm · 20mTorr · 1200W · 1차 05.14</p>
+        <div class="q3-chiprow">
+          <button type="button" class="q3-chip" aria-label="AMAT 식각률 수정">
+            <span class="q3-chip-k">식각률</span><b class="q3-chip-v">385</b><span class="q3-chip-u">nm/min</span>
+            <svg class="q3-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q3-chip" aria-label="AMAT 균일도 수정">
+            <span class="q3-chip-k">균일도</span><b class="q3-chip-v">±1.8</b><span class="q3-chip-u">%</span>
+            <svg class="q3-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q3-chip" aria-label="AMAT 파티클 수정">
+            <span class="q3-chip-k">파티클</span><b class="q3-chip-v">3</b><span class="q3-chip-u">ea</span>
+            <svg class="q3-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q3-chip-add" aria-label="AMAT 지표 추가">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span>지표</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="q3-lane">
+      <div class="pcard">
+        <div class="pband">Lam <span>Kiyo45</span></div>
+        <div class="pstage">
+          <div class="pscroll" data-start="1">
+            <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+            <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+            <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+            <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+          </div>
+          <div class="pchips"><b>1차</b><b class="on">2차</b></div>
+          <div class="pdate">06.02</div>
+          <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <div class="pbar"><div class="pbar-thumb"></div></div>
+        </div>
+      </div>
+
+      <div class="q3-chipdock">
+        <p class="q3-cline">8인치 SiO2 패턴 · C4F8 60sccm · 15mTorr · 1500W · 2차 06.02</p>
+        <div class="q3-chiprow">
+          <button type="button" class="q3-chip" aria-label="Lam 식각률 수정">
+            <span class="q3-chip-k">식각률</span><b class="q3-chip-v">412</b><span class="q3-chip-u">nm/min</span>
+            <svg class="q3-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q3-chip" aria-label="Lam 균일도 수정">
+            <span class="q3-chip-k">균일도</span><b class="q3-chip-v">±1.4</b><span class="q3-chip-u">%</span>
+            <svg class="q3-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q3-chip" aria-label="Lam 선택비 수정">
+            <span class="q3-chip-k">선택비</span><b class="q3-chip-v">25</b><span class="q3-chip-u">:1</span>
+            <svg class="q3-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q3-chip" aria-label="Lam 처리량 수정">
+            <span class="q3-chip-k">처리량</span><b class="q3-chip-v">52</b><span class="q3-chip-u">wph</span>
+            <svg class="q3-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q3-chip-add" aria-label="Lam 지표 추가">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span>지표</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="q3-comments">
+    <div class="q3-chead">
+      <h3 class="q3-ctitle"><svg class="q3-cico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>코멘트<span class="q3-ccount">4건</span></h3>
+      <span class="q3-chint">조건이 다른 두 데모의 종합 판단은 여기에 기록합니다</span>
+      <button type="button" class="q3-cadd"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>코멘트 추가</button>
+    </div>
+    <div class="q3-clist">
+      <article class="q3-cmt">
+        <div class="q3-cmt-top">
+          <span class="q3-avatar" style="background:#2f8f4e" aria-hidden="true">조</span>
+          <div class="q3-cmt-who">
+            <div class="q3-cmt-title">Lam 균일도 우위</div>
+            <div class="q3-cmt-meta"><span class="q3-cmt-name" style="color:#2f8f4e">조성범</span> · 07.11</div>
+          </div>
+        </div>
+        <p class="q3-cmt-body">5포인트 측정 전 구간 ±1.5% 이내. 엣지 3mm까지 유지되는 게 큼.</p>
+      </article>
+      <article class="q3-cmt">
+        <div class="q3-cmt-top">
+          <span class="q3-avatar" style="background:#2f6db8" aria-hidden="true">박</span>
+          <div class="q3-cmt-who">
+            <div class="q3-cmt-title">파티클 트레이드오프</div>
+            <div class="q3-cmt-meta"><span class="q3-cmt-name" style="color:#2f6db8">박주봉</span> · 07.12</div>
+          </div>
+        </div>
+        <p class="q3-cmt-body">AMAT 3ea로 우위. 다만 처리량이 45wph로 Lam보다 낮아 트레이드오프.</p>
+      </article>
+      <article class="q3-cmt">
+        <div class="q3-cmt-top">
+          <span class="q3-avatar" style="background:#a8761a" aria-hidden="true">박</span>
+          <div class="q3-cmt-who">
+            <div class="q3-cmt-title">AMAT 재방문 필요</div>
+            <div class="q3-cmt-meta"><span class="q3-cmt-name" style="color:#a8761a">박세리</span> · 07.14</div>
+          </div>
+        </div>
+        <p class="q3-cmt-body">2차 데모에서 선택비 재측정 요청함. 1차 조건과 챔버 상태가 달랐음.</p>
+      </article>
+      <article class="q3-cmt">
+        <div class="q3-cmt-top">
+          <span class="q3-avatar" style="background:#2f8f4e" aria-hidden="true">조</span>
+          <div class="q3-cmt-who">
+            <div class="q3-cmt-title">가격·납기 별도 확인</div>
+            <div class="q3-cmt-meta"><span class="q3-cmt-name" style="color:#2f8f4e">조성범</span> · 07.15</div>
+          </div>
+        </div>
+        <p class="q3-cmt-body">지표만으로 결정 불가. 구매팀에 2사 견적·납기 요청 완료.</p>
+      </article>
+    </div>
+  </section>
+</section></div>
+  <p class="note">장점: 실제로 측정한 항목만 사진 바로 아래 알약 모양으로 붙어 있어서, 회사마다 무엇을 쟀고 값이 얼마인지 메모처럼 한눈에 읽힙니다. 단점: 표처럼 줄이 맞춰져 있지 않아 두 회사를 꼼꼼히 견주려면 같은 이름의 칩을 눈으로 찾아 비교해야 합니다. 모바일: 390px에서는 사진과 그 밑 칩 묶음이 위아래로 쌓이고 칩은 자동으로 줄바꿈되며, 수정 연필이 항상 옅게 보여 손가락으로 바로 누를 수 있습니다.</p>
+</article>
+
+<article class="opt" id="opt-q4">
+  <div class="ohd">
+    <span class="okey">4</span>
+    <b>사진 밑 지표 칩</b>
+    <s>지표 칩(사진 밑) · 코멘트 접힘</s>
+  </div>
+  <div class="mock s-q4"><section class="s-q4">
+  <div class="q4-band">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg>
+    <span class="q4-band-title">건식식각기</span>
+    <span class="q4-band-sub">데모 2건 · AMAT · Lam</span>
+  </div>
+
+  <div class="q4-cols">
+    <div class="q4-col">
+      <div class="pcard">
+        <div class="pband">AMAT <span>Producer GT</span></div>
+        <div class="pstage">
+          <div class="pscroll" data-start="0">
+            <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+            <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+            <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+            <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+          </div>
+          <div class="pchips"><b class="on">1차</b></div>
+          <div class="pdate">05.14</div>
+          <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <div class="pbar"><div class="pbar-thumb"></div></div>
+        </div>
+      </div>
+      <div class="q4-chippanel">
+        <p class="q4-chipcond">8인치 Si 베어 · CF4 80sccm · 20mTorr · 1200W · 1차 05.14</p>
+        <div class="q4-chips">
+          <button type="button" class="q4-chip" aria-label="AMAT 식각률 수정">
+            <span class="q4-chip-k">식각률</span><span class="q4-chip-v">385</span><span class="q4-chip-u">nm/min</span>
+            <svg class="q4-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q4-chip" aria-label="AMAT 균일도 수정">
+            <span class="q4-chip-k">균일도</span><span class="q4-chip-v">±1.8</span><span class="q4-chip-u">%</span>
+            <svg class="q4-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q4-chip" aria-label="AMAT 파티클 수정">
+            <span class="q4-chip-k">파티클</span><span class="q4-chip-v">3</span><span class="q4-chip-u">ea</span>
+            <svg class="q4-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q4-chip-add" aria-label="AMAT 지표 추가">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span>지표</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="q4-col">
+      <div class="pcard">
+        <div class="pband">Lam <span>Kiyo45</span></div>
+        <div class="pstage">
+          <div class="pscroll" data-start="1">
+            <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+            <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+            <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+            <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+          </div>
+          <div class="pchips"><b>1차</b><b class="on">2차</b></div>
+          <div class="pdate">06.02</div>
+          <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <div class="pbar"><div class="pbar-thumb"></div></div>
+        </div>
+      </div>
+      <div class="q4-chippanel">
+        <p class="q4-chipcond">8인치 SiO2 패턴 · C4F8 60sccm · 15mTorr · 1500W · 2차 06.02</p>
+        <div class="q4-chips">
+          <button type="button" class="q4-chip" aria-label="Lam 식각률 수정">
+            <span class="q4-chip-k">식각률</span><span class="q4-chip-v">412</span><span class="q4-chip-u">nm/min</span>
+            <svg class="q4-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q4-chip" aria-label="Lam 균일도 수정">
+            <span class="q4-chip-k">균일도</span><span class="q4-chip-v">±1.4</span><span class="q4-chip-u">%</span>
+            <svg class="q4-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q4-chip" aria-label="Lam 선택비 수정">
+            <span class="q4-chip-k">선택비</span><span class="q4-chip-v">25</span><span class="q4-chip-u">:1</span>
+            <svg class="q4-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q4-chip" aria-label="Lam 처리량 수정">
+            <span class="q4-chip-k">처리량</span><span class="q4-chip-v">52</span><span class="q4-chip-u">wph</span>
+            <svg class="q4-chip-pen" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          </button>
+          <button type="button" class="q4-chip-add" aria-label="Lam 지표 추가">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <span>지표</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="q4-note">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+    <span>두 데모는 샘플·레시피 조건이 서로 달라 지표를 각 사 기준으로만 표기합니다. 교차 우수 판정 없음.</span>
+  </div>
+
+  <div class="q4-cmts">
+    <div class="q4-cmt-bar">
+      <button type="button" class="q4-cmt-toggle" aria-expanded="false" aria-controls="q4-cmt-panel">
+        <svg class="q4-cmt-ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+        <span class="q4-cmt-title">코멘트</span>
+        <span class="q4-cmt-badge">4</span>
+        <span class="q4-cmt-preview">최근 07.15 — 가격·납기 별도 확인</span>
+        <svg class="q4-chev" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>
+      </button>
+      <button type="button" class="q4-cmt-add">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        <span>코멘트 추가</span>
+      </button>
+    </div>
+    <div class="q4-cmt-wrap" id="q4-cmt-panel">
+      <div class="q4-cmt-inner">
+        <div class="q4-clist">
+          <div class="q4-citem">
+            <span class="q4-cava" style="background:#2f8f4e">조</span>
+            <div class="q4-cbody">
+              <div class="q4-chead"><span class="q4-ctitle">Lam 균일도 우위</span><span class="q4-cauthor">조성범</span><span class="q4-cdate">07.11</span></div>
+              <p class="q4-ctext">5포인트 측정 전 구간 ±1.5% 이내. 엣지 3mm까지 유지되는 게 큼.</p>
+            </div>
+          </div>
+          <div class="q4-citem">
+            <span class="q4-cava" style="background:#2f6db8">박</span>
+            <div class="q4-cbody">
+              <div class="q4-chead"><span class="q4-ctitle">파티클 트레이드오프</span><span class="q4-cauthor">박주봉</span><span class="q4-cdate">07.12</span></div>
+              <p class="q4-ctext">AMAT 3ea로 우위. 다만 처리량이 45wph로 Lam보다 낮아 트레이드오프.</p>
+            </div>
+          </div>
+          <div class="q4-citem">
+            <span class="q4-cava" style="background:#a8761a">박</span>
+            <div class="q4-cbody">
+              <div class="q4-chead"><span class="q4-ctitle">AMAT 재방문 필요</span><span class="q4-cauthor">박세리</span><span class="q4-cdate">07.14</span></div>
+              <p class="q4-ctext">2차 데모에서 선택비 재측정 요청함. 1차 조건과 챔버 상태가 달랐음.</p>
+            </div>
+          </div>
+          <div class="q4-citem">
+            <span class="q4-cava" style="background:#2f8f4e">조</span>
+            <div class="q4-cbody">
+              <div class="q4-chead"><span class="q4-ctitle">가격·납기 별도 확인</span><span class="q4-cauthor">조성범</span><span class="q4-cdate">07.15</span></div>
+              <p class="q4-ctext">지표만으로 결정 불가. 구매팀에 2사 견적·납기 요청 완료.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section></div>
+  <p class="note">장점: 각 장비에서 실제로 잰 항목만 사진 바로 아래 칩으로 붙어 있어서 사진과 수치를 한 묶음으로 보게 되고, 재지 않은 항목의 빈칸이 아예 없습니다(AMAT 3개·Lam 4개처럼 칩 구성이 달라도 자연스럽습니다). 단점: 화면이 우열을 짚어 주지 않으므로 두 장비를 견주려면 같은 이름 칩(식각률·균일도가 양쪽 다 맨 앞)을 눈으로 찾아 비교해야 해서 표보다는 한 박자 느립니다. 모바일: 390px에서는 [사진+칩] 묶음이 위아래로 한 기둥씩 쌓이고 칩이 자동으로 줄바꿈되며, 연필 표시는 터치 화면에서 항상 보입니다.</p>
+</article>
+
+<article class="opt" id="opt-q5">
+  <div class="ohd">
+    <span class="okey">5</span>
+    <b>통합 보드</b>
+    <s>통합 보드 — 지표+메모 한 곳 · 위치 정렬</s>
+  </div>
+  <div class="mock s-q5"><section class="s-q5 q5-write-metric">
+  <header class="q5-band">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19.8 18.4 14 10.67V6.5l1.35-1.69c.26-.33.03-.81-.39-.81H9.04c-.42 0-.65.48-.39.81L10 6.5v4.17L4.2 18.4c-.49.66-.02 1.6.8 1.6h14c.82 0 1.29-.94.8-1.6z"/></svg>
+    <h2 class="q5-band-t">건식식각기</h2>
+    <span class="q5-band-sub">AMAT · Lam — 데모 2건 · 통합 기록</span>
+  </header>
+
+  <div class="q5-photos">
+    <div class="pcard">
+      <div class="pband">AMAT <span>Producer GT</span></div>
+      <div class="pstage">
+        <div class="pscroll" data-start="0">
+          <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+          <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+          <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+          <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+        </div>
+        <div class="pchips"><b class="on">1차</b></div>
+        <div class="pdate">05.14</div>
+        <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+        <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+        <div class="pbar"><div class="pbar-thumb"></div></div>
+      </div>
+    </div>
+
+    <div class="pcard">
+      <div class="pband">Lam <span>Kiyo45</span></div>
+      <div class="pstage">
+        <div class="pscroll" data-start="1">
+          <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+          <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+          <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+          <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+        </div>
+        <div class="pchips"><b>1차</b><b class="on">2차</b></div>
+        <div class="pdate">06.02</div>
+        <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+        <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+        <div class="pbar"><div class="pbar-thumb"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="q5-board">
+    <div class="q5-bhead">
+      <svg class="q5-bico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+      <h3 class="q5-btitle">기록 보드</h3>
+      <span class="q5-bcount">지표 7 · 메모 4</span>
+      <div class="q5-seg" role="group" aria-label="쓰기 종류 선택">
+        <span class="q5-seg-cap">쓰기</span>
+        <div class="q5-seg-box">
+          <button type="button" class="q5-seg-btn q5-seg-metric on" aria-pressed="true">지표</button>
+          <button type="button" class="q5-seg-btn q5-seg-memo" aria-pressed="false">메모</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="q5-mwrap">
+      <p class="q5-mnote"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>지표는 각 사 데모 조건 기준입니다</p>
+      <div class="q5-mcols">
+        <div class="q5-mcol">
+          <div class="q5-mcol-head"><b>AMAT</b><span>Producer GT</span></div>
+          <div class="q5-mitem">
+            <div class="q5-mrow">
+              <span class="q5-mk">식각률</span><b class="q5-mv">385</b><span class="q5-mu">nm/min</span>
+              <button type="button" class="q5-medit" aria-label="AMAT 식각률 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            </div>
+            <p class="q5-mcond">CF4 80sccm · 20mTorr · 1200W · Si 베어</p>
+            <div class="q5-mmeta"><i class="q5-mdot" style="background:#2f8f4e"></i><span>조성범 · 07.11</span></div>
+          </div>
+          <div class="q5-mitem">
+            <div class="q5-mrow">
+              <span class="q5-mk">균일도</span><b class="q5-mv">±1.8</b><span class="q5-mu">%</span>
+              <button type="button" class="q5-medit" aria-label="AMAT 균일도 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            </div>
+            <p class="q5-mcond">5포인트 · 엣지 3mm 제외</p>
+            <div class="q5-mmeta"><i class="q5-mdot" style="background:#a8761a"></i><span>박세리 · 07.15</span></div>
+          </div>
+          <div class="q5-mitem">
+            <div class="q5-mrow">
+              <span class="q5-mk">파티클</span><b class="q5-mv">3</b><span class="q5-mu">ea</span>
+              <button type="button" class="q5-medit" aria-label="AMAT 파티클 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            </div>
+            <p class="q5-mcond">0.3um 기준 · 이송 후 측정</p>
+            <div class="q5-mmeta"><i class="q5-mdot" style="background:#2f6db8"></i><span>박주봉 · 07.12</span></div>
+          </div>
+          <button type="button" class="q5-madd" aria-label="AMAT 지표 추가"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><span>지표</span></button>
+        </div>
+
+        <div class="q5-mcol">
+          <div class="q5-mcol-head"><b>Lam</b><span>Kiyo45</span></div>
+          <div class="q5-mitem">
+            <div class="q5-mrow">
+              <span class="q5-mk">식각률</span><b class="q5-mv">412</b><span class="q5-mu">nm/min</span>
+              <button type="button" class="q5-medit" aria-label="Lam 식각률 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            </div>
+            <p class="q5-mcond">C4F8 60sccm · 15mTorr · 1500W · SiO2 패턴</p>
+            <div class="q5-mmeta"><i class="q5-mdot" style="background:#2f8f4e"></i><span>조성범 · 07.11</span></div>
+          </div>
+          <div class="q5-mitem">
+            <div class="q5-mrow">
+              <span class="q5-mk">균일도</span><b class="q5-mv">±1.4</b><span class="q5-mu">%</span>
+              <button type="button" class="q5-medit" aria-label="Lam 균일도 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            </div>
+            <p class="q5-mcond">5포인트 · 엣지 3mm 포함</p>
+            <div class="q5-mmeta"><i class="q5-mdot" style="background:#2f8f4e"></i><span>조성범 · 07.11</span></div>
+          </div>
+          <div class="q5-mitem">
+            <div class="q5-mrow">
+              <span class="q5-mk">선택비</span><b class="q5-mv">25</b><span class="q5-mu">:1</span>
+              <button type="button" class="q5-medit" aria-label="Lam 선택비 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            </div>
+            <p class="q5-mcond">SiO2/Si 기준</p>
+            <div class="q5-mmeta"><i class="q5-mdot" style="background:#2f6db8"></i><span>박주봉 · 07.12</span></div>
+          </div>
+          <div class="q5-mitem">
+            <div class="q5-mrow">
+              <span class="q5-mk">처리량</span><b class="q5-mv">52</b><span class="q5-mu">wph</span>
+              <button type="button" class="q5-medit" aria-label="Lam 처리량 값 수정"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 8.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+            </div>
+            <p class="q5-mcond">25매 연속 처리</p>
+            <div class="q5-mmeta"><i class="q5-mdot" style="background:#a8761a"></i><span>박세리 · 07.13</span></div>
+          </div>
+          <button type="button" class="q5-madd" aria-label="Lam 지표 추가"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><span>지표</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="q5-memos">
+      <div class="q5-msub">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+        <b>메모</b><span class="q5-mcnt">4</span>
+      </div>
+      <div class="q5-mgrid">
+        <article class="q5-cmt">
+          <div class="q5-cmt-top">
+            <span class="q5-avatar" style="background:#2f8f4e" aria-hidden="true">조</span>
+            <div class="q5-cmt-who">
+              <div class="q5-cmt-title">Lam 균일도 우위</div>
+              <div class="q5-cmt-meta"><span style="color:#2f8f4e">조성범</span> · 07.11</div>
+            </div>
+          </div>
+          <p class="q5-cmt-body">5포인트 측정 전 구간 ±1.5% 이내. 엣지 3mm까지 유지되는 게 큼.</p>
+        </article>
+        <article class="q5-cmt">
+          <div class="q5-cmt-top">
+            <span class="q5-avatar" style="background:#2f6db8" aria-hidden="true">박</span>
+            <div class="q5-cmt-who">
+              <div class="q5-cmt-title">파티클 트레이드오프</div>
+              <div class="q5-cmt-meta"><span style="color:#2f6db8">박주봉</span> · 07.12</div>
+            </div>
+          </div>
+          <p class="q5-cmt-body">AMAT 3ea로 우위. 다만 처리량이 45wph로 Lam보다 낮아 트레이드오프.</p>
+        </article>
+        <article class="q5-cmt">
+          <div class="q5-cmt-top">
+            <span class="q5-avatar" style="background:#a8761a" aria-hidden="true">박</span>
+            <div class="q5-cmt-who">
+              <div class="q5-cmt-title">AMAT 재방문 필요</div>
+              <div class="q5-cmt-meta"><span style="color:#a8761a">박세리</span> · 07.14</div>
+            </div>
+          </div>
+          <p class="q5-cmt-body">2차 데모에서 선택비 재측정 요청함. 1차 조건과 챔버 상태가 달랐음.</p>
+        </article>
+        <article class="q5-cmt">
+          <div class="q5-cmt-top">
+            <span class="q5-avatar" style="background:#2f8f4e" aria-hidden="true">조</span>
+            <div class="q5-cmt-who">
+              <div class="q5-cmt-title">가격·납기 별도 확인</div>
+              <div class="q5-cmt-meta"><span style="color:#2f8f4e">조성범</span> · 07.15</div>
+            </div>
+          </div>
+          <p class="q5-cmt-body">지표만으로 결정 불가. 구매팀에 2사 견적·납기 요청 완료.</p>
+        </article>
+      </div>
+      <button type="button" class="q5-cadd"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg><span>코멘트</span></button>
+    </div>
+  </section>
+</section></div>
+  <p class="note">장점: 수치와 그 수치가 나온 조건, 팀 메모까지 보드 하나에서 읽히고, 지표가 어느 회사 것인지는 색 없이 왼쪽(AMAT)/오른쪽(Lam) 자리만으로 바로 구분되며 나중에 쓴 지표도 항상 메모 위에 정렬됩니다. 단점: 기록이 쌓일수록 보드가 세로로 길어지고, 지표와 메모 중 어디에 쓸지는 보드 머리의 [지표|메모] 버튼을 한 번 봐야 압니다. 모바일: 사진은 한 장씩 세로로 쌓이지만 지표 구역은 좌 AMAT/우 Lam 두 줄기를 그대로 유지하고 메모만 한 줄로 쌓입니다.</p>
+</article>
+  </div>
+</div>
+<script>
+var SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+function initCarousel(card){
+  var sc = card.querySelector('.pscroll'); if(!sc) return;
+  var bar = card.querySelector('.pbar'), thumb = card.querySelector('.pbar-thumb');
+  var prev = card.querySelector('.pprev'), next = card.querySelector('.pnext');
+  var n = sc.children.length;
+  var W = function(){ return sc.clientWidth || 1; };
+  var idx = function(){ return Math.max(0, Math.min(n - 1, Math.round(sc.scrollLeft / W()))); };
+  var start = +(sc.dataset.start || 0);
+  var cur = Math.max(0, Math.min(n - 1, start));
+  var go = function(i, inst){
+    cur = Math.max(0, Math.min(n - 1, i));
+    sc.scrollTo({ left: cur * W(), behavior: inst ? 'auto' : SMOOTH });
+  };
+  var sync = function(){
+    if(!thumb) return;
+    var max = sc.scrollWidth - sc.clientWidth;
+    var f = max > 0 ? sc.scrollLeft / max : 0;
+    var tw = 100 / n;
+    thumb.style.width = tw + '%';
+    thumb.style.left = (f * (100 - tw)) + '%';
+  };
+  var settleT;
+  sc.addEventListener('scroll', function(){
+    sync();
+    clearTimeout(settleT);
+    settleT = setTimeout(function(){ if(!pd && !td) cur = idx(); }, 150);
+  }, { passive: true });
+  if(typeof ResizeObserver !== 'undefined'){
+    new ResizeObserver(function(){
+      sc.scrollTo({ left: cur * W(), behavior: 'auto' });
+      sync();
+    }).observe(sc);
+  }
+  if(start) go(start, true);
+  sync();
+
+  var suppress = false, snapT;
+  var releaseSnap = function(){ clearTimeout(snapT); snapT = setTimeout(function(){ sc.classList.remove('dragging'); }, 450); };
+  if(prev) prev.addEventListener('click', function(e){ e.stopPropagation(); if(suppress) return; go(cur - 1); });
+  if(next) next.addEventListener('click', function(e){ e.stopPropagation(); if(suppress) return; go(cur + 1); });
+
+  var stage = card.querySelector('.pstage');
+  var acc = 0, at = 0, cool = 0;
+  stage.addEventListener('wheel', function(e){
+    if(e.ctrlKey) return;
+    var horiz = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (e.shiftKey ? e.deltaY : 0);
+    if(!horiz) return;
+    e.preventDefault();
+    var raw = horiz * (e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? 400 : 1);
+    var now = performance.now();
+    if(now < cool) return;
+    if(now - at > 300) acc = 0;
+    at = now; acc += raw;
+    if(Math.abs(acc) >= 40){ go(cur + (acc > 0 ? 1 : -1)); acc = 0; cool = now + 400; }
+  }, { passive: false });
+
+  var pd = null;
+  stage.addEventListener('pointerdown', function(e){
+    if(e.pointerType === 'touch' || e.button !== 0) return;
+    if(e.target.closest && e.target.closest('.pbar')) return;
+    e.preventDefault();
+    clearTimeout(snapT);
+    pd = { x: e.clientX, l: sc.scrollLeft, id: e.pointerId, moved: false };
+    sc.classList.add('dragging');
+  });
+  window.addEventListener('pointermove', function(e){
+    if(!pd || e.pointerId !== pd.id) return;
+    if(e.buttons === 0){ endPd(e); return; }
+    var dx = e.clientX - pd.x;
+    if(Math.abs(dx) > 4) pd.moved = true;
+    sc.scrollLeft = pd.l - dx;
+  });
+  var endPd = function(e){
+    if(!pd || e.pointerId !== pd.id) return;
+    var moved = pd.moved; pd = null;
+    if(moved){
+      suppress = true; setTimeout(function(){ suppress = false; }, 80);
+      go(idx()); releaseSnap();
+    } else sc.classList.remove('dragging');
+  };
+  window.addEventListener('pointerup', endPd);
+  window.addEventListener('pointercancel', endPd);
+
+  if(bar && thumb){
+    var td = null;
+    thumb.addEventListener('pointerdown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      clearTimeout(snapT);
+      td = { x: e.clientX, l: sc.scrollLeft, id: e.pointerId };
+      sc.classList.add('dragging'); bar.classList.add('scrubbing');
+      try{ thumb.setPointerCapture(e.pointerId); }catch(err){}
+    });
+    window.addEventListener('pointermove', function(e){
+      if(!td || e.pointerId !== td.id) return;
+      var tr = bar.getBoundingClientRect().width;
+      var usable = tr * (1 - 1 / n);
+      var max = sc.scrollWidth - sc.clientWidth;
+      if(usable > 0 && max > 0) sc.scrollLeft = td.l + (e.clientX - td.x) / usable * max;
+    });
+    var endTd = function(e){
+      if(!td || e.pointerId !== td.id) return;
+      td = null; bar.classList.remove('scrubbing');
+      go(idx()); releaseSnap();
+    };
+    window.addEventListener('pointerup', endTd);
+    window.addEventListener('pointercancel', endTd);
+    bar.addEventListener('pointerdown', function(e){
+      e.stopPropagation();
+      if(e.target === thumb) return;
+      if(e.pointerType === 'touch') return;
+      var r = bar.getBoundingClientRect();
+      if(r.width <= 0) return;
+      go(Math.floor((e.clientX - r.left) / r.width * n));
+    });
+  }
+}
+document.querySelectorAll('.pcard').forEach(initCarousel);
+document.querySelectorAll('.seg button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.seg button').forEach(function(x){ x.classList.toggle('on', x === b); });
+    document.body.classList.toggle('mob', b.dataset.v === 'm');
+  });
+});
+
+try{ (function(){
+  var root=document.querySelector('.s-q2');
+  if(!root) return;
+  var toggle=root.querySelector('.q2-ctoggle');
+  var add=root.querySelector('.q2-cadd');
+  var input=root.querySelector('.q2-cinput');
+  var submit=root.querySelector('.q2-csubmit');
+  function isOpen(){return root.classList.contains('q2-open');}
+  function setOpen(v){
+    root.classList.toggle('q2-open',v);
+    if(toggle) toggle.setAttribute('aria-expanded',v?'true':'false');
+  }
+  if(toggle) toggle.addEventListener('click',function(){setOpen(!isOpen());});
+  if(add) add.addEventListener('click',function(e){
+    e.stopPropagation();
+    setOpen(true);
+    if(input) setTimeout(function(){input.focus();},210);
+  });
+  if(submit) submit.addEventListener('click',function(){
+    if(input){input.value='';input.focus();}
+  });
+})() }catch(e){ console.warn('init fail', e); }
+try{ (function(){var root=document.querySelector('.s-q4');if(!root)return;var sec=root.querySelector('.q4-cmts');if(!sec)return;var toggle=sec.querySelector('.q4-cmt-toggle');var add=sec.querySelector('.q4-cmt-add');function setOpen(v){sec.classList.toggle('is-open',v);if(toggle)toggle.setAttribute('aria-expanded',v?'true':'false');}if(toggle)toggle.addEventListener('click',function(){setOpen(!sec.classList.contains('is-open'));});if(add)add.addEventListener('click',function(){setOpen(true);});})() }catch(e){ console.warn('init fail', e); }
+try{ (function(){
+  var root=document.querySelector('.s-q5');
+  if(!root) return;
+  var btns=root.querySelectorAll('.q5-seg-btn');
+  Array.prototype.forEach.call(btns,function(btn){
+    btn.addEventListener('click',function(){
+      Array.prototype.forEach.call(btns,function(b){
+        var on=(b===btn);
+        b.classList.toggle('on',on);
+        b.setAttribute('aria-pressed',on?'true':'false');
+      });
+      var metric=btn.classList.contains('q5-seg-metric');
+      root.classList.toggle('q5-write-metric',metric);
+      root.classList.toggle('q5-write-memo',!metric);
+    });
+  });
+})() }catch(e){ console.warn('init fail', e); }</script>

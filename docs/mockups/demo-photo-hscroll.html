@@ -1,0 +1,426 @@
+<title>데모 사진 가로 스크롤 — 시안 2종</title>
+<style>
+:root{
+  --ground:#0F1117;--surface:#131722;--card:#161B22;--border:#293244;--divider:#232C3A;
+  --ink:#FFFFFF;--ink2:#AAB4C3;--ink3:#7D8899;--accent:#5491DA;
+  --sans:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:1240px;margin:0 auto;padding:36px 24px 90px}
+.eyebrow{font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin:0 0 9px}
+h1{font-size:24px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em}
+.intro{font-size:14px;line-height:1.75;color:var(--ink2);margin:0 0 4px;max-width:72ch;word-break:keep-all}
+.bar-ui{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:10px;padding:10px 0;margin:14px 0 10px;background:linear-gradient(var(--ground) 72%,rgba(15,17,23,0))}
+.bar-ui .lbl{font-size:12px;color:var(--ink3)}
+.seg{display:inline-flex;gap:3px;padding:3px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+.seg button{font:inherit;font-size:12px;font-weight:500;color:var(--ink2);background:none;border:0;padding:5px 14px;border-radius:999px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button:hover:not(.on){color:var(--ink)}
+.opt{min-width:0;margin-top:26px}
+.ohd{display:flex;align-items:baseline;gap:9px;margin:0 0 10px}
+.okey{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:8px;background:rgba(84,145,218,.16);border:1px solid rgba(84,145,218,.42);color:var(--accent);font-size:11px;font-weight:700;align-self:center}
+.ohd b{font-size:15px;font-weight:600}
+.ohd s{text-decoration:none;font-size:12px;color:var(--ink3)}
+.mock{container-type:inline-size;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;overflow:hidden}
+.mob .mock{max-width:390px;margin:0 auto;padding:10px}
+.note{font-size:12px;line-height:1.75;color:var(--ink2);margin:10px 0 0;word-break:keep-all;max-width:88ch}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@container (max-width:640px){.duo{grid-template-columns:1fr}}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.pcard{min-width:0;display:flex;flex-direction:column}
+.pband{display:flex;align-items:center;justify-content:center;gap:5px;background:#5491DA;color:#fff;font-size:12px;font-weight:500;padding:5px 12px;border-radius:8px 8px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pband span{opacity:.85;font-weight:400}
+.pstage{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:#0F1117;border:1px solid #293244;border-top:0;border-radius:0 0 8px 8px}
+.ph{position:absolute;inset:0}
+.pchips{position:absolute;top:8px;left:8px;z-index:4;display:flex;gap:3px}
+.pchips b{font-size:11px;font-weight:500;color:#fff;background:rgba(0,0,0,.5);border-radius:8px;padding:2px 7px}
+.pchips b.on{background:#5491DA}
+.pdate{position:absolute;top:8px;right:8px;z-index:4;font-size:11px;font-weight:500;color:#fff;background:rgba(0,0,0,.5);border-radius:8px;padding:2px 7px}
+
+.scrim{position:absolute;left:0;right:0;bottom:0;height:44%;z-index:2;pointer-events:none}
+.scrim::before{content:'';position:absolute;inset:0;-webkit-backdrop-filter:brightness(.86) saturate(1.04);backdrop-filter:brightness(.86) saturate(1.04);-webkit-mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.96) 22%,rgba(0,0,0,.85) 41%,rgba(0,0,0,.65) 57%,rgba(0,0,0,.42) 71.5%,rgba(0,0,0,.21) 84%,rgba(0,0,0,.07) 93%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.96) 22%,rgba(0,0,0,.85) 41%,rgba(0,0,0,.65) 57%,rgba(0,0,0,.42) 71.5%,rgba(0,0,0,.21) 84%,rgba(0,0,0,.07) 93%,rgba(0,0,0,0) 100%)}
+.scrim::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.880) 0%,rgba(0,0,0,.868) 12%,rgba(0,0,0,.842) 22%,rgba(0,0,0,.800) 32%,rgba(0,0,0,.742) 41%,rgba(0,0,0,.668) 49%,rgba(0,0,0,.578) 57%,rgba(0,0,0,.478) 64.5%,rgba(0,0,0,.374) 71.5%,rgba(0,0,0,.274) 78%,rgba(0,0,0,.185) 84%,rgba(0,0,0,.112) 89%,rgba(0,0,0,.058) 93%,rgba(0,0,0,.024) 96.2%,rgba(0,0,0,.006) 98.6%,rgba(0,0,0,0) 100%)}
+
+.pcap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:0 16px 14px;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.pcap-h{display:flex;align-items:baseline;gap:10px}
+.pcap-l{flex:1 1 auto;min-width:0;font-size:14px;font-weight:600;line-height:1.35;letter-spacing:-.01em;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 14px rgba(0,0,0,.35)}
+.pcap-n{flex:0 0 auto;font-size:11px;font-weight:500;line-height:1.4;letter-spacing:.04em;color:#7D8899;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.pcap-d{margin:0;font-size:12px;font-weight:400;line-height:1.5;color:#AAB4C3;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+
+.ph-0{background:radial-gradient(circle at 50% 42%,#5b6b80 0%,#3a4657 22%,#232c3a 48%,#12161f 78%,#0b0e14 100%),repeating-radial-gradient(circle at 50% 42%,rgba(255,255,255,.05) 0 2px,transparent 2px 13px)}
+.ph-1{background:radial-gradient(circle at 50% 50%,#fdfefe 0%,#eef4f9 30%,#dbe6f0 48%,#c3d3e2 58%,#9fb2c6 70%,#6f8296 100%),conic-gradient(from 210deg at 50% 50%,rgba(120,190,255,.5),rgba(190,255,220,.42),rgba(255,225,170,.42),rgba(255,175,205,.42),rgba(120,190,255,.5))}
+.ph-2{background:linear-gradient(118deg,#8e9aa8 0%,#6d7a8a 26%,#49525f 52%,#5f6b7a 72%,#2f3743 100%),repeating-linear-gradient(62deg,rgba(255,255,255,.09) 0 3px,transparent 3px 22px)}
+.ph-3{background:linear-gradient(#0d1117,#0d1117),repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 34px),radial-gradient(ellipse 22% 46% at 32% 62%,rgba(77,161,103,.85),transparent 70%),radial-gradient(ellipse 9% 34% at 58% 70%,rgba(77,161,103,.7),transparent 70%),radial-gradient(ellipse 5% 22% at 76% 78%,rgba(214,162,62,.6),transparent 70%)}
+
+.pchips,.pdate{pointer-events:none}
+
+/* ── 가로 스크롤 캐러셀(공통 메커니즘) ── */
+.pscroll{position:absolute;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;cursor:grab;user-select:none;-webkit-user-select:none;overscroll-behavior-x:contain}
+.pscroll::-webkit-scrollbar{display:none}
+.pscroll.dragging{scroll-snap-type:none;cursor:grabbing}
+.pslide{position:relative;flex:0 0 100%;min-width:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden}
+.pslide .ph{position:absolute;inset:0}
+
+/* ── 시안 1: 컨트롤 바형 ── */
+.s-a .pnav{display:flex;align-items:center;gap:8px;margin-top:7px}
+.s-a .pprev,.s-a .pnext{flex:none;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;padding:0;border:1px solid #293244;border-radius:8px;background:#161B22;color:#AAB4C3;cursor:pointer;transition:color .15s ease,border-color .15s ease}
+.s-a .pprev:hover,.s-a .pnext:hover{color:#fff;border-color:#5491DA}
+.s-a .pprev svg,.s-a .pnext svg{width:16px;height:16px;fill:currentColor}
+.s-a .pbar{position:relative;flex:1;height:16px;cursor:pointer;touch-action:none}
+.s-a .pbar::before{content:'';position:absolute;left:0;right:0;top:50%;height:5px;transform:translateY(-50%);border-radius:999px;background:#232C3A}
+.s-a .pbar-thumb{position:absolute;top:50%;transform:translateY(-50%);height:5px;border-radius:999px;background:#5491DA;cursor:grab;transition:height .12s ease,background-color .12s ease}
+.s-a .pbar:hover .pbar-thumb,.s-a .pbar.scrubbing .pbar-thumb{height:9px;background:#6ea6e6}
+.s-a .pbar.scrubbing .pbar-thumb{cursor:grabbing}
+
+/* ── 시안 2: 오버레이형(유튜브식) ── */
+.s-b .pprev,.s-b .pnext{position:absolute;top:0;bottom:22px;width:18%;z-index:6;display:flex;align-items:center;padding:0 4px;border:0;color:#fff;opacity:0;cursor:pointer;transition:opacity .15s ease;background:linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.04) 55%,transparent 80%)}
+.s-b .pprev{left:0;justify-content:flex-start}
+.s-b .pnext{right:0;justify-content:flex-end;background:linear-gradient(270deg,rgba(255,255,255,.16),rgba(255,255,255,.04) 55%,transparent 80%)}
+.s-b .pstage:hover .pprev,.s-b .pstage:hover .pnext,.s-b .pprev:focus-visible,.s-b .pnext:focus-visible{opacity:1}
+.s-b .pprev svg,.s-b .pnext svg{width:30px;height:30px;fill:currentColor;filter:drop-shadow(0 1px 4px rgba(0,0,0,.7))}
+.s-b .pbar{position:absolute;left:12px;right:12px;bottom:4px;height:14px;z-index:7;cursor:pointer;touch-action:none}
+.s-b .pbar::before{content:'';position:absolute;left:0;right:0;bottom:3px;height:3px;border-radius:999px;background:rgba(255,255,255,.22);transition:height .12s ease}
+.s-b .pbar-thumb{position:absolute;bottom:3px;height:3px;border-radius:999px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.4);transition:height .12s ease}
+.s-b .pstage:hover .pbar::before,.s-b .pstage:hover .pbar-thumb,.s-b .pbar.scrubbing::before,.s-b .pbar.scrubbing .pbar-thumb{height:6px}
+.s-b .pcap{padding-bottom:20px} /* 진행선(호버 6px)과 캡션 사이 여유 */
+@media (hover:none){.s-b .pprev,.s-b .pnext{display:none}}
+
+/* 좁은 폭(모바일 390px): 조작부 터치 타깃 확대 */
+@container (max-width:640px){
+  .s-a .pprev,.s-a .pnext{width:34px;height:34px}
+  .s-a .pbar{height:22px}
+  .s-b .pbar{height:20px}
+}
+</style>
+<div class="page">
+  <h2 class="sr-only">데모결과 사진을 썸네일 없이 가로 스크롤로 넘기는 두 가지 시안. 스크롤바 드래그, 가로 휠, 좌우 버튼, 모바일 스와이프 지원.</h2>
+  <p class="eyebrow">데모결과 · 사진 가로 스크롤</p>
+  <h1>썸네일 없이, 가로 스크롤로</h1>
+  <p class="intro">작은 썸네일 줄을 없애고 사진을 옆으로 넘기는 방식입니다. 사진을 잡고 끌거나, 가로 휠(트랙패드 가로 스와이프·Shift+휠)을 굴리거나, 스크롤바를 끌거나, 좌우 버튼을 누르면 넘어갑니다. 세로 휠은 페이지 스크롤 그대로입니다. 캡션(시네마 스크림)은 사진마다 붙어 같이 넘어갑니다. 두 시안의 차이는 조작부가 어디에 어떻게 보이느냐뿐입니다.</p>
+  <div class="bar-ui">
+    <span class="lbl">보기 폭</span>
+    <div class="seg" role="group" aria-label="보기 폭 전환">
+      <button type="button" class="on" data-v="p">PC</button>
+      <button type="button" data-v="m">모바일 390px</button>
+    </div>
+  </div>
+
+<section class="opt" id="opt-a">
+  <div class="ohd"><span class="okey">1</span><b>컨트롤 바형</b><s>사진 아래 전용 조작줄(버튼+스크롤바)</s></div>
+  <div class="mock s-a">
+    <div class="duo">
+
+<div class="pcard">
+  <div class="pband">AMAT <span>Producer GT</span></div>
+  <div class="pstage">
+    <div class="pscroll" data-start="0" role="group" aria-label="AMAT 데모 사진">
+
+      <div class="pslide">
+        <div class="ph ph-0"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div>
+          <p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-1"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div>
+          <p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-2"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div>
+          <p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-3"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div>
+          <p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p>
+        </div>
+      </div>
+    </div><div class="pchips"><b class="on">1차</b><b>2차</b></div><div class="pdate">05.14</div></div>
+  <div class="pnav"><button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button><div class="pbar"><div class="pbar-thumb"></div></div><button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button></div>
+</div>
+<div class="pcard">
+  <div class="pband">Lam <span>Kiyo45</span></div>
+  <div class="pstage">
+    <div class="pscroll" data-start="1" role="group" aria-label="Lam 데모 사진">
+
+      <div class="pslide">
+        <div class="ph ph-0"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div>
+          <p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-1"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div>
+          <p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-2"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div>
+          <p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-3"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div>
+          <p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p>
+        </div>
+      </div>
+    </div><div class="pchips"><b>1차</b><b class="on">2차</b></div><div class="pdate">06.02</div></div>
+  <div class="pnav"><button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button><div class="pbar"><div class="pbar-thumb"></div></div><button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button></div>
+</div>
+    </div>
+  </div>
+  <p class="note">사진 아래에 좌우 버튼과 스크롤바가 항상 보입니다. 처음 보는 사람도 조작법이 바로 보이는 게 장점이고, 조작줄 높이만큼 카드가 살짝 길어지는 게 단점입니다. 모바일에서는 사진을 옆으로 쓸어 넘기고, 같은 조작줄이 손가락으로도 조작됩니다.</p>
+</section>
+
+<section class="opt" id="opt-b">
+  <div class="ohd"><span class="okey">2</span><b>오버레이형</b><s>사진 위 얇은 진행선 + 호버 화살표(유튜브식)</s></div>
+  <div class="mock s-b">
+    <div class="duo">
+
+<div class="pcard">
+  <div class="pband">AMAT <span>Producer GT</span></div>
+  <div class="pstage">
+    <div class="pscroll" data-start="0" role="group" aria-label="AMAT 데모 사진">
+
+      <div class="pslide">
+        <div class="ph ph-0"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div>
+          <p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-1"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div>
+          <p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-2"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div>
+          <p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-3"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div>
+          <p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p>
+        </div>
+      </div>
+    </div><div class="pchips"><b class="on">1차</b><b>2차</b></div><div class="pdate">05.14</div><button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button><button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button><div class="pbar"><div class="pbar-thumb"></div></div></div>
+</div>
+<div class="pcard">
+  <div class="pband">Lam <span>Kiyo45</span></div>
+  <div class="pstage">
+    <div class="pscroll" data-start="1" role="group" aria-label="Lam 데모 사진">
+
+      <div class="pslide">
+        <div class="ph ph-0"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div>
+          <p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-1"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div>
+          <p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-2"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div>
+          <p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p>
+        </div>
+      </div>
+      <div class="pslide">
+        <div class="ph ph-3"></div>
+        <div class="scrim"></div>
+        <div class="pcap">
+          <div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div>
+          <p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p>
+        </div>
+      </div>
+    </div><div class="pchips"><b>1차</b><b class="on">2차</b></div><div class="pdate">06.02</div><button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button><button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button><div class="pbar"><div class="pbar-thumb"></div></div></div>
+</div>
+    </div>
+  </div>
+  <p class="note">사진 맨 아래에 얇은 진행선만 겹쳐 있고, 마우스를 올리면 선이 굵어지고 좌우 끝에 화살표가 나타납니다. 카드가 사진으로 딱 끝나 가장 콤팩트하고 사진이 커 보이는 게 장점이고, 처음엔 조작 장치가 눈에 덜 띄는 게 단점입니다. 모바일에서는 화살표 없이 쓸어 넘기며, 진행선은 항상 얇게 보입니다.</p>
+</section>
+</div>
+<script>
+var SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+function initCarousel(card){
+  var sc = card.querySelector('.pscroll'); if(!sc) return;
+  var bar = card.querySelector('.pbar'), thumb = card.querySelector('.pbar-thumb');
+  var prev = card.querySelector('.pprev'), next = card.querySelector('.pnext');
+  var n = sc.children.length;
+  var W = function(){ return sc.clientWidth || 1; };
+  var idx = function(){ return Math.max(0, Math.min(n - 1, Math.round(sc.scrollLeft / W()))); };
+  var start = +(sc.dataset.start || 0);
+  var cur = Math.max(0, Math.min(n - 1, start)); // 현재 장 — 리사이즈(모바일 토글·창 크기)에도 유지
+  var go = function(i, inst){
+    cur = Math.max(0, Math.min(n - 1, i));
+    sc.scrollTo({ left: cur * W(), behavior: inst ? 'auto' : SMOOTH });
+  };
+  card._idx = idx; card._go = go;
+  var sync = function(){
+    if(!thumb) return;
+    var max = sc.scrollWidth - sc.clientWidth;
+    var f = max > 0 ? sc.scrollLeft / max : 0;
+    var tw = 100 / n;
+    thumb.style.width = tw + '%';
+    thumb.style.left = (f * (100 - tw)) + '%';
+  };
+  // 사용자 스크롤이 멈추면 그 장을 현재 장으로 기억(드래그/스크럽 중 제외)
+  var settleT;
+  sc.addEventListener('scroll', function(){
+    sync();
+    clearTimeout(settleT);
+    settleT = setTimeout(function(){ if(!pd && !td) cur = idx(); }, 150);
+  }, { passive: true });
+  // 폭이 바뀌면(늦은 최초 레이아웃 포함) 현재 장 위치로 즉시 재정렬
+  if(typeof ResizeObserver !== 'undefined'){
+    new ResizeObserver(function(){
+      sc.scrollTo({ left: cur * W(), behavior: 'auto' });
+      sync();
+    }).observe(sc);
+  }
+  if(start) go(start, true);
+  sync();
+
+  // 드래그 직후 화살표 click 무시용 + 스냅 복귀 타이머(다음 드래그가 취소 가능)
+  var suppress = false, snapT;
+  var releaseSnap = function(){ clearTimeout(snapT); snapT = setTimeout(function(){ sc.classList.remove('dragging'); }, 450); };
+
+  if(prev) prev.addEventListener('click', function(e){ e.stopPropagation(); if(suppress) return; go(cur - 1); });
+  if(next) next.addEventListener('click', function(e){ e.stopPropagation(); if(suppress) return; go(cur + 1); });
+
+  // 휠 = 가로 델타(트랙패드 가로·틸트휠) 또는 Shift+휠만 사진 넘김. 세로 휠은 페이지 스크롤에,
+  // Ctrl+휠(브라우저 확대)은 브라우저에 양보. 무대 전체에서 받아 화살표 위에서도 동일하게 동작
+  var stage = card.querySelector('.pstage');
+  var acc = 0, at = 0, cool = 0;
+  stage.addEventListener('wheel', function(e){
+    if(e.ctrlKey) return;
+    var horiz = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (e.shiftKey ? e.deltaY : 0);
+    if(!horiz) return;
+    e.preventDefault();
+    var raw = horiz * (e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? 400 : 1);
+    var now = performance.now();
+    if(now < cool) return;
+    if(now - at > 300) acc = 0;
+    at = now; acc += raw;
+    if(Math.abs(acc) >= 40){ go(cur + (acc > 0 ? 1 : -1)); acc = 0; cool = now + 400; }
+  }, { passive: false });
+
+  // 사진 잡고 드래그(마우스/펜) — 무대 전체에서 시작(투명 화살표 위에서도). 터치는 네이티브 스크롤
+  var pd = null;
+  stage.addEventListener('pointerdown', function(e){
+    if(e.pointerType === 'touch' || e.button !== 0) return;
+    if(e.target.closest && e.target.closest('.pbar')) return; // 스크롤바는 자체 처리
+    e.preventDefault();
+    clearTimeout(snapT);
+    pd = { x: e.clientX, l: sc.scrollLeft, id: e.pointerId, moved: false };
+    sc.classList.add('dragging');
+  });
+  window.addEventListener('pointermove', function(e){
+    if(!pd || e.pointerId !== pd.id) return;
+    if(e.buttons === 0){ endPd(e); return; } // Alt+Tab 등으로 up 유실 시 고착 방지
+    var dx = e.clientX - pd.x;
+    if(Math.abs(dx) > 4) pd.moved = true;
+    sc.scrollLeft = pd.l - dx;
+  });
+  var endPd = function(e){
+    if(!pd || e.pointerId !== pd.id) return;
+    var moved = pd.moved; pd = null;
+    if(moved){
+      suppress = true; setTimeout(function(){ suppress = false; }, 80);
+      go(idx()); releaseSnap();
+    } else sc.classList.remove('dragging');
+  };
+  window.addEventListener('pointerup', endPd);
+  window.addEventListener('pointercancel', endPd);
+
+  // 스크롤바 스크럽 + 트랙 점프
+  if(bar && thumb){
+    var td = null;
+    thumb.addEventListener('pointerdown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      clearTimeout(snapT);
+      td = { x: e.clientX, l: sc.scrollLeft, id: e.pointerId };
+      sc.classList.add('dragging'); bar.classList.add('scrubbing');
+      try{ thumb.setPointerCapture(e.pointerId); }catch(err){}
+    });
+    window.addEventListener('pointermove', function(e){
+      if(!td || e.pointerId !== td.id) return;
+      var tr = bar.getBoundingClientRect().width;
+      var usable = tr * (1 - 1 / n);
+      var max = sc.scrollWidth - sc.clientWidth;
+      if(usable > 0 && max > 0) sc.scrollLeft = td.l + (e.clientX - td.x) / usable * max;
+    });
+    var endTd = function(e){
+      if(!td || e.pointerId !== td.id) return;
+      td = null; bar.classList.remove('scrubbing');
+      go(idx()); releaseSnap();
+    };
+    window.addEventListener('pointerup', endTd);
+    window.addEventListener('pointercancel', endTd);
+    bar.addEventListener('pointerdown', function(e){
+      e.stopPropagation();
+      if(e.target === thumb) return;
+      if(e.pointerType === 'touch') return; // 터치는 스와이프와 충돌 방지(트랙 점프는 마우스만)
+      var r = bar.getBoundingClientRect();
+      if(r.width <= 0) return;
+      go(Math.floor((e.clientX - r.left) / r.width * n));
+    });
+  }
+}
+document.querySelectorAll('.pcard').forEach(initCarousel);
+
+// PC/모바일 토글 — 재정렬은 각 캐러셀의 ResizeObserver가 처리
+document.querySelectorAll('.seg button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.seg button').forEach(function(x){ x.classList.toggle('on', x === b); });
+    document.body.classList.toggle('mob', b.dataset.v === 'm');
+  });
+});
+</script>
