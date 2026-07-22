@@ -28,7 +28,7 @@ import { MEMBERS, memberById, membersForEvent, given, eventContent, eventMembers
 import CalFilterBar from './CalFilterBar'
 import ChipContent, { type ChipContentProps } from './ChipContent'
 import EventPopover, { type EventDetail } from './EventPopover'
-import CalEventWrite from './CalEventWrite'
+import CalEventWrite, { type CalDraft } from './CalEventWrite'
 import { updateCalEvent } from '@/api/calendar'
 import { iconSize, radius } from '@/theme/tokens'
 import AddIcon from '@mui/icons-material/Add'
@@ -71,6 +71,14 @@ function rgba(hex: string, a: number) {
 type ViewKey = 'month' | 'timeweek' | 'agenda'
 
 function renderEventContent(arg: EventContentArg) {
+  // 새 일정 초안 막대(모달 열림 중 미리보기) — 단순 흰 글자 바
+  if (arg.event.extendedProps.draft) {
+    return (
+      <Box sx={{ px: '4px', fontSize: 11.5, fontWeight: 700, color: 'common.white', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+        {arg.event.title}
+      </Box>
+    )
+  }
   const chip = arg.event.extendedProps as unknown as ChipContentProps
   // 주 시간표의 시간일정만 'timed'(2줄 가능), 그 외(월간·종일행)는 'daygrid'.
   const variant: 'daygrid' | 'timed' = !arg.event.allDay && arg.view.type === 'timeGridWeek' ? 'timed' : 'daygrid'
@@ -122,6 +130,8 @@ export default function Calendar() {
   const { isAdmin } = useRole()
   const snack = useSnack()
   const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string; initialEndDate?: string } | null>(null)
+  // 새 일정 초안 — 모달(add)이 열려 있는 동안 달력에 '(새 일정)' 막대로 미리보기(임시 일정이라 기존 일정을 안 덮음)
+  const [draft, setDraft] = useState<CalDraft | null>(null)
   const idMap = useRef(new WeakMap<HTMLElement, string>()) // segment → 일정 id (수정 진입용)
   const dragClickSuppress = useRef(0) // 드래그 드롭 직후 합성 click이 팝오버를 고정하는 것 방지
 
@@ -260,6 +270,13 @@ export default function Calendar() {
     setPop(null)
   }, [view, anchor, searchTrim, selCats, selMembers])
 
+  // 미니달력에서 화면 밖 날짜를 고르면 달력이 따라감 — 초안 미리보기가 항상 보이게(적대 리뷰 확정)
+  useEffect(() => {
+    if (!draft) return
+    const d = parseKey(draft.start)
+    if (d < visRange.start || d >= visRange.end) setAnchor(d)
+  }, [draft, visRange])
+
   // 계정 개인화 뷰 — 설정 로드되면 서버 저장값으로 1회 동기화(기기 넘나들며 유지)
   const usReady = useAppSelector((s) => s.userSettings.ready)
   const svCalView = useAppSelector((s) => s.userSettings.settings['cal.view'] as string | undefined)
@@ -373,7 +390,7 @@ export default function Calendar() {
   const fcEvents = useMemo(() => {
     const byId = new Map<string, CalEvent>()
     for (const ev of allEvents) if (!byId.has(ev.id)) byId.set(ev.id, ev)
-    return [...byId.values()].filter(eventActive).map((ev) => {
+    const list = [...byId.values()].filter(eventActive).map((ev) => {
       const cat = ev.cat
       const catColor = CAT_META[cat].color
       const time = ev.allDay ? '' : ev.start.slice(11, 16)
@@ -404,11 +421,26 @@ export default function Calendar() {
         borderColor: catColor,
         // 반복 일정 인스턴스는 드래그/리사이즈 제외 — 시리즈 전체가 움직이면 위험(개별 예외 미지원)
         editable: !ev.recurring,
-        extendedProps: { ...props, detail },
+        extendedProps: { ...props, detail, sortPri: 0 },
       }
     })
+    // 새 일정 초안 막대 — 임시 일정으로 넣어 다른 일정과 같은 줄서기(겹침 없음). sortPri=1로 같은 날 맨 아래.
+    if (draft) {
+      list.push({
+        id: '__draft',
+        title: draft.title || '(새 일정)',
+        start: draft.start,
+        end: keyOf(addDays(parseKey(draft.end), 1)), // 종일 end는 미포함(다음 날)
+        allDay: true,
+        backgroundColor: 'rgba(84,145,218,.85)',
+        borderColor: '#5491DA',
+        editable: false,
+        extendedProps: { draft: true, sortPri: 1 } as never,
+      } as (typeof list)[number])
+    }
+    return list
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allEvents, selCats, selMembers, searchTrim])
+  }, [allEvents, selCats, selMembers, searchTrim, draft])
 
   // 주간 기간 라벨용
   const weekStart = useMemo(() => startOfWeek(anchor), [anchor])
@@ -660,8 +692,13 @@ export default function Calendar() {
             // 실제 보이는 날짜 범위(activeStart/activeEnd) → 종류별 건수 집계 기준. 이동·뷰전환 시 즉시 갱신.
             datesSet={(arg) => setVisRange({ start: arg.start, end: arg.end })}
             // 각 segment(.fc-event) → 원본 상세 매핑만 등록. 실제 hit 판정은 컨테이너 위임이 담당.
+            // 같은 날 줄서기: 초안 막대(sortPri=1)는 기존 일정 뒤로
+            eventOrder="sortPri,start,-duration,allDay,title"
             eventDidMount={(info) => {
-              detailMap.current.set(info.el, info.event.extendedProps.detail as EventDetail)
+              // 초안 막대(detail 없음)는 호버·클릭 대상에서 제외
+              const detail = info.event.extendedProps.detail as EventDetail | undefined
+              if (!detail) return
+              detailMap.current.set(info.el, detail)
               idMap.current.set(info.el, String(info.event.id))
             }}
             eventWillUnmount={(info) => {
@@ -669,7 +706,8 @@ export default function Calendar() {
               idMap.current.delete(info.el)
               if (lockedEl.current === info.el) closePop()
             }}
-            dayMaxEvents={view === 'month' ? 3 : false}
+            // 초안 막대가 열려 있는 동안은 한 줄 여유(+1) — 일정 3건인 날에서 미리보기가 '+N건'으로 접히지 않게(적대 리뷰 확정)
+            dayMaxEvents={view === 'month' ? (draft ? 4 : 3) : false}
             moreLinkContent={(arg) => `+${arg.num}건`}
             height="auto"
             dayCellContent={(arg) => String(arg.date.getDate())}
@@ -686,7 +724,7 @@ export default function Calendar() {
         )}
         {/* 빈 상태 — 이 범위·조건에 일정 0건(캘린더 UI 점검 #6). 목록(agenda) 뷰는 FC 자체 빈 안내가 있어 제외.
             첫 로드 실패(오류배너 표시 중·데이터 0)에는 '없어요' 안내가 모순이라 숨김(적대 리뷰 확정) */}
-        {ready && !(error && allEvents.length === 0) && visibleCount === 0 && view !== 'agenda' && (
+        {ready && !(error && allEvents.length === 0) && !draft && visibleCount === 0 && view !== 'agenda' && (
           <Box sx={{ position: 'absolute', left: 0, right: 0, top: '42%', display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 4 }}>
             <Box sx={{ px: 2, py: 1, borderRadius: `${radius.pill}px`, bgcolor: 'background.elevated', border: 1, borderColor: 'divider', fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>
               {selCats.length > 0 || selMembers.length > 0 || searchTrim
@@ -722,6 +760,7 @@ export default function Calendar() {
         event={write?.event || null}
         initialDate={write?.initialDate || todayKey}
         initialEndDate={write?.initialEndDate}
+        onDraftChange={setDraft}
         onClose={() => setWrite(null)}
         onSaved={(msg) => {
           setWrite(null)
