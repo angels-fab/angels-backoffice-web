@@ -35,7 +35,7 @@ import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
 import { iconSize, radius } from '@/theme/tokens'
-import { DateField, ConfirmDialog } from '@/components/ds'
+import { ConfirmDialog } from '@/components/ds'
 import { todaySeoul } from '@/utils/date'
 
 // 제목에서 '@참석자' 부분을 뗀 기본 제목([구분]·내용) — 참석자는 별도 피커가 관리
@@ -341,7 +341,6 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   const [endTime, setEndTime] = useState('10:00')
   const [loc, setLoc] = useState('')
   const [repeat, setRepeat] = useState<Repeat>('none')
-  const [repeatUntil, setRepeatUntil] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scopeAsk, setScopeAsk] = useState<null | 'save' | 'delete'>(null) // 반복 시리즈 범위 선택 대기
@@ -374,7 +373,6 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     setScopeAsk(null)
     setDelAsk(false)
     setRepeat('none')
-    setRepeatUntil('')
     setPicking(false)
     setCalAnchor(null)
     setTimeAnchor(null)
@@ -480,7 +478,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       start: allDay ? s : `${s}T${startTime}`,
       end: allDay ? e : `${e}T${endTime}`,
       repeat,
-      repeatUntil: repeat === 'none' ? '' : repeatUntil,
+      repeatUntil: '', // 종료일 입력 없음 — API 기본(6개월·매년 5년) 적용
       createdBy: user || '',
     }
   }
@@ -499,7 +497,6 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     if (!allDay && repeat === 'none' && (endDate || date) === date && endTime <= startTime)
       return setError('종료 시간이 시작보다 빨라요')
     if (endDate && endDate < date) return setError('종료일이 시작일보다 빨라요')
-    if (repeat !== 'none' && repeatUntil && repeatUntil < date) return setError('반복 종료일이 시작일보다 빨라요')
     setError(null)
     // 반복 시리즈 수정은 범위(이 일정만/이후/전체) 선택을 먼저 물음
     if (mode === 'edit' && isSeries) { setScopeAsk('save'); return }
@@ -565,7 +562,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       slotProps={{
         paper: {
           sx: {
-            width: 480, maxWidth: '100%', m: 2,
+            width: 420, maxWidth: '100%', m: 2,
             bgcolor: 'background.paper', backgroundImage: 'none',
             border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, p: '18px 24px 20px',
           },
@@ -657,14 +654,12 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         {/* 아이콘 행 스택 — 언제 / 반복 / 누구 / 어디 */}
         <Box>
           <FieldRow icon={<AccessTimeIcon />} wrap>
-            {repeat === 'none' && (
-              <SummaryChip
-                label={rangeLabel}
-                active={!!calAnchor}
-                ariaLabel="기간 선택"
-                onClick={(e) => { const el = e.currentTarget; setCalAnchor((a) => (a ? null : el)); setTimeAnchor(null); setRepeatAnchor(null); setPicking(false) }}
-              />
-            )}
+            <SummaryChip
+              label={rangeLabel}
+              active={!!calAnchor}
+              ariaLabel="기간 선택"
+              onClick={(e) => { const el = e.currentTarget; setCalAnchor((a) => (a ? null : el)); setTimeAnchor(null); setRepeatAnchor(null); setPicking(false) }}
+            />
             {!allDay && (
               <SummaryChip
                 label={`${startTime} – ${endTime}`}
@@ -724,15 +719,13 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
 
           {mode === 'add' && (
             <FieldRow icon={<RepeatIcon />} wrap>
+              {/* 반복은 옵션 선택만으로 끝(사용자 확정) — 종료일 입력 없음, 기간은 기본 6개월(매년 5년) */}
               <SummaryChip
                 label={repeatOptions(date).find((o) => o.value === repeat)?.label ?? '반복 안 함'}
                 active={!!repeatAnchor}
                 ariaLabel="반복"
                 onClick={(e) => { const el = e.currentTarget; setRepeatAnchor((a) => (a ? null : el)); setCalAnchor(null); setTimeAnchor(null); setPicking(false) }}
               />
-              {repeat !== 'none' && (
-                <DateField variant="inline" ariaLabel="반복 종료일" value={repeatUntil} onChange={setRepeatUntil} fullWidth={false} sx={{ width: 138 }} />
-              )}
             </FieldRow>
           )}
           {/* 반복 드롭다운 — 기간/시간 피커와 동일한 비차단 미니팝업(모달 안 클릭=드롭다운만 닫힘·원클릭) */}
