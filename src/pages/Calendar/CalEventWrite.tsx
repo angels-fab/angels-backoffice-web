@@ -14,7 +14,6 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
-import CloseIcon from '@mui/icons-material/Close'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import RepeatIcon from '@mui/icons-material/Repeat'
 import GroupsIcon from '@mui/icons-material/Groups'
@@ -34,7 +33,7 @@ import { useRole } from '@/auth/role'
 import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { iconSize, radius } from '@/theme/tokens'
+import { radius } from '@/theme/tokens'
 import { ConfirmDialog } from '@/components/ds'
 import { todaySeoul } from '@/utils/date'
 
@@ -584,14 +583,18 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         }}
         sx={{ display: 'flex', flexDirection: 'column' }}
       >
-        {/* 헤더 — 모드 캡션(작게) + 닫기 */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-          <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, letterSpacing: '.06em' }}>
+        {/* 헤더 — 모드 캡션 + 액션(취소·저장, edit는 삭제까지). 하단 버튼행·✕를 없애 모달을 컴팩트하게 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, letterSpacing: '.06em', flex: 'none' }}>
             {mode === 'add' ? '일정 추가' : '일정 수정'}
           </Typography>
-          <IconButton onClick={onClose} disabled={busy} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}>
-            <CloseIcon sx={{ fontSize: iconSize.action }} />
-          </IconButton>
+          <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
+            {mode === 'edit' && (
+              <Button size="small" color="error" onClick={remove} disabled={busy}>삭제</Button>
+            )}
+            <Button size="small" onClick={onClose} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
+            <Button size="small" type="submit" variant="contained" disabled={busy}>{busy ? '저장 중…' : '저장'}</Button>
+          </Box>
         </Box>
 
         {/* 제목 — 주인공(크게·첫 포커스·밑줄 포커스) */}
@@ -729,7 +732,8 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 ariaLabel="반복"
                 onClick={(e) => { const el = e.currentTarget; setRepeatAnchor((a) => (a ? null : el)); setCalAnchor(null); setTimeAnchor(null); setPicking(false) }}
               />
-              <Box sx={{ ml: 1, display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
+              {/* 종일 — 오른쪽 끝 고정(반복 라벨 길이가 변해도 위치 불변) */}
+              <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>종일</Typography>
                 <Switch size="small" checked={allDay} onChange={(e) => { setAllDay(e.target.checked); setTimeAnchor(null) }} slotProps={{ input: { 'aria-label': '종일' } }} />
               </Box>
@@ -825,14 +829,6 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
 
         {/* role=alert — 검증·저장 실패를 스크린리더에도 즉시 안내 */}
         {error && <Typography role="alert" color="error" variant="body2" sx={{ mt: 1 }}>{error}</Typography>}
-
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.5 }}>
-          {mode === 'edit' && (
-            <Button color="error" onClick={remove} disabled={busy} sx={{ mr: 'auto' }}>삭제</Button>
-          )}
-          <Button onClick={onClose} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button type="submit" variant="contained" disabled={busy}>{busy ? '저장 중…' : '저장'}</Button>
-        </Box>
       </Box>
     </Dialog>
 
