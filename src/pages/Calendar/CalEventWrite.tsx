@@ -35,7 +35,7 @@ import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
 import { iconSize, radius } from '@/theme/tokens'
-import { DateField, SelectField, ConfirmDialog } from '@/components/ds'
+import { DateField, ConfirmDialog } from '@/components/ds'
 import { todaySeoul } from '@/utils/date'
 
 // 제목에서 '@참석자' 부분을 뗀 기본 제목([구분]·내용) — 참석자는 별도 피커가 관리
@@ -103,7 +103,7 @@ interface Props {
 }
 
 type Repeat = 'none' | 'daily' | 'weekly' | 'monthly_nth' | 'monthly_last' | 'yearly'
-const ORDINALS = ['첫번째', '두번째', '세번째', '네번째']
+const ORDINALS = ['첫번째', '두번째', '세번째', '네번째', '다섯번째']
 
 const dateOnly = (dt: string) => (dt || '').slice(0, 10)
 const timeOnly = (dt: string) => (dt || '').slice(11, 16)
@@ -149,7 +149,8 @@ function repeatOptions(dateKey: string): { value: Repeat; label: string }[] {
   const nth = Math.ceil(d / 7)
   const daysInMonth = new Date(Number(dateKey.slice(0, 4)), m, 0).getDate()
   opts.push({ value: 'weekly', label: `매주 ${w}요일` })
-  if (nth <= 4) opts.push({ value: 'monthly_nth', label: `매월 ${ORDINALS[nth - 1]} ${w}요일` })
+  // N번째는 항상 병기(다섯번째는 그 요일이 5번 있는 달에만 생성), 마지막은 그 달의 마지막 해당 요일일 때만
+  opts.push({ value: 'monthly_nth', label: `매월 ${ORDINALS[nth - 1]} ${w}요일` })
   if (d + 7 > daysInMonth) opts.push({ value: 'monthly_last', label: `매월 마지막 ${w}요일` })
   opts.push({ value: 'yearly', label: `매년 ${m}월 ${d}일` })
   return opts
@@ -348,6 +349,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   // 기간/시간 피커 — 칩에 붙는 미니팝업(모달 크기 불변, 사용자 확정). 날짜는 그리드에서 이미 정했으니 기본 닫힘.
   const [calAnchor, setCalAnchor] = useState<HTMLElement | null>(null)
   const [timeAnchor, setTimeAnchor] = useState<HTMLElement | null>(null)
+  const [repeatAnchor, setRepeatAnchor] = useState<HTMLElement | null>(null) // 반복 드롭다운 — 피커와 동일한 미니팝업
   const [picking, setPicking] = useState(false) // 미니달력: 시작 찍고 종료 대기 중
   const [calYm, setCalYm] = useState('') // 미니달력 표시 달 'yyyy-MM'
 
@@ -376,6 +378,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     setPicking(false)
     setCalAnchor(null)
     setTimeAnchor(null)
+    setRepeatAnchor(null)
     if (mode === 'edit' && event) {
       const parsed = parseTitleTag(baseTitle(event.title))
       setTitle(parsed.content)
@@ -485,9 +488,10 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
-    // 열려 있던 피커는 접는다 — 반복 범위 확인창 위에 피커가 떠 있는 z순서 꼬임 방지(리뷰 부수 관찰)
+    // 열려 있던 피커/드롭다운은 접는다 — 반복 범위 확인창 위에 피커가 떠 있는 z순서 꼬임 방지(리뷰 부수 관찰)
     setCalAnchor(null)
     setTimeAnchor(null)
+    setRepeatAnchor(null)
     setPicking(false)
     if (!isAdmin || !user) return setError('관리자 로그인이 필요합니다')
     if (!title.trim()) return setError('제목을 입력해주세요')
@@ -557,16 +561,11 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     <>
     <Dialog
       open={open}
-      onClose={(_, reason) => {
-        if (busy) return
-        // 피커가 열린 채 백드롭 클릭 → 피커만 닫는다(Popover 시절 동작 보존 — 작성 중 입력 유실 방지)
-        if (reason === 'backdropClick' && (calAnchor || timeAnchor)) { setCalAnchor(null); setTimeAnchor(null); setPicking(false); return }
-        onClose()
-      }}
+      onClose={() => { if (!busy) onClose() }} // 모달 밖 배경 클릭 = 모달까지 닫힘(사용자 확정 — 피커/드롭다운도 함께 닫힘)
       slotProps={{
         paper: {
           sx: {
-            width: 540, maxWidth: '100%', m: 2,
+            width: 480, maxWidth: '100%', m: 2,
             bgcolor: 'background.paper', backgroundImage: 'none',
             border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, p: '18px 24px 20px',
           },
@@ -577,11 +576,12 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         component="form"
         onSubmit={submit}
         onKeyDown={(e) => {
-          // Escape는 피커만 닫는다(모달까지 닫히지 않게) — Popper는 Popover와 달리 키를 스스로 안 받음
-          if (e.key === 'Escape' && (calAnchor || timeAnchor)) {
+          // Escape는 피커/드롭다운만 닫는다(모달까지 닫히지 않게) — Popper는 Popover와 달리 키를 스스로 안 받음
+          if (e.key === 'Escape' && (calAnchor || timeAnchor || repeatAnchor)) {
             e.stopPropagation()
             setCalAnchor(null)
             setTimeAnchor(null)
+            setRepeatAnchor(null)
             setPicking(false)
           }
         }}
@@ -657,18 +657,20 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         {/* 아이콘 행 스택 — 언제 / 반복 / 누구 / 어디 */}
         <Box>
           <FieldRow icon={<AccessTimeIcon />} wrap>
-            <SummaryChip
-              label={rangeLabel}
-              active={!!calAnchor}
-              ariaLabel="기간 선택"
-              onClick={(e) => { const el = e.currentTarget; setCalAnchor((a) => (a ? null : el)); setTimeAnchor(null); setPicking(false) }}
-            />
+            {repeat === 'none' && (
+              <SummaryChip
+                label={rangeLabel}
+                active={!!calAnchor}
+                ariaLabel="기간 선택"
+                onClick={(e) => { const el = e.currentTarget; setCalAnchor((a) => (a ? null : el)); setTimeAnchor(null); setRepeatAnchor(null); setPicking(false) }}
+              />
+            )}
             {!allDay && (
               <SummaryChip
                 label={`${startTime} – ${endTime}`}
                 active={!!timeAnchor}
                 ariaLabel="시간 선택"
-                onClick={(e) => { const el = e.currentTarget; setTimeAnchor((a) => (a ? null : el)); setCalAnchor(null) }}
+                onClick={(e) => { const el = e.currentTarget; setTimeAnchor((a) => (a ? null : el)); setCalAnchor(null); setRepeatAnchor(null) }}
               />
             )}
             <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.5, flex: 'none' }}>
@@ -686,7 +688,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 <Box onMouseDown={(e) => e.preventDefault()} sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' }}>
                   {/* mousedown 기준 감지 — 팝업을 연 클릭 자체가 새 팝업을 도로 닫는 레이스 차단(칩 전환 원클릭).
                       앵커 칩 위는 제외: 닫기/열기 토글은 칩 onClick이 담당(mousedown 닫힘+click 재열림 이중동작 방지) */}
-                  <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (e.target instanceof Element && e.target.closest('.MuiBackdrop-root')) return; if (calAnchor && e.target instanceof Node && calAnchor.contains(e.target)) return; setCalAnchor(null); setPicking(false) }}>
+                  <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (calAnchor && e.target instanceof Node && calAnchor.contains(e.target)) return; setCalAnchor(null); setPicking(false) }}>
                     <Box>
                       <MiniCalendar ym={calYm || (date || todaySeoul()).slice(0, 7)} onYm={setCalYm} start={date} end={endDate} picking={picking} onPick={pickDay} />
                     </Box>
@@ -709,7 +711,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                   }}
                   sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' }}
                 >
-                  <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (e.target instanceof Element && e.target.closest('.MuiBackdrop-root')) return; if (timeAnchor && e.target instanceof Node && timeAnchor.contains(e.target)) return; setTimeAnchor(null) }}>
+                  <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (timeAnchor && e.target instanceof Node && timeAnchor.contains(e.target)) return; setTimeAnchor(null) }}>
                     <Box sx={{ display: 'flex', gap: 0.75, p: 1, bgcolor: 'background.elevated', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px` }}>
                       <TimeColumn label="시작" value={startTime} onPick={setStartTime} />
                       <TimeColumn label="종료" value={endTime} onPick={setEndTime} />
@@ -722,26 +724,55 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
 
           {mode === 'add' && (
             <FieldRow icon={<RepeatIcon />} wrap>
-              <SelectField
-                variant="inline"
+              <SummaryChip
+                label={repeatOptions(date).find((o) => o.value === repeat)?.label ?? '반복 안 함'}
+                active={!!repeatAnchor}
                 ariaLabel="반복"
-                value={repeat}
-                onChange={(v) => {
-                  setRepeat(v as Repeat)
-                  if (v !== 'none') { setEndDate(''); setPicking(false) } // 반복은 단일 날짜 기준
-                }}
-                options={repeatOptions(date)}
-                fullWidth={false}
-                sx={{ width: 178 }}
+                onClick={(e) => { const el = e.currentTarget; setRepeatAnchor((a) => (a ? null : el)); setCalAnchor(null); setTimeAnchor(null); setPicking(false) }}
               />
               {repeat !== 'none' && (
-                <>
-                  <DateField variant="inline" ariaLabel="반복 종료일" value={repeatUntil} onChange={setRepeatUntil} fullWidth={false} sx={{ width: 138 }} />
-                  <Typography variant="caption" sx={{ color: 'text.disabled' }}>{repeat === 'yearly' ? '비우면 5년 반복' : '비우면 6개월 반복'}</Typography>
-                </>
+                <DateField variant="inline" ariaLabel="반복 종료일" value={repeatUntil} onChange={setRepeatUntil} fullWidth={false} sx={{ width: 138 }} />
               )}
             </FieldRow>
           )}
+          {/* 반복 드롭다운 — 기간/시간 피커와 동일한 비차단 미니팝업(모달 안 클릭=드롭다운만 닫힘·원클릭) */}
+          <Popper open={!!repeatAnchor} anchorEl={repeatAnchor} placement="bottom-start" transition sx={{ zIndex: (th) => th.zIndex.modal + 1 }}>
+            {({ TransitionProps }) => (
+              <Grow {...TransitionProps} style={{ transformOrigin: 'top left' }}>
+                <Box onMouseDown={(e) => e.preventDefault()} sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' }}>
+                  <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (repeatAnchor && e.target instanceof Node && repeatAnchor.contains(e.target)) return; setRepeatAnchor(null) }}>
+                    <Box sx={{ p: 0.5, bgcolor: 'background.elevated', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, minWidth: 176 }}>
+                      {repeatOptions(date).map((o) => {
+                        const on = o.value === repeat
+                        return (
+                          <Box
+                            key={o.value}
+                            component="button"
+                            type="button"
+                            aria-pressed={on}
+                            onClick={() => {
+                              setRepeat(o.value)
+                              if (o.value !== 'none') { setEndDate(''); setPicking(false); setCalAnchor(null) } // 반복은 단일 날짜 기준 — 날짜칩도 숨김
+                              setRepeatAnchor(null)
+                            }}
+                            sx={{
+                              display: 'block', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                              px: 1.25, py: '7px', fontSize: 13, whiteSpace: 'nowrap', borderRadius: `${radius.input}px`,
+                              ...(on
+                                ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: 700 }
+                                : { bgcolor: 'transparent', color: 'text.primary', '&:hover': { bgcolor: 'action.hover' } }),
+                            }}
+                          >
+                            {o.label}
+                          </Box>
+                        )
+                      })}
+                    </Box>
+                  </ClickAwayListener>
+                </Box>
+              </Grow>
+            )}
+          </Popper>
           {mode === 'edit' && isSeries && (
             <FieldRow icon={<RepeatIcon />}>
               <Typography variant="caption" sx={{ color: 'text.disabled' }}>

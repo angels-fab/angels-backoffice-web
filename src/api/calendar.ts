@@ -104,16 +104,18 @@ function occurrenceDates(s0: string, repeat: Exclude<CalRepeat, 'none'>, until: 
     // 시작일의 요일·서수(몇 번째 그 요일인지)를 앵커로 매달 같은 자리 요일에 생성 — 구글캘린더식
     const d0 = Number(s0.slice(8, 10))
     const dow = new Date(Number(s0.slice(0, 4)), Number(s0.slice(5, 7)) - 1, d0).getDay()
-    const nth = Math.ceil(d0 / 7) // monthly_nth는 UI에서 1~4만 제공(N번째는 어느 달에나 존재)
+    const nth = Math.ceil(d0 / 7) // 1~5 — 다섯번째는 그 요일이 5번 있는 달에만 존재(없는 달은 건너뜀)
     let [y, m] = [Number(s0.slice(0, 4)), Number(s0.slice(5, 7))]
     for (let i = 0; i < 600 && out.length < cap; i++) {
       const lastDay = new Date(y, m, 0).getDate()
       const day = repeat === 'monthly_last'
         ? lastDay - ((new Date(y, m - 1, lastDay).getDay() - dow + 7) % 7)
         : 1 + ((dow - new Date(y, m - 1, 1).getDay() + 7) % 7) + (nth - 1) * 7
-      const occ = iso(new Date(y, m - 1, day))
-      if (occ > until) break
-      if (occ >= s0) out.push(occ)
+      if (day <= lastDay) { // 다섯번째가 없는 달 스킵(Date 월 넘김 오염 방지) — 마지막/1~4번째는 항상 존재
+        const occ = iso(new Date(y, m - 1, day))
+        if (occ > until) break
+        if (occ >= s0) out.push(occ)
+      }
       m += 1
       if (m > 12) { m = 1; y += 1 }
     }
