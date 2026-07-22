@@ -64,11 +64,14 @@ export async function fetchMilestones(): Promise<MilestoneRow[]> {
 
 const todayKst = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 
-/** 상태·담당자 부분갱신(관리자 전용 — RLS). 완료 전환 시 completed_at 자동 스탬프. */
+/** 상태·담당자·기간 부분갱신(관리자 전용 — RLS). 완료 전환 시 completed_at 자동 스탬프. */
 export async function updateMilestone(p: {
   id: number
   status?: MilestoneStatus
   owner?: string
+  /** 착수·완료목표 분기 조정 — 사람이 확정한 값이므로 fuzzy 해제(지연 자동판정 적용 시작) */
+  startQ?: string
+  endQ?: string
   updatedBy: string
 }): Promise<{ completedAt: string | null }> {
   const payload: Record<string, unknown> = { updated_by: p.updatedBy, updated_at: new Date().toISOString() }
@@ -79,6 +82,9 @@ export async function updateMilestone(p: {
     payload.completed_at = completedAt
   }
   if (p.owner !== undefined) payload.owner = p.owner
+  if (p.startQ !== undefined) payload.start_q = p.startQ
+  if (p.endQ !== undefined) payload.end_q = p.endQ
+  if (p.startQ !== undefined || p.endQ !== undefined) payload.fuzzy = false
   await ensureSession()
   const { error } = await withTimeout(
     supabase.from('milestones').update(payload).eq('id', p.id),

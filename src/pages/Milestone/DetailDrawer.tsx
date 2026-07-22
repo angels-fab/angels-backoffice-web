@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import { AppDrawer, FormField, StatusChip } from '@/components/ds'
+import { AppDrawer, FormField, SelectField, StatusChip } from '@/components/ds'
 import { MILESTONE_STATUSES, type MilestoneRow, type MilestoneStatus } from '@/api/milestones'
-import { STATUS_KIND, categoryShort, deriveStatus, isImminent, qFull } from './model'
+import { STATUS_KIND, TOTAL_QUARTERS, categoryShort, deriveStatus, isImminent, qAt, qFull, qIndex } from './model'
 
 /**
- * 업무 상세 드로어 — 엑셀 전체 필드(내용·산출물·협조) + 상태·담당자 편집(관리자).
+ * 업무 상세 드로어 — 엑셀 전체 필드(내용·산출물·협조) + 상태·담당자·기간 편집(관리자).
  * 저장 상태는 4종만 선택 가능, 임박·지연은 자동 계산임을 명시.
+ * 기간 저장 = 사람이 확정한 값이라 fuzzy(추정 매핑) 해제 — 이후 지연 자동판정 적용.
  */
+
+const QUARTER_OPTIONS = Array.from({ length: TOTAL_QUARTERS }, (_, i) => ({ value: qAt(i), label: qFull(qAt(i)) }))
 
 const fmtStamp = (iso: string) => {
   const d = new Date(iso)
@@ -41,13 +44,20 @@ export interface DetailDrawerProps {
   onClose: () => void
   onChangeStatus: (row: MilestoneRow, status: MilestoneStatus) => void
   onSaveOwner: (row: MilestoneRow, owner: string) => void
+  onSaveQuarters: (row: MilestoneRow, startQ: string, endQ: string) => void
 }
 
-export default function DetailDrawer({ row, curIdx, canEdit, onClose, onChangeStatus, onSaveOwner }: DetailDrawerProps) {
+export default function DetailDrawer({ row, curIdx, canEdit, onClose, onChangeStatus, onSaveOwner, onSaveQuarters }: DetailDrawerProps) {
   const [ownerDraft, setOwnerDraft] = useState('')
   useEffect(() => {
     setOwnerDraft(row?.owner || '')
   }, [row?.id, row?.owner])
+  const [startDraft, setStartDraft] = useState('')
+  const [endDraft, setEndDraft] = useState('')
+  useEffect(() => {
+    setStartDraft(row?.startQ || '')
+    setEndDraft(row?.endQ || '')
+  }, [row?.id, row?.startQ, row?.endQ])
 
   if (!row) return null
   const derived = deriveStatus(row, curIdx)
@@ -79,10 +89,59 @@ export default function DetailDrawer({ row, curIdx, canEdit, onClose, onChangeSt
         <Typography variant="body2">
           착수 {row.startLabel || '—'} · 완료목표 {row.endLabel || '—'}
         </Typography>
-        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {qFull(row.startQ)} ~ {qFull(row.endQ)}
-          {row.fuzzy && ' · 추정 매핑(원문이 정확한 분기가 아님)'}
-        </Typography>
+        {canEdit ? (
+          (() => {
+            const invalid = qIndex(startDraft) > qIndex(endDraft)
+            const unchanged = startDraft === row.startQ && endDraft === row.endQ
+            return (
+              <>
+                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mt: 0.75 }}>
+                  <SelectField
+                    variant="inline"
+                    ariaLabel="착수 분기"
+                    value={startDraft}
+                    onChange={setStartDraft}
+                    options={QUARTER_OPTIONS}
+                    fullWidth={false}
+                    sx={{ minWidth: 112 }}
+                  />
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    ~
+                  </Typography>
+                  <SelectField
+                    variant="inline"
+                    ariaLabel="완료목표 분기"
+                    value={endDraft}
+                    onChange={setEndDraft}
+                    options={QUARTER_OPTIONS}
+                    fullWidth={false}
+                    sx={{ minWidth: 112 }}
+                  />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disabled={invalid || unchanged}
+                    onClick={() => onSaveQuarters(row, startDraft, endDraft)}
+                  >
+                    저장
+                  </Button>
+                </Box>
+                <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: invalid ? 'error.main' : 'text.disabled' }}>
+                  {invalid
+                    ? '착수가 완료목표보다 늦을 수 없습니다.'
+                    : row.fuzzy
+                      ? '원문이 모호해 추정으로 넣은 시기입니다 — 저장하면 확정값이 되어 지연 자동표시가 적용됩니다.'
+                      : '저장하면 임박·지연 표시가 새 완료목표 분기 기준으로 계산됩니다.'}
+                </Typography>
+              </>
+            )
+          })()
+        ) : (
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {qFull(row.startQ)} ~ {qFull(row.endQ)}
+            {row.fuzzy && ' · 추정 매핑(원문이 정확한 분기가 아님)'}
+          </Typography>
+        )}
       </Field>
 
       <Field label="세부 실행내용">{row.content}</Field>

@@ -171,6 +171,20 @@ export default function Milestone() {
     }
   }
 
+  const saveQuarters = async (row: MilestoneRow, startQ: string, endQ: string) => {
+    if (!isAdmin) return
+    const by = user || ''
+    const prev = { startQ: row.startQ, endQ: row.endQ, fuzzy: row.fuzzy, updatedBy: row.updatedBy, updatedAt: row.updatedAt }
+    dispatch(patchMilestone({ id: row.id, startQ, endQ, fuzzy: false, updatedBy: by, updatedAt: new Date().toISOString() }))
+    try {
+      await updateMilestone({ id: row.id, startQ, endQ, updatedBy: by })
+      snack(`기간 저장: ${qFull(startQ)} ~ ${qFull(endQ)}`)
+    } catch (e) {
+      dispatch(patchMilestone({ id: row.id, ...prev }))
+      snack(e instanceof Error ? e.message : '저장에 실패했습니다', 'error')
+    }
+  }
+
   if (!ready) {
     return (
       <PageContainer>
@@ -676,6 +690,7 @@ export default function Milestone() {
         onClose={() => setOpenId(null)}
         onChangeStatus={(r, s) => void changeStatus(r, s)}
         onSaveOwner={(r, o) => void saveOwner(r, o)}
+        onSaveQuarters={(r, s, e) => void saveQuarters(r, s, e)}
       />
     </PageContainer>
   )
