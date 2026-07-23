@@ -888,9 +888,11 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .snav-item svg{font-size:18px;flex-shrink:0}
 .snav-item:hover{background:var(--ink2);color:var(--text)}
 .snav-item.active{background:rgba(84,145,218,.12);color:var(--blue);font-weight:700}
-/* 메뉴명 칸 — 접힘 0fr(폭 0) ↔ 펼침 1fr(이름 폭만큼). 이 트랙이 커지는 만큼 패널 폭이 따라 늘어난다 */
-.snav-lcol{display:grid;grid-template-columns:0fr;transition:grid-template-columns .18s cubic-bezier(.2,.7,.3,1) .12s}
-.snav-panel:hover .snav-lcol,.snav-panel:focus-within .snav-lcol{grid-template-columns:1fr;transition-delay:0s}
+/* 메뉴명 칸 — 접힘 max-width:0 ↔ 펼침 시 내용(이름) 폭만큼. max-width 220px은 전환용 상한일 뿐,
+   실제 폭은 콘텐츠가 결정 → 패널이 메뉴명 길이만큼만 늘어난다. (0fr↔1fr은 절대배치 패널의
+   자동 폭과 상성이 안 맞아 실측 후 교체 — 이름 칸이 안 열리는 버그) */
+.snav-lcol{max-width:0;min-width:0;overflow:hidden;transition:max-width .18s cubic-bezier(.2,.7,.3,1) .12s}
+.snav-panel:hover .snav-lcol,.snav-panel:focus-within .snav-lcol{max-width:220px;transition-delay:0s}
 /* 아이콘↔이름 간격(10px)도 펼칠 때만 — 접힘 시 0이어야 아이콘이 레일 정중앙 */
 .snav-lin{min-width:0;overflow:hidden;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap;padding-left:0;transition:padding-left .18s cubic-bezier(.2,.7,.3,1) .12s}
 .snav-panel:hover .snav-lin,.snav-panel:focus-within .snav-lin{padding-left:10px;transition-delay:0s}
