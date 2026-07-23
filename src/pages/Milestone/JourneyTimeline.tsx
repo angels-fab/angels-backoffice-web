@@ -36,12 +36,10 @@ const statusColor = (t: Theme, s: DerivedStatus): string => {
 export interface JourneyTimelineProps {
   items: MilestoneRow[]
   curIdx: number
-  /** 선택된 완료목표 분기('2027Q1') — 목록 필터와 연동 */
-  selectedQ: string | null
-  onSelectQuarter: (q: string | null) => void
 }
 
-export default function JourneyTimeline({ items, curIdx, selectedQ, onSelectQuarter }: JourneyTimelineProps) {
+// v3: 클릭 기능 제거 — 관제판은 "읽는 화면"(화면 전환 유발 요소 없음). 정보는 hover 툴팁까지만.
+export default function JourneyTimeline({ items, curIdx }: JourneyTimelineProps) {
   // 분기별 완료목표 업무의 상태 카운트
   const cols = Array.from({ length: TOTAL_QUARTERS }, (_, idx) => {
     const q = qAt(idx)
@@ -69,7 +67,7 @@ export default function JourneyTimeline({ items, curIdx, selectedQ, onSelectQuar
       {/* 상시 범례 — 스택바 색 해독을 툴팁·추측에 맡기지 않는다(UX 진단 반영) */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1.5, mb: 1 }}>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          막대 = 그 분기까지 끝내야 하는 업무량 · 분기 클릭 = 해당 목록 보기
+          막대 = 그 분기까지 끝내야 하는 업무량
         </Typography>
         <Box sx={{ ml: 'auto', display: 'flex', gap: 1.25 }}>
           {(['완료', '진행중', '보류', '지연', '예정'] as DerivedStatus[]).map((s) => (
@@ -123,15 +121,13 @@ export default function JourneyTimeline({ items, curIdx, selectedQ, onSelectQuar
                 const isCur = c.idx === curIdx
                 const isPast = c.idx < curIdx
                 const isLast = c.idx === TOTAL_QUARTERS - 1
-                const selected = selectedQ === c.q
                 return (
                   <Tooltip
                     key={c.q}
                     arrow
-                    title={`${c.q.replace('Q', '.')}Q 완료목표 ${c.total}건 — 클릭해 목록 필터`}
+                    title={`${c.q.replace('Q', '.')}Q 완료목표 ${c.total}건`}
                   >
                     <Box
-                      onClick={() => onSelectQuarter(selected ? null : c.q)}
                       sx={{
                         flex: 1,
                         minWidth: 0,
@@ -141,18 +137,9 @@ export default function JourneyTimeline({ items, curIdx, selectedQ, onSelectQuar
                         alignItems: 'center',
                         justifyContent: 'flex-end',
                         height: BAR_AREA + 50,
-                        cursor: 'pointer',
                         borderRadius: `${radius.chip}px`,
-                        border: '1px solid',
-                        borderColor: selected ? 'primary.main' : 'transparent',
-                        bgcolor: (t) =>
-                          selected
-                            ? alpha(t.palette.primary.main, 0.12)
-                            : isCur
-                              ? alpha(t.palette.accent.amber, 0.07)
-                              : 'transparent',
+                        bgcolor: (t) => (isCur ? alpha(t.palette.accent.amber, 0.07) : 'transparent'),
                         opacity: isPast ? 0.55 : 1,
-                        '&:hover': { bgcolor: (t) => alpha(t.palette.primary.main, 0.08) },
                       }}
                     >
                       {/* 현재 위치 핀 */}

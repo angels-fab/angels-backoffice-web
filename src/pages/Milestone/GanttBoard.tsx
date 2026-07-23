@@ -37,7 +37,8 @@ const LEGEND: DerivedStatus[] = ['완료', '진행중', '보류', '지연', '예
 export interface GanttBoardProps {
   items: MilestoneRow[]
   curIdx: number
-  onOpen: (row: MilestoneRow) => void
+  /** 업무 막대 클릭 — v3에선 미지정(간트 = 조망 전용, 편집은 표의 우측 패널에서) */
+  onOpen?: (row: MilestoneRow) => void
 }
 
 export default function GanttBoard({ items, curIdx, onOpen }: GanttBoardProps) {
@@ -253,13 +254,12 @@ export default function GanttBoard({ items, curIdx, onOpen }: GanttBoardProps) {
                       return (
                         <Box
                           key={r.id}
-                          onClick={() => onOpen(r)}
+                          onClick={onOpen ? () => onOpen(r) : undefined}
                           sx={{
                             display: 'flex',
                             alignItems: 'center',
-                            cursor: 'pointer',
                             borderRadius: `${radius.chip}px`,
-                            '&:hover': { bgcolor: 'background.elevated' },
+                            ...(onOpen && { cursor: 'pointer', '&:hover': { bgcolor: 'background.elevated' } }),
                           }}
                         >
                           <Box sx={{ width: LABEL_W, flexShrink: 0, pl: 4.5, pr: 1, minWidth: 0 }}>

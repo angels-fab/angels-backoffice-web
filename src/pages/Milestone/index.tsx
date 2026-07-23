@@ -3,11 +3,6 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Tooltip from '@mui/material/Tooltip'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha } from '@mui/material/styles'
 import FlagIcon from '@mui/icons-material/Flag'
@@ -23,7 +18,7 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import {
   AppCard, CardGrid, ContentSection, EmptyState, ErrorBanner, KpiCard, ListRow,
   LoadingState, PageContainer, PageHeader, RatioBar, SearchBar, SegTabs, Select, StatusChip,
-  dataTableHeadSx, dataTableSx, useSnack, type RatioSegment,
+  useSnack, type RatioSegment,
 } from '@/components/ds'
 import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -36,14 +31,16 @@ import {
 } from './model'
 import JourneyTimeline from './JourneyTimeline'
 import GanttBoard from './GanttBoard'
-import DetailDrawer from './DetailDrawer'
+import { DesktopDetailPanel, DetailSheet } from './DetailPanel'
 
 /**
  * 마일스톤 — 팹센터 구축~개소(2026.3Q~2029) 실행계획 62건의 살아있는 현황판.
- * v2(UX 진단 반영): 페이지를 [관제판 | 전체 업무] 탭으로 분할해 "누르는 곳과 결과가
- * 다른 화면" 문제를 해소 — 관제판의 모든 클릭(KPI·분기·분야 카드)은 전체 업무 탭
- * 전환+필터로 응답한다. 착수 전 국면에서는 '착수 대기'가 화면의 주인공.
- * 상태 4종만 저장하고 임박·지연은 자동 파생(model.tsx). 정본 = Supabase milestones.
+ *
+ * v3 UX 문법(사용자 확정): ① 관제판 = 읽는 곳 — 클릭 유도 없음(행동은 포커스의
+ * 착수/완료 버튼과 '전체 N건 보기' 명시 버튼뿐). ② 전체 업무 = 일하는 곳 —
+ * 드로어 폐지, 왼쪽 목록 + 오른쪽 고정 패널(클릭해도 화면 이동 없이 패널만 갱신),
+ * [저장 후 다음]으로 순서대로 정리. ③ 화면 전환은 상단 탭을 직접 누를 때만.
+ * 간트 = 조망 전용(편집은 표에서). 상태 4종 저장, 임박·지연 자동 파생(model.tsx).
  */
 
 const STATUS_FILTERS: Array<'전체' | DerivedStatus> = ['전체', '예정', '진행중', '완료', '보류', '지연']
@@ -57,6 +54,10 @@ const fmtStamp = (iso: string) => {
 /** KPI 0값은 흐리게 — 착수 전 국면에서 살아있는 숫자(앰버)만 도드라지게 */
 const dimZero = (n: number) =>
   n > 0 ? n : <Box component="span" sx={{ color: 'text.disabled' }}>0</Box>
+
+/** 파생 상태 → 목록 점 색 */
+const statusDot = (s: DerivedStatus) =>
+  ({ 완료: 'accent.blue', 진행중: 'accent.green', 보류: 'accent.amber', 지연: 'accent.red', 예정: 'text.disabled' })[s]
 
 export default function Milestone() {
   const dispatch = useAppDispatch()
@@ -74,8 +75,10 @@ export default function Milestone() {
   const [catFilter, setCatFilter] = useState<string | null>(null)
   const [qFilter, setQFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [openId, setOpenId] = useState<number | null>(null)
-  // 그룹 표 펼침 — 필터·검색이 걸리면 전체 강제 펼침(결과가 접힘에 가려지는 것 방지)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  /** 하단 시트 — 관제판·모바일에서 항목을 살짝 열어보는 용도(화면 이동 없음) */
+  const [sheetOpen, setSheetOpen] = useState(false)
+  // 그룹 목록 펼침 — 필터·검색이 걸리면 전체 강제 펼침(결과가 접힘에 가려지는 것 방지)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ [CATEGORIES[0].full]: true })
   const focusRef = useRef<HTMLDivElement>(null)
 
@@ -83,7 +86,7 @@ export default function Milestone() {
     if (!ready && !loading) void dispatch(loadMilestones())
   }, [ready, loading, dispatch])
 
-  const openRow = useMemo(() => items.find((r) => r.id === openId) || null, [items, openId])
+  const selectedRow = useMemo(() => items.find((r) => r.id === selectedId) || null, [items, selectedId])
 
   // ── 파생 집계 ── ('YYYYQN' 포맷은 사전순 비교 = 시간순 비교)
   const stats = useMemo(() => {
@@ -120,17 +123,44 @@ export default function Milestone() {
 
   const filterActive = statusFilter !== '전체' || !!catFilter || !!qFilter || !!search.trim()
 
+  // 목록 표시 순서(분야 그룹 순) — [저장 후 다음]의 이동 순서이기도 함
+  const orderedIds = useMemo(
+    () => CATEGORIES.flatMap((cat) => filtered.filter((r) => r.category === cat.full)).map((r) => r.id),
+    [filtered],
+  )
+
+  // 데스크톱 전체 업무 탭: 선택이 없거나 필터 밖이면 첫 항목 자동 선택(패널이 비지 않게)
+  useEffect(() => {
+    if (pageTab !== 'list' || isMobile) return
+    if (selectedId === null || !orderedIds.includes(selectedId)) {
+      setSelectedId(orderedIds[0] ?? null)
+    }
+  }, [pageTab, isMobile, orderedIds, selectedId])
+
+  const position = useMemo(() => {
+    if (selectedId === null) return undefined
+    const i = orderedIds.indexOf(selectedId)
+    return i >= 0 ? { idx: i + 1, total: orderedIds.length } : undefined
+  }, [orderedIds, selectedId])
+
+  const selectNext = () => {
+    if (selectedId === null) return
+    const i = orderedIds.indexOf(selectedId)
+    const next = orderedIds[i + 1]
+    if (next === undefined) snack('마지막 항목입니다', 'info')
+    else setSelectedId(next)
+  }
+
   const latestUpdate = useMemo(() => {
     const withBy = items.filter((r) => r.updatedBy)
     if (withBy.length === 0) return null
     return withBy.reduce((a, b) => (a.updatedAt > b.updatedAt ? a : b))
   }, [items])
 
-  // ── 탭 전환 동선 — 관제판 클릭은 전체 업무 탭 + 필터로 응답(인과 가시화) ──
-  const goList = (patch?: { status?: '전체' | DerivedStatus; cat?: string | null; q?: string | null }) => {
+  // ── 이동 — 전부 "이름 붙은 버튼"으로만 일어난다(v3: 암묵 탭 전환 금지) ──
+  const goList = (patch?: { status?: '전체' | DerivedStatus; q?: string | null }) => {
     if (patch) {
       if (patch.status !== undefined) setStatusFilter(patch.status)
-      if (patch.cat !== undefined) setCatFilter(patch.cat)
       if (patch.q !== undefined) setQFilter(patch.q)
     }
     setPageTab('list')
@@ -140,8 +170,13 @@ export default function Milestone() {
     setPageTab('dash')
     setTimeout(() => focusRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
   }
+  /** 항목 열기 — 데스크톱 목록은 우측 패널, 그 외(관제판·모바일)는 하단 시트 */
+  const openItem = (id: number, from: 'list' | 'sheet') => {
+    setSelectedId(id)
+    if (from === 'sheet' || isMobile) setSheetOpen(true)
+  }
 
-  // ── 상태·담당자 갱신(낙관적 + 실패 롤백) ──
+  // ── 상태·담당자·기간 갱신(낙관적 + 실패 롤백) ──
   const changeStatus = async (row: MilestoneRow, status: MilestoneStatus) => {
     if (!isAdmin) return
     const by = user || ''
@@ -194,12 +229,23 @@ export default function Milestone() {
     )
   }
 
+  const panelProps = selectedRow && {
+    row: selectedRow,
+    curIdx,
+    canEdit: isAdmin,
+    onChangeStatus: (r: MilestoneRow, s: MilestoneStatus) => void changeStatus(r, s),
+    onSaveOwner: (r: MilestoneRow, o: string) => void saveOwner(r, o),
+    onSaveQuarters: (r: MilestoneRow, sq: string, eq: string) => void saveQuarters(r, sq, eq),
+    onNext: selectNext,
+    position,
+  }
+
   const focusRow = (r: MilestoneRow, action: '착수' | '완료') => (
     <ListRow
       key={r.id}
       dense
       divider
-      onClick={() => setOpenId(r.id)}
+      onClick={() => openItem(r.id, 'sheet')}
       leading={
         <Box
           sx={{
@@ -228,7 +274,6 @@ export default function Milestone() {
     />
   )
 
-  // 포커스 소제목 줄 — 두 섹션(착수/마감)의 존재를 처음부터 보이게
   const focusSubHeader = (label: string, count: number, extra?: React.ReactNode) => (
     <Box sx={{ px: 2, py: 1.25, bgcolor: 'background.elevated', display: 'flex', alignItems: 'center', gap: 0.75 }}>
       <Typography variant="caption" sx={{ fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>
@@ -241,9 +286,26 @@ export default function Milestone() {
     </Box>
   )
 
-  const periodCell = (r: MilestoneRow) => (
+  const seeAllButton = (labelText: string, onClick: () => void) => (
+    <Box
+      component="button"
+      onClick={onClick}
+      sx={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
+        width: '100%', py: 1, border: 'none', cursor: 'pointer',
+        bgcolor: 'transparent', color: 'primary.main', fontFamily: 'inherit',
+        fontSize: typescale.small.size,
+        '&:hover': { bgcolor: 'background.elevated' },
+      }}
+    >
+      {labelText}
+      <ChevronRightIcon sx={{ fontSize: iconSize.body }} />
+    </Box>
+  )
+
+  const periodText = (r: MilestoneRow) => (
     <Tooltip title={`원문: ${r.startLabel} → ${r.endLabel}${r.fuzzy ? ' (분기는 추정 표기)' : ''}`} arrow>
-      <Box component="span" sx={{ fontFamily: 'monospace', color: 'text.disabled' }}>
+      <Box component="span" sx={{ fontFamily: 'monospace', fontSize: typescale.caption.size, color: 'text.disabled', flexShrink: 0 }}>
         {qShort(r.startQ)}→{qShort(r.endQ)}{r.fuzzy ? '≈' : ''}
       </Box>
     </Tooltip>
@@ -275,7 +337,7 @@ export default function Milestone() {
       />
       {error && <ErrorBanner message="마일스톤을 불러오지 못했습니다" onRetry={() => void dispatch(loadMilestones())} />}
 
-      {/* 페이지 탭 — 관제판(현황) / 전체 업무(대장) */}
+      {/* 페이지 탭 — 화면 전환은 여기서만 일어난다(v3 문법) */}
       <Box sx={{ mb: `${layout.pageHeaderGap}px` }}>
         <SegTabs
           items={[
@@ -290,7 +352,7 @@ export default function Milestone() {
 
       {pageTab === 'dash' ? (
         <>
-          {/* KPI 스트립 — 5등분, 착수 전 국면의 주인공은 앰버 '착수 대기' */}
+          {/* KPI 스트립 — 정보 전용(클릭 없음). 착수 대기 타일만 포커스로 스크롤 */}
           <ContentSection>
             <CardGrid columns={5} gap={layout.kpiStripGap}>
               <KpiCard
@@ -300,34 +362,18 @@ export default function Milestone() {
                 sub={stats.done === 0 ? '착수 전 · 이번 분기부터 시작' : undefined}
                 accentColor="blue"
                 icon={<TaskAltIcon />}
-                onClick={stats.done > 0 ? () => goList({ status: statusFilter === '완료' ? '전체' : '완료' }) : undefined}
-                sx={statusFilter === '완료' ? { borderColor: 'primary.main' } : undefined}
               />
-              <KpiCard
-                value={dimZero(stats.inProgress)}
-                label="진행중"
-                accentColor="green"
-                icon={<AutorenewIcon />}
-                onClick={stats.inProgress > 0 ? () => goList({ status: statusFilter === '진행중' ? '전체' : '진행중' }) : undefined}
-                sx={statusFilter === '진행중' ? { borderColor: 'primary.main' } : undefined}
-              />
+              <KpiCard value={dimZero(stats.inProgress)} label="진행중" accentColor="green" icon={<AutorenewIcon />} />
               <KpiCard
                 value={dimZero(stats.waiting)}
                 label="이번 분기 착수 대기"
-                sub={stats.waiting > 0 ? `→ 착수할 ${stats.waiting}건 보기` : '모두 착수했습니다'}
+                sub={stats.waiting > 0 ? '아래 포커스에서 처리' : '모두 착수했습니다'}
                 accentColor="amber"
                 icon={<PendingActionsIcon />}
                 onClick={stats.waiting > 0 ? goFocus : undefined}
                 sx={stats.waiting > 0 ? { borderColor: 'accent.amber' } : undefined}
               />
-              <KpiCard
-                value={dimZero(stats.delayed)}
-                label="지연"
-                accentColor={stats.delayed > 0 ? 'red' : 'blue'}
-                icon={<ErrorOutlineIcon />}
-                onClick={stats.delayed > 0 ? () => goList({ status: statusFilter === '지연' ? '전체' : '지연' }) : undefined}
-                sx={statusFilter === '지연' ? { borderColor: 'primary.main' } : undefined}
-              />
+              <KpiCard value={dimZero(stats.delayed)} label="지연" accentColor={stats.delayed > 0 ? 'red' : 'blue'} icon={<ErrorOutlineIcon />} />
               <KpiCard
                 value={`D-${TOTAL_QUARTERS - 1 - curIdx}`}
                 unit="분기"
@@ -339,20 +385,12 @@ export default function Milestone() {
             </CardGrid>
           </ContentSection>
 
-          {/* 구축 여정 타임라인 — 범례·건수는 카드 안에 상시 표시 */}
+          {/* 구축 여정 타임라인 — 읽기 전용 */}
           <ContentSection title="구축 여정">
-            <JourneyTimeline
-              items={items}
-              curIdx={curIdx}
-              selectedQ={qFilter}
-              onSelectQuarter={(q) => {
-                setQFilter(q)
-                if (q) goList()
-              }}
-            />
+            <JourneyTimeline items={items} curIdx={curIdx} />
           </ContentSection>
 
-          {/* 분야별 진행 + 이번 분기 포커스 */}
+          {/* 분야별 진행(읽기 전용) + 이번 분기 포커스(행동) */}
           <ContentSection last>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.6fr 1fr' }, gap: `${layout.cardGap}px` }}>
               <Box sx={{ order: { xs: 2, md: 1 } }}>
@@ -370,7 +408,6 @@ export default function Milestone() {
                     const prog = counts.get('진행중') || 0
                     const startWait = rows.filter((r) => r.status === '예정' && r.startQ <= curQ).length
                     const notStarted = done + prog === 0
-                    // 착수 전 분야는 %(항상 0) 대신 건수와 "언제 시작"을 말해준다
                     const futureStarts = rows.filter((r) => r.startQ > curQ).map((r) => r.startQ).sort()
                     const segments: RatioSegment[] = [
                       { label: '완료', value: done, status: 'info' },
@@ -379,15 +416,8 @@ export default function Milestone() {
                       { label: '지연', value: counts.get('지연') || 0, status: 'error' },
                       { label: '예정', value: counts.get('예정') || 0, status: 'neutral' },
                     ]
-                    const selected = catFilter === cat.full
                     return (
-                      <AppCard
-                        key={cat.full}
-                        padding={layout.cardPaddingSm}
-                        onClick={() => goList({ cat: selected ? null : cat.full })}
-                        ariaLabel={`${cat.short} 업무만 보기`}
-                        sx={selected ? { borderColor: 'primary.main' } : undefined}
-                      >
+                      <AppCard key={cat.full} padding={layout.cardPaddingSm}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                           <Box sx={{ display: 'flex', fontSize: iconSize.body, color: 'text.secondary', flexShrink: 0 }}>{cat.icon}</Box>
                           <Typography
@@ -457,22 +487,7 @@ export default function Milestone() {
                   ) : (
                     <>
                       {focusStart.slice(0, 6).map((r) => focusRow(r, '착수'))}
-                      {focusStart.length > 6 && (
-                        <Box
-                          component="button"
-                          onClick={() => goList({ status: '예정' })}
-                          sx={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-                            width: '100%', py: 1, border: 'none', cursor: 'pointer',
-                            bgcolor: 'transparent', color: 'primary.main', fontFamily: 'inherit',
-                            fontSize: typescale.small.size,
-                            '&:hover': { bgcolor: 'background.elevated' },
-                          }}
-                        >
-                          전체 {focusStart.length}건 보기
-                          <ChevronRightIcon sx={{ fontSize: iconSize.body }} />
-                        </Box>
-                      )}
+                      {focusStart.length > 6 && seeAllButton(`전체 업무에서 ${focusStart.length}건 모두 보기`, () => goList({ status: '예정' }))}
                     </>
                   )}
                   {focusSubHeader(
@@ -489,22 +504,7 @@ export default function Milestone() {
                   ) : (
                     <>
                       {focusDue.slice(0, 6).map((r) => focusRow(r, '완료'))}
-                      {focusDue.length > 6 && (
-                        <Box
-                          component="button"
-                          onClick={() => goList({ q: curQ })}
-                          sx={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5,
-                            width: '100%', py: 1, border: 'none', cursor: 'pointer',
-                            bgcolor: 'transparent', color: 'primary.main', fontFamily: 'inherit',
-                            fontSize: typescale.small.size,
-                            '&:hover': { bgcolor: 'background.elevated' },
-                          }}
-                        >
-                          전체 {focusDue.length}건 보기
-                          <ChevronRightIcon sx={{ fontSize: iconSize.body }} />
-                        </Box>
-                      )}
+                      {focusDue.length > 6 && seeAllButton(`전체 업무에서 ${focusDue.length}건 모두 보기`, () => goList({ q: curQ }))}
                     </>
                   )}
                 </AppCard>
@@ -514,7 +514,7 @@ export default function Milestone() {
         </>
       ) : (
         <>
-          {/* 전체 업무 탭 — 필터줄은 스크롤해도 고정(맥락 유지) */}
+          {/* 전체 업무 탭 — 필터줄은 스크롤해도 고정 */}
           <Box
             sx={{
               position: 'sticky', top: 0, zIndex: 5,
@@ -525,10 +525,10 @@ export default function Milestone() {
           >
             {!isMobile && (
               <SegTabs
-                items={[{ value: 'table', label: '표' }, { value: 'gantt', label: '간트 지도' }]}
+                items={[{ value: 'table', label: '목록·편집' }, { value: 'gantt', label: '간트 지도' }]}
                 value={view}
                 onChange={setView}
-                ariaLabel="표·간트 전환"
+                ariaLabel="목록·간트 전환"
               />
             )}
             {STATUS_FILTERS.map((s) => (
@@ -550,148 +550,113 @@ export default function Milestone() {
                 ...CATEGORIES.map((c) => ({ value: c.full, label: c.short })),
               ]}
             />
-            {catFilter && (
-              <StatusChip status="info" label={`${categoryShort(catFilter)} ×`} selected onClick={() => setCatFilter(null)} />
-            )}
             {qFilter && (
               <StatusChip status="info" label={`${qFull(qFilter)} 마감 ×`} selected onClick={() => setQFilter(null)} />
             )}
-            <SearchBar value={search} onChange={setSearch} placeholder="업무·산출물·담당자 검색" width={190} sx={{ ml: 'auto' }} />
+            <SearchBar value={search} onChange={setSearch} placeholder="업무·산출물·담당자 검색" width={180} sx={{ ml: 'auto' }} />
           </Box>
 
-          {view === 'table' || isMobile ? (
-            <>
-              <AppCard padding={0}>
-                <Box sx={{ overflowX: 'auto' }}>
-                  <Table size="small" sx={{ ...dataTableSx, '& th, & td': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
-                    <TableHead>
-                      <TableRow sx={dataTableHeadSx}>
-                        <TableCell sx={{ width: 70 }}>상태</TableCell>
-                        <TableCell sx={{ textAlign: 'left' }}>업무</TableCell>
-                        <TableCell sx={{ width: 120 }}>기간</TableCell>
-                        <TableCell sx={{ textAlign: 'left', width: 230 }}>핵심 산출물</TableCell>
-                        <TableCell sx={{ width: 80 }}>협조</TableCell>
-                        <TableCell sx={{ width: 80 }}>담당자</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {filtered.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={6} sx={{ border: 0 }}>
-                            <EmptyState size="sm" title="조건에 맞는 업무가 없습니다" />
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {CATEGORIES.map((cat) => {
-                        const rows = filtered.filter((r) => r.category === cat.full)
-                        if (rows.length === 0) return null
-                        const open = filterActive || !!openGroups[cat.full]
-                        const startWait = rows.filter((r) => r.status === '예정' && r.startQ <= curQ).length
-                        const counts = new Map<DerivedStatus, number>()
-                        rows.forEach((r) => {
-                          const s = deriveStatus(r, curIdx)
-                          counts.set(s, (counts.get(s) || 0) + 1)
-                        })
-                        const segments: RatioSegment[] = [
-                          { label: '완료', value: counts.get('완료') || 0, status: 'info' },
-                          { label: '진행중', value: counts.get('진행중') || 0, status: 'success' },
-                          { label: '보류', value: counts.get('보류') || 0, status: 'warning' },
-                          { label: '지연', value: counts.get('지연') || 0, status: 'error' },
-                          { label: '예정', value: counts.get('예정') || 0, status: 'neutral' },
-                        ]
-                        return (
-                          <Fragment key={cat.full}>
-                            {/* 분야 그룹 머리글 — 62행 벽을 9개 묶음으로 끊는다 */}
-                            <TableRow
-                              onClick={filterActive ? undefined : () => setOpenGroups((g) => ({ ...g, [cat.full]: !open }))}
-                              sx={{
-                                cursor: filterActive ? 'default' : 'pointer',
-                                '& td': { bgcolor: 'background.elevated' },
-                                ...(filterActive ? {} : { '&:hover td': { bgcolor: 'background.paper' } }),
-                              }}
-                            >
-                              <TableCell colSpan={6}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  {!filterActive && (
-                                    <ExpandMoreIcon
-                                      sx={{
-                                        fontSize: iconSize.action, color: 'text.secondary',
-                                        transform: open ? 'none' : 'rotate(-90deg)', transition: 'transform .15s',
-                                      }}
-                                    />
-                                  )}
-                                  <Box sx={{ display: 'flex', fontSize: iconSize.body, color: 'text.secondary' }}>{cat.icon}</Box>
-                                  <Typography component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight }}>
-                                    {cat.short}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                                    {rows.length}건{startWait > 0 ? ` · 이번 분기 착수 ${startWait}` : ''}
-                                  </Typography>
-                                  <Box sx={{ ml: 'auto', width: 90 }}>
-                                    <RatioBar segments={segments} height={5} showLegend={false} />
-                                  </Box>
-                                </Box>
-                              </TableCell>
-                            </TableRow>
-                            {open &&
-                              rows.map((r) => {
-                                const s = deriveStatus(r, curIdx)
-                                return (
-                                  <TableRow key={r.id} hover onClick={() => setOpenId(r.id)} sx={{ cursor: 'pointer' }}>
-                                    <TableCell align="center">
-                                      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
-                                        <StatusChip status={STATUS_KIND[s]} label={s} />
-                                        {isImminent(r, curIdx) && (
-                                          <Tooltip title="완료목표가 이번 분기" arrow>
-                                            <Box sx={{ width: 7, height: 7, borderRadius: `${radius.pill}px`, bgcolor: 'accent.amber' }} />
-                                          </Tooltip>
-                                        )}
-                                      </Box>
-                                    </TableCell>
-                                    <TableCell>
-                                      <Box component="span" sx={{ display: 'inline-block', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom' }}>
-                                        {r.title}
-                                      </Box>
-                                    </TableCell>
-                                    <TableCell align="center">{periodCell(r)}</TableCell>
-                                    <TableCell>
-                                      <Box component="span" sx={{ display: 'inline-block', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'bottom', color: 'text.secondary' }}>
-                                        {r.deliverable || '—'}
-                                      </Box>
-                                    </TableCell>
-                                    <TableCell align="center">{r.coop || '—'}</TableCell>
-                                    <TableCell align="center">
-                                      <Box component="span" sx={{ color: r.owner ? 'text.primary' : 'text.disabled' }}>{r.owner || '—'}</Box>
-                                    </TableCell>
-                                  </TableRow>
-                                )
-                              })}
-                          </Fragment>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </Box>
-              </AppCard>
-              <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.disabled' }}>
-                ≈ = 원문 일정("착공 전" 등)을 분기로 추정 표기 — 행에 마우스를 올리면 원문이 보입니다
-              </Typography>
-            </>
+          {view === 'gantt' && !isMobile ? (
+            <GanttBoard items={filtered} curIdx={curIdx} />
           ) : (
-            <GanttBoard items={filtered} curIdx={curIdx} onOpen={(r) => setOpenId(r.id)} />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.15fr 1fr' }, gap: `${layout.cardGap}px`, alignItems: 'start' }}>
+              {/* 왼쪽 — 고르는 목록 */}
+              <AppCard padding={0}>
+                {filtered.length === 0 && <EmptyState title="조건에 맞는 업무가 없습니다" />}
+                {CATEGORIES.map((cat) => {
+                  const rows = filtered.filter((r) => r.category === cat.full)
+                  if (rows.length === 0) return null
+                  const open = filterActive || !!openGroups[cat.full]
+                  const startWait = rows.filter((r) => r.status === '예정' && r.startQ <= curQ).length
+                  const counts = new Map<DerivedStatus, number>()
+                  rows.forEach((r) => {
+                    const s = deriveStatus(r, curIdx)
+                    counts.set(s, (counts.get(s) || 0) + 1)
+                  })
+                  const segments: RatioSegment[] = [
+                    { label: '완료', value: counts.get('완료') || 0, status: 'info' },
+                    { label: '진행중', value: counts.get('진행중') || 0, status: 'success' },
+                    { label: '보류', value: counts.get('보류') || 0, status: 'warning' },
+                    { label: '지연', value: counts.get('지연') || 0, status: 'error' },
+                    { label: '예정', value: counts.get('예정') || 0, status: 'neutral' },
+                  ]
+                  return (
+                    <Fragment key={cat.full}>
+                      {/* 분야 그룹 머리글 */}
+                      <Box
+                        onClick={filterActive ? undefined : () => setOpenGroups((g) => ({ ...g, [cat.full]: !open }))}
+                        sx={{
+                          display: 'flex', alignItems: 'center', gap: 1,
+                          px: 1.5, py: 1, bgcolor: 'background.elevated',
+                          borderBottom: 1, borderColor: 'divider',
+                          ...(filterActive ? {} : { cursor: 'pointer', '&:hover': { bgcolor: 'background.paper' } }),
+                        }}
+                      >
+                        {!filterActive && (
+                          <ExpandMoreIcon
+                            sx={{
+                              fontSize: iconSize.action, color: 'text.secondary',
+                              transform: open ? 'none' : 'rotate(-90deg)', transition: 'transform .15s',
+                            }}
+                          />
+                        )}
+                        <Box sx={{ display: 'flex', fontSize: iconSize.body, color: 'text.secondary' }}>{cat.icon}</Box>
+                        <Typography component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight }}>
+                          {cat.short}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                          {rows.length}건{startWait > 0 ? ` · 이번 분기 착수 ${startWait}` : ''}
+                        </Typography>
+                        <Box sx={{ ml: 'auto', width: 90, flexShrink: 0 }}>
+                          <RatioBar segments={segments} height={5} showLegend={false} />
+                        </Box>
+                      </Box>
+                      {open &&
+                        rows.map((r) => {
+                          const s = deriveStatus(r, curIdx)
+                          return (
+                            <ListRow
+                              key={r.id}
+                              dense
+                              divider
+                              selected={!isMobile && r.id === selectedId}
+                              onClick={() => openItem(r.id, 'list')}
+                              leading={
+                                <Box sx={{ width: 8, height: 8, borderRadius: `${radius.pill}px`, flexShrink: 0, bgcolor: statusDot(s) }} />
+                              }
+                              title={r.title}
+                              titleTrailing={
+                                isImminent(r, curIdx) ? (
+                                  <Tooltip title="완료목표가 이번 분기" arrow>
+                                    <Box component="span" sx={{ display: 'inline-flex' }}>
+                                      <StatusChip status="warning" label="임박" />
+                                    </Box>
+                                  </Tooltip>
+                                ) : undefined
+                              }
+                              trailing={periodText(r)}
+                            />
+                          )
+                        })}
+                    </Fragment>
+                  )
+                })}
+              </AppCard>
+
+              {/* 오른쪽 — 일하는 패널(데스크톱 상주). 모바일은 하단 시트 */}
+              {!isMobile && panelProps && <DesktopDetailPanel {...panelProps} />}
+            </Box>
           )}
+          <Typography variant="caption" sx={{ display: 'block', mt: 1, color: 'text.disabled' }}>
+            ≈ = 원문 일정("착공 전" 등)을 분기로 추정 표기 — 기간에 마우스를 올리면 원문이 보입니다
+          </Typography>
         </>
       )}
 
-      <DetailDrawer
-        row={openRow}
-        curIdx={curIdx}
-        canEdit={isAdmin}
-        onClose={() => setOpenId(null)}
-        onChangeStatus={(r, s) => void changeStatus(r, s)}
-        onSaveOwner={(r, o) => void saveOwner(r, o)}
-        onSaveQuarters={(r, s, e) => void saveQuarters(r, s, e)}
-      />
+      {/* 하단 시트 — 관제판·모바일 공용(화면 이동 없이 살짝 열람·편집) */}
+      {panelProps && (
+        <DetailSheet open={sheetOpen} onClose={() => setSheetOpen(false)} {...panelProps} />
+      )}
     </PageContainer>
   )
 }
