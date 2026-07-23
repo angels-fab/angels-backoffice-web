@@ -15,7 +15,8 @@ import { radius, typescale } from '@/theme/tokens'
  */
 export interface SegTabItem<T extends string = string> {
   value: T
-  label: string
+  /** 문자열이 기본. 칩 등 부가 표시가 필요하면 ReactNode 허용(예: '준비중' 칩) */
+  label: React.ReactNode
 }
 export interface SegTabsProps<T extends string = string> {
   items: readonly SegTabItem<T>[]

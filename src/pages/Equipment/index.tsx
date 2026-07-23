@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
+import { alpha } from '@mui/material/styles'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
@@ -37,7 +38,7 @@ import EquipmentTabs from './EquipmentTabs'
 import DemoResults from './DemoResults'
 import { NameWithQty, codeRange } from './batchUtil'
 import { useTableSort, sortRows, SortTh } from './sortable'
-import { iconSize, layout, radius, shadow } from '@/theme/tokens'
+import { iconSize, layout, radius, shadow, typescale } from '@/theme/tokens'
 
 const GANTT_NAME_W = 150 // 장비명 열(축소) — 나머지는 간트가 가변폭으로 채움(가로 스크롤 없음)
 // 가변폭 간트에서 반월 1칸의 실제 픽셀폭 = 간트영역 폭 / (월수*2). 드래그/리사이즈 스냅 기준.
@@ -733,7 +734,16 @@ export default function Equipment() {
               { value: 'stage', label: '단계별' },
               { value: 'timeline', label: '타임라인' },
               { value: 'list', label: '목록' },
-              { value: 'demo', label: '데모결과' },
+              {
+                value: 'demo',
+                // 준비중 칩 — 마일스톤 메뉴와 동일 표기(리뉴얼 직후 다듬는 중임을 팀원에게 안내)
+                label: (
+                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+                    데모결과
+                    <Box component="span" sx={(t) => ({ fontSize: typescale.caption.size, lineHeight: 1.5, color: 'accent.amber', border: '1px solid', borderColor: alpha(t.palette.accent.amber, 0.45), bgcolor: alpha(t.palette.accent.amber, 0.12), borderRadius: `${radius.chip}px`, px: '5px' })}>준비중</Box>
+                  </Box>
+                ),
+              },
             ] as const}
             value={view}
             onChange={setView}

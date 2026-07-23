@@ -875,8 +875,11 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
    펼침 폭 = 고정값이 아니라 "메뉴명 길이만큼"(.snav-lcol 0fr↔1fr — 콘텐츠 폭 추종, 사용자 확정).
    진입 지연 0(스치면 즉시)·이탈만 .12s(경계 깜빡임 방지). 콘텐츠는 밀리지 않음(오버레이). */
 .sidenav{width:64px;flex-shrink:0;position:sticky;top:53px;height:calc(100vh - 53px);z-index:9}
-.snav-panel{position:absolute;left:0;top:0;bottom:0;min-width:64px;box-sizing:border-box;background:var(--ink);border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;overflow-x:hidden;transition:box-shadow .18s ease}
-.snav-panel:hover,.snav-panel:focus-within{box-shadow:0 8px 24px rgba(0,0,0,.3)}
+/* 서랍 방식(2026-07-24 재작업): 애니메이션을 이름 칸이 아니라 '패널 폭'에 건다.
+   이름은 항상 제자리에 렌더되어 있고(아이콘 뒤 22px 간격 = 접힘 64px 경계 밖), 패널이
+   max-width 64↔200으로 커튼처럼 열리고 닫히며 이름을 드러냈다 가린다 — "가려졌다 스르륵" */
+.snav-panel{position:absolute;left:0;top:0;bottom:0;width:max-content;min-width:64px;max-width:64px;box-sizing:border-box;background:var(--ink);border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;overflow-x:hidden;transition:max-width .3s cubic-bezier(.4,0,.2,1) .12s,box-shadow .3s ease .12s}
+.snav-panel:hover,.snav-panel:focus-within{max-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.3);transition-delay:0s}
 .snav-group{display:flex;flex-direction:column;gap:2px}
 /* 그룹 라벨 — 접힘 땐 텍스트 대신 헤어라인(요소 높이 고정이라 세로 위치 불변) */
 .snav-label{position:relative;height:16px;display:flex;align-items:center;padding:0 10px;margin-bottom:5px}
@@ -897,12 +900,10 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
    자동 폭과 상성이 안 맞아 실측 후 교체 — 이름 칸이 안 열리는 버그)
    ※ 상한(140px)은 실제 내용 폭(~115px)에 가깝게 유지할 것 — 상한이 내용보다 크게 남으면
    펼침이 절반 시점에 뚝 끝나 보여 부드럽지 않다(2026-07-23 스무스 조정: 220→140 + 감속 스프링 + 텍스트 페이드) */
-/* 서랍식 가감속(2026-07-24): 감속 스프링(시작이 빨라 '툭' 느낌) → 표준 ease-in-out(느리게 출발→가속→감속) */
-.snav-lcol{max-width:0;min-width:0;overflow:hidden;transition:max-width .3s cubic-bezier(.4,0,.2,1) .12s}
-.snav-panel:hover .snav-lcol,.snav-panel:focus-within .snav-lcol{max-width:140px;transition-delay:0s}
-/* 아이콘↔이름 간격(10px)도 펼칠 때만 — 접힘 시 0이어야 아이콘이 레일 정중앙 */
-.snav-lin{min-width:0;overflow:hidden;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap;padding-left:0;opacity:0;transition:padding-left .3s cubic-bezier(.4,0,.2,1) .12s,opacity .16s ease .12s}
-.snav-panel:hover .snav-lin,.snav-panel:focus-within .snav-lin{padding-left:10px;opacity:1;transition-delay:0s,.08s}
+/* 메뉴명 — 애니메이션 없음. 항상 제자리에 렌더되고, 접힘 상태에선 패널 64px 경계 밖(아이콘 뒤 22px
+   간격: 12+10+20+22=64)이라 잘려서 안 보인다. 패널(위 max-width)이 열리며 커튼처럼 드러남 */
+.snav-lcol{min-width:0}
+.snav-lin{min-width:0;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap;padding-left:22px}
 .snav-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* 접힘 상태 배지 — 아이콘 우상단 빨강 숫자·우하단 앰버 점. 펼치면 숨고 D7 위첨자(NavBadge)가 대신 보임 */
 .snav-rnew{position:absolute;top:2px;left:24px;min-width:14px;height:14px;padding:0 3px;border-radius:999px;background:var(--red);color:#fff;font-size:9px;font-weight:700;line-height:14px;text-align:center;pointer-events:none;transition:opacity .12s ease}
