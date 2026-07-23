@@ -22,7 +22,7 @@ import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius } from '@/theme/tokens'
 import { LoadingState } from '@/components/ds'
 import {
-  createMetricDef, updateMetricDef, setMetricDefActive, fetchMetricDefHistory, fetchValueHistory, METRIC_ACTION_LABEL,
+  createMetricDef, updateMetricDef, setMetricDefActive, fetchMetricDefHistory, fetchValueHistory, METRIC_ACTION_LABEL, metricText, metricParts,
   type DemoMetricDef, type MetricDirection, type MetricDefHistory, type ValueHistory,
 } from '@/api/demo'
 
@@ -178,7 +178,9 @@ export function ValueHistoryDialog({ open, equipment, defs, onClose }: { open: b
     if (h.after === null) return ['회차 삭제(사진·파일 포함)'] // 삭제 이력
     const b = h.before || {}, a = h.after || {}
     const keys = Array.from(new Set([...Object.keys(b), ...Object.keys(a)]))
-    return keys.filter((k) => String(b[k] ?? '') !== String(a[k] ?? '')).map((k) => `${labelOf(k)} ${b[k] ?? '-'}→${a[k] ?? '-'}`)
+    // 값이 문자열/객체(값+단위+조건) 혼재 — 조건(cond)까지 포함해 비교·표시(조건만 바뀐 이력도 추적)
+    const txt = (m: (typeof b)[string] | undefined) => { if (m == null) return ''; const p = metricParts(m); return metricText(m) + (p.cond ? ` @${p.cond}` : '') }
+    return keys.filter((k) => txt(b[k]) !== txt(a[k])).map((k) => `${labelOf(k)} ${txt(b[k]) || '-'}→${txt(a[k]) || '-'}`)
   }
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>

@@ -22,12 +22,22 @@ export interface DemoMetricDef {
   id: number; equipment: string; key: string; label: string; unit: string
   direction: MetricDirection; sort: number; active: boolean
 }
-export interface DemoPhotoRef { name: string; path?: string }
+export interface DemoPhotoRef { name: string; path?: string; caption?: string }
 export interface DemoFileRef { name: string; path?: string; type?: string }
+/**
+ * 지표 값 — 구형(문자열)과 신형(값+단위+조건 객체)이 JSONB 안에 공존한다(마이그레이션 없음).
+ * 문자열이면 단위는 표준 지표 정의(demo_metric_defs)에서, 조건 없음. 객체면 칩 자체가 단위·조건을 가진다
+ * (2026-07-23 리뉴얼: 지표 = 사진 밑 칩박스, 측정한 것만 + 값이 나온 조건 병기).
+ */
+export type MetricVal = string | { v: string; unit?: string; cond?: string }
+/** 값 분해 — 항상 {v, unit?, cond?} 꼴로. 구형 JSONB에 숫자 등 스칼라가 있어도 방어 */
+export const metricParts = (m: MetricVal): { v: string; unit?: string; cond?: string } => (typeof m === 'object' && m !== null ? m : { v: String(m) })
+/** 값 표시용 텍스트(이력·비교 등) — "385nm/min" */
+export const metricText = (m: MetricVal | null | undefined): string => { if (m == null) return ''; const p = metricParts(m); return [p.v, p.unit].filter(Boolean).join('') }
 export interface DemoRoundRow {
   id: number; equipment: string; maker: string; model: string; round: number
   date: string; place: string; conditions: string; sample: string
-  metrics: Record<string, string>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
+  metrics: Record<string, MetricVal>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
 }
 /** 코멘트(제목 있는 메모카드) — 장비종류별 보드(순서·폭). makers는 구버전 잔존(현재 미사용, 빈 배열) */
 export interface DemoChatMsg { id: number; equipment: string; makers: string[]; title: string; body: string; author: string; createdAt: string; sortOrder: number; width: number }
@@ -52,7 +62,7 @@ export interface MetricDefHistory {
 
 // ── 매핑 ──
 interface DefRow { id: number; equipment: string; metric_key: string; label: string; unit: string; direction: MetricDirection; sort: number; active: boolean }
-interface ResRow { id: number; equipment: string; maker: string; model: string; round: number; visit_date: string | null; place: string; conditions: string; sample_info: string | null; metrics: Record<string, string> | null; photos: DemoPhotoRef[] | null; files: DemoFileRef[] | null; cover: number }
+interface ResRow { id: number; equipment: string; maker: string; model: string; round: number; visit_date: string | null; place: string; conditions: string; sample_info: string | null; metrics: Record<string, MetricVal> | null; photos: DemoPhotoRef[] | null; files: DemoFileRef[] | null; cover: number }
 interface ChatRow { id: number; equipment: string; makers: string[] | null; title: string | null; body: string; author: string; created_at: string; sort_order: number | null; width: number | null }
 
 const toDef = (r: DefRow): DemoMetricDef => ({ id: r.id, equipment: r.equipment, key: r.metric_key, label: r.label, unit: r.unit, direction: r.direction, sort: r.sort, active: r.active })
@@ -97,13 +107,13 @@ export async function fetchMetricDefHistory(equipment?: string): Promise<MetricD
 }
 
 /** 지표 값 변경 이력(조작방지) — 제조사별 값 변경 기록 */
-export interface ValueHistory { id: number; equipment: string; maker: string; model: string; round: number; before: Record<string, string> | null; after: Record<string, string> | null; changedBy: string; changedAt: string }
+export interface ValueHistory { id: number; equipment: string; maker: string; model: string; round: number; before: Record<string, MetricVal> | null; after: Record<string, MetricVal> | null; changedBy: string; changedAt: string }
 export async function fetchValueHistory(equipment?: string): Promise<ValueHistory[]> {
   let q = supabase.from('demo_value_history').select('*').order('changed_at', { ascending: false })
   if (equipment) q = q.eq('equipment', equipment)
   const { data, error } = await withTimeout(q, DB_TIMEOUT, '값 변경 이력 불러오기')
   if (error) fail(error, '값 변경 이력을 불러오지 못했습니다')
-  return ((data || []) as { id: number; equipment: string; maker: string; model: string; round: number; before: Record<string, string> | null; after: Record<string, string> | null; changed_by: string | null; changed_at: string }[])
+  return ((data || []) as { id: number; equipment: string; maker: string; model: string; round: number; before: Record<string, MetricVal> | null; after: Record<string, MetricVal> | null; changed_by: string | null; changed_at: string }[])
     .map((h) => ({ id: h.id, equipment: h.equipment, maker: h.maker, model: h.model, round: h.round, before: h.before, after: h.after, changedBy: h.changed_by || '', changedAt: h.changed_at }))
 }
 
@@ -207,7 +217,7 @@ export async function removeDemoFiles(paths: string[]): Promise<void> {
 export interface DemoResultInput {
   equipment: string; maker: string; model: string; round: number
   date: string; place: string; conditions: string; sample: string
-  metrics: Record<string, string>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
+  metrics: Record<string, MetricVal>; photos: DemoPhotoRef[]; files: DemoFileRef[]; cover: number
 }
 export async function addDemoResult(p: DemoResultInput & { author: string }): Promise<void> {
   await ensureSession()
@@ -219,8 +229,10 @@ export async function addDemoResult(p: DemoResultInput & { author: string }): Pr
   }), DB_TIMEOUT, '데모결과 저장')
   if (error) throw new Error(error.message || '데모결과 저장에 실패했습니다')
 }
-const sameMetrics = (a: Record<string, string>, b: Record<string, string>) => {
-  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) if (String(a[k] ?? '') !== String(b[k] ?? '')) return false
+// 값 비교 — 문자열/객체 혼재를 {값|단위|조건} 정규화 후 비교(형태만 다르고 내용 같으면 이력 안 남김)
+const normVal = (x: MetricVal | undefined) => { const p = x == null ? { v: '' } : metricParts(x); return `${p.v}|${p.unit || ''}|${p.cond || ''}` }
+const sameMetrics = (a: Record<string, MetricVal>, b: Record<string, MetricVal>) => {
+  for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) if (normVal(a[k]) !== normVal(b[k])) return false
   return true
 }
 export async function updateDemoResult(id: number, p: Partial<DemoResultInput> & { author: string }): Promise<void> {
@@ -277,14 +289,14 @@ async function currentUid(): Promise<string | null> {
   const { data } = await supabase.auth.getSession()
   return data.session?.user.id ?? null
 }
-/** 코멘트 저장(장비종류 단위) — 제목 필수 + 내용 선택(제목 있는 메모카드) */
-export async function postDemoChat(p: { equipment: string; title: string; body: string; author: string }): Promise<void> {
-  if (!p.title.trim()) throw new Error('제목을 입력해주세요')
+/** 메모 저장(장비종류 단위) — 2026-07-23 리뉴얼: 무제목 스트림(본문 필수·제목 선택, 구형 데이터 호환) */
+export async function postDemoChat(p: { equipment: string; title?: string; body: string; author: string }): Promise<void> {
+  if (!p.body.trim()) throw new Error('내용을 입력해주세요')
   await ensureSession()
   const uid = await currentUid()
   const { error } = await withTimeout(
     // sort_order = epoch 초 — 재정렬(1..n) 이후에도 새 카드는 항상 맨 뒤. width 기본 1열
-    supabase.from('demo_chat').insert({ equipment: p.equipment, makers: [], title: p.title.trim(), body: p.body.trim(), author: p.author, member_uid: uid, sort_order: Date.now() / 1000, width: 1 }),
+    supabase.from('demo_chat').insert({ equipment: p.equipment, makers: [], title: (p.title || '').trim(), body: p.body.trim(), author: p.author, member_uid: uid, sort_order: Date.now() / 1000, width: 1 }),
     DB_TIMEOUT, '메모 저장',
   )
   if (error) throw new Error(error.message || '메모 저장에 실패했습니다')
@@ -302,7 +314,7 @@ export async function setDemoChatWidth(id: number, width: number): Promise<void>
   if (error) throw new Error(error.message || '너비 변경에 실패했습니다')
 }
 export async function updateDemoChat(id: number, p: { title: string; body: string }): Promise<void> {
-  if (!p.title.trim()) throw new Error('제목을 입력해주세요')
+  if (!p.body.trim()) throw new Error('내용을 입력해주세요')
   await ensureSession()
   const { error } = await withTimeout(
     supabase.from('demo_chat').update({ title: p.title.trim(), body: p.body.trim() }).eq('id', id),
