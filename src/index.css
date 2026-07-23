@@ -884,18 +884,25 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .snav-label::before{content:'';position:absolute;left:11px;width:18px;top:50%;height:1px;background:var(--border);transition:opacity .12s ease .12s}
 .snav-panel:hover .snav-label span,.snav-panel:focus-within .snav-label span{opacity:1;transition-delay:0s}
 .snav-panel:hover .snav-label::before,.snav-panel:focus-within .snav-label::before{opacity:0;transition-delay:0s}
-.snav-item{position:relative;display:flex;align-items:center;width:100%;padding:9px 11px;border:none;border-radius:8px;background:none;color:var(--text2);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;text-align:left;transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent}
-.snav-item svg{font-size:18px;flex-shrink:0}
+.snav-item{position:relative;display:flex;align-items:center;width:100%;padding:9px 10px;border:none;border-radius:8px;background:none;color:var(--text2);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;text-align:left;transition:background .15s,color .15s;-webkit-tap-highlight-color:transparent}
+/* 아이콘 가시성(2026-07-23): 20px + 본문보다 밝은 색. 접힘 레일에선 아래 타일 배경까지 더해 버튼처럼 도드라짐 */
+.snav-item svg{font-size:20px;flex-shrink:0;color:#d7dde6;transition:color .15s}
 .snav-item:hover{background:var(--ink2);color:var(--text)}
+.snav-item:hover svg{color:var(--text)}
 .snav-item.active{background:rgba(84,145,218,.12);color:var(--blue);font-weight:700}
-/* 메뉴명 칸 — 접힘 max-width:0 ↔ 펼침 시 내용(이름) 폭만큼. max-width 220px은 전환용 상한일 뿐,
+.snav-item.active svg{color:var(--blue)}
+/* 접힘 상태에서만 아이콘 타일(은은한 배경) — 펼치면 행 전체 hover 배경이 대신함 */
+.snav-panel:not(:hover):not(:focus-within) .snav-item:not(.active){background:rgba(255,255,255,.04)}
+/* 메뉴명 칸 — 접힘 max-width:0 ↔ 펼침 시 내용(이름) 폭만큼. max-width는 전환용 상한일 뿐,
    실제 폭은 콘텐츠가 결정 → 패널이 메뉴명 길이만큼만 늘어난다. (0fr↔1fr은 절대배치 패널의
-   자동 폭과 상성이 안 맞아 실측 후 교체 — 이름 칸이 안 열리는 버그) */
-.snav-lcol{max-width:0;min-width:0;overflow:hidden;transition:max-width .18s cubic-bezier(.2,.7,.3,1) .12s}
-.snav-panel:hover .snav-lcol,.snav-panel:focus-within .snav-lcol{max-width:220px;transition-delay:0s}
+   자동 폭과 상성이 안 맞아 실측 후 교체 — 이름 칸이 안 열리는 버그)
+   ※ 상한(140px)은 실제 내용 폭(~115px)에 가깝게 유지할 것 — 상한이 내용보다 크게 남으면
+   펼침이 절반 시점에 뚝 끝나 보여 부드럽지 않다(2026-07-23 스무스 조정: 220→140 + 감속 스프링 + 텍스트 페이드) */
+.snav-lcol{max-width:0;min-width:0;overflow:hidden;transition:max-width .26s cubic-bezier(0.22,1,0.36,1) .12s}
+.snav-panel:hover .snav-lcol,.snav-panel:focus-within .snav-lcol{max-width:140px;transition-delay:0s}
 /* 아이콘↔이름 간격(10px)도 펼칠 때만 — 접힘 시 0이어야 아이콘이 레일 정중앙 */
-.snav-lin{min-width:0;overflow:hidden;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap;padding-left:0;transition:padding-left .18s cubic-bezier(.2,.7,.3,1) .12s}
-.snav-panel:hover .snav-lin,.snav-panel:focus-within .snav-lin{padding-left:10px;transition-delay:0s}
+.snav-lin{min-width:0;overflow:hidden;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap;padding-left:0;opacity:0;transition:padding-left .26s cubic-bezier(0.22,1,0.36,1) .12s,opacity .14s ease .12s}
+.snav-panel:hover .snav-lin,.snav-panel:focus-within .snav-lin{padding-left:10px;opacity:1;transition-delay:0s,.06s}
 .snav-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* 접힘 상태 배지 — 아이콘 우상단 빨강 숫자·우하단 앰버 점. 펼치면 숨고 D7 위첨자(NavBadge)가 대신 보임 */
 .snav-rnew{position:absolute;top:2px;left:24px;min-width:14px;height:14px;padding:0 3px;border-radius:999px;background:var(--red);color:#fff;font-size:9px;font-weight:700;line-height:14px;text-align:center;pointer-events:none;transition:opacity .12s ease}
