@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react'
-
 // ── 업무현황 ('센터 업무 현황' 시트 1행 = WorkItem) ──
 // 시트 열(헤더 기준 자동 인식): 번호 구분 업무 관련부서 관련자료 발의일자 예정일
 //   시간 장소 담당자 상태 완료일자 Remind 센터장검토 링크
@@ -256,10 +254,15 @@ export interface Notice {
 
 // ── 바로가기 ──
 export interface QuickLink {
-  icon: ReactNode
+  /** 로고 이미지(import한 asset URL). 없으면 fallbackText를 글자 타일로 표시 */
+  logo?: string
+  /** 가로로 긴 워드마크 로고 — 칩을 넓게 렌더 */
+  wide?: boolean
+  /** 로고가 없는 사이트의 글자 타일 텍스트 (예: RED) */
+  fallbackText?: string
+  /** 글자 타일 색 */
+  fallbackColor?: string
   name: string
   host: string
   url: string
-  /** 아이콘 배경색 (바로가기 페이지) */
-  bg: string
 }
