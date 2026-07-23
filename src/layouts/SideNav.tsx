@@ -22,49 +22,58 @@ export default function SideNav() {
     path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(path + '/')
 
   // 팀 콘텐츠(team)는 팀원 이상, 관리자 전용(adminOnly)은 관리자만, 나머지는 전체 공개.
+  // 홈은 레일에서 제외(2026-07-23 확정: 로고 클릭=홈) — NAV_GROUPS 자체는 유지(개선위치·모바일 탭바 파생용).
   const canSee = (it: NavItem) => (it.adminOnly ? isAdmin : it.team ? isMember : true)
   const visibleGroups = NAV_GROUPS
-    .map((g) => ({ ...g, items: g.items.filter(canSee) }))
+    .map((g) => ({ ...g, items: g.items.filter(canSee).filter((it) => it.path !== '/') }))
     .filter((g) => g.items.length > 0)
 
   return (
     <aside className="sidenav d-only">
-      {visibleGroups.map((g, i) => (
-        <div className="snav-group" key={g.label ?? i}>
-          {g.label && <div className="snav-label">{g.label}</div>}
-          {g.items.map((item) => {
-            const newCnt = item.badgeKey ? badges[item.badgeKey] || 0 : 0
-            const memoCnt = isMaintainer ? memoCounts[item.path] || 0 : 0
-            return (
-            <button
-              key={item.path}
-              className={`snav-item${isActive(item.path) ? ' active' : ''}`}
-              onClick={() => navigate(item.path)}
-            >
-              {item.icon}
-              {/* 아이폰식 위첨자 배지(D7 표준): 메뉴명 뒤 위첨자, 빨강=새 글·앰버=개선 메모 나란히.
-                  배지는 .snav-name(overflow:hidden 말줄임) 밖 형제로 둬야 잘리지 않음 — ds NavBadge 1스펙 */}
-              <span className="snav-text">
-                <Box component="span" className="snav-name">{item.label}</Box>
-                {(newCnt > 0 || memoCnt > 0) && (
-                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0, mt: '-2px' }}>
-                    <NavBadge count={newCnt} kind="new" />
-                    {memoCnt > 0 && (
-                      <Tooltip title={`개선 메모 ${memoCnt}건`} placement="top" arrow>
-                        {/* Tooltip 자식은 ref 필요 — span 래퍼 */}
-                        <Box component="span" sx={{ display: 'inline-flex' }}>
-                          <NavBadge count={memoCnt} kind="memo" />
-                        </Box>
-                      </Tooltip>
+      {/* 레일: 평소 아이콘만(64px), 호버·포커스 시 메뉴명 폭만큼 오버레이 펼침 — 스타일은 index.css .snav-* */}
+      <nav className="snav-panel" aria-label="주 메뉴">
+        {visibleGroups.map((g, i) => (
+          <div className="snav-group" key={g.label ?? i}>
+            {g.label && <div className="snav-label"><span>{g.label}</span></div>}
+            {g.items.map((item) => {
+              const newCnt = item.badgeKey ? badges[item.badgeKey] || 0 : 0
+              const memoCnt = isMaintainer ? memoCounts[item.path] || 0 : 0
+              return (
+              <button
+                key={item.path}
+                className={`snav-item${isActive(item.path) ? ' active' : ''}`}
+                onClick={() => navigate(item.path)}
+              >
+                {item.icon}
+                {/* 접힘 상태 배지 — 아이콘 우상단 빨강 숫자·우하단 앰버 점(펼치면 CSS로 숨김) */}
+                {newCnt > 0 && <span className="snav-rnew" aria-hidden="true">{newCnt > 99 ? '99+' : newCnt}</span>}
+                {memoCnt > 0 && <span className="snav-rmemo" aria-hidden="true" />}
+                {/* 메뉴명 칸(0fr↔1fr) — 펼침 폭이 이름 길이를 따라간다 */}
+                <span className="snav-lcol">
+                  <span className="snav-lin">
+                    <Box component="span" className="snav-name">{item.label}</Box>
+                    {/* 아이폰식 위첨자 배지(D7 표준): 메뉴명 뒤 위첨자, 빨강=새 글·앰버=개선 메모 나란히 */}
+                    {(newCnt > 0 || memoCnt > 0) && (
+                      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0, mt: '-2px' }}>
+                        <NavBadge count={newCnt} kind="new" />
+                        {memoCnt > 0 && (
+                          <Tooltip title={`개선 메모 ${memoCnt}건`} placement="top" arrow>
+                            {/* Tooltip 자식은 ref 필요 — span 래퍼 */}
+                            <Box component="span" sx={{ display: 'inline-flex' }}>
+                              <NavBadge count={memoCnt} kind="memo" />
+                            </Box>
+                          </Tooltip>
+                        )}
+                      </Box>
                     )}
-                  </Box>
-                )}
-              </span>
-            </button>
-            )
-          })}
-        </div>
-      ))}
+                  </span>
+                </span>
+              </button>
+              )
+            })}
+          </div>
+        ))}
+      </nav>
     </aside>
   )
 }

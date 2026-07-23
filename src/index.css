@@ -871,18 +871,35 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* ── 좌측 사이드바 (PC) ── */
 .app-shell{display:flex;flex:1;width:100%;align-items:stretch}
 .app-content{flex:1;min-width:0;display:flex;flex-direction:column}
-.sidenav{width:208px;flex-shrink:0;box-sizing:border-box;position:sticky;top:53px;height:calc(100vh - 53px);overflow-y:auto;padding:18px 12px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:20px}
+/* 사이드 레일(2026-07-23 확정): 평소 64px 아이콘 레일, 호버·키보드 포커스 시 오버레이로 펼침.
+   펼침 폭 = 고정값이 아니라 "메뉴명 길이만큼"(.snav-lcol 0fr↔1fr — 콘텐츠 폭 추종, 사용자 확정).
+   진입 지연 0(스치면 즉시)·이탈만 .12s(경계 깜빡임 방지). 콘텐츠는 밀리지 않음(오버레이). */
+.sidenav{width:64px;flex-shrink:0;position:sticky;top:53px;height:calc(100vh - 53px);z-index:9}
+.snav-panel{position:absolute;left:0;top:0;bottom:0;min-width:64px;box-sizing:border-box;background:var(--ink);border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;overflow-x:hidden;transition:box-shadow .18s ease}
+.snav-panel:hover,.snav-panel:focus-within{box-shadow:0 8px 24px rgba(0,0,0,.3)}
 .snav-group{display:flex;flex-direction:column;gap:2px}
-.snav-label{font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.09em;padding:0 10px;margin-bottom:5px}
-.snav-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:none;border-radius:8px;background:none;color:var(--text2);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;text-align:left;transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent}
+/* 그룹 라벨 — 접힘 땐 텍스트 대신 헤어라인(요소 높이 고정이라 세로 위치 불변) */
+.snav-label{position:relative;height:16px;display:flex;align-items:center;padding:0 10px;margin-bottom:5px}
+.snav-label span{font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.09em;white-space:nowrap;opacity:0;transition:opacity .12s ease .12s}
+.snav-label::before{content:'';position:absolute;left:11px;width:18px;top:50%;height:1px;background:var(--border);transition:opacity .12s ease .12s}
+.snav-panel:hover .snav-label span,.snav-panel:focus-within .snav-label span{opacity:1;transition-delay:0s}
+.snav-panel:hover .snav-label::before,.snav-panel:focus-within .snav-label::before{opacity:0;transition-delay:0s}
+.snav-item{position:relative;display:flex;align-items:center;width:100%;padding:9px 11px;border:none;border-radius:8px;background:none;color:var(--text2);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;text-align:left;transition:background .12s,color .12s;-webkit-tap-highlight-color:transparent}
 .snav-item svg{font-size:18px;flex-shrink:0}
 .snav-item:hover{background:var(--ink2);color:var(--text)}
 .snav-item.active{background:rgba(84,145,218,.12);color:var(--blue);font-weight:700}
-/* 메뉴명(+개선 메모 점) 묶음 — flex:1로 새 글 숫자를 행 오른쪽 끝으로 밀어냄 */
-.snav-text{flex:1;min-width:0;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap}
+/* 메뉴명 칸 — 접힘 0fr(폭 0) ↔ 펼침 1fr(이름 폭만큼). 이 트랙이 커지는 만큼 패널 폭이 따라 늘어난다 */
+.snav-lcol{display:grid;grid-template-columns:0fr;transition:grid-template-columns .18s cubic-bezier(.2,.7,.3,1) .12s}
+.snav-panel:hover .snav-lcol,.snav-panel:focus-within .snav-lcol{grid-template-columns:1fr;transition-delay:0s}
+/* 아이콘↔이름 간격(10px)도 펼칠 때만 — 접힘 시 0이어야 아이콘이 레일 정중앙 */
+.snav-lin{min-width:0;overflow:hidden;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap;padding-left:0;transition:padding-left .18s cubic-bezier(.2,.7,.3,1) .12s}
+.snav-panel:hover .snav-lin,.snav-panel:focus-within .snav-lin{padding-left:10px;transition-delay:0s}
 .snav-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
-/* 개선 메모 — 메뉴명 우상단 작은 노란 점(숫자 없음, 관리자 전용) */
-/* 새 글 숫자 — 행 오른쪽 끝, 빨강 배경·숫자만(볼드 아님) */
+/* 접힘 상태 배지 — 아이콘 우상단 빨강 숫자·우하단 앰버 점. 펼치면 숨고 D7 위첨자(NavBadge)가 대신 보임 */
+.snav-rnew{position:absolute;top:2px;left:24px;min-width:14px;height:14px;padding:0 3px;border-radius:999px;background:var(--red);color:#fff;font-size:9px;font-weight:700;line-height:14px;text-align:center;pointer-events:none;transition:opacity .12s ease}
+.snav-rmemo{position:absolute;bottom:4px;left:27px;width:7px;height:7px;border-radius:50%;background:var(--amber);pointer-events:none;transition:opacity .12s ease}
+.snav-panel:hover .snav-rnew,.snav-panel:focus-within .snav-rnew,.snav-panel:hover .snav-rmemo,.snav-panel:focus-within .snav-rmemo{opacity:0}
+@media(prefers-reduced-motion:reduce){.snav-panel,.snav-lcol,.snav-label span,.snav-label::before,.snav-rnew,.snav-rmemo{transition:none}}
 .topbar-bell{margin-left:auto;background:none;border:none;color:var(--text2);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;flex-shrink:0;transition:color .15s,background .15s}
 .topbar-bell:hover{color:var(--text);background:var(--ink2)}
 .topbar-brand{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}

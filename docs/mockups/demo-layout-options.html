@@ -1,0 +1,817 @@
+<title>데모결과 배치 3안 — 사진·칩박스·메모</title>
+<style>
+:root{
+  --ground:#0F1117;--surface:#131722;--card:#161B22;--border:#293244;--divider:#232C3A;
+  --ink:#FFFFFF;--ink2:#AAB4C3;--ink3:#7D8899;--accent:#5491DA;
+  --sans:system-ui,-apple-system,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+.page{max-width:1240px;margin:0 auto;padding:36px 24px 90px}
+.eyebrow{font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);margin:0 0 9px}
+h1{font-size:24px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em}
+.intro{font-size:14px;line-height:1.75;color:var(--ink2);margin:0 0 4px;max-width:76ch;word-break:keep-all}
+.bar-ui{position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:10px;padding:10px 0;margin:14px 0 10px;background:linear-gradient(var(--ground) 72%,rgba(15,17,23,0))}
+.bar-ui .lbl{font-size:12px;color:var(--ink3)}
+.seg{display:inline-flex;gap:3px;padding:3px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+.seg button{font:inherit;font-size:12px;font-weight:500;color:var(--ink2);background:none;border:0;padding:5px 14px;border-radius:999px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button:hover:not(.on){color:var(--ink)}
+.jump{display:flex;gap:6px;margin-left:auto}
+.jump a{font-size:12px;color:var(--ink2);text-decoration:none;padding:5px 11px;border-radius:999px;border:1px solid var(--border);background:var(--card)}
+.jump a:hover{color:var(--ink);border-color:var(--accent)}
+.opt{min-width:0;margin-top:34px;scroll-margin-top:64px}
+.ohd{display:flex;align-items:baseline;gap:9px;margin:0 0 10px}
+.okey{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:8px;background:rgba(84,145,218,.16);border:1px solid rgba(84,145,218,.42);color:var(--accent);font-size:11px;font-weight:700;align-self:center}
+.ohd b{font-size:15px;font-weight:600}
+.ohd s{text-decoration:none;font-size:12px;color:var(--ink3)}
+.mock{container-type:inline-size;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;overflow:hidden}
+.mob .mock{max-width:390px;margin:0 auto;padding:10px}
+.note{font-size:12px;line-height:1.75;color:var(--ink2);margin:10px 0 0;word-break:keep-all;max-width:92ch}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+.pcard{min-width:0;display:flex;flex-direction:column}
+.pband{display:flex;align-items:center;justify-content:center;gap:5px;background:#5491DA;color:#fff;font-size:12px;font-weight:500;padding:5px 12px;border-radius:8px 8px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pband span{opacity:.85;font-weight:400}
+.pstage{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;background:#0F1117;border:1px solid #293244;border-top:0;border-radius:0 0 8px 8px}
+.ph{position:absolute;inset:0}
+.pchips{position:absolute;top:8px;left:8px;z-index:4;display:flex;gap:3px}
+.pchips b{font-size:11px;font-weight:500;color:#fff;background:rgba(0,0,0,.5);border-radius:8px;padding:2px 7px}
+.pchips b.on{background:#5491DA}
+.pdate{position:absolute;top:8px;right:8px;z-index:4;font-size:11px;font-weight:500;color:#fff;background:rgba(0,0,0,.5);border-radius:8px;padding:2px 7px}
+
+.scrim{position:absolute;left:0;right:0;bottom:0;height:44%;z-index:2;pointer-events:none}
+.scrim::before{content:'';position:absolute;inset:0;-webkit-backdrop-filter:brightness(.86) saturate(1.04);backdrop-filter:brightness(.86) saturate(1.04);-webkit-mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.96) 22%,rgba(0,0,0,.85) 41%,rgba(0,0,0,.65) 57%,rgba(0,0,0,.42) 71.5%,rgba(0,0,0,.21) 84%,rgba(0,0,0,.07) 93%,rgba(0,0,0,0) 100%);mask-image:linear-gradient(to top,#000 0%,rgba(0,0,0,.96) 22%,rgba(0,0,0,.85) 41%,rgba(0,0,0,.65) 57%,rgba(0,0,0,.42) 71.5%,rgba(0,0,0,.21) 84%,rgba(0,0,0,.07) 93%,rgba(0,0,0,0) 100%)}
+.scrim::after{content:'';position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.880) 0%,rgba(0,0,0,.868) 12%,rgba(0,0,0,.842) 22%,rgba(0,0,0,.800) 32%,rgba(0,0,0,.742) 41%,rgba(0,0,0,.668) 49%,rgba(0,0,0,.578) 57%,rgba(0,0,0,.478) 64.5%,rgba(0,0,0,.374) 71.5%,rgba(0,0,0,.274) 78%,rgba(0,0,0,.185) 84%,rgba(0,0,0,.112) 89%,rgba(0,0,0,.058) 93%,rgba(0,0,0,.024) 96.2%,rgba(0,0,0,.006) 98.6%,rgba(0,0,0,0) 100%)}
+
+.pcap{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:0 16px 14px;display:flex;flex-direction:column;gap:5px;pointer-events:none}
+.pcap-h{display:flex;align-items:baseline;gap:10px}
+.pcap-l{flex:1 1 auto;min-width:0;font-size:14px;font-weight:600;line-height:1.35;letter-spacing:-.01em;color:#FFFFFF;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 3px rgba(0,0,0,.55),0 0 14px rgba(0,0,0,.35)}
+.pcap-n{flex:0 0 auto;font-size:11px;font-weight:500;line-height:1.4;letter-spacing:.04em;color:#7D8899;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.pcap-d{margin:0;font-size:12px;font-weight:400;line-height:1.5;color:#AAB4C3;min-height:36px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+
+.ph-0{background:radial-gradient(circle at 50% 42%,#5b6b80 0%,#3a4657 22%,#232c3a 48%,#12161f 78%,#0b0e14 100%),repeating-radial-gradient(circle at 50% 42%,rgba(255,255,255,.05) 0 2px,transparent 2px 13px)}
+.ph-1{background:radial-gradient(circle at 50% 50%,#fdfefe 0%,#eef4f9 30%,#dbe6f0 48%,#c3d3e2 58%,#9fb2c6 70%,#6f8296 100%),conic-gradient(from 210deg at 50% 50%,rgba(120,190,255,.5),rgba(190,255,220,.42),rgba(255,225,170,.42),rgba(255,175,205,.42),rgba(120,190,255,.5))}
+.ph-2{background:linear-gradient(118deg,#8e9aa8 0%,#6d7a8a 26%,#49525f 52%,#5f6b7a 72%,#2f3743 100%),repeating-linear-gradient(62deg,rgba(255,255,255,.09) 0 3px,transparent 3px 22px)}
+.ph-3{background:linear-gradient(#0d1117,#0d1117),repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 34px),radial-gradient(ellipse 22% 46% at 32% 62%,rgba(77,161,103,.85),transparent 70%),radial-gradient(ellipse 9% 34% at 58% 70%,rgba(77,161,103,.7),transparent 70%),radial-gradient(ellipse 5% 22% at 76% 78%,rgba(214,162,62,.6),transparent 70%)}
+
+.pchips,.pdate{pointer-events:none}
+
+/* ── 가로 스크롤 캐러셀(공통 — 검증 완료본) ── */
+.pscroll{position:absolute;inset:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-ms-overflow-style:none;cursor:grab;user-select:none;-webkit-user-select:none;overscroll-behavior-x:contain}
+.pscroll::-webkit-scrollbar{display:none}
+.pscroll.dragging{scroll-snap-type:none;cursor:grabbing}
+.pslide{position:relative;flex:0 0 100%;min-width:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden}
+.pslide .ph{position:absolute;inset:0}
+.pprev,.pnext{position:absolute;top:0;bottom:22px;width:18%;z-index:6;display:flex;align-items:center;padding:0 4px;border:0;color:#fff;opacity:0;cursor:pointer;transition:opacity .15s ease;background:linear-gradient(90deg,rgba(255,255,255,.16),rgba(255,255,255,.04) 55%,transparent 80%)}
+.pprev{left:0;justify-content:flex-start}
+.pnext{right:0;justify-content:flex-end;background:linear-gradient(270deg,rgba(255,255,255,.16),rgba(255,255,255,.04) 55%,transparent 80%)}
+.pstage:hover .pprev,.pstage:hover .pnext,.pprev:focus-visible,.pnext:focus-visible{opacity:1}
+.pprev svg,.pnext svg{width:30px;height:30px;fill:currentColor;filter:drop-shadow(0 1px 4px rgba(0,0,0,.7))}
+.pbar{position:absolute;left:12px;right:12px;bottom:4px;height:14px;z-index:7;cursor:pointer;touch-action:none}
+.pbar::before{content:'';position:absolute;left:0;right:0;bottom:3px;height:3px;border-radius:999px;background:rgba(255,255,255,.22);transition:height .12s ease}
+.pbar-thumb{position:absolute;bottom:3px;height:3px;border-radius:999px;background:rgba(255,255,255,.92);box-shadow:0 1px 3px rgba(0,0,0,.4);transition:height .12s ease}
+.pstage:hover .pbar::before,.pstage:hover .pbar-thumb,.pbar.scrubbing::before,.pbar.scrubbing .pbar-thumb{height:6px}
+.pcap{padding-bottom:20px}
+@media (hover:none){.pprev,.pnext{display:none}}
+@container (max-width:640px){.pbar{height:20px}}
+
+.s-l1{container:l1-sec / inline-size;display:flex;flex-direction:column;gap:14px;color:#FFFFFF;font-size:13px}
+.s-l1 *{box-sizing:border-box}
+
+.s-l1 .l1-band{display:flex;align-items:center;gap:10px;background:#39415a;border-radius:12px;padding:12px 16px}
+.s-l1 .l1-band svg{width:20px;height:20px;fill:currentColor;flex-shrink:0}
+.s-l1 .l1-band b{font-size:18px;font-weight:700}
+.s-l1 .l1-band span{margin-left:auto;font-size:12px;font-weight:400;color:#AAB4C3}
+
+.s-l1 .l1-duo{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.s-l1 .l1-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+
+.s-l1 .l1-chips{display:flex;flex-wrap:wrap;gap:8px}
+.s-l1 .l1-chip{height:72px;display:inline-flex;flex-direction:column;justify-content:center;gap:3px;padding:0 16px;background:#131722;border:1px solid #293244;border-radius:12px;color:#FFFFFF;font-family:inherit;text-align:left;cursor:pointer;white-space:nowrap;transition:border-color .15s}
+.s-l1 .l1-chip:hover{border-color:#5491DA}
+.s-l1 .l1-chip:focus-visible{outline:2px solid #5491DA;outline-offset:2px}
+.s-l1 .l1-chip-k{font-size:11px;font-weight:500;color:#7D8899;display:flex;align-items:center;gap:5px}
+.s-l1 .l1-chip-k svg{width:11px;height:11px;fill:#5491DA;opacity:0;transition:opacity .15s}
+.s-l1 .l1-chip:hover .l1-chip-k svg{opacity:1}
+.s-l1 .l1-chip-v{font-size:21px;font-weight:700;color:#FFFFFF;line-height:1.1;font-variant-numeric:tabular-nums}
+.s-l1 .l1-chip-v small{font-size:14px;font-weight:600;color:#FFFFFF;margin-left:3px}
+.s-l1 .l1-chip-c{font-size:11px;font-weight:400;color:#7D8899}
+.s-l1 .l1-chip-add{height:72px;display:inline-flex;align-items:center;gap:6px;padding:0 16px;background:none;border:1px dashed #293244;border-radius:12px;color:#7D8899;font-size:12px;font-family:inherit;cursor:pointer;transition:color .15s,border-color .15s}
+.s-l1 .l1-chip-add:hover{color:#5491DA;border-color:#5491DA}
+.s-l1 .l1-chip-add svg{width:14px;height:14px;fill:currentColor}
+
+.s-l1 .l1-xnote{display:flex;align-items:flex-start;gap:7px;color:#7D8899;font-size:12px;padding:0 2px}
+.s-l1 .l1-xnote svg{width:14px;height:14px;fill:currentColor;flex-shrink:0;margin-top:2px}
+
+.s-l1 .l1-board{background:#161B22;border:1px solid #293244;border-radius:12px;overflow:hidden}
+.s-l1 .l1-bhead{display:flex;align-items:center;gap:9px;padding:11px 18px;background:#131722;border-bottom:1px solid #232C3A}
+.s-l1 .l1-bhead > svg{width:16px;height:16px;fill:#AAB4C3;flex-shrink:0}
+.s-l1 .l1-bhead b{font-size:14px;font-weight:600;color:#FFFFFF}
+.s-l1 .l1-scope{font-style:normal;font-size:11px;font-weight:500;color:#AAB4C3;background:#161B22;border:1px solid #293244;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.s-l1 .l1-cnt{font-size:12px;font-weight:400;color:#7D8899}
+.s-l1 .l1-addc{margin-left:auto;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 13px;background:none;border:1px dashed #293244;border-radius:999px;color:#7D8899;font-size:12px;font-family:inherit;cursor:pointer;transition:color .15s,border-color .15s}
+.s-l1 .l1-addc:hover{color:#5491DA;border-color:#5491DA}
+.s-l1 .l1-addc svg{width:13px;height:13px;fill:currentColor;flex-shrink:0}
+
+.s-l1 .l1-rows{list-style:none;margin:0;padding:0}
+.s-l1 .l1-row{display:flex;align-items:center;gap:12px;padding:13px 18px;transition:background .15s}
+.s-l1 .l1-row + .l1-row{border-top:1px solid #232C3A}
+.s-l1 .l1-row:hover{background:rgba(84,145,218,.05)}
+.s-l1 .l1-ava{flex:none;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:#FFFFFF}
+.s-l1 .l1-name{flex:none;width:66px;font-size:12px;font-weight:400;color:#AAB4C3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.s-l1 .l1-text{flex:1;min-width:0;margin:0;font-size:13px;font-weight:400;color:#FFFFFF}
+.s-l1 .l1-date{flex:none;font-size:12px;font-weight:400;color:#7D8899;font-variant-numeric:tabular-nums}
+
+@container l1-sec (max-width:640px){
+  .s-l1 .l1-duo{grid-template-columns:1fr}
+  .s-l1 .l1-bhead{flex-wrap:wrap;row-gap:6px}
+  .s-l1 .l1-row{flex-wrap:wrap;row-gap:5px}
+  .s-l1 .l1-name{flex:1;width:auto}
+  .s-l1 .l1-text{order:1;flex:0 0 100%;padding-left:40px}
+}
+
+.s-l2{container-type:inline-size;container-name:l2-root;display:flex;flex-direction:column;gap:14px;color:#FFFFFF;font-size:13px}
+.s-l2 *{box-sizing:border-box}
+
+/* 제목띠 */
+.s-l2 .l2-band{display:flex;align-items:center;gap:10px;background:#39415a;border-radius:12px;padding:12px 16px}
+.s-l2 .l2-band svg{width:20px;height:20px;fill:currentColor;flex-shrink:0}
+.s-l2 .l2-band b{font-size:18px;font-weight:700}
+.s-l2 .l2-band span{margin-left:auto;font-size:12px;font-weight:400;color:#AAB4C3}
+
+/* 사진+칩박스: 2열 리듬 (위치=소속) */
+.s-l2 .l2-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.s-l2 .l2-col{display:flex;flex-direction:column;gap:9px;min-width:0}
+
+/* 지표 칩박스 — 높이 72 고정 · 내용 따라 가변폭 (계승 규격) */
+.s-l2 .l2-chips{display:flex;flex-wrap:wrap;gap:8px}
+.s-l2 .l2-chip{height:72px;display:inline-flex;flex-direction:column;justify-content:center;gap:3px;padding:0 16px;background:#131722;border:1px solid #293244;border-radius:12px;color:#FFFFFF;font-family:inherit;text-align:left;cursor:pointer;white-space:nowrap;transition:border-color .15s}
+.s-l2 .l2-chip:hover{border-color:#5491DA}
+.s-l2 .l2-chip:focus-visible{outline:2px solid #5491DA;outline-offset:2px}
+.s-l2 .l2-chip-k{font-size:11px;font-weight:500;color:#7D8899;display:flex;align-items:center;gap:5px}
+.s-l2 .l2-chip-k svg{width:11px;height:11px;fill:#5491DA;opacity:0;transition:opacity .15s}
+.s-l2 .l2-chip:hover .l2-chip-k svg{opacity:1}
+.s-l2 .l2-chip-v{font-size:21px;font-weight:700;color:#FFFFFF;line-height:1.1;font-variant-numeric:tabular-nums}
+.s-l2 .l2-chip-v small{font-size:14px;font-weight:600;color:#FFFFFF;margin-left:3px}
+.s-l2 .l2-chip-c{font-size:11px;font-weight:400;color:#7D8899}
+.s-l2 .l2-chip-add{height:72px;display:inline-flex;align-items:center;gap:6px;padding:0 16px;background:none;border:1px dashed #293244;border-radius:12px;color:#7D8899;font-size:12px;font-family:inherit;cursor:pointer;transition:color .15s,border-color .15s}
+.s-l2 .l2-chip-add:hover{color:#5491DA;border-color:#5491DA}
+.s-l2 .l2-chip-add:focus-visible{outline:2px solid #5491DA;outline-offset:2px}
+.s-l2 .l2-chip-add svg{width:14px;height:14px;fill:currentColor}
+
+/* 교차 판정 없음 안내 */
+.s-l2 .l2-xnote{display:flex;align-items:flex-start;gap:7px;color:#7D8899;font-size:12px;font-weight:400;padding:0 2px}
+.s-l2 .l2-xnote svg{width:14px;height:14px;fill:currentColor;flex-shrink:0;margin-top:2px}
+
+/* 메모 보드 — 배경 톤이 다른 컨테이너(공용 신호 1) + 3열 타일(공용 신호 2: 위 2열과 열수 불일치) */
+.s-l2 .l2-board{background:#131722;border:1px solid #232C3A;border-radius:12px;padding:14px}
+.s-l2 .l2-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:stretch}
+.s-l2 .l2-m{display:flex;align-items:flex-start;gap:11px;padding:12px 14px;background:#161B22;border:1px solid #293244;border-radius:12px;min-width:0;min-height:96px}
+.s-l2 .l2-ava{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#FFFFFF;margin-top:1px}
+.s-l2 .l2-mb{flex:1;min-width:0}
+.s-l2 .l2-mh{display:flex;align-items:baseline;gap:8px}
+.s-l2 .l2-mh b{font-size:12.5px;font-weight:600;color:#AAB4C3}
+.s-l2 .l2-mh time{margin-left:auto;font-size:11px;font-weight:400;color:#7D8899;flex-shrink:0}
+.s-l2 .l2-mt{margin:3px 0 0;font-size:13px;font-weight:400;color:#FFFFFF;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* + 코멘트 진입 타일 (그리드 한 칸 채움) */
+.s-l2 .l2-madd{min-height:96px;display:flex;align-items:center;justify-content:center;gap:7px;background:none;border:1px dashed #293244;border-radius:12px;color:#7D8899;font-size:12.5px;font-family:inherit;cursor:pointer;transition:color .15s,border-color .15s}
+.s-l2 .l2-madd:hover{color:#5491DA;border-color:#5491DA}
+.s-l2 .l2-madd:focus-visible{outline:2px solid #5491DA;outline-offset:2px}
+.s-l2 .l2-madd svg{width:15px;height:15px;fill:currentColor}
+
+/* 좁은 화면: 전부 1열 */
+@container l2-root (max-width:640px){
+  .s-l2 .l2-cols{grid-template-columns:1fr}
+  .s-l2 .l2-grid{grid-template-columns:1fr}
+  .s-l2 .l2-m{min-height:0}
+  .s-l2 .l2-madd{min-height:52px}
+  .s-l2 .l2-band b{font-size:16px}
+}
+
+.s-l3{container-type:inline-size;container-name:l3-root;
+  --l3-surface:#131722;--l3-card:#161B22;--l3-border:#293244;--l3-line:#232C3A;
+  --l3-blue:#5491DA;--l3-text:#FFFFFF;--l3-text2:#AAB4C3;--l3-text3:#7D8899;
+  display:flex;flex-direction:column;gap:14px;color:var(--l3-text);font-size:13px}
+.s-l3 *{box-sizing:border-box}
+
+.s-l3 .l3-band{display:flex;align-items:center;gap:10px;background:#39415a;border-radius:12px;padding:12px 16px}
+.s-l3 .l3-band svg{width:20px;height:20px;fill:currentColor;flex-shrink:0}
+.s-l3 .l3-band b{font-size:18px;font-weight:700}
+.s-l3 .l3-band span{margin-left:auto;font-size:12px;color:var(--l3-text2)}
+
+.s-l3 .l3-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(350px,400px);gap:16px;align-items:start}
+.s-l3 .l3-main{display:flex;flex-direction:column;gap:12px;min-width:0}
+.s-l3 .l3-demos{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;align-items:start}
+.s-l3 .l3-demo{display:flex;flex-direction:column;gap:9px;min-width:0}
+
+.s-l3 .l3-chips{display:flex;flex-wrap:wrap;gap:8px}
+.s-l3 .l3-chip{height:72px;max-width:100%;display:inline-flex;flex-direction:column;justify-content:center;gap:3px;
+  padding:0 16px;background:var(--l3-surface);border:1px solid var(--l3-border);border-radius:12px;
+  color:var(--l3-text);font-family:inherit;text-align:left;cursor:pointer;white-space:nowrap;transition:border-color .15s}
+.s-l3 .l3-chip:hover{border-color:var(--l3-blue)}
+.s-l3 .l3-chip:focus-visible{outline:2px solid var(--l3-blue);outline-offset:2px}
+.s-l3 .l3-chip-k{font-size:11px;font-weight:500;color:var(--l3-text3);display:flex;align-items:center;gap:5px}
+.s-l3 .l3-chip-k svg{width:11px;height:11px;fill:var(--l3-blue);opacity:0;transition:opacity .15s}
+.s-l3 .l3-chip:hover .l3-chip-k svg{opacity:1}
+.s-l3 .l3-chip-v{font-size:21px;font-weight:700;color:#FFFFFF;line-height:1.1;font-variant-numeric:tabular-nums}
+.s-l3 .l3-chip-v small{font-size:14px;font-weight:600;color:#FFFFFF;margin-left:3px}
+.s-l3 .l3-chip-c{font-size:11px;color:var(--l3-text3);overflow:hidden;text-overflow:ellipsis}
+.s-l3 .l3-chip-add{height:72px;display:inline-flex;align-items:center;gap:6px;padding:0 16px;background:none;
+  border:1px dashed var(--l3-border);border-radius:12px;color:var(--l3-text3);font-size:12px;font-family:inherit;cursor:pointer;
+  transition:color .15s,border-color .15s}
+.s-l3 .l3-chip-add:hover{color:var(--l3-blue);border-color:var(--l3-blue)}
+.s-l3 .l3-chip-add svg{width:14px;height:14px;fill:currentColor}
+
+.s-l3 .l3-xnote{display:flex;align-items:flex-start;gap:7px;color:var(--l3-text3);font-size:12px;padding:0 2px}
+.s-l3 .l3-xnote svg{width:14px;height:14px;fill:currentColor;flex-shrink:0;margin-top:2px}
+
+.s-l3 .l3-dock{background:var(--l3-surface);border:1px solid var(--l3-line);border-radius:12px;
+  padding:13px 13px 14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.s-l3 .l3-dock-top{display:flex;flex-direction:column;gap:3px}
+.s-l3 .l3-dock-head{display:flex;align-items:center;gap:7px}
+.s-l3 .l3-dock-head svg{width:16px;height:16px;fill:var(--l3-text2);flex-shrink:0}
+.s-l3 .l3-dock-head b{font-size:14px;font-weight:600}
+.s-l3 .l3-count{font-size:11px;font-weight:500;color:var(--l3-text2);background:var(--l3-line);border-radius:999px;padding:1px 8px}
+.s-l3 .l3-dock-sub{margin:0;font-size:11px;font-weight:500;color:var(--l3-text3)}
+.s-l3 .l3-cbtn{display:flex;align-items:center;justify-content:flex-start;gap:8px;width:100%;
+  padding:10px 12px;background:none;border:1px dashed var(--l3-border);border-radius:10px;
+  color:var(--l3-text3);font-size:13px;font-family:inherit;cursor:pointer;transition:color .15s,border-color .15s}
+.s-l3 .l3-cbtn:hover{color:var(--l3-blue);border-color:var(--l3-blue)}
+.s-l3 .l3-cbtn svg{width:14px;height:14px;fill:currentColor;flex-shrink:0}
+
+.s-l3 .l3-stream{display:flex;flex-direction:column;gap:8px}
+.s-l3 .l3-m{display:flex;gap:11px;padding:12px 13px;background:var(--l3-card);border:1px solid var(--l3-border);border-radius:12px;min-width:0}
+.s-l3 .l3-ava{flex-shrink:0;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;color:#fff;margin-top:1px}
+.s-l3 .l3-mb{flex:1;min-width:0}
+.s-l3 .l3-mh{display:flex;align-items:baseline;gap:8px}
+.s-l3 .l3-mh b{font-size:12.5px;font-weight:600;color:var(--l3-text2)}
+.s-l3 .l3-mh time{margin-left:auto;font-size:11px;color:var(--l3-text3)}
+.s-l3 .l3-mt{margin:2px 0 0;font-size:13px;color:var(--l3-text)}
+
+@container l3-root (max-width:640px){
+  .s-l3 .l3-body{grid-template-columns:1fr}
+  .s-l3 .l3-demos{grid-template-columns:1fr}
+}
+</style>
+<div class="page">
+  <h2 class="sr-only">데모결과 페이지 배치 후보 3종 — 메모가 특정 제조사 것으로 오해되지 않도록 사진·지표 칩박스·메모의 배치를 달리한 안들.</h2>
+  <p class="eyebrow">데모결과 · 배치 후보</p>
+  <h1>메모가 "공용"으로 읽히는 세 가지 배치</h1>
+  <p class="intro">지적하신 문제 — 메모가 2열이면 왼쪽 열은 AMAT 것, 오른쪽 열은 Lam 것처럼 보입니다. 이 페이지에서 "위치=소속"은 지표 칩박스가 쓰는 문법이라, 메모까지 2열이면 문법이 충돌합니다. 세 안 모두 사진과 칩박스(사진 밑, 조건 포함)는 그대로 두고 <b>메모의 배치만</b> 다르게 풀었습니다: ① 풀폭 1열 행 리스트 ② 열수를 어긋내는 3열 타일 ③ 아예 축을 분리한 우측 도크. 사진은 가로 스크롤(드래그·가로휠·좌우버튼) 동작합니다.</p>
+  <div class="bar-ui">
+    <span class="lbl">보기 폭</span>
+    <div class="seg" role="group" aria-label="보기 폭 전환">
+      <button type="button" class="on" data-v="p">PC</button>
+      <button type="button" data-v="m">모바일 390px</button>
+    </div>
+    <nav class="jump" aria-label="후보 바로가기">
+      <a href="#opt-l1">1</a><a href="#opt-l2">2</a><a href="#opt-l3">3</a>
+    </nav>
+  </div>
+
+<section class="opt" id="opt-l1">
+  <div class="ohd"><span class="okey">1</span><b>메모 풀폭 스트림</b><s>메모 = 풀폭 1열 스트림(행 리스트)</s></div>
+  <div class="mock s-l1"><section class="s-l1">
+  <div class="l1-band">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg>
+    <b>건식식각기</b><span>데모 2건 · AMAT · Lam</span>
+  </div>
+
+  <div class="l1-duo">
+    <div class="l1-col">
+      <div class="pcard">
+        <div class="pband">AMAT <span>Producer GT</span></div>
+        <div class="pstage">
+          <div class="pscroll" data-start="0">
+            <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+            <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+            <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+            <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+          </div>
+          <div class="pchips"><b class="on">1차</b></div>
+          <div class="pdate">05.14</div>
+          <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <div class="pbar"><div class="pbar-thumb"></div></div>
+        </div>
+      </div>
+      <div class="l1-chips">
+        <button type="button" class="l1-chip">
+          <span class="l1-chip-k">식각률<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l1-chip-v">385<small>nm/min</small></span>
+          <span class="l1-chip-c">8인치 Si 베어 · CF4 80sccm · 1차 05.14</span>
+        </button>
+        <button type="button" class="l1-chip">
+          <span class="l1-chip-k">균일도<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l1-chip-v">±1.8<small>%</small></span>
+          <span class="l1-chip-c">5포인트 · 엣지 3mm</span>
+        </button>
+        <button type="button" class="l1-chip">
+          <span class="l1-chip-k">파티클<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l1-chip-v">3<small>ea</small></span>
+          <span class="l1-chip-c">0.1µm↑ · 첨가 전 기준</span>
+        </button>
+        <button type="button" class="l1-chip-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>지표</button>
+      </div>
+    </div>
+
+    <div class="l1-col">
+      <div class="pcard">
+        <div class="pband">Lam <span>Kiyo45</span></div>
+        <div class="pstage">
+          <div class="pscroll" data-start="1">
+            <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+            <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+            <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+            <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+          </div>
+          <div class="pchips"><b>1차</b><b class="on">2차</b></div>
+          <div class="pdate">06.02</div>
+          <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <div class="pbar"><div class="pbar-thumb"></div></div>
+        </div>
+      </div>
+      <div class="l1-chips">
+        <button type="button" class="l1-chip">
+          <span class="l1-chip-k">식각률<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l1-chip-v">412<small>nm/min</small></span>
+          <span class="l1-chip-c">8인치 SiO2 패턴 · C4F8 60sccm · 2차 06.02</span>
+        </button>
+        <button type="button" class="l1-chip">
+          <span class="l1-chip-k">균일도<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l1-chip-v">±1.4<small>%</small></span>
+          <span class="l1-chip-c">5포인트 · 전 구간</span>
+        </button>
+        <button type="button" class="l1-chip">
+          <span class="l1-chip-k">선택비<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l1-chip-v">25<small>:1</small></span>
+          <span class="l1-chip-c">SiO2/Si · 2차</span>
+        </button>
+        <button type="button" class="l1-chip">
+          <span class="l1-chip-k">처리량<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l1-chip-v">52<small>wph</small></span>
+          <span class="l1-chip-c">연속 25장 평균</span>
+        </button>
+        <button type="button" class="l1-chip-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>지표</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="l1-xnote">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+    <span>두 데모는 샘플·레시피 조건이 달라 지표를 각 사 기준으로만 표기합니다. 교차 우수 판정 없음.</span>
+  </div>
+
+  <div class="l1-board">
+    <div class="l1-bhead">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+      <b>검토 메모</b>
+      <em class="l1-scope">장비 공용</em>
+      <span class="l1-cnt">4건</span>
+      <button type="button" class="l1-addc"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>코멘트</button>
+    </div>
+    <ul class="l1-rows">
+      <li class="l1-row">
+        <span class="l1-ava" style="background:#2f8f4e">조</span>
+        <span class="l1-name">조성범</span>
+        <p class="l1-text">5포인트 측정 전 구간 ±1.5% 이내. 엣지 3mm까지 유지되는 게 큼.</p>
+        <time class="l1-date">07.11</time>
+      </li>
+      <li class="l1-row">
+        <span class="l1-ava" style="background:#2f6db8">박</span>
+        <span class="l1-name">박주봉</span>
+        <p class="l1-text">AMAT 파티클 3ea로 우위. 다만 처리량 45wph는 Lam보다 낮아 트레이드오프.</p>
+        <time class="l1-date">07.12</time>
+      </li>
+      <li class="l1-row">
+        <span class="l1-ava" style="background:#a8761a">박</span>
+        <span class="l1-name">박세리</span>
+        <p class="l1-text">2차 데모에서 선택비 재측정 요청함. 1차 조건과 챔버 상태가 달랐음.</p>
+        <time class="l1-date">07.14</time>
+      </li>
+      <li class="l1-row">
+        <span class="l1-ava" style="background:#2f8f4e">조</span>
+        <span class="l1-name">조성범</span>
+        <p class="l1-text">지표만으로 결정 불가. 구매팀에 2사 견적·납기 요청 완료.</p>
+        <time class="l1-date">07.15</time>
+      </li>
+    </ul>
+  </div>
+</section></div>
+  <p class="note">장점: 메모가 좌우 두 열이 아니라 한 덩어리 보드 안에 한 줄씩 아래로 쌓이고 머리에 "장비 공용"이라고 적혀 있어서, 어느 회사 메모인지 헷갈릴 틈이 없습니다. 단점: 메모가 많이 쌓이면 보드가 세로로 길어져서 아래로 더 내려 봐야 합니다. 모바일: 좁은 화면에서는 사진·지표가 한 열로 쌓이고, 메모 줄은 이름·날짜가 윗줄, 내용이 아랫줄로 내려와 그대로 읽기 편합니다.</p>
+</section>
+
+<section class="opt" id="opt-l2">
+  <div class="ohd"><span class="okey">2</span><b>메모 3열 타일</b><s>메모 = 엇갈린 3열 타일(열수 불일치 신호)</s></div>
+  <div class="mock s-l2"><section class="s-l2">
+
+  <div class="l2-band">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg>
+    <b>건식식각기</b><span>데모 2건 · AMAT · Lam</span>
+  </div>
+
+  <div class="l2-cols">
+
+    <div class="l2-col">
+      <div class="pcard">
+        <div class="pband">AMAT <span>Producer GT</span></div>
+        <div class="pstage">
+          <div class="pscroll" data-start="0">
+            <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+            <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+            <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+            <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+          </div>
+          <div class="pchips"><b class="on">1차</b></div>
+          <div class="pdate">05.14</div>
+          <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <div class="pbar"><div class="pbar-thumb"></div></div>
+        </div>
+      </div>
+
+      <div class="l2-chips">
+        <button type="button" class="l2-chip">
+          <span class="l2-chip-k">식각률<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l2-chip-v">385<small>nm/min</small></span>
+          <span class="l2-chip-c">8인치 Si 베어 · CF4 80sccm · 1차 05.14</span>
+        </button>
+        <button type="button" class="l2-chip">
+          <span class="l2-chip-k">균일도<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l2-chip-v">±1.8<small>%</small></span>
+          <span class="l2-chip-c">5포인트 · 엣지 3mm</span>
+        </button>
+        <button type="button" class="l2-chip">
+          <span class="l2-chip-k">파티클<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l2-chip-v">3<small>ea</small></span>
+          <span class="l2-chip-c">0.1µm↑ · 첨가 전 기준</span>
+        </button>
+        <button type="button" class="l2-chip-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>지표</button>
+      </div>
+    </div>
+
+    <div class="l2-col">
+      <div class="pcard">
+        <div class="pband">Lam <span>Kiyo45</span></div>
+        <div class="pstage">
+          <div class="pscroll" data-start="1">
+            <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+            <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+            <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+            <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+          </div>
+          <div class="pchips"><b>1차</b><b class="on">2차</b></div>
+          <div class="pdate">06.02</div>
+          <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+          <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+          <div class="pbar"><div class="pbar-thumb"></div></div>
+        </div>
+      </div>
+
+      <div class="l2-chips">
+        <button type="button" class="l2-chip">
+          <span class="l2-chip-k">식각률<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l2-chip-v">412<small>nm/min</small></span>
+          <span class="l2-chip-c">8인치 SiO2 패턴 · C4F8 60sccm · 2차 06.02</span>
+        </button>
+        <button type="button" class="l2-chip">
+          <span class="l2-chip-k">균일도<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l2-chip-v">±1.4<small>%</small></span>
+          <span class="l2-chip-c">5포인트 · 전 구간</span>
+        </button>
+        <button type="button" class="l2-chip">
+          <span class="l2-chip-k">선택비<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l2-chip-v">25<small>:1</small></span>
+          <span class="l2-chip-c">SiO2/Si · 2차</span>
+        </button>
+        <button type="button" class="l2-chip">
+          <span class="l2-chip-k">처리량<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+          <span class="l2-chip-v">52<small>wph</small></span>
+          <span class="l2-chip-c">연속 25장 평균</span>
+        </button>
+        <button type="button" class="l2-chip-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>지표</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="l2-xnote">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+    <span>두 데모는 샘플·레시피 조건이 달라 지표를 각 사 기준으로만 표기합니다. 교차 우수 판정 없음.</span>
+  </div>
+
+  <div class="l2-board">
+    <div class="l2-grid">
+      <div class="l2-m">
+        <span class="l2-ava" style="background:#2f8f4e">조</span>
+        <div class="l2-mb">
+          <div class="l2-mh"><b>조성범</b><time>07.11</time></div>
+          <p class="l2-mt">5포인트 측정 전 구간 ±1.5% 이내. 엣지 3mm까지 유지되는 게 큼.</p>
+        </div>
+      </div>
+      <div class="l2-m">
+        <span class="l2-ava" style="background:#2f6db8">박</span>
+        <div class="l2-mb">
+          <div class="l2-mh"><b>박주봉</b><time>07.12</time></div>
+          <p class="l2-mt">AMAT 파티클 3ea로 우위. 다만 처리량 45wph는 Lam보다 낮아 트레이드오프.</p>
+        </div>
+      </div>
+      <div class="l2-m">
+        <span class="l2-ava" style="background:#a8761a">박</span>
+        <div class="l2-mb">
+          <div class="l2-mh"><b>박세리</b><time>07.14</time></div>
+          <p class="l2-mt">2차 데모에서 선택비 재측정 요청함. 1차 조건과 챔버 상태가 달랐음.</p>
+        </div>
+      </div>
+      <div class="l2-m">
+        <span class="l2-ava" style="background:#2f8f4e">조</span>
+        <div class="l2-mb">
+          <div class="l2-mh"><b>조성범</b><time>07.15</time></div>
+          <p class="l2-mt">지표만으로 결정 불가. 구매팀에 2사 견적·납기 요청 완료.</p>
+        </div>
+      </div>
+      <button type="button" class="l2-madd">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>코멘트
+      </button>
+    </div>
+  </div>
+
+</section></div>
+  <p class="note">장점: 사진·지표는 2칸인데 메모만 3칸이라 줄이 어긋나고, 메모 묶음이 살짝 다른 색 상자 안에 들어 있어서 "어느 한 회사 것이 아니라 다 같이 쓰는 메모"라는 게 배치만 봐도 읽히며 메모가 많아져도 화면이 짧게 유지됩니다. 단점: 칸이 좁아 긴 메모는 3줄까지만 보이고 나머지가 잘리며, 메모가 1~2개뿐일 때는 빈 칸이 생겨 허전해 보일 수 있습니다. 모바일: 좁은 화면(640px 이하)에서는 사진·지표·메모가 모두 한 줄에 하나씩 세로로 쌓이고 "+ 코멘트" 칸은 낮게 줄어듭니다.</p>
+</section>
+
+<section class="opt" id="opt-l3">
+  <div class="ohd"><span class="okey">3</span><b>메모 오른쪽 도크</b><s>메모 = 우측 세로 도크(축 분리)</s></div>
+  <div class="mock s-l3"><section class="s-l3">
+  <div class="l3-band">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 9H9v6h6V9zm-2 4h-2v-2h2v2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2zm-4 6H7V7h10v10z"/></svg>
+    <b>건식식각기</b><span>데모 2건 · AMAT · Lam</span>
+  </div>
+
+  <div class="l3-body">
+    <div class="l3-main">
+      <div class="l3-demos">
+
+        <div class="l3-demo">
+          <div class="pcard">
+            <div class="pband">AMAT <span>Producer GT</span></div>
+            <div class="pstage">
+              <div class="pscroll" data-start="0">
+                <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+                <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+                <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+                <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+              </div>
+              <div class="pchips"><b class="on">1차</b></div>
+              <div class="pdate">05.14</div>
+              <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+              <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+              <div class="pbar"><div class="pbar-thumb"></div></div>
+            </div>
+          </div>
+          <div class="l3-chips">
+            <button type="button" class="l3-chip">
+              <span class="l3-chip-k">식각률<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+              <span class="l3-chip-v">385<small>nm/min</small></span>
+              <span class="l3-chip-c">8인치 Si 베어 · CF4 80sccm · 1차 05.14</span>
+            </button>
+            <button type="button" class="l3-chip">
+              <span class="l3-chip-k">균일도<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+              <span class="l3-chip-v">±1.8<small>%</small></span>
+              <span class="l3-chip-c">5포인트 · 엣지 3mm</span>
+            </button>
+            <button type="button" class="l3-chip">
+              <span class="l3-chip-k">파티클<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+              <span class="l3-chip-v">3<small>ea</small></span>
+              <span class="l3-chip-c">0.1µm↑ · 첨가 전 기준</span>
+            </button>
+            <button type="button" class="l3-chip-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>지표</button>
+          </div>
+        </div>
+
+        <div class="l3-demo">
+          <div class="pcard">
+            <div class="pband">Lam <span>Kiyo45</span></div>
+            <div class="pstage">
+              <div class="pscroll" data-start="1">
+                <div class="pslide"><div class="ph ph-0"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">챔버 내부 — 상부 전극</span><span class="pcap-n">1 / 4</span></div><p class="pcap-d">식각 후 폴리머 잔류물이 육안으로 확인됨. 우측 하단에 집중.</p></div></div>
+                <div class="pslide"><div class="ph ph-1"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">웨이퍼 표면 — 식각 프로파일</span><span class="pcap-n">2 / 4</span></div><p class="pcap-d">5포인트 측정 지점. 엣지 3mm 구간까지 균일도 유지 확인.</p></div></div>
+                <div class="pslide"><div class="ph ph-2"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">이송 로봇암 — 로드락</span><span class="pcap-n">3 / 4</span></div><p class="pcap-d">웨이퍼 이송 구간. 파티클 카운트를 측정한 위치.</p></div></div>
+                <div class="pslide"><div class="ph ph-3"></div><div class="scrim"></div><div class="pcap"><div class="pcap-h"><span class="pcap-l">OES 스펙트럼 — 종점 검출</span><span class="pcap-n">4 / 4</span></div><p class="pcap-d">엔드포인트 신호 파형. 챔버 상태 차이 확인용으로 기록.</p></div></div>
+              </div>
+              <div class="pchips"><b>1차</b><b class="on">2차</b></div>
+              <div class="pdate">06.02</div>
+              <button type="button" class="pprev" aria-label="이전 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></button>
+              <button type="button" class="pnext" aria-label="다음 사진"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></button>
+              <div class="pbar"><div class="pbar-thumb"></div></div>
+            </div>
+          </div>
+          <div class="l3-chips">
+            <button type="button" class="l3-chip">
+              <span class="l3-chip-k">식각률<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+              <span class="l3-chip-v">412<small>nm/min</small></span>
+              <span class="l3-chip-c">8인치 SiO2 패턴 · C4F8 60sccm · 2차 06.02</span>
+            </button>
+            <button type="button" class="l3-chip">
+              <span class="l3-chip-k">균일도<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+              <span class="l3-chip-v">±1.4<small>%</small></span>
+              <span class="l3-chip-c">5포인트 · 전 구간</span>
+            </button>
+            <button type="button" class="l3-chip">
+              <span class="l3-chip-k">선택비<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+              <span class="l3-chip-v">25<small>:1</small></span>
+              <span class="l3-chip-c">SiO2/Si · 2차</span>
+            </button>
+            <button type="button" class="l3-chip">
+              <span class="l3-chip-k">처리량<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>
+              <span class="l3-chip-v">52<small>wph</small></span>
+              <span class="l3-chip-c">연속 25장 평균</span>
+            </button>
+            <button type="button" class="l3-chip-add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>지표</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="l3-xnote">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+        <span>두 데모는 샘플·레시피 조건이 달라 지표를 각 사 기준으로만 표기합니다. 교차 우수 판정 없음.</span>
+      </div>
+    </div>
+
+    <aside class="l3-dock" aria-label="장비 공통 메모">
+      <div class="l3-dock-top">
+        <div class="l3-dock-head">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+          <b>메모</b><span class="l3-count">4</span>
+        </div>
+        <p class="l3-dock-sub">AMAT·Lam 공통 — 장비 기준 기록</p>
+      </div>
+      <button type="button" class="l3-cbtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>코멘트</button>
+      <div class="l3-stream">
+        <div class="l3-m">
+          <span class="l3-ava" style="background:#2f8f4e">조</span>
+          <div class="l3-mb">
+            <div class="l3-mh"><b>조성범</b><time>07.15</time></div>
+            <p class="l3-mt">지표만으로 결정 불가. 구매팀에 2사 견적·납기 요청 완료.</p>
+          </div>
+        </div>
+        <div class="l3-m">
+          <span class="l3-ava" style="background:#a8761a">박</span>
+          <div class="l3-mb">
+            <div class="l3-mh"><b>박세리</b><time>07.14</time></div>
+            <p class="l3-mt">2차 데모에서 선택비 재측정 요청함. 1차 조건과 챔버 상태가 달랐음.</p>
+          </div>
+        </div>
+        <div class="l3-m">
+          <span class="l3-ava" style="background:#2f6db8">박</span>
+          <div class="l3-mb">
+            <div class="l3-mh"><b>박주봉</b><time>07.12</time></div>
+            <p class="l3-mt">AMAT 파티클 3ea로 우위. 다만 처리량 45wph는 Lam보다 낮아 트레이드오프.</p>
+          </div>
+        </div>
+        <div class="l3-m">
+          <span class="l3-ava" style="background:#2f8f4e">조</span>
+          <div class="l3-mb">
+            <div class="l3-mh"><b>조성범</b><time>07.11</time></div>
+            <p class="l3-mt">5포인트 측정 전 구간 ±1.5% 이내. 엣지 3mm까지 유지되는 게 큼.</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section></div>
+  <p class="note">장점: 메모가 사진 두 장이 놓인 줄과 완전히 다른 오른쪽 세로 칸에 있어서 어느 회사 메모인지 헷갈릴 여지가 없고, 사진·지표·메모가 한 화면에 같이 보여요. 단점: 오른쪽 메모 칸이 자리를 차지해서 사진 폭이 화면 전체를 쓸 때보다 3분의 2 정도로 줄어요. 모바일: 좁은 화면에서는 메모 칸이 사진들 아래로 내려와 전부 한 줄로 쌓이고, 메모 위 "공통 기록" 안내와 개수 표시는 그대로 유지돼요.</p>
+</section>
+</div>
+<script>var SMOOTH = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+function initCarousel(card){
+  var sc = card.querySelector('.pscroll'); if(!sc) return;
+  var bar = card.querySelector('.pbar'), thumb = card.querySelector('.pbar-thumb');
+  var prev = card.querySelector('.pprev'), next = card.querySelector('.pnext');
+  var n = sc.children.length;
+  var W = function(){ return sc.clientWidth || 1; };
+  var idx = function(){ return Math.max(0, Math.min(n - 1, Math.round(sc.scrollLeft / W()))); };
+  var start = +(sc.dataset.start || 0);
+  var cur = Math.max(0, Math.min(n - 1, start));
+  var go = function(i, inst){
+    cur = Math.max(0, Math.min(n - 1, i));
+    sc.scrollTo({ left: cur * W(), behavior: inst ? 'auto' : SMOOTH });
+  };
+  var sync = function(){
+    if(!thumb) return;
+    var max = sc.scrollWidth - sc.clientWidth;
+    var f = max > 0 ? sc.scrollLeft / max : 0;
+    var tw = 100 / n;
+    thumb.style.width = tw + '%';
+    thumb.style.left = (f * (100 - tw)) + '%';
+  };
+  var settleT;
+  sc.addEventListener('scroll', function(){
+    sync();
+    clearTimeout(settleT);
+    settleT = setTimeout(function(){ if(!pd && !td) cur = idx(); }, 150);
+  }, { passive: true });
+  if(typeof ResizeObserver !== 'undefined'){
+    new ResizeObserver(function(){
+      sc.scrollTo({ left: cur * W(), behavior: 'auto' });
+      sync();
+    }).observe(sc);
+  }
+  if(start) go(start, true);
+  sync();
+
+  var suppress = false, snapT;
+  var releaseSnap = function(){ clearTimeout(snapT); snapT = setTimeout(function(){ sc.classList.remove('dragging'); }, 450); };
+  if(prev) prev.addEventListener('click', function(e){ e.stopPropagation(); if(suppress) return; go(cur - 1); });
+  if(next) next.addEventListener('click', function(e){ e.stopPropagation(); if(suppress) return; go(cur + 1); });
+
+  var stage = card.querySelector('.pstage');
+  var acc = 0, at = 0, cool = 0;
+  stage.addEventListener('wheel', function(e){
+    if(e.ctrlKey) return;
+    var horiz = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (e.shiftKey ? e.deltaY : 0);
+    if(!horiz) return;
+    e.preventDefault();
+    var raw = horiz * (e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? 400 : 1);
+    var now = performance.now();
+    if(now < cool) return;
+    if(now - at > 300) acc = 0;
+    at = now; acc += raw;
+    if(Math.abs(acc) >= 40){ go(cur + (acc > 0 ? 1 : -1)); acc = 0; cool = now + 400; }
+  }, { passive: false });
+
+  var pd = null;
+  stage.addEventListener('pointerdown', function(e){
+    if(e.pointerType === 'touch' || e.button !== 0) return;
+    if(e.target.closest && e.target.closest('.pbar')) return;
+    e.preventDefault();
+    clearTimeout(snapT);
+    pd = { x: e.clientX, l: sc.scrollLeft, id: e.pointerId, moved: false };
+    sc.classList.add('dragging');
+  });
+  window.addEventListener('pointermove', function(e){
+    if(!pd || e.pointerId !== pd.id) return;
+    if(e.buttons === 0){ endPd(e); return; }
+    var dx = e.clientX - pd.x;
+    if(Math.abs(dx) > 4) pd.moved = true;
+    sc.scrollLeft = pd.l - dx;
+  });
+  var endPd = function(e){
+    if(!pd || e.pointerId !== pd.id) return;
+    var moved = pd.moved; pd = null;
+    if(moved){
+      suppress = true; setTimeout(function(){ suppress = false; }, 80);
+      go(idx()); releaseSnap();
+    } else sc.classList.remove('dragging');
+  };
+  window.addEventListener('pointerup', endPd);
+  window.addEventListener('pointercancel', endPd);
+
+  if(bar && thumb){
+    var td = null;
+    thumb.addEventListener('pointerdown', function(e){
+      e.preventDefault(); e.stopPropagation();
+      clearTimeout(snapT);
+      td = { x: e.clientX, l: sc.scrollLeft, id: e.pointerId };
+      sc.classList.add('dragging'); bar.classList.add('scrubbing');
+      try{ thumb.setPointerCapture(e.pointerId); }catch(err){}
+    });
+    window.addEventListener('pointermove', function(e){
+      if(!td || e.pointerId !== td.id) return;
+      var tr = bar.getBoundingClientRect().width;
+      var usable = tr * (1 - 1 / n);
+      var max = sc.scrollWidth - sc.clientWidth;
+      if(usable > 0 && max > 0) sc.scrollLeft = td.l + (e.clientX - td.x) / usable * max;
+    });
+    var endTd = function(e){
+      if(!td || e.pointerId !== td.id) return;
+      td = null; bar.classList.remove('scrubbing');
+      go(idx()); releaseSnap();
+    };
+    window.addEventListener('pointerup', endTd);
+    window.addEventListener('pointercancel', endTd);
+    bar.addEventListener('pointerdown', function(e){
+      e.stopPropagation();
+      if(e.target === thumb) return;
+      if(e.pointerType === 'touch') return;
+      var r = bar.getBoundingClientRect();
+      if(r.width <= 0) return;
+      go(Math.floor((e.clientX - r.left) / r.width * n));
+    });
+  }
+}
+document.querySelectorAll('.pcard').forEach(initCarousel);
+document.querySelectorAll('.seg button').forEach(function(b){
+  b.addEventListener('click', function(){
+    document.querySelectorAll('.seg button').forEach(function(x){ x.classList.toggle('on', x === b); });
+    document.body.classList.toggle('mob', b.dataset.v === 'm');
+  });
+});
+</script>
