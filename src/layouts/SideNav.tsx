@@ -1,7 +1,9 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Tooltip from '@mui/material/Tooltip'
+import { alpha } from '@mui/material/styles'
 import { NavBadge } from '@/components/ds'
+import { radius, typescale } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
 import { memoCountByPath } from '@/utils/improveMemo'
@@ -52,6 +54,25 @@ export default function SideNav() {
                 <span className="snav-lcol">
                   <span className="snav-lin">
                     <Box component="span" className="snav-name">{item.label}</Box>
+                    {/* 준비중 칩 — 완성 전 메뉴 표시(nav.tsx wip 플래그) */}
+                    {item.wip && (
+                      <Box
+                        component="span"
+                        sx={{
+                          flexShrink: 0,
+                          fontSize: typescale.caption.size,
+                          lineHeight: 1.5,
+                          color: 'accent.amber',
+                          border: '1px solid',
+                          borderColor: (t) => alpha(t.palette.accent.amber, 0.45),
+                          bgcolor: (t) => alpha(t.palette.accent.amber, 0.12),
+                          borderRadius: `${radius.chip}px`,
+                          px: '5px',
+                        }}
+                      >
+                        준비중
+                      </Box>
+                    )}
                     {/* 아이폰식 위첨자 배지(D7 표준): 메뉴명 뒤 위첨자, 빨강=새 글·앰버=개선 메모 나란히 */}
                     {(newCnt > 0 || memoCnt > 0) && (
                       <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', flexShrink: 0, mt: '-2px' }}>

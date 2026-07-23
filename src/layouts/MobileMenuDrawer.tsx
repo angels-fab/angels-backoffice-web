@@ -19,7 +19,8 @@ import { useAppSelector } from '@/store/hooks'
 import { NavBadge } from '@/components/ds'
 import { useNavBadges } from './useNavBadges'
 import { memoCountByPath } from '@/utils/improveMemo'
-import { radius } from '@/theme/tokens'
+import { alpha } from '@mui/material/styles'
+import { radius, typescale } from '@/theme/tokens'
 
 /**
  * 모바일 「메뉴」 바텀시트 — 하단 탭(홈·업무현황·업무일정·공지)에 없는 나머지 목적지 + 계정.
@@ -36,6 +37,8 @@ interface NavRow {
   path: string
   memberOnly?: boolean
   badge?: number
+  /** 준비중 메뉴 — 이름 옆 앰버 칩 */
+  wip?: boolean
 }
 
 export default function MobileMenuDrawer({ open, onClose }: Props) {
@@ -56,7 +59,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
   // 장비·개선요청 = 팀원 이상 / 행사·바로가기 = 유관자 포함 전체 로그인
   const rows: NavRow[] = [
     { icon: <MonitorIcon />, label: '장비관리', path: '/equipment', memberOnly: true },
-    { icon: <FlagIcon />, label: '마일스톤', path: '/milestone', memberOnly: true },
+    { icon: <FlagIcon />, label: '마일스톤', path: '/milestone', memberOnly: true, wip: true },
     { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve, memberOnly: true },
     { icon: <CoPresentIcon />, label: '학술·교육·전시', path: '/events' },
     { icon: <LinkIcon />, label: '바로가기', path: '/links' },
@@ -98,6 +101,25 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
                 primary={
                   <Box component="span" sx={{ position: 'relative', display: 'inline-block' }}>
                     {r.label}
+                    {/* 준비중 칩 — 완성 전 메뉴 표시 */}
+                    {r.wip && (
+                      <Box
+                        component="span"
+                        sx={{
+                          ml: '5px',
+                          fontSize: typescale.caption.size,
+                          lineHeight: 1.5,
+                          color: 'accent.amber',
+                          border: '1px solid',
+                          borderColor: (t) => alpha(t.palette.accent.amber, 0.45),
+                          bgcolor: (t) => alpha(t.palette.accent.amber, 0.12),
+                          borderRadius: `${radius.chip}px`,
+                          px: '5px',
+                        }}
+                      >
+                        준비중
+                      </Box>
+                    )}
                     {((r.badge || 0) > 0 || memo > 0) && (
                       <Box component="span" sx={{ position: 'absolute', left: '100%', top: -7, ml: '3px', display: 'inline-flex', gap: '3px' }}>
                         <NavBadge count={r.badge || 0} kind="new" />

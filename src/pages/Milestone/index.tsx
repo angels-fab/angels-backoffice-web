@@ -15,6 +15,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import ConstructionIcon from '@mui/icons-material/Construction'
 import {
   AppCard, CardGrid, ContentSection, EmptyState, ErrorBanner, KpiCard, ListRow,
   LoadingState, PageContainer, PageHeader, RatioBar, SearchBar, SegTabs, Select, StatusChip,
@@ -336,6 +337,28 @@ export default function Milestone() {
         }
       />
       {error && <ErrorBanner message="마일스톤을 불러오지 못했습니다" onRetry={() => void dispatch(loadMilestones())} />}
+
+      {/* 준비중 안내 — 완성 전 오해 방지(사용자 지시 2026-07-23). 완성 시 이 블록 + nav.tsx wip 플래그 제거 */}
+      <Box
+        sx={{
+          display: 'flex', alignItems: 'center', gap: 1.25,
+          px: 2, py: 1.25, mb: 2,
+          borderRadius: `${radius.card}px`,
+          border: '1px solid',
+          borderColor: 'accent.amber',
+          bgcolor: (t) => alpha(t.palette.accent.amber, 0.1),
+        }}
+      >
+        <ConstructionIcon sx={{ fontSize: iconSize.header, color: 'accent.amber', flexShrink: 0 }} />
+        <Box>
+          <Typography sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'accent.amber' }}>
+            준비 중인 메뉴입니다
+          </Typography>
+          <Typography variant="caption" sx={{ display: 'block', color: 'accent.amber' }}>
+            화면 구성과 일정·담당자 데이터를 계속 다듬는 중이에요 — 아직 확정 정보가 아닙니다
+          </Typography>
+        </Box>
+      </Box>
 
       {/* 페이지 탭 — 화면 전환은 여기서만 일어난다(v3 문법) */}
       <Box sx={{ mb: `${layout.pageHeaderGap}px` }}>
