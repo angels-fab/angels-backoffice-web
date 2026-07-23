@@ -44,7 +44,8 @@ export default function SideNav() {
               <button
                 key={item.path}
                 className={`snav-item${isActive(item.path) ? ' active' : ''}`}
-                onClick={() => navigate(item.path)}
+                // 클릭 후 blur — 포커스가 남으면 focus-within 때문에 마우스가 떠나도 패널이 안 닫힘
+                onClick={(e) => { e.currentTarget.blur(); navigate(item.path) }}
               >
                 {item.icon}
                 {/* 접힘 상태 배지 — 아이콘 우상단 빨강 숫자·우하단 앰버 점(펼치면 CSS로 숨김) */}

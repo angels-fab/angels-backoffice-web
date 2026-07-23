@@ -71,10 +71,11 @@ function Photo({ photo, onClick, fit = 'cover' }: { photo?: DemoPhotoRef; onClic
   )
 }
 
+// 가독성(2026-07-24): 9.5px → 11px(caption) — 사진 위 조작 칩은 작아서 못 읽는 일이 없어야 함
 const roundChip = (active: boolean) => (th: Theme) => ({
-  fontSize: 9.5, fontWeight: 700, lineHeight: 1, px: '6px', py: '3px', borderRadius: `${radius.pill}px`, border: 'none',
-  cursor: 'pointer', fontFamily: 'inherit', color: th.palette.common.white, bgcolor: active ? th.palette.primary.main : 'rgba(0,0,0,.5)',
-  boxShadow: active ? 'none' : 'inset 0 0 0 1px rgba(255,255,255,.28)',
+  fontSize: typescale.caption.size, fontWeight: 700, lineHeight: 1, px: '7px', py: '3.5px', borderRadius: `${radius.pill}px`, border: 'none',
+  cursor: 'pointer', fontFamily: 'inherit', color: th.palette.common.white, bgcolor: active ? th.palette.primary.main : 'rgba(0,0,0,.55)',
+  boxShadow: active ? 'none' : 'inset 0 0 0 1px rgba(255,255,255,.32)',
 })
 
 // 회차 칩 옆 '+' — 같은 장비+제조사의 다음 회차 등록
@@ -140,8 +141,8 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
     <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', maxWidth: '100%', verticalAlign: 'middle', '& .pen': { opacity: 0, transition: 'opacity .12s' }, '&:hover .pen': { opacity: canEdit ? 0.8 : 0 } }}>
       <Box component="span" sx={{ minWidth: 0, ...(multiline ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } : {}) }}>{display ?? (text || (canEdit ? placeholder : '-'))}</Box>
       {canEdit && <IconButton className="pen" size="small" aria-label="수정" onClick={start}
-        sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', p: '3px', color: 'text.disabled', '&:hover': { color: 'warning.main', opacity: 1 } }}>
-        <EditIcon sx={{ fontSize: iconSize.caption }} />
+        sx={{ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', p: '3px', color: 'text.secondary', '&:hover': { color: 'warning.main', opacity: 1 } }}>
+        <EditIcon sx={{ fontSize: iconSize.body }} />
       </IconButton>}
     </Box>
   )
@@ -310,8 +311,8 @@ function PhotoCarousel({ photos, cover, onZoom, children }: {
               <>
                 <Box aria-hidden sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '44%', zIndex: 2, pointerEvents: 'none', background: SCRIM_GRAD }} />
                 <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, pointerEvents: 'none', px: 1.5, pb: '20px', display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                  <Box sx={{ flex: 1, minWidth: 0, fontSize: typescale.small.size, lineHeight: 1.5, color: '#e7ecf3', textShadow: '0 1px 2px rgba(0,0,0,.5)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.caption || ''}</Box>
-                  {n > 1 && <Box sx={{ flex: 'none', fontSize: typescale.caption.size, fontWeight: 500, letterSpacing: '.04em', color: 'rgba(255,255,255,.66)', fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{i + 1} / {n}</Box>}
+                  <Box sx={{ flex: 1, minWidth: 0, fontSize: typescale.body.size, lineHeight: 1.5, color: '#f0f4f9', textShadow: '0 1px 2px rgba(0,0,0,.55)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.caption || ''}</Box>
+                  {n > 1 && <Box sx={{ flex: 'none', fontSize: typescale.caption.size, fontWeight: 500, letterSpacing: '.04em', color: 'rgba(255,255,255,.8)', fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{i + 1} / {n}</Box>}
                 </Box>
               </>
             )}
@@ -381,21 +382,22 @@ function ChipRow({ round, defs, defsAll, canEdit, onEditChip, onAddChip }: {
             bgcolor: 'background.default', border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.button}px`,
             ...(canEdit ? { cursor: 'pointer', transition: 'border-color .15s ease', '&:hover': { borderColor: th.palette.primary.main } } : {}),
           })}>
-          <Box sx={{ fontSize: typescale.caption.size, fontWeight: 500, color: 'text.secondary', lineHeight: 1.3 }}>{c.label}</Box>
+          {/* 가독성(2026-07-24): 라벨·단위·조건을 한 단계 키우고(11→12) 조건은 흐림→보조색으로 */}
+          <Box sx={{ fontSize: typescale.small.size, fontWeight: 500, color: 'text.secondary', lineHeight: 1.3 }}>{c.label}</Box>
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
             <Box component="span" sx={{ fontSize: typescale.cardTitle.size, fontWeight: 700, color: 'text.primary', lineHeight: 1.25, fontVariantNumeric: 'tabular-nums' }}>{c.value}</Box>
-            {c.unit && <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: 500, color: 'text.secondary' }}>{c.unit}</Box>}
+            {c.unit && <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: 500, color: 'text.secondary' }}>{c.unit}</Box>}
           </Box>
           {c.cond && (
             <Tooltip title={c.cond} placement="bottom-start" enterDelay={400}>
-              <Box sx={{ fontSize: typescale.caption.size, color: 'text.disabled', lineHeight: 1.35, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.cond}</Box>
+              <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', lineHeight: 1.4, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.cond}</Box>
             </Tooltip>
           )}
         </Box>
       ))}
       {canEdit && (
         <Box component="button" type="button" onClick={onAddChip}
-          sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: 0.5, alignSelf: 'stretch', minHeight: 52, px: 1.25, border: `1px dashed ${th.palette.divider}`, borderRadius: `${radius.button}px`, background: 'none', color: 'text.disabled', fontSize: typescale.small.size, fontFamily: 'inherit', cursor: 'pointer', transition: 'color .15s ease, border-color .15s ease', '&:hover': { color: th.palette.primary.main, borderColor: th.palette.primary.main } })}>
+          sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: 0.5, alignSelf: 'stretch', minHeight: 52, px: 1.25, border: `1px dashed ${th.palette.divider}`, borderRadius: `${radius.button}px`, background: 'none', color: 'text.secondary', fontSize: typescale.small.size, fontFamily: 'inherit', cursor: 'pointer', transition: 'color .15s ease, border-color .15s ease', '&:hover': { color: th.palette.primary.main, borderColor: th.palette.primary.main } })}>
           <AddIcon sx={{ fontSize: iconSize.body }} /> 지표
         </Box>
       )}
@@ -500,8 +502,8 @@ function MemoRow({ m, own, busy, onEdit, onDelete }: { m: DemoChatMsg; own: bool
         <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>{fmtDay(m.createdAt)}</Box>
         {own && !editing && (
           <Box className="memo-act" sx={{ display: 'flex', gap: 0.25, opacity: 0, transition: 'opacity .12s' }}>
-            <Tooltip title="수정"><IconButton size="small" aria-label="메모 수정" onClick={startEdit} sx={{ p: '2px', color: 'text.disabled', '&:hover': { color: 'text.primary' } }}><EditIcon sx={{ fontSize: iconSize.caption }} /></IconButton></Tooltip>
-            <Tooltip title="삭제"><IconButton size="small" aria-label="메모 삭제" onClick={onDelete} sx={{ p: '2px', color: 'text.disabled', '&:hover': { color: 'error.main' } }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton></Tooltip>
+            <Tooltip title="수정"><IconButton size="small" aria-label="메모 수정" onClick={startEdit} sx={{ p: '2px', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}><EditIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
+            <Tooltip title="삭제"><IconButton size="small" aria-label="메모 삭제" onClick={onDelete} sx={{ p: '2px', color: 'text.secondary', '&:hover': { color: 'error.main' } }}><CloseIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
           </Box>
         )}
       </Box>
@@ -522,8 +524,8 @@ function MemoStream({ memos, canPost, canModerate, user, busy, onPost, onEdit, o
   return (
     <Box sx={{ mt: 2, borderTop: 1, borderColor: 'divider', pt: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, mb: 0.25 }}>
-        <Box sx={{ fontSize: typescale.small.size, fontWeight: 800, letterSpacing: '.02em', color: 'text.secondary' }}>검토 메모</Box>
-        <Box sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>{memos.length > 0 ? `${memos.length}건 · ` : ''}장비 공용(제조사 무관)</Box>
+        <Box sx={{ fontSize: typescale.body.size, fontWeight: 800, letterSpacing: '.02em', color: 'text.secondary' }}>검토 메모</Box>
+        <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', opacity: 0.85 }}>{memos.length > 0 ? `${memos.length}건 · ` : ''}장비 공용(제조사 무관)</Box>
       </Box>
       {memos.map((m) => (
         <MemoRow key={m.id} m={m} own={ownOf(m)} busy={busy}
@@ -542,7 +544,7 @@ function MemoStream({ memos, canPost, canModerate, user, busy, onPost, onEdit, o
           </Box>
         ) : (
           <Box role="button" tabIndex={0} onClick={() => setAdding(true)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAdding(true) } }}
-            sx={(th) => ({ mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 34, border: `1px dashed ${th.palette.divider}`, borderRadius: `${radius.button}px`, color: 'text.disabled', cursor: 'pointer', fontSize: typescale.small.size, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
+            sx={(th) => ({ mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.4, minHeight: 34, border: `1px dashed ${th.palette.divider}`, borderRadius: `${radius.button}px`, color: 'text.secondary', cursor: 'pointer', fontSize: typescale.small.size, '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } })}>
             <AddIcon sx={{ fontSize: iconSize.body }} /> 코멘트
           </Box>
         )
@@ -739,7 +741,7 @@ function MakerLane({ mg, sel, onSel, defs, defsAll, canEdit, onZoom, onAddRound,
             {r.files.map((f, i) => (
               <Tooltip key={i} title={`${f.name} 열기`} arrow>
                 <Box component="span" onClick={() => void openFile(f)} sx={{ display: 'inline-flex', lineHeight: 0, flex: 'none', cursor: f.path ? 'pointer' : 'default' }}>
-                  <AttachmentIcon type={f.type} name={f.name} size={14} />
+                  <AttachmentIcon type={f.type} name={f.name} size={16} />
                 </Box>
               </Tooltip>
             ))}
@@ -760,19 +762,20 @@ function MakerLane({ mg, sel, onSel, defs, defsAll, canEdit, onZoom, onAddRound,
               </Tooltip>
             )}
           </Box>
-          <Box sx={{ position: 'absolute', top: 4, right: 4, zIndex: 8, fontSize: 9, color: 'common.white', bgcolor: 'rgba(0,0,0,.5)', borderRadius: `${radius.chip}px`, px: '4px', py: '1px', fontWeight: 700, pointerEvents: 'none' }}>{fmtDate(r.date)}</Box>
+          <Box sx={{ position: 'absolute', top: 4, right: 4, zIndex: 8, fontSize: typescale.caption.size, color: 'common.white', bgcolor: 'rgba(0,0,0,.55)', borderRadius: `${radius.chip}px`, px: '6px', py: '2px', fontWeight: 700, pointerEvents: 'none' }}>{fmtDate(r.date)}</Box>
         </PhotoCarousel>
       </Box>
       {/* 회차 도구 — 사진(캡션) 관리 · 데모결과 삭제 */}
       {canEdit && (
-        <Box sx={{ mt: 0.4, display: 'flex', justifyContent: 'center', gap: 0.5, minHeight: 18 }}>
-          <Tooltip title={`${r.round}차 사진·캡션 관리`}><IconButton size="small" onClick={onManagePhotos} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'text.secondary' } }}><AddPhotoAlternateOutlinedIcon sx={{ fontSize: iconSize.caption }} /></IconButton></Tooltip>
-          <Tooltip title={`${r.round}차 데모결과 삭제`}><IconButton size="small" onClick={onDeleteRound} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'error.main' } }}><DeleteOutlineIcon sx={{ fontSize: iconSize.caption }} /></IconButton></Tooltip>
+        <Box sx={{ mt: 0.4, display: 'flex', justifyContent: 'center', gap: 0.75, minHeight: 22 }}>
+          {/* 가독성(2026-07-24): 도구 아이콘 13→16px, 흐림→보조색 */}
+          <Tooltip title={`${r.round}차 사진·캡션 관리`}><IconButton size="small" onClick={onManagePhotos} sx={{ p: '2px', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}><AddPhotoAlternateOutlinedIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
+          <Tooltip title={`${r.round}차 데모결과 삭제`}><IconButton size="small" onClick={onDeleteRound} sx={{ p: '2px', color: 'text.secondary', '&:hover': { color: 'error.main' } }}><DeleteOutlineIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
         </Box>
       )}
       {/* 회차 공통 정보(샘플·조건) — 인라인 수정. 칩별 상세 조건은 각 칩 안에 */}
       {metaVisible && (
-        <Box sx={{ mt: canEdit ? 0.25 : 0.75, fontSize: typescale.caption.size, color: 'text.disabled', lineHeight: 1.6, display: 'flex', flexWrap: 'wrap', columnGap: 1.25, rowGap: 0 }}>
+        <Box sx={{ mt: canEdit ? 0.25 : 0.75, fontSize: typescale.small.size, color: 'text.secondary', lineHeight: 1.6, display: 'flex', flexWrap: 'wrap', columnGap: 1.25, rowGap: 0 }}>
           {/* multiline 필수 — 폼이 여러 줄(\n)로 저장하는 필드라 한 줄 인풋이면 개행이 뭉개져 저장됨 */}
           <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: 500 }}>샘플</Box><EditText text={r.sample} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { sample: v })} /></Box>
           <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: 500 }}>조건</Box><EditText text={r.conditions} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { conditions: v })} /></Box>
@@ -851,7 +854,7 @@ function EquipGroup({ equipment, defs, defsAll, makers, messages, canEdit, canMo
       {/* 제목띠 — 장비명 + 지표편집·변경이력 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.75, py: '8px', bgcolor: '#39415a', color: 'common.white' }}>
         <Box sx={{ fontSize: typescale.emphasis.size, fontWeight: 800 }}>{equipment}</Box>
-        <Box sx={{ fontSize: typescale.caption.size, opacity: 0.65 }}>데모 기록 · 지표는 각 사 조건 기준</Box>
+        <Box sx={{ fontSize: typescale.caption.size, opacity: 0.8 }}>데모 기록 · 지표는 각 사 조건 기준</Box>
         <Box sx={{ flex: 1 }} />
         {canEdit && <Tooltip title="표준 지표 관리(자동완성 후보)"><IconButton size="small" aria-label="지표 편집" onClick={onEditMetrics} sx={{ p: '3px', color: 'rgba(255,255,255,.75)', '&:hover': { color: 'common.white' } }}><TuneIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>}
         <Tooltip title={latestValueChange ? `변경 이력 — 최근: ${latestValueChange.maker} · ${latestValueChange.changedBy}` : '변경 이력'} arrow>

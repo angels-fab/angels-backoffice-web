@@ -37,7 +37,7 @@ import EquipmentTabs from './EquipmentTabs'
 import DemoResults from './DemoResults'
 import { NameWithQty, codeRange } from './batchUtil'
 import { useTableSort, sortRows, SortTh } from './sortable'
-import { iconSize, radius, shadow } from '@/theme/tokens'
+import { iconSize, layout, radius, shadow } from '@/theme/tokens'
 
 const GANTT_NAME_W = 150 // 장비명 열(축소) — 나머지는 간트가 가변폭으로 채움(가로 스크롤 없음)
 // 가변폭 간트에서 반월 1칸의 실제 픽셀폭 = 간트영역 폭 / (월수*2). 드래그/리사이즈 스냅 기준.
@@ -658,7 +658,8 @@ export default function Equipment() {
   }
 
   return (
-    <PageContainer>
+    // 데모결과 뷰만 울트라 폭(1680) — 사진 2~3열이 크게 보이도록(다른 뷰는 표준 1400)
+    <PageContainer maxWidth={view === 'demo' ? layout.maxWidthUltra : undefined}>
       <PageHeader
         icon={<LocalShippingIcon />}
         title="장비 관리"
