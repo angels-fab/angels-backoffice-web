@@ -7,6 +7,12 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3600,
       "autoPort": true
+    },
+    {
+      "name": "angels-backoffice-web-3610",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "3610"],
+      "port": 3610
     }
   ]
 }

@@ -185,7 +185,7 @@ export default function SwipeableCard({
             <SwapHorizIcon sx={{ fontSize: iconSize.header }} />
           </TrayButton>
         )}
-        <TrayButton label="수정" color="#5b6472" onClick={() => { closeAll(); onEdit() }}>
+        <TrayButton label="수정" color="grey.600" onClick={() => { closeAll(); onEdit() }}>
           <EditIcon sx={{ fontSize: iconSize.header }} />
         </TrayButton>
         <TrayButton label="삭제" color={DANGER} onClick={() => { closeAll(); onDelete() }}>

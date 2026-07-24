@@ -6,7 +6,7 @@ import type { WorkItem } from '@/types'
 import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 import SwipeableCard, { type WorkSwipeConfig } from './SwipeableCard'
 
-const ACTIVATION_DISTANCE = 8 // px 이상 이동해야 드래그 시작(마우스)
+const ACTIVATION_DISTANCE = 3 // px 이상 이동하면 드래그 시작(거의 즉시 — 보드와 동일. 순수 클릭 <2px는 선택 유지)
 const CLICK_SUPPRESS_MS = 350
 const SCROLL_EDGE = 72 // 화면 상/하단 자동 스크롤 시작 영역(px)
 const SCROLL_MIN = 3
@@ -18,9 +18,7 @@ interface Props {
   /** 선택·드래그 가능(관리자·수정 중 아님) */
   canDrag: (t: WorkItem) => boolean
   selectedNums: Set<string>
-  /** 모바일 복수선택 모드 */
-  selMode: boolean
-  /** 일반=단일선택 / toggle(Cmd·Ctrl·선택모드 탭)=추가·해제 / shift=범위 */
+  /** 일반=단일선택 / toggle(Cmd·Ctrl)=추가·해제 / shift=범위 — 복수선택은 PC 전용(모바일은 스와이프 액션) */
   onSelectToggle: (num: string, mods: { shift: boolean; toggle: boolean }) => void
   /** 모바일 카드 왼쪽 스와이프 액션(상태·수정·삭제). 있으면 터치는 스와이프가 담당 */
   swipe?: WorkSwipeConfig
@@ -50,7 +48,7 @@ interface Props {
  * 복수선택 시 카드들이 포인터로 모여 스택 토큰(N건 배지)이 된다.
  */
 export default function StatusDragGrid({
-  items, renderCard, canDrag, selectedNums, selMode,
+  items, renderCard, canDrag, selectedNums,
   onSelectToggle, swipe, onDragStartCard, onStatusDrop, onZoneChange,
   onCardDoubleClick, onDeleteDrop, onTrashHover, onRightEdge, awaitingNums, awaitingHidden,
 }: Props) {
@@ -68,7 +66,6 @@ export default function StatusDragGrid({
   const itemsRef = useRef(items); itemsRef.current = items
   const canDragRef = useRef(canDrag); canDragRef.current = canDrag
   const selectedRef = useRef(selectedNums); selectedRef.current = selectedNums
-  const selModeRef = useRef(selMode); selModeRef.current = selMode
   const onSelectToggleRef = useRef(onSelectToggle); onSelectToggleRef.current = onSelectToggle
   const swipeRef = useRef(swipe); swipeRef.current = swipe
   const onDragStartCardRef = useRef(onDragStartCard); onDragStartCardRef.current = onDragStartCard
@@ -283,17 +280,16 @@ export default function StatusDragGrid({
     document.addEventListener('keydown', onKeyDown)
   }
 
-  // 클릭 선택(캡처 단계) — 일반=그 카드만 / Cmd·Ctrl·선택모드 탭=토글 / Shift=범위
+  // 클릭 선택(캡처 단계) — 일반=그 카드만 / Cmd·Ctrl=토글 / Shift=범위 (복수선택은 PC 전용)
   const onClickCapture = (e: React.MouseEvent, num: string) => {
-    if (lastPointerType.current === 'touch') return // 터치: 탭 선택 안 함(선택은 PC 전용)
+    if (lastPointerType.current === 'touch') return // 터치: 탭 선택 안 함(선택은 PC 전용, 모바일은 스와이프 액션)
     if (suppressNextClick.current) { suppressNextClick.current = false; e.preventDefault(); e.stopPropagation(); return }
     if (Date.now() < suppressClickUntil.current) { e.preventDefault(); e.stopPropagation(); return }
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) return // 메뉴·링크는 통과
     const item = itemsRef.current.find((i) => i.num === num)
     if (!item || !canDragRef.current(item)) return
     e.preventDefault(); e.stopPropagation()
-    const toggle = e.metaKey || e.ctrlKey || (selModeRef.current && !e.shiftKey)
-    onSelectToggleRef.current(num, { shift: e.shiftKey, toggle })
+    onSelectToggleRef.current(num, { shift: e.shiftKey, toggle: e.metaKey || e.ctrlKey })
   }
 
   const setCellRef = (num: string) => (el: HTMLElement | null) => {

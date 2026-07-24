@@ -28,7 +28,8 @@ import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
-import { alpha } from '@mui/material/styles'
+import ViewKanbanIcon from '@mui/icons-material/ViewKanban'
+import { alpha, darken, lighten } from '@mui/material/styles'
 import { radius, shadow, iconSize, typescale } from '@/theme/tokens'
 import {
   PageContainer,
@@ -39,6 +40,10 @@ import {
   SearchBar,
   StatusChip,
   EmptyState,
+  ErrorBanner,
+  LoadingState,
+  ConfirmDialog,
+  focusRingSx,
 } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { isWorkNew } from '@/utils/newPost'
@@ -51,7 +56,7 @@ import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS, catKind, mgrColor } from './workMeta'
+import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS, catKind, mgrColor, W_STATUS } from './workMeta'
 import ManagerChip from '@/components/ds/ManagerChip'
 import type { CardTone } from './workMeta'
 import { CatFilterChip, MgrFilterChip } from './FilterChips'
@@ -64,6 +69,7 @@ import type { NewTaskForm } from './NewTaskCard'
 import ReorderableTaskGrid from './ReorderableTaskGrid'
 import KpiSection from './KpiSection'
 import StatusDragGrid from './StatusDragGrid'
+import KanbanBoard from './KanbanBoard'
 import type { WorkSwipeConfig } from './SwipeableCard'
 import { genieOverlayInto, type DropZone, type StatusDropResult, type WorkView } from './dropZones'
 
@@ -75,13 +81,14 @@ type HistEntry =
 // STEP24 — 담당자 현황 섹션 임시 숨김(구조 보존, 추후 재노출 시 true)
 const SHOW_MANAGER_STATUS = false
 
-// 업무목록 헤더 — 상태별 제목·아이콘·색(시안 work-list-controls.html stateMeta). 아이콘은 박스 없이 색만.
+// 업무목록 헤더 — 상태별 제목·아이콘·색. 아이콘은 박스 없이 색만.
+// 색은 D3 전역 배정(진행중=그린·보류=앰버·완료=블루·Remind/Check=퍼플) — KPI·카드 톤·보드 열과 동일.
 const VIEW_META: Record<WorkView, { title: string; Icon: React.ElementType; color: string }> = {
   inProgress: { title: '진행중 업무', Icon: TimelapseIcon, color: 'accent.green' },
-  hold: { title: '보류 업무', Icon: PauseIcon, color: 'accent.blue' },
+  hold: { title: '보류 업무', Icon: PauseIcon, color: 'accent.amber' },
   check: { title: '부서장 확인', Icon: FactCheckOutlinedIcon, color: 'accent.purple' },
-  done: { title: '완료 업무', Icon: TaskAltIcon, color: 'text.secondary' },
-  remind: { title: 'Remind 업무', Icon: TipsAndUpdatesIcon, color: 'accent.amber' },
+  done: { title: '완료 업무', Icon: TaskAltIcon, color: 'accent.blue' },
+  remind: { title: 'Remind 업무', Icon: TipsAndUpdatesIcon, color: 'accent.purple' },
 }
 
 // 스와이프 [상태] 피커의 존별 라벨(목표 상태 표시)
@@ -138,7 +145,7 @@ function NewTaskPlusButton({ onClick }: { onClick: () => void }) {
         color: th.palette.accent.green,
         transition: 'background-color .15s, border-color .15s',
         '&:hover': { bgcolor: alpha(th.palette.accent.green, 0.2), borderColor: alpha(th.palette.accent.green, 0.7) },
-        '&:focus-visible': { outline: 'none', borderColor: th.palette.accent.green },
+        ...(focusRingSx as object),
       })}
     >
       <AddIcon sx={{ fontSize: iconSize.action }} />
@@ -213,7 +220,8 @@ export default function Work() {
   const [searchParams, setSearchParams] = useSearchParams()
   // KPI 버튼이 전환하는 메인 목록 — 마지막 보던 뷰 기억(개인화)
   const [view, setView] = useState<WorkView>(() => {
-    const s = localStorage.getItem('work:view')
+    let s: string | null = null
+    try { s = localStorage.getItem('work:view') } catch { /* 저장소 차단 환경(사생활 모드 등) */ }
     return s === 'inProgress' || s === 'hold' || s === 'check' || s === 'done' || s === 'remind' ? s : 'inProgress'
   })
   // 계정 개인화 뷰 — 설정 로드되면 서버 저장값으로 1회 동기화(기기 넘나들며 유지)
@@ -225,11 +233,18 @@ export default function Work() {
     svViewApplied.current = true
     if (svWorkView === 'inProgress' || svWorkView === 'hold' || svWorkView === 'check' || svWorkView === 'done' || svWorkView === 'remind') setView(svWorkView)
   }, [usReady, svWorkView])
-  // 뷰 변경 시 저장 — 로컬 캐시(즉시) + 계정 서버(디바운스, 기기 동기화)
+  // 뷰 변경 시 로컬 캐시(즉시). 계정 저장은 사용자가 KPI로 전환한 순간만(openView) —
+  // 마운트 자동 저장은 로컬 초기값이 서버 복원값을 선점·덮어써 기기 간 동기화를 깨므로 금지(2026-07-25 UX 감사).
   useEffect(() => {
     try { localStorage.setItem('work:view', view) } catch { /* 저장 불가 무시 */ }
-    dispatch(putSetting({ key: 'work.view', value: view }))
-  }, [view, dispatch])
+  }, [view])
+  // 보드(칸반) 보기 — 진행중/보류/완료/Remind 4열 한 화면(기기 로컬 기억). KPI 버튼 클릭 시 목록 보기 복귀.
+  const [boardMode, setBoardMode] = useState(() => {
+    try { return localStorage.getItem('work:board') === '1' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('work:board', boardMode ? '1' : '0') } catch { /* 저장 불가 무시 */ }
+  }, [boardMode])
   // 구분·담당자 필터 — 업무일정 규칙(전체 칩 없음·빈 Set=전체·일반클릭 단독/재클릭 해제·Shift 복수). 구분은 normCat 키.
   const [selCats, setSelCats] = useState<Set<string>>(new Set())
   const [selMgrs, setSelMgrs] = useState<Set<string>>(new Set())
@@ -280,12 +295,30 @@ export default function Work() {
   const [orderMap, setOrderMap] = useState<Record<string, number>>({})
   // 표시 전용 정렬 — 시트·포털정렬순서 미변경, Undo/Redo 이력 미포함. null=기본(진행중=수동순서, 그 외=최신순)
   const [listSort, setListSort] = useState<{ key: 'date' | 'mgr' | 'cat'; dir: 'asc' | 'desc' } | null>(null)
+  // 정렬 계정 기억 — 같은 툴바의 필터와 동일 정책(로드 성공 후 1회 복원, 사용자 조작에서만 저장)
+  const svListSort = useAppSelector((s) => s.userSettings.settings['work.listSort'] as { key: string; dir: string } | null | undefined)
+  const listSortApplied = useRef(false)
+  const listSortTouched = useRef(false)
+  // 정렬 변경(버튼 토글·드래그 해제 공용) — 화면 반영 + 계정 저장(로드 실패 세션은 화면만)
+  const changeListSort = (v: { key: 'date' | 'mgr' | 'cat'; dir: 'asc' | 'desc' } | null) => {
+    listSortTouched.current = true
+    setListSort(v)
+    if (usLoadedOk) dispatch(putSetting({ key: 'work.listSort', value: v }))
+  }
+  // 저장된 정렬 1회 복원 — 복원 전 사용자가 이미 조작했으면 스킵(필터 복원과 동일 규칙)
+  useEffect(() => {
+    if (!usLoadedOk || listSortApplied.current) return
+    listSortApplied.current = true
+    if (listSortTouched.current || !svListSort) return
+    const key = svListSort.key
+    const dir = svListSort.dir
+    if ((key === 'date' || key === 'mgr' || key === 'cat') && (dir === 'asc' || dir === 'desc')) setListSort({ key, dir })
+  }, [usLoadedOk, svListSort])
   const authRef = useRef({ user, authKey })
   authRef.current = { user, authKey }
 
-  // 복수선택(Cmd/Ctrl·Shift·모바일 롱프레스) + KPI 드롭존 드래그 상태 + 상태 저장 직렬화 큐
+  // 복수선택(Cmd/Ctrl·Shift — PC 전용, 모바일은 카드 스와이프 액션이 대체) + KPI 드롭존 드래그 상태 + 상태 저장 직렬화 큐
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [selMode, setSelMode] = useState(false) // 모바일 선택모드
   const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true }) // 모바일=카드 스와이프 액션 활성
   const [reorderMode, setReorderMode] = useState(false) // 진행중 순서 편집(흔들림) 모드 — 모바일 액션 시트에서 진입
   const selAnchor = useRef<string | null>(null)
@@ -318,6 +351,19 @@ export default function Work() {
     setSearchParams(next, { replace: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, items])
+
+  // 상세 Drawer 바깥(빈 배경) 클릭 = 닫기 — nonModal이라 백드롭이 없어 문서 클릭으로 직접 감지.
+  // 드로어 내부·모달/팝오버·카드(보드/그리드 셀)는 제외 — 카드는 자체 토글·선택 동작이 담당.
+  useEffect(() => {
+    if (!picked) return
+    const onDocClickCloseDrawer = (e: MouseEvent) => {
+      const el = e.target as HTMLElement | null
+      if (el && el.closest('.MuiDrawer-root, .MuiModal-root, .MuiPopover-root, [data-kanban-card], .reorder-cell, .sdg-cell')) return
+      setPicked(null)
+    }
+    document.addEventListener('click', onDocClickCloseDrawer)
+    return () => document.removeEventListener('click', onDocClickCloseDrawer)
+  }, [picked])
 
   // ── 전체 집계(필터 무관) ──
   const counts = useMemo(() => {
@@ -456,6 +502,17 @@ export default function Work() {
     [pool, matchCat, matchMgr, matchQuery, applyListSort],
   )
 
+  // 보드(칸반) 보기 데이터 — 필터·검색만 적용(상태별 열 분배·정렬은 KanbanBoard가 수행)
+  const boardItems = useMemo(
+    () => items.filter((t) => matchCat(t) && matchMgr(t) && matchQuery(t)),
+    [items, matchCat, matchMgr, matchQuery],
+  )
+  // 보드 표시 건수 — 4열(진행중·보류·완료·Remind) 합. 취소·미정은 보드 미표시라 제외.
+  const boardShownCount = useMemo(
+    () => boardItems.filter((t) => t.remind || ['inProgress', 'hold', 'done'].includes(classify(t))).length,
+    [boardItems],
+  )
+
   // 진행중 카드 표시 순서(개인화 Stage 3) — 내 계정의 저장 순서('work.order', num 배열)가 있으면 그 순서.
   // 목록에 없는 카드(이후 신규·복원)는 맨 아래(기존 미지정=Infinity 관례와 동일). 개인 순서가 없으면
   // (한 번도 드래그 안 함·설정 로드실패) 종전 팀 기준선(orderMap 낙관 → works.sort_order) 폴백 — 화면 무변화.
@@ -482,6 +539,8 @@ export default function Work() {
     () => applyListSort(inProgressList.filter((t) => matchCat(t) && matchMgr(t) && matchQuery(t))),
     [inProgressList, matchCat, matchMgr, matchQuery, applyListSort],
   )
+  // 보드 진행중 열 순서 — 목록 보기와 같은 내 수동 순서 공유(inProgressList가 개인화 순서를 이미 반영)
+  const inProgressNums = useMemo(() => inProgressList.map((t) => t.num), [inProgressList])
 
   // 통합 Undo/Redo — 순서변경·상태변경 히스토리(HistEntry) 스택
   const undoStack = useRef<HistEntry[]>([])
@@ -500,13 +559,33 @@ export default function Work() {
   const checkHold = useMemo(() => items.filter((t) => t.chief && classify(t) === 'hold').sort(cmp), [items])
 
   // KPI 버튼 → 목록 전환(드롭 직후 존 클릭은 억제)
+  // 작성 중 내용 보호 확인 — window.confirm 대신 표준 ConfirmDialog(B6). proceed = 동의 시 실행할 전환.
+  const [leaveConfirm, setLeaveConfirm] = useState<{ proceed: () => void } | null>(null)
+  const guardCompose = (proceed: () => void) => {
+    if (composing && composeDirty) setLeaveConfirm({ proceed })
+    else proceed()
+  }
+
   const openView = (v: WorkView) => {
     if (Date.now() < zoneClickSuppress.current) return
-    // 인라인 작성 중 내용이 있으면 뷰 전환으로 사라지기 전에 확인
-    if (composing && composeDirty && !window.confirm('작성 중인 새 업무가 있습니다. 이동하면 입력한 내용이 사라집니다. 이동할까요?')) return
-    setView(v)
-    setComposing(false)
-    setEditingId(null)
+    guardCompose(() => {
+      setView(v)
+      // 계정 저장은 사용자 전환 시에만 — 필터·seen과 동일한 게이트 정책(마운트 자동 저장 금지)
+      dispatch(putSetting({ key: 'work.view', value: v }))
+      setBoardMode(false) // 보드 보기 중 KPI 클릭 = 해당 상태 목록으로 복귀
+      setComposing(false)
+      setEditingId(null)
+    })
+  }
+
+  // 보드(칸반) 보기 토글 — 작성 중 내용 보호 확인은 뷰 전환과 동일. 복수선택은 보드 미지원이라 해제.
+  const toggleBoard = () => {
+    guardCompose(() => {
+      setBoardMode((v) => !v)
+      setComposing(false)
+      setEditingId(null)
+      setSelected(new Set())
+    })
   }
 
   // '+' 버튼(진행중 뷰 전용) — 카드 그리드 첫 칸에 인라인 작성카드 표시
@@ -753,17 +832,19 @@ export default function Work() {
       finalOrder = full.map((n) => (inSet.has(n) ? orderedNums[i++] : n))
     }
     pushEntry({ kind: 'order', before: full, after: finalOrder })
-    // 드래그 = 수동 정렬 의도 — 표시 정렬을 해제하고 보이는 배치 그대로 포털정렬순서로 확정(시각적 점프 없음)
-    setListSort(null); commitOrder(finalOrder); bumpHist()
+    // 드래그 = 수동 정렬 의도 — 표시 정렬을 해제(계정 저장 포함)하고 보이는 배치 그대로 포털정렬순서로 확정(시각적 점프 없음)
+    changeListSort(null); commitOrder(finalOrder); bumpHist()
   }
 
-  // 정렬 버튼 — 표시 전용(시트·포털정렬순서 미변경, 이력 미포함). 같은 키 재클릭 = 방향 전환.
-  // 날짜는 최신순(↓)부터, 담당자·구분은 오름차순(↑)부터 시작.
+  // 정렬 버튼 — 표시 전용(시트·포털정렬순서 미변경, 이력 미포함). 3단 사이클:
+  // 켬(날짜 최신순↓·담당자/구분 오름차순↑) → 재클릭 방향 전환 → 한 번 더 해제(기본 순서 복귀).
+  // 해제 수단이 없으면 진행중 뷰의 기본(내 수동 순서)으로 돌아갈 방법이 드래그뿐이라 3단이 필수.
   const toggleListSort = (key: 'date' | 'mgr' | 'cat') => {
-    setListSort((prev) => {
-      if (prev?.key === key) return { key, dir: prev.dir === 'desc' ? 'asc' : 'desc' }
-      return { key, dir: key === 'date' ? 'desc' : 'asc' }
-    })
+    const prev = listSort
+    if (prev?.key !== key) return changeListSort({ key, dir: key === 'date' ? 'desc' : 'asc' })
+    const flipped = prev.dir === 'desc' ? 'asc' : 'desc'
+    const initial = key === 'date' ? 'desc' : 'asc'
+    changeListSort(prev.dir === initial ? { key, dir: flipped } : null)
   }
   // 정렬 버튼 라벨·화살표 — 활성 버튼에만 방향 화살표
   const sortArrow = (key: 'date' | 'mgr' | 'cat') =>
@@ -832,14 +913,14 @@ export default function Work() {
     const e = undoStack.current.pop()
     if (!e) return
     redoStack.current.push(e)
-    if (e.kind === 'order') { setListSort(null); commitOrder(e.before) } else applyStatusEntry(e, 'back')
+    if (e.kind === 'order') { changeListSort(null); commitOrder(e.before) } else applyStatusEntry(e, 'back')
     bumpHist()
   }
   const doRedo = () => {
     const e = redoStack.current.pop()
     if (!e) return
     undoStack.current.push(e)
-    if (e.kind === 'order') { setListSort(null); commitOrder(e.after) } else applyStatusEntry(e, 'forward')
+    if (e.kind === 'order') { changeListSort(null); commitOrder(e.after) } else applyStatusEntry(e, 'forward')
     bumpHist()
   }
   // 키보드 단축키(Ctrl/Cmd+Z=실행취소, +Shift=다시실행). 입력란 포커스 중엔 가로채지 않음. 관리자만.
@@ -860,15 +941,18 @@ export default function Work() {
   }, [isAdmin])
 
   // ── 복수선택 ──
-  const clearSelection = useCallback(() => { setSelected(new Set()); setSelMode(false); selAnchor.current = null }, [])
+  const clearSelection = useCallback(() => { setSelected(new Set()); selAnchor.current = null }, [])
   // 목록 이동·필터·검색 변경·로그아웃 시 해제
   useEffect(() => { clearSelection() }, [view, selCats, selMgrs, query, user, clearSelection])
-  // ESC — 선택/선택모드 종료(입력란 포커스 제외)
+  // ESC — 1순위 상세 드로어 닫기(빈 배경 클릭과 동일 의미), 없으면 선택 종료(입력란 포커스 제외)
+  const pickedRef = useRef(picked)
+  pickedRef.current = picked
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       const el = document.activeElement as HTMLElement | null
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      if (pickedRef.current) { setPicked(null); return }
       clearSelection()
     }
     window.addEventListener('keydown', onKey)
@@ -898,15 +982,19 @@ export default function Work() {
         selAnchor.current = num
         return next
       }
+      // 일반 클릭 — 단일 선택. 이미 그 카드 하나만 선택된 상태면 재클릭 = 해제(토글).
+      if (prev.size === 1 && prev.has(num)) {
+        selAnchor.current = null
+        return new Set()
+      }
       selAnchor.current = num
-      return new Set([num]) // 일반 클릭 — 단일 선택
+      return new Set([num])
     })
   }
   // 선택 안 된 카드를 드래그로 잡음 — 그 카드만 선택(기존 복수선택 해제)
   const selectOnly = useCallback((num: string) => {
     selAnchor.current = num
     setSelected(new Set([num]))
-    setSelMode(false)
   }, [])
   // 카드 주변 빈 공간 클릭 = 전체 선택 해제(카드·버튼·입력·드롭존·팝업 제외 — 카드 클릭은 캡처에서 전파 중단됨)
   useEffect(() => {
@@ -1096,22 +1184,18 @@ export default function Work() {
         updatedAt={error ? '불러오기 실패' : undefined}
       />
 
-      {/* 업무 목록 불러오기 최종 실패 — 빈 화면 대신 오류 안내 + 다시 시도. 기존 목록이 있으면 유지 표시 */}
+      {/* 업무 목록 불러오기 최종 실패 — 표준 ErrorBanner(B7). 기존 목록이 있으면 warning 강등 + 유지 표시 */}
       {error && (
-        <Alert
+        <ErrorBanner
           severity={items.length > 0 ? 'warning' : 'error'}
-          sx={{ mb: 2 }}
-          action={
-            <Button color="inherit" size="small" onClick={() => dispatch(loadWorkData())} disabled={workLoading}>
-              {workLoading ? '불러오는 중…' : '다시 시도'}
-            </Button>
+          message={
+            (items.length > 0
+              ? `업무 목록 새로고침에 실패했습니다. 마지막으로 불러온 목록(${updatedAt || '이전'})을 표시 중입니다.`
+              : '업무 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.') + (errorMsg ? ` — ${errorMsg}` : '')
           }
-        >
-          {items.length > 0
-            ? `업무 목록 새로고침에 실패했습니다. 마지막으로 불러온 목록(${updatedAt || '이전'})을 표시 중입니다.`
-            : '업무 목록을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'}
-          {errorMsg ? ` — ${errorMsg}` : ''}
-        </Alert>
+          busy={workLoading}
+          onRetry={() => dispatch(loadWorkData())}
+        />
       )}
 
       {/* ① KPI — 2열. 명시적 버튼(링/Check 필/보관함/완료 박스/Remind 필)만 목록을 열고, 드래그 드롭존을 겸함 */}
@@ -1134,6 +1218,16 @@ export default function Work() {
       <ContentSection last={!SHOW_MANAGER_STATUS}>
         {/* 제목행: [상태 아이콘] 상태별 제목 N건 [+](진행중·관리자만) — 그 외 요소 없음 */}
         {(() => {
+          // 보드 보기 — 상태별 제목 대신 보드 제목(새 업무 '+'는 목록 보기 전용)
+          if (boardMode) {
+            return (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5, minWidth: 0 }}>
+                <ViewKanbanIcon sx={{ fontSize: 22, color: 'text.secondary', flexShrink: 0 }} />
+                <Typography variant="h2" component="h2">업무 보드</Typography>
+                <Typography variant="body2" sx={{ color: 'text.disabled' }}>{boardShownCount}건</Typography>
+              </Box>
+            )
+          }
           const meta = VIEW_META[view]
           const ViewIcon = meta.Icon
           return (
@@ -1217,15 +1311,20 @@ export default function Work() {
               </BtnGroup>
             )}
             {/* 순서 편집 토글 — 모바일 진행중 뷰 전용. 켜면 카드를 끌어 순서변경(그동안 스와이프 비활성) */}
-            {isAdmin && isMobile && view === 'inProgress' && (
+            {isAdmin && isMobile && view === 'inProgress' && !boardMode && (
               <BtnGroup>
                 <GroupBtn title="순서 편집 (카드를 끌어 순서변경)" label="순서" icon={<SwapVertIcon sx={{ fontSize: iconSize.body }} />} selected={reorderMode} onClick={() => { clearSelection(); setReorderMode((v) => !v) }} />
               </BtnGroup>
             )}
+            {/* 보드(칸반) 보기 토글 — 4개 상태 열 한 화면, 카드 드래그로 열 간 상태 변경 */}
             <BtnGroup>
-              <GroupBtn title="날짜 정렬(재클릭 시 방향 전환)" label="날짜" icon={sortArrow('date')} selected={listSort?.key === 'date'} onClick={() => toggleListSort('date')} />
-              <GroupBtn title="담당자 가나다 정렬(재클릭 시 방향 전환)" label="담당자" icon={sortArrow('mgr')} selected={listSort?.key === 'mgr'} onClick={() => toggleListSort('mgr')} />
-              <GroupBtn title="업무구분 정렬(재클릭 시 방향 전환)" label="구분" icon={sortArrow('cat')} selected={listSort?.key === 'cat'} onClick={() => toggleListSort('cat')} />
+              <GroupBtn title="보드 보기 — 상태별 열로 보고 카드를 끌어 상태 변경" label="보드" icon={<ViewKanbanIcon sx={{ fontSize: iconSize.body }} />} selected={boardMode} onClick={toggleBoard} />
+            </BtnGroup>
+            {/* 표시 정렬 — 목록·보드 공용(보드는 각 열 안에서 적용). 미사용 시 기본 순서(진행중 수동순서·그 외 최신순) */}
+            <BtnGroup>
+              <GroupBtn title="날짜 정렬 (재클릭 방향 전환 · 한 번 더 기본 순서)" label="날짜" icon={sortArrow('date')} selected={listSort?.key === 'date'} onClick={() => toggleListSort('date')} />
+              <GroupBtn title="담당자 가나다 정렬 (재클릭 방향 전환 · 한 번 더 기본 순서)" label="담당자" icon={sortArrow('mgr')} selected={listSort?.key === 'mgr'} onClick={() => toggleListSort('mgr')} />
+              <GroupBtn title="업무구분 정렬 (재클릭 방향 전환 · 한 번 더 기본 순서)" label="구분" icon={sortArrow('cat')} selected={listSort?.key === 'cat'} onClick={() => toggleListSort('cat')} />
             </BtnGroup>
             {/* 휴지통 드로어 열기 — 복원용(삭제 건이 있을 때만). 삭제 드롭은 우측 드웰 휴지통이 담당 */}
             {isAdmin && trashed.length > 0 && (
@@ -1253,7 +1352,25 @@ export default function Work() {
           </Box>
         </Box>
 
-        {view === 'inProgress' ? (
+        {!workReady ? (
+          // 첫 로딩 — 빈 상태 문구 대신 표준 LoadingState(B7). 실패 시에도 ready=true라 여기 갇히지 않음
+          <LoadingState label="업무를 불러오는 중…" />
+        ) : boardMode ? (
+          // 보드(칸반) 보기 — 열 간 드롭은 KPI 존과 동일 로직(handleStatusDrop) 재사용: Undo/Redo·저장 큐·롤백 공유.
+          // 카드 클릭 = 상세 열기/같은 카드 재클릭 닫기(토글), 열린 카드는 보드에서 선택 강조.
+          <KanbanBoard
+            items={boardItems}
+            canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
+            onStatusDrop={handleStatusDrop}
+            onCardClick={(t) => setPicked((p) => (p?.num === t.num ? null : t))}
+            selectedNum={picked?.num ?? null}
+            sort={listSort ? applyListSort : null}
+            inProgressOrder={inProgressNums}
+            canReorder={isAdmin && !!user && !!authKey}
+            onReorder={handleReorder}
+            onZoneChange={onZoneChange}
+          />
+        ) : view === 'inProgress' ? (
           inProgressListed.length === 0 && !composing ? (
             <AppCard padding={0}><EmptyState size="sm" title="해당 업무가 없습니다" /></AppCard>
           ) : (
@@ -1291,7 +1408,6 @@ export default function Work() {
             renderCard={(t) => renderTask(t, view === 'remind' ? 'purple' : classify(t) === 'done' ? 'blue' : classify(t) === 'hold' ? 'amber' : 'green')}
             canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
             selectedNums={selected}
-            selMode={selMode}
             onSelectToggle={toggleSelect}
             swipe={swipeConfig}
             onDragStartCard={selectOnly}
@@ -1325,7 +1441,7 @@ export default function Work() {
                 <Typography variant="subtitle1" sx={{ mb: 1 }}>{m.mgr}</Typography>
                 <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                   <StatusChip status="success" label={`진행중 ${m.inProgress}`} />
-                  {m.remind > 0 && <StatusChip status="warning" label={`Remind ${m.remind}`} />}
+                  {m.remind > 0 && <StatusChip status="purple" label={`Remind ${m.remind}`} />}
                   {m.chief > 0 && <StatusChip status="purple" label={`Check ${m.chief}`} />}
                 </Box>
               </AppCard>
@@ -1364,7 +1480,7 @@ export default function Work() {
           }}
         >
           <Typography sx={{ flex: 1, fontSize: typescale.emphasis.size }}>왼쪽 손잡이(≡)를 끌어 순서를 바꾸세요 · 목록은 그대로 스크롤됩니다</Typography>
-          <Button size="small" variant="contained" onClick={() => setReorderMode(false)} sx={{ bgcolor: 'common.white', color: 'primary.main', '&:hover': { bgcolor: '#f0f0f0' } }}>
+          <Button size="small" variant="contained" onClick={() => setReorderMode(false)} sx={{ bgcolor: 'common.white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}>
             완료
           </Button>
         </Box>
@@ -1378,8 +1494,8 @@ export default function Work() {
         <DialogContent>
           <DialogContentText sx={{ color: 'text.secondary' }}>
             {deleteReq && deleteReq.items.length > 1
-              ? '삭제를 누르면 선택한 카드가 휴지통으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.'
-              : `「${deleteReq ? taskTitle(deleteReq.items[0]) : ''}」 업무를 삭제합니다. 이 작업은 되돌릴 수 없습니다.`}
+              ? '삭제를 누르면 선택한 카드가 휴지통으로 이동합니다. 휴지통에서 언제든 복원할 수 있습니다.'
+              : `「${deleteReq ? taskTitle(deleteReq.items[0]) : ''}」 업무를 휴지통으로 이동합니다. 휴지통에서 언제든 복원할 수 있습니다.`}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -1405,6 +1521,17 @@ export default function Work() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 뷰 전환 확인 — 작성 중 새 업무 내용 보호(B6: window.confirm 대체 표준 ConfirmDialog) */}
+      <ConfirmDialog
+        open={!!leaveConfirm}
+        destructive
+        title="작성 중인 업무를 닫을까요?"
+        description="이동하면 입력한 내용이 사라집니다."
+        confirmLabel="이동"
+        onConfirm={() => { leaveConfirm?.proceed(); setLeaveConfirm(null) }}
+        onClose={() => setLeaveConfirm(null)}
+      />
 
       {/* 결과 Snackbar — 상태 저장 실패 시에는 '다시 시도' 제공 */}
       <Snackbar
@@ -1443,8 +1570,9 @@ export default function Work() {
               right: 14, top: trashPanelBox.top,
               width: 74, height: trashPanelBox.height, borderRadius: `${radius.modal}px`,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.75,
-              border: '1.5px solid #f07a74',
-              bgcolor: 'rgba(148,43,43,.92)',
+              border: '1.5px solid',
+              borderColor: alpha(lighten(th.palette.accent.red, 0.2), 0.95),
+              bgcolor: alpha(darken(th.palette.accent.red, 0.45), 0.93),
               color: 'common.white',
               fontSize: typescale.caption.size, fontWeight: typescale.pageTitle.weight, textAlign: 'center', lineHeight: 1.25,
               transform: contact ? 'scale(1.02)' : 'none',
@@ -1481,7 +1609,7 @@ export default function Work() {
               width: tk.w, height: tk.h, pointerEvents: 'none',
               transform: `scale(${tk.scale})`, transformOrigin: '50% 50%',
               opacity: 0.92, borderRadius: `${radius.card}px`,
-              outline: '2px dashed rgba(224,91,84,.95)', outlineOffset: '3px',
+              outline: '2px dashed', outlineColor: alpha(th.palette.accent.red, 0.95), outlineOffset: '3px',
               '--stack-gap': `${Math.max(2, 10 * tk.scale).toFixed(1)}px`,
             })}
           >
@@ -1574,7 +1702,7 @@ export default function Work() {
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography variant="body2" sx={{ fontWeight: typescale.emphasis.weight, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, alignItems: 'center' }}>
-                        <StatusChip status={classify(t) === 'done' ? 'neutral' : classify(t) === 'hold' ? 'info' : 'success'} label={stateLabel} />
+                        <StatusChip status={W_STATUS[classify(t)].status} label={stateLabel} />
                         {t.cat && <StatusChip status="neutral" label={t.cat} />}
                         {t.mgr && <ManagerChip name={t.mgr} />}
                       </Box>
