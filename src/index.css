@@ -874,7 +874,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* 사이드 레일(2026-07-23 확정): 평소 64px 아이콘 레일, 호버·키보드 포커스 시 오버레이로 펼침.
    펼침 폭 = 고정값이 아니라 "메뉴명 길이만큼"(.snav-lcol 0fr↔1fr — 콘텐츠 폭 추종, 사용자 확정).
    진입 지연 0(스치면 즉시)·이탈만 .12s(경계 깜빡임 방지). 콘텐츠는 밀리지 않음(오버레이). */
-.sidenav{width:64px;flex-shrink:0;position:sticky;top:53px;height:calc(100vh - 53px);z-index:9}
+/* z=100: 페이지 콘텐츠(최대 z30 — Work 스티키 KPI)보다 항상 위, MUI 모달·드로어·스낵바(1100+)보다는 아래.
+   펼침 패널(.snav-panel)은 이 컨텍스트를 상속하므로 여기 하나만 관리(2026-07-24 전수조사 결과) */
+.sidenav{width:64px;flex-shrink:0;position:sticky;top:53px;height:calc(100vh - 53px);z-index:100}
 /* 서랍 방식(2026-07-24 재작업): 애니메이션을 이름 칸이 아니라 '패널 폭'에 건다.
    이름은 항상 제자리에 렌더되어 있고(아이콘 뒤 22px 간격 = 접힘 64px 경계 밖), 패널이
    max-width 64↔200으로 커튼처럼 열리고 닫히며 이름을 드러냈다 가린다 — "가려졌다 스르륵" */

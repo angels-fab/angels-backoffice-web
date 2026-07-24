@@ -72,17 +72,20 @@ function Photo({ photo, onClick, fit = 'cover' }: { photo?: DemoPhotoRef; onClic
 }
 
 // 가독성(2026-07-24): 9.5px → 11px(caption) — 사진 위 조작 칩은 작아서 못 읽는 일이 없어야 함
+// 회차 칩 — 파란 밴드(제목행) 위 배치(2026-07-24: 사진 오버레이 → 밴드로 이동). 활성 = 흰 알약 + 파란 글씨
 const roundChip = (active: boolean) => (th: Theme) => ({
-  fontSize: typescale.caption.size, fontWeight: 700, lineHeight: 1, px: '7px', py: '3.5px', borderRadius: `${radius.pill}px`, border: 'none',
-  cursor: 'pointer', fontFamily: 'inherit', color: th.palette.common.white, bgcolor: active ? th.palette.primary.main : 'rgba(0,0,0,.55)',
-  boxShadow: active ? 'none' : 'inset 0 0 0 1px rgba(255,255,255,.32)',
+  fontSize: typescale.caption.size, fontWeight: active ? 800 : 700, lineHeight: 1, px: '7px', py: '3.5px', borderRadius: `${radius.pill}px`, border: 'none',
+  cursor: 'pointer', fontFamily: 'inherit',
+  color: active ? th.palette.primary.main : th.palette.common.white,
+  bgcolor: active ? th.palette.common.white : 'rgba(255,255,255,.22)',
+  '&:hover': active ? {} : { bgcolor: 'rgba(255,255,255,.34)' },
 })
 
-// 회차 칩 옆 '+' — 같은 장비+제조사의 다음 회차 등록
+// 회차 칩 옆 '+' — 같은 장비+제조사의 다음 회차 등록(밴드 위 점선 알약)
 const plusChip = (th: Theme) => ({
   fontSize: typescale.caption.size, fontWeight: 700, lineHeight: 1, px: '6px', py: '2.5px', borderRadius: `${radius.pill}px`,
-  cursor: 'pointer', fontFamily: 'inherit', color: th.palette.common.white, bgcolor: 'rgba(0,0,0,.5)',
-  border: '1px dashed rgba(255,255,255,.55)', '&:hover': { bgcolor: th.palette.primary.main, borderColor: 'transparent' },
+  cursor: 'pointer', fontFamily: 'inherit', color: th.palette.common.white, bgcolor: 'transparent',
+  border: '1px dashed rgba(255,255,255,.6)', '&:hover': { bgcolor: 'rgba(255,255,255,.18)' },
 })
 
 /**
@@ -323,10 +326,12 @@ function PhotoCarousel({ photos, cover, onZoom, children }: {
       {n > 1 && (
         <Box data-nodrag role="tablist" aria-label="사진 선택" sx={{ position: 'absolute', left: 0, right: 0, bottom: '4px', zIndex: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px', pointerEvents: 'none' }}>
           {photos.map((_, i) => (
+            // 모션(2026-07-24): 버튼 폭 '하나만' 애니메이션 — 안의 점은 calc로 부모를 그대로 따라 늘어나
+            // 점→대시가 한 몸으로 자연스럽게 변함(이전엔 버튼·점 두 폭이 따로 움직여 어색했음)
             <Box key={i} component="button" type="button" aria-label={`${i + 1}번째 사진`} aria-selected={i === active} role="tab"
               onClick={(e) => { e.stopPropagation(); go(i) }}
-              sx={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: i === active ? 26 : 16, height: 16, p: 0, border: 0, background: 'none', cursor: 'pointer', transition: 'width .18s cubic-bezier(.2,.7,.3,1)' }}>
-              <Box component="span" sx={{ display: 'block', width: i === active ? 20 : 6, height: 6, borderRadius: `${radius.pill}px`, bgcolor: i === active ? 'common.white' : 'rgba(255,255,255,.45)', boxShadow: '0 1px 3px rgba(0,0,0,.55)', transition: 'width .18s cubic-bezier(.2,.7,.3,1), background-color .15s ease', '&:hover': { bgcolor: i === active ? 'common.white' : 'rgba(255,255,255,.75)' } }} />
+              sx={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: i === active ? 26 : 16, height: 16, p: 0, border: 0, background: 'none', cursor: 'pointer', transition: 'width .24s cubic-bezier(0.22, 1, 0.36, 1)' }}>
+              <Box component="span" sx={{ display: 'block', width: 'calc(100% - 10px)', height: 6, borderRadius: `${radius.pill}px`, bgcolor: i === active ? 'common.white' : 'rgba(255,255,255,.45)', boxShadow: '0 1px 3px rgba(0,0,0,.55)', transition: 'background-color .2s ease', '&:hover': { bgcolor: i === active ? 'common.white' : 'rgba(255,255,255,.75)' } }} />
             </Box>
           ))}
         </Box>
@@ -483,7 +488,8 @@ function MemoRow({ m, own, busy, onEdit, onDelete }: { m: DemoChatMsg; own: bool
       <Box sx={{ flex: 1, minWidth: 0 }}>
         {editing ? (
           <Box>
-            <RichBodyEditor value={body} onChange={setBody} placeholder="내용" ariaLabel="메모 수정" fontSize={typescale.body.size} minHeight={40} onCtrlEnter={() => void save()} compact />
+            {/* 포털 표준 툴바(공지·개선요청과 동일) — compact 금지(2026-07-24 서식툴바 통일) */}
+            <RichBodyEditor value={body} onChange={setBody} placeholder="내용" ariaLabel="메모 수정" fontSize={typescale.body.size} minHeight={40} onCtrlEnter={() => void save()} />
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
               <Button size="small" onClick={() => setEditing(false)} disabled={busy} sx={{ color: 'text.secondary', fontSize: typescale.small.size, minWidth: 0 }}>취소</Button>
               <Button size="small" variant="contained" onClick={() => void save()} disabled={busy || !body.trim()} sx={{ fontSize: typescale.small.size, minWidth: 0 }}>수정</Button>
@@ -536,7 +542,8 @@ function MemoStream({ memos, canPost, canModerate, user, busy, onPost, onEdit, o
       {canPost && (
         adding ? (
           <Box sx={{ mt: 1 }}>
-            <RichBodyEditor value={draft} onChange={setDraft} placeholder="메모 입력…" ariaLabel="메모 작성" fontSize={typescale.body.size} minHeight={44} onCtrlEnter={() => void save()} compact />
+            {/* 포털 표준 툴바(공지·개선요청과 동일) — compact 금지(2026-07-24 서식툴바 통일) */}
+            <RichBodyEditor value={draft} onChange={setDraft} placeholder="메모 입력…" ariaLabel="메모 작성" fontSize={typescale.body.size} minHeight={44} onCtrlEnter={() => void save()} />
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>
               <Button size="small" onClick={() => { setAdding(false); setDraft('') }} disabled={busy} sx={{ color: 'text.secondary', fontSize: typescale.small.size, minWidth: 0 }}>취소</Button>
               <Button size="small" variant="contained" onClick={() => void save()} disabled={busy || !draft.trim()} startIcon={busy ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined} sx={{ fontSize: typescale.small.size, minWidth: 0 }}>저장</Button>
@@ -719,25 +726,64 @@ function PhotoManageDialog({ round, maker, user, onClose, onSaved }: {
  * 제조사 레인 — 색 밴드(제조사·모델·첨부) + 사진 캐러셀(회차칩·날짜 오버레이) + 도구줄 + 지표 칩박스.
  * 위치=소속: 이 레인의 칩은 이 제조사 것(왼쪽 사진 아래 = 왼쪽 회사).
  */
-function MakerLane({ mg, sel, onSel, defs, defsAll, canEdit, onZoom, onAddRound, onDeleteRound, onManagePhotos, onEditChip, onAddChip, onSaveMeta }: {
+/** 레인 하단 공통 블록 — 샘플·조건 인라인 수정 + 지표 칩박스. 1개사일 땐 옆 칸(aside)으로 빠진다 */
+function LaneInfo({ r, defs, defsAll, canEdit, onEditChip, onAddChip, onSaveMeta }: {
+  r: DemoRoundRow; defs: DemoMetricDef[]; defsAll: DemoMetricDef[]; canEdit: boolean
+  onEditChip: (round: DemoRoundRow, chip: ChipInfo) => void; onAddChip: (round: DemoRoundRow) => void
+  onSaveMeta: (roundId: number, patch: { sample?: string; conditions?: string }) => void
+}) {
+  const metaVisible = canEdit || !!(r.sample || '').trim() || !!(r.conditions || '').trim()
+  return (
+    <>
+      {/* 회차 공통 정보(샘플·조건) — 인라인 수정. 칩별 상세 조건은 각 칩 안에 */}
+      {metaVisible && (
+        <Box sx={{ mt: 0.75, fontSize: typescale.small.size, color: 'text.secondary', lineHeight: 1.6, display: 'flex', flexWrap: 'wrap', columnGap: 1.25, rowGap: 0 }}>
+          {/* multiline 필수 — 폼이 여러 줄(\n)로 저장하는 필드라 한 줄 인풋이면 개행이 뭉개져 저장됨 */}
+          <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: 500 }}>샘플</Box><EditText text={r.sample} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { sample: v })} /></Box>
+          <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: 500 }}>조건</Box><EditText text={r.conditions} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { conditions: v })} /></Box>
+        </Box>
+      )}
+      {/* 지표 칩박스 — 측정한 것만, 이 제조사 열 아래 */}
+      <ChipRow round={r} defs={defs} defsAll={defsAll} canEdit={canEdit} onEditChip={(c) => onEditChip(r, c)} onAddChip={() => onAddChip(r)} />
+    </>
+  )
+}
+
+function MakerLane({ mg, sel, onSel, defs, defsAll, canEdit, onZoom, onAddRound, onDeleteRound, onManagePhotos, onEditChip, onAddChip, onSaveMeta, aside = false }: {
   mg: DemoMakerGroup; sel: number; onSel: (i: number) => void; defs: DemoMetricDef[]; defsAll: DemoMetricDef[]; canEdit: boolean
   onZoom: (photos: DemoPhotoRef[], idx: number) => void
   onAddRound: () => void; onDeleteRound: () => void; onManagePhotos: () => void
   onEditChip: (round: DemoRoundRow, chip: ChipInfo) => void; onAddChip: (round: DemoRoundRow) => void
   onSaveMeta: (roundId: number, patch: { sample?: string; conditions?: string }) => void
+  /** true = 샘플·조건·칩박스를 레인 밖(옆 칸)에서 렌더(1개사 레이아웃) */
+  aside?: boolean
 }) {
   const r = mg.rounds[Math.min(sel, mg.rounds.length - 1)]
   const cover = Math.min(Math.max(r.cover || 0, 0), Math.max(r.photos.length - 1, 0))
-  const metaVisible = canEdit || !!(r.sample || '').trim() || !!(r.conditions || '').trim()
   return (
     <Box sx={{ minWidth: 0 }}>
-      {/* 색깔 밴드 — 제조사·모델은 가운데, 첨부는 우측 절대배치 */}
-      <Box sx={(th) => ({ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', px: 1.5, py: '4px', bgcolor: th.palette.primary.main, borderRadius: `${radius.chip}px ${radius.chip}px 0 0`, minWidth: 0 })}>
-        <Box sx={{ fontSize: typescale.small.size, fontWeight: 700, color: 'common.white', minWidth: 0, maxWidth: r.files.length ? 'calc(100% - 34px)' : '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      {/* 색깔 밴드(제목행) — 제조사·모델 왼쪽 + 회차·날짜·첨부·도구 오른쪽(2026-07-24: 사진 위 오버레이에서 이동) */}
+      <Box sx={(th) => ({ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5, rowGap: 0.25, px: 1.25, py: '4px', minHeight: 32, bgcolor: th.palette.primary.main, borderRadius: `${radius.chip}px ${radius.chip}px 0 0`, minWidth: 0 })}>
+        <Box sx={{ flex: '0 1 auto', minWidth: 0, fontSize: typescale.small.size, fontWeight: 700, color: 'common.white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {mg.maker}{mg.model ? <Box component="span" sx={{ opacity: 0.85, fontWeight: 500, ml: 0.5 }}>{mg.model}</Box> : null}
         </Box>
+        <Box sx={{ flex: 1, minWidth: 4 }} />
+        {/* 회차 칩 + '+'(다음 회차) */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px', flexWrap: 'wrap' }}>
+          {mg.rounds.map((rr, i) => (
+            <Box key={rr.round} component="button" aria-label={`${rr.round}차`} aria-pressed={i === sel} onClick={() => onSel(i)} sx={roundChip(i === sel)}>{rr.round}차</Box>
+          ))}
+          {canEdit && (
+            <Tooltip title={`${mg.maker} 다음 회차(${mg.rounds[mg.rounds.length - 1].round + 1}차) 등록`}>
+              <Box component="button" aria-label="다음 회차 등록" onClick={onAddRound} sx={plusChip}>+</Box>
+            </Tooltip>
+          )}
+        </Box>
+        {/* 방문일 */}
+        {r.date && <Box sx={{ flex: 'none', fontSize: typescale.caption.size, fontWeight: 600, color: 'rgba(255,255,255,.85)', fontVariantNumeric: 'tabular-nums' }}>{fmtDate(r.date)}</Box>}
+        {/* 첨부파일 */}
         {r.files.length > 0 && (
-          <Box sx={{ position: 'absolute', right: 5, top: 0, bottom: 0, display: 'flex', alignItems: 'center', gap: 0.4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, flex: 'none' }}>
             {r.files.map((f, i) => (
               <Tooltip key={i} title={`${f.name} 열기`} arrow>
                 <Box component="span" onClick={() => void openFile(f)} sx={{ display: 'inline-flex', lineHeight: 0, flex: 'none', cursor: f.path ? 'pointer' : 'default' }}>
@@ -747,42 +793,19 @@ function MakerLane({ mg, sel, onSel, defs, defsAll, canEdit, onZoom, onAddRound,
             ))}
           </Box>
         )}
+        {/* 도구 — 사진(캡션) 관리 · 데모결과 삭제 */}
+        {canEdit && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flex: 'none' }}>
+            <Tooltip title={`${r.round}차 사진·캡션 관리`}><IconButton size="small" onClick={onManagePhotos} sx={{ p: '2px', color: 'rgba(255,255,255,.8)', '&:hover': { color: 'common.white' } }}><AddPhotoAlternateOutlinedIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
+            <Tooltip title={`${r.round}차 데모결과 삭제`}><IconButton size="small" onClick={onDeleteRound} sx={{ p: '2px', color: 'rgba(255,255,255,.8)', '&:hover': { color: 'error.light' } }}><DeleteOutlineIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
+          </Box>
+        )}
       </Box>
       {/* 사진 캐러셀 — 회차 전환 시 key로 리셋(시작 장=대표사진) */}
       <Box sx={{ border: 1, borderTop: 0, borderColor: 'divider', borderBottomLeftRadius: `${radius.chip}px`, borderBottomRightRadius: `${radius.chip}px`, overflow: 'hidden' }}>
-        <PhotoCarousel key={r.id} photos={r.photos} cover={cover} onZoom={(i) => onZoom(r.photos, i)}>
-          {/* 회차 칩 + '+'(다음 회차) — 캐러셀 화살표(z6)보다 위(z8) */}
-          <Box data-nodrag sx={{ position: 'absolute', top: 4, left: 4, zIndex: 8, display: 'flex', gap: '3px', flexWrap: 'wrap', pr: 4 }}>
-            {mg.rounds.map((rr, i) => (
-              <Box key={rr.round} component="button" aria-label={`${rr.round}차`} aria-pressed={i === sel} onClick={(e) => { e.stopPropagation(); onSel(i) }} sx={roundChip(i === sel)}>{rr.round}차</Box>
-            ))}
-            {canEdit && (
-              <Tooltip title={`${mg.maker} 다음 회차(${mg.rounds[mg.rounds.length - 1].round + 1}차) 등록`}>
-                <Box component="button" aria-label="다음 회차 등록" onClick={(e) => { e.stopPropagation(); onAddRound() }} sx={plusChip}>+</Box>
-              </Tooltip>
-            )}
-          </Box>
-          <Box sx={{ position: 'absolute', top: 4, right: 4, zIndex: 8, fontSize: typescale.caption.size, color: 'common.white', bgcolor: 'rgba(0,0,0,.55)', borderRadius: `${radius.chip}px`, px: '6px', py: '2px', fontWeight: 700, pointerEvents: 'none' }}>{fmtDate(r.date)}</Box>
-        </PhotoCarousel>
+        <PhotoCarousel key={r.id} photos={r.photos} cover={cover} onZoom={(i) => onZoom(r.photos, i)} />
       </Box>
-      {/* 회차 도구 — 사진(캡션) 관리 · 데모결과 삭제 */}
-      {canEdit && (
-        <Box sx={{ mt: 0.4, display: 'flex', justifyContent: 'center', gap: 0.75, minHeight: 22 }}>
-          {/* 가독성(2026-07-24): 도구 아이콘 13→16px, 흐림→보조색 */}
-          <Tooltip title={`${r.round}차 사진·캡션 관리`}><IconButton size="small" onClick={onManagePhotos} sx={{ p: '2px', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}><AddPhotoAlternateOutlinedIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
-          <Tooltip title={`${r.round}차 데모결과 삭제`}><IconButton size="small" onClick={onDeleteRound} sx={{ p: '2px', color: 'text.secondary', '&:hover': { color: 'error.main' } }}><DeleteOutlineIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>
-        </Box>
-      )}
-      {/* 회차 공통 정보(샘플·조건) — 인라인 수정. 칩별 상세 조건은 각 칩 안에 */}
-      {metaVisible && (
-        <Box sx={{ mt: canEdit ? 0.25 : 0.75, fontSize: typescale.small.size, color: 'text.secondary', lineHeight: 1.6, display: 'flex', flexWrap: 'wrap', columnGap: 1.25, rowGap: 0 }}>
-          {/* multiline 필수 — 폼이 여러 줄(\n)로 저장하는 필드라 한 줄 인풋이면 개행이 뭉개져 저장됨 */}
-          <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: 500 }}>샘플</Box><EditText text={r.sample} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { sample: v })} /></Box>
-          <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: 500 }}>조건</Box><EditText text={r.conditions} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { conditions: v })} /></Box>
-        </Box>
-      )}
-      {/* 지표 칩박스 — 측정한 것만, 이 제조사 열 아래 */}
-      <ChipRow round={r} defs={defs} defsAll={defsAll} canEdit={canEdit} onEditChip={(c) => onEditChip(r, c)} onAddChip={() => onAddChip(r)} />
+      {!aside && <LaneInfo r={r} defs={defs} defsAll={defsAll} canEdit={canEdit} onEditChip={onEditChip} onAddChip={onAddChip} onSaveMeta={onSaveMeta} />}
     </Box>
   )
 }
@@ -863,16 +886,28 @@ function EquipGroup({ equipment, defs, defsAll, makers, messages, canEdit, canMo
       </Box>
 
       <Box sx={{ p: { xs: 1.25, md: 1.75 } }}>
-        {/* 제조사 레인 — 1사=풀폭 크게, 2사=반씩, 3사=1/3씩. 위치=소속(그 레인의 칩=그 제조사) */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: `repeat(${Math.max(makers.length, 1)}, minmax(0, 1fr))` }, gap: { xs: 2, md: 1.5 }, alignItems: 'start' }}>
+        {/* 제조사 레인 — 2사=반씩, 3사=1/3씩. 1사도 2열 유지(사진 크기를 2사와 동일하게):
+            사진은 1번 칸, 2번 사진 자리에 지표 패널(2026-07-24 사용자 지정). 위치=소속 */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: `repeat(${Math.max(makers.length, 2)}, minmax(0, 1fr))` }, gap: { xs: 2, md: 1.5 }, alignItems: 'start' }}>
           {makers.map((m) => (
             <MakerLane key={m.key} mg={m} sel={sel[m.key] ?? m.rounds.length - 1} onSel={selOf(m)} defs={defs} defsAll={defsAll} canEdit={canEdit}
+              aside={makers.length === 1}
               onZoom={(photos, idx) => setLightbox({ photos, idx })}
               onAddRound={() => onAddRound(m)} onDeleteRound={() => askDelete(m)} onManagePhotos={() => setPhotoMg(m)}
               onEditChip={(round, chip) => setChipDlg({ round, mode: 'edit', chip })}
               onAddChip={(round) => setChipDlg({ round, mode: 'add' })}
               onSaveMeta={onSaveMeta} />
           ))}
+          {makers.length === 1 && (
+            // 1개사 — 2번 사진 자리 = 지표 패널(샘플·조건 + 칩박스)
+            <Box sx={(th) => ({ minWidth: 0, alignSelf: 'stretch', p: 1.25, border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`, display: 'flex', flexDirection: 'column' })}>
+              <Box sx={{ fontSize: typescale.small.size, fontWeight: 700, color: 'text.secondary', mb: 0.25 }}>지표</Box>
+              <LaneInfo r={shown(makers[0])} defs={defs} defsAll={defsAll} canEdit={canEdit}
+                onEditChip={(round, chip) => setChipDlg({ round, mode: 'edit', chip })}
+                onAddChip={(round) => setChipDlg({ round, mode: 'add' })}
+                onSaveMeta={onSaveMeta} />
+            </Box>
+          )}
         </Box>
 
         {/* 검토 메모 — 풀폭 1열 스트림(레인 열과 정렬을 끊어 '장비 공용'이 배치로 읽힘) */}
