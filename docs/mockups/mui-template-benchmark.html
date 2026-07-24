@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MUI 템플릿 벤치마킹 13선 — ANGELS 업무포털</title>
+<style>
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --mock:#f1f3f6; --tile:#ffffff;
+  --ink:#1c2430; --ink2:#4b5563; --mut:#8b95a1; --line:#e3e7ec; --line2:#d3d9e0;
+  --blue:#2a78d6; --blue-bg:#e8f1fb; --blue-tx:#1a5aa8;
+  --green:#1baf7a; --green-bg:#e3f5ee; --green-tx:#0d7a54;
+  --amber:#eda100; --amber-bg:#fdf3dd; --amber-tx:#9a6a06;
+  --red:#e34948; --red-bg:#fdecec; --red-tx:#b02a2a;
+  --gray-bg:#eef0f3; --gray-tx:#5b6572;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12161c; --card:#1a2029; --mock:#141920; --tile:#1f2732;
+    --ink:#e8ecf1; --ink2:#b6bec9; --mut:#7d8794; --line:#2a323d; --line2:#39424e;
+    --blue:#4d93e8; --blue-bg:#1a2c42; --blue-tx:#8dbcf2;
+    --green:#2cc48c; --green-bg:#15302a; --green-tx:#6fdcb4;
+    --amber:#f0b13a; --amber-bg:#38290e; --amber-tx:#f2c979;
+    --red:#ef6a69; --red-bg:#3a1d1d; --red-tx:#f29d9c;
+    --gray-bg:#252d38; --gray-tx:#aab3bf;
+  }
+}
+*{box-sizing:border-box; margin:0; padding:0}
+body{background:var(--bg); color:var(--ink); font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif; line-height:1.6; padding:40px 20px}
+.wrap{max-width:860px; margin:0 auto}
+h1{font-size:24px; font-weight:700; margin-bottom:6px}
+.sub{color:var(--ink2); font-size:14px; margin-bottom:20px}
+.chips{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:32px; align-items:center}
+.chips .lbl{font-size:12px; color:var(--mut)}
+.chip{font-size:12px; padding:4px 12px; border-radius:999px}
+.chip.ok{background:var(--green-bg); color:var(--green-tx)}
+.chip.info{background:var(--blue-bg); color:var(--blue-tx)}
+.sect{font-size:16px; font-weight:700; margin:36px 0 14px; padding-top:20px; border-top:1px solid var(--line)}
+.sect small{font-weight:400; color:var(--mut); font-size:12px; margin-left:8px}
+.card{background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:14px}
+.head{display:flex; align-items:center; gap:9px; flex-wrap:wrap; margin-bottom:4px}
+.num{width:24px; height:24px; border-radius:50%; background:var(--blue-bg); color:var(--blue-tx); font-size:13px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex:none}
+.ttl{font-size:15px; font-weight:700}
+.tag{font-size:11px; padding:2px 9px; border-radius:999px}
+.tag.where{background:var(--blue-bg); color:var(--blue-tx)}
+.tag.now{background:var(--green-bg); color:var(--green-tx)}
+.tag.mid{background:var(--amber-bg); color:var(--amber-tx)}
+.tag.opt{background:var(--gray-bg); color:var(--gray-tx)}
+.src{font-size:11px; color:var(--mut); margin-left:auto}
+.desc{font-size:13px; color:var(--ink2); margin:2px 0 0}
+.mock{background:var(--mock); border-radius:10px; padding:14px; margin-top:12px; font-size:12px}
+.mock .note{font-size:11px; color:var(--mut); margin-top:8px}
+.tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px}
+.tile{background:var(--tile); border:1px solid var(--line); border-radius:9px; padding:9px 11px}
+.tile .l{font-size:11px; color:var(--ink2)}
+.tile .v{font-size:20px; font-weight:700; line-height:1.3}
+.tile.hot{border:2px solid var(--blue)}
+.tile.hot .l,.tile.hot .v{color:var(--blue-tx)}
+.row{display:flex; align-items:center; gap:8px; padding:7px 4px; border-top:1px solid var(--line)}
+.row .grow{flex:1; color:var(--ink2)}
+.pill{font-size:11px; padding:1px 9px; border-radius:999px; white-space:nowrap}
+.pill.b{background:var(--blue-bg); color:var(--blue-tx)}
+.pill.g{background:var(--green-bg); color:var(--green-tx)}
+.pill.a{background:var(--amber-bg); color:var(--amber-tx)}
+.pill.r{background:var(--red-bg); color:var(--red-tx)}
+.pill.n{background:var(--gray-bg); color:var(--gray-tx)}
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px}
+.kpi{background:var(--tile); border:1px solid var(--line); border-radius:9px; padding:11px 13px}
+.kpi .l{font-size:12px; color:var(--ink2)}
+.kpi .vrow{display:flex; align-items:baseline; gap:8px; margin:2px 0 4px}
+.kpi .v{font-size:22px; font-weight:700}
+.dot{width:8px; height:8px; border-radius:50%; display:inline-block; flex:none}
+.tl{display:flex; gap:10px}
+.tl .rail{display:flex; flex-direction:column; align-items:center}
+.tl .rail .bar{flex:1; width:2px; background:var(--line2)}
+.tl .body{padding-bottom:12px}
+.tl .when{font-size:11px; color:var(--mut)}
+.cols{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; font-size:11px}
+.col h5{display:flex; align-items:center; gap:5px; color:var(--ink2); font-size:11px; font-weight:600; margin-bottom:6px}
+.kcard{background:var(--tile); border:1px solid var(--line); border-radius:7px; padding:6px 8px; margin-bottom:6px}
+.kcard .due{color:var(--mut); margin-top:2px}
+.donutwrap{display:flex; align-items:center; gap:22px; flex-wrap:wrap}
+.legend{display:grid; gap:6px; font-size:12px; color:var(--ink2)}
+.legend span{display:flex; align-items:center; gap:7px}
+.sw{width:10px; height:10px; border-radius:2px; display:inline-block}
+.bell{display:flex; justify-content:flex-end}
+.bellbox{width:300px; max-width:100%}
+.drop{background:var(--tile); border:1px solid var(--line); border-radius:10px; padding:10px 13px}
+.drop .hd{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; font-weight:600}
+.drop .hd a{font-size:11px; color:var(--blue-tx); font-weight:400; text-decoration:none}
+.search{background:var(--tile); border:1px solid var(--line2); border-radius:10px; padding:8px 12px; display:flex; align-items:center; gap:8px; font-size:13px}
+.kbd{font-size:11px; color:var(--mut); border:1px solid var(--line); border-radius:4px; padding:1px 6px}
+.result{display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px}
+.result.on{background:var(--tile)}
+.result .to{font-size:11px; color:var(--mut); margin-left:auto}
+.stack{display:flex; height:14px; border-radius:7px; overflow:hidden; margin:6px 0 4px}
+.tabs{display:flex; gap:16px; border-bottom:1px solid var(--line); margin-bottom:8px; font-size:12px}
+.tab{padding:6px 2px; color:var(--ink2); display:flex; gap:6px; align-items:center}
+.tab.on{color:var(--blue-tx); border-bottom:2px solid var(--blue); font-weight:700}
+.cnt{font-size:10px; padding:0 6px; border-radius:6px; background:var(--gray-bg); color:var(--gray-tx)}
+.tab.on .cnt{background:var(--blue-bg); color:var(--blue-tx)}
+.strip{display:flex; flex-wrap:wrap}
+.strip>div{padding:2px 18px 2px 0; margin-right:18px; border-right:1px dashed var(--line2)}
+.strip>div:last-child{border-right:none}
+.strip .l{font-size:11px; color:var(--ink2)}
+.strip .v{font-size:17px; font-weight:700}
+.strip .s{font-size:11px; color:var(--mut)}
+.filters{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 4px}
+.fsel{background:var(--tile); border:1px solid var(--line); border-radius:8px; padding:5px 11px; font-size:12px; color:var(--ink2); display:flex; align-items:center; gap:6px}
+.seg{display:inline-flex; border:1px solid var(--line2); border-radius:8px; overflow:hidden; font-size:12px}
+.seg span{padding:5px 14px; color:var(--ink2)}
+.seg .on{background:var(--blue); color:#fff; font-weight:600}
+.datebk{width:44px; flex:none; text-align:center; background:var(--tile); border:1px solid var(--line); border-radius:8px; padding:4px 0}
+.datebk .m{font-size:10px; color:var(--red); font-weight:700}
+.datebk .d{font-size:16px; font-weight:700; line-height:1.2}
+.evrow{display:flex; gap:10px; align-items:center; padding:6px 0}
+.evrow .t{font-weight:600}
+.evrow .s{font-size:11px; color:var(--mut)}
+.grade{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:8px}
+.gcard{background:var(--tile); border:1px solid var(--line); border-radius:9px; padding:8px 11px}
+.gcard .g{font-size:11px; font-weight:700}
+.gcard .n{font-size:18px; font-weight:700}
+.gcard .s{font-size:10px; color:var(--mut)}
+.switch{width:30px; height:16px; border-radius:8px; background:var(--blue); position:relative; display:inline-block; vertical-align:middle}
+.switch::after{content:""; position:absolute; right:2px; top:2px; width:12px; height:12px; border-radius:50%; background:#fff}
+.two{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:14px}
+.avoid .row{border-top:none; padding:4px 0}
+.flow{display:flex; align-items:center; gap:7px; flex-wrap:wrap; font-size:12px}
+.flow .ar{color:var(--mut)}
+.foot{margin-top:36px; padding-top:16px; border-top:1px solid var(--line); font-size:12px; color:var(--mut)}
+.foot a{color:var(--blue-tx)}
+svg{display:block}
+.spark{margin-top:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>MUI 템플릿 벤치마킹 13선</h1>
+<p class="sub">ANGELS 업무포털에 가져올 만한 요소 — MUI 스토어 템플릿 데모 투어 결과 (2026-07-24)</p>
+
+<div class="chips">
+  <span class="lbl">둘러본 데모</span>
+  <span class="chip ok">Mantis 무료</span>
+  <span class="chip ok">Minimal 무료</span>
+  <span class="chip ok">Modernize 풀데모</span>
+  <span class="chip ok">Devias Kit Pro (로그인)</span>
+  <span class="chip ok">Minimal Pro (로그인)</span>
+  <span class="chip info">숫자·문구는 우리 포털 기준 예시</span>
+</div>
+
+<div class="sect">1차 — 스토어 전체 둘러보기<small>공통 패턴 7가지</small></div>
+
+<div class="card">
+  <div class="head"><span class="num">1</span><span class="ttl">상태 요약 카드 = 필터 버튼</span><span class="tag where">개선요청 · 마일스톤</span><span class="tag now">바로 가능</span><span class="src">Modernize 티켓 앱</span></div>
+  <p class="desc">표 위의 건수 요약 카드가 곧 필터. 카드를 누르면 아래 표가 그 상태로 걸러진다.</p>
+  <div class="mock">
+    <div class="tiles">
+      <div class="tile"><div class="l">전체</div><div class="v">24</div></div>
+      <div class="tile hot"><div class="l">검토중</div><div class="v">9</div></div>
+      <div class="tile"><div class="l">보류</div><div class="v">3</div></div>
+      <div class="tile"><div class="l">종결</div><div class="v">12</div></div>
+    </div>
+    <div class="row" style="margin-top:8px"><span class="grow">장비페이지 반입일 표기 오류 수정 요청</span><span class="pill b">검토중</span></div>
+    <div class="row"><span class="grow">캘린더 휴가 일정 색상 구분 요청</span><span class="pill b">검토중</span></div>
+    <div class="note">카드 클릭 → 해당 상태만 표시 (파란 테두리 = 선택됨)</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">2</span><span class="ttl">KPI 카드에 증감 칩 + 스파크라인</span><span class="tag where">장비 KPI · 업무 KPI</span><span class="tag now">바로 가능</span><span class="src">Mantis · Minimal 공통</span></div>
+  <p class="desc">큰 숫자 옆에 지난주 대비 증감 칩, 아래에 작은 추세 그래프(스파크라인).</p>
+  <div class="mock">
+    <div class="kpis">
+      <div class="kpi"><div class="l">반입 완료 장비</div><div class="vrow"><span class="v">18대</span><span class="pill g">+2 이번 주</span></div>
+        <svg class="spark" viewBox="0 0 140 26" width="100%" height="26"><polyline points="0,22 23,20 46,21 70,16 93,12 116,9 140,5" fill="none" stroke="#1baf7a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="kpi"><div class="l">진행 중 업무</div><div class="vrow"><span class="v">12건</span><span class="pill r">-1 지난주 대비</span></div>
+        <svg class="spark" viewBox="0 0 140 26" width="100%" height="26"><polyline points="0,9 23,11 46,7 70,13 93,11 116,15 140,14" fill="none" stroke="#2a78d6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">3</span><span class="ttl">최근 활동 타임라인</span><span class="tag where">홈 대시보드</span><span class="tag mid">중기 · 이력 데이터 필요</span><span class="src">Minimal 홈</span></div>
+  <p class="desc">공지 등록·업무 상태 변경·개선요청 처리를 시간순 세로 타임라인으로.</p>
+  <div class="mock">
+    <div class="tl"><div class="rail"><span class="dot" style="background:#1baf7a; margin-top:4px"></span><span class="bar"></span></div><div class="body">개선요청 「반입일 표기 오류」 종결 처리<div class="when">오늘 14:20 · 관리자</div></div></div>
+    <div class="tl"><div class="rail"><span class="dot" style="background:#2a78d6; margin-top:4px"></span><span class="bar"></span></div><div class="body">공지 「7월 안전교육 일정」 등록<div class="when">오늘 09:10</div></div></div>
+    <div class="tl"><div class="rail"><span class="dot" style="background:#eda100; margin-top:4px"></span></div><div class="body">업무 「클린룸 배관 검수」 상태 변경 → 진행<div class="when">어제 17:40</div></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">4</span><span class="ttl">칸반 보드 (표 ↔ 보드 토글)</span><span class="tag where">업무현황</span><span class="tag opt">선택 · 기존 그리드와 중복 검토</span><span class="src">Modernize · Devias · Minimal</span></div>
+  <p class="desc">할 일/진행/보류/완료 열에 카드를 끌어 옮기는 보드. 카드마다 마감일 칩.</p>
+  <div class="mock">
+    <div class="cols">
+      <div class="col"><h5><span class="dot" style="background:#8b95a1"></span>할 일 · 3</h5><div class="kcard">가스배관 도면 검토<div class="due">마감 7/28</div></div><div class="kcard">비품 발주 정리<div class="due">마감 7/30</div></div></div>
+      <div class="col"><h5><span class="dot" style="background:#2a78d6"></span>진행 · 2</h5><div class="kcard">클린룸 배관 검수<div class="due">마감 7/25</div></div></div>
+      <div class="col"><h5><span class="dot" style="background:#eda100"></span>보류 · 1</h5><div class="kcard">전력 증설 협의<div class="due">일정 미정</div></div></div>
+      <div class="col"><h5><span class="dot" style="background:#1baf7a"></span>완료 · 4</h5><div class="kcard">데모 결과 등록<div class="due">7/22 완료</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">5</span><span class="ttl">도넛 차트로 상태 구성비</span><span class="tag where">마일스톤 · 장비 진행률</span><span class="tag now">바로 가능</span><span class="src">Minimal · Modernize</span></div>
+  <p class="desc">완료/진행/임박/지연 비율을 도넛 하나로 요약. 가운데는 전체 건수.</p>
+  <div class="mock">
+    <div class="donutwrap">
+      <svg viewBox="0 0 100 100" width="112" height="112">
+        <g transform="rotate(-90 50 50)">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#1baf7a" stroke-width="14" stroke-dasharray="105.5 251.3" stroke-dashoffset="0"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#2a78d6" stroke-width="14" stroke-dasharray="77.9 251.3" stroke-dashoffset="-105.5"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#eda100" stroke-width="14" stroke-dasharray="37.7 251.3" stroke-dashoffset="-183.4"/>
+          <circle cx="50" cy="50" r="40" fill="none" stroke="#e34948" stroke-width="14" stroke-dasharray="30.2 251.3" stroke-dashoffset="-221.1"/>
+        </g>
+        <text x="50" y="47" text-anchor="middle" font-size="16" font-weight="700" fill="currentColor">62</text>
+        <text x="50" y="62" text-anchor="middle" font-size="9" fill="currentColor" opacity="0.55">전체 건</text>
+      </svg>
+      <div class="legend">
+        <span><span class="sw" style="background:#1baf7a"></span>완료 42%</span>
+        <span><span class="sw" style="background:#2a78d6"></span>진행 31%</span>
+        <span><span class="sw" style="background:#eda100"></span>임박 15%</span>
+        <span><span class="sw" style="background:#e34948"></span>지연 12%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">6</span><span class="ttl">상단바 알림 센터</span><span class="tag where">공통 레이아웃</span><span class="tag mid">중기 · 알림 테이블 필요</span><span class="src">거의 모든 템플릿 공통</span></div>
+  <p class="desc">벨 아이콘 + 미확인 배지 → 최근 알림 드롭다운 + 읽음 처리. 지금은 SideNav 건수 배지만 있음.</p>
+  <div class="mock">
+    <div class="bell"><div class="bellbox">
+      <div style="text-align:right; margin-bottom:6px; position:relative; display:inline-block; left:100%; transform:translateX(-100%)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <span style="position:absolute; top:-5px; right:-7px; background:#e34948; color:#fff; font-size:10px; min-width:15px; height:15px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 3px">3</span>
+      </div>
+      <div class="drop">
+        <div class="hd"><span>알림</span><a href="#">모두 읽음</a></div>
+        <div class="row"><span class="dot" style="background:#2a78d6"></span><span class="grow">새 공지 「7월 안전교육 일정」<br><span style="font-size:11px; color:var(--mut)">10분 전</span></span></div>
+        <div class="row"><span class="dot" style="background:#eda100"></span><span class="grow">개선요청에 새 답글 1건<br><span style="font-size:11px; color:var(--mut)">1시간 전</span></span></div>
+        <div class="row"><span class="dot" style="background:#1baf7a"></span><span class="grow">내 업무 「배관 검수」 마감 임박<br><span style="font-size:11px; color:var(--mut)">어제</span></span></div>
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">7</span><span class="ttl">Ctrl+K 통합 검색 팔레트</span><span class="tag where">공통 · PC 위주</span><span class="tag mid">중기</span><span class="src">Minimal · Devias 계열</span></div>
+  <p class="desc">공지·업무·장비를 한 창에서 검색하고 바로 이동하는 통합 검색창(커맨드 팔레트).</p>
+  <div class="mock">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <span style="color:var(--mut); flex:1">배관</span><span class="kbd">Ctrl</span><span class="kbd">K</span>
+    </div>
+    <div style="margin-top:8px">
+      <div class="result on"><span class="grow">업무 · 클린룸 <b style="color:var(--blue-tx)">배관</b> 검수</span><span class="to">업무현황</span></div>
+      <div class="result"><span class="grow">일정 · <b style="color:var(--blue-tx)">배관</b> 공사 입회</span><span class="to">업무일정</span></div>
+      <div class="result"><span class="grow">공지 · <b style="color:var(--blue-tx)">배관</b> 작업 안전수칙</span><span class="to">공지사항</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="sect">2차 — Devias Kit Pro · Minimal Pro 내부 투어<small>추가 발견 6가지</small></div>
+
+<div class="card">
+  <div class="head"><span class="num">8</span><span class="ttl">물류형 장비 대시보드</span><span class="tag where">장비현황</span><span class="tag now">구조 그대로 치환 가능</span><span class="src">Devias 물류(Logistics)</span></div>
+  <p class="desc">상태 타일 → 전체 구성 스택 바 → 등급 카드 → 개별 표. 차량을 장비로 바꾸면 그대로 우리 구조.</p>
+  <div class="mock">
+    <div class="tiles">
+      <div class="tile"><div class="l">가동 중</div><div class="v">38</div></div>
+      <div class="tile"><div class="l">설치 중</div><div class="v">12</div></div>
+      <div class="tile"><div class="l">반입 예정</div><div class="v">50</div></div>
+      <div class="tile"><div class="l">점검 필요</div><div class="v">2</div></div>
+    </div>
+    <div style="margin-top:10px"><span style="font-size:11px; color:var(--ink2)">전체 100대 구성</span>
+      <div class="stack"><span style="width:38%; background:#1baf7a"></span><span style="width:12%; background:#2a78d6"></span><span style="width:50%; background:#c3cbd5"></span></div>
+      <div style="display:flex; gap:14px; font-size:11px; color:var(--ink2)"><span><span class="sw" style="background:#1baf7a"></span> 가동 38</span><span><span class="sw" style="background:#2a78d6"></span> 설치 12</span><span><span class="sw" style="background:#c3cbd5"></span> 반입 예정 50</span></div>
+    </div>
+    <div class="grade">
+      <div class="gcard"><div class="g" style="color:var(--green-tx)">양호</div><div class="n">31</div><div class="s">이상 없음</div></div>
+      <div class="gcard"><div class="g" style="color:var(--amber-tx)">보통</div><div class="n">5</div><div class="s">경미한 이슈</div></div>
+      <div class="gcard"><div class="g" style="color:var(--red-tx)">불량</div><div class="n">2</div><div class="s">조치 필요</div></div>
+    </div>
+    <div class="row" style="margin-top:8px"><span class="grow">EQ-004 · 스퍼터링 장비</span><span class="pill n">경고 없음</span><span class="pill g">가동</span></div>
+    <div class="row"><span class="grow">EQ-003 · 식각 장비</span><span class="pill a">챔버 온도 주의</span><span class="pill b">설치</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">9</span><span class="ttl">다가오는 일정 위젯</span><span class="tag where">홈 대시보드</span><span class="tag now">바로 가능</span><span class="src">Devias 홈(Overview)</span></div>
+  <p class="desc">날짜 블록 + 제목 + 시간. 업무일정·행사를 홈에서 한 카드로 통합 노출.</p>
+  <div class="mock">
+    <div class="evrow"><div class="datebk"><div class="m">7월</div><div class="d">25</div></div><div><div class="t">클린룸 배관 검수 입회</div><div class="s">14:00 – 16:00</div></div></div>
+    <div class="evrow"><div class="datebk"><div class="m">7월</div><div class="d">28</div></div><div><div class="t">7월 안전교육</div><div class="s">10:00 – 12:00 · 전 직원</div></div></div>
+    <div class="evrow"><div class="datebk"><div class="m">8월</div><div class="d">1</div></div><div><div class="t">ANGELS 반도체 세미나</div><div class="s">종일 · 행사</div></div></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">10</span><span class="ttl">표 상태 탭 필터</span><span class="tag where">표 있는 모든 페이지</span><span class="tag now">바로 가능</span><span class="src">Devias 고객 목록</span></div>
+  <p class="desc">1번(카드형)의 탭 버전. 좁은 자리엔 탭, 넓은 자리엔 카드 — 페이지 성격에 따라 선택.</p>
+  <div class="mock">
+    <div class="tabs">
+      <span class="tab on">전체 <span class="cnt">24</span></span>
+      <span class="tab">검토중 <span class="cnt">9</span></span>
+      <span class="tab">보류 <span class="cnt">3</span></span>
+      <span class="tab">종결 <span class="cnt">12</span></span>
+    </div>
+    <div class="row" style="border-top:none"><span class="grow">홈 로드맵 아이콘 확대 요청</span><span class="pill g">종결</span></div>
+    <div class="row"><span class="grow">장비 데모결과 정렬 기능 요청</span><span class="pill b">검토중</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">11</span><span class="ttl">요약 스트립 + 상태 탭 이중 구조</span><span class="tag where">개선요청 보드</span><span class="tag now">바로 가능 · 추천 1순위</span><span class="src">Minimal 송장 목록</span></div>
+  <p class="desc">오늘 본 목록 UX 완성형. 요약 스트립(건수+부가정보) → 상태 탭 → 상세 필터 3단 구성.</p>
+  <div class="mock">
+    <div class="strip">
+      <div><div class="l">전체</div><div class="v">24건</div><div class="s">이번 달 +5</div></div>
+      <div><div class="l" style="color:var(--blue-tx)">검토중</div><div class="v">9건</div><div class="s">평균 4일 경과</div></div>
+      <div><div class="l" style="color:var(--amber-tx)">보류</div><div class="v">3건</div><div class="s">사유 등록됨</div></div>
+      <div><div class="l" style="color:var(--green-tx)">종결</div><div class="v">12건</div><div class="s">처리율 50%</div></div>
+    </div>
+    <div class="tabs" style="margin-top:10px">
+      <span class="tab on">전체 <span class="cnt">24</span></span>
+      <span class="tab">검토중 <span class="cnt">9</span></span>
+      <span class="tab">보류 <span class="cnt">3</span></span>
+      <span class="tab">종결 <span class="cnt">12</span></span>
+    </div>
+    <div class="filters">
+      <span class="fsel">개선위치: 전체</span>
+      <span class="fsel">기간: 2026-07-01 ~ 07-24</span>
+      <span class="fsel">담당: 전체</span>
+    </div>
+    <div class="row"><span class="grow">장비페이지 반입일 표기 오류 수정 요청</span><span class="pill b">검토중</span></div>
+    <div class="row"><span class="grow">공지 첨부파일 미리보기 요청</span><span class="pill a">보류</span></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">12</span><span class="ttl">캘린더 목록(아젠다) 뷰 전환</span><span class="tag where">업무일정</span><span class="tag now">바로 가능</span><span class="src">Minimal 캘린더</span></div>
+  <p class="desc">월간 그리드 ↔ 일자별 세로 목록 토글. 빠른 확인·모바일에 유용.</p>
+  <div class="mock">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+      <b style="font-size:13px">2026년 7월 20일 – 26일</b>
+      <span class="seg"><span>월간</span><span>주간</span><span class="on">목록</span></span>
+    </div>
+    <div style="font-size:11px; color:var(--mut); font-weight:700; margin-bottom:2px">7월 24일 금요일</div>
+    <div class="row" style="border-top:none"><span class="dot" style="background:#2a78d6"></span><span class="grow">배관 공사 입회 <span style="color:var(--mut)">14:00–16:00</span></span></div>
+    <div class="row"><span class="dot" style="background:#eda100"></span><span class="grow">주간 업무 회의 <span style="color:var(--mut)">16:30–17:00</span></span></div>
+    <div style="font-size:11px; color:var(--mut); font-weight:700; margin:8px 0 2px">7월 28일 화요일</div>
+    <div class="row" style="border-top:none"><span class="dot" style="background:#1baf7a"></span><span class="grow">7월 안전교육 <span style="color:var(--mut)">종일</span></span></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="num">13</span><span class="ttl">표 공통 UX 세트 — Dense 토글 외</span><span class="tag where">업무현황 · 개선요청</span><span class="tag now">바로 가능</span><span class="src">Minimal 전 목록 공통</span></div>
+  <p class="desc">상태 탭 + 종류 필터 + 정렬 + 행 간격 좁힘(Dense) 토글 + 행별 더보기 메뉴 — 반복되는 표준 세트.</p>
+  <div class="mock">
+    <div style="display:flex; justify-content:flex-end; align-items:center; gap:7px; font-size:12px; color:var(--ink2); margin-bottom:6px"><span class="switch"></span> 좁게 보기</div>
+    <div class="row" style="border-top:1px solid var(--line); padding:4px"><span class="grow">클린룸 배관 검수</span><span class="pill b">진행</span></div>
+    <div class="row" style="padding:4px"><span class="grow">가스배관 도면 검토</span><span class="pill n">대기</span></div>
+    <div class="row" style="padding:4px"><span class="grow">데모 결과 등록</span><span class="pill g">완료</span></div>
+    <div class="note">토글 켜면 행 높이가 절반 — 데이터 많을 때 한 화면에 더 보임</div>
+  </div>
+</div>
+
+<div class="sect">판단 기준</div>
+
+<div class="two">
+  <div class="card avoid">
+    <div class="head"><span class="ttl" style="color:var(--red-tx)">가져오지 말 것</span></div>
+    <div class="row"><span class="pill r">제외</span><span class="grow">테마 커스터마이저(프리셋 컬러 서랍) — 데모 판매용 기능</span></div>
+    <div class="row"><span class="pill r">제외</span><span class="grow">그라데이션 배너 · 프로모션 위젯 — 우리 톤과 불일치</span></div>
+    <div class="row"><span class="pill g">참고</span><span class="grow">템플릿들도 카드 좌측 컬러 보더는 안 쓰는 추세 (우리 규칙과 동일)</span></div>
+  </div>
+  <div class="card">
+    <div class="head"><span class="ttl">추천 착수 순서</span></div>
+    <div class="flow" style="margin-top:6px">
+      <span class="pill g">1 요약 스트립+탭 (11)</span><span class="ar">→</span>
+      <span class="pill g">2 KPI 증감 칩 (2)</span><span class="ar">→</span>
+      <span class="pill g">3 다가오는 일정 (9)</span><span class="ar">→</span>
+      <span class="pill g">4 장비 대시보드 재구성 (8)</span>
+    </div>
+    <div class="flow" style="margin-top:10px">
+      <span class="pill a">중기: 알림 센터 (6)</span>
+      <span class="pill a">활동 타임라인 (3)</span>
+      <span class="pill a">Ctrl+K (7)</span>
+      <span class="pill n">선택: 칸반 (4)</span>
+    </div>
+    <div class="note" style="font-size:11px; color:var(--mut); margin-top:10px">초록 = 기존 데이터로 바로 가능 · 노랑 = DB 작업 필요 · 회색 = 필요성 검토</div>
+  </div>
+</div>
+
+<div class="foot">
+  출처 데모: <a href="https://mui.com/store/templates/">MUI 스토어</a> · <a href="https://minimals.cc/">Minimal Pro</a> · <a href="https://material-kit-pro-react.devias.io/">Devias Kit Pro</a> · <a href="https://modernize-react.adminmart.com/dashboards/modern">Modernize</a> · <a href="https://mantisdashboard.io/free/">Mantis 무료</a> · <a href="https://free.minimals.cc/">Minimal 무료</a><br>
+  본 문서의 수치·문구는 전부 예시이며 실제 포털 데이터가 아님. 12·13번 캡처 기준: 2026-07-24 투어.
+</div>
+
+</div>
+</body>
+</html>
