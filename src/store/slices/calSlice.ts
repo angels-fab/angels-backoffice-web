@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import { fetchCalendarEvents } from '@/api/calendar'
-import { nowStamp } from '@/utils/date'
+import { nowStamp, todaySeoul } from '@/utils/date'
 import type { CalEvent } from '@/types'
 
 // 일정 제목 키워드 → 분류 (캘린더에는 분류 개념이 없어 제목으로 판별)
@@ -40,6 +40,10 @@ function expandRawEvent(ev: { id: string; title: string; start: string; end: str
   const eTime = ev.end.slice(11)
   const time = ev.allDay ? '종일' : sTime + (eTime !== sTime ? '-' + eTime : '')
   const cat = classify(ev.title)
+  // 지난 휴가(연차/반차/휴가/사가)는 화면에서 숨김 — 종료일 다음 날부터 렌더 제외.
+  // 삭제가 아니라 화면 필터라 DB·구글캘린더 원본은 그대로 보존(사용자 확정 2026-07-23).
+  // 진행 중(끝나는 날이 오늘 이상)·미래 휴가는 그대로 표시.
+  if (cat === 'leave' && !isNaN(e.getTime()) && dstr(e) < todaySeoul()) return out
   let t = new Date(s.getFullYear(), s.getMonth(), s.getDate())
   for (let i = 0; i < 60 && t <= e; i++) {
     out.push({
