@@ -31,7 +31,7 @@ import PushPinIcon from '@mui/icons-material/PushPin'
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { typescale, iconSize, radius } from '@/theme/tokens'
+import { typescale, iconSize, radius, control } from '@/theme/tokens'
 import { nextFilterSelection } from '@/utils/filterSelect'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, statusTextColor, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableHeadSx, dataTableSx, useSnack } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
@@ -637,7 +637,7 @@ export default function Improve() {
               startIcon={<AddIcon />}
               variant={composing ? 'contained' : 'outlined'}
               size="small"
-              sx={{ whiteSpace: 'nowrap' }}
+              sx={{ whiteSpace: 'nowrap', minHeight: control.height }}
             >
               새 요청
             </Button>

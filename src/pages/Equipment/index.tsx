@@ -38,7 +38,7 @@ import EquipmentTabs from './EquipmentTabs'
 import DemoResults from './DemoResults'
 import { NameWithQty, codeRange } from './batchUtil'
 import { useTableSort, sortRows, SortTh } from './sortable'
-import { iconSize, layout, radius, shadow, typescale } from '@/theme/tokens'
+import { iconSize, layout, radius, shadow, typescale, control } from '@/theme/tokens'
 
 const GANTT_NAME_W = 150 // 장비명 열(축소) — 나머지는 간트가 가변폭으로 채움(가로 스크롤 없음)
 // 가변폭 간트에서 반월 1칸의 실제 픽셀폭 = 간트영역 폭 / (월수*2). 드래그/리사이즈 스냅 기준.
@@ -675,7 +675,7 @@ export default function Equipment() {
                 <IconButton aria-label="다시실행" title="다시실행 (Ctrl+Shift+Z)" onClick={redo} disabled={!redoStack.length} size="small" sx={{ color: 'text.secondary' }}>
                   <RedoIcon sx={{ fontSize: iconSize.header }} />
                 </IconButton>
-                <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => { setEditBatchCodes([]); setEditTarget(null); setWriteOpen(true) }}>
+                <Button variant="contained" size="small" startIcon={<AddIcon />} sx={{ minHeight: control.height }} onClick={() => { setEditBatchCodes([]); setEditTarget(null); setWriteOpen(true) }}>
                   장비 추가
                 </Button>
               </>

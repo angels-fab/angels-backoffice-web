@@ -9,7 +9,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, LoadingState, Select, SearchBar } from '@/components/ds'
-import { iconSize, radius } from '@/theme/tokens'
+import { iconSize, radius, control } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -196,7 +196,7 @@ export default function EquipmentOps() {
             <Select value={mgrF} onChange={setMgrF} ariaLabel="담당자"
               options={mgrOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 담당자' : o }))} />
             <SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호·제조사 검색" width={220} />
-            <Button size="small" variant={missingOnly ? 'contained' : 'outlined'} onClick={() => setMissingOnly((m) => !m)} sx={{ flexShrink: 0, py: 0.4, fontSize: 13, color: missingOnly ? undefined : 'text.secondary', borderColor: 'divider' }}>
+            <Button size="small" variant={missingOnly ? 'contained' : 'outlined'} onClick={() => setMissingOnly((m) => !m)} sx={{ flexShrink: 0, py: 0.4, fontSize: 13, minHeight: control.height, color: missingOnly ? undefined : 'text.secondary', borderColor: 'divider' }}>
               누락정보만
             </Button>
           </Box>

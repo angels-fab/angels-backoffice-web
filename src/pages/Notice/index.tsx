@@ -44,7 +44,7 @@ import {
   useSnack,
 } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
-import { iconSize, radius } from '@/theme/tokens'
+import { iconSize, radius, control } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { useMarkSeen } from '@/layouts/useNavBadges'
 import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
@@ -342,7 +342,7 @@ export default function Notice() {
           label="분류"
           search={<SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" width={200} />}
           actions={isMember ? (
-            <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: iconSize.action }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap' }}>
+            <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: iconSize.action }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap', minHeight: control.height }}>
               새 공지
             </Button>
           ) : undefined}

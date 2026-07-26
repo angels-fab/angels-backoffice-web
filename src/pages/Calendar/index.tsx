@@ -31,7 +31,7 @@ import ChipContent, { type ChipContentProps } from './ChipContent'
 import EventPopover, { type EventDetail } from './EventPopover'
 import CalEventWrite, { type CalDraft } from './CalEventWrite'
 import { updateCalEvent } from '@/api/calendar'
-import { iconSize, radius } from '@/theme/tokens'
+import { iconSize, radius, control } from '@/theme/tokens'
 import AddIcon from '@mui/icons-material/Add'
 import { useRole } from '@/auth/role'
 
@@ -496,6 +496,7 @@ export default function Calendar() {
                 size="small"
                 variant="contained"
                 startIcon={<AddIcon sx={{ fontSize: iconSize.action }} />}
+                sx={{ minHeight: control.height }}
                 onClick={() => setWrite({ mode: 'add', event: null, initialDate: todayKey })}
               >
                 일정 추가
