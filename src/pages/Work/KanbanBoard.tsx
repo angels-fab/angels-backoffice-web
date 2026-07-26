@@ -139,11 +139,11 @@ const BoardCard = memo(function BoardCard({ t, zone, tone, selected, draggable, 
         userSelect: 'none',
         // 드래그 가능한 카드만 세로 팬 제한(가로 끌기=드래그). 비드래그 카드는 모바일 보드 가로 스크롤 통과
         touchAction: draggable ? 'pan-y' : 'auto',
-        transition: 'border-color .14s, background-color .14s, box-shadow .14s, transform .14s',
-        // 호버 시 2px 떠오름 — 그리드 카드(TaskAccordion)와 같은 감각
-        '&:hover': { borderColor: c(0.78), bgcolor: c(0.09), transform: 'translateY(-2px)', boxShadow: 'var(--shadow-md)' },
+        transition: 'border-color .14s, background-color .14s, box-shadow .14s',
+        // 떠오름 없음 — 그리드 카드와 동일 규칙(호버로 카드가 움직이면 조준이 어긋난다)
+        '&:hover': { borderColor: c(0.78), bgcolor: c(0.09), boxShadow: 'var(--shadow-md)' },
         // 선택 > 호버 — 선택 시 호버에도 선택 모습 유지(TaskAccordion과 동일 규칙)
-        ...(sel ? { ...sel, '&:hover': { ...sel, transform: 'translateY(-2px)', boxShadow: `0 0 0 2px ${c(0.22)}, var(--shadow-lg)` } } : {}),
+        ...(sel ? { ...sel, '&:hover': { ...sel, boxShadow: `0 0 0 2px ${c(0.22)}, var(--shadow-lg)` } } : {}),
         ...(focusRingSx as object),
       }}
     >

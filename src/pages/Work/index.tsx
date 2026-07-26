@@ -133,14 +133,19 @@ function contentFmtForSave(form: NewTaskForm, hadFmt: boolean): { value?: string
   return {}
 }
 
-// '+' 새 업무 버튼(42×28) — 제목행 건수 옆, 진행중 뷰에서만. 누르면 카드 그리드 첫 칸에 인라인 작성란.
+// '+ 새 업무' 버튼 — 제목행 건수 옆, 진행중 뷰에서만. 누르면 카드 그리드 첫 칸에 인라인 작성란.
+// 아이콘만(+) 두면 "무엇을 추가하는지"가 맥락에 의존한다 — 바로 옆이 '진행중 업무 N건'이라
+// 필터 추가로도 읽힌다. 이미 aria-label로 갖고 있던 문구를 화면에도 보여준다(사용자 확정 2026-07-26).
 function NewTaskPlusButton({ onClick }: { onClick: () => void }) {
   return (
     <ButtonBase
       onClick={onClick}
       aria-label="새 업무 등록"
       sx={(th) => ({
-        width: 42, height: 28, flexShrink: 0,
+        height: 28, px: '10px', gap: '3px', flexShrink: 0,
+        // lineHeight를 1로 고정 — 기본(normal)이면 반쪽 여백 배분 탓에 글자 잉크가 1.4px 내려가
+        // 옆 제목·건수와 어긋나 보인다(실측). 이 저장소 칩들(StatusChip·FilterChip)과 같은 규칙.
+        fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, whiteSpace: 'nowrap', lineHeight: 1,
         border: '1px solid', borderColor: alpha(th.palette.accent.green, 0.5),
         borderRadius: `${radius.chip}px`, bgcolor: alpha(th.palette.accent.green, 0.12),
         color: th.palette.accentText.green,
@@ -149,7 +154,8 @@ function NewTaskPlusButton({ onClick }: { onClick: () => void }) {
         ...(focusRingSx as object),
       })}
     >
-      <AddIcon sx={{ fontSize: iconSize.action }} />
+      <AddIcon sx={{ fontSize: iconSize.body }} />
+      새 업무
     </ButtonBase>
   )
 }
@@ -1165,7 +1171,7 @@ export default function Work() {
         onSave={(form) => handleSaveEdit(t, form)}
       />
     ) : (
-      <TaskAccordion key={t.id} t={t} tone={tone} selected={selected.has(t.num)} />
+      <TaskAccordion key={t.id} t={t} tone={tone} selected={selected.has(t.num)} onRequestSelect={() => selectOnly(t.num)} />
     )
 
   return (

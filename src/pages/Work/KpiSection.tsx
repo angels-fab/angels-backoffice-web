@@ -6,6 +6,7 @@ import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
 import { ContentSection, focusRingSx } from '@/components/ds'
 import { iconSize, radius, shadow, typescale } from '@/theme/tokens'
+import { chiefPurple } from './chiefCheck'
 import type { DropZone, WorkView } from './dropZones'
 
 /**
@@ -132,14 +133,21 @@ export default function KpiSection({
             <Box
               component="span"
               aria-hidden
+              // 색은 카드의 부서장 확인 배지와 **같은 토큰**(chiefPurple). 예전엔 손으로 박은 hex라
+              // 같은 '부서장 확인'인데 카드와 KPI의 보라가 달랐다(사용자 지적).
+              // 숫자는 12px이라 원 안에서 안 읽혀 14px로 키우고 원도 함께 키움.
               sx={(t) => ({
-                position: 'absolute', left: 'calc(100% + 7px)', top: '50%', transform: 'translateY(-50%)',
-                width: { xs: 20, md: 21 }, height: { xs: 20, md: 21 },
-                border: '1px solid rgba(169,138,224,.52)', borderRadius: '999px',
-                bgcolor: t.palette.mode === 'dark' ? '#29233a' : 'rgba(169,138,224,.16)',
-                color: t.palette.mode === 'dark' ? '#d7c6f6' : '#6f4fb0',
+                position: 'absolute', zIndex: 2, left: 'calc(100% + 7px)', top: '50%', transform: 'translateY(-50%)',
+                width: { xs: 23, md: 24 }, height: { xs: 23, md: 24 },
+                border: '1px solid', borderColor: chiefPurple.border(t), borderRadius: '999px',
+                // 타일 위에 **얹혀 있는** 배지라 타일 호버색이 비쳐서는 안 된다(사용자 지적).
+                // 반투명이면 아래 STRONG[zone]이 그대로 올라오므로, 타일 표면색 위에 같은 알파를
+                // 덧칠해 불투명하게 만든다 — 호버해도 배지 색은 그대로.
+                bgcolor: 'var(--ink2)',
+                backgroundImage: `linear-gradient(${chiefPurple.fill(t)}, ${chiefPurple.fill(t)})`,
+                color: chiefPurple.text(t),
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: typescale.small.size, fontWeight: typescale.display.weight, lineHeight: 1,
+                fontSize: typescale.emphasis.size, fontWeight: typescale.display.weight, lineHeight: 1,
                 boxShadow: shadow.sm, pointerEvents: 'none',
               })}
             >
@@ -205,25 +213,30 @@ export default function KpiSection({
                 onClick={(e) => { e.stopPropagation(); onOpenView('check') }}
                 onKeyDown={keyActivate(() => onOpenView('check'))}
                 sx={(t) => ({
-                  position: 'absolute', zIndex: 4, left: '50%', bottom: { xs: -12, md: -13 },
+                  position: 'absolute', zIndex: 4, left: '50%', bottom: { xs: -14, md: -15 },
                   transform: 'translateX(-50%)',
-                  height: { xs: 24, md: 26 }, px: '10px',
-                  border: '1px solid rgba(169,138,224,.42)', borderRadius: '999px',
-                  // 배경은 항상 완전 불투명(반투명 rgba 금지) — 뒤 KPI 테두리·구분선이 비치지 않게
-                  // 다크=표면색+보라 혼합 불투명색 / 라이트=연보라 불투명색(같은 목적: 뒤 요소 비침 방지)
-                  bgcolor: t.palette.mode === 'dark' ? (view === 'check' ? '#413a5a' : '#1b202b') : (view === 'check' ? '#DCD0F5' : '#EFEAF9'),
-                  color: t.palette.mode === 'dark' ? '#c5adf0' : '#5B3FA6',
+                  height: { xs: 28, md: 30 }, px: '12px',
+                  border: '1px solid', borderColor: chiefPurple.border(t), borderRadius: '999px',
+                  // 색은 카드 배지·KPI 숫자 배지와 같은 토큰(chiefPurple). 다만 이 칩은 타일 사이 틈에
+                  // 걸쳐 있어 **불투명이어야** 뒤 테두리가 비치지 않는다 → 페이지색 위에 같은 알파를
+                  // 덧칠해 합성 결과는 같으면서 불투명하게(배경색 + 같은 색 그라데이션 1겹).
+                  bgcolor: 'var(--ink)',
+                  backgroundImage: `linear-gradient(${view === 'check' ? chiefPurple.fillStrong(t) : chiefPurple.fill(t)}, ${view === 'check' ? chiefPurple.fillStrong(t) : chiefPurple.fill(t)})`,
+                  color: chiefPurple.text(t),
                   display: 'flex', alignItems: 'center', gap: '7px',
-                  fontSize: typescale.caption.size, fontWeight: typescale.display.weight, whiteSpace: 'nowrap', cursor: 'pointer',
+                  // 11px은 작아서 안 읽힘(사용자 지적) — 라벨 12px, 건수는 아래에서 14px
+                  // KPI 상태명(진행중·보류)과 같은 크기 — 그 사이에 걸친 칩이라 둘보다 작으면 눌려 보인다
+                  // 상태명(16px)보다 **한 단 아래**. 같게 하면 KPI의 주인공과 경쟁하고, 11px은 안 읽혔다.
+                  fontSize: typescale.body.size, fontWeight: typescale.display.weight, whiteSpace: 'nowrap', cursor: 'pointer',
                   boxShadow: shadow.sm,
                   transition: 'background-color .14s ease, border-color .14s ease, transform .14s ease',
-                  '&:hover': { bgcolor: t.palette.mode === 'dark' ? (view === 'check' ? '#4a4266' : '#342e4a') : (view === 'check' ? '#D2C2F0' : '#E7DEF6'), borderColor: 'rgba(169,138,224,.65)', transform: 'translateX(-50%) translateY(-1px)' },
+                  '&:hover': { backgroundImage: `linear-gradient(${chiefPurple.fillStrong(t)}, ${chiefPurple.fillStrong(t)})`, transform: 'translateX(-50%) translateY(-1px)' },
                   ...(focusRingSx as object),
                 })}
               >
-                <CheckIcon sx={{ fontSize: iconSize.caption }} />
+                <CheckIcon sx={{ fontSize: iconSize.body }} />
                 <Box component="span">부서장 확인</Box>
-                <Box component="span" sx={(t) => ({ fontSize: typescale.body.size, fontWeight: typescale.display.weight, color: t.palette.mode === 'dark' ? '#d7c6f6' : '#5B3FA6' })}>{checkTotal}</Box>
+                <Box component="span" sx={(t) => ({ fontSize: typescale.emphasis.size, fontWeight: typescale.display.weight, color: chiefPurple.text(t) })}>{checkTotal}</Box>
               </Box>
             </Tooltip>
           )}
