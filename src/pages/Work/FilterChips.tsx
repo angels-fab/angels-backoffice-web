@@ -1,6 +1,6 @@
 import Box from '@mui/material/Box'
 import type { Theme } from '@mui/material/styles'
-import type { StatusKind } from '@/components/ds'
+import { statusTextColor, type StatusKind } from '@/components/ds'
 import { TintChip, PillChip } from '@/components/FilterChip'
 import { typescale } from '@/theme/tokens'
 
@@ -39,8 +39,9 @@ export function CatFilterChip({ label, count, on, kind, onToggle }: ChipBaseProp
       hover
       sx={{ p: '4px 10px' }}
     >
-      <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>{label}</Box>
-      <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>{count}</Box>
+      {/* 켜짐 = 카드 구분칩과 같은 글자색(같은 구분임을 색으로 잇는다) / 꺼짐 = 채움이 없으므로 중립 */}
+      <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: (t: Theme) => (on ? statusTextColor(t, kind) : t.palette.text.secondary) }}>{label}</Box>
+      <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.secondary' }}>{count}</Box>
     </TintChip>
   )
 }

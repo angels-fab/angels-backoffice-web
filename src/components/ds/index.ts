@@ -41,7 +41,7 @@ export type { FilterToolbarProps } from './FilterToolbar'
 export { default as Select } from './Select'
 export type { SelectProps, SelectOption } from './Select'
 
-export { default as StatusChip } from './StatusChip'
+export { default as StatusChip, statusTextColor } from './StatusChip'
 export type { StatusChipProps, StatusKind } from './StatusChip'
 
 export { default as SegTabs } from './SegTabs'

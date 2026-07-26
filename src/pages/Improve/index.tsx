@@ -32,7 +32,8 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius } from '@/theme/tokens'
-import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableHeadSx, dataTableSx, useSnack } from '@/components/ds'
+import { nextFilterSelection } from '@/utils/filterSelect'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, statusTextColor, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableHeadSx, dataTableSx, useSnack } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
@@ -243,14 +244,8 @@ export default function Improve() {
   // 메뉴를 추가/삭제하면 이 목록에 즉시 반영된다(미리 정해둔 목록·시트 불필요).
   const locOptions = useMemo(() => ['포털', ...NAV_LABELS], [])
 
-  const onTab = (s: ImpStatus, shift: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (shift) { next.has(s) ? next.delete(s) : next.add(s); return next }
-      if (next.size === 1 && next.has(s)) return new Set()
-      return new Set([s])
-    })
-  }
+  // 필터 선택 규칙은 정본(utils/filterSelect)에 위임 — 업무현황·공지와 동일
+  const onTab = (s: ImpStatus, shift: boolean) => setSelected((prev) => nextFilterSelection(prev, s, shift))
 
   // 수정(상태·위치·유형·내용·사유·메모) = 로그인 관리자 전체 / 삭제 = 해당 글 담당자(작성자)만
   const canEdit = isAdmin && !!user && !!authKey
@@ -631,7 +626,7 @@ export default function Improve() {
         />
       )}
 
-      <ContentSection last>
+      <ContentSection title="개선요청 목록" count={`${listed.length}건`} last>
         {/* 상태 필터 — 공용 FilterToolbar(공지와 동일 박스+검색+새글). 0건 상태 숨김·재클릭=전체·Shift=중복. */}
         <FilterToolbar
           label="상태"
@@ -649,7 +644,9 @@ export default function Improve() {
           ) : undefined}
         >
           {visibleStatuses.map((s) => {
-            const on = selected.has(s)
+            // 빈 선택 = 전체. 그 상태를 공지·업무현황과 같이 **전부 켜진 모습**으로 그린다
+            // (구현은 셋 다 '빈=전체'로 같은데 개선요청만 전부 꺼진 모습이라 기본값이 달라 보였다).
+            const on = selected.size === 0 || selected.has(s)
             return (
               <TintChip
                 key={s}
@@ -660,8 +657,8 @@ export default function Improve() {
                 hover
                 sx={{ p: '4px 10px' }}
               >
-                <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>{s}</Box>
-                <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>{counts[s] || 0}</Box>
+                <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: (t) => (on ? statusTextColor(t, impKind(s)) : t.palette.text.secondary) }}>{s}</Box>
+                <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.secondary' }}>{counts[s] || 0}</Box>
               </TintChip>
             )
           })}
@@ -707,7 +704,14 @@ export default function Improve() {
                   </TableCell>
                 </TableRow>
               )}
-              {listed.length === 0 && !composing && (
+              {/* 첫 로딩 — '없습니다'가 먼저 뜨지 않게 LoadingState 우선(공지·업무현황과 동일).
+                  실패 시에도 ready=true라 여기 갇히지 않고 위 ErrorBanner가 설명한다. */}
+              {!ready && listed.length === 0 && !composing && (
+                <TableRow>
+                  <TableCell colSpan={fullSpan} sx={{ textAlign: 'center', py: 3 }}><LoadingState /></TableCell>
+                </TableRow>
+              )}
+              {ready && listed.length === 0 && !composing && (
                 <TableRow>
                   <TableCell colSpan={fullSpan} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>해당하는 요청이 없습니다</TableCell>
                 </TableRow>
@@ -758,14 +762,15 @@ export default function Improve() {
                     <TableCell onClick={toggle} sx={{ textAlign: 'left !important', whiteSpace: 'normal', cursor: 'pointer' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: iconSize.action, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
-                        <Box component="span" sx={{ fontWeight: typescale.caption.weight, color: 'text.primary' }}>{t.title}</Box>
+                        {/* 제목은 14px + 주 톤으로 이미 식별자 — 굵기는 강조 상태에만 쓴다(전부 굵으면 신호가 사라짐) */}
+                        <Box component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: 500, color: 'text.primary' }}>{t.title}</Box>
                         {/* 제목 → 최근글 N칩 → 답글 +N칩 → 링크 순. 모두 줄어들지 않게 flexShrink:0 */}
                         {isNew && (
-                          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: 'error.main', color: 'common.white', fontSize: 9.5, fontWeight: typescale.cardTitle.weight, lineHeight: 1 }}>N</Box>
+                          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: 9.5, fontWeight: typescale.cardTitle.weight, lineHeight: 1 }}>N</Box>
                         )}
                         {/* 답글 +N — 삭제 안 된 답글이 있을 때만. 파란 칩(왼쪽 점 없음), 상태와 무관. 클릭 시 행 토글로 아코디언 펼침 */}
                         {rowReplies.length > 0 && (
-                          <Box component="span" sx={(th) => ({ flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 18, px: '7px', borderRadius: `${radius.button}px`, fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1, whiteSpace: 'nowrap', color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.14), border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}` })}>답글 +{rowReplies.length}</Box>
+                          <Box component="span" sx={(th) => ({ flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 18, px: '7px', borderRadius: `${radius.button}px`, fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1, whiteSpace: 'nowrap', color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.14), border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}` })}>답글 +{rowReplies.length}</Box>
                         )}
                         {t.link && (
                           <IconButton component="a" href={t.link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련자료" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
@@ -774,7 +779,7 @@ export default function Improve() {
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell>{t.author || '-'}</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>{t.author || '-'}</TableCell>
                     <TableCell sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>{fmtDate(t.date)}</TableCell>
                     <TableCell onClick={stop} sx={{ cursor: editable ? 'pointer' : 'not-allowed' }}>
                       {editable ? (

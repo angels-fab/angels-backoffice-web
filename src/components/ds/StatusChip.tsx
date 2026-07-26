@@ -1,5 +1,5 @@
 import Chip from '@mui/material/Chip'
-import { alpha } from '@mui/material/styles'
+import { alpha, darken } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 import { typescale } from '@/theme/tokens'
 
@@ -33,6 +33,26 @@ const COLOR: Record<StatusKind, (t: import('@mui/material/styles').Theme) => str
   neutral: (t) => t.palette.text.secondary,
 }
 
+// 글자용 색 — 같은 의미의 accentText(테마가 자동 선택). 채움(COLOR)과 분리된 2계층.
+/**
+ * 상태색 계열의 **글자색** 정본. 표시칩(이 파일)과 필터칩(Work/Notice/Improve)이 같은 값을 써야
+ * "같은 분류"가 목록과 필터에서 같은 색으로 읽힌다 — 예전엔 필터만 회색이라 같은 '행정'인데
+ * 카드는 파랑·필터는 회색으로 보였다(사용자 지적 2026-07-26).
+ * accent(채움용 원색)가 아니라 accentText라 틴트 면 위에서도 4.5:1을 넘긴다.
+ */
+export const statusTextColor = (t: import('@mui/material/styles').Theme, kind: StatusKind): string =>
+  TEXT_COLOR[kind](t)
+
+const TEXT_COLOR: Record<StatusKind, (t: import('@mui/material/styles').Theme) => string> = {
+  success: (t) => t.palette.accentText.green,
+  info: (t) => t.palette.accentText.blue,
+  warning: (t) => t.palette.accentText.amber,
+  error: (t) => t.palette.accentText.red,
+  purple: (t) => t.palette.accentText.purple,
+  teal: (t) => t.palette.accentText.teal,
+  neutral: (t) => t.palette.text.secondary,
+}
+
 /**
  * StatusChip — 상태/분류를 일관된 색 규칙으로 표시하는 칩.
  *
@@ -63,12 +83,21 @@ export default function StatusChip({
       variant="outlined"
       sx={(t) => {
         const c = customColor ?? COLOR[status](t)
+        // 채움(fill)은 c, 글자는 테마별 글자용 값 — 흰/틴트 배경에서도 4.5:1 확보(fill/text 2계층).
+        // customColor(담당자 고유색 등)는 매핑이 없으므로 라이트에서만 어둡게 눌러 대비를 만든다.
+        const textC = customColor
+          ? (t.palette.mode === 'light' ? darken(customColor, 0.34) : customColor)
+          : TEXT_COLOR[status](t)
         return {
           // MUI Chip 기본 라벨은 13px(body) → 본문·ManagerChip과 같은 12px(칩=라벨 크기)로 통일.
           fontSize: typescale.small.size,
-          color: selected ? t.palette.common.white : c,
-          bgcolor: selected ? c : alpha(c, 0.12),
-          borderColor: selected ? c : alpha(c, 0.32),
+          // 채움(selected) 라벨은 흰색 고정이 아니라 채움색 대비로 자동 선택 —
+          // 앰버·틸 같은 밝은 채움 위 흰 글자는 2.3:1까지 떨어진다(getContrastText가 검은 라벨을 고름).
+          color: selected ? t.palette.getContrastText(c) : textC,
+          // 미선택 칩의 면·보더 농도. 구 값(.12/.32)은 카드 대비 면 1.10~1.26·보더 1.29~1.86이라
+          // 6색 칩이 멀리서 회색 알약으로 뭉쳐 보였다(분류 신호가 죽음). 라벨은 .18 면 위에서도 4.5 통과.
+          bgcolor: selected ? c : alpha(c, 0.18),
+          borderColor: selected ? c : alpha(c, 0.6),
           '& .MuiChip-icon': { color: 'inherit', fontSize: 16 },
           // lineHeight:1 통일 + 글자 0.5px 하향 — 다른 칩과 동일 규격으로 한글 정중앙(실측)
           '& .MuiChip-label': { lineHeight: 1, transform: 'translateY(0.5px)' },

@@ -39,6 +39,8 @@ function TitleText({ children }: { children: ReactNode }) {
       <Typography
         component="span"
         sx={{
+          // 목록 행 제목 정본 = 14px + 주 톤. 굵기는 500 — 크기·색으로 이미 식별자이고,
+          // 모든 행이 굵으면 굵기가 아무 정보도 전달하지 못한다(강조 상태에만 700을 쓴다).
           fontSize: 14,
           fontWeight: 500,
           lineHeight: 1.4,
@@ -123,11 +125,13 @@ export default function ListRow({
         py: `${dense ? row.padYDense : row.padY}px`,
         transition: 'background-color .12s',
         ...(divider && { borderBottom: 1, borderColor: 'divider' }),
-        ...(selected && { bgcolor: 'background.elevated' }),
+        // 선택 > hover 로 층을 벌린다. 둘 다 elevated였을 땐 "선택된 행"과 "마우스 얹은 행"이 같은 색이라
+        // 어느 쪽인지 알 수 없었다(대비 1.00). 값 정본은 index.css의 --surface-selected / --row-hover.
+        ...(selected && { bgcolor: 'var(--surface-selected)' }),
         ...(clickable && {
           cursor: 'pointer',
-          '&:hover': { bgcolor: 'background.elevated' },
-          '&:focus-visible': { outline: 'none', bgcolor: 'background.elevated' },
+          '&:hover': { bgcolor: 'var(--row-hover)' },
+          '&:focus-visible': { outline: 'none', bgcolor: 'var(--row-hover)' },
         }),
       }, sx)}
     >

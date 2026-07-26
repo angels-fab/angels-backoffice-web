@@ -40,6 +40,7 @@ import {
   FilterToolbar,
   dataTableHeadSx,
   dataTableSx,
+  statusTextColor,
   useSnack,
 } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
@@ -50,6 +51,7 @@ import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
 import { addNotice, updateNotice, deleteNotice, removeNoticeFiles } from '@/api/notices'
 import { useRole } from '@/auth/role'
 import { todaySeoul } from '@/utils/date'
+import { nextFilterList } from '@/utils/filterSelect'
 import type { Notice as NoticeItem } from '@/types'
 import { noticeCatStatus } from './noticeMeta'
 import NoticeDetail from './NoticeDetail'
@@ -69,13 +71,6 @@ function kindColor(th: Theme, kind: StatusKind): string {
   }
 }
 const catColor = (th: Theme, cat: string) => kindColor(th, noticeCatStatus(cat))
-
-function isolateToggle(prev: string[], id: string, total: number): string[] {
-  if (prev.length === 0 || prev.length >= total) return [id]
-  if (prev.includes(id)) return prev.filter((x) => x !== id)
-  const next = [...prev, id]
-  return next.length >= total ? [] : next
-}
 
 export default function Notice() {
   const dispatch = useAppDispatch()
@@ -116,7 +111,7 @@ export default function Notice() {
   }, [items])
 
   const catSelected = (c: string) => selCats.length === 0 || selCats.includes(c)
-  const toggleCat = (c: string) => setSelCats((prev) => isolateToggle(prev, c, NOTICE_CATS.length))
+  const toggleCat = (c: string, additive: boolean) => setSelCats((prev) => nextFilterList(prev, c, additive))
 
   // 자동완성용 옵션 (부서/부서담당자 히스토리)
   const deptOptions = useMemo(() => [...new Set(items.map((n) => n.dept).filter(Boolean))], [items])
@@ -212,15 +207,6 @@ export default function Notice() {
 
   const showEmpty = ready && filtered.length === 0 && !composing
 
-  // 상단고정 ↔ 일반 목록 구분선 — 게시판 테두리색 계열 그라데이션
-  const renderGroupSep = () => (
-    <TableRow>
-      <TableCell colSpan={5} sx={{ p: 0, border: 0 }}>
-        <Box sx={(th) => ({ height: 2, background: `linear-gradient(90deg, transparent, ${alpha(th.palette.text.disabled, 0.5)}, transparent)` })} />
-      </TableCell>
-    </TableRow>
-  )
-
   // 공지 한 행(원본/복사본 공용). isCopy=상단 중요 복사본(압정·볼드·떠오른 표면), 아니면 일반(번호).
   const renderRow = (n: NoticeItem, isCopy: boolean) => {
     const rowKey = isCopy ? `pin-${n.num}` : String(n.num)
@@ -235,18 +221,18 @@ export default function Notice() {
         <TableRow
           hover
           sx={(th) => ({
-            // 종료글은 더 흐리게(0.3) · 진행중은 그대로(상대 대비로 더 또렷)
-            opacity: isExpired(n) ? 0.3 : 1,
+            // 종료 표시는 행 전체 opacity가 아니라 제목 톤으로만 한다. opacity는 모든 자식에 곱해져
+            // 분류칩·첨부아이콘·작성일까지 라이트 2.2~2.4:1로 깎았다('종료' 칩이 이미 상태를 말해준다).
             '& > td': {
               // 표준(DataTable): 기본행=투명(카드면 비침)+행 hover / 펼침=블루 틴트 / 상단고정만 예외로 살짝 떠오른 표면
-              bgcolor: open ? alpha(th.palette.accent.blue, 0.12) : isCopy ? th.palette.background.elevated : 'transparent',
+              bgcolor: open ? alpha(th.palette.accent.blue, 0.12) : isCopy ? 'var(--surface-selected)' : 'transparent',
               borderBottom: open ? 0 : undefined,
             },
           })}
         >
           <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
             {isCopy
-              ? <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+              ? <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
               : (
                 // 같은 번호의 상단고정 복사본이 펼쳐져 있으면 원본 번호에 동그라미 강조
                 <Box
@@ -256,8 +242,8 @@ export default function Notice() {
                     minWidth: 22, height: 22, px: '4px', borderRadius: radius.circle, fontVariantNumeric: 'tabular-nums',
                     transition: 'border-color .15s, color .15s',
                     ...(openKey === `pin-${n.num}`
-                      ? { border: `1.5px solid ${th.palette.accent.amber}`, color: th.palette.accent.amber, fontWeight: 700 }
-                      : { color: th.palette.text.disabled }),
+                      ? { border: `1.5px solid ${th.palette.accent.amber}`, color: th.palette.accentText.amber, fontWeight: 700 }
+                      : { color: th.palette.text.secondary }),
                   })}
                 >
                   {n.num}
@@ -277,11 +263,14 @@ export default function Notice() {
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, width: 'fit-content', maxWidth: '100%' }}>
               {isExpired(n) && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="neutral" label="종료" /></Box>}
-              <Typography className="notice-title" variant="body2" sx={{ fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
+              {/* 행의 식별자 — variant body2는 테마에서 색이 보조톤이라 주 톤을 명시해야 제목이 눌리지 않는다 */}
+              {/* 제목은 14px + 주 톤만으로 이미 식별자 — 굵기는 "상단고정"을 알리는 신호로 아껴 쓴다
+                  (전부 700으로 두면 굵기가 아무 정보도 전달하지 못함) */}
+              <Typography className="notice-title" variant="body2" sx={{ color: isExpired(n) ? 'text.secondary' : 'text.primary', fontSize: 14, fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
               </Typography>
               {n.isNew && (
-                <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: 'error.main', color: 'common.white', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+                <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
               )}
               {link && (
                 <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
@@ -293,7 +282,7 @@ export default function Notice() {
           <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textAlign: 'center', display: { xs: 'none', sm: 'table-cell' } }}>{n.author || '-'}</TableCell>
           <TableCell sx={{ whiteSpace: 'nowrap' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'flex-end', md: 'space-between' }, gap: 1 }}>
-              <Box component="span" sx={{ color: 'text.disabled', fontFamily: 'monospace', display: { xs: 'none', md: 'inline' } }}>{n.date}</Box>
+              <Box component="span" sx={{ color: 'text.secondary', fontFamily: 'monospace', display: { xs: 'none', md: 'inline' } }}>{n.date}</Box>
               <ExpandMoreIcon sx={{ fontSize: iconSize.action, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
             </Box>
           </TableCell>
@@ -367,11 +356,13 @@ export default function Notice() {
                 on={on}
                 color={color}
                 ariaLabel={`${c} ${catCounts[c] || 0}건${on ? '' : ' (해제됨)'}`}
-                onToggle={() => toggleCat(c)}
-                sx={{ p: '4px 10px', color }}
+                onToggle={(additive) => toggleCat(c, additive)}
+                sx={{ p: '4px 10px' }}
               >
-                <Box component="span" sx={{ fontSize: 12, fontWeight: 600 }}>{c}</Box>
-                <Box component="span" sx={{ fontSize: 11, opacity: 0.7 }}>{catCounts[c] || 0}</Box>
+                {/* 라벨은 중립톤 — 분류색은 배경 틴트가 이미 전달한다. 글자에 accent를 쓰면
+                    같은 색 틴트 위라 대비가 2.1~3.6:1로 무너짐(개선요청·업무·일정 칩과 동일 규칙) */}
+                <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: (t) => (on ? statusTextColor(t, noticeCatStatus(c)) : t.palette.text.secondary) }}>{c}</Box>
+                <Box component="span" sx={{ fontSize: 11, color: 'text.secondary' }}>{catCounts[c] || 0}</Box>
               </TintChip>
             )
           })}
@@ -400,13 +391,10 @@ export default function Notice() {
                   {isMember && composing && (
                     <NoticeCompose mode="new" author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={handleSaveNew} onCancel={() => setComposing(false)} />
                   )}
-                  {/* 상단고정 그룹(종료 공지는 자동 해제) + 구분선. 원본은 아래 최신순 목록에 그대로 남음 */}
-                  {pinnedCopies.length > 0 && (
-                    <>
-                      {pinnedCopies.map((n) => renderRow(n, true))}
-                      {renderGroupSep()}
-                    </>
-                  )}
+                  {/* 상단고정 그룹(종료 공지는 자동 해제). 원본은 아래 최신순 목록에 그대로 남음.
+                      그라데이션 구분선은 제거 — 고정글은 압정 아이콘·굵은 제목·떠오른 배경으로 이미 구분되고,
+                      그라데이션은 앱 어디에도 없는 장식이라 이질적이었음(사용자 확정) */}
+                  {pinnedCopies.length > 0 && pinnedCopies.map((n) => renderRow(n, true))}
                   {filtered.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>공지사항이 없습니다</TableCell>

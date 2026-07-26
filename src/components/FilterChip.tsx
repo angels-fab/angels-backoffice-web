@@ -47,11 +47,19 @@ export function TintChip({ on, color, ariaLabel, onToggle, hover = false, sx, ch
           const c = typeof color === 'function' ? color(theme) : color
           return {
             display: 'inline-flex', alignItems: 'center', height: 24, boxSizing: 'border-box', lineHeight: 1, gap: '5px', borderRadius: `${radius.pill}px`,
-            bgcolor: alpha(c, on ? 0.16 : 0.06), cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none',
-            opacity: on ? 1 : 0.45, transition: 'opacity .15s, background .15s',
+            // off를 opacity로 표현하면 컨테이너 전체가 깎여 라벨 대비가 라이트 2.01·다크 2.60까지 떨어졌다
+            // (글자색이 연한 게 아니라 opacity가 전부를 깎던 것). off = 빈 면 + divider 테두리로 바꿔
+            // 글자는 제 색을 유지하고, on/off는 채움 유무로 구분한다.
+            // 켜짐 농도는 표시칩(StatusChip 미선택 .18/.6)과 동일 — 같은 분류가 목록과 필터에서
+            // 다른 색으로 보이지 않게. 꺼짐은 채움 없이 divider 테두리만.
+            bgcolor: on ? alpha(c, 0.18) : 'transparent',
+            border: '1px solid',
+            borderColor: on ? alpha(c, 0.6) : 'divider',
+            cursor: 'pointer', whiteSpace: 'nowrap', userSelect: 'none',
+            transition: 'background .15s, border-color .15s',
             // lineHeight:1 통일 후, 글자 span만 0.5px 하향(아이콘 svg 제외) — 다른 칩과 동일 보정으로 정중앙
             '& > span': { transform: 'translateY(0.5px)' },
-            ...(hover ? { '&:hover': on ? { bgcolor: alpha(c, 0.22) } : { opacity: 0.7 } } : {}),
+            ...(hover ? { '&:hover': { bgcolor: alpha(c, on ? 0.22 : 0.08), borderColor: alpha(c, on ? 0.6 : 0.35) } } : {}),
             '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
           }
         },

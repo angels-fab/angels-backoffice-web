@@ -12,17 +12,25 @@
 /** 표 헤더 <TableRow>에 얹는 sx — 배경 채움·12px·가운데 기본. */
 export const dataTableHeadSx = {
   '& th': {
-    bgcolor: 'background.elevated',
+    // 헤더 띠 — 라이트에서 elevated(#EDF1F6)는 카드(#FFF) 대비 1.11이라 띠가 안 보였다.
+    // 레거시 .eq-ledger 표와 같은 값을 공유(--th-bg)해 두 구현의 헤더가 어긋나지 않게 한다.
+    bgcolor: 'var(--th-bg)',
     fontSize: '0.75rem',
     fontWeight: 600,
     color: 'text.secondary',
     whiteSpace: 'nowrap',
     textAlign: 'center',
+    // 헤더 ↔ 본문 경계선. --border는 라이트에서 #E3E8EF로 헤더 띠(#DFE7F0)보다 **밝아서**
+    // 선이 아니라 미세한 틈으로 보였다(대비 1.01). 헤더 전용 --th-line으로 분리 — 세 표 구현 공유.
+    borderBottom: '1px solid var(--th-line)',
   },
 } as const
 
-/** 표 <Table>에 얹는 sx — 가로선(divider) + 본문 셀 12px. */
+/** 표 <Table>에 얹는 sx — 가로선(divider) + 본문 셀 12px + 행 hover. */
 export const dataTableSx = {
   '& th, & td': { borderColor: 'divider' },
   '& tbody td': { fontSize: '0.75rem' },
+  // MUI 기본 action.hover(라이트 rgba(0,0,0,.04)→#F5F5F5)는 대비 1.09에 중성 회색이라
+  // 파랑기미 표면들 사이에서 혼자 튀었다. 레거시 .eq-ledger·ListRow와 같은 --row-hover로 통일.
+  '& tbody .MuiTableRow-hover:hover': { backgroundColor: 'var(--row-hover)' },
 } as const

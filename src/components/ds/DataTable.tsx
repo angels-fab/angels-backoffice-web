@@ -79,7 +79,8 @@ export default function DataTable<T>({
                   fontWeight: 600,
                   color: 'text.secondary',
                   // 헤더 배경 채움(사용자 확정) — sticky 시 스크롤 가림막 겸용
-                  bgcolor: 'background.elevated',
+                  bgcolor: 'var(--th-bg)', // 헤더 띠 정본 — tableStyle.ts·.eq-ledger와 공유
+                  borderBottom: '1px solid var(--th-line)',
                 }}
               >
                 {c.label}
