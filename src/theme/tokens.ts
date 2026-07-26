@@ -12,39 +12,53 @@
  * 미러링한다(tokens.ts가 정본, index.css는 레거시 페이지용 거울 — 페이지 이관 시 제거).
  */
 
-/** 다크 테마 표면(背) 색 — 명세 2단계(STEP 2) 기준 */
+/**
+ * 다크 테마 표면(背) 색.
+ *
+ * 표면 램프 규칙(2026-07-25 확정): 다크에서 깊이는 그림자가 아니라 "표면 밝기"가 만든다.
+ * 인접 단계 명도대비(CR) ≥1.15, 페이지→카드 ≥1.2를 만족해야 한다 — 안 그러면 카드가
+ * 배경과 같은 색으로 보여 1px 보더 혼자 깊이를 떠받치게 된다(구 값 bg→paper 1.09 = 사실상 동색.
+ * 그래서 KpiSection·RoadmapCard가 다크 전용 hex를 손으로 만들어 썼음).
+ * 값 변경 시 이 위에 얹히는 텍스트·강조색이 4.5:1을 유지하는지 반드시 재계산할 것.
+ */
 export const darkPalette = {
   /** 페이지 전체 배경 (Background) */
   background: '#0F1117',
-  /** 사이드바 등 한 단계 표면 (Surface) */
-  surface: '#131722',
-  /** 카드/패널 (Card) */
-  paper: '#161B22',
-  /** hover 시 떠오르는 표면 (Hover Surface) */
-  hover: '#1D2635',
-  /** 카드/입력 테두리 (Border) */
-  border: '#293244',
+  /** 사이드바·입력 등 한 단계 표면 (Surface) */
+  surface: '#161C26',
+  /** 카드/패널 (Card) — bg 대비 1.21:1 */
+  paper: '#1C2430',
+  /** hover 시 떠오르는 표면 (Hover Surface) — paper 대비 1.17:1 */
+  hover: '#26303E',
+  /** 카드/입력 테두리 (Border) — 카드가 밝아진 만큼 함께 상향 */
+  border: '#32405A',
   /** 구분선 (Divider) — Border보다 옅음 */
-  divider: '#232C3A',
+  divider: '#2A3546',
   /** 본문 텍스트 (Primary) */
   text: '#FFFFFF',
   /** 보조 텍스트 (Secondary) */
   textSecondary: '#AAB4C3',
-  /** 흐린 텍스트 (Muted) */
-  textMuted: '#7D8899',
+  /** 흐린 텍스트 (Muted) — 상향(구 #7D8899는 떠오른/호버 표면 #1D2635 위 4.24:1 미달) → 전 표면 5.5:1+ */
+  textMuted: '#909CAE',
 } as const
 
-/** 라이트 테마(추후 지원) — 구조만 먼저 정의 */
+/**
+ * 라이트 테마 표면.
+ * 라이트는 다크와 반대로 깊이를 "그림자"가 만든다(업계 관행 — Minimal 등 상용 템플릿 동일):
+ * 페이지는 오프화이트, 카드는 순백 + 부드러운 그림자. 보더는 옅게 두고 경계는 그림자가 담당.
+ */
 export const lightPalette = {
-  background: '#F7F8FA',
+  background: '#F4F6F8',
   surface: '#FFFFFF',
   paper: '#FFFFFF',
   hover: '#F0F3F7',
   border: '#E3E8EF',
   divider: '#EDF0F4',
   text: '#1A1D23',
-  textSecondary: '#5A6472',
-  textMuted: '#8A93A2',
+  // 보조 — 틴트 칩·날짜 배지 위(가장 불리한 조건)에서도 4.5:1을 넘도록 한 단 진하게(구 #5A6472는 4.25로 미달)
+  textSecondary: '#555E6B',
+  // muted — 구 #8A93A2는 2.9:1 미달. 흰 카드가 아니라 페이지 배경(#F4F6F8) 위에서도 4.5:1 여유가 있게(4.97:1)
+  textMuted: '#5E6C7A',
 } as const
 
 /**
@@ -58,6 +72,38 @@ export const accent = {
   red: '#E05B54', // error — 부드러운 레드
   purple: '#A98AE0', // 보조 강조
   teal: '#46B7BE', // 보조 강조
+} as const
+
+/**
+ * 강조색 "글자용" 변형 (fill/text 2계층).
+ *
+ * 위 accent는 **채움(fill)** 전용 — 점·솔리드칩·아이콘·프로그레스·보더.
+ * 같은 색을 **글자(text)** 로 쓰면 배경에 따라 대비가 무너지므로 테마별 글자값을 따로 둔다.
+ * 소비는 theme.palette.accentText(테마가 자동 선택) 한 경로로만 — 컴포넌트에서 직접 분기 금지.
+ */
+/**
+ * 흰 배경/옅은 틴트 위 글자 — accent 원색은 2.3~3.6:1이라 미달, 이 진한 값으로.
+ * 기준은 "흰 카드"가 아니라 **페이지 배경(#F4F6F8) 위 12% 틴트칩**(더 불리한 쪽)에서 4.5:1 — 실측 검증.
+ */
+export const accentTextLight = {
+  blue: '#225BB4',
+  green: '#196533',
+  amber: '#7F5B00',
+  red: '#A82B26',
+  purple: '#653FB1',
+  teal: '#0D6369',
+} as const
+/**
+ * 다크 표면 위 글자 — accent 원색을 그대로 글자로 쓰면 "떠오른 표면 위 12% 틴트칩"(가장 불리한 조건)에서
+ * 3.4~4.1:1로 미달한다. 그 조건에서도 4.5:1을 넘도록 한 단 밝힌 값(실측 4.66~5.55).
+ */
+export const accentTextDark = {
+  blue: '#79AEF2',
+  green: '#6FC98A',
+  amber: '#E0B155',
+  red: '#F5837C',
+  purple: '#B79BE8',
+  teal: '#5CC8CF',
 } as const
 
 /**
@@ -187,9 +233,9 @@ export const row = {
  * focusRing(파란 링)은 그림자 스케일과 별개 축(theme.ts 관리).
  */
 export const shadow = {
-  sm: '0 2px 10px rgba(0,0,0,.22)',
-  md: '0 8px 24px rgba(0,0,0,.3)',
-  lg: '0 20px 50px rgba(0,0,0,.48)',
+  sm: 'var(--shadow-sm)',
+  md: 'var(--shadow-md)',
+  lg: 'var(--shadow-lg)',
 } as const
 
 /** @deprecated shadow.sm 사용 (호환 유지용 별칭) */
@@ -213,6 +259,11 @@ export const motion = {
  * 잡값 스냅 규칙: 10.5→11 · 11.5→12 · 12.5→13 · 13.5→14 (역할이 캡션이면 한 단계 아래 허용).
  * MUI variant 매핑: caption=caption · small=small(커스텀) · body=body2 · emphasis=subtitle1
  *  · cardTitle=h4 · sectionTitle=h3 · pageTitle=h2 · display=h1. sx fontSize 숫자 금지.
+ *
+ * ★ 제목에 body2/small/caption/subtitle2 금지 — 이 네 variant는 theme.ts에서 color: textSecondary를
+ *   함께 박아 둔다(본문·메타 전용). '13px이 필요해서' body2를 고르고 fontWeight만 600으로 올리면
+ *   "굵지만 흐린 제목"이 된다(실측 라이트 5.1:1 vs 정상 13.1:1). 제목은 emphasis(subtitle1) 또는
+ *   body2 + color:'text.primary' 명시.
  */
 export const typescale = {
   /** 타임스탬프·캡션 */
@@ -280,14 +331,15 @@ export const domain = {
   },
   /** 업무(Work) — 담당자 채움 칩(고정 4인 + 해시 fallback) · 카드 상태톤(rgb 트리플릿) */
   manager: {
+    // 솔리드 칩에 흰 글자를 얹으므로 모든 색이 흰 글자 4.5:1 이상이어야 한다(구 값은 센터·조성범·박세리가 3.8~4.1로 미달).
     fixed: {
-      센터: '#1d8f8f',
+      센터: '#177A7A',
       박주봉: '#2f6db8',
-      조성범: '#2f8f4e',
-      박세리: '#a8761a',
+      조성범: '#277A42',
+      박세리: '#8F6316',
       신현진: '#6f5fb0',
     } as Record<string, string>,
-    palette: ['#b8557e', '#1d8f8f', '#c0572f', '#7a8a2a', '#5a6cc0', '#a04ab0'],
+    palette: ['#b8557e', '#177A7A', '#AC4E2A', '#667325', '#5a6cc0', '#a04ab0'],
     unknown: '#5f6b7e',
   },
   /** Work 카드 상태톤 — 'R G B' 트리플릿(알파 사다리용). D3 적용 배정:

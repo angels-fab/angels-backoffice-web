@@ -1,6 +1,6 @@
 import type * as React from 'react'
 import { alpha, createTheme, type Theme } from '@mui/material/styles'
-import { accent, darkPalette, hoverShadow, lightPalette, radius } from './tokens'
+import { accent, accentTextDark, accentTextLight, darkPalette, hoverShadow, lightPalette, radius, shadow } from './tokens'
 
 /**
  * MUI 테마 팩토리. 다크/라이트 모드를 토큰에서 생성한다.
@@ -25,6 +25,7 @@ declare module '@mui/material/styles' {
     elevated: string
   }
   interface Palette {
+    /** 채움(fill) 전용 강조색 — 점·솔리드칩·아이콘·프로그레스·보더 */
     accent: {
       blue: string
       green: string
@@ -33,9 +34,12 @@ declare module '@mui/material/styles' {
       purple: string
       teal: string
     }
+    /** 글자(text) 전용 강조색 — 현재 테마 배경에서 4.5:1을 만족하는 값. accent를 글자로 쓰지 말 것 */
+    accentText: Palette['accent']
   }
   interface PaletteOptions {
     accent?: Palette['accent']
+    accentText?: Palette['accent']
   }
   /** 셸(사이드바↔하단탭) 분기점 768 — P1 확정(D2 2계층). theme.breakpoints.down('shell') */
   interface BreakpointOverrides {
@@ -59,6 +63,8 @@ type Mode = 'light' | 'dark'
 
 function buildTheme(mode: Mode): Theme {
   const p = mode === 'dark' ? darkPalette : lightPalette
+  // 글자로도 쓰이는 의미색(버튼·링크·상태 텍스트) — 현재 테마 배경에서 4.5:1을 만족하는 값
+  const semantic = mode === 'dark' ? accentTextDark : accentTextLight
   // 모든 인터랙티브 요소가 공유하는 Focus Ring (ThemeProvider에서 관리)
   const focusRing = `0 0 0 3px ${alpha(accent.blue, mode === 'dark' ? 0.4 : 0.3)}`
 
@@ -70,12 +76,20 @@ function buildTheme(mode: Mode): Theme {
     },
     palette: {
       mode,
-      primary: { main: accent.blue },
-      success: { main: accent.green },
-      warning: { main: accent.amber },
-      error: { main: accent.red },
-      info: { main: accent.blue },
+      // 채움 위 라벨색(getContrastText·contained 버튼)을 흰/검 중 자동 선택할 때의 기준.
+      // MUI 기본 3은 WCAG 본문 기준(4.5)에 못 미쳐 흰 라벨이 2.1~3.6:1로 깔렸다 → 4.5로 올려 자동으로 검은 라벨 선택.
+      contrastThreshold: 4.5,
+      // MUI 의미색의 main은 "텍스트로도" 쓰인다(text 버튼·링크·아이콘 색) → 글자용 값으로 배선.
+      // 채움 버튼의 라벨색은 MUI가 contrastText를 자동 계산하므로 안전하다.
+      // 칩·점 등 순수 채움은 palette.accent(원색)를 그대로 쓴다 — fill/text 2계층 유지.
+      primary: { main: semantic.blue },
+      success: { main: semantic.green },
+      warning: { main: semantic.amber },
+      error: { main: semantic.red },
+      info: { main: semantic.blue },
       accent,
+      // 글자용 강조색은 테마가 자동 선택 — 컴포넌트에서 mode 분기 금지
+      accentText: mode === 'dark' ? accentTextDark : accentTextLight,
       divider: p.divider,
       background: {
         default: p.background,
@@ -144,6 +158,8 @@ function buildTheme(mode: Mode): Theme {
             backgroundImage: 'none',
             border: `1px solid ${p.border}`,
             borderRadius: radius.card,
+            // 라이트는 그림자가 깊이를 만든다(다크는 표면 밝기가 담당하므로 상시 그림자 없음)
+            ...(mode === 'light' && { boxShadow: shadow.sm }),
           },
         },
       },
@@ -154,6 +170,7 @@ function buildTheme(mode: Mode): Theme {
             backgroundImage: 'none',
             border: `1px solid ${p.border}`,
             borderRadius: radius.card,
+            ...(mode === 'light' && { boxShadow: shadow.sm }),
           },
         },
       },
@@ -181,6 +198,12 @@ function buildTheme(mode: Mode): Theme {
             fontWeight: 600,
             '&.Mui-focusVisible': { boxShadow: focusRing },
           },
+        },
+      },
+      MuiInputBase: {
+        styleOverrides: {
+          // 모바일 입력 16px — iOS 사파리 포커스 자동 확대(줌) 방지. 데스크톱 밀도는 그대로.
+          input: { '@media (max-width:768px)': { fontSize: 16 } },
         },
       },
       MuiOutlinedInput: {

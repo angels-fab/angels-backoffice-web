@@ -5,13 +5,105 @@
 :root{
   /* SaaS 다크 토큰 — src/theme/tokens.ts 와 동일 값 미러링(정본은 tokens.ts).
      STEP2: Pure Black(#000 계열) → 현대적 SaaS 다크(#0F1117). 페이지 이관 시 점진 제거. */
-  --ink:#0F1117;--ink2:#161B22;--ink3:#1D2635;
-  --border:#293244;--border2:#232C3A;--text:#FFFFFF;--text2:#AAB4C3;--text3:#7D8899;
+  /* 표면 램프 — 다크는 "표면 밝기"가 깊이를 만든다(그림자 아님). 정본 tokens.ts darkPalette.
+     인접 단계 CR ≥1.15 / 페이지→카드 ≥1.2 유지할 것 — 좁히면 카드가 배경과 같은 색이 된다. */
+  --ink:#0F1117;--ink2:#1C2430;--ink3:#26303E;
+  /* 표 헤더 띠 — 라이트에선 카드 표면(#FFF)과 hover색(#EDF1F6) 차이가 1.11이라 "띠"로 안 읽혔다. 헤더 전용으로 한 단 더 내림 */
+  --th-bg:var(--ink3);--th-line:#3C4A63;
+  /* 행 상태 표면 — hover·선택(고정글)이 헤더띠/카드와 같은 색이면 층이 안 읽힌다. 역할별로 값을 벌림 */
+  --row-hover:#2E3949;--surface-selected:#343F52;
+  /* 업무카드 상태 톤 — 정본 tokens.domain.workTone(다크) / workMeta TONE_RGB_LIGHT(라이트).
+     JS로 색을 구워 넘기면 memo된 보드 카드(144장)가 테마 전환 때 리렌더 안 돼 이전 색이 남는다(실측).
+     CSS 변수는 <html data-theme> 한 번으로 리렌더 없이 전부 따라온다. --tone-k = 라이트 알파 배율. */
+  --tone-green:114 199 141;--tone-blue:121 169 226;--tone-gray:194 202 213;--tone-amber:224 188 116;--tone-purple:169 138 224;--tone-k:1;
+  --sb-thumb:rgba(255,255,255,.18);--sb-thumb-hover:rgba(255,255,255,.32);
+  --border:#32405A;--border2:#2A3546;--text:#FFFFFF;--text2:#AAB4C3;--text3:#909CAE;
   --amber:#D6A23E;--blue:#5491DA;--green:#4DA167;--purple:#A98AE0;--teal:#46B7BE;--red:#E05B54;
   /* 형광펜 = PPT/Word 형광펜색(원색·불투명) + 형광펜 위 글자는 어둡게(가독) */
   --hl-yellow:#FFFF00;--hl-green:#00FF00;--hl-blue:#00FFFF;--hl-pink:#FF00FF;--hl-ink:#1b1c22;
   /* 에디터 글자색 = PPT 표준색(다크 배경에서 안 보이는 파랑·보라·빨강은 톤만 올림) */
   --ec-red:#FF453A;--ec-amber:#FFC000;--ec-yellow:#FFD400;--ec-green:#22C55E;--ec-blue:#3B9BFF;--ec-purple:#B57BFF;
+  /* 표면 위 반투명 베일·헤어라인·입력칸 — 다크=흰색 저알파, 라이트=검정 저알파로 뒤집힘(아래 [data-theme=light]) */
+  --field-bg:rgba(255,255,255,.05);--veil-line:rgba(255,255,255,.07);--veil-line-strong:rgba(255,255,255,.28);
+  --veil-hover:rgba(255,255,255,.025);--veil-track:rgba(255,255,255,.06);--veil-handle:rgba(255,255,255,.6);
+  --nav-icon:#d7dde6;
+  /* 그림자 3단 — 테마별로 값이 바뀌므로 CSS 변수가 정본(tokens.ts shadow가 이 변수를 가리킴).
+     다크: 표면 밝기가 깊이를 담당하므로 그림자는 보조(팝오버·모달 위주) */
+  --shadow-sm:0 2px 10px rgba(0,0,0,.22);
+  --shadow-md:0 8px 24px rgba(0,0,0,.3);
+  --shadow-lg:0 20px 50px rgba(0,0,0,.48);
+  /* 강조색 "글자용"(fill/text 2계층 — tokens.ts accentTextDark/Light 미러).
+     --blue 등은 채움(배경·보더·점) 전용. 글자에는 반드시 --*-tx 를 쓸 것. */
+  --blue-tx:#79AEF2;--green-tx:#6FC98A;--amber-tx:#E0B155;--red-tx:#F5837C;--purple-tx:#B79BE8;--teal-tx:#5CC8CF;
+  /* 흰 글자를 얹는 솔리드 배지·강조 채움 — 원색은 흰 글자 대비가 3.3~3.6:1이라 미달. 테마 공통 */
+  --red-solid:#B72F29;--blue-solid:#2563C4;
+}
+/* ── 라이트 테마 ── TopBar 해/달 토글이 <html data-theme="light">를 세팅한다.
+   레거시 페이지가 참조하는 :root 변수만 라이트 값으로 바꾸면 화면 전체가 함께 전환된다.
+   강조 6색(--amber/--blue/…)·형광펜(--hl-*)은 브랜드 원색이라 양쪽 공통으로 유지. */
+:root[data-theme="light"]{
+  --ink:#F4F6F8;--ink2:#FFFFFF;--ink3:#EDF1F6;
+  --th-bg:#DFE7F0;--th-line:#BFCBDB;
+  --row-hover:#EDF2F8;--surface-selected:#E4EBF4;
+  --tone-green:77 161 103;--tone-blue:84 145 218;--tone-gray:138 147 162;--tone-amber:214 162 62;--tone-purple:169 138 224;--tone-k:2.4;
+  --border:#E3E8EF;--border2:#EDF0F4;--text:#1A1D23;--text2:#555E6B;--text3:#5E6C7A;
+  /* 에디터 글자색 — 흰 배경에서 흐린 밝은 톤을 진하게(흰 배경 표준 채도) */
+  --ec-red:#D92D20;--ec-amber:#B45309;--ec-yellow:#A16207;--ec-green:#15803D;--ec-blue:#1D6FD8;--ec-purple:#7C3AED;
+  --field-bg:#F4F6F9;--veil-line:rgba(0,0,0,.09);--veil-line-strong:rgba(0,0,0,.22);
+  --veil-hover:rgba(0,0,0,.035);--veil-track:rgba(0,0,0,.07);--veil-handle:rgba(0,0,0,.45);
+  --nav-icon:#566173;
+  /* 라이트는 반대로 "그림자"가 깊이를 만든다 — 검정 대신 남색 기미를 섞어야 탁해 보이지 않는다 */
+  --shadow-sm:0 1px 2px rgba(20,37,66,.08),0 1px 3px rgba(20,37,66,.06);
+  --shadow-md:0 2px 6px rgba(20,37,66,.08),0 10px 24px -8px rgba(20,37,66,.14);
+  --shadow-lg:0 8px 16px rgba(20,37,66,.10),0 24px 48px -12px rgba(20,37,66,.20);
+  /* 글자용 강조색 — 밝은 배경에서는 원색이 2.3~3.6:1이라 진한 값으로 */
+  --blue-tx:#225BB4;--green-tx:#196533;--amber-tx:#7F5B00;--red-tx:#A82B26;--purple-tx:#653FB1;--teal-tx:#0D6369;
+  --sb-thumb:rgba(15,23,42,.22);--sb-thumb-hover:rgba(15,23,42,.36);
+}
+/* 스크롤바 — OS 기본(투박한 회색 막대) 대신 얇은 오버레이형. 트랙은 비우고 손잡이만 보이게 하고,
+   투명 보더 + background-clip:content-box로 손잡이 양옆에 여백을 만들어 알약 모양으로 띄운다.
+   (스크롤바를 아예 숨기는 .eq-strip/.eq-filters는 클래스 선택자라 더 구체적이므로 그대로 유지) */
+*{scrollbar-width:thin;scrollbar-color:var(--sb-thumb) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--sb-thumb);background-clip:content-box;border:3px solid transparent;border-radius:8px}
+::-webkit-scrollbar-thumb:hover{background:var(--sb-thumb-hover);background-clip:content-box;border:3px solid transparent}
+::-webkit-scrollbar-corner{background:transparent}
+
+/* 라이트 전용 — 카드가 오프화이트 페이지에서 떠 보이게 상시 그림자.
+   (다크는 표면 밝기가 이 역할을 하므로 상시 그림자를 주지 않는다) */
+:root[data-theme="light"] .card,
+:root[data-theme="light"] .eq-dash,
+:root[data-theme="light"] .eq-card,
+:root[data-theme="light"] .work-box,
+:root[data-theme="light"] .wkpi-card,
+:root[data-theme="light"] .bento-card,
+:root[data-theme="light"] .bento-panel,
+:root[data-theme="light"] .sc2-card,
+:root[data-theme="light"] .shortcut-card,
+:root[data-theme="light"] .stat-item,
+:root[data-theme="light"] .kpi-budget,
+:root[data-theme="light"] .cal-wrap,
+:root[data-theme="light"] .cal-event-panel,
+:root[data-theme="light"] .notice-board,
+:root[data-theme="light"] .post-wrap,
+:root[data-theme="light"] .roadmap-phase,
+:root[data-theme="light"] .eq-list-wrap,
+:root[data-theme="light"] .ms-body{box-shadow:var(--shadow-sm)}
+/* 테마 전환 — 화면 전체를 한 장의 스냅샷으로 크로스페이드(View Transitions, mode.tsx applyMode).
+   컴포넌트별로 따로 바뀌지 않고 전체가 한 번에 부드럽게 넘어간다. 요소별 transition이 아니라 버벅임도 없음. */
+::view-transition-old(root),
+::view-transition-new(root){
+  animation-duration:.4s;
+  animation-timing-function:ease;
+}
+/* 모션 줄이기(OS 설정) 존중 — 전역 리셋. 개별 @media 누락분(로드맵 펄스·깜빡임 등)까지 일괄 커버 */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+/* 모바일 입력창 16px — iOS 사파리가 16px 미만 입력에 포커스 시 자동 확대(줌)하는 것 방지 */
+@media (max-width:768px){
+  .eq-search,.eq-select{font-size:16px}
 }
 body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
@@ -26,7 +118,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .dashboard{width:100%;max-width:1180px;margin-bottom:48px}
 /* ── 홈 장비현황 섹션 (PC) ── */
 .eq-dash{background:var(--ink2);border:1px solid var(--border2);border-radius:18px;padding:22px 24px;cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s}
-.eq-dash:hover{transform:translateY(-2px);border-color:var(--text3);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.eq-dash:hover{transform:translateY(-2px);border-color:var(--text3);box-shadow:var(--shadow-md)}
 .eq-dash .eqm{grid-template-columns:1.1fr 3fr;gap:14px}
 .eq-dash .eqm-grid{grid-template-columns:repeat(4,1fr);grid-template-rows:1fr;gap:14px}
 .eq-dash .eqm-big{padding:16px 22px;gap:8px;border-radius:12px}
@@ -69,8 +161,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .equip-list{list-style:none;display:flex;flex-direction:column;gap:7px}
 .equip-list li{display:flex;align-items:center;gap:7px;font-size:12px}
 .badge-type{padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600;flex-shrink:0;border:1px solid transparent}
-.badge-type.domestic{background:rgba(77,161,103,.12);color:var(--green);border-color:rgba(77,161,103,.25)}
-.badge-type.foreign{background:rgba(84,145,218,.12);color:var(--blue);border-color:rgba(84,145,218,.25)}
+.badge-type.domestic{background:rgba(77,161,103,.12);color:var(--green-tx);border-color:rgba(77,161,103,.25)}
+.badge-type.foreign{background:rgba(84,145,218,.12);color:var(--blue-tx);border-color:rgba(84,145,218,.25)}
 .equip-name{flex:1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .equip-mgr{font-size:10px;color:var(--text3);flex-shrink:0}
 
@@ -90,18 +182,18 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* ── 미니 KPI (홈 장비현황 미리보기) ── */
 .eqm{display:grid;grid-template-columns:1.1fr 1.6fr;gap:8px;width:100%}
 .eqm-big{background:rgba(84,145,218,.10);border:none;border-radius:12px;padding:11px 13px;display:flex;flex-direction:column;justify-content:center;gap:5px}
-.eqm-big-lbl{font-size:11px;font-weight:700;color:#4d9fff}
-.eqm-big-num{font-size:24px;font-weight:800;color:#fff;line-height:1}
+.eqm-big-lbl{font-size:11px;font-weight:700;color:var(--blue-tx)}
+.eqm-big-num{font-size:24px;font-weight:800;color:var(--text);line-height:1}
 .eqm-big-num .u{font-size:11px;font-weight:600;color:var(--text2);margin-left:1px}
 .eqm-big-num .sm{font-size:15px}
 .eqm-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:6px}
 .eqm-cell{border-radius:8px;padding:7px 10px;border:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;gap:3px}
 .eqm-cell-lbl{font-size:10px;font-weight:600;line-height:1}
-.eqm-cell-num{font-size:17px;font-weight:800;color:#fff;line-height:1}
+.eqm-cell-num{font-size:17px;font-weight:800;color:var(--text);line-height:1}
 .eqm-cell-num .u{font-size:9px;font-weight:500;color:var(--text2);margin-left:1px}
 .eqm-ph{color:var(--text3);font-size:13px;padding:14px 4px}
 .work-preview{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
-.hdr-badge{font-size:10px;font-weight:700;color:var(--blue);background:rgba(84,145,218,.14);border:1px solid rgba(84,145,218,.3);padding:2px 8px;border-radius:6px;white-space:nowrap}
+.hdr-badge{font-size:10px;font-weight:700;color:var(--blue-tx);background:rgba(84,145,218,.14);border:1px solid rgba(84,145,218,.3);padding:2px 8px;border-radius:6px;white-space:nowrap}
 .work-prev-item{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .work-prev-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:var(--amber)}
 /* 홈 업무 미리보기 카드 (가로형: 구분 | 제목 | 담당자) */
@@ -129,7 +221,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .card-notice-list li{display:flex;align-items:center;gap:6px;font-size:12.5px}
 .card-notice-txt{flex:1;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
 .card{background:var(--ink2);border:1px solid var(--border2);border-radius:18px;padding:20px;text-align:left;cursor:pointer;text-decoration:none;color:var(--text);display:flex;flex-direction:row;align-items:flex-start;gap:12px;transition:transform .15s,border-color .15s,box-shadow .15s;position:relative;overflow:hidden;-webkit-tap-highlight-color:rgba(214,162,62,.2);touch-action:manipulation;user-select:none}
-.card:hover{transform:translateY(-3px);border-color:var(--text3);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.card:hover{transform:translateY(-3px);border-color:var(--text3);box-shadow:var(--shadow-md)}
 .icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
 .card.c0 .icon{background:rgba(214,162,62,.12)}.card.c1 .icon{background:rgba(84,145,218,.12)}
 .card.c2 .icon{background:rgba(77,161,103,.12)}.card.c3 .icon{background:rgba(169,138,224,.12)}
@@ -157,7 +249,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .work-tab:hover{background:var(--ink2);color:var(--text)}
 .work-tab.active{background:var(--ink2);color:var(--text);border-color:var(--border);font-weight:500}
 .tab-count{font-size:11px;background:var(--ink3);color:var(--text2);padding:1px 7px;border-radius:99px;font-weight:400}
-.tab-count.done{background:rgba(77,161,103,.15);color:var(--green)}
+.tab-count.done{background:rgba(77,161,103,.15);color:var(--green-tx)}
 .work-panel{display:none;background:var(--ink2);border:0.5px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:8px 0}
 .work-panel.active{display:block}
 .task-list{list-style:none}
@@ -168,9 +260,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .task-name.done-txt{text-decoration:line-through;color:var(--text3)}
 .task-meta{font-size:11px;color:var(--text3);margin-top:2px}
 .task-badge{display:inline-flex;padding:1px 8px;border-radius:4px;font-size:10px;font-weight:600;flex-shrink:0}
-.task-badge.high{background:rgba(224,91,84,.12);color:var(--red);border:1px solid rgba(224,91,84,.25)}
-.task-badge.mid{background:rgba(214,162,62,.12);color:var(--amber);border:1px solid rgba(214,162,62,.25)}
-.task-badge.low{background:rgba(77,161,103,.12);color:var(--green);border:1px solid rgba(77,161,103,.25)}
+.task-badge.high{background:rgba(224,91,84,.12);color:var(--red-tx);border:1px solid rgba(224,91,84,.25)}
+.task-badge.mid{background:rgba(214,162,62,.12);color:var(--amber-tx);border:1px solid rgba(214,162,62,.25)}
+.task-badge.low{background:rgba(77,161,103,.12);color:var(--green-tx);border:1px solid rgba(77,161,103,.25)}
 .task-assignee{font-size:11px;color:var(--text2);flex-shrink:0}
 .task-empty{padding:40px;text-align:center;color:var(--text3);font-size:13px}
 .task-item-wrap{border-bottom:0.5px solid var(--border2);background:transparent;transition:background .15s}
@@ -206,7 +298,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .cur-leader{flex:1 1 0;min-width:8px;overflow:hidden;white-space:nowrap;color:var(--text3);font-size:11px;letter-spacing:2px;opacity:.55;user-select:none;-webkit-user-select:none}
 .task-no-ref{font-size:11px;color:var(--text3);font-family:"IBM Plex Mono",monospace;flex-shrink:0}
 .cur-c-att{width:44px;flex-shrink:0;display:flex;justify-content:center;align-self:center}
-.cur-att{color:var(--blue);text-decoration:none;font-size:15px;line-height:1}
+.cur-att{color:var(--blue-tx);text-decoration:none;font-size:15px;line-height:1}
 .cur-att:hover{filter:brightness(1.3)}
 .cur-dept{font-size:12px;color:var(--text2);font-weight:500;white-space:nowrap;flex-shrink:0}
 .cur-subs{margin-top:5px;font-size:12px;color:var(--text2);line-height:1.6}
@@ -228,7 +320,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wc-hl[data-color="blue"]{background:var(--hl-blue)}
 .wc-hl[data-color="pink"]{background:var(--hl-pink)}
 /* TipTap 본문 에디터(작성/수정) — 프레임(.wc-field)이 툴바+본문을 함께 감쌈(서식툴 작성란 내부 규칙) */
-.wc-field{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+.wc-field{background:var(--field-bg);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
 .wc-field:focus-within{border-color:var(--green)}
 .wc-editor{outline:none;min-height:66px;font-size:13px;line-height:1.6;color:var(--text);
   overflow-wrap:anywhere;word-break:break-word}
@@ -254,9 +346,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 #wtab-cur:hover,#wtab-cur.active{border-color:var(--blue)}
 #wtab-past:hover,#wtab-past.active{border-color:var(--green)}
 #wtab-remind:hover,#wtab-remind.active{border-color:var(--amber)}
-#wtab-cur .wkpi-label{color:var(--blue)}
-#wtab-past .wkpi-label{color:var(--green)}
-#wtab-remind .wkpi-label{color:var(--amber)}
+#wtab-cur .wkpi-label{color:var(--blue-tx)}
+#wtab-past .wkpi-label{color:var(--green-tx)}
+#wtab-remind .wkpi-label{color:var(--amber-tx)}
 .wkpi-main{display:flex;align-items:center;justify-content:space-between;gap:14px;flex:1 1 auto}
 .wkpi-cats{flex:1 1 0;min-width:0;display:flex;flex-wrap:wrap;align-content:center;justify-content:flex-end;gap:4px;padding-left:10px;border-left:1px solid var(--border)}
 .kpi-cat-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 7px;border-radius:5px;border:1px solid transparent;white-space:nowrap;line-height:1.5;height:fit-content}
@@ -270,9 +362,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wkpi-label{font-size:15px;color:var(--text2);font-weight:600}
 .wkpi-num{font-size:46px;font-weight:800;color:var(--text);line-height:1}
 .wkpi-sub{font-size:13px;font-weight:500}
-.wkpi-sub.blue{color:var(--blue)}
-.wkpi-sub.green{color:var(--green)}
-.wkpi-sub.amber{color:var(--amber)}
+.wkpi-sub.blue{color:var(--blue-tx)}
+.wkpi-sub.green{color:var(--green-tx)}
+.wkpi-sub.amber{color:var(--amber-tx)}
 .task-group-title{padding:8px 18px 4px;font-size:10px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;font-weight:600}
 /* ── 업무현황 박스 (현재/지난) ── */
 .work-box{background:var(--ink2);border:1px solid var(--border2);border-radius:16px;overflow:hidden;width:100%}
@@ -284,10 +376,10 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .task-pin{flex-shrink:0;font-size:12px;margin-right:-4px}
 .work-box-remind{border-color:rgba(214,162,62,.35)}
 .work-box-remind .work-box-head{border-bottom-color:rgba(214,162,62,.25)}
-.work-box-remind .work-box-title{color:var(--amber)}
+.work-box-remind .work-box-title{color:var(--amber-tx)}
 .work-box-chief{border-color:rgba(169,138,224,.35)}
 .work-box-chief .work-box-head{border-bottom-color:rgba(169,138,224,.25)}
-.work-box-chief .work-box-title{color:var(--purple)}
+.work-box-chief .work-box-title{color:var(--purple-tx)}
 
 /* ── Equipment list ── */
 /* ── 도입 장비 카드 그리드 ── */
@@ -304,14 +396,16 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .eq-card-top{display:flex;align-items:baseline;gap:8px;min-width:0}
 .eq-card-code{font-size:12px;font-weight:700;color:var(--text2);font-family:"IBM Plex Mono",monospace;flex-shrink:0}
 .eq-card-sub{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.eq-card-state{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);white-space:nowrap}
+/* 상태 = 카드에서 판단하는 핵심값 → 보조톤·11.5px에서 주 톤·13px로 */
+.eq-card-state{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:13px;color:var(--text);white-space:nowrap}
 .eq-card-name{font-size:15px;font-weight:600;color:var(--text);line-height:1.4;min-width:0}
 .eq-card-badges{display:flex;gap:5px;flex-wrap:wrap}
-.eq-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:5px;border:1px solid var(--border);background:var(--ink3);color:var(--text2);white-space:nowrap}
+.eq-badge{font-size:12px;font-weight:600;padding:2px 8px;border-radius:5px;border:1px solid var(--border);background:var(--ink3);color:var(--text2);white-space:nowrap}
 .eq-card-rows{display:flex;flex-direction:column;gap:4px;margin-top:2px;border-top:0.5px solid var(--border2);padding-top:9px}
 .eq-crow{display:flex;justify-content:space-between;gap:10px;font-size:12px}
 .eq-crow-k{color:var(--text3);flex-shrink:0}
-.eq-crow-v{color:var(--text2);text-align:right;min-width:0}
+/* 카드 값(담당자·금액 등) = 핵심값 → 주 톤. 라벨(.eq-crow-k)만 흐림 유지 */
+.eq-crow-v{color:var(--text);text-align:right;min-width:0}
 .eq-list-wrap{border:0.5px solid var(--border);border-radius:10px;overflow:hidden;width:100%}
 .eq-list-header{display:grid;grid-template-columns:48px 90px minmax(140px,1fr) minmax(0,3.6fr);gap:8px;align-items:end;background:var(--ink2);border:1px solid var(--border);border-radius:8px 8px 0 0;padding:8px 0 8px 16px;font-size:16px;color:var(--text);font-weight:600;letter-spacing:.5px;text-transform:uppercase;width:100%}
 .eq-list-header>span{padding-bottom:2px}
@@ -329,12 +423,12 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .eq-d-val{font-size:12px;color:var(--text);font-weight:500}
 .eq-phase-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
 .eq-phase{padding:3px 10px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid}
-.ph-spec-s{background:rgba(84,145,218,.15);color:#5491DA;border-color:rgba(84,145,218,.3)}
-.ph-bid-s{background:rgba(169,138,224,.15);color:#A98AE0;border-color:rgba(169,138,224,.3)}
-.ph-eval-s{background:rgba(77,161,103,.15);color:#4DA167;border-color:rgba(77,161,103,.3)}
-.ph-ctr-s{background:rgba(214,162,62,.15);color:#D6A23E;border-color:rgba(214,162,62,.3)}
-.ph-mfg-s{background:rgba(224,91,84,.15);color:#E05B54;border-color:rgba(224,91,84,.3)}
-.ph-ins-s{background:rgba(70,183,190,.15);color:#46B7BE;border-color:rgba(70,183,190,.3)}
+.ph-spec-s{background:rgba(84,145,218,.15);color:var(--blue-tx);border-color:rgba(84,145,218,.3)}
+.ph-bid-s{background:rgba(169,138,224,.15);color:var(--purple-tx);border-color:rgba(169,138,224,.3)}
+.ph-eval-s{background:rgba(77,161,103,.15);color:var(--green-tx);border-color:rgba(77,161,103,.3)}
+.ph-ctr-s{background:rgba(214,162,62,.15);color:var(--amber-tx);border-color:rgba(214,162,62,.3)}
+.ph-mfg-s{background:rgba(224,91,84,.15);color:var(--red-tx);border-color:rgba(224,91,84,.3)}
+.ph-ins-s{background:rgba(70,183,190,.15);color:var(--teal-tx);border-color:rgba(70,183,190,.3)}
 
 
 
@@ -358,8 +452,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .cal-wrap{background:var(--ink2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--border)}
 .cal-dow{padding:8px 0;text-align:center;font-size:11px;font-weight:600;color:var(--text2)}
-.cal-dow.sun{color:var(--red)}
-.cal-dow.sat{color:var(--blue)}
+.cal-dow.sun{color:var(--red-tx)}
+.cal-dow.sat{color:var(--blue-tx)}
 
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
 .cal-cell{min-height:80px;border-right:0.5px solid var(--border2);border-bottom:0.5px solid var(--border2);padding:6px 4px;cursor:pointer;transition:background .12s;position:relative}
@@ -370,14 +464,14 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .cal-cell.other-month .cal-day{color:var(--text3)}
 .cal-day{font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%}
 .cal-cell.today .cal-day{background:var(--amber);color:#000;font-weight:700}
-.cal-day.sun-day{color:var(--red)}
-.cal-day.sat-day{color:var(--blue)}
+.cal-day.sun-day{color:var(--red-tx)}
+.cal-day.sat-day{color:var(--blue-tx)}
 .cal-event-dot{font-size:10px;padding:1px 5px;border-radius:3px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;cursor:pointer}
-.ev-meeting{background:rgba(84,145,218,.2);color:#5491DA}
-.ev-edu{background:rgba(77,161,103,.2);color:#4DA167}
-.ev-recruit{background:rgba(169,138,224,.2);color:#A98AE0}
-.ev-trip{background:rgba(214,162,62,.2);color:#D6A23E}
-.ev-etc{background:rgba(70,183,190,.2);color:#46B7BE}
+.ev-meeting{background:rgba(84,145,218,.2);color:var(--blue-tx)}
+.ev-edu{background:rgba(77,161,103,.2);color:var(--green-tx)}
+.ev-recruit{background:rgba(169,138,224,.2);color:var(--purple-tx)}
+.ev-trip{background:rgba(214,162,62,.2);color:var(--amber-tx)}
+.ev-etc{background:rgba(70,183,190,.2);color:var(--teal-tx)}
 
 .cal-event-panel{margin-top:12px;background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:16px}
 .cal-event-panel-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px;letter-spacing:.3px}
@@ -393,7 +487,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 
 /* ── FullCalendar v6 다크 테마 (디자인 패널 통합 패치) ── */
 .fc-theme-angels{
-  --fc-border-color:var(--border2);
+  /* 격자선 = 달력의 뼈대(구조)라 내부 구분선(border2)이 아니라 보더 색.
+     border2는 라이트에서 흰 칸 대비 1.14라 격자가 보이지 않았다(사용자 지적) */
+  --fc-border-color:var(--border);
   --fc-page-bg-color:transparent;
   --fc-neutral-bg-color:var(--ink2);
   --fc-today-bg-color:rgba(59,120,231,.07);
@@ -410,25 +506,28 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   font-family:inherit;
   flex:1;min-height:0;display:flex;flex-direction:column;
 }
-.fc-theme-angels .fc{flex:1;min-height:480px;background:var(--ink2);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+/* 달력 카드 — 그림자를 검정 .25 고정으로 두면 라이트에서 탁하다. 테마별 그림자 토큰으로(다른 카드와 동일) */
+.fc-theme-angels .fc{flex:1;min-height:480px;background:var(--ink2);border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:var(--shadow-sm)}
 /* (정리) FC 자체 툴바·버튼 스타일 9줄 삭제 — headerToolbar={false}라 렌더된 적 없는 사문 */
 .fc-theme-angels .fc-scrollgrid{border-color:var(--border)}
 .fc-theme-angels .fc-col-header-cell{background:var(--ink2);border-bottom:1px solid var(--border)}
 .fc-theme-angels .fc-col-header-cell-cushion{color:var(--text2);text-decoration:none;font-size:12px;font-weight:600;letter-spacing:.02em;padding:8px 4px}
-.fc-theme-angels .fc-day-sun .fc-col-header-cell-cushion{color:var(--red)}
-.fc-theme-angels .fc-day-sat .fc-col-header-cell-cushion{color:var(--blue)}
+.fc-theme-angels .fc-day-sun .fc-col-header-cell-cushion{color:var(--red-tx)}
+.fc-theme-angels .fc-day-sat .fc-col-header-cell-cushion{color:var(--blue-tx)}
 /* (정리) day-frame min-height·day-top 정렬은 아래 .fc-team이 전면 재정의라 여기선 삭제 */
 .fc-theme-angels .fc-daygrid-day-number{color:var(--text);text-decoration:none;font-size:13px;font-weight:500;line-height:1;padding:6px 8px 2px;font-variant-numeric:tabular-nums}
 .fc-theme-angels .fc-day-other .fc-daygrid-day-number{color:var(--text3);font-weight:400}
-.fc-theme-angels .fc-day-other.fc-daygrid-day{background:rgba(0,0,0,.16)}
+/* 지난달/다음달 칸 — 검정 베일 고정(.16)이면 라이트에서 칸이 회색이 되어 날짜 글자 대비가 3.7까지 떨어진다.
+   테마별로 뒤집히는 옅은 베일로 교체(다크=흰 저알파, 라이트=검정 저알파) */
+.fc-theme-angels .fc-day-other.fc-daygrid-day{background:var(--veil-hover)}
 .fc-theme-angels .fc-daygrid-day.fc-day-sat{background:rgba(84,145,218,.035)}
 .fc-theme-angels .fc-daygrid-day.fc-day-sun{background:rgba(224,91,84,.04)}
-.fc-theme-angels .fc-day-sat .fc-daygrid-day-number{color:var(--blue)}
-.fc-theme-angels .fc-day-sun .fc-daygrid-day-number{color:var(--red)}
+.fc-theme-angels .fc-day-sat .fc-daygrid-day-number{color:var(--blue-tx)}
+.fc-theme-angels .fc-day-sun .fc-daygrid-day-number{color:var(--red-tx)}
 .fc-theme-angels .fc-day-other.fc-day-sat .fc-daygrid-day-number,.fc-theme-angels .fc-day-other.fc-day-sun .fc-daygrid-day-number{color:var(--text3)}
 .fc-theme-angels .fc-day-today{box-shadow:inset 0 2px 0 0 var(--blue)}
 /* (정리) today 날짜 원은 .fc-team 쪽이 정본 — 여기 중복 정의 삭제(line-height:1은 .fc-team으로 이동) */
-.fc-theme-angels .fc-day-today .fc-col-header-cell-cushion{color:#fff}
+.fc-theme-angels .fc-day-today .fc-col-header-cell-cushion{color:var(--text)}
 .fc-theme-angels .fc-daygrid-day-events{margin-top:2px;padding:0 2px}
 .fc-theme-angels .fc-daygrid-event-harness{margin-top:2px}
 /* (정리) dot-event 5줄 삭제 — eventDisplay="block"이라 dot 렌더 자체가 없음 */
@@ -442,10 +541,10 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-theme-angels .fc-event{cursor:pointer}
 .fc-theme-angels .fc-event-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .fc-theme-angels .fc-event-main-frame{min-width:0}
-.fc-theme-angels .fc-daygrid-day:not(.fc-day-today):hover{background:rgba(255,255,255,.025)}
+.fc-theme-angels .fc-daygrid-day:not(.fc-day-today):hover{background:var(--veil-hover)}
 .fc-theme-angels .fc-daygrid-more-link{display:block;margin:2px 2px 0;padding:1px 6px;border-radius:6px;font-size:11px;font-weight:600;color:var(--text2)}
 .fc-theme-angels .fc-daygrid-more-link:hover{background:var(--ink3);color:var(--text)}
-.fc-theme-angels .fc-popover{background:var(--ink2);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.fc-theme-angels .fc-popover{background:var(--ink2);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-lg)}
 .fc-theme-angels .fc-popover-header{background:var(--ink3);color:var(--text)}
 .fc-theme-angels .fc-popover-close{color:var(--text2);opacity:.8}
 .fc-theme-angels .fc-popover-close:hover{color:var(--text);opacity:1}
@@ -468,7 +567,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-team .fc-daygrid-day-frame{min-height:114px}
 .fc-team .fc-daygrid-day-top{flex-direction:row;justify-content:flex-end;min-height:26px;align-items:center}
 .fc-team .fc-daygrid-day-number{font-size:13px;font-weight:600;padding:6px 8px 2px}
-.fc-team .fc-day-today .fc-daygrid-day-number{color:#fff;background:var(--blue);min-width:22px;height:22px;padding:0 5px;margin:4px 4px 0 0;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;line-height:1}
+.fc-team .fc-day-today .fc-daygrid-day-number{color:#fff;background:var(--blue-solid);min-width:22px;height:22px;padding:0 5px;margin:4px 4px 0 0;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;line-height:1}
 /* 당일일정 간격은 원래값(margin-top:3) 복구. 멀티데이↔당일 간격은 아래 abs transform이 담당. */
 .fc-team .fc-daygrid-event-harness{margin-top:3px}
 /* 멀티데이(abs) 바: FullCalendar가 reserve를 render보다 2px 짧게 잡아 아래 당일일정과 겹침 → transform으로 시각적 위로 올려 간격 확보(측정엔 영향 없음) */
@@ -500,7 +599,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-team .fc-event:focus:not(:focus-visible){box-shadow:none}
 .fc-team .fc-event:focus:not(:focus-visible)::after{background:transparent}
 
-.gcal-detail{position:relative;background:var(--ink2);border:1px solid var(--border);border-radius:12px;width:min(92vw,380px);padding:20px 22px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.gcal-detail{position:relative;background:var(--ink2);border:1px solid var(--border);border-radius:12px;width:min(92vw,380px);padding:20px 22px;box-shadow:var(--shadow-lg)}
 .gcal-detail-x{position:absolute;top:10px;right:10px}
 .gcal-detail-head{display:flex;gap:12px;margin-bottom:16px;padding-right:24px}
 .gcal-detail-bar{width:5px;border-radius:3px;flex-shrink:0;align-self:stretch;min-height:40px}
@@ -527,15 +626,15 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* FAB 로드맵 시안(RoadmapCard) — 현재 단계 펄스 링 */
 @keyframes ringPulse{0%{transform:scale(.82);opacity:.55}70%{transform:scale(1.55);opacity:0}100%{opacity:0}}
 .rm-step-label{font-size:15px;font-weight:700;color:var(--text);text-align:center}
-.rm-step:not(.done):not(.current) .rm-step-label{color:var(--amber)}
+.rm-step:not(.done):not(.current) .rm-step-label{color:var(--amber-tx)}
 .rm-step.done .rm-step-label{color:var(--text)}
 .rm-step-period{font-size:12.5px;color:var(--text3);text-align:center}
 .rm-step.current .rm-step-period{color:var(--text)}
 .rm-step:not(.done):not(.current) .rm-step-period{color:var(--text)}
 .rm-step-status{font-size:11.5px;font-weight:600;padding:2px 10px;border-radius:99px}
-.done-s{color:var(--green);background:rgba(77,161,103,.12);border:1px solid rgba(77,161,103,.25)}
-.ing-s{color:var(--blue);background:rgba(84,145,218,.12);border:1px solid rgba(84,145,218,.25)}
-.plan-s{color:var(--amber);background:rgba(214,162,62,.1);border:1px solid rgba(214,162,62,.3)}
+.done-s{color:var(--green-tx);background:rgba(77,161,103,.12);border:1px solid rgba(77,161,103,.25)}
+.ing-s{color:var(--blue-tx);background:rgba(84,145,218,.12);border:1px solid rgba(84,145,218,.25)}
+.plan-s{color:var(--amber-tx);background:rgba(214,162,62,.1);border:1px solid rgba(214,162,62,.3)}
 
 /* ── Milestone inline ── */
 .ms-inline-list{display:flex;flex-direction:column;gap:8px}
@@ -554,8 +653,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .rm-title{font-size:13px;font-weight:500;color:var(--text)}
 .rm-meta{font-size:11px;color:var(--text3);margin-top:2px}
 .rm-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;margin-left:auto;flex-shrink:0}
-.done-b{background:rgba(77,161,103,.15);color:var(--green);border:1px solid rgba(77,161,103,.3)}
-.ing-b{background:rgba(214,162,62,.15);color:var(--amber);border:1px solid rgba(214,162,62,.3)}
+.done-b{background:rgba(77,161,103,.15);color:var(--green-tx);border:1px solid rgba(77,161,103,.3)}
+.ing-b{background:rgba(214,162,62,.15);color:var(--amber-tx);border:1px solid rgba(214,162,62,.3)}
 .plan-b{background:var(--ink3);color:var(--text2);border:1px solid var(--border)}
 
 /* ── Milestone ── */
@@ -584,8 +683,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .kpi-wrap{display:flex;flex-direction:column;gap:38px;width:100%}
 .kpi-top{display:grid;grid-template-columns:1.3fr 2fr;gap:12px}
 .kpi-big{background:linear-gradient(135deg,#0d2440,#0a1828);border:1px solid #1f4068;border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
-.kpi-big-label{font-size:16px;font-weight:700;color:#4d9fff;margin-bottom:6px}
-.kpi-big-num{font-size:48px;font-weight:800;color:#fff;line-height:1}
+.kpi-big-label{font-size:16px;font-weight:700;color:var(--blue-tx);margin-bottom:6px}
+.kpi-big-num{font-size:48px;font-weight:800;color:var(--text);line-height:1}
 .kpi-big-num span{font-size:20px;font-weight:600;color:var(--text2);margin-left:4px}
 .kpi-big-sub{font-size:12px;color:var(--text3);margin-top:8px}
 .kpi-big-icon{position:absolute;right:20px;bottom:18px;width:90px;height:130px;opacity:.9}
@@ -594,7 +693,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .kpi-small{border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;justify-content:center;position:relative;border:1px solid var(--border)}
 .kpi-small-label{font-size:13px;font-weight:600;margin-bottom:4px}
 .kpi-small-row{display:flex;align-items:baseline;gap:8px}
-.kpi-small-num{font-size:26px;font-weight:800;color:#fff;line-height:1}
+.kpi-small-num{font-size:26px;font-weight:800;color:var(--text);line-height:1}
 .kpi-small-num span{font-size:13px;font-weight:500;color:var(--text2);margin-left:2px}
 .kpi-small-pct{font-size:13px;font-weight:600}
 .kpi-budget{background:var(--ink2);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
@@ -608,7 +707,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .kpi-budget-subgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .kpi-bcard{border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;justify-content:center;gap:10px;position:relative;border:1px solid var(--border)}
 .kpi-bcard-label{font-size:14px;font-weight:600}
-.kpi-bcard-num{font-size:28px;font-weight:800;color:#fff;line-height:1}
+.kpi-bcard-num{font-size:28px;font-weight:800;color:var(--text);line-height:1}
 .kpi-bcard-icon{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:auto;height:80%;opacity:.9}
 .kpi-bcard-icon img{height:100%;width:auto;object-fit:contain}
 @media(max-width:900px){.kpi-top{grid-template-columns:1fr}.kpi-small-grid{grid-column:auto}.kpi-budget-grid{grid-template-columns:1fr}.kpi-budget-layout{grid-template-columns:1fr}.kpi-budget-subgrid{grid-template-columns:1fr}}
@@ -618,16 +717,16 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .gantt-wrap{position:relative;width:100%}
 /* 월별 세로 격자선 - 각 행 높이에 맞춤 (겹침 방지) */
 .gantt-grid{position:absolute;top:0;bottom:0;left:0;width:100%;display:grid;height:100%;z-index:0;pointer-events:none}
-.gantt-grid-col{border-left:1px solid rgba(255,255,255,.07)}
+.gantt-grid-col{border-left:1px solid var(--veil-line)}
 .gantt-grid-col:first-child{border-left:none}
 .gantt-grid-col:last-child{border-right:1px solid var(--border)}
-.gantt-grid-col.year-start{border-left:1px solid rgba(255,255,255,.28)}
+.gantt-grid-col.year-start{border-left:1px solid var(--veil-line-strong)}
 .gantt-bar{display:grid;width:100%;height:20px;border-radius:3px;overflow:hidden;border:0.5px solid var(--border2);position:relative;z-index:1;min-width:0}
 .gantt-month{display:grid;grid-template-columns:1fr 1fr;height:100%;box-sizing:border-box;min-width:0}
 .gantt-cell{min-width:0;height:100%;box-sizing:border-box;position:relative}
 /* 단계 길이 리사이즈 핸들 (단계 오른쪽 끝 칸 안쪽 우측) */
 .gantt-resize-h{position:absolute;top:0;right:0;width:7px;height:100%;cursor:ew-resize;z-index:2}
-.gantt-resize-h::after{content:'';position:absolute;top:0;right:0;width:2px;height:100%;background:rgba(255,255,255,.6);opacity:0;transition:opacity .1s}
+.gantt-resize-h::after{content:'';position:absolute;top:0;right:0;width:2px;height:100%;background:var(--veil-handle);opacity:0;transition:opacity .1s}
 .gantt-resize-h:hover::after{opacity:1}
 /* 첫 단계 시작점 핸들 (첫 단계 왼쪽 끝) */
 .gantt-resize-start{right:auto;left:0}
@@ -638,10 +737,10 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .gantt-yearrow{display:grid;width:100%;border-bottom:1px solid var(--border)}
 .gantt-ycell{text-align:center;font-size:15px;font-weight:700;color:var(--text2);white-space:nowrap;padding-bottom:4px;box-sizing:border-box}
 .gantt-head{display:grid;width:100%;padding-top:2px}
-.gantt-mcell{min-width:0;height:18px;font-size:9px;color:var(--text3);text-align:center;position:relative;line-height:1;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid rgba(255,255,255,.07)}
+.gantt-mcell{min-width:0;height:18px;font-size:9px;color:var(--text3);text-align:center;position:relative;line-height:1;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--veil-line)}
 .gantt-mcell:first-child{border-left:none}
 .gantt-mcell:last-child{border-right:1px solid var(--border)}
-.gantt-mcell.year-start{border-left:1px solid rgba(255,255,255,.28)}
+.gantt-mcell.year-start{border-left:1px solid var(--veil-line-strong)}
 .gantt-year{position:absolute;top:0;left:0;width:100%;text-align:center;font-size:15px;font-weight:700;color:var(--text2);white-space:nowrap}
 .gantt-mnum{font-size:13px;display:block;text-align:center;width:100%}
 
@@ -669,12 +768,19 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .eq-search::placeholder{color:var(--text3)}
 
 .eq-ledger{border-collapse:collapse}
-.eq-ledger th{padding:9px 11px;text-align:left;color:var(--text2);font-size:12px;font-weight:600;letter-spacing:.02em;border-bottom:1px solid var(--border2);background:var(--ink3);white-space:nowrap;position:sticky;top:0;z-index:1}
-.eq-ledger td{padding:8px 11px;border-bottom:1px solid var(--border2);color:var(--text2);font-size:12px;vertical-align:middle}
-.eq-ledger tbody tr:hover{background:var(--ink3)}
-.eq-ledger .lg-code{color:var(--text3);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;white-space:nowrap}
-.eq-ledger .lg-primary{color:var(--text);font-weight:700;white-space:nowrap}
-.lg-chip{display:inline-flex;align-items:center;min-height:21px;padding:0 8px;border:1px solid var(--border);border-radius:6px;background:var(--ink3);font-size:10.5px;white-space:nowrap}
+/* 표 셀 좌우 여백 16px — 공지사항·개선요청 표(MUI Table)와 같은 값. 구 11px이라 장비 표만 빽빽해 보였음 */
+.eq-ledger th{padding:9px 16px;text-align:left;color:var(--text2);font-size:12px;font-weight:600;letter-spacing:.02em;border-bottom:1px solid var(--th-line);background:var(--th-bg);white-space:nowrap;position:sticky;top:0;z-index:1}
+/* 표 셀 기본 = 핵심값(담당자·구분·다음일정·금액)이라 주 톤. 부수값(관리번호 .lg-code)만 아래에서 보조로 낮춤 */
+.eq-ledger td{padding:8px 16px;border-bottom:1px solid var(--border2);color:var(--text);font-size:12px;vertical-align:middle}
+.eq-ledger tbody tr:hover{background:var(--row-hover)}
+/* 코드 셀 정본 — 모노스페이스는 같은 크기에서 가늘어 보여 weight 500으로 보정(구 400은 "너무 얇다" 지적) */
+.eq-ledger .lg-code{color:var(--text2);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;font-weight:500;white-space:nowrap}
+/* 장비명 = 행의 식별자 → 다른 셀(12px)보다 한 단 크게 */
+/* 행 제목 정본 = 14px/500 + 주 톤 — 공지사항·개선요청 표와 동일. 굵기는 강조 상태 전용 */
+.eq-ledger .lg-primary{color:var(--text);font-weight:500;font-size:14px;white-space:nowrap}
+/* 상태 칩 — 같은 표 안의 StatusChip(높이 24·반경 8·굵기 600)과 규격을 맞춘다.
+   구 값(높이 21·반경 6·굵기 미지정)이라 한 줄 안에서 두 종류 칩처럼 보였음 */
+.lg-chip{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border:1px solid var(--border);border-radius:8px;background:var(--ink3);font-size:12px;font-weight:600;white-space:nowrap}
 .lg-miss{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
 
 /* ── 반응형 표 → 카드 (재사용) ──
@@ -748,7 +854,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .sc2-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%}
 @media(max-width:600px){.sc2-grid{grid-template-columns:repeat(2,1fr)}}
 .sc2-card{background:var(--ink2);border:1px solid var(--border);border-radius:14px;padding:24px 16px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-decoration:none;transition:transform .15s,border-color .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent}
-.sc2-card:hover{transform:translateY(-3px);border-color:var(--text3);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.sc2-card:hover{transform:translateY(-3px);border-color:var(--text3);box-shadow:var(--shadow-md)}
 .sc2-icon{width:64px;height:64px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px}
 .sc2-name{font-size:14px;font-weight:700;color:var(--text);text-align:center}
 .sc2-url{font-size:11px;color:var(--text3);text-align:center}
@@ -757,7 +863,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .shortcut-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%}
 @media(max-width:600px){.shortcut-grid{grid-template-columns:repeat(2,1fr)}}
 .shortcut-card{background:var(--ink2);border:1px solid var(--border);border-radius:12px;padding:28px 16px 22px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;text-decoration:none;transition:transform .15s,border-color .15s,box-shadow .15s}
-.shortcut-card:hover{transform:translateY(-3px);border-color:var(--text3);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.shortcut-card:hover{transform:translateY(-3px);border-color:var(--text3);box-shadow:var(--shadow-md)}
 .sc-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px}
 .sc-name{font-size:14px;font-weight:600;color:var(--text)}
 .sc-url{font-size:11px;color:var(--text3)}
@@ -768,14 +874,16 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .notice-row:last-child{border-bottom:none}
 .notice-row:hover{background:var(--ink2)}
 .notice-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;flex-shrink:0}
-.nb-긴급{background:rgba(224,91,84,.12);color:var(--red);border:1px solid rgba(224,91,84,.25)}
-.nb-공지{background:rgba(214,162,62,.12);color:var(--amber);border:1px solid rgba(214,162,62,.25)}
+.nb-긴급{background:rgba(224,91,84,.12);color:var(--red-tx);border:1px solid rgba(224,91,84,.25)}
+.nb-공지{background:rgba(214,162,62,.12);color:var(--amber-tx);border:1px solid rgba(214,162,62,.25)}
 .nb-일반{background:var(--ink3);color:var(--text2);border:1px solid var(--border)}
-.nb-행사{background:rgba(77,161,103,.12);color:var(--green);border:1px solid rgba(77,161,103,.25)}
-.notice-title{flex:1;font-size:13px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-행사{background:rgba(77,161,103,.12);color:var(--green-tx);border:1px solid rgba(77,161,103,.25)}
+/* 레이아웃만 담당 — 크기·굵기·색은 Notice/index.tsx의 sx가 단일 소스.
+   (여기 font-size/weight를 두면 sx와 같은 특이도라 로드 순서로 승부가 갈려 변경이 안 먹는다) */
+.notice-title{flex:1;overflow:hidden;text-overflow:ellipsis}
 .notice-meta{font-size:11px;color:var(--text3);flex-shrink:0;display:flex;gap:12px}
 .notice-new{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--blue);margin-left:5px;vertical-align:middle;flex-shrink:0}
-.new-badge{display:inline-block;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.3px;line-height:1.6}
+.new-badge{display:inline-block;background:var(--red-solid);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.3px;line-height:1.6}
 
 /* ── 아코디언 공지사항 (시트 연동) ── */
 /* 게시판 전체를 하나의 테두리로 감싸기 */
@@ -795,7 +903,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .ntc-summary{width:100%;padding:0;background:transparent;border:none;cursor:pointer;font-family:inherit;text-align:left}
 .ntc-summary>span{display:flex;align-items:center;padding:13px 8px;min-width:0}
 .ntc-num{justify-content:center;gap:4px;font-size:12.5px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums;white-space:nowrap}
-.ntc-pin{color:var(--amber);flex-shrink:0}
+.ntc-pin{color:var(--amber-tx);flex-shrink:0}
 .ntc-item.pinned{background:rgba(214,162,62,.04)}
 .ntc-item.pinned:hover{background:rgba(214,162,62,.07)}
 .ntc-cat-cell{justify-content:center}
@@ -810,7 +918,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .ntc-date{justify-content:center;font-size:11.5px;color:var(--text3);font-variant-numeric:tabular-nums;white-space:nowrap}
 .ntc-att{justify-content:center}
 .ntc-att a{display:flex;align-items:center;color:var(--text3);transition:color .15s}
-.ntc-att a:hover{color:var(--blue)}
+.ntc-att a:hover{color:var(--blue-tx)}
 /* 펼침 패널 */
 .ntc-panel{overflow:hidden;animation:ntcSlide .22s ease}
 @keyframes ntcSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
@@ -881,7 +989,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
    이름은 항상 제자리에 렌더되어 있고(아이콘 뒤 22px 간격 = 접힘 64px 경계 밖), 패널이
    max-width 64↔200으로 커튼처럼 열리고 닫히며 이름을 드러냈다 가린다 — "가려졌다 스르륵" */
 .snav-panel{position:absolute;left:0;top:0;bottom:0;width:max-content;min-width:64px;max-width:64px;box-sizing:border-box;background:var(--ink);border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;overflow-x:hidden;transition:max-width .3s cubic-bezier(.4,0,.2,1) .12s,box-shadow .3s ease .12s}
-.snav-panel:hover,.snav-panel:focus-within{max-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.3);transition-delay:0s}
+.snav-panel:hover,.snav-panel:focus-within{max-width:200px;box-shadow:var(--shadow-md);transition-delay:0s}
 .snav-group{display:flex;flex-direction:column;gap:2px}
 /* 그룹 라벨 — 접힘 땐 텍스트 대신 헤어라인(요소 높이 고정이라 세로 위치 불변) */
 .snav-label{position:relative;height:16px;display:flex;align-items:center;padding:0 10px;margin-bottom:5px}
@@ -891,11 +999,11 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .snav-panel:hover .snav-label::before,.snav-panel:focus-within .snav-label::before{opacity:0;transition-delay:0s}
 .snav-item{position:relative;display:flex;align-items:center;width:100%;padding:9px 10px;border:none;border-radius:8px;background:none;color:var(--text2);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;text-align:left;transition:background .15s,color .15s;-webkit-tap-highlight-color:transparent}
 /* 아이콘 가시성(2026-07-23): 20px + 본문보다 밝은 색. 접힘 레일에선 아래 타일 배경까지 더해 버튼처럼 도드라짐 */
-.snav-item svg{font-size:20px;flex-shrink:0;color:#d7dde6;transition:color .15s}
+.snav-item svg{font-size:20px;flex-shrink:0;color:var(--nav-icon);transition:color .15s}
 .snav-item:hover{background:var(--ink2);color:var(--text)}
 .snav-item:hover svg{color:var(--text)}
-.snav-item.active{background:rgba(84,145,218,.12);color:var(--blue);font-weight:700}
-.snav-item.active svg{color:var(--blue)}
+.snav-item.active{background:rgba(84,145,218,.12);color:var(--blue-tx);font-weight:700}
+.snav-item.active svg{color:var(--blue-tx)}
 /* (아이콘 타일 배경은 2026-07-24 사용자 요청으로 제거 — 아이콘 크기·밝은 색만으로 가시성 확보) */
 /* 메뉴명 칸 — 접힘 max-width:0 ↔ 펼침 시 내용(이름) 폭만큼. max-width는 전환용 상한일 뿐,
    실제 폭은 콘텐츠가 결정 → 패널이 메뉴명 길이만큼만 늘어난다. (0fr↔1fr은 절대배치 패널의
@@ -908,7 +1016,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .snav-lin{min-width:0;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap;padding-left:22px}
 .snav-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
 /* 접힘 상태 배지 — 아이콘 우상단 빨강 숫자·우하단 앰버 점. 펼치면 숨고 D7 위첨자(NavBadge)가 대신 보임 */
-.snav-rnew{position:absolute;top:2px;left:24px;min-width:14px;height:14px;padding:0 3px;border-radius:999px;background:var(--red);color:#fff;font-size:9px;font-weight:700;line-height:14px;text-align:center;pointer-events:none;transition:opacity .12s ease}
+.snav-rnew{position:absolute;top:2px;left:24px;min-width:14px;height:14px;padding:0 3px;border-radius:999px;background:var(--red-solid);color:#fff;font-size:9px;font-weight:700;line-height:14px;text-align:center;pointer-events:none;transition:opacity .12s ease}
 .snav-rmemo{position:absolute;bottom:4px;left:27px;width:7px;height:7px;border-radius:50%;background:var(--amber);pointer-events:none;transition:opacity .12s ease}
 .snav-panel:hover .snav-rnew,.snav-panel:focus-within .snav-rnew,.snav-panel:hover .snav-rmemo,.snav-panel:focus-within .snav-rmemo{opacity:0}
 @media(prefers-reduced-motion:reduce){.snav-panel,.snav-lcol,.snav-label span,.snav-label::before,.snav-rnew,.snav-rmemo{transition:none}}
@@ -924,11 +1032,11 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .navchip svg{font-size:15px}
 .navchip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--ink2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;transition:border-color .15s,color .15s}
 .navchip:hover{border-color:var(--blue);color:var(--text)}
-.navchip.active{background:transparent;border:1.5px solid var(--blue);color:var(--blue);font-weight:700;font-size:14px;padding:8px 16px}
+.navchip.active{background:transparent;border:1.5px solid var(--blue);color:var(--blue-tx);font-weight:700;font-size:14px;padding:8px 16px}
 .nav-dd{position:relative;display:inline-flex}
 .nav-flyout{position:absolute;top:100%;right:0;padding-top:8px;width:max-content;min-width:0;display:none;flex-direction:column;align-items:flex-end;z-index:60}
 .nav-dd:hover .nav-flyout{display:flex}
-.nav-flyout-inner{background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:2px;box-shadow:0 10px 28px rgba(0,0,0,.4)}
+.nav-flyout-inner{background:var(--ink2);border:1px solid var(--border);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:2px;box-shadow:var(--shadow-lg)}
 .nav-flyout a{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:7px;text-decoration:none;color:var(--text2);font-size:13px;font-weight:500;white-space:nowrap;transition:background .12s,color .12s}
 .nav-flyout a:hover{background:var(--ink3);color:var(--text)}
 .nav-flyout .fl-ico{width:33px;display:inline-flex;align-items:center;justify-content:center;font-size:23px;line-height:1}
@@ -949,22 +1057,22 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 
 /* ── 홈: 장비 현황 요약 카드 ── */
 .eq-summary{width:100%;max-width:960px;background:linear-gradient(135deg,#0d2440,#0a1828);border:1px solid #1f4068;border-radius:18px;padding:18px 20px;margin-bottom:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;position:relative;overflow:hidden;-webkit-tap-highlight-color:rgba(84,145,218,.2)}
-.eq-summary:hover{border-color:var(--blue);box-shadow:0 8px 24px rgba(0,0,0,.3);transform:translateY(-2px)}
+.eq-summary:hover{border-color:var(--blue);box-shadow:var(--shadow-md);transform:translateY(-2px)}
 .eq-summary-page{cursor:default;margin-bottom:0;max-width:none}
 .eq-summary-page:hover{border-color:#1f4068;box-shadow:none;transform:none}
 .eqs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .eqs-title{font-size:14px;font-weight:700;color:#cfe3ff}
 .eqs-arrow{color:var(--text2);font-size:20px;line-height:1}
 .eqs-big{display:flex;flex-direction:column;justify-content:center}
-.eqs-big .big-types{font-size:38px;font-weight:800;color:#fff;line-height:1}
+.eqs-big .big-types{font-size:38px;font-weight:800;color:var(--text);line-height:1}
 .eqs-big .big-units{font-size:18px;font-weight:700;color:var(--text2);line-height:1;margin-top:6px}
 .eqs-big .u{font-size:16px;font-weight:600;color:var(--text2);margin:0 3px 0 1px}
-.eqs-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.06);margin-bottom:14px;gap:2px}
+.eqs-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--veil-track);margin-bottom:14px;gap:2px}
 .eqs-bar span{display:block;height:100%;border-radius:2px;min-width:0;transition:flex-grow .3s}
 .eqs-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .eqs-stat{text-align:center}
 .eqs-stat-lbl{font-size:9px;font-weight:600;line-height:1.1;margin-bottom:1px;white-space:nowrap;letter-spacing:-.3px}
-.eqs-stat-num{font-size:12px;font-weight:800;color:#fff;line-height:1}
+.eqs-stat-num{font-size:12px;font-weight:800;color:var(--text);line-height:1}
 .eqs-stat-unit{font-size:11px;font-weight:700;color:var(--text2);line-height:1;margin-top:3px}
 .eqs-big .big-types .u{font-size:16px;font-weight:600;color:var(--text2);margin-left:2px}
 .eqs-big .big-units .u2{font-size:11px;font-weight:500;margin-left:1px}
@@ -988,16 +1096,16 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 @media(max-width:860px){.bc-eq,.bc-work,.bc-notice,.bc-cal{grid-column:1/-1}}
 .bc-head{display:flex;align-items:center;gap:9px;width:100%}
 .bc-ico{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-.bci-blue{background:rgba(84,145,218,.12);color:var(--blue)}
-.bci-amber{background:rgba(214,162,62,.12);color:var(--amber)}
-.bci-red{background:rgba(224,91,84,.12);color:var(--red)}
-.bci-purple{background:rgba(169,138,224,.12);color:var(--purple)}
+.bci-blue{background:rgba(84,145,218,.12);color:var(--blue-tx)}
+.bci-amber{background:rgba(214,162,62,.12);color:var(--amber-tx)}
+.bci-red{background:rgba(224,91,84,.12);color:var(--red-tx)}
+.bci-purple{background:rgba(169,138,224,.12);color:var(--purple-tx)}
 .bc-name{font-size:14px;font-weight:600;color:var(--text)}
 .bc-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;white-space:nowrap}
-.bcb-blue{background:rgba(84,145,218,.12);color:var(--blue)}
-.bcb-amber{background:rgba(214,162,62,.12);color:var(--amber)}
-.bcb-red{background:rgba(224,91,84,.14);color:var(--red)}
-.bcb-purple{background:rgba(169,138,224,.12);color:var(--purple)}
+.bcb-blue{background:rgba(84,145,218,.12);color:var(--blue-tx)}
+.bcb-amber{background:rgba(214,162,62,.12);color:var(--amber-tx)}
+.bcb-red{background:rgba(224,91,84,.14);color:var(--red-tx)}
+.bcb-purple{background:rgba(169,138,224,.12);color:var(--purple-tx)}
 /* 장비 타일 내부 미리보기 중간 사이즈 보정 */
 .bc-eq .eqm{grid-template-columns:1.1fr 2fr;gap:10px}
 .bc-eq .eqm-grid{grid-template-columns:repeat(2,1fr);gap:8px}
@@ -1026,13 +1134,13 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .card-top .icon{width:28px;height:28px;font-size:15px;border-radius:7px}
 .card-top .card-name{text-align:left;font-size:14px}
 .see-all{margin-left:auto;font-size:12px;color:var(--text2);font-weight:500;white-space:nowrap;flex-shrink:0;transition:color .15s}
-.card:hover .see-all{color:var(--blue)}
+.card:hover .see-all{color:var(--blue-tx)}
 
 /* ── D-day 배지 ── */
 .dday-badge{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.3px;line-height:1.6;flex-shrink:0}
-.dday-urgent{background:rgba(224,91,84,.15);color:#f87171;border:1px solid rgba(224,91,84,.35)}
-.dday-soon{background:rgba(214,162,62,.14);color:#D6A23E;border:1px solid rgba(214,162,62,.3)}
-.dday-far{background:rgba(84,145,218,.12);color:#5491DA;border:1px solid rgba(84,145,218,.28)}
+.dday-urgent{background:rgba(224,91,84,.15);color:var(--red-tx);border:1px solid rgba(224,91,84,.35)}
+.dday-soon{background:rgba(214,162,62,.14);color:var(--amber-tx);border:1px solid rgba(214,162,62,.3)}
+.dday-far{background:rgba(84,145,218,.12);color:var(--blue-tx);border:1px solid rgba(84,145,218,.28)}
 
 /* ── 미리보기 배지 (날짜·카테고리) ── */
 .cal-date-badge{padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;flex-shrink:0;white-space:nowrap}
@@ -1042,7 +1150,7 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 .bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;background:rgba(19,23,34,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
 .bnav-item{flex:1;background:none;border:none;color:var(--text2);font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;font-size:10px;font-weight:500;transition:color .15s;-webkit-tap-highlight-color:transparent}
 .bnav-item .bnav-ico{font-size:18px;line-height:1}
-.bnav-item.active{color:var(--blue)}
+.bnav-item.active{color:var(--blue-tx)}
 .bnav-ico-wrap svg{width:23px;height:23px;display:block}
 .bnav-item::after{content:"";display:block;width:16px;height:3px;border-radius:2px;background:transparent;margin-top:2px}
 .bnav-item.active::after{background:var(--blue)}
@@ -1090,3 +1198,15 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 /* 업무일정 날짜 클릭·범위 드래그 미리보기 — 칸 전체 옅은 강조(구글식).
    (구) 고정 위치 '(제목 없음)' 가짜 바는 그 칸 첫 일정을 덮는 결함이 있어 폐지 — 기존 일정이 그대로 보인다. */
 .fc-team .fc-highlight{background:rgba(84,145,218,.14);border-radius:6px;box-shadow:inset 0 0 0 2px rgba(84,145,218,.5)}
+
+/* ── 라이트 테마 구조 오버라이드 ── 변수만으로 안 되는 개별 규칙(히어로 카드·로고·하단탭·특정 배지) */
+/* 로고 에셋은 '검정 배경 위 흰 글자' JPG라 라이트 상단바(밝음)에선 lighten이면 사라진다 → 반전+multiply로 '흰 배경 위 검정 로고'가 되게 한다 */
+:root[data-theme="light"] .topbar-logo{mix-blend-mode:multiply;filter:invert(1);background:transparent}
+/* 짙은 네이비 히어로 카드(장비예산·홈 장비요약) → 라이트에선 옅은 블루 표면 + 진한 블루 라벨 */
+:root[data-theme="light"] .kpi-big{background:linear-gradient(135deg,#eef4fc,#e2ecf8);border-color:#cfe0f5}
+:root[data-theme="light"] .kpi-big-label{color:#2f6db8}
+:root[data-theme="light"] .eq-summary{background:linear-gradient(135deg,#eef4fc,#e2ecf8);border-color:#cfe0f5}
+:root[data-theme="light"] .eq-summary-page:hover{border-color:#cfe0f5}
+:root[data-theme="light"] .eqs-title{color:#2f6db8}
+/* 모바일 하단 탭바 — 라이트에선 흰 반투명(다크는 짙은 네이비 반투명) */
+:root[data-theme="light"] .bottom-nav{background:rgba(255,255,255,.92)}
