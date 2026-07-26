@@ -16,6 +16,19 @@
      JS로 색을 구워 넘기면 memo된 보드 카드(144장)가 테마 전환 때 리렌더 안 돼 이전 색이 남는다(실측).
      CSS 변수는 <html data-theme> 한 번으로 리렌더 없이 전부 따라온다. --tone-k = 라이트 알파 배율. */
   --tone-green:114 199 141;--tone-blue:121 169 226;--tone-gray:194 202 213;--tone-amber:224 188 116;--tone-purple:169 138 224;--tone-k:1;
+  /* 카드 **본문** 채움만 따로 — 여기는 --tone-k 배율을 안 쓰고 최종 알파를 테마별로 직접 준다.
+     본문은 카드 면적의 84%라, 머리띠와 같은 배율로 칠하면 라이트에서 화면이 초록 덩어리가 된다.
+     머리띠·테두리·링은 그대로 --tone-k를 쓴다(상태는 여전히 한눈에 읽혀야 하므로). */
+  --tone-body:.055;--tone-body-hover:.09;--tone-body-sel:.15;
+  /* 카드 평상시 테두리도 따로 — --tone-k 배율은 '넓은 면에서 파스텔이 사라지는' 문제 때문에 넣은 값이라
+     1px 선에 그대로 곱하면 라이트 테두리만 채도가 2배(채도폭 51 vs 다크 25)로 튄다. */
+  --tone-border:.21;
+  /* 선택·호버 링도 배율에서 뺀다 — 라이트에서 .22*2.4=.53이 되면 1px 테두리와 2px 링이 붙어
+     한 덩어리 3px 띠로 보인다. **다크가 기준** — 라이트를 다크 인상에 맞춘다(사용자 확정).
+     호버·선택 테두리도 변수화: 라이트에서 .78·.92에 2.4를 곱하면 둘 다 1.0으로 잘려
+     호버와 선택이 같은 색이 돼버린다(다크는 .78 vs .92로 단계가 살아 있음). */
+  --tone-ring:.22;--tone-ring-hover:.14;
+  --tone-border-hover:.78;--tone-border-sel:.92;
   --sb-thumb:rgba(255,255,255,.18);--sb-thumb-hover:rgba(255,255,255,.32);
   --border:#32405A;--border2:#2A3546;--text:#FFFFFF;--text2:#AAB4C3;--text3:#909CAE;
   --amber:#D6A23E;--blue:#5491DA;--green:#4DA167;--purple:#A98AE0;--teal:#46B7BE;--red:#E05B54;
@@ -46,6 +59,10 @@
   --th-bg:#DFE7F0;--th-line:#BFCBDB;
   --row-hover:#EDF2F8;--surface-selected:#E4EBF4;
   --tone-green:77 161 103;--tone-blue:84 145 218;--tone-gray:138 147 162;--tone-amber:214 162 62;--tone-purple:169 138 224;--tone-k:2.4;
+  --tone-body:.05;--tone-body-hover:.10;--tone-body-sel:.18;
+  --tone-border:.46;
+  --tone-ring:.22;--tone-ring-hover:.14;
+  --tone-border-hover:.62;--tone-border-sel:.80;
   --border:#E3E8EF;--border2:#EDF0F4;--text:#1A1D23;--text2:#555E6B;--text3:#5E6C7A;
   /* 에디터 글자색 — 흰 배경에서 흐린 밝은 톤을 진하게(흰 배경 표준 채도) */
   --ec-red:#D92D20;--ec-amber:#B45309;--ec-yellow:#A16207;--ec-green:#15803D;--ec-blue:#1D6FD8;--ec-purple:#7C3AED;

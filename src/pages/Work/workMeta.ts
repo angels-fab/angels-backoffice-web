@@ -30,6 +30,29 @@ export const toneVar = (tone: CardTone): string => `var(--tone-${tone})`
  */
 export const toneCss = (a: number): string => `rgb(var(--card-tone) / calc(${a} * var(--tone-k)))`
 
+/**
+ * 카드 **본문** 채움 — 상태별 최종 알파를 테마 변수로 직접 받는다(`--tone-k` 배율 미적용).
+ *
+ * 본문은 카드 면적의 84%라 머리띠와 같은 배율로 칠하면 라이트에서 화면의 29%가 한 가지 색으로
+ * 덮여 "초록 덩어리"가 된다(실측). 색을 약하게 만드는 대신 **색이 차지하는 면적을 줄이는** 쪽으로,
+ * 본문만 라이트에서 .133 → .05로 낮춘다. 다크는 원래 옅어서(.055) 그대로.
+ * 머리띠·테두리·링은 toneCss를 그대로 써서 상태가 여전히 한눈에 읽히게 남긴다.
+ */
+/** 카드 평상시 테두리 — 본문과 같은 이유로 배율을 빼고 테마별 최종 알파를 직접 준다 */
+export const toneBorderCss = 'rgb(var(--card-tone) / var(--tone-border))'
+
+/** 선택 2px 링 / 호버 1px 링 — 배율 미적용(라이트에서 테두리와 붙어 두꺼워 보이던 원인) */
+export const toneBorderHoverCss = 'rgb(var(--card-tone) / var(--tone-border-hover))'
+export const toneBorderSelCss = 'rgb(var(--card-tone) / var(--tone-border-sel))'
+export const toneRingCss = 'rgb(var(--card-tone) / var(--tone-ring))'
+export const toneRingHoverCss = 'rgb(var(--card-tone) / var(--tone-ring-hover))'
+
+export const toneBody = {
+  base: 'rgb(var(--card-tone) / var(--tone-body))',
+  hover: 'rgb(var(--card-tone) / var(--tone-body-hover))',
+  selected: 'rgb(var(--card-tone) / var(--tone-body-sel))',
+} as const
+
 // 업무구분 → 칩 색(캡처 기준): 설계적정성=초록·예산=빨강·인사=노랑·행정=파랑·장비=회색·교육세미나=보라
 const CAT_KIND: { key: string; kind: StatusKind }[] = [
   { key: '설계적정성', kind: 'success' },
