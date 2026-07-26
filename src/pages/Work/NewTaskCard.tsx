@@ -270,7 +270,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
             border: '2px dashed', borderColor: th.palette.accent.green, borderRadius: `${radius.card}px`,
             bgcolor: alpha(th.palette.accent.green, 0.14), backdropFilter: 'blur(1.5px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1,
-            fontSize: typescale.emphasis.size, fontWeight: typescale.cardTitle.weight, color: th.palette.accent.green,
+            fontSize: typescale.emphasis.size, fontWeight: typescale.cardTitle.weight, color: th.palette.accentText.green,
           })}
         >
           <CloudUploadIcon sx={{ fontSize: iconSize.header }} />
@@ -297,8 +297,8 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
           <Tooltip title={uploading ? '업로드 중…' : '저장'}>
             <span>
-              <IconButton size="small" aria-label="저장" onClick={save} disabled={saving || uploading} sx={(th) => ({ color: th.palette.accent.green, p: 0.5 })}>
-                {saving ? <CircularProgress size={iconSize.action} thickness={5} sx={{ color: 'accent.green' }} /> : <CheckIcon sx={{ fontSize: iconSize.action }} />}
+              <IconButton size="small" aria-label="저장" onClick={save} disabled={saving || uploading} sx={(th) => ({ color: th.palette.accentText.green, p: 0.5 })}>
+                {saving ? <CircularProgress size={iconSize.action} thickness={5} sx={{ color: 'accentText.green' }} /> : <CheckIcon sx={{ fontSize: iconSize.action }} />}
               </IconButton>
             </span>
           </Tooltip>
@@ -420,7 +420,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
             border: 1, borderRadius: `${radius.modal}px`, cursor: 'pointer',
             transition: 'border-color .12s, background-color .12s',
             ...(chief
-              ? { borderColor: alpha(th.palette.accent.purple, 0.55), bgcolor: alpha(th.palette.accent.purple, 0.16), color: th.palette.accent.purple }
+              ? { borderColor: alpha(th.palette.accent.purple, 0.55), bgcolor: alpha(th.palette.accent.purple, 0.16), color: th.palette.accentText.purple }
               : { borderColor: th.palette.divider, bgcolor: 'transparent', color: 'text.secondary' }),
           })}
         >

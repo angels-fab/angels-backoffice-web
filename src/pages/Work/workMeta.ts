@@ -11,6 +11,25 @@ import { domain } from '@/theme/tokens'
 export type CardTone = 'green' | 'blue' | 'gray' | 'amber' | 'purple'
 export const TONE_RGB: Record<CardTone, string> = domain.workTone
 
+/**
+ * 카드 톤 색은 **CSS 변수**로 해석한다 — 정본은 index.css의 `--tone-{green|blue|amber|purple|gray}`
+ * (다크=workTone 파스텔 / 라이트=채도 높은 원색)와 알파 배율 `--tone-k`(다크 1 / 라이트 2.4).
+ *
+ * JS로 테마를 읽어 색 문자열을 구워 넘기지 않는 이유: 보드 카드(144장)는 memo돼 있어 테마 전환 때
+ * 리렌더되지 않고, 구워둔 색이 이전 테마 값으로 남았다(실측 — 라이트인데 다크 파스텔 유지).
+ * CSS 변수는 <html data-theme>가 바뀌면 리렌더 없이 전부 따라오고, 전환 커밋 비용도 함께 줄어든다.
+ *
+ * 라이트 배율이 필요한 이유: workTone은 다크 배경용 파스텔이라, 알파 .055로 흰 배경에 얹으면
+ * #F7FCF9 = 사실상 흰색이 된다("색에 힘이 없다").
+ */
+export const toneVar = (tone: CardTone): string => `var(--tone-${tone})`
+
+/**
+ * `--card-tone`을 세팅한 요소(및 자손)에서 쓰는 톤 색. `a`는 **다크 기준** 알파 —
+ * 라이트는 `--tone-k`가 곱해진다(알파는 CSS가 0~1로 자동 clamp).
+ */
+export const toneCss = (a: number): string => `rgb(var(--card-tone) / calc(${a} * var(--tone-k)))`
+
 // 업무구분 → 칩 색(캡처 기준): 설계적정성=초록·예산=빨강·인사=노랑·행정=파랑·장비=회색·교육세미나=보라
 const CAT_KIND: { key: string; kind: StatusKind }[] = [
   { key: '설계적정성', kind: 'success' },
@@ -27,15 +46,9 @@ export function catKind(cat?: string): StatusKind {
   return m ? m.kind : 'neutral'
 }
 
-// 관련부서 → 칩 색: 부서명 해시로 팔레트에서 고정 배정(같은 부서는 항상 같은 색, 부서마다 다른 색).
-const DEPT_KINDS: StatusKind[] = ['teal', 'info', 'purple', 'warning', 'success', 'error']
-export function deptKind(dept?: string): StatusKind {
-  const s = (dept || '').trim()
-  if (!s) return 'neutral'
-  let h = 0
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
-  return DEPT_KINDS[h % DEPT_KINDS.length]
-}
+// 관련부서 칩은 무채색(StatusChip status="neutral") — 구 deptKind는 부서명 **해시**로 색을 뽑았는데,
+// 임의값이라 "청록 = 기획팀"을 학습할 수가 없어 색이 정보를 전혀 나르지 못했다(사용자 결정으로 제거).
+// 업무카드에서 색을 갖는 축은 상태(카드 톤)와 구분칩 둘뿐이다.
 
 /**
  * 업무 상태 — 시트 '상태' 열 기준(진행중/완료/보류/취소). 빈값/기타는 '미정'.

@@ -56,6 +56,7 @@ import { useRole } from '@/auth/role'
 import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
+import { nextFilterSelection } from '@/utils/filterSelect'
 import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS, catKind, mgrColor, W_STATUS } from './workMeta'
 import ManagerChip from '@/components/ds/ManagerChip'
 import type { CardTone } from './workMeta'
@@ -84,11 +85,11 @@ const SHOW_MANAGER_STATUS = false
 // 업무목록 헤더 — 상태별 제목·아이콘·색. 아이콘은 박스 없이 색만.
 // 색은 D3 전역 배정(진행중=그린·보류=앰버·완료=블루·Remind/Check=퍼플) — KPI·카드 톤·보드 열과 동일.
 const VIEW_META: Record<WorkView, { title: string; Icon: React.ElementType; color: string }> = {
-  inProgress: { title: '진행중 업무', Icon: TimelapseIcon, color: 'accent.green' },
-  hold: { title: '보류 업무', Icon: PauseIcon, color: 'accent.amber' },
-  check: { title: '부서장 확인', Icon: FactCheckOutlinedIcon, color: 'accent.purple' },
-  done: { title: '완료 업무', Icon: TaskAltIcon, color: 'accent.blue' },
-  remind: { title: 'Remind 업무', Icon: TipsAndUpdatesIcon, color: 'accent.purple' },
+  inProgress: { title: '진행중 업무', Icon: TimelapseIcon, color: 'accentText.green' },
+  hold: { title: '보류 업무', Icon: PauseIcon, color: 'accentText.amber' },
+  check: { title: '부서장 확인', Icon: FactCheckOutlinedIcon, color: 'accentText.purple' },
+  done: { title: '완료 업무', Icon: TaskAltIcon, color: 'accentText.blue' },
+  remind: { title: 'Remind 업무', Icon: TipsAndUpdatesIcon, color: 'accentText.purple' },
 }
 
 // 스와이프 [상태] 피커의 존별 라벨(목표 상태 표시)
@@ -142,7 +143,7 @@ function NewTaskPlusButton({ onClick }: { onClick: () => void }) {
         width: 42, height: 28, flexShrink: 0,
         border: '1px solid', borderColor: alpha(th.palette.accent.green, 0.5),
         borderRadius: `${radius.chip}px`, bgcolor: alpha(th.palette.accent.green, 0.12),
-        color: th.palette.accent.green,
+        color: th.palette.accentText.green,
         transition: 'background-color .15s, border-color .15s',
         '&:hover': { bgcolor: alpha(th.palette.accent.green, 0.2), borderColor: alpha(th.palette.accent.green, 0.7) },
         ...(focusRingSx as object),
@@ -853,16 +854,7 @@ export default function Work() {
       : undefined
 
   // 구분·담당자 필터 토글 — 일반클릭: 단독 선택/단독 재클릭 해제(전체) · Shift: 기존 유지 + 추가/해제
-  const nextFilterSet = (prev: Set<string>, value: string, additive: boolean): Set<string> => {
-    if (!additive) {
-      if (prev.size === 1 && prev.has(value)) return new Set<string>()
-      return new Set([value])
-    }
-    const next = new Set(prev)
-    if (next.has(value)) next.delete(value)
-    else next.add(value)
-    return next
-  }
+  const nextFilterSet = nextFilterSelection<string>
   // 계정 저장은 여기(사용자 토글)에서만. 설정 로드 실패 세션(usLoadedOk=false)은 화면만 바꾸고 저장 안 함.
   const toggleCat = (value: string, additive: boolean) => {
     filterTouched.current = true
@@ -1222,8 +1214,8 @@ export default function Work() {
           if (boardMode) {
             return (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5, minWidth: 0 }}>
-                <ViewKanbanIcon sx={{ fontSize: 22, color: 'text.secondary', flexShrink: 0 }} />
-                <Typography variant="h2" component="h2">업무 보드</Typography>
+                <ViewKanbanIcon sx={{ fontSize: iconSize.header, color: 'text.secondary', flexShrink: 0 }} />
+                <Typography variant="h3" component="h2">업무 보드</Typography>
                 <Typography variant="body2" sx={{ color: 'text.disabled' }}>{boardShownCount}건</Typography>
               </Box>
             )
@@ -1232,8 +1224,8 @@ export default function Work() {
           const ViewIcon = meta.Icon
           return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.5, minWidth: 0 }}>
-              <ViewIcon sx={{ fontSize: 22, color: meta.color, flexShrink: 0 }} />
-              <Typography variant="h2" component="h2" sx={{ color: meta.color }}>{meta.title}</Typography>
+              <ViewIcon sx={{ fontSize: iconSize.header, color: meta.color, flexShrink: 0 }} />
+              <Typography variant="h3" component="h2" sx={{ color: meta.color }}>{meta.title}</Typography>
               <Typography variant="body2" sx={{ color: 'text.disabled' }}>
                 {view === 'inProgress' ? inProgressListed.length : listed.length}건
               </Typography>
@@ -1335,7 +1327,7 @@ export default function Work() {
                   height: 30, px: 1.25, gap: 0.5, flexShrink: 0,
                   border: '1px solid', borderColor: 'divider', borderRadius: `${radius.chip}px`,
                   bgcolor: alpha(th.palette.text.primary, 0.03),
-                  color: th.palette.accent.red,
+                  color: th.palette.accentText.red,
                   fontSize: typescale.body.size, fontWeight: typescale.emphasis.weight, lineHeight: 1,
                   '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.06) },
                 })}
@@ -1662,7 +1654,7 @@ export default function Work() {
       <Drawer anchor="right" open={trashOpen} onClose={() => { setTrashOpen(false); setTrashSel(new Set()) }}>
         <Box sx={{ width: { xs: '88vw', sm: 400 }, p: 2, display: 'flex', flexDirection: 'column', gap: 1.25, height: '100%' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <DeleteOutlineIcon sx={(th) => ({ fontSize: iconSize.header, color: th.palette.accent.red })} />
+            <DeleteOutlineIcon sx={(th) => ({ fontSize: iconSize.header, color: th.palette.accentText.red })} />
             <Typography variant="h3" component="h3" sx={{ fontWeight: typescale.pageTitle.weight }}>휴지통</Typography>
             <Typography variant="body2" sx={{ color: 'text.disabled' }}>{trashed.length}건</Typography>
             <Box sx={{ ml: 'auto' }}>
@@ -1700,7 +1692,7 @@ export default function Work() {
                   >
                     <Checkbox size="small" checked={checked} sx={{ p: 0.25, mt: 0.1 }} onClick={(e) => e.stopPropagation()} onChange={() => setTrashSel((prev) => { const n = new Set(prev); if (n.has(t.num)) n.delete(t.num); else n.add(t.num); return n })} />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" sx={{ fontWeight: typescale.emphasis.weight, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: typescale.emphasis.weight, wordBreak: 'break-word', color: 'text.primary' }}>{taskTitle(t)}</Typography>
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5, alignItems: 'center' }}>
                         <StatusChip status={W_STATUS[classify(t)].status} label={stateLabel} />
                         {t.cat && <StatusChip status="neutral" label={t.cat} />}

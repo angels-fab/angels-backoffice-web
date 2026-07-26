@@ -12,7 +12,7 @@ import ManagerChip from '@/components/ds/ManagerChip'
 import { fmtDate, dateSortValue } from '@/utils/date'
 import { isWorkNew } from '@/utils/newPost'
 import type { WorkItem } from '@/types'
-import { classify, taskTitle, catKind, TONE_RGB } from './workMeta'
+import { classify, taskTitle, catKind, toneVar, toneCss } from './workMeta'
 import type { CardTone } from './workMeta'
 import { zoneAt, genieOverlayInto } from './dropZones'
 import type { DropZone, StatusDropResult } from './dropZones'
@@ -28,6 +28,7 @@ const MOVE_DURATION = 240 // 주변 카드 자리 이동(FLIP) 애니메이션(m
 const SETTLE_DURATION = 180 // 드롭 후 최종 정착 애니메이션(ms)
 const MOVE_EASING = 'cubic-bezier(0.22, 1, 0.36, 1)' // 부드러운 감속곡선
 const REORDER_PAD_X = 40 // 진행중 열 좌우 순서판정 여유(px) — 열이 좁아 살짝 벗어나도 유지(보드 전용)
+const COL_CAP = 30 // 열당 초기 렌더 카드 수 — 나머지는 '더 보기'로 펼침(전환 멈춤의 원인이 카드 수라서)
 
 export interface KanbanBoardProps {
   /** 필터·검색이 적용된 업무 목록(상태 분류는 보드가 수행) */
@@ -80,9 +81,9 @@ function CardInner({ t }: { t: WorkItem }) {
     <>
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
         {isWorkNew(t) && (
-          <Box component="span" sx={{ flexShrink: 0, mt: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: 'error.main', color: 'common.white', fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+          <Box component="span" sx={{ flexShrink: 0, mt: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (th) => th.palette.accent.red, color: (th) => th.palette.getContrastText(th.palette.accent.red), fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
         )}
-        <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, wordBreak: 'break-word', lineHeight: 1.45 }}>
+        <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, wordBreak: 'break-word', lineHeight: 1.45, color: 'text.primary' }}>
           {taskTitle(t)}
         </Typography>
         {t.chief && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="purple" label="Check" /></Box>}
@@ -99,19 +100,21 @@ function CardInner({ t }: { t: WorkItem }) {
 }
 
 // 보드 카드 — memo로 감싸 드래그 중 다른 카드의 리렌더를 차단(순서 전환 시 프레임 저하의 주원인 제거).
-// 콜백은 부모에서 ref로 고정 전달하므로, 실제로 바뀌는 값은 selected/draggable/toneRgb뿐 → 해당 카드만 갱신.
+// 콜백은 부모에서 ref로 고정 전달하므로, 실제로 바뀌는 값은 selected/draggable뿐 → 해당 카드만 갱신.
+// 색은 CSS 변수(--card-tone)라 테마 전환에 리렌더가 필요 없다 — memo가 리렌더를 막아 이전 테마 색이
+// 남던 버그의 근본 원인 제거 + 전환 커밋 비용 감소.
 interface BoardCardProps {
   t: WorkItem
   zone: DropZone
-  toneRgb: string
+  tone: CardTone
   selected: boolean
   draggable: boolean
   onPointerDown: (e: React.PointerEvent, t: WorkItem, zone: DropZone) => void
   onClick: (t: WorkItem) => void
   register: (num: string, el: HTMLElement | null) => void
 }
-const BoardCard = memo(function BoardCard({ t, zone, toneRgb, selected, draggable, onPointerDown, onClick, register }: BoardCardProps) {
-  const c = (a: number) => `rgb(${toneRgb} / ${a})`
+const BoardCard = memo(function BoardCard({ t, zone, tone, selected, draggable, onPointerDown, onClick, register }: BoardCardProps) {
+  const c = toneCss
   const sel = selected ? { borderColor: c(0.92), bgcolor: c(0.15), boxShadow: `0 0 0 2px ${c(0.22)}` } : null
   return (
     <Box
@@ -129,16 +132,18 @@ const BoardCard = memo(function BoardCard({ t, zone, toneRgb, selected, draggabl
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(t) }
       }}
       sx={{
+        '--card-tone': toneVar(tone),
         border: '1px solid', borderColor: c(0.24), bgcolor: c(0.055),
         borderRadius: `${radius.card}px`, px: 1.5, py: 1.25,
         cursor: draggable ? 'grab' : 'pointer',
         userSelect: 'none',
         // 드래그 가능한 카드만 세로 팬 제한(가로 끌기=드래그). 비드래그 카드는 모바일 보드 가로 스크롤 통과
         touchAction: draggable ? 'pan-y' : 'auto',
-        transition: 'border-color .14s, background-color .14s, box-shadow .14s',
-        '&:hover': { borderColor: c(0.78), bgcolor: c(0.09) },
+        transition: 'border-color .14s, background-color .14s, box-shadow .14s, transform .14s',
+        // 호버 시 2px 떠오름 — 그리드 카드(TaskAccordion)와 같은 감각
+        '&:hover': { borderColor: c(0.78), bgcolor: c(0.09), transform: 'translateY(-2px)', boxShadow: 'var(--shadow-md)' },
         // 선택 > 호버 — 선택 시 호버에도 선택 모습 유지(TaskAccordion과 동일 규칙)
-        ...(sel ? { ...sel, '&:hover': sel } : {}),
+        ...(sel ? { ...sel, '&:hover': { ...sel, transform: 'translateY(-2px)', boxShadow: `0 0 0 2px ${c(0.22)}, var(--shadow-lg)` } } : {}),
         ...(focusRingSx as object),
       }}
     >
@@ -161,6 +166,7 @@ export default function KanbanBoard({
 }: KanbanBoardProps) {
   const [drag, setDrag] = useState<DragState | null>(null)
   const [hover, setHover] = useState<HoverState>(null)
+  const [expandedCols, setExpandedCols] = useState<Partial<Record<DropZone, boolean>>>({}) // '더 보기'로 전체 펼친 열
   const [overIdx, setOverIdx] = useState<number | null>(null) // 진행중 열 자리표시 위치(드래그 카드 제외 기준)
   const colRefs = useRef<Partial<Record<DropZone, HTMLDivElement | null>>>({})
   const cardEls = useRef(new Map<string, HTMLElement>()) // FLIP·정착 애니메이션용 카드 요소
@@ -473,7 +479,7 @@ export default function KanbanBoard({
       <Box ref={boardRef} sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', overflowX: 'auto', pb: 1 }}>
         {COLS.map(({ zone, title, tone, accent, Icon }) => {
           const list = colItems[zone]
-          const c = (a: number) => `rgb(${TONE_RGB[tone]} / ${a})`
+          const c = toneCss
           const isTarget = !!drag && hover?.kind === 'col' && hover.zone === zone && drag.from !== zone
           const isCandidate = !!drag && drag.from !== zone
           // 진행중 열 삽입정렬 표시 — 드래그 카드는 열에서 빠지고(언마운트) 자리표시(점선)가 overIdx 위치에.
@@ -492,30 +498,46 @@ export default function KanbanBoard({
           } else {
             entries = list.map((t): Entry => ({ kind: 'card', t }))
           }
+          // 열마다 처음엔 COL_CAP장만 그린다. 완료 열이 100건을 넘어 보드 전체가 카드 144장이 되면
+          // 테마 전환·보기 전환 때 딸린 MUI 컴포넌트가 전부 리렌더돼 200~280ms 동안 화면이 멈춘다(실측).
+          // 카드 수를 줄이는 것 말고는 줄일 방법이 없어, 넘치는 만큼은 '더 보기'로 미룬다(데이터는 그대로).
+          const overflow = expandedCols[zone] ? 0 : Math.max(0, entries.length - COL_CAP)
+          if (overflow > 0) entries = entries.slice(0, COL_CAP)
           return (
             <Box
               key={zone}
               ref={(el: HTMLDivElement | null) => { colRefs.current[zone] = el }}
               sx={(th) => ({
+                '--card-tone': toneVar(tone),
                 flex: '1 1 0', minWidth: 232,
                 border: '1px solid',
-                borderColor: isTarget ? c(0.85) : isCandidate ? c(0.4) : th.palette.divider,
+                // 평소에도 상태색 테두리를 옅게 — 중립 divider만 쓰면 4개 열이 서로 구분되지 않는다(사용자 지적).
+                // 드래그 중 후보(.4)·목적지(.85)와는 농도로 확실히 구분된다.
+                borderColor: isTarget ? c(0.85) : isCandidate ? c(0.4) : c(0.26),
                 borderStyle: isCandidate && !isTarget ? 'dashed' : 'solid',
                 borderRadius: `${radius.card}px`,
                 bgcolor: isTarget ? c(0.09) : alpha(th.palette.text.primary, 0.025),
                 boxShadow: isTarget ? `0 0 0 3px ${c(0.16)}` : 'none',
                 transition: 'border-color .14s, background-color .14s, box-shadow .14s',
                 display: 'flex', flexDirection: 'column',
+                // 제목띠가 열 폭을 꽉 채우는데 자기 모서리는 직각이라, 둥근 열 모서리 밖으로 삐져나와
+                // 위쪽에 뾰족한 귀가 생겼다(사용자 지적). 열 단위로 잘라 모서리를 따르게 한다.
+                overflow: 'hidden',
               })}
             >
               {/* 열 머리 — 상태 아이콘·이름·건수 */}
-              <Box sx={(th) => ({ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.5, py: 1.1, borderBottom: `1px solid ${th.palette.divider}` })}>
-                <Icon sx={(th: { palette: { accent: Record<string, string> } }) => ({ fontSize: 18, color: th.palette.accent[accent] })} />
-                <Typography sx={(th) => ({ fontSize: typescale.emphasis.size, fontWeight: typescale.pageTitle.weight, color: th.palette.accent[accent] })}>{title}</Typography>
+              {/* 제목띠 — 상태색 옅은 채움으로 열을 한눈에 구분(구: 배경 없음 + 중립 구분선) */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.5, py: 1.1, bgcolor: c(0.1), borderBottom: `1px solid ${c(0.2)}` }}>
+                {/* 아이콘·제목은 "글자"이므로 채움색(accent)이 아니라 글자용 색(accentText) — 라이트에서 대비 확보 */}
+                <Icon sx={(th: { palette: { accentText: Record<string, string> } }) => ({ fontSize: 18, color: th.palette.accentText[accent] })} />
+                <Typography sx={(th) => ({ fontSize: typescale.emphasis.size, fontWeight: typescale.pageTitle.weight, color: th.palette.accentText[accent as keyof typeof th.palette.accentText] })}>{title}</Typography>
                 <Typography sx={{ fontSize: typescale.body.size, color: 'text.disabled' }}>{list.length}</Typography>
               </Box>
-              {/* 카드 목록(진행중은 드래그 중 자리표시 포함) */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.25, minHeight: 96 }}>
+              {/* 카드 목록(진행중은 드래그 중 자리표시 포함) — 열마다 자체 세로 스크롤.
+                  완료 열은 100건이 넘어 페이지를 1만 px까지 늘렸고, 그 결과 ① 다른 열을 보려고 그만큼
+                  스크롤해야 했으며 ② 루트 스냅샷이 GPU 텍스처 한계를 넘겨 테마 전환이 중단됐다(실측
+                  10,038px × dpr 1.5 = 15,057px). 열 안에서 스크롤하면 문서 높이가 한 화면으로 고정된다. */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1.25, minHeight: 96, maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
                 {list.length === 0 && (
                   <Typography sx={{ py: 3, textAlign: 'center', fontSize: typescale.body.size, color: 'text.disabled' }}>
                     {isCandidate ? '여기에 놓으면 이 상태로 변경' : '해당 업무 없음'}
@@ -542,7 +564,7 @@ export default function KanbanBoard({
                       key={t.id}
                       t={t}
                       zone={zone}
-                      toneRgb={TONE_RGB[tone]}
+                      tone={tone}
                       selected={selectedNum === t.num}
                       draggable={canDrag(t)}
                       onPointerDown={stablePointerDown}
@@ -551,6 +573,22 @@ export default function KanbanBoard({
                     />
                   )
                 })}
+                {overflow > 0 && (
+                  <Box
+                    component="button"
+                    onClick={() => setExpandedCols((p) => ({ ...p, [zone]: true }))}
+                    sx={{
+                      mt: 0.5, py: 1, width: '100%',
+                      border: '1px dashed', borderColor: c(0.4), borderRadius: `${radius.card}px`,
+                      bgcolor: 'transparent', cursor: 'pointer', fontFamily: 'inherit',
+                      fontSize: typescale.body.size, color: 'text.secondary',
+                      '&:hover': { bgcolor: c(0.09), color: 'text.primary' },
+                      '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
+                    }}
+                  >
+                    나머지 {overflow}건 더 보기
+                  </Box>
+                )}
               </Box>
             </Box>
           )
@@ -570,7 +608,7 @@ export default function KanbanBoard({
           sx={(th) => ({
             position: 'fixed', zIndex: th.zIndex.modal + 1, pointerEvents: 'none',
             width: drag.w,
-            border: '1px solid', borderColor: `rgb(${TONE_RGB[COLS.find((cc) => cc.zone === drag.from)!.tone]} / 0.85)`,
+            border: '1px solid', borderColor: `rgb(${toneVar(COLS.find((cc) => cc.zone === drag.from)!.tone)} / 0.85)`,
             bgcolor: 'background.paper',
             borderRadius: `${radius.card}px`, px: 1.5, py: 1.25,
             boxShadow: shadow.lg, opacity: 0.96,

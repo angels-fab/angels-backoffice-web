@@ -113,7 +113,7 @@ export default function WorkAttachments({ attachments, variant = 'card' }: WorkA
               {/* 끝 슬롯 — PC: 고정폭에서 크기↔다운로드 크로스페이드 / 터치: 크기+아이콘 병행 / 완료 직후 초록 체크 */}
               <Box component="span" className="att-end" sx={{ position: 'relative', flex: 'none', width: 44, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                 {done ? (
-                  <Box component="span" sx={(th) => ({ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: th.palette.accent.green })}>
+                  <Box component="span" sx={(th) => ({ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', color: th.palette.accentText.green })}>
                     <CheckIcon sx={{ fontSize: iconSize.body }} />
                   </Box>
                 ) : (

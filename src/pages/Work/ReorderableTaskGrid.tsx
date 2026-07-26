@@ -8,7 +8,7 @@ import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trash
 import SwipeableCard, { type WorkSwipeConfig } from './SwipeableCard'
 
 // 시안(docs/mockups/work-card-motion-only.html · work-drag-trash.html) 물리값
-const ACTIVATION_DISTANCE = 8 // px 이상 움직여야 드래그 시작(마우스·순서편집 터치)
+const ACTIVATION_DISTANCE = 3 // px 이상 움직이면 드래그 시작(거의 즉시 — 보드와 동일. 순수 클릭 <2px는 선택 유지)
 const SWITCH_MARGIN = 28 // 새 슬롯이 현재 슬롯보다 이만큼 명확히 가까울 때만 재배치(중심거리, px)
 const SWITCH_LOCK_MS = 240 // 재배치 시작 후 추가 재배치 판정 잠금(왕복 방지)
 const MOVE_DURATION = 240 // 주변 카드 자리 이동 애니메이션(ms)
@@ -546,15 +546,15 @@ export default function ReorderableTaskGrid({
               <Box
                 data-reorder-handle
                 aria-label="순서 이동 손잡이"
-                sx={{
+                sx={(th) => ({
                   position: 'absolute', top: 6, left: 6, zIndex: 4,
                   width: 32, height: 32, borderRadius: `${radius.modal}px`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  bgcolor: 'rgba(15,17,23,.74)', color: 'common.white',
+                  bgcolor: alpha(th.palette.background.paper, 0.86), color: 'text.primary',
                   border: '1px solid', borderColor: 'divider',
                   cursor: 'grab', touchAction: 'none',
                   '&:active': { cursor: 'grabbing' },
-                }}
+                })}
               >
                 <DragIndicatorIcon sx={{ fontSize: iconSize.header }} />
               </Box>

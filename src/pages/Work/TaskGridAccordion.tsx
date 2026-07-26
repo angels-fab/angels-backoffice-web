@@ -23,7 +23,7 @@ import { StatusChip } from '@/components/ds'
 import { radius, iconSize, typescale } from '@/theme/tokens'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { taskTitle, taskLink, catKind, deptKind } from './workMeta'
+import { taskTitle, taskLink, catKind } from './workMeta'
 import ManagerChip from '@/components/ds/ManagerChip'
 import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
@@ -83,8 +83,8 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
   const cardBody = (t: WorkItem, on: boolean, showChevron: boolean, hideMenu?: boolean) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
       {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-      {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}
-      <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: typescale.emphasis.weight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      {t.dept && <StatusChip status="neutral" label={t.dept} />}
+      <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: typescale.emphasis.weight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'text.primary' }}>
         {taskTitle(t)}
       </Typography>
       {isAdmin && !hideMenu && (

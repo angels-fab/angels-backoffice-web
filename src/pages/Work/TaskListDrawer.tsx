@@ -15,7 +15,7 @@ import { SearchBar, StatusChip } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
-import { taskTitle, taskLink, catKind, deptKind } from './workMeta'
+import { taskTitle, taskLink, catKind } from './workMeta'
 import ManagerChip from '@/components/ds/ManagerChip'
 import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
@@ -137,8 +137,8 @@ export default function TaskListDrawer({
                     }}
                   >
                     {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-                    {t.dept && <StatusChip status={deptKind(t.dept)} label={t.dept} />}
-                    <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: typescale.emphasis.weight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {t.dept && <StatusChip status="neutral" label={t.dept} />}
+                    <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: typescale.emphasis.weight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'text.primary' }}>
                       {taskTitle(t)}
                     </Typography>
                   </Box>
@@ -166,7 +166,7 @@ export default function TaskListDrawer({
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                 <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', flex: 1, minWidth: 0 }}>
                   {selTask.cat && <StatusChip status={catKind(selTask.cat)} label={selTask.cat} />}
-                  {selTask.dept && <StatusChip status={deptKind(selTask.dept)} label={selTask.dept} />}
+                  {selTask.dept && <StatusChip status="neutral" label={selTask.dept} />}
                 </Box>
                 {isAdmin && (onEdit || onDelete) && (
                   <Box sx={{ display: 'flex', gap: 0.25, flexShrink: 0 }}>

@@ -4,8 +4,8 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
-import { ContentSection } from '@/components/ds'
-import { iconSize, shadow, typescale } from '@/theme/tokens'
+import { ContentSection, focusRingSx } from '@/components/ds'
+import { iconSize, radius, shadow, typescale } from '@/theme/tokens'
 import type { DropZone, WorkView } from './dropZones'
 
 /**
@@ -38,21 +38,18 @@ export interface KpiSectionProps {
 // 시안 고정 색상(다크 전용 포털) — 상태명/워시/강조는 경계 2% 혼합 규칙을 그대로 사용
 // D3 전역 배정(사용자 확정): 진행중=그린 · 보류=앰버 · 완료=파랑 · Remind(플래그)=퍼플
 // 경계색 = 인접 두 상태색(accent RGB)의 중간값: 그린77,161,103 · 앰버214,162,62 · 파랑84,145,218 · 퍼플169,138,224
-const LABEL: Record<DropZone, string> = { inProgress: '#72c78d', hold: '#e0bc74', done: '#79a9e2', remind: '#bfa7ef' }
-const WASH: Record<DropZone, string> = {
-  inProgress: 'linear-gradient(to right, rgba(77,161,103,.1) 0 98%, rgba(146,162,83,.098) 100%)',
-  hold: 'linear-gradient(to right, rgba(146,162,83,.098) 0%, rgba(214,162,62,.095) 2% 98%, rgba(149,154,140,.09) 100%)',
-  done: 'linear-gradient(to right, rgba(149,154,140,.09) 0%, rgba(84,145,218,.085) 2% 98%, rgba(127,142,221,.078) 100%)',
-  remind: 'linear-gradient(to right, rgba(127,142,221,.078) 0%, rgba(169,138,224,.07) 2% 100%)',
-}
+// 상태명은 "글자"이므로 채움색이 아니라 글자용 강조색(테마별로 자동 전환되는 --*-tx)을 쓴다.
+// 구 하드코딩 파스텔(#72c78d 등)은 다크 전용 값이라 라이트에서 1.7~2.2:1로 읽히지 않았음.
+const LABEL: Record<DropZone, string> = { inProgress: 'var(--green-tx)', hold: 'var(--amber-tx)', done: 'var(--blue-tx)', remind: 'var(--purple-tx)' }
+// 선택·드롭 후보 타일의 채움 — 타일이 분리 카드가 되면서 연결형 시절의 경계 블렌딩 그라데이션은 불필요해졌다.
+// 평면 단색이라 라이트/다크 모두에서 농도가 그대로 나온다("색에 힘이 없다" 대응).
 const STRONG: Record<DropZone, string> = {
-  inProgress: 'linear-gradient(to right, rgba(77,161,103,.34) 0 98%, rgba(146,162,83,.34) 100%)',
-  hold: 'linear-gradient(to right, rgba(146,162,83,.34) 0%, rgba(214,162,62,.34) 2% 98%, rgba(149,154,140,.34) 100%)',
-  done: 'linear-gradient(to right, rgba(149,154,140,.28) 0%, rgba(84,145,218,.28) 2% 98%, rgba(127,142,221,.28) 100%)',
-  remind: 'linear-gradient(to right, rgba(127,142,221,.25) 0%, rgba(169,138,224,.25) 2% 100%)',
+  inProgress: 'rgba(77,161,103,.34)',
+  hold: 'rgba(214,162,62,.34)',
+  done: 'rgba(84,145,218,.34)',
+  remind: 'rgba(169,138,224,.32)',
 }
 const LABEL_KO: Record<DropZone, string> = { inProgress: '진행중', hold: '보류', done: '완료', remind: 'Remind' }
-const DIVIDER = 'rgba(170,180,195,.22)'
 
 const keyActivate = (fn: () => void) => (e: KeyboardEvent) => {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); fn() }
@@ -61,7 +58,7 @@ const keyActivate = (fn: () => void) => (e: KeyboardEvent) => {
 export default function KpiSection({
   inProgressCount, holdCount, checkInProgCount, checkHoldCount,
   doneCount, remindCount,
-  view, onOpenView, activeZone, pulse,
+  view, onOpenView, dragging, activeZone, pulse,
 }: KpiSectionProps) {
   const checkTotal = checkInProgCount + checkHoldCount
 
@@ -82,9 +79,11 @@ export default function KpiSection({
   const pulseKey = (zone: DropZone) => (pulse && pulse.zone === zone ? pulse.tick : 0)
 
   // 상태 영역(타일) — 클릭=목록, 드롭존, 선택/호버=배경 농도(테두리 없음), 하단 30px 인디케이터
-  const tile = (zone: DropZone, count: number, checkCount: number, radius: { xs: string; md: string }) => {
+  const tile = (zone: DropZone, count: number, checkCount: number) => {
     const selected = view === zone
-    const highlighted = selected || activeZone === zone
+    // 드래그 중에는 **실제로 겹친 존 하나만** 켠다. 선택 타일까지 같이 켜두면 두 타일이 동시에
+    // 활성으로 보여 어디에 놓이는지 헷갈린다(사용자 지적). 드래그가 끝나면 선택 강조가 돌아온다.
+    const highlighted = dragging ? activeZone === zone : selected
     return (
       <Box
         role="button"
@@ -99,24 +98,24 @@ export default function KpiSection({
           position: 'relative', minWidth: 0, minHeight: { xs: 82, md: 90 },
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: '4px', textAlign: 'center', cursor: 'pointer', color: LABEL[zone],
-          borderRadius: { xs: radius.xs, md: radius.md },
-          // 하단 인디케이터가 타일 곡률 밖으로 삐져나오지 않게 타일 단위로만 클리핑
-          // (컨테이너 overflow:hidden 금지 — '부서장 확인' 칩은 family에 붙어 있어 영향 없음.
-          //  타일 밖으로 나가는 자식이 없고, 각 위치별 radius를 그대로 따라 모서리가 감싸짐)
+          // 분리형 카드(약한 분리) — 대면적 파스텔 대신 중립 표면. 색은 라벨·하단 인디케이터·드래그 강조로만.
+          borderRadius: `${radius.card}px`,
+          border: '1px solid',
+          borderColor: highlighted ? 'transparent' : 'divider',
+          boxShadow: highlighted ? 'none' : shadow.sm,
           overflow: 'hidden',
-          background: highlighted ? STRONG[zone] : WASH[zone],
+          // 평소=중립 카드, 드래그 후보·선택 시에만 상태색이 켜진다(드롭존 역할 유지)
+          background: highlighted ? STRONG[zone] : 'var(--ink2)',
           transition: 'background .14s ease, box-shadow .14s ease, transform .14s ease',
-          '&:hover': { background: STRONG[zone] },
-          '&:focus-visible': { outline: '2px solid #7db3ef', outlineOffset: '-3px' },
-          // 하단 인디케이터(선택 시) — 시안 state-tab처럼 타일 전체 폭의 긴 상태색 라인(장식, pointer-events 없음)
-          '&::after': {
-            content: '""', position: 'absolute', left: 0, right: 0, bottom: 0, height: 3,
-            bgcolor: 'currentColor',
-            opacity: highlighted ? 0.9 : 0, transition: 'opacity .14s', pointerEvents: 'none',
-          },
-          '&:hover::after': { opacity: highlighted ? 0.9 : 0.4 },
+          // 드래그 중에는 :hover를 끈다. 들린 카드는 pointerEvents:'none'이고 포인터 캡처도 안 쓰므로
+          // 커서가 지나가는 타일이 계속 hover를 받는데, 드롭 판정(activeZone)은 커서가 아니라
+          // '카드 실영역의 최대 교차면적 + 1.15배 히스테리시스'라 둘이 어긋난다 → 타일 2개가 동시에 켜짐.
+          ...(dragging ? {} : { '&:hover': { background: STRONG[zone], transform: 'translateY(-2px)', boxShadow: shadow.md } }),
+          ...(focusRingSx as object),
+          // 하단 3px 인디케이터는 제거(사용자 요청). 분리형 카드가 되면서 강조 배경만으로 상태가 충분히 읽히고,
+          // 선(線)까지 있으면 타일마다 색 요소가 둘이라 시끄러웠다.
           // 드래그 표시 규칙 — 드래그 시작만으로는 아무 변화 없음(링·확대·테두리 금지).
-          // 카드가 실제로 겹친 존(activeZone)만 클릭 선택과 동일한 효과(강조 배경 + 하단 상태색 선).
+          // 카드가 실제로 겹친 존(activeZone)만 강조 배경으로 켜진다.
         }}
       >
         {/* 건수(위) — Check 배지는 레이아웃 폭에 미포함(absolute)이라 중앙축 불변 */}
@@ -133,15 +132,16 @@ export default function KpiSection({
             <Box
               component="span"
               aria-hidden
-              sx={{
+              sx={(t) => ({
                 position: 'absolute', left: 'calc(100% + 7px)', top: '50%', transform: 'translateY(-50%)',
                 width: { xs: 20, md: 21 }, height: { xs: 20, md: 21 },
                 border: '1px solid rgba(169,138,224,.52)', borderRadius: '999px',
-                bgcolor: '#29233a', color: '#d7c6f6',
+                bgcolor: t.palette.mode === 'dark' ? '#29233a' : 'rgba(169,138,224,.16)',
+                color: t.palette.mode === 'dark' ? '#d7c6f6' : '#6f4fb0',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: typescale.small.size, fontWeight: typescale.display.weight, lineHeight: 1,
                 boxShadow: shadow.sm, pointerEvents: 'none',
-              }}
+              })}
             >
               {checkCount}
             </Box>
@@ -161,16 +161,9 @@ export default function KpiSection({
     display: 'grid',
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     minWidth: 0,
-    // 모바일(<md): 그룹이 독립 카드
-    border: { xs: '1px solid', md: 0 },
-    borderColor: { xs: 'divider', md: 'transparent' },
-    borderRadius: { xs: '15px', md: 0 },
-    bgcolor: { xs: 'background.paper', md: 'transparent' },
+    // 타일이 각자 카드가 됐으므로 그룹은 배치만 담당(테두리·구분선 제거). 간격은 아래 카드들과 같은 리듬
+    gap: '10px',
     overflow: 'visible',
-    '&::after': {
-      content: '""', position: 'absolute', zIndex: 2, left: '50%', top: 10, bottom: 10, width: '1px',
-      bgcolor: DIVIDER, pointerEvents: 'none',
-    },
   }
 
   return (
@@ -192,24 +185,15 @@ export default function KpiSection({
           position: 'relative',
           display: 'grid',
           gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
-          gap: { xs: '26px', md: 0 },
-          border: { xs: 0, md: '1px solid' },
-          borderColor: { md: 'divider' },
-          borderRadius: { md: '18px' },
-          bgcolor: { xs: 'transparent', md: 'background.paper' },
+          gap: { xs: '26px', md: '10px' },
           overflow: 'visible',
           '& > *': { minWidth: 0 },
-          // 보류/완료 사이 중앙 구분선(PC 연결형에서만)
-          '&::after': {
-            content: '""', position: 'absolute', zIndex: 2, left: '50%', top: 10, bottom: 10, width: '1px',
-            bgcolor: DIVIDER, pointerEvents: 'none', display: { xs: 'none', md: 'block' },
-          },
         }}
       >
         {/* 진행중 + 보류 그룹 */}
         <Box aria-label="진행 업무 그룹" sx={familySx}>
-          {tile('inProgress', inProgressCount, checkInProgCount, { xs: '14px 0 0 14px', md: '17px 0 0 17px' })}
-          {tile('hold', holdCount, checkHoldCount, { xs: '0 14px 14px 0', md: '0' })}
+          {tile('inProgress', inProgressCount, checkInProgCount)}
+          {tile('hold', holdCount, checkHoldCount)}
           {/* 부서장 확인 통합 칩 — 진행중·보류 경계 하단에 걸침. 클릭=Check 목록(진행중+보류) */}
           {checkTotal > 0 && (
             <Tooltip title={`진행중 ${checkInProgCount}건 · 보류 ${checkHoldCount}건`}>
@@ -220,26 +204,26 @@ export default function KpiSection({
                 aria-label={`부서장 확인 업무 ${checkTotal}건 목록 열기`}
                 onClick={(e) => { e.stopPropagation(); onOpenView('check') }}
                 onKeyDown={keyActivate(() => onOpenView('check'))}
-                sx={{
+                sx={(t) => ({
                   position: 'absolute', zIndex: 4, left: '50%', bottom: { xs: -12, md: -13 },
                   transform: 'translateX(-50%)',
                   height: { xs: 24, md: 26 }, px: '10px',
                   border: '1px solid rgba(169,138,224,.42)', borderRadius: '999px',
                   // 배경은 항상 완전 불투명(반투명 rgba 금지) — 뒤 KPI 테두리·구분선이 비치지 않게
-                  // 기본 표면색(#1b202b)에 보라(#a98ae0)를 섞은 불투명 혼합색: 호버 ≈18%, 선택 ≈26%
-                  bgcolor: view === 'check' ? '#413a5a' : '#1b202b',
-                  color: '#c5adf0',
+                  // 다크=표면색+보라 혼합 불투명색 / 라이트=연보라 불투명색(같은 목적: 뒤 요소 비침 방지)
+                  bgcolor: t.palette.mode === 'dark' ? (view === 'check' ? '#413a5a' : '#1b202b') : (view === 'check' ? '#DCD0F5' : '#EFEAF9'),
+                  color: t.palette.mode === 'dark' ? '#c5adf0' : '#5B3FA6',
                   display: 'flex', alignItems: 'center', gap: '7px',
                   fontSize: typescale.caption.size, fontWeight: typescale.display.weight, whiteSpace: 'nowrap', cursor: 'pointer',
                   boxShadow: shadow.sm,
                   transition: 'background-color .14s ease, border-color .14s ease, transform .14s ease',
-                  '&:hover': { bgcolor: view === 'check' ? '#4a4266' : '#342e4a', borderColor: 'rgba(169,138,224,.65)', transform: 'translateX(-50%) translateY(-1px)' },
-                  '&:focus-visible': { outline: '2px solid #bfa7ef', outlineOffset: '2px' },
-                }}
+                  '&:hover': { bgcolor: t.palette.mode === 'dark' ? (view === 'check' ? '#4a4266' : '#342e4a') : (view === 'check' ? '#D2C2F0' : '#E7DEF6'), borderColor: 'rgba(169,138,224,.65)', transform: 'translateX(-50%) translateY(-1px)' },
+                  ...(focusRingSx as object),
+                })}
               >
                 <CheckIcon sx={{ fontSize: iconSize.caption }} />
                 <Box component="span">부서장 확인</Box>
-                <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: typescale.display.weight, color: '#d7c6f6' }}>{checkTotal}</Box>
+                <Box component="span" sx={(t) => ({ fontSize: typescale.body.size, fontWeight: typescale.display.weight, color: t.palette.mode === 'dark' ? '#d7c6f6' : '#5B3FA6' })}>{checkTotal}</Box>
               </Box>
             </Tooltip>
           )}
@@ -247,8 +231,8 @@ export default function KpiSection({
 
         {/* 완료 + Remind 그룹 */}
         <Box aria-label="완료 업무 그룹" sx={familySx}>
-          {tile('done', doneCount, 0, { xs: '14px 0 0 14px', md: '0' })}
-          {tile('remind', remindCount, 0, { xs: '0 14px 14px 0', md: '0 17px 17px 0' })}
+          {tile('done', doneCount, 0)}
+          {tile('remind', remindCount, 0)}
         </Box>
       </Box>
     </ContentSection>

@@ -189,9 +189,23 @@ function sliceRunsFrom(runs: Run[], n: number): Run[] {
   return out
 }
 
+// 목록 한 단계 들여쓰기(px) — 리치텍스트 목록과 일반 텍스트 2차가 같은 폭을 쓰도록 공유
+const LIST_INDENT_PX = 18
+
+/**
+ * 앞 공백 → 들여쓰기 px. **공백 수를 그대로 px로 환산하지 않고 단계로 스냅**한다.
+ *
+ * 작성 관례는 2단계다 — 1차 = `- 내용`, 2차 = `  ① 내용`(2칸 들여쓴 동그라미숫자).
+ * 구현은 공백 1칸을 4px로 환산했는데, 1차를 공백 0칸으로 쓴 줄(33)과 1칸으로 쓴 줄(266)이 섞여 있어
+ * 같은 1차끼리 4px씩 어긋나 보였다(위계가 아니라 작성 편차가 화면에 새는 것). 2차도 8px밖에
+ * 안 들어가 1차와 구분되지 않았고, 리치텍스트 목록 한 단계(LIST_INDENT_PX=18)와도 폭이 달랐다.
+ * 2칸을 한 단계로 보고 스냅하면 1차 299줄이 한 줄로 정렬되고 2차 147줄이 확실히 들어간다.
+ */
 function lineMeta(text: string): { indentPx: number; leadLen: number } {
   const lead = text.match(/^[ \t]*/)?.[0] || ''
-  return { indentPx: lead.replace(/\t/g, '    ').length * 4, leadLen: lead.length }
+  const spaces = lead.replace(/\t/g, '    ').length
+  const level = Math.min(3, Math.floor(spaces / 2))
+  return { indentPx: level * LIST_INDENT_PX, leadLen: lead.length }
 }
 
 /** 일반 텍스트 한 줄 → BodyLine(글머리·들여쓰기 분리, 서식 없음) */
@@ -202,9 +216,6 @@ export function plainLineToBodyLine(line: string): BodyLine {
   if (m) return { marker: m[1], indentPx, runs: m[2] ? [{ text: m[2], marks: {} }] : [], plain: line }
   return { marker: null, indentPx, runs: rest ? [{ text: rest, marks: {} }] : [], plain: line }
 }
-
-// 목록 한 단계 들여쓰기(px) — 텍스트 글머리(선행 공백)와 시각적으로 어울리게
-const LIST_INDENT_PX = 18
 
 /** 문단 → BodyLine. forcedMarker(목록 항목)면 마커는 목록에서 부여하고 본문은 그대로 유지 */
 function paragraphToBodyLine(p: PMParagraph, baseIndentPx: number, forcedMarker?: string): BodyLine {

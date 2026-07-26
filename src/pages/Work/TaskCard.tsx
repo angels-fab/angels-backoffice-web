@@ -39,8 +39,8 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
         })}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-          <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accent.purple', flexShrink: 0 }} />
-          <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{taskTitle(t)}</Typography>
+          <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accentText.purple', flexShrink: 0 }} />
+          <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'text.primary' }}>{taskTitle(t)}</Typography>
           <Box sx={{ flexShrink: 0 }}><StatusChip status={catKind(t.cat)} label={t.cat || '미분류'} /></Box>
         </Box>
       </AppCard>
@@ -61,7 +61,7 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, height: '100%' }}>
         {/* 최상단: 압정 · 상태 · 구분 · 담당자 색칩 · 날짜 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-          <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accent.purple', flexShrink: 0 }} />
+          <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accentText.purple', flexShrink: 0 }} />
           <StatusChip status={st.status} label={st.label} />
           {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
           <ManagerChip name={t.mgr} sx={{ ml: 'auto' }} />

@@ -30,7 +30,7 @@ export default function WorkPinButton({ num }: { num: string }) {
           e.stopPropagation()
           dispatch(putSetting({ key: 'work.pins', value: pinned ? list.filter((n) => n !== num) : [...list, num] }))
         }}
-        sx={(th) => ({ p: 0.5, color: pinned ? th.palette.accent.amber : 'text.disabled', '&:hover': { color: th.palette.accent.amber } })}
+        sx={(th) => ({ p: 0.5, color: pinned ? th.palette.accent.amber : 'text.disabled', '&:hover': { color: th.palette.accentText.amber } })}
       >
         {pinned ? <StarRoundedIcon sx={{ fontSize: iconSize.action }} /> : <StarBorderRoundedIcon sx={{ fontSize: iconSize.action }} />}
       </IconButton>
