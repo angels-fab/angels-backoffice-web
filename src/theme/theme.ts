@@ -1,6 +1,6 @@
 import type * as React from 'react'
 import { alpha, createTheme, type Theme } from '@mui/material/styles'
-import { accent, accentTextDark, accentTextLight, darkPalette, hoverShadow, lightPalette, radius, shadow } from './tokens'
+import { accent, accentTextDark, accentTextLight, darkPalette, hoverShadow, lightPalette, radius, shadow, control } from './tokens'
 
 /**
  * MUI 테마 팩토리. 다크/라이트 모드를 토큰에서 생성한다.
@@ -181,6 +181,9 @@ function buildTheme(mode: Mode): Theme {
             borderRadius: radius.button,
             '&.Mui-focusVisible': { boxShadow: focusRing },
           },
+          // 헤더·툴바에서 검색창과 나란히 서는 경우가 많아 같은 높이로 맞춘다.
+          // MUI 기본은 Button(small) 30px · TextField(small) 37px라 7px 어긋나 짝이 안 맞아 보였다.
+          sizeSmall: { minHeight: control.height },
         },
       },
       MuiIconButton: {

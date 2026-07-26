@@ -287,6 +287,13 @@ export const typescale = {
 /**
  * 아이콘 크기 4단 (P1 확정, B#8) — sx fontSize에 이 값만 사용. 17·19 등 중간값 스냅.
  */
+/**
+ * 컨트롤 높이 정본 — 헤더·툴바에서 나란히 놓이는 버튼과 입력이 같은 높이를 갖게 한다.
+ * 예전엔 MUI 기본값을 그대로 써서 Button(small) 30px · TextField(small) 37px로 7px 어긋났고,
+ * 검색창 옆 '새 공지·장비 추가' 버튼이 낮아 짝이 안 맞아 보였다(사용자 지적 2026-07-26).
+ */
+export const control = { height: 36 } as const
+
 export const iconSize = {
   caption: 13,
   body: 16,

@@ -1,5 +1,6 @@
 import TextField from '@mui/material/TextField'
 import { mergeSx } from './sxMerge'
+import { control } from '@/theme/tokens'
 import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
 import SearchIcon from '@mui/icons-material/Search'
@@ -38,7 +39,8 @@ export default function SearchBar({
       placeholder={placeholder}
       size="small"
       autoFocus={autoFocus}
-      sx={mergeSx({ width }, sx)}
+      // 옆에 서는 액션 버튼과 같은 높이(control.height) — 둘이 짝으로 읽히려면 위아래 변이 맞아야 한다
+      sx={mergeSx({ width, '& .MuiOutlinedInput-root': { height: control.height } }, sx)}
       slotProps={{
         input: {
           startAdornment: (
