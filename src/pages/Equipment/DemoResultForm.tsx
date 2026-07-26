@@ -165,7 +165,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
         )}
         {/* 방문일/데모센터 */}
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 1, mb: 1 }}>
-          <Box><Box sx={label}>방문일</Box><Box component="input" type="date" value={date} onChange={(e) => setDate((e.target as HTMLInputElement).value)} sx={(th) => ({ ...field(th), colorScheme: 'dark' })} /></Box>
+          <Box><Box sx={label}>방문일</Box><Box component="input" type="date" value={date} onChange={(e) => setDate((e.target as HTMLInputElement).value)} sx={(th) => ({ ...field(th), colorScheme: th.palette.mode })} /></Box>
           <Box><Box sx={label}>데모센터</Box><ComboField value={place} onChange={setPlace} options={placeOpts} placeholder="예: 용인 데모센터" ariaLabel="데모센터" /></Box>
         </Box>
         {/* 샘플 정보 */}

@@ -52,7 +52,7 @@ function ScheduleRow({ left, title, right, leftColor }: { left: string; title: s
       >
         {left}
       </Box>
-      <Typography sx={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <Typography sx={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {title}
       </Typography>
       {right}
@@ -143,7 +143,7 @@ export default function ScheduleSection() {
                     component="span"
                     sx={{
                       flexShrink: 0,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 700,
                       px: 0.75,
                       py: '2px',

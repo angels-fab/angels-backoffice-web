@@ -8,7 +8,7 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
-import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, Select, SearchBar } from '@/components/ds'
+import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, LoadingState, Select, SearchBar } from '@/components/ds'
 import { iconSize, radius } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
@@ -127,7 +127,7 @@ export default function EquipmentOps() {
     <PageContainer>
       <PageHeader
         icon={<MonitorIcon />}
-        title="장비 관리"
+        title="장비관리"
         updatedAt={error ? '연결 실패' : undefined}
         actions={
           <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
@@ -202,7 +202,11 @@ export default function EquipmentOps() {
           </Box>
         </Box>
 
-        {listed.length === 0 ? (
+        {loading && listed.length === 0 ? (
+          /* 첫 로딩 — 빈 상태 문구('없습니다')가 먼저 뜨지 않게 로딩을 우선 렌더.
+             이미 목록이 있는 새로고침 중에는 기존 표를 유지한다. */
+          <LoadingState label="장비를 불러오는 중…" />
+        ) : listed.length === 0 ? (
           <EmptyState size="sm" title="조건에 맞는 장비가 없습니다" />
         ) : (
           <Box sx={{ overflowX: 'auto' }}>
@@ -224,12 +228,12 @@ export default function EquipmentOps() {
                       <Box component="td" className="lg-code">{codeRange(g)}</Box>
                       <Box component="td" className="lg-primary">
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
-                          <NameWithQty name={g.name} count={g.count} fontSize={12} />
+                          <NameWithQty name={g.name} count={g.count} fontSize={14} />
                           {g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400, fontSize: 11, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
                       </Box>
-                      <Box component="td">{g.cat || '-'}</Box>
-                      <Box component="td">{g.mgr || '-'}</Box>
+                      <Box component="td" sx={{ color: 'text.primary', fontSize: 12 }}>{g.cat || '-'}</Box>
+                      <Box component="td" sx={{ color: 'text.primary', fontSize: 12 }}>{g.mgr || '-'}</Box>
                       <Box component="td"><StatusChip status={meta.status} label={meta.label} /></Box>
                       <Box component="td" sx={{ color: g.installLoc ? 'text.secondary' : req ? 'warning.main' : 'text.disabled' }}>{g.installLoc || '미등록'}</Box>
                       <Box component="td">

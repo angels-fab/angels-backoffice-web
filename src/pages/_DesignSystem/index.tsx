@@ -129,7 +129,7 @@ export default function DesignSystemShowcase() {
           <Demo name="<ListRow>" desc="목록·표의 한 행 (④ 리스트 통일) — 카드 안 divider 나열">
             <AppCard padding={0}>
               <ListRow
-                leading={<CampaignIcon sx={{ fontSize: 18, color: 'accent.amber' }} />}
+                leading={<CampaignIcon sx={{ fontSize: 18, color: 'accentText.amber' }} />}
                 title="7월 정기 안전교육 일정 안내드립니다"
                 subtitle="운영지원팀 · 김담당"
                 trailing={

@@ -138,7 +138,8 @@ export default function JourneyTimeline({ items, curIdx }: JourneyTimelineProps)
                         justifyContent: 'flex-end',
                         height: BAR_AREA + 50,
                         borderRadius: `${radius.chip}px`,
-                        bgcolor: (t) => (isCur ? alpha(t.palette.accent.amber, 0.07) : 'transparent'),
+                        // '현재' 구간 채움 — 라이트(흰 배경)에선 .07이 사실상 흰색이라 현재 위치가 안 보였다
+                        bgcolor: (t) => (isCur ? alpha(t.palette.accent.amber, t.palette.mode === 'light' ? 0.2 : 0.07) : 'transparent'),
                         opacity: isPast ? 0.55 : 1,
                       }}
                     >
@@ -152,7 +153,9 @@ export default function JourneyTimeline({ items, curIdx }: JourneyTimelineProps)
                             px: 0.75,
                             borderRadius: `${radius.chip}px`,
                             bgcolor: 'accent.amber',
-                            color: 'background.default',
+                            // 채움 위 라벨 — 'background.default'는 라이트에서 밝은색이라 앰버 위에서 2.1:1로 사라졌다.
+                            // 채움색 대비로 흰/검을 자동 선택(테마 무관하게 항상 읽힘)
+                            color: (t) => t.palette.getContrastText(t.palette.accent.amber),
                             fontWeight: typescale.emphasis.weight,
                             whiteSpace: 'nowrap',
                           }}
@@ -162,7 +165,7 @@ export default function JourneyTimeline({ items, curIdx }: JourneyTimelineProps)
                       )}
                       {/* 종점 — 개소 */}
                       {isLast && (
-                        <Box sx={{ position: 'absolute', top: 0, display: 'flex', fontSize: iconSize.header, color: 'accent.purple' }}>
+                        <Box sx={{ position: 'absolute', top: 0, display: 'flex', fontSize: iconSize.header, color: 'accentText.purple' }}>
                           <RocketLaunchIcon fontSize="inherit" />
                         </Box>
                       )}
@@ -229,7 +232,7 @@ export default function JourneyTimeline({ items, curIdx }: JourneyTimelineProps)
                     {y.year}
                   </Typography>
                   {y.year === '2029' && (
-                    <Typography variant="caption" sx={{ color: 'accent.purple', fontWeight: typescale.emphasis.weight }}>
+                    <Typography variant="caption" sx={{ color: 'accentText.purple', fontWeight: typescale.emphasis.weight }}>
                       개소
                     </Typography>
                   )}

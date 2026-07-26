@@ -63,7 +63,7 @@ export default function SideNav() {
                           flexShrink: 0,
                           fontSize: typescale.caption.size,
                           lineHeight: 1.5,
-                          color: 'accent.amber',
+                          color: 'accentText.amber',
                           border: '1px solid',
                           borderColor: (t) => alpha(t.palette.accent.amber, 0.45),
                           bgcolor: (t) => alpha(t.palette.accent.amber, 0.12),

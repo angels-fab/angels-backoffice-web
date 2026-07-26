@@ -33,7 +33,7 @@ export default function PinnedWorksSection() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
               <WorkPinButton num={t.num} />
               {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
-              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: typescale.emphasis.weight }}>
+              <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'text.primary', fontWeight: typescale.emphasis.weight }}>
                 {taskTitle(t)}
               </Typography>
               <ManagerChip name={t.mgr} />

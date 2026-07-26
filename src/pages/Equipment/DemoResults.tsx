@@ -875,13 +875,13 @@ function EquipGroup({ equipment, defs, defsAll, makers, messages, canEdit, canMo
     // 그룹 셸 — 제목띠(장비명+도구)가 레인들+메모를 통째로 감쌈
     <Box sx={{ mb: 3, border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, bgcolor: 'background.paper', boxShadow: shadow.sm, overflow: 'hidden' }}>
       {/* 제목띠 — 장비명 + 지표편집·변경이력 */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.75, py: '8px', bgcolor: '#39415a', color: 'common.white' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.75, py: '8px', bgcolor: 'background.elevated', color: 'text.primary' }}>
         <Box sx={{ fontSize: typescale.emphasis.size, fontWeight: 800 }}>{equipment}</Box>
         <Box sx={{ fontSize: typescale.caption.size, opacity: 0.8 }}>데모 기록 · 지표는 각 사 조건 기준</Box>
         <Box sx={{ flex: 1 }} />
-        {canEdit && <Tooltip title="표준 지표 관리(자동완성 후보)"><IconButton size="small" aria-label="지표 편집" onClick={onEditMetrics} sx={{ p: '3px', color: 'rgba(255,255,255,.75)', '&:hover': { color: 'common.white' } }}><TuneIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>}
+        {canEdit && <Tooltip title="표준 지표 관리(자동완성 후보)"><IconButton size="small" aria-label="지표 편집" onClick={onEditMetrics} sx={{ p: '3px', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}><TuneIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>}
         <Tooltip title={latestValueChange ? `변경 이력 — 최근: ${latestValueChange.maker} · ${latestValueChange.changedBy}` : '변경 이력'} arrow>
-          <IconButton size="small" aria-label="변경 이력" onClick={onViewValueHistory} sx={{ p: '3px', color: latestValueChange ? 'warning.light' : 'rgba(255,255,255,.75)', '&:hover': { color: 'common.white' } }}><HistoryIcon sx={{ fontSize: iconSize.body }} /></IconButton>
+          <IconButton size="small" aria-label="변경 이력" onClick={onViewValueHistory} sx={{ p: '3px', color: latestValueChange ? 'warning.light' : 'text.secondary', '&:hover': { color: 'text.primary' } }}><HistoryIcon sx={{ fontSize: iconSize.body }} /></IconButton>
         </Tooltip>
       </Box>
 

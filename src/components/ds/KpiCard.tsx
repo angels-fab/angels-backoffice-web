@@ -48,7 +48,8 @@ export default function KpiCard({
             position: 'absolute',
             top: 16,
             right: 16,
-            color: (t) => t.palette.accent[accentColor],
+            // 숫자는 "글자"이므로 채움색(accent)이 아니라 글자용 값(accentText)을 쓴다 — 라이트에서 대비 확보
+            color: (t) => t.palette.accentText[accentColor],
             opacity: 0.28,
             fontSize: 28,
             display: 'flex',
@@ -66,7 +67,8 @@ export default function KpiCard({
             fontSize: 34,
             fontWeight: 800,
             lineHeight: 1,
-            color: (t) => t.palette.accent[accentColor],
+            // 숫자는 "글자"이므로 채움색(accent)이 아니라 글자용 값(accentText)을 쓴다 — 라이트에서 대비 확보
+            color: (t) => t.palette.accentText[accentColor],
           }}
         >
           {value}

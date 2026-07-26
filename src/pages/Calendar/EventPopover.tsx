@@ -80,7 +80,7 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
           {detail.catLabel}
         </Box>
         {detail.time && (
-          <Box component="span" sx={{ fontSize: 11, fontWeight: 700, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+          <Box component="span" sx={{ fontSize: 12, fontWeight: 700, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
             {detail.time}
           </Box>
         )}

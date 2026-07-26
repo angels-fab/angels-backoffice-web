@@ -1,5 +1,4 @@
 import Box from '@mui/material/Box'
-import { typescale } from '@/theme/tokens'
 import type { EqGroup, EqRawItem } from '@/types'
 import { eqStateKey } from '@/pages/EquipmentOps/eqMeta'
 
@@ -9,14 +8,15 @@ export const codeRange = (g: EqGroup) =>
 
 /**
  * 장비명 + 복수 수량(2대 이상만) — 배지가 아닌 '장비명 옆 강조 텍스트'.
- * 1대면 수량 미표시. 수량은 장비명보다 약간 작게(0.82em) 표기. 타임라인·목록·대장 공용 규칙.
+ * 1대면 수량 미표시. 장비명은 목록 행 제목 정본(14px), 수량은 약간 작게(12px). 타임라인·목록·대장 공용 규칙.
  */
-export function NameWithQty({ name, count, fontSize = 13, color = 'text.primary' }: { name: string; count: number; fontSize?: number; color?: string }) {
+export function NameWithQty({ name, count, fontSize = 14, color = 'text.primary' }: { name: string; count: number; fontSize?: number; color?: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, minWidth: 0 }}>
-      <Box component="span" sx={{ fontSize, fontWeight: typescale.cardTitle.weight, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</Box>
+      {/* 행 제목 정본 = 14px/500 — 크기·색으로 이미 식별자다. 굵기(700)는 강조 상태 전용 */}
+      <Box component="span" sx={{ fontSize, fontWeight: 500, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</Box>
       {count > 1 && (
-        <Box component="span" sx={{ fontSize: '0.82em', fontWeight: typescale.cardTitle.weight, color: 'text.secondary', flexShrink: 0 }}>{count}대</Box>
+        <Box component="span" sx={{ fontSize: 12, fontWeight: 500, color: 'text.secondary', flexShrink: 0 }}>{count}대</Box>
       )}
     </Box>
   )

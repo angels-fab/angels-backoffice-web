@@ -22,7 +22,7 @@ export default function EqKpi() {
           <div className="kpi-budget-unit" style={{ position: 'absolute', top: -22, right: 2 }}>
             (단위: 천원)
           </div>
-          <div className="kpi-big" style={{ background: '#0d1f33', borderColor: '#1f4068' }}>
+          <div className="kpi-big">
             <div>
               <div className="kpi-big-label">총 도입예산</div>
               <div className="kpi-big-num" style={{ fontSize: 36 }}>{k(won)}</div>
@@ -35,14 +35,14 @@ export default function EqKpi() {
             </div>
           </div>
           <div className="kpi-budget-subgrid">
-            <div className="kpi-bcard" style={{ background: '#1a1d23' }}>
+            <div className="kpi-bcard" style={{ background: 'var(--ink3)' }}>
               <div className="kpi-bcard-label" style={{ color: 'var(--text2)' }}>지방비 예산</div>
               <div className="kpi-bcard-num">{k(localFund)}</div>
               <div className="kpi-bcard-icon">
                 <img src={budgetMapImg} alt="" />
               </div>
             </div>
-            <div className="kpi-bcard" style={{ background: '#1a1d23' }}>
+            <div className="kpi-bcard" style={{ background: 'var(--ink3)' }}>
               <div className="kpi-bcard-label" style={{ color: 'var(--text2)' }}>
                 국비 예산{' '}
                 <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>(예상)</span>

@@ -1,7 +1,8 @@
 import Box from '@mui/material/Box'
+import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
 import { mergeSx } from './sxMerge'
-import { radius, typescale } from '@/theme/tokens'
+import { radius, shadow, typescale } from '@/theme/tokens'
 
 /**
  * SegTabs — 뷰/모드 전환용 세그먼트 컨트롤(단일 표준).
@@ -32,7 +33,13 @@ export default function SegTabs<T extends string>({ items, value, onChange, aria
       role="tablist"
       aria-label={ariaLabel}
       sx={mergeSx(
-        { display: 'inline-flex', gap: '3px', bgcolor: 'background.elevated', p: '3px', borderRadius: `${radius.button}px` },
+        // 묶음 배경 — 'background.elevated'는 라이트에서 페이지와 대비 1.03이라 탭 그룹의 윤곽이 보이지 않았다.
+        // 눌린 홈(recessed) 느낌의 옅은 채움 + 보더로 그룹 경계를 확실히 만든다(두 테마 공통).
+        {
+          display: 'inline-flex', gap: '3px', p: '3px', borderRadius: `${radius.button}px`,
+          bgcolor: (t: Theme) => alpha(t.palette.text.primary, t.palette.mode === 'light' ? 0.06 : 0.08),
+          border: '1px solid', borderColor: 'divider',
+        },
         sx,
       )}
     >
@@ -51,7 +58,8 @@ export default function SegTabs<T extends string>({ items, value, onChange, aria
               fontWeight: active ? typescale.cardTitle.weight : typescale.emphasis.weight,
               color: active ? 'primary.main' : 'text.secondary',
               bgcolor: active ? 'background.paper' : 'transparent',
-              boxShadow: active ? '0 1px 2px rgba(0,0,0,.35)' : 'none',
+              // 활성 탭이 떠 보이게 — 검정 .35 고정은 라이트에서 탁하므로 테마별 그림자 토큰
+              boxShadow: active ? shadow.sm : 'none',
               transition: 'all .12s',
               '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-2px' },
             }}

@@ -13,6 +13,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
+import { alpha } from '@mui/material/styles'
 import EventNoteIcon from '@mui/icons-material/EventNote'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
@@ -111,7 +112,8 @@ export default function Calendar() {
   const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true })
   // 마지막으로 보던 뷰 기억(localStorage) — 없으면 기기 기본(모바일=목록, PC=월)
   const [view, setView] = useState<ViewKey>(() => {
-    const saved = localStorage.getItem('cal:view')
+    let saved: string | null = null
+    try { saved = localStorage.getItem('cal:view') } catch { /* 저장소 차단 환경(사생활 모드 등) */ }
     return saved === 'month' || saved === 'timeweek' || saved === 'agenda' ? saved : isMobile ? 'agenda' : 'month'
   })
   const [anchor, setAnchor] = useState<Date>(() => parseKey(todaySeoul()))
@@ -306,11 +308,11 @@ export default function Calendar() {
     svViewApplied.current = true
     if (svCalView === 'month' || svCalView === 'timeweek' || svCalView === 'agenda') setView(svCalView)
   }, [usReady, svCalView])
-  // 뷰 변경 시 저장 — 로컬 캐시(즉시) + 계정 서버(디바운스, 기기 동기화)
+  // 뷰 변경 시 로컬 캐시(즉시). 계정 저장은 사용자가 토글로 바꾼 순간만(SegTabs onChange) —
+  // 마운트 자동 저장은 로컬 초기값이 서버 복원값을 선점·덮어써 기기 간 동기화를 깨므로 금지(2026-07-25 UX 감사).
   useEffect(() => {
     try { localStorage.setItem('cal:view', view) } catch { /* 저장 불가 무시 */ }
-    dispatch(putSetting({ key: 'cal.view', value: view }))
-  }, [view, dispatch])
+  }, [view])
 
   // ── 필터 술어 (빈 선택 = 전체) ──
   const catSelected = (cat: RealCat) => selCats.length === 0 || selCats.includes(cat)
@@ -486,7 +488,7 @@ export default function Calendar() {
     <PageContainer>
       <PageHeader
         icon={<EventNoteIcon />}
-        title="업무 일정"
+        title="업무일정"
         actions={
           <>
             {isAdmin && (
@@ -541,7 +543,7 @@ export default function Calendar() {
               { value: 'timeweek', label: '주' },
             ] as const}
             value={view}
-            onChange={setView}
+            onChange={(v) => { setView(v); dispatch(putSetting({ key: 'cal.view', value: v })) }}
           />
 
           {/* 이전 · 오늘 · 다음 — 하나의 외곽선 버튼 그룹(바깥 모서리만 둥글게, 사이 얇은 구분선) */}
@@ -792,7 +794,7 @@ export default function Calendar() {
 
         {/* 첫 로드 — 격자 위 표준 로딩 오버레이(캘린더 UI 점검 #7) */}
         {!ready && (
-          <Box sx={{ position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(15,17,23,.45)', borderRadius: `${radius.card}px` }}>
+          <Box sx={{ position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: (th) => alpha(th.palette.background.default, 0.45), borderRadius: `${radius.card}px` }}>
             <LoadingState label="일정을 불러오는 중…" />
           </Box>
         )}

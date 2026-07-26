@@ -109,7 +109,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
                           ml: '5px',
                           fontSize: typescale.caption.size,
                           lineHeight: 1.5,
-                          color: 'accent.amber',
+                          color: 'accentText.amber',
                           border: '1px solid',
                           borderColor: (t) => alpha(t.palette.accent.amber, 0.45),
                           bgcolor: (t) => alpha(t.palette.accent.amber, 0.12),

@@ -49,7 +49,7 @@ export default function SectionHeader({
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
           <Typography variant="h3">{title}</Typography>
           {count != null && (
-            <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {count}
             </Typography>
           )}

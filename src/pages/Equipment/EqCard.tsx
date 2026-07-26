@@ -2,12 +2,12 @@ import type { EqGroup } from '@/types'
 import { accent } from '@/theme/tokens'
 import { eqStateColor } from './EqItem'
 
-// 분류별 구분색 (장비운영관리 시트의 '분류' 열 값 기준) — 배경까지 확실히 구분되는 톤
+// 분류별 구분색 (장비운영관리 시트의 '분류' 열 값 기준) — 강조색 저알파 틴트라 다크/라이트 모두 자연스럽게 읽힘
 const CAT_STYLE: Record<string, { bg: string; border: string; color: string }> = {
-  공정: { bg: '#0d1f33', border: '#1f4068', color: accent.blue }, // 파랑
-  분석: { bg: '#1d1433', border: '#3a2a66', color: accent.purple }, // 보라
+  공정: { bg: accent.blue + '14', border: accent.blue + '33', color: accent.blue }, // 파랑
+  분석: { bg: accent.purple + '14', border: accent.purple + '33', color: accent.purple }, // 보라
 }
-const DEFAULT_STYLE = { bg: '#1a1d23', border: '#30363d', color: '#8B949E' }
+const DEFAULT_STYLE = { bg: 'var(--ink2)', border: 'var(--border2)', color: '#8B949E' }
 export const catStyle = (cat: string) => CAT_STYLE[(cat || '').trim()] || DEFAULT_STYLE
 export const catColor = (cat: string) => catStyle(cat).color
 

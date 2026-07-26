@@ -106,9 +106,9 @@ export function FileTypeIcon({ type, name, size = 18 }: { type?: string; name?: 
   // 기본(미지원 유형) — 중립 파일 아이콘
   return (
     <svg {...svgP}>
-      <path fill="#eceff1" stroke="#b0bec5" strokeWidth="1" d="M8 3h11l7 7v17a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-      <path fill="#cfd8dc" d="M19 3l7 7h-7z" />
-      <path fill="#b0bec5" d="M10 16h12v1.6H10zm0 3.4h12V21H10zm0 3.4h8v1.6h-8z" />
+      <path style={{ fill: 'var(--ink2)', stroke: 'var(--text3)' }} strokeWidth="1" d="M8 3h11l7 7v17a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+      <path style={{ fill: 'var(--border)' }} d="M19 3l7 7h-7z" />
+      <path style={{ fill: 'var(--text3)' }} d="M10 16h12v1.6H10zm0 3.4h12V21H10zm0 3.4h8v1.6h-8z" />
     </svg>
   )
 }

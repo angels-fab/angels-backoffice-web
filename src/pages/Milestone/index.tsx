@@ -280,7 +280,7 @@ export default function Milestone() {
       <Typography variant="caption" sx={{ fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>
         {label}
       </Typography>
-      <Typography variant="caption" sx={{ fontWeight: typescale.cardTitle.weight, color: 'accent.amber' }}>
+      <Typography variant="caption" sx={{ fontWeight: typescale.cardTitle.weight, color: 'accentText.amber' }}>
         {count}
       </Typography>
       {extra}
@@ -306,7 +306,7 @@ export default function Milestone() {
 
   const periodText = (r: MilestoneRow) => (
     <Tooltip title={`원문: ${r.startLabel} → ${r.endLabel}${r.fuzzy ? ' (분기는 추정 표기)' : ''}`} arrow>
-      <Box component="span" sx={{ fontFamily: 'monospace', fontSize: typescale.caption.size, color: 'text.disabled', flexShrink: 0 }}>
+      <Box component="span" sx={{ fontFamily: 'monospace', fontSize: typescale.body.size, color: 'text.secondary', flexShrink: 0 }}>
         {qShort(r.startQ)}→{qShort(r.endQ)}{r.fuzzy ? '≈' : ''}
       </Box>
     </Tooltip>
@@ -327,9 +327,10 @@ export default function Milestone() {
           stats.waiting > 0 ? (
             <Button
               variant="outlined"
+              size="small"
               startIcon={<PlayArrowIcon />}
               onClick={goFocus}
-              sx={{ borderColor: 'accent.amber', color: 'accent.amber', '&:hover': { borderColor: 'accent.amber', bgcolor: (t) => alpha(t.palette.accent.amber, 0.08) } }}
+              sx={{ borderColor: 'accent.amber', color: 'accentText.amber', '&:hover': { borderColor: 'accent.amber', bgcolor: (t) => alpha(t.palette.accent.amber, 0.08) } }}
             >
               착수할 일 {stats.waiting}건
             </Button>
@@ -349,12 +350,12 @@ export default function Milestone() {
           bgcolor: (t) => alpha(t.palette.accent.amber, 0.1),
         }}
       >
-        <ConstructionIcon sx={{ fontSize: iconSize.header, color: 'accent.amber', flexShrink: 0 }} />
+        <ConstructionIcon sx={{ fontSize: iconSize.header, color: 'accentText.amber', flexShrink: 0 }} />
         <Box>
-          <Typography sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'accent.amber' }}>
+          <Typography sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'accentText.amber' }}>
             준비 중인 메뉴입니다
           </Typography>
-          <Typography variant="caption" sx={{ display: 'block', color: 'accent.amber' }}>
+          <Typography variant="caption" sx={{ display: 'block', color: 'accentText.amber' }}>
             화면 구성과 일정·담당자 데이터를 계속 다듬는 중이에요 — 아직 확정 정보가 아닙니다
           </Typography>
         </Box>
@@ -469,7 +470,7 @@ export default function Milestone() {
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.75 }}>
                           {notStarted ? (
                             startWait > 0 ? (
-                              <Typography variant="caption" sx={{ color: 'accent.amber', fontWeight: typescale.emphasis.weight }}>
+                              <Typography variant="caption" sx={{ color: 'accentText.amber', fontWeight: typescale.emphasis.weight }}>
                                 이번 분기 {startWait}건 착수
                               </Typography>
                             ) : (
@@ -483,7 +484,7 @@ export default function Milestone() {
                                 완료 {done} · 진행 {prog} · 남음 {rows.length - done}
                               </Typography>
                               {startWait > 0 && (
-                                <Typography variant="caption" sx={{ ml: 'auto', color: 'accent.amber', fontWeight: typescale.emphasis.weight }}>
+                                <Typography variant="caption" sx={{ ml: 'auto', color: 'accentText.amber', fontWeight: typescale.emphasis.weight }}>
                                   착수 대기 {startWait}
                                 </Typography>
                               )}
@@ -517,7 +518,7 @@ export default function Milestone() {
                     '이번 분기 완료 목표',
                     focusDue.length,
                     doneThisQ > 0 ? (
-                      <Typography variant="caption" sx={{ ml: 'auto', color: 'accent.blue' }}>
+                      <Typography variant="caption" sx={{ ml: 'auto', color: 'accentText.blue' }}>
                         완료 처리 {doneThisQ}건
                       </Typography>
                     ) : undefined,

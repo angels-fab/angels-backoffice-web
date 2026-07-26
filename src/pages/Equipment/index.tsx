@@ -12,7 +12,7 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
-import LocalShippingIcon from '@mui/icons-material/LocalShipping'
+import MonitorIcon from '@mui/icons-material/Monitor'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
 import UndoIcon from '@mui/icons-material/Undo'
@@ -20,7 +20,7 @@ import RedoIcon from '@mui/icons-material/Redo'
 import EditCalendarIcon from '@mui/icons-material/EditCalendar'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { PageContainer, PageHeader, StatTile, EmptyState, ErrorBanner, SegTabs, Select, SearchBar, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, StatTile, EmptyState, ErrorBanner, LoadingState, SegTabs, Select, SearchBar, useSnack } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -662,8 +662,8 @@ export default function Equipment() {
     // 데모결과 뷰만 울트라 폭(1680) — 사진 2~3열이 크게 보이도록(다른 뷰는 표준 1400)
     <PageContainer maxWidth={view === 'demo' ? layout.maxWidthUltra : undefined}>
       <PageHeader
-        icon={<LocalShippingIcon />}
-        title="장비 관리"
+        icon={<MonitorIcon />}
+        title="장비관리"
         updatedAt={error ? '연결 실패' : undefined}
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -740,7 +740,7 @@ export default function Equipment() {
                 label: (
                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
                     데모결과
-                    <Box component="span" sx={(t) => ({ fontSize: typescale.caption.size, lineHeight: 1.5, color: 'accent.amber', border: '1px solid', borderColor: alpha(t.palette.accent.amber, 0.45), bgcolor: alpha(t.palette.accent.amber, 0.12), borderRadius: `${radius.chip}px`, px: '5px' })}>준비중</Box>
+                    <Box component="span" sx={(t) => ({ fontSize: typescale.caption.size, lineHeight: 1.5, color: 'accentText.amber', border: '1px solid', borderColor: alpha(t.palette.accent.amber, 0.45), bgcolor: alpha(t.palette.accent.amber, 0.12), borderRadius: `${radius.chip}px`, px: '5px' })}>준비중</Box>
                   </Box>
                 ),
               },
@@ -776,6 +776,10 @@ export default function Equipment() {
         {view === 'demo' ? (
           /* ── 데모결과 (장비사 데모센터 테스트 결과 — 사진 중심 뷰) ── */
           <DemoResults addSlot={demoSlot} />
+        ) : loading && filtered.length === 0 ? (
+          /* 첫 로딩 — 빈 상태 문구('없습니다')가 먼저 뜨지 않게 로딩을 우선 렌더.
+             이미 목록이 있는 새로고침 중에는 기존 표를 유지한다. */
+          <LoadingState label="장비를 불러오는 중…" />
         ) : filtered.length === 0 ? (
           <EmptyState size="sm" title="조건에 맞는 도입 장비가 없습니다" />
         ) : view === 'timeline' ? (
@@ -810,7 +814,7 @@ export default function Equipment() {
                 sx={{ display: 'flex', alignItems: 'center', minHeight: 32, cursor: 'pointer', borderTop: 1, borderColor: 'divider', '&:hover': { bgcolor: 'background.elevated' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: -2 } }}
               >
                 <Box sx={{ width: GANTT_NAME_W, flexShrink: 0, minWidth: 0, px: 1.25, py: 0.5, borderRight: 1, borderColor: 'divider' }}>
-                  <NameWithQty name={g.name} count={g.count} fontSize={12} />
+                  <NameWithQty name={g.name} count={g.count} fontSize={14} />
                 </Box>
                 <Box
                   sx={{ flex: 1, minWidth: 0, py: 0.5, cursor: canEdit ? 'grab' : undefined, userSelect: 'none', touchAction: canEdit ? 'none' : undefined }}
@@ -833,8 +837,8 @@ export default function Equipment() {
             {stageBoard.map((col) => (
               <Box key={col.label} sx={{ minHeight: 360, p: 1, border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`, bgcolor: 'background.default' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, color: 'text.secondary' }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 700 }}>{col.label}</Typography>
-                  <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>{col.items.length}건</Typography>
+                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'text.primary' }}>{col.label}</Typography>
+                  <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{col.items.length}건</Typography>
                 </Box>
                 {col.items.length === 0 ? (
                   <Typography sx={{ mt: 4, textAlign: 'center', color: 'text.disabled', fontSize: 11 }}>해당 장비 없음</Typography>
@@ -847,9 +851,9 @@ export default function Equipment() {
                       sx={{ p: 1, mb: 0.75, border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`, bgcolor: 'background.paper', cursor: 'pointer', '&:hover': { borderColor: 'text.disabled' }, '&:focus-visible': { outline: 2, outlineColor: 'primary.main' } }}
                     >
                       <Box sx={{ mb: 0.5 }}>
-                        <NameWithQty name={g.name} count={g.count} fontSize={12} />
+                        <NameWithQty name={g.name} count={g.count} fontSize={14} />
                       </Box>
-                      <Typography sx={{ fontSize: 11, color: 'text.disabled' }}>
+                      <Typography sx={{ fontSize: 12, color: 'text.primary' }}>
                         {g.mgr || '미지정'}{info.dueMonth ? ` · ${info.dueMonth}` : ''}{g.variantNames.length ? ` · ${g.variantNames.join('/')}` : ''}
                       </Typography>
                     </Box>
@@ -879,8 +883,8 @@ export default function Equipment() {
                       <Box component="td" className="lg-code" data-label="관리번호">{codeRange(g)}</Box>
                       <Box component="td" className="lg-primary rtable-title" data-label="장비명">
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
-                          <NameWithQty name={g.name} count={g.count} fontSize={12} />
-                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400, fontSize: 11, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
+                          <NameWithQty name={g.name} count={g.count} fontSize={14} />
+                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: 12, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
                       </Box>
                       <Box component="td" data-label="담당자">{g.mgr || '-'}</Box>

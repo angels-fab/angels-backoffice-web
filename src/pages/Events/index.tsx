@@ -153,7 +153,7 @@ export default function Events() {
                   신청 대기 {pendingCount}
                 </Button>
               )}
-              <Button variant="contained" startIcon={<AddIcon />} onClick={() => setSubmitOpen(true)}>
+              <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => setSubmitOpen(true)}>
                 새 행사
               </Button>
             </Box>

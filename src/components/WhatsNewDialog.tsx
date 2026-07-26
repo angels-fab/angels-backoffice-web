@@ -98,7 +98,7 @@ function WorkAttachDemo() {
     <Box sx={{ border: `1px solid ${c(0.24)}`, bgcolor: c(0.055), borderRadius: `${radius.card}px`, overflow: 'hidden' }}>
       {/* 제목줄(축약) */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.75, bgcolor: c(0.09), borderBottom: `1px solid ${c(0.14)}` }}>
-        <Box component="span" sx={(th) => ({ fontSize: 10, fontWeight: 600, px: '7px', py: '2px', borderRadius: `${radius.chip}px`, color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.16), border: `1px solid ${alpha(th.palette.accent.blue, 0.35)}` })}>회의</Box>
+        <Box component="span" sx={(th) => ({ fontSize: 10, fontWeight: 600, px: '7px', py: '2px', borderRadius: `${radius.chip}px`, color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.16), border: `1px solid ${alpha(th.palette.accent.blue, 0.35)}` })}>회의</Box>
         <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>클린룸 공조 설계 검토회의</Box>
       </Box>
       {/* 본문(축약) */}

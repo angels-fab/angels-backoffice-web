@@ -1,7 +1,8 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import { alpha } from '@mui/material/styles'
 import type { ReactNode } from 'react'
-import { layout } from '@/theme/tokens'
+import { layout, radius } from '@/theme/tokens'
 import { usePageImprovementMemo } from '@/components/PageImprovementMemo'
 
 export interface PageHeaderProps {
@@ -53,8 +54,10 @@ export default function PageHeader({ title, icon, subtitle, updatedAt, actions }
                 flexShrink: 0,
                 width: 40,
                 height: 40,
-                borderRadius: 2,
-                bgcolor: 'background.elevated',
+                borderRadius: `${radius.modal}px`,
+                // 배지 배경 — 'background.elevated'는 라이트에서 페이지 배경과 대비 1.03이라 배지가 안 보였다.
+                // 아이콘과 같은 강조색의 옅은 틴트로 두면 두 테마 모두에서 형태가 드러난다.
+                bgcolor: (t) => alpha(t.palette.primary.main, t.palette.mode === 'light' ? 0.1 : 0.16),
                 color: 'primary.main',
                 '& svg': { fontSize: 22 },
               }}

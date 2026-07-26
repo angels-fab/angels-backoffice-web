@@ -52,7 +52,7 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
         font: 'inherit',
         fontSize: 12,
         fontWeight: 800,
-        color: th.palette.accent.amber,
+        color: th.palette.accentText.amber,
         bgcolor: alpha(th.palette.accent.amber, open ? 0.2 : 0.12),
         transition: 'background-color .15s ease',
         '&:hover': { bgcolor: alpha(th.palette.accent.amber, 0.22) },
@@ -98,7 +98,7 @@ function ReplyCountChip({ count, onClick }: { count: number; onClick: () => void
         borderRadius: `${radius.button}px`,
         border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}`,
         bgcolor: alpha(th.palette.accent.blue, 0.14),
-        color: th.palette.accent.blue,
+        color: th.palette.accentText.blue,
         font: 'inherit',
         fontSize: 11,
         fontWeight: 700,
@@ -138,14 +138,14 @@ function MemoRow({
   return (
     <Box sx={{ py: 1.25, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-        <Box component="span" sx={(th) => ({ fontSize: 11, fontWeight: 800, color: th.palette.accent.amber, fontVariantNumeric: 'tabular-nums' })}>
+        <Box component="span" sx={(th) => ({ fontSize: 11, fontWeight: 800, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
           요청 #{t.num}
         </Box>
         <Box component="span" sx={{ fontSize: 13, fontWeight: 700, color: 'text.primary', minWidth: 0 }}>{t.title}</Box>
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: 'text.secondary' }}>
           <PersonOutlineIcon sx={{ fontSize: iconSize.caption }} />{t.author || '-'}
         </Box>
-        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: th.palette.accent.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: `${radius.pill}px` })}>
+        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: `${radius.pill}px` })}>
           <PlaceOutlinedIcon sx={{ fontSize: iconSize.caption }} />{t.loc || '-'}
         </Box>
         {/* 상태 — 메인 보드와 동일 값·색. 관리자는 여기서 바로 변경(보류·완료·불가는 확인 팝업). */}
@@ -375,7 +375,7 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
       })}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.75, py: 1, borderBottom: '1px solid', borderColor: (th) => alpha(th.palette.accent.amber, 0.18) }}>
-        <Box sx={(th) => ({ fontSize: 12, fontWeight: 800, color: th.palette.accent.amber })}>이 화면에서 확인할 개선요청</Box>
+        <Box sx={(th) => ({ fontSize: 12, fontWeight: 800, color: th.palette.accentText.amber })}>이 화면에서 확인할 개선요청</Box>
         <Button size="small" onClick={() => setOpen(false)} sx={{ minWidth: 0, fontSize: 12, color: 'text.secondary', px: 1 }}>접기</Button>
       </Box>
       <Box sx={{ px: 1.75 }}>

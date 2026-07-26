@@ -91,7 +91,7 @@ export default function NoticeSection() {
                 {n.title}
               </Typography>
               {meta && (
-                <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                <Typography variant="small" sx={{ color: 'text.secondary' }}>
                   {meta}
                 </Typography>
               )}

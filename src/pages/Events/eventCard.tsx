@@ -356,7 +356,7 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
   return (
     <Box>
       {/* 포스터 풀사이즈(전체 표시) + 좌상단 분류·상태 칩 */}
-      <Box sx={{ position: 'relative', borderRadius: `${radius.modal}px`, overflow: 'hidden', bgcolor: '#0b0e14' }}>
+      <Box sx={{ position: 'relative', borderRadius: `${radius.modal}px`, overflow: 'hidden', bgcolor: 'background.default' }}>
         {url ? (
           <Box component="img" src={url} alt={e.title} sx={{ display: 'block', width: '100%', height: 'auto' }} />
         ) : (

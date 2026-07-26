@@ -84,7 +84,7 @@ export default function GanttBoard({ items, curIdx, onOpen }: GanttBoardProps) {
               ))}
               <Typography
                 variant="caption"
-                sx={{ position: 'absolute', right: 0, color: 'accent.purple', fontWeight: typescale.emphasis.weight }}
+                sx={{ position: 'absolute', right: 0, color: 'accentText.purple', fontWeight: typescale.emphasis.weight }}
               >
                 개소
               </Typography>

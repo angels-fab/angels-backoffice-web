@@ -99,7 +99,7 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
           sx={(th) => ({
             position: 'relative', borderRadius: `${radius.card}px`, overflow: 'hidden', cursor: 'pointer', minHeight: 200,
             border: '2px dashed', borderColor: drag ? th.palette.primary.main : th.palette.divider,
-            bgcolor: drag ? alpha(th.palette.primary.main, 0.08) : '#0b0e14',
+            bgcolor: drag ? alpha(th.palette.primary.main, 0.08) : th.palette.background.default,
             display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'border-color .15s, background-color .15s',
           })}
         >

@@ -30,13 +30,14 @@ const STATUS: Record<RoadmapStatus, StatusStyle> = {
     badgeBg: alpha(domain.roadmap.done, 0.14),
     nodeBorder: domain.roadmap.done,
     nodeColor: domain.roadmap.done,
-    nodeBg: '#13202a',
+    nodeBg: 'var(--ink2)',
     nodeShadow: `inset 0 0 0 48px ${alpha(domain.roadmap.done, 0.1)}`,
   },
   current: {
     badge: '진행중',
-    // D3 맞교환: 진행중=그린 — 크롬(배지·노드 그라데이션·링)도 그린 계열로 동조
-    badgeColor: '#d2f2e4',
+    // D3 맞교환: 진행중=그린 — 크롬(배지·노드 그라데이션·링)도 그린 계열로 동조.
+    // 배지 글자는 그린 자체로(라이트에서 연민트가 연그린 틴트 위에서 사라짐 — done 배지와 동일 규칙)
+    badgeColor: domain.roadmap.current,
     badgeBg: alpha(domain.roadmap.current, 0.3),
     nodeBorder: domain.roadmap.current,
     nodeColor: 'common.white',
@@ -47,9 +48,9 @@ const STATUS: Record<RoadmapStatus, StatusStyle> = {
     badge: '예정',
     badgeColor: domain.roadmap.plan,
     badgeBg: 'rgba(148,163,184,.13)',
-    nodeBorder: '#35465a',
+    nodeBorder: 'var(--border)',
     nodeColor: '#5d6f86',
-    nodeBg: '#161f2b',
+    nodeBg: 'var(--ink2)',
     nodeShadow: 'none',
   },
 }
@@ -93,57 +94,58 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
   }, [])
   return (
     <Box
-      sx={{
+      sx={(t) => ({
         // 아래 섹션 카드들과 동일한 전체 너비(카드 바깥 경계선 기준 정렬) — 폭 제한은 상위 PageContainer가 담당
         width: '100%',
-        background: 'linear-gradient(160deg,#141d2b,#0e151f)',
-        border: '1px solid #243245',
-        borderRadius: '22px',
+        // 자체 히어로 카드 — 다크는 시안 그라데이션, 라이트는 밝은 표면(테마 콜백)
+        background: t.palette.mode === 'dark' ? 'linear-gradient(160deg,#141d2b,#0e151f)' : 'linear-gradient(160deg,#ffffff,#eef3fb)',
+        border: '1px solid var(--border)',
+        borderRadius: `${radius.card}px`,
         p: '26px 30px 24px',
-        color: '#e2e8f0',
+        color: 'var(--text)',
         boxSizing: 'border-box',
-        boxShadow: '0 18px 44px -22px rgba(0,0,0,.55)',
-      }}
+        boxShadow: t.palette.mode === 'dark' ? '0 18px 44px -22px rgba(0,0,0,.55)' : '0 12px 30px -18px rgba(30,50,90,.22)',
+      })}
     >
       {/* 헤더 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: '14px', mb: '24px', flexWrap: 'wrap' }}>
         <Box
-          sx={{
+          sx={(t) => ({
             width: 48,
             height: 48,
             borderRadius: `${radius.modal}px`,
-            background: 'linear-gradient(155deg,#2a4a86,#1a2740)',
+            background: t.palette.mode === 'dark' ? 'linear-gradient(155deg,#2a4a86,#1a2740)' : 'linear-gradient(155deg,#dce8fb,#bcd3f2)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#7eb0ff',
+            color: t.palette.mode === 'dark' ? '#7eb0ff' : '#2f6db8',
             flex: '0 0 auto',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,.07)',
             '& svg': { fontSize: 24 },
-          }}
+          })}
         >
           <TrendingUpIcon fontSize="inherit" />
         </Box>
         <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
-          <Box sx={{ fontSize: 22, fontWeight: 800, color: '#f8fafc', letterSpacing: '-0.4px', lineHeight: 1.2 }}>
+          <Box sx={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.4px', lineHeight: 1.2 }}>
             FAB 구축 로드맵
           </Box>
-          <Box sx={{ fontSize: 13, color: '#94a3b8', mt: '4px' }}>
+          <Box sx={{ fontSize: 13, color: 'var(--text2)', mt: '4px' }}>
             GIST 첨단AI반도체팹센터 구축 단계별 진행 현황
           </Box>
         </Box>
         {showLegend && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '0 0 auto' }}>
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: '#9fb0c4' }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: 'var(--text2)' }}>
               <LegendDot color={domain.roadmap.done} />
               완료
             </Box>
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: '#9fb0c4' }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: 'var(--text2)' }}>
               <LegendDot color={domain.roadmap.current} ring={`0 0 0 3px ${alpha(domain.roadmap.current, 0.22)}`} />
               진행중
             </Box>
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: '#9fb0c4' }}>
-              <LegendDot color="#2a3645" border="1.5px solid #45566b" />
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: 'var(--text2)' }}>
+              <LegendDot color="var(--ink3)" border="1.5px solid var(--border)" />
               예정
             </Box>
           </Box>
@@ -162,7 +164,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
               top: 23,
               height: 3,
               borderRadius: '3px',
-              background: `linear-gradient(90deg,${domain.roadmap.done} 0%,${domain.roadmap.done} 40%,${domain.roadmap.current} 50%,#3a4d63 60%,#2a3645 100%)`,
+              background: `linear-gradient(90deg,${domain.roadmap.done} 0%,${domain.roadmap.done} 40%,${domain.roadmap.current} 50%,var(--border) 60%,var(--border) 100%)`,
               opacity: 0.75,
               zIndex: 0,
             }}
@@ -253,7 +255,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
                     sx={{
                       fontSize: 16,
                       fontWeight: 700,
-                      color: isCurrent ? '#f8fafc' : '#eef3f9',
+                      color: 'var(--text)',
                       mt: showBadges ? '9px' : '15px',
                       lineHeight: 1.3,
                       textWrap: 'balance',
@@ -263,7 +265,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
                   </Box>
 
                   {/* 기간 */}
-                  <Box sx={{ fontSize: 12, color: '#8195a9', mt: '5px', fontVariantNumeric: 'tabular-nums' }}>
+                  <Box sx={{ fontSize: 12, color: 'var(--text3)', mt: '5px', fontVariantNumeric: 'tabular-nums' }}>
                     {step.period}
                   </Box>
                 </Box>

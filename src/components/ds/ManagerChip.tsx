@@ -6,9 +6,12 @@ import { managerColor, radius, typescale } from '@/theme/tokens'
 /**
  * ManagerChip — 담당자(사람) 이름 라벨 칩.
  *
- * 칩 2체계 중 "라벨형"(보여주는 것) = radius.chip(8px) · 높이 24 · 솔리드. 색은 managerColor
- * (단일 출처)라 Work·Calendar 어디서나 같은 사람=같은 색. 빈값이면 '미지정' 회색.
+ * 칩 2체계 중 "라벨형"(보여주는 것) = radius.chip(8px) · 높이 24. 빈값이면 '미지정'.
  * ※ 필터(토글)가 아니라 표시 전용 — 필터는 FilterChip(PillChip/TintChip, 알약형)을 쓴다.
+ *
+ * 색은 managerColor(단일 출처)라 Work·Calendar 어디서나 같은 사람=같은 색.
+ * (부서칩은 해시색이라 학습이 불가능해 무채색으로 내렸지만, 담당자는 고정 소수 집합이라 색을 유지 —
+ *  사용자 결정 2026-07-26.)
  */
 export interface ManagerChipProps {
   name?: string | null
