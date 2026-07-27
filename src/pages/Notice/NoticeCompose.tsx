@@ -17,6 +17,7 @@ import AttachFileIcon from '@mui/icons-material/AttachFile'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
+import { inlineFieldSx } from '@/components/ds/fields'
 import type { Notice, NoticeFile } from '@/types'
 import { todaySeoul } from '@/utils/date'
 import { ComboField } from '@/pages/Work/inlineFields'
@@ -86,13 +87,7 @@ type Upload = {
   error?: string
 }
 
-const inputSx = (th: Theme) => ({
-  bgcolor: alpha(th.palette.text.primary, 0.05),
-  border: '1px solid', borderColor: th.palette.divider, borderRadius: `${radius.chip}px`,
-  px: 1, py: 0.4, fontSize: 13, color: 'text.primary',
-  '&.Mui-focused': { borderColor: th.palette.primary.main },
-  '& input::placeholder, & textarea::placeholder': { color: 'text.disabled', opacity: 1 },
-})
+const inputSx = (th: Theme) => ({ ...inlineFieldSx(th), py: 0.4 })
 
 function LinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)

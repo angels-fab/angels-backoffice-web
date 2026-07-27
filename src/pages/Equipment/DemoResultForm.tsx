@@ -18,12 +18,13 @@ import StarBorderIcon from '@mui/icons-material/StarBorder'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { iconSize, radius, typescale } from '@/theme/tokens'
+import { inlineFieldSx } from '@/components/ds/fields'
 import { ComboField } from '@/pages/Work/inlineFields'
 import { AttachmentIcon, formatBytes } from '@/pages/Notice/attachmentUI'
 import { addDemoResult, uploadDemoFile, createMetricDef, updateMetricDef, type DemoMetricDef, type DemoRoundRow } from '@/api/demo'
 import { prepDemoPhoto, isPhotoFile } from '@/utils/imagePrep'
 
-const field = (th: Theme) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`, px: 1.1, py: '7px', fontSize: typescale.body.size, color: 'text.primary', width: '100%' })
+const field = (th: Theme) => ({ ...inlineFieldSx(th), py: '7px', width: '100%' })
 const label = { fontSize: typescale.caption.size, fontWeight: 700, color: 'text.disabled', letterSpacing: '.02em', mb: 0.35 }
 
 type Pic = { file: File; url: string; name: string }
@@ -165,7 +166,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
         )}
         {/* 방문일/데모센터 */}
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 1, mb: 1 }}>
-          <Box><Box sx={label}>방문일</Box><Box component="input" type="date" value={date} onChange={(e) => setDate((e.target as HTMLInputElement).value)} sx={(th) => ({ ...field(th), colorScheme: th.palette.mode })} /></Box>
+          <Box><Box sx={label}>방문일</Box><Box component="input" type="date" value={date} onChange={(e) => setDate((e.target as HTMLInputElement).value)} sx={field} /></Box>
           <Box><Box sx={label}>데모센터</Box><ComboField value={place} onChange={setPlace} options={placeOpts} placeholder="예: 용인 데모센터" ariaLabel="데모센터" /></Box>
         </Box>
         {/* 샘플 정보 */}

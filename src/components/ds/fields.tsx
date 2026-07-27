@@ -16,7 +16,7 @@ import { radius } from '@/theme/tokens'
  *   기존 손코딩 2진영(radius 6/8·fontSize 12.5/13·포커스 green/primary 3갈래)을
  *   radius 10(control)·fontSize 13(body)·공통 파란 포커스링 1값으로 정규화한 승격판.
  *
- * 날짜/시간은 DateField/TimeField(네이티브 피커·다크 colorScheme) 하나로 통일 —
+ * 날짜/시간은 DateField/TimeField(네이티브 피커) 하나로 통일 —
  * raw <input type=date>·숨긴 native+showPicker 등 4방식 손코딩 금지.
  */
 export type FieldVariant = 'modal' | 'inline'
@@ -33,13 +33,14 @@ export const inlineFieldSx = (th: Theme) => ({
   color: th.palette.text.primary,
   transition: 'border-color .12s, box-shadow .12s',
   '&:hover': { borderColor: alpha(th.palette.text.secondary, 0.55) },
-  '&.Mui-focused': {
+  // .Mui-focused = InputBase 계열, :focus = Box component="input" 같은 생 input
+  '&.Mui-focused, &:focus': {
     borderColor: th.palette.primary.main,
     boxShadow: `0 0 0 3px ${alpha(th.palette.primary.main, 0.4)}`,
+    outline: 'none',
   },
   '& input::placeholder, & textarea::placeholder': { color: th.palette.text.disabled, opacity: 1 },
-  // 네이티브 date/time 피커 아이콘을 다크로
-  '& input': { colorScheme: 'dark' },
+  // 네이티브 피커 색은 index.css의 :root color-scheme이 담당 — 여기서 덮지 않는다
 })
 
 /** inline 라벨(외부 캡션) — modal은 TextField label prop 사용 */
@@ -116,7 +117,7 @@ export function FormField({
         slotProps={{
           // date/time은 값이 없어도 라벨이 겹치지 않게 항상 축소
           inputLabel: type !== 'text' ? { shrink: true } : undefined,
-          htmlInput: { style: { colorScheme: 'dark' }, ...(ariaLabel ? { 'aria-label': ariaLabel } : null) },
+          htmlInput: ariaLabel ? { 'aria-label': ariaLabel } : undefined,
         }}
         sx={sx}
       />

@@ -21,13 +21,14 @@ import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius } from '@/theme/tokens'
 import { LoadingState } from '@/components/ds'
+import { inlineFieldSx } from '@/components/ds/fields'
 import {
   createMetricDef, updateMetricDef, setMetricDefActive, fetchMetricDefHistory, fetchValueHistory, METRIC_ACTION_LABEL, metricText, metricParts,
   type DemoMetricDef, type MetricDirection, type MetricDefHistory, type ValueHistory,
 } from '@/api/demo'
 
 const DIR_LABEL: Record<MetricDirection, string> = { higher: '높을수록 우수', lower: '낮을수록 우수', none: '비교 안 함' }
-const field = (th: Theme) => ({ bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`, px: 1, py: '5px', fontSize: typescale.body.size, color: 'text.primary' })
+const field = (th: Theme) => ({ ...inlineFieldSx(th), py: '5px' })
 const fmtTs = (iso: string) => { try { return new Date(iso).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) } catch { return iso.slice(0, 16) } }
 
 function DirSelect({ value, onChange }: { value: MetricDirection; onChange: (v: MetricDirection) => void }) {

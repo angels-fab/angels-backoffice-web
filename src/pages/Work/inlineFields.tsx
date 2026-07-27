@@ -12,6 +12,7 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
+import { inlineFieldSx } from '@/components/ds/fields'
 import { radius, iconSize, typescale } from '@/theme/tokens'
 
 /**
@@ -22,19 +23,10 @@ import { radius, iconSize, typescale } from '@/theme/tokens'
  * - LinkButton / AttachButton: 제목줄 우측 아이콘(관련링크 팝업 / 파일 첨부 선택)
  */
 
-// 모든 입력의 미니멀 보더 룩 (NewTaskCard의 Field와 동일 톤)
-export const fieldBase = (th: Theme) => ({
-  bgcolor: alpha(th.palette.text.primary, 0.05),
-  border: '1px solid',
-  borderColor: th.palette.divider,
-  borderRadius: `${radius.chip}px`,
-  px: 1,
-  minHeight: 30,
-  fontSize: 13,
-  color: th.palette.text.primary,
-  transition: 'border-color .12s',
-  '&:hover': { borderColor: alpha(th.palette.text.secondary, 0.55) },
-})
+// 모든 입력의 미니멀 보더 룩 = ds inline 정본(포커스 링 포함). 여기서 따로 손코딩하지 않는다.
+// 직접 별칭(= inlineFieldSx)이 아니라 감싼 함수인 이유: 모듈 최상위에서 값을 읽으면
+// 순환 임포트가 끼었을 때 undefined로 굳는다. 호출 시점에 읽도록 한 겹 둔다.
+export const fieldBase = (th: Theme) => inlineFieldSx(th)
 
 const popoverPaperSx = {
   bgcolor: 'background.paper',
@@ -79,7 +71,6 @@ export function ComboField({
             alignItems: 'center',
             py: 0.4,
             width: '100%',
-            '&.Mui-focused': { borderColor: th.palette.accent.green },
             '& input::placeholder': { color: 'text.disabled', opacity: 1 },
           })}
         />
@@ -125,7 +116,6 @@ export function SelectField({
             width: '100%',
             cursor: 'pointer',
             '& input': { cursor: 'pointer' },
-            '&.Mui-focused': { borderColor: th.palette.accent.green },
             '& input::placeholder': { color: 'text.disabled', opacity: 1 },
           })}
         />
@@ -171,7 +161,7 @@ export function DateField({
           alignItems: 'center',
           gap: 0.5,
           cursor: 'pointer',
-          '&:focus-visible': { outline: 'none', borderColor: th.palette.accent.green },
+          '&:focus-visible': { outline: 'none' },
         }),
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
@@ -192,7 +182,7 @@ export function DateField({
         onChange={(e) => onChange((e.target as HTMLInputElement).value)}
         tabIndex={-1}
         aria-hidden
-        sx={{ position: 'absolute', left: 8, bottom: 0, width: 1, height: 1, opacity: 0, pointerEvents: 'none', border: 0, p: 0, m: 0, colorScheme: 'dark' }}
+        sx={{ position: 'absolute', left: 8, bottom: 0, width: 1, height: 1, opacity: 0, pointerEvents: 'none', border: 0, p: 0, m: 0 }}
       />
     </Box>
   )
@@ -363,7 +353,7 @@ export function TimeRangeField({
           (th) => ({
             ...fieldBase(th),
             display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'pointer',
-            '&:focus-visible': { outline: 'none', borderColor: th.palette.accent.green },
+            '&:focus-visible': { outline: 'none' },
           }),
           ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
         ]}
@@ -428,7 +418,7 @@ export function LinkButton({ value, onChange }: { value: string; onChange: (v: s
             onChange={(e) => onChange(e.target.value)}
             placeholder="https://…"
             inputProps={{ 'aria-label': '관련 링크 입력' }}
-            sx={(th) => ({ ...fieldBase(th), py: 0.5, width: '100%', '&.Mui-focused': { borderColor: th.palette.accent.green } })}
+            sx={(th) => ({ ...fieldBase(th), py: 0.5, width: '100%' })}
           />
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
             <Button size="small" onClick={() => onChange('')} sx={{ color: 'text.secondary' }}>지우기</Button>

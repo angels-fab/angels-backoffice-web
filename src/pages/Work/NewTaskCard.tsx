@@ -12,6 +12,7 @@ import AttachFileIcon from '@mui/icons-material/AttachFile'
 import CloudUploadIcon from '@mui/icons-material/CloudUpload'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
+import { inlineFieldSx } from '@/components/ds/fields'
 import { iconSize, motion, radius, typescale } from '@/theme/tokens'
 import { ComboField, DateField, TimeRangeField, LinkButton, AttachButton } from './inlineFields'
 import RichContentEditor from './RichContentEditor'
@@ -97,15 +98,7 @@ function Field({
       minRows={minRows}
       inputProps={{ 'aria-label': ariaLabel }}
       sx={[
-        (th) => ({
-          bgcolor: alpha(th.palette.text.primary, 0.05),
-          border: '1px solid', borderColor: th.palette.divider, borderRadius: `${radius.chip}px`,
-          px: 1, py: 0.4, fontSize: typescale.body.size, color: 'text.primary',
-          transition: 'border-color .12s',
-          '&:hover': { borderColor: alpha(th.palette.text.secondary, 0.55) },
-          '&.Mui-focused': { borderColor: th.palette.accent.green },
-          '& input::placeholder, & textarea::placeholder': { color: 'text.disabled', opacity: 1 },
-        }),
+        (th) => ({ ...inlineFieldSx(th), py: 0.4 }),
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}
     />

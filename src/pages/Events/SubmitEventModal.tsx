@@ -15,6 +15,7 @@ import { CAT_COLOR, type EventCat } from './eventCard'
 import { radius, iconSize } from '@/theme/tokens'
 import { uploadSubmissionPoster, submitEvent } from '@/api/events'
 import { FormField, DateField } from '@/components/ds'
+import { inlineFieldSx } from '@/components/ds/fields'
 
 const CATS: EventCat[] = ['학술', '교육', '전시']
 // 분류별 요약 항목(최대 3) — 분류 선택 시 자동으로 채워짐. 값 안 적은 항목은 게시 시 빠짐.
@@ -24,12 +25,7 @@ const SUMMARY_PRESETS: Record<EventCat, string[]> = {
   전시: ['관람기간', '입장방법', '규모'],
 }
 const presetRows = (c: EventCat) => SUMMARY_PRESETS[c].map((l) => ({ label: l, value: '' }))
-const field = (th: Theme) => ({
-  bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`,
-  px: 1.2, py: '8px', fontSize: 13, color: 'text.primary', width: '100%',
-  '&.Mui-focused': { borderColor: th.palette.primary.main },
-  '& input::placeholder, & textarea::placeholder': { color: 'text.disabled', opacity: 1 },
-})
+const field = (th: Theme) => ({ ...inlineFieldSx(th), py: '8px', width: '100%' })
 const label = { fontSize: 12, fontWeight: 700, color: 'text.disabled', letterSpacing: '.02em', mb: 0.4 }
 
 /**

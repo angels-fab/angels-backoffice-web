@@ -8,6 +8,7 @@ import AddIcon from '@mui/icons-material/Add'
 import GroupsIcon from '@mui/icons-material/Groups'
 import { alpha } from '@mui/material/styles'
 import { iconSize, radius, typescale } from '@/theme/tokens'
+import { inlineFieldSx } from '@/components/ds/fields'
 import type { AttendeeRow } from '@/api/events'
 
 /**
@@ -16,7 +17,7 @@ import type { AttendeeRow } from '@/api/events'
  */
 export default function AttendeeSection({ rows, user, isMember, isAdmin, busy, hideSelfToggle, onToggleSelf, onAddName, onRemove }: {
   rows: AttendeeRow[]; user: string | null; isMember: boolean; isAdmin: boolean; busy: boolean; hideSelfToggle?: boolean
-  onToggleSelf?: () => void; onAddName: (name: string) => void; onRemove: (id: number) => void
+  onToggleSelf?: () => void; onAddName: (name: string) => void; onRemove: (row: AttendeeRow) => void
 }) {
   const [name, setName] = useState('')
   const mine = user ? rows.find((r) => r.memberUid && r.name === user) : undefined
@@ -40,7 +41,7 @@ export default function AttendeeSection({ rows, user, isMember, isAdmin, busy, h
             <Box key={r.id} component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: typescale.small.size, color: 'text.primary', bgcolor: alpha(th.palette.text.primary, 0.06), border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.pill}px`, pl: 1, pr: canRemove(r) ? 0.25 : 1, py: '2px' })}>
               {r.name}
               {canRemove(r) && (
-                <IconButton size="small" aria-label={`${r.name} 제거`} disabled={busy} onClick={() => onRemove(r.id)} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'error.main' } }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton>
+                <IconButton size="small" aria-label={`${r.name} 제거`} disabled={busy} onClick={() => onRemove(r)} sx={{ p: '1px', color: 'text.disabled', '&:hover': { color: 'error.main' } }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton>
               )}
             </Box>
           ))}
@@ -55,7 +56,7 @@ export default function AttendeeSection({ rows, user, isMember, isAdmin, busy, h
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
             placeholder="이름 추가"
-            sx={(th) => ({ flex: 1, fontSize: typescale.body.size, bgcolor: alpha(th.palette.text.primary, 0.05), border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`, px: 1, py: '3px' })}
+            sx={(th) => ({ ...inlineFieldSx(th), flex: 1, py: '3px' })}
           />
           <IconButton size="small" aria-label="참석자 추가" disabled={busy || !name.trim()} onClick={add} sx={{ color: 'success.main' }}><AddIcon sx={{ fontSize: iconSize.action }} /></IconButton>
         </Box>
