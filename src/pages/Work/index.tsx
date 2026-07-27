@@ -1425,7 +1425,7 @@ export default function Work() {
       {SHOW_MANAGER_STATUS && (
         <ContentSection title="담당자 현황" last>
           {busiest && busiest.inProgress > 0 && (
-            <AppCard padding={18} sx={{ mb: 2 }}>
+            <AppCard padding={16} sx={{ mb: 2 }}>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>가장 바쁜 담당자</Typography>
               <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mt: 0.5 }}>
                 <Typography variant="h3" sx={{ fontWeight: typescale.pageTitle.weight }}>{busiest.mgr}</Typography>
@@ -1485,24 +1485,18 @@ export default function Work() {
       )}
 
       {/* 삭제 확인 Dialog — 휴지통 드롭은 흡입 전에 이 확인창부터. 취소 시 토큰·카드 원상 복원 */}
-      <Dialog open={deleteReq?.phase === 'confirm'} onClose={() => !deleting && setDeleteReq(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
-        <DialogTitle>
-          {deleteReq && deleteReq.items.length > 1 ? `선택한 업무 ${deleteReq.items.length}건을 삭제할까요?` : '정말 삭제하시겠습니까?'}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: 'text.secondary' }}>
-            {deleteReq && deleteReq.items.length > 1
-              ? '삭제를 누르면 선택한 카드가 휴지통으로 이동합니다. 휴지통에서 언제든 복원할 수 있습니다.'
-              : `「${deleteReq ? taskTitle(deleteReq.items[0]) : ''}」 업무를 휴지통으로 이동합니다. 휴지통에서 언제든 복원할 수 있습니다.`}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteReq(null)} disabled={deleting} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button color="error" variant="contained" onClick={confirmDelete} disabled={deleting}>
-            {deleting ? '삭제 중…' : '삭제'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={deleteReq?.phase === 'confirm'}
+        destructive
+        title={deleteReq && deleteReq.items.length > 1 ? `선택한 업무 ${deleteReq.items.length}건을 삭제할까요?` : '업무를 삭제할까요?'}
+        description={deleteReq && deleteReq.items.length > 1
+          ? '선택한 카드가 휴지통으로 이동합니다. 휴지통에서 언제든 복원할 수 있습니다.'
+          : `「${deleteReq ? taskTitle(deleteReq.items[0]) : ''}」 업무를 휴지통으로 이동합니다. 휴지통에서 언제든 복원할 수 있습니다.`}
+        confirmLabel="삭제"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteReq(null)}
+      />
 
       {/* 수정 확인 Dialog (in-place 편집 → 확인 시 저장) */}
       <Dialog open={!!pendingEdit} onClose={() => !savingEdit && setPendingEdit(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>

@@ -26,7 +26,7 @@ import { memosForPath } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import ReplyThread from '@/pages/Improve/ReplyThread'
-import { StatusChip, useSnack } from '@/components/ds'
+import { StatusChip, useSnack, ConfirmDialog } from '@/components/ds'
 import { IMP_STATUSES, impKind, needsReason, normStatus, isSettled } from '@/pages/Improve/improveMeta'
 import { radius, iconSize } from '@/theme/tokens'
 
@@ -309,16 +309,16 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   // 답글 삭제 + 상태변경 확인 Dialog — 유지보수자에게 항상 렌더(패널 상태와 무관). 스낵바는 전역 useSnack.
   const snackbar = admin ? (
     <>
-      <Dialog open={!!delReply} onClose={() => !replyBusy && setDelReply(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
-        <DialogTitle>답글 삭제</DialogTitle>
-        <DialogContent>
-          <Box sx={{ fontSize: 14, color: 'text.primary', lineHeight: 1.7 }}>이 답글을 삭제할까요?<br />삭제하면 목록과 답글 수에서 제외됩니다.</Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDelReply(null)} disabled={replyBusy}>취소</Button>
-          <Button variant="contained" color="error" onClick={confirmDelReply} disabled={replyBusy}>{replyBusy ? '삭제 중…' : '삭제'}</Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={!!delReply}
+        destructive
+        title="답글을 삭제할까요?"
+        description="삭제하면 목록과 답글 수에서 제외됩니다."
+        confirmLabel="삭제"
+        busy={replyBusy}
+        onConfirm={confirmDelReply}
+        onClose={() => setDelReply(null)}
+      />
       {/* 상태 변경 확인(보류·완료·불가) — 보류·불가는 사유 입력 */}
       <Dialog open={!!statusDlg} onClose={() => savingStatusNum === null && setStatusDlg(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
         <DialogTitle>상태를 '{statusDlg?.status}'(으)로 변경할까요?</DialogTitle>

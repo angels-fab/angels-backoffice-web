@@ -3,14 +3,12 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
 import Alert from '@mui/material/Alert'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import LogoutIcon from '@mui/icons-material/Logout'
 import StorageIcon from '@mui/icons-material/Storage'
-import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, LoadingState } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, LoadingState, ConfirmDialog, useSnack, Select } from '@/components/ds'
 import { useRole, ROLE_LABEL } from '@/auth/role'
 import { supabase, padPassword } from '@/api/supabase'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
@@ -67,7 +65,7 @@ function PasswordChangeCard() {
   }
 
   return (
-    <AppCard padding={18}>
+    <AppCard padding={16}>
       <Box component="form" onSubmit={submit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
           <TextField label="새 비밀번호" type="password" size="small" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" />
@@ -96,6 +94,7 @@ function UserManagement() {
   const { user: me } = useRole()
   const [rows, setRows] = useState<ProfileRow[] | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const snack = useSnack()
 
   const load = async () => {
     const { data } = await supabase
@@ -112,18 +111,21 @@ function UserManagement() {
     setBusyId(null)
     void load()
   }
-  const remove = async (id: string, name: string, pending: boolean) => {
-    const msg = pending
-      ? `${name || '이 신청'} 가입 신청을 거절할까요? (프로필 삭제)`
-      : `${name} 회원을 강퇴할까요? (프로필 삭제 — 재가입 필요)`
-    if (!window.confirm(msg)) return
-    setBusyId(id)
-    await supabase.from('profiles').delete().eq('id', id)
+  // 강퇴·거절 = 프로필 삭제(재가입 필요)라 되돌릴 수 없다. 구현은 window.confirm이었는데
+  // 브라우저 기본 포커스가 '확인'이라 Enter 한 번에 실행됐고, 테마·한글 타이포도 안 탔다.
+  // ConfirmDialog(정본)로 교체 — 빨간 확인 버튼·busy 잠금은 컴포넌트가 담당.
+  const [delUser, setDelUser] = useState<{ id: string; name: string; pending: boolean } | null>(null)
+  const remove = async () => {
+    if (!delUser) return
+    setBusyId(delUser.id)
+    const { error } = await supabase.from('profiles').delete().eq('id', delUser.id)
     setBusyId(null)
+    setDelUser(null)
+    if (error) snack(error.message || '삭제에 실패했습니다.', 'error')
     void load()
   }
 
-  if (rows === null) return <AppCard padding={18}><LoadingState size="md" /></AppCard>
+  if (rows === null) return <AppCard padding={16}><LoadingState size="md" /></AppCard>
 
   const pending = rows.filter((r) => r.role === 'pending')
   const active = rows.filter((r) => r.role !== 'pending')
@@ -134,11 +136,11 @@ function UserManagement() {
       <Box>
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>가입 승인 대기{pending.length > 0 ? ` (${pending.length})` : ''}</Typography>
         {pending.length === 0 ? (
-          <AppCard padding={14}><Typography variant="body2" sx={{ color: 'text.secondary' }}>대기 중인 가입 신청이 없습니다.</Typography></AppCard>
+          <AppCard padding={16}><Typography variant="body2" sx={{ color: 'text.secondary' }}>대기 중인 가입 신청이 없습니다.</Typography></AppCard>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 0.5 }}>
             {pending.map((r) => (
-              <AppCard key={r.id} padding={14}>
+              <AppCard key={r.id} padding={16}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography variant="subtitle1">{r.name || '(이름 없음)'}</Typography>
@@ -147,7 +149,7 @@ function UserManagement() {
                   <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
                     <Button size="small" variant="outlined" disabled={busyId === r.id} onClick={() => changeRole(r.id, 'associate')}>유관자 승인</Button>
                     <Button size="small" variant="contained" disabled={busyId === r.id} onClick={() => changeRole(r.id, 'member')}>팀원 승인</Button>
-                    <Button size="small" color="error" disabled={busyId === r.id} onClick={() => remove(r.id, r.name, true)}>거절</Button>
+                    <Button size="small" color="error" disabled={busyId === r.id} onClick={() => setDelUser({ id: r.id, name: r.name, pending: true })}>거절</Button>
                   </Box>
                 </Box>
               </AppCard>
@@ -164,7 +166,7 @@ function UserManagement() {
             const self = !!me && r.name === me
             const roleVal = ['associate', 'member', 'admin'].includes(r.role) ? r.role : 'member'
             return (
-              <AppCard key={r.id} padding={14}>
+              <AppCard key={r.id} padding={16}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
                   <Box sx={{ minWidth: 0 }}>
                     <Typography variant="subtitle1">
@@ -175,20 +177,15 @@ function UserManagement() {
                   </Box>
                   <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
                     <Select
-                      size="small"
                       value={roleVal}
                       disabled={self || busyId === r.id}
-                      onChange={(e) => changeRole(r.id, e.target.value)}
-                      sx={{ minWidth: 104, '& .MuiSelect-select': { py: 0.5, fontSize: 14 } }}
-                    >
-                      {MANAGEABLE_ROLES.map((o) => (
-                        // 관리자 승격은 팀원(또는 이미 관리자)에게만 — 유관자는 바로 관리자로 못 올림(팀원 거쳐야)
-                        <MenuItem key={o.value} value={o.value} disabled={o.value === 'admin' && roleVal === 'associate'}>
-                          {o.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    <Button size="small" color="error" variant="text" disabled={self || busyId === r.id} onClick={() => remove(r.id, r.name, false)}>강퇴</Button>
+                      onChange={(v) => changeRole(r.id, v)}
+                      ariaLabel={`${r.name || '구성원'} 역할`}
+                      minWidth={104}
+                      // 관리자 승격은 팀원(또는 이미 관리자)에게만 — 유관자는 바로 관리자로 못 올림(팀원 거쳐야)
+                      options={MANAGEABLE_ROLES.map((o) => ({ ...o, disabled: o.value === 'admin' && roleVal === 'associate' }))}
+                    />
+                    <Button size="small" color="error" variant="text" disabled={self || busyId === r.id} onClick={() => setDelUser({ id: r.id, name: r.name, pending: false })}>강퇴</Button>
                   </Box>
                 </Box>
               </AppCard>
@@ -196,6 +193,17 @@ function UserManagement() {
           })}
         </Box>
       </Box>
+
+      <ConfirmDialog
+        open={!!delUser}
+        destructive
+        title={delUser?.pending ? '가입 신청을 거절할까요?' : `${delUser?.name || ''} 회원을 강퇴할까요?`}
+        description="프로필이 삭제되어 다시 가입해야 합니다. 이 작업은 되돌릴 수 없습니다."
+        confirmLabel={delUser?.pending ? '거절' : '강퇴'}
+        busy={!!delUser && busyId === delUser.id}
+        onConfirm={() => void remove()}
+        onClose={() => setDelUser(null)}
+      />
     </Box>
   )
 }
@@ -211,7 +219,7 @@ export default function Settings() {
       <PageHeader icon={<SettingsIcon />} title="설정" />
 
       <ContentSection title="권한">
-        <AppCard padding={18}>
+        <AppCard padding={16}>
           <Row
             label="현재 권한"
             value={<StatusChip status={isAdmin ? 'success' : role === 'member' ? 'info' : 'neutral'} label={`${ROLE_LABEL[role]}${user ? ' · ' + user : ''}`} />}
@@ -246,7 +254,7 @@ export default function Settings() {
       )}
 
       <ContentSection title="포털 정보">
-        <AppCard padding={18}>
+        <AppCard padding={16}>
           <Row label="포털 버전" value={<Typography variant="subtitle1">v{APP_VERSION}</Typography>} />
         </AppCard>
       </ContentSection>

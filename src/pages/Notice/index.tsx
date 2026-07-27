@@ -6,11 +6,6 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogContentText from '@mui/material/DialogContentText'
-import DialogActions from '@mui/material/DialogActions'
 import Table from '@mui/material/Table'
 import TableHead from '@mui/material/TableHead'
 import TableBody from '@mui/material/TableBody'
@@ -42,6 +37,7 @@ import {
   dataTableSx,
   statusTextColor,
   useSnack,
+  ConfirmDialog,
 } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { iconSize, radius, control } from '@/theme/tokens'
@@ -369,7 +365,7 @@ export default function Notice() {
         </FilterToolbar>
 
         {!ready ? (
-          <AppCard padding={18}><LoadingState /></AppCard>
+          <AppCard padding={16}><LoadingState /></AppCard>
         ) : showEmpty ? (
           // 불러오기 실패로 비었으면 위 배너가 이미 설명 — '없습니다'를 겹쳐 띄우면 데이터가 원래 없는 걸로 오해됨
           error && items.length === 0 ? null : <AppCard padding={0}><EmptyState size="sm" title="공지사항이 없습니다" /></AppCard>
@@ -415,20 +411,16 @@ export default function Notice() {
         )}
       </ContentSection>
 
-      <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
-        <DialogTitle>공지를 삭제할까요?</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: 'text.secondary' }}>
-            「{deleteTarget?.title}」 공지를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button color="error" variant="contained" onClick={confirmDelete} disabled={deleting}>
-            {deleting ? '삭제 중…' : '삭제'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        destructive
+        title="공지를 삭제할까요?"
+        description={`「${deleteTarget?.title || ''}」 공지를 삭제합니다. 삭제 후 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
     </PageContainer>
   )
 }

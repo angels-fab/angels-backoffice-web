@@ -20,7 +20,7 @@ import RedoIcon from '@mui/icons-material/Redo'
 import EditCalendarIcon from '@mui/icons-material/EditCalendar'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { PageContainer, PageHeader, StatTile, EmptyState, ErrorBanner, LoadingState, SegTabs, Select, SearchBar, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, StatTile, EmptyState, ErrorBanner, LoadingState, SegTabs, Select, SearchBar, useSnack, ConfirmDialog } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -884,7 +884,7 @@ export default function Equipment() {
                       <Box component="td" className="lg-primary rtable-title" data-label="장비명">
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                           <NameWithQty name={g.name} count={g.count} fontSize={14} />
-                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: 12, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
+                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: typescale.small.size, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
                       </Box>
                       <Box component="td" data-label="담당자">{g.mgr || '-'}</Box>
@@ -921,18 +921,16 @@ export default function Equipment() {
       )}
 
       {/* 삭제 확인 */}
-      <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 360 } } } }}>
-        <DialogTitle>정말 삭제하시겠습니까?</DialogTitle>
-        <DialogContent>
-          <DialogContentText sx={{ color: 'text.secondary' }}>
-            「{deleteTarget?.name}」 도입배치 {deleteTarget?.count}대({deleteTarget?.codes.join(', ')})를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button color="error" variant="contained" onClick={confirmDelete} disabled={deleting}>{deleting ? '삭제 중…' : '삭제'}</Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        destructive
+        title="도입배치를 삭제할까요?"
+        description={`「${deleteTarget?.name || ''}」 도입배치 ${deleteTarget?.count ?? 0}대(${deleteTarget?.codes.join(', ') || ''})를 삭제합니다. 삭제 후 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        busy={deleting}
+        onConfirm={confirmDelete}
+        onClose={() => setDeleteTarget(null)}
+      />
 
       {/* 개별 변경 확인 — 포인터 근처 작은 UI(✓ 반영 / ✗ 취소). 큰 중앙 모달 아님. 저장은 편집 종료 시 일괄. */}
       {pending && <PendingConfirm p={pending} onApply={applyPending} onCancel={cancelPending} />}

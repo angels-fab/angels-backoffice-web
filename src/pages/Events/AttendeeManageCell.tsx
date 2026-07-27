@@ -12,7 +12,7 @@ import { iconSize, typescale } from '@/theme/tokens'
  */
 export default function AttendeeManageCell({ rows, user, isMember, isAdmin, busy, onAddName, onRemove }: {
   rows: AttendeeRow[]; user: string | null; isMember: boolean; isAdmin: boolean; busy: boolean
-  onAddName: (name: string) => void; onRemove: (id: number) => void
+  onAddName: (name: string) => void; onRemove: (row: AttendeeRow) => void
 }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   return (

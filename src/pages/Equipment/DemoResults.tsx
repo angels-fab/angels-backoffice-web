@@ -26,7 +26,8 @@ import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { iconSize, radius, shadow, typescale } from '@/theme/tokens'
-import { useSnack, LoadingState } from '@/components/ds'
+import { useSnack, LoadingState, ConfirmDialog } from '@/components/ds'
+import { inlineFieldSx } from '@/components/ds/fields'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import {
@@ -414,7 +415,8 @@ function ChipRow({ round, defs, defsAll, canEdit, onEditChip, onAddChip }: {
 function ChipDialog({ mode, round, defs, chip, onClose, onSubmit }: {
   mode: 'add' | 'edit'; round: DemoRoundRow; defs: DemoMetricDef[]; chip?: ChipInfo
   onClose: () => void
-  onSubmit: (metrics: Record<string, MetricVal>, what: string) => void
+  /** destructive=true면 이어지는 비밀번호 확인창이 삭제 톤(빨강·삭제 문구)으로 뜬다 */
+  onSubmit: (metrics: Record<string, MetricVal>, what: string, destructive?: boolean) => void
 }) {
   const [label, setLabel] = useState(chip?.label || '')
   const [v, setV] = useState(chip?.value || '')
@@ -442,7 +444,7 @@ function ChipDialog({ mode, round, defs, chip, onClose, onSubmit }: {
     if (!chip) return
     const nm = { ...round.metrics }
     delete nm[chip.key]
-    onSubmit(nm, `${chip.label} 삭제`)
+    onSubmit(nm, `${chip.label} 삭제`, true)
   }
   return (
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
@@ -832,12 +834,12 @@ function EquipGroup({ equipment, defs, defsAll, makers, messages, canEdit, canMo
 
   // 지표값 저장(추가·수정·삭제 공통) — 비밀번호 재확인(조작방지) 후 metrics 통째 저장
   const [savingVal, setSavingVal] = useState(false)
-  const [pwPrompt, setPwPrompt] = useState<{ roundId: number; metrics: Record<string, MetricVal>; label: string } | null>(null)
+  const [pwPrompt, setPwPrompt] = useState<{ roundId: number; metrics: Record<string, MetricVal>; label: string; destructive?: boolean } | null>(null)
   const [pw, setPw] = useState('')
   const [pwErr, setPwErr] = useState('')
-  const askChipSave = (round: DemoRoundRow, mg: DemoMakerGroup, metrics: Record<string, MetricVal>, what: string) => {
+  const askChipSave = (round: DemoRoundRow, mg: DemoMakerGroup, metrics: Record<string, MetricVal>, what: string, destructive?: boolean) => {
     setChipDlg(null)
-    setPw(''); setPwErr(''); setPwPrompt({ roundId: round.id, metrics, label: `${mg.maker}${mg.model ? ` ${mg.model}` : ''} · ${round.round}차 — ${what}` })
+    setPw(''); setPwErr(''); setPwPrompt({ roundId: round.id, metrics, label: `${mg.maker}${mg.model ? ` ${mg.model}` : ''} · ${round.round}차 — ${what}`, destructive })
   }
   const confirmSaveVal = async () => {
     if (!pwPrompt) return
@@ -928,25 +930,26 @@ function EquipGroup({ equipment, defs, defsAll, makers, messages, canEdit, canMo
       {chipDlg && (
         <ChipDialog mode={chipDlg.mode} round={chipDlg.round} defs={defs} chip={chipDlg.chip}
           onClose={() => setChipDlg(null)}
-          onSubmit={(metrics, what) => { const mg = chipMakerOf(chipDlg.round); if (mg) askChipSave(chipDlg.round, mg, metrics, what) }} />
+          onSubmit={(metrics, what, destructive) => { const mg = chipMakerOf(chipDlg.round); if (mg) askChipSave(chipDlg.round, mg, metrics, what, destructive) }} />
       )}
 
       {/* 지표값 저장 — 비밀번호 재확인(조작방지). Enter 제출·빈값 비활성 유지 */}
       {pwPrompt && (
         <Dialog open onClose={() => !savingVal && setPwPrompt(null)} maxWidth="xs" fullWidth>
-          <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>지표값 변경 확인</DialogTitle>
+          {/* 지표 '삭제'도 이 창을 거친다 — 삭제일 땐 제목·버튼을 삭제 톤으로(파란 '확인'이면 저장으로 읽힌다) */}
+          <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>{pwPrompt.destructive ? '지표 삭제 확인' : '지표값 변경 확인'}</DialogTitle>
           <DialogContent>
             <Box sx={{ fontSize: typescale.body.size, color: 'text.secondary', mb: 1.25, lineHeight: 1.6 }}>
-              <b>{pwPrompt.label}</b> — 변경 내용은 이력에 기록됩니다. 본인 비밀번호를 입력해주세요.
+              <b>{pwPrompt.label}</b> — {pwPrompt.destructive ? '삭제 후 되돌릴 수 없습니다(삭제 기록은 변경 이력에 남음).' : '변경 내용은 이력에 기록됩니다.'} 본인 비밀번호를 입력해주세요.
             </Box>
             <InputBase autoFocus type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="비밀번호"
               onKeyDown={(e) => { if (e.key === 'Enter' && pw && !savingVal) void confirmSaveVal() }}
-              sx={(th) => ({ width: '100%', px: 1.25, py: 0.75, border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.input}px`, fontSize: typescale.body.size })} />
+              sx={(th) => ({ ...inlineFieldSx(th), width: '100%', py: 0.75 })} />
             {pwErr && <Box sx={{ mt: 0.75, fontSize: typescale.small.size, color: 'error.main' }}>{pwErr}</Box>}
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
             <Button onClick={() => setPwPrompt(null)} disabled={savingVal} sx={{ color: 'text.secondary' }}>취소</Button>
-            <Button variant="contained" onClick={() => void confirmSaveVal()} disabled={!pw || savingVal} startIcon={savingVal ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined}>확인</Button>
+            <Button variant="contained" color={pwPrompt.destructive ? 'error' : 'primary'} onClick={() => void confirmSaveVal()} disabled={!pw || savingVal} startIcon={savingVal ? <CircularProgress size={14} thickness={5} color="inherit" /> : undefined}>{pwPrompt.destructive ? '삭제' : '확인'}</Button>
           </DialogActions>
         </Dialog>
       )}
@@ -961,7 +964,7 @@ function EquipGroup({ equipment, defs, defsAll, makers, messages, canEdit, canMo
             </Box>
             <InputBase autoFocus type="password" value={delPw} onChange={(e) => setDelPw(e.target.value)} placeholder="비밀번호"
               onKeyDown={(e) => { if (e.key === 'Enter' && delPw && !deleting) void confirmDelete() }}
-              sx={(th) => ({ width: '100%', px: 1.25, py: 0.75, border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.input}px`, fontSize: typescale.body.size })} />
+              sx={(th) => ({ ...inlineFieldSx(th), width: '100%', py: 0.75 })} />
             {delErr && <Box sx={{ mt: 0.75, fontSize: typescale.small.size, color: 'error.main' }}>{delErr}</Box>}
           </DialogContent>
           <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -1022,8 +1025,16 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
     catch (e) { snack(e instanceof Error ? e.message : '메모 수정 실패', 'error'); throw e }
     finally { setChatBusy(false) }
   }
-  const onDeleteChat = async (id: number) => {
-    try { await deleteDemoChat(id); refetchChat() } catch (e) { snack(e instanceof Error ? e.message : '삭제 실패', 'error') }
+  // 검토 메모 삭제는 하드 딜리트(실행취소 없음)인데 아이콘 한 번에 바로 지워졌다.
+  // 관리자는 남이 쓴 메모까지 지울 수 있어(ownOf) 오조작 비용이 크므로 확인 한 단계를 둔다.
+  const [delMemo, setDelMemo] = useState<number | null>(null)
+  const onDeleteChat = (id: number) => setDelMemo(id)
+  const confirmDeleteChat = async () => {
+    if (delMemo == null) return
+    setChatBusy(true)
+    try { await deleteDemoChat(delMemo); setDelMemo(null); refetchChat() }
+    catch (e) { snack(e instanceof Error ? e.message : '삭제 실패', 'error') }
+    finally { setChatBusy(false) }
   }
 
   const onSaveValues = async (roundId: number, metrics: Record<string, MetricVal>) => {
@@ -1077,6 +1088,17 @@ export default function DemoResults({ addSlot }: { addSlot?: HTMLElement | null 
           />
         ))
       )}
+      <ConfirmDialog
+        open={delMemo != null}
+        destructive
+        title="검토 메모를 삭제할까요?"
+        description="삭제 후 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        busy={chatBusy}
+        onConfirm={() => void confirmDeleteChat()}
+        onClose={() => setDelMemo(null)}
+      />
+
       {editorEquip && (
         <MetricEditorDialog open equipment={editorEquip} defs={defs} author={user}
           onClose={() => setEditorEquip(null)}

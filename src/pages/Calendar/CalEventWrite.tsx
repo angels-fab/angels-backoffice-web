@@ -850,12 +850,15 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     <Dialog open={!!scopeAsk} onClose={() => !busy && setScopeAsk(null)} slotProps={{ paper: { sx: { bgcolor: 'background.paper', minWidth: { xs: 280, sm: 340 } } } }}>
       <DialogTitle>{scopeAsk === 'delete' ? '반복 일정 삭제' : '반복 일정 수정'}</DialogTitle>
       <DialogContent>
-        <DialogContentText sx={{ color: 'text.secondary' }}>어느 범위에 적용할까요?</DialogContentText>
+        <DialogContentText sx={{ color: 'text.secondary' }}>
+          {scopeAsk === 'delete' ? '어느 범위를 삭제할까요? 삭제 후 되돌릴 수 없습니다.' : '어느 범위에 적용할까요?'}
+        </DialogContentText>
       </DialogContent>
+      {/* 삭제 범위 3개는 모두 되돌릴 수 없다 — '모든 일정'만 빨강이면 나머지 둘이 안전해 보인다 */}
       <DialogActions sx={{ px: 3, pb: 2, gap: 0.75, flexDirection: 'column', alignItems: 'stretch' }}>
-        <Button fullWidth variant="outlined" disabled={busy} onClick={() => (scopeAsk === 'delete' ? doDelete('one') : doSave('one'))}>이 일정만</Button>
-        <Button fullWidth variant="outlined" disabled={busy} onClick={() => (scopeAsk === 'delete' ? doDelete('following') : doSave('following'))}>이 일정 및 이후</Button>
-        <Button fullWidth variant="outlined" color={scopeAsk === 'delete' ? 'error' : 'primary'} disabled={busy} onClick={() => (scopeAsk === 'delete' ? doDelete('all') : doSave('all'))}>모든 일정</Button>
+        <Button fullWidth variant="outlined" color={scopeAsk === 'delete' ? 'error' : 'primary'} disabled={busy} onClick={() => (scopeAsk === 'delete' ? doDelete('one') : doSave('one'))}>이 일정만</Button>
+        <Button fullWidth variant="outlined" color={scopeAsk === 'delete' ? 'error' : 'primary'} disabled={busy} onClick={() => (scopeAsk === 'delete' ? doDelete('following') : doSave('following'))}>이 일정 및 이후</Button>
+        <Button fullWidth variant={scopeAsk === 'delete' ? 'contained' : 'outlined'} color={scopeAsk === 'delete' ? 'error' : 'primary'} disabled={busy} onClick={() => (scopeAsk === 'delete' ? doDelete('all') : doSave('all'))}>모든 일정</Button>
         <Button fullWidth disabled={busy} onClick={() => setScopeAsk(null)} sx={{ color: 'text.secondary', mt: 0.5 }}>취소</Button>
       </DialogActions>
     </Dialog>

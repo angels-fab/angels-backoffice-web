@@ -33,8 +33,9 @@ import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius, control } from '@/theme/tokens'
 import { nextFilterSelection } from '@/utils/filterSelect'
-import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, statusTextColor, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableHeadSx, dataTableSx, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, statusTextColor, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableHeadSx, dataTableSx, useSnack, ConfirmDialog } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
+import { inlineFieldSx } from '@/components/ds/fields'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { addReply, patchReply, removeReply } from '@/store/slices/replySlice'
@@ -60,13 +61,7 @@ const kindColor = (t: Theme, kind: StatusKind) =>
         : kind === 'error' ? t.palette.accent.red
           : t.palette.text.secondary
 
-const inputSx = (th: Theme) => ({
-  bgcolor: alpha(th.palette.text.primary, 0.05),
-  border: '1px solid', borderColor: th.palette.divider, borderRadius: `${radius.chip}px`,
-  px: 1, py: 0.4, fontSize: typescale.body.size, color: 'text.primary',
-  '&.Mui-focused': { borderColor: th.palette.accent.green },
-  '& input::placeholder, & textarea::placeholder': { color: 'text.disabled', opacity: 1 },
-})
+const inputSx = (th: Theme) => ({ ...inlineFieldSx(th), py: 0.4 })
 
 type Snack = { open: boolean; msg: string; severity: 'success' | 'error' | 'info' }
 type ReasonDlg = { row: ImprovementItem; status: string; value: string }
@@ -698,7 +693,7 @@ export default function Improve() {
                       <Button onClick={addCard} startIcon={<AddIcon />} size="small" variant="outlined" disabled={savingDraft || publishing} sx={{ color: 'text.secondary', borderColor: 'divider' }}>요청 추가</Button>
                       <Box sx={{ flex: 1 }} />
                       <Button onClick={() => void handleSaveDrafts(false)} size="small" disabled={savingDraft || publishing} sx={{ color: 'text.secondary' }}>{savingDraft ? '임시저장 중…' : '임시저장'}</Button>
-                      <Button onClick={requestClose} size="small" color="error" disabled={savingDraft || publishing}>취소</Button>
+                      <Button onClick={requestClose} size="small" disabled={savingDraft || publishing} sx={{ color: 'text.secondary' }}>취소</Button>
                       <Button onClick={() => void handlePublish()} size="small" variant="contained" color="success" disabled={publishing || savingDraft || publishable.length === 0}>{publishing ? '등록 중…' : `${publishable.length}건 등록`}</Button>
                     </Box>
                   </TableCell>
@@ -898,34 +893,34 @@ export default function Improve() {
           />
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button color="error" onClick={() => setReasonDlg(null)} disabled={savingId !== null}>취소</Button>
+          <Button onClick={() => setReasonDlg(null)} disabled={savingId !== null} sx={{ color: 'text.secondary' }}>취소</Button>
           <Button variant="contained" color="success" onClick={commitReason} disabled={savingId !== null}>{savingId !== null ? '저장 중…' : '저장'}</Button>
         </DialogActions>
       </Dialog>
 
       {/* 삭제 확인 팝업 */}
-      <Dialog open={!!deleteDlg} onClose={() => !saving && setDeleteDlg(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
-        <DialogTitle>요청 삭제</DialogTitle>
-        <DialogContent>
-          <Box sx={{ fontSize: typescale.emphasis.size, color: 'text.primary', lineHeight: 1.7 }}>「{deleteDlg?.title}」 요청을 삭제할까요?<br />삭제하면 되돌릴 수 없습니다.</Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteDlg(null)} disabled={saving}>취소</Button>
-          <Button variant="contained" color="error" onClick={handleDelete} disabled={saving}>{saving ? '삭제 중…' : '삭제'}</Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={!!deleteDlg}
+        destructive
+        title="요청을 삭제할까요?"
+        description={`「${deleteDlg?.title || ''}」 요청을 삭제합니다. 삭제 후 되돌릴 수 없습니다.`}
+        confirmLabel="삭제"
+        busy={saving}
+        onConfirm={handleDelete}
+        onClose={() => setDeleteDlg(null)}
+      />
 
-      {/* 답글 삭제 확인 팝업 (소프트 삭제) */}
-      <Dialog open={!!delReply} onClose={() => !replyBusy && setDelReply(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
-        <DialogTitle>답글 삭제</DialogTitle>
-        <DialogContent>
-          <Box sx={{ fontSize: typescale.emphasis.size, color: 'text.primary', lineHeight: 1.7 }}>이 답글을 삭제할까요?<br />삭제하면 목록과 답글 수에서 제외됩니다.</Box>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDelReply(null)} disabled={replyBusy}>취소</Button>
-          <Button variant="contained" color="error" onClick={confirmDelReply} disabled={replyBusy}>{replyBusy ? '삭제 중…' : '삭제'}</Button>
-        </DialogActions>
-      </Dialog>
+      {/* 답글 삭제 확인 (소프트 삭제 — 되돌릴 수 없다는 문구는 쓰지 않는다) */}
+      <ConfirmDialog
+        open={!!delReply}
+        destructive
+        title="답글을 삭제할까요?"
+        description="삭제하면 목록과 답글 수에서 제외됩니다."
+        confirmLabel="삭제"
+        busy={replyBusy}
+        onConfirm={confirmDelReply}
+        onClose={() => setDelReply(null)}
+      />
     </PageContainer>
   )
 }

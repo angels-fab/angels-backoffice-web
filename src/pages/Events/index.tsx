@@ -6,7 +6,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
-import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, SegTabs, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, SegTabs, ConfirmDialog, useSnack } from '@/components/ds'
 import { radius, shadow } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
@@ -103,9 +103,13 @@ export default function Events() {
     setAttBusy(true)
     try { await addAttendee({ eventId, name, self: false }); refetchAtt() } catch (err) { attErr(err) } finally { setAttBusy(false) }
   }
-  const removeAtt = async (id: number) => {
+  // 참석자 제거는 하드 딜리트(실행취소 없음)인데 칩 안 X 아이콘이 좁아 이름을 누르려다 빗맞기 쉬웠다.
+  // 확인창을 한 단계 두되, 본인 참석 토글(toggleSelf)은 스스로 되돌릴 수 있으므로 지금처럼 무확인 유지.
+  const [delAtt, setDelAtt] = useState<AttendeeRow | null>(null)
+  const removeAtt = async () => {
+    if (!delAtt) return
     setAttBusy(true)
-    try { await removeAttendee(id); refetchAtt() } catch (err) { attErr(err) } finally { setAttBusy(false) }
+    try { await removeAttendee(delAtt.id); setDelAtt(null); refetchAtt() } catch (err) { attErr(err) } finally { setAttBusy(false) }
   }
   // 진행·예정 카드 얼굴 참석 버튼용(개인) — 로그인 팀원만. 게스트·비로그인은 undefined(버튼 미표시).
   const attendFor = (e: FabEvent): AttendControl | undefined => {
@@ -206,7 +210,7 @@ export default function Events() {
               busy={attBusy}
               onToggleSelf={(id) => void toggleSelf(id)}
               onAddName={(id, n) => void addAttName(id, n)}
-              onRemove={(id) => void removeAtt(id)}
+              onRemove={(row) => setDelAtt(row)}
             />
           </AppCard>
         )}
@@ -247,6 +251,17 @@ export default function Events() {
         onSubmitted={() => { setSubmitOpen(false); snack('행사를 신청했습니다. 관리자 검토 후 게시됩니다.'); refetchSubs() }}
         onError={(m) => snack(m, 'error')}
       />
+      <ConfirmDialog
+        open={!!delAtt}
+        destructive
+        title="참석자를 제거할까요?"
+        description={`${delAtt?.name || ''} 님을 참석자 목록에서 제거합니다. 제거 후 되돌릴 수 없습니다.`}
+        confirmLabel="제거"
+        busy={attBusy}
+        onConfirm={() => void removeAtt()}
+        onClose={() => setDelAtt(null)}
+      />
+
       {/* 관리자 — 신청 대기·검토 */}
       {isAdmin && (
         <SubmissionsAdmin open={subOpen} onClose={() => setSubOpen(false)} submissions={submissions} onChanged={refetchSubs} onError={(m) => snack(m, 'error')} />

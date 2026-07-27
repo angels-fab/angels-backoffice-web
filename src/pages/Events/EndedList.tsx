@@ -15,7 +15,7 @@ export default function EndedList({ events, selectedId, onPick, attByEvent, user
   events: FabEvent[]; selectedId?: string | null; onPick: (e: FabEvent) => void
   attByEvent: Record<string, AttendeeRow[]>
   user: string | null; isMember: boolean; isAdmin: boolean; busy: boolean
-  onToggleSelf: (eventId: string) => void; onAddName: (eventId: string, name: string) => void; onRemove: (id: number) => void
+  onToggleSelf: (eventId: string) => void; onAddName: (eventId: string, name: string) => void; onRemove: (row: AttendeeRow) => void
 }) {
   const canToggle = isMember && !!user
   return (
