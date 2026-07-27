@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
     "design-lint": "node scripts/design-lint.mjs",
-    "deploy:backend": "clasp -P google-apps-script push -f && clasp -P google-apps-script redeploy AKfycbxwvgPPyZDVTnWl6g7M_Y2vv1U-mrYitz0KUy9SBxfCtSWOzjX1w9oZp90b7don9Fmd -d \"backend deploy (clasp)\""
+    "deploy:backend": "clasp -P google-apps-script push -f && clasp -P google-apps-script redeploy AKfycbxwvgPPyZDVTnWl6g7M_Y2vv1U-mrYitz0KUy9SBxfCtSWOzjX1w9oZp90b7don9Fmd -d \"backend deploy (clasp)\"",
+    "design-lint:ratchet": "node scripts/design-lint.mjs --ratchet",
+    "design-lint:accept": "node scripts/design-lint.mjs --accept",
+    "hooks:install": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

@@ -1,0 +1,21 @@
+#!/bin/sh
+# 커밋 전 게이트 — 디자인시스템 드리프트가 '늘어나지만' 않으면 통과(래칫).
+#
+# 왜 --strict 가 아니라 래칫인가: 기존 위반이 600건대라 strict 로는 어떤 커밋도 통과하지 못한다.
+# "더 나빠지지만 않으면 통과"로 두면 새 코드는 깨끗하게 강제되고 기존은 점진적으로 줄어든다.
+#
+# 끄기:  git config --unset core.hooksPath
+# 켜기:  npm run hooks:install
+# 이번 커밋만 건너뛰기는 하지 말 것 — 걸렸다면 토큰을 안 쓴 코드가 들어간 것이다.
+
+if ! node scripts/design-lint.mjs --ratchet; then
+  echo ""
+  echo "  커밋을 중단했습니다. 위에 나온 파일에서 하드코딩 값을 토큰으로 바꾸세요:"
+  echo "    색      #RRGGBB      → theme.palette.* / accentText.*"
+  echo "    글자    fontSize: 13 → Typography variant 또는 typescale.*"
+  echo "    굵기    fontWeight   → variant 굵기 위계"
+  echo "    모서리  borderRadius → \${radius.X}px"
+  echo "    그림자  boxShadow    → shadow.sm/md/lg"
+  echo ""
+  exit 1
+fi
