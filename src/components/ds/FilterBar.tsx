@@ -15,7 +15,11 @@ export interface FilterBarProps {
 /**
  * FilterBar — 페이지 상단 필터 영역의 통일된 가로 컨테이너.
  *
- * 레이아웃 규칙: 아래 여백 24px(layout.filterGap). 좁은 화면에서 wrap.
+ * ⚠ 미채택 — 프로덕션 사용처 0곳(_DesignSystem 쇼케이스에만 남음).
+ *   실제 정본은 <FilterToolbar>(공지·개선요청에서 사용 중)다. 새 화면은 FilterToolbar 를 쓸 것.
+ *   여기에 값을 맞추려 들면 정본이 두 벌이 된다.
+ *
+ * 레이아웃 규칙: 아래 여백 layout.filterGap(16). 좁은 화면에서 wrap.
  *
  * @example
  * <FilterBar trailing={<SearchBar value={q} onChange={setQ} />}>

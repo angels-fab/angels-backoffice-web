@@ -27,7 +27,7 @@ export default function NoticeSection() {
 
   if (!ready) {
     return (
-      <AppCard padding={18}>
+      <AppCard padding={16}>
         <LoadingState size="sm" />
       </AppCard>
     )

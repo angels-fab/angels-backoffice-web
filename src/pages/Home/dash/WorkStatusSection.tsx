@@ -17,7 +17,7 @@ export default function WorkStatusSection() {
   return (
     <Box>
       {/* 비율 막대 (Mini Chart) */}
-      <AppCard padding={18} sx={{ mb: 2 }}>
+      <AppCard padding={16} sx={{ mb: 2 }}>
         <RatioBar
           segments={[
             { label: '진행중', value: c.inProgress, status: 'success' },

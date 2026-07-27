@@ -2,6 +2,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import type { ReactNode } from 'react'
+import { layout } from '@/theme/tokens'
 
 export interface SectionHeaderProps {
   /** 섹션 제목 */
@@ -42,7 +43,7 @@ export default function SectionHeader({
         alignItems: description ? 'flex-start' : 'center',
         justifyContent: 'space-between',
         gap: 1,
-        mb: 1.5,
+        mb: `${layout.sectionTitleGap}px`,
       }}
     >
       <Box sx={{ minWidth: 0 }}>

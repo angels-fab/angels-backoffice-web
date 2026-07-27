@@ -66,8 +66,11 @@ export default function PageHeader({ title, icon, subtitle, updatedAt, actions }
             </Box>
           )}
           <Box sx={{ minWidth: 0 }}>
-            {/* 제목 + (있으면) 개선 메모 칩 — 제목 바로 옆 */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            {/* 제목 + (있으면) 개선 메모 칩 — 제목 바로 옆.
+                minHeight를 아이콘 배지와 같은 40으로 두고 가운데 정렬: 제목 줄(28.6px)을 그냥
+                flex-start로 두면 40px 배지·36px 액션 버튼보다 중심이 5~6px 위로 떠서 '제목이
+                위로 치우쳐' 보인다. 세 요소의 중심을 같은 20px 선에 맞춘다. */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minHeight: layout.headerRowHeight }}>
               <Typography variant="h2" component="h1">
                 {title}
               </Typography>
@@ -86,7 +89,8 @@ export default function PageHeader({ title, icon, subtitle, updatedAt, actions }
           </Box>
         </Box>
         {actions && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0 }}>{actions}</Box>
+          // 제목 줄과 같은 minHeight로 중심선을 맞춘다(제목 블록에 부제가 붙어도 첫 줄 기준 유지)
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0, minHeight: layout.headerRowHeight }}>{actions}</Box>
         )}
       </Box>
       {/* 칩 클릭 시 제목 아래 메모 패널 */}

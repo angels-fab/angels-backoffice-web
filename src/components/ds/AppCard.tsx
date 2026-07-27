@@ -7,7 +7,7 @@ import { layout } from '@/theme/tokens'
 
 export interface AppCardProps {
   children: ReactNode
-  /** 내부 padding(px). 기본 16 — 긴 설명 카드만 24(cardPaddingLg), 목록 카드는 0. */
+  /** 내부 padding(px). 기본 16(cardPadding) — 조밀 타일 12(cardPaddingSm), 표·목록 껍데기는 0. */
   padding?: number
   /** 클릭 가능 카드의 hover 인터랙션(배경 전환+보더 강조). */
   interactive?: boolean

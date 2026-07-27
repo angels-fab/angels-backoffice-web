@@ -18,23 +18,28 @@ import { typescale } from '@/theme/tokens'
 export interface SelectOption {
   value: string
   label: ReactNode
+  /** 이 항목만 선택 불가(예: 조건부 승격 제한) */
+  disabled?: boolean
 }
 export interface SelectProps {
   value: string
   onChange: (value: string) => void
   options: SelectOption[]
   ariaLabel?: string
+  /** 전체 비활성 */
+  disabled?: boolean
   /** 최소 폭(px) — 기본 110 */
   minWidth?: number
   sx?: SxProps<Theme>
 }
 
-export default function Select({ value, onChange, options, ariaLabel, minWidth = 110, sx }: SelectProps) {
+export default function Select({ value, onChange, options, ariaLabel, disabled, minWidth = 110, sx }: SelectProps) {
   return (
     <MuiSelect
       size="small"
       value={value}
       onChange={(e) => onChange(String(e.target.value))}
+      disabled={disabled}
       inputProps={{ 'aria-label': ariaLabel }}
       sx={mergeSx(
         { minWidth, flexShrink: 0, '& .MuiSelect-select': { py: '6px', fontSize: typescale.body.size } },
@@ -42,7 +47,7 @@ export default function Select({ value, onChange, options, ariaLabel, minWidth =
       )}
     >
       {options.map((o) => (
-        <MenuItem key={o.value} value={o.value} sx={{ fontSize: typescale.body.size }}>{o.label}</MenuItem>
+        <MenuItem key={o.value} value={o.value} disabled={o.disabled} sx={{ fontSize: typescale.body.size }}>{o.label}</MenuItem>
       ))}
     </MuiSelect>
   )

@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import { layout } from '@/theme/tokens'
 import AppCard from './AppCard'
 import StatusChip, { type StatusKind } from './StatusChip'
 
@@ -23,7 +24,8 @@ export interface StatTileProps {
 export default function StatTile({ value, unit, label, status, sub, onClick, selected }: StatTileProps) {
   return (
     <AppCard
-      padding={18}
+      // 토큰 참조 — 여기 숫자를 박아두면(구 18) DS 부품 하나가 카드 여백 정본을 조용히 갈라놓는다
+      padding={layout.cardPadding}
       onClick={onClick}
       sx={selected ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` } : undefined}
     >

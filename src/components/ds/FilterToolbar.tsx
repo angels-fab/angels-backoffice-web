@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import { mergeSx } from './sxMerge'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
-import { radius } from '@/theme/tokens'
+import { layout, radius } from '@/theme/tokens'
 
 /**
  * FilterToolbar — 목록 페이지 상단 필터 바 표준 (박스 + 라벨 + 칩 + 검색 + 액션).
@@ -41,7 +41,8 @@ export default function FilterToolbar({ label, children, search, actions, sx }: 
     <Box
       sx={mergeSx(
         (t: Theme) => ({
-          display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25, mb: 2,
+          // mb 는 토큰 참조 — 여기 리터럴(구 mb:2)을 두면 정본 filterGap 이 아무도 안 쓰는 죽은 값이 된다
+          display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1.25, mb: `${layout.filterGap}px`,
           p: '10px 14px', bgcolor: 'background.paper',
           border: `1px solid ${t.palette.divider}`, borderRadius: `${radius.card}px`,
         }),

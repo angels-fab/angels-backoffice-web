@@ -17,7 +17,7 @@ export default function EquipmentSection() {
   return (
     <Box>
       {/* 상태 비율 막대(대수 기준) */}
-      <AppCard padding={18} sx={{ mb: 2 }}>
+      <AppCard padding={16} sx={{ mb: 2 }}>
         <RatioBar
           segments={[
             { label: '운영중', value: u['운영중'], status: 'success' },

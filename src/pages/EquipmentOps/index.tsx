@@ -9,7 +9,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, LoadingState, Select, SearchBar } from '@/components/ds'
-import { iconSize, radius, control } from '@/theme/tokens'
+import { iconSize, radius, control, typescale } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -229,7 +229,8 @@ export default function EquipmentOps() {
                       <Box component="td" className="lg-primary">
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                           <NameWithQty name={g.name} count={g.count} fontSize={14} />
-                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.disabled', fontWeight: 400, fontSize: 11, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
+                          {/* 변형명 부제 — 장비도입 표(Equipment/index.tsx)와 같은 열·같은 역할이라 값도 같게(12/보조톤) */}
+                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: typescale.small.size, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
                       </Box>
                       <Box component="td" sx={{ color: 'text.primary', fontSize: 12 }}>{g.cat || '-'}</Box>
