@@ -8,12 +8,16 @@ import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ImageIcon from '@mui/icons-material/Image'
 import { alpha } from '@mui/material/styles'
 import { typescale, iconSize, radius } from '@/theme/tokens'
+import { StatusChip } from '@/components/ds'
+import type { StatusKind } from '@/components/ds'
 import { fmtEventDate } from '@/constants/events'
 import { CAT_COLOR, type EventCat } from './eventCard'
 import { updateSubmissionStatus, submissionPosterUrl, type EventSubmissionRow } from '@/api/events'
 
 const STATUS_LABEL: Record<string, string> = { pending: '대기', published: '게시완료', rejected: '반려' }
-const STATUS_COLOR: Record<string, string> = { pending: '#eab308', published: '#22c55e', rejected: '#ef4444' }
+// 상태색은 하드코딩 hex(다크 전제)가 아니라 StatusChip 정본 — 라이트 흰 다이얼로그 위에서
+// 노랑 1.85:1 · 초록 2.19:1 로 안 읽혔다(2026-07-27 대비 전수조사).
+const STATUS_KIND: Record<string, StatusKind> = { pending: 'warning', published: 'success', rejected: 'error' }
 
 /**
  * 관리자용 — 팀원이 신청한 행사 목록 검토. 게시(실제 카드 등록)는 클로드에게 요청해서 진행하고,
@@ -47,12 +51,11 @@ export default function SubmissionsAdmin({ open, onClose, submissions, onChanged
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
             {sorted.map((s) => {
               const catColor = CAT_COLOR[(s.category as EventCat)] ?? '#888'
-              const stColor = STATUS_COLOR[s.status] ?? '#888'
               return (
                 <Box key={s.id} sx={(th) => ({ border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.button}px`, p: 1.25, bgcolor: alpha(th.palette.text.primary, 0.02) })}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 0.75 }}>
                     {s.category && <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, px: '8px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: catColor, color: 'common.white' }}>{s.category}</Box>}
-                    <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, px: '8px', py: '2px', borderRadius: `${radius.pill}px`, color: stColor, border: `1px solid ${stColor}` }}>{STATUS_LABEL[s.status] ?? s.status}</Box>
+                    <StatusChip status={STATUS_KIND[s.status] ?? 'neutral'} label={STATUS_LABEL[s.status] ?? s.status} size="small" />
                     <Box sx={{ flex: 1 }} />
                     <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.disabled' }}>{s.submitter || '-'}</Box>
                   </Box>

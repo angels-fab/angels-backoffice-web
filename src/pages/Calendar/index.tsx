@@ -454,8 +454,10 @@ export default function Calendar() {
         start: draft.start,
         end: keyOf(addDays(parseKey(draft.end), 1)), // 종일 end는 미포함(다음 날)
         allDay: true,
-        backgroundColor: 'rgba(84,145,218,.85)',
-        borderColor: '#5491DA',
+        // 반투명이면 라이트에서 흰 달력 칸이 비쳐 배경이 밝아지고(#6EA2E0) 흰 제목이 2.67:1로 흐려진다.
+        // 두 테마 공통 진한 파랑(--blue-solid)으로 불투명하게 — 흰 글자 5.7:1.
+        backgroundColor: 'var(--blue-solid)',
+        borderColor: 'var(--blue-solid)',
         editable: false,
         extendedProps: { draft: true, sortPri: 1 } as never,
       } as (typeof list)[number])

@@ -10,6 +10,7 @@ import BeachAccessIcon from '@mui/icons-material/BeachAccess'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import type { SvgIconComponent } from '@mui/icons-material'
 import { typescale, iconSize, radius } from '@/theme/tokens'
+import { CAT_META } from './catMeta'
 import type { RealCat } from './catMeta'
 
 /**
@@ -112,9 +113,17 @@ function NameRow({ participants }: { participants: Participant[] }) {
   )
 }
 
-export default function ChipContent({ participants, catKey, catColor, time, title, variant = 'daygrid', multiDay }: ChipContentProps) {
+export default function ChipContent({ participants, catKey, time, title, variant = 'daygrid', multiDay }: ChipContentProps) {
   const Icon = CAT_ICON[catKey]
-  const iconSx = { fontSize: iconSize.body, color: catColor, flex: 'none', ...(catKey === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}) }
+  // 아이콘 색은 채움색(catColor)이 아니라 글자용 짝 — 자기 색 18% 틴트 위에 원색을 얹으면
+  // 라이트에서 2.0:1(비문자 기준 3:1 미달)로 사라진다. 칩에 종류 '글자'가 없어 이 아이콘이 유일한 표식.
+  const tone = CAT_META[catKey].tone
+  const iconSx = {
+    fontSize: iconSize.body,
+    color: tone === 'neutral' ? 'text.primary' : `accentText.${tone}`,
+    flex: 'none',
+    ...(catKey === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}),
+  }
   const timeSx = { fontSize: typescale.small.size, fontWeight: typescale.cardTitle.weight, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', flex: 'none' } as const
   const titleSx = { flex: '0 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, lineHeight: 1.4 } as const
 

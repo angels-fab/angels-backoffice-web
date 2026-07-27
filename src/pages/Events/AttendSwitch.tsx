@@ -38,9 +38,12 @@ export default function AttendSwitch({ checked, disabled, onToggle }: {
         sx={(th) => ({
           position: 'absolute', top: 0, height: '100%', display: 'flex', alignItems: 'center',
           fontSize: 11, fontWeight: 800, letterSpacing: '.02em', lineHeight: 1, pointerEvents: 'none',
+          // 꺼짐 트랙은 alpha(text.primary,.22)라 테마에 따라 뒤집힌다(다크 진회색 / 라이트 연회색).
+          // 라벨을 흰색으로 고정하면 라이트에서 1.53:1로 사라지므로 text.primary를 쓴다
+          // (다크 text.primary=흰색 6.8:1 / 라이트=진남색 10.6:1 — 한 값으로 양쪽 해결).
           ...(checked
             ? { left: 9, color: th.palette.common.white }
-            : { right: 9, color: alpha(th.palette.common.white, 0.92) }),
+            : { right: 9, color: th.palette.text.primary }),
         })}
       >
         {checked ? '참석' : '불참'}
@@ -50,7 +53,9 @@ export default function AttendSwitch({ checked, disabled, onToggle }: {
         component="span"
         sx={(th) => ({
           position: 'absolute', top: PAD, width: KNOB, height: KNOB, borderRadius: radius.circle,
-          bgcolor: th.palette.common.white, boxShadow: '0 1px 3px rgba(0,0,0,.4)', transition: 'left .2s ease',
+          // 라이트 꺼짐 트랙(연회색)에 흰 손잡이는 1.9:1이라 윤곽이 안 잡힌다 — 얇은 테두리로 경계 확보
+          bgcolor: th.palette.common.white, border: '1px solid', borderColor: alpha(th.palette.common.black, 0.2),
+          boxSizing: 'border-box', boxShadow: '0 1px 3px rgba(0,0,0,.4)', transition: 'left .2s ease',
           left: checked ? W - KNOB - PAD : PAD,
         })}
       />

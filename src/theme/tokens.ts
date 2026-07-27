@@ -40,6 +40,9 @@ export const darkPalette = {
   textSecondary: '#AAB4C3',
   /** 흐린 텍스트 (Muted) — 상향(구 #7D8899는 떠오른/호버 표면 #1D2635 위 4.24:1 미달) → 전 표면 5.5:1+ */
   textMuted: '#909CAE',
+  /** 툴팁 표면 — 배경/글자를 짝으로 고정(MUI 기본 전경=흰색에 맡기면 라이트에서 흰글씨/흰배경). 흰 글씨 13.3:1 */
+  tooltip: '#26303E',
+  tooltipText: '#FFFFFF',
 } as const
 
 /**
@@ -59,6 +62,10 @@ export const lightPalette = {
   textSecondary: '#555E6B',
   // muted — 구 #8A93A2는 2.9:1 미달. 흰 카드가 아니라 페이지 배경(#F4F6F8) 위에서도 4.5:1 여유가 있게(4.97:1)
   textMuted: '#5E6C7A',
+  // 툴팁은 라이트에서도 '어두운 표면 + 흰 글씨'(웹 관행·MUI 기본 룩). 흰 글씨 12.6:1
+  // hover(#F0F3F7)를 쓰면 흰 글씨와 1.06:1이 되어 글자가 사라진다 — 배경/글자는 반드시 짝으로.
+  tooltip: '#2A3441',
+  tooltipText: '#FFFFFF',
 } as const
 
 /**
@@ -72,6 +79,7 @@ export const accent = {
   red: '#E05B54', // error — 부드러운 레드
   purple: '#A98AE0', // 보조 강조
   teal: '#46B7BE', // 보조 강조
+  rose: '#D87CA6', // 연차/휴가 — domain.calendar.leave 와 같은 값(글자용 짝 accentText.rose 를 두려고 fill 도 등록)
 } as const
 
 /**
@@ -92,6 +100,7 @@ export const accentTextLight = {
   red: '#A82B26',
   purple: '#653FB1',
   teal: '#0D6369',
+  rose: '#A6386B', // 22% 틴트 알약 위 4.58:1 · 달력칩 18% 틴트 위 5.20:1
 } as const
 /**
  * 다크 표면 위 글자 — accent 원색을 그대로 글자로 쓰면 "떠오른 표면 위 12% 틴트칩"(가장 불리한 조건)에서
@@ -104,6 +113,7 @@ export const accentTextDark = {
   red: '#F5837C',
   purple: '#B79BE8',
   teal: '#5CC8CF',
+  rose: '#E9A8C4', // 다크 22% 틴트 알약 위 4.94:1
 } as const
 
 /**
@@ -133,24 +143,28 @@ export const layout = {
   pageXMobile: 16,
   /** PageHeader 아래(= Header → 첫 Section) 여백 */
   pageHeaderGap: 24,
+  /** PageHeader 제목 줄 높이 — 아이콘 배지(40)·액션 버튼(control.height 36)과 중심선을 맞추는 기준 */
+  headerRowHeight: 40,
+  /** 섹션 제목 줄 아래 여백(제목 → 섹션 내용) — 실측 전 페이지 12px 일치, SectionHeader 가 정본 */
+  sectionTitleGap: 12,
   /** Filter 영역 아래 여백 — P1 정규화: 전 페이지 실화면 값(16)으로 확정 */
   filterGap: 16,
   /** Section 간 간격 */
   sectionGap: 24,
-  /** KPI 카드 간 간격(CardGrid) */
-  kpiGap: 16,
-  /** KPI 스트립(꽉 찬 한 줄 타일) 칸 간격 — 실화면 표준 */
+  /** KPI 스트립(꽉 찬 한 줄 타일) 칸 간격 — 실화면 표준.
+   *  ★ Work KpiSection의 모바일 값(26px)은 이탈이 아니다 — 타일 아래로 14px 튀어나오는
+   *  '부서장 확인' 칩(KpiSection.tsx:216)을 피하려고 잡은 값이라, 8로 내리면 칩이 겹친다. */
   kpiStripGap: 8,
   /** 일반 카드/그리드 간 간격 */
   cardGap: 16,
+  /** 세로로 쌓는 카드 목록의 카드 간 간격 */
+  listCardGap: 8,
   /** Card 내부 padding — 기본 16 (사용자 확정 2026-07-13: 콤팩트가 표준) */
   cardPadding: 16,
-  /** Card 내부 padding — 여유 24 (긴 설명·텍스트 위주 카드에만 허용) */
-  cardPaddingLg: 24,
   /** Card 내부 padding — 최소 12 (미리보기 타일). 목록 카드는 0 */
   cardPaddingSm: 12,
-  /** Drawer 내부 padding */
-  drawerPadding: 24,
+  /** Drawer·바텀시트 내부 padding — 실화면 값(16). 구 24는 실사용처가 없던 오기 */
+  drawerPadding: 16,
   /** 콘텐츠 최대 폭 — Dashboard / 목록 페이지 */
   maxWidthWide: 1400,
   /** 콘텐츠 최대 폭 — 상세 페이지 */

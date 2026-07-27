@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
 import { accent, radius, shadow } from '../../theme/tokens'
+import { catTextColor, toneOfColor } from './catMeta'
 
 /** 일정 상세 데이터 — 원본 제목 그대로(장소-목적 분리 안 함) + 시간 + 전체 해당자 + 분류. */
 export interface EventDetail {
@@ -76,7 +77,8 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
-        <Box component="span" sx={{ px: '8px', py: '3px', borderRadius: `${radius.pill}px`, fontSize: 11, fontWeight: 800, color: detail.catColor, bgcolor: alpha(detail.catColor, 0.22) }}>
+        {/* 글자는 catTextColor(글자용 짝) — 채움색(catColor)을 그대로 쓰면 자기 틴트 위 1.8:1로 사라진다 */}
+        <Box component="span" sx={(th) => ({ px: '8px', py: '3px', borderRadius: `${radius.pill}px`, fontSize: 11, fontWeight: 800, color: catTextColor(th, toneOfColor(detail.catColor)), bgcolor: alpha(detail.catColor, 0.22) })}>
           {detail.catLabel}
         </Box>
         {detail.time && (
@@ -101,7 +103,7 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
             sx={{
               font: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer',
               px: 1.25, py: '5px', borderRadius: `${radius.chip}px`,
-              color: accent.blue, bgcolor: alpha(accent.blue, 0.14), border: `1px solid ${alpha(accent.blue, 0.4)}`,
+              color: 'accentText.blue', bgcolor: alpha(accent.blue, 0.14), border: `1px solid ${alpha(accent.blue, 0.4)}`,
               '&:hover': { bgcolor: alpha(accent.blue, 0.24) },
             }}
           >

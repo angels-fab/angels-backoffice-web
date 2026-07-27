@@ -33,6 +33,7 @@ declare module '@mui/material/styles' {
       red: string
       purple: string
       teal: string
+      rose: string
     }
     /** 글자(text) 전용 강조색 — 현재 테마 배경에서 4.5:1을 만족하는 값. accent를 글자로 쓰지 말 것 */
     accentText: Palette['accent']
@@ -231,8 +232,10 @@ function buildTheme(mode: Mode): Theme {
       },
       MuiTooltip: {
         styleOverrides: {
-          tooltip: { fontSize: '0.75rem', borderRadius: radius.chip, backgroundColor: p.hover },
-          arrow: { color: p.hover },
+          // 배경만 지정하고 글자색을 MUI 기본(흰색)에 맡기면 라이트에서 흰글씨/흰배경이 된다.
+          // 표면색은 배경·전경을 반드시 짝으로 지정할 것(p.tooltip / p.tooltipText).
+          tooltip: { fontSize: '0.75rem', borderRadius: radius.chip, backgroundColor: p.tooltip, color: p.tooltipText },
+          arrow: { color: p.tooltip },
         },
       },
       MuiDivider: {

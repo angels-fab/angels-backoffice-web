@@ -3,6 +3,9 @@
 
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
+  /* 네이티브 위젯(date/time 피커·스크롤바·select)이 테마를 따라오게 — 여기 한 곳이 정본.
+     컴포넌트에서 colorScheme를 개별 지정하지 말 것(라이트에서 검은 피커가 뜬다). */
+  color-scheme: dark;
   /* SaaS 다크 토큰 — src/theme/tokens.ts 와 동일 값 미러링(정본은 tokens.ts).
      STEP2: Pure Black(#000 계열) → 현대적 SaaS 다크(#0F1117). 페이지 이관 시 점진 제거. */
   /* 표면 램프 — 다크는 "표면 밝기"가 깊이를 만든다(그림자 아님). 정본 tokens.ts darkPalette.
@@ -55,6 +58,7 @@
    레거시 페이지가 참조하는 :root 변수만 라이트 값으로 바꾸면 화면 전체가 함께 전환된다.
    강조 6색(--amber/--blue/…)·형광펜(--hl-*)은 브랜드 원색이라 양쪽 공통으로 유지. */
 :root[data-theme="light"]{
+  color-scheme: light;
   --ink:#F4F6F8;--ink2:#FFFFFF;--ink3:#EDF1F6;
   --th-bg:#DFE7F0;--th-line:#BFCBDB;
   --row-hover:#EDF2F8;--surface-selected:#E4EBF4;
