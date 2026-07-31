@@ -1,3 +1,6 @@
+import type { Theme } from '@mui/material/styles'
+import { radius, typescale } from '@/theme/tokens'
+
 /**
  * 손코딩 데이터표 공용 스타일 — 표 규격 중 "테마가 못 잡는 것"만 남긴 조각.
  *
@@ -30,3 +33,33 @@ export const dataTableSx = {
   // 파랑기미 표면들 사이에서 혼자 튀었다. 레거시 .eq-ledger·ListRow와 같은 --row-hover로 통일.
   '& tbody .MuiTableRow-hover:hover': { backgroundColor: 'var(--row-hover)' },
 } as const
+
+/**
+ * 모바일(≤shell 768) 표 → 세로 카드 변환.
+ *
+ * 레거시 .rtable(index.css)과 같은 결과를 sx로 구현한 것 — className 을 새로 늘리지 않기 위해서다
+ * (레거시 CSS 의존을 걷어내는 중이고, className 은 design-lint 위반 항목이기도 하다).
+ * 대표 셀(카드 제목이 될 열)은 <DataCell title> 로 쓰면 data-title="1" 이 붙어 맨 위로 온다.
+ */
+export const mobileTableCardSx = (th: Theme) => ({
+  [th.breakpoints.down('shell')]: {
+    display: 'block',
+    minWidth: 0,
+    '& thead': { display: 'none' },
+    '& tbody': { display: 'block' },
+    '& tbody tr': {
+      display: 'flex', flexDirection: 'column', gap: '5px',
+      bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider',
+      borderRadius: `${radius.card}px`, p: '11px 14px', mb: '10px',
+    },
+    '& tbody td': {
+      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '14px',
+      border: 0, p: '2px 0', textAlign: 'left', whiteSpace: 'normal',
+    },
+    '& tbody td[data-title="1"]': {
+      order: -1, justifyContent: 'flex-start', gap: '6px',
+      fontSize: typescale.emphasis.size, fontWeight: typescale.cardTitle.weight,
+      p: '0 0 6px 0', mb: '3px', borderBottom: '1px solid', borderColor: 'divider',
+    },
+  },
+})

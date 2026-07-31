@@ -50,38 +50,11 @@ export function sortRows<T, K extends string>(
   })
 }
 
-/** 정렬 가능한 <th> — 현재 정렬 열·방향을 MUI 아이콘으로 표시 */
-export function SortTh({ label, colKey, active, dir, onSort, right }: {
-  label: string
-  colKey: string
-  active: boolean
-  dir: SortDir
-  onSort: (c: string) => void
-  right?: boolean
-}) {
-  return (
-    <Box
-      component="th"
-      onClick={() => onSort(colKey)}
-      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-      title={!active ? '클릭: 오름차순' : dir === 'asc' ? '클릭: 내림차순' : '클릭: 정렬 해제'}
-      sx={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', '&:hover': { color: 'text.secondary' } }}
-    >
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, justifyContent: right ? 'flex-end' : 'flex-start' }}>
-        {label}
-        {active && (dir === 'asc'
-          ? <ArrowUpwardIcon sx={{ fontSize: iconSize.caption, color: 'primary.main' }} />
-          : <ArrowDownwardIcon sx={{ fontSize: iconSize.caption, color: 'primary.main' }} />)}
-      </Box>
-    </Box>
-  )
-}
-
 /**
- * 정렬 가능한 헤더 셀 — MUI Table 로 이관한 표용.
+ * 정렬 가능한 헤더 셀.
  *
- * SortTh(위)는 레거시 `.eq-ledger` 표(장비도입) 전용이다. 그쪽은 raw <th> 라 MUI 의
- * TableCell 컨텍스트를 못 받는다. 장비도입까지 이관이 끝나면 SortTh 는 삭제한다.
+ * (구 SortTh 는 레거시 `.eq-ledger` 표용 raw <th> 였는데, 장비도입·장비대장 두 표가 모두
+ *  MUI Table 로 이관되어 2026-08-01 삭제했다.)
  *
  * 정렬은 align prop 으로만 준다 — 표·행 레벨 `& th` sx(특이도 0-1-1)로 주면
  * 셀별 정렬 선언이 조용히 죽는다(공지 작성일 헤더가 실제로 그 상태였다).

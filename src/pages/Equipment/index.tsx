@@ -3,6 +3,10 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
+import Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableBody from '@mui/material/TableBody'
+import TableRow from '@mui/material/TableRow'
 import { alpha } from '@mui/material/styles'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
@@ -20,7 +24,7 @@ import RedoIcon from '@mui/icons-material/Redo'
 import EditCalendarIcon from '@mui/icons-material/EditCalendar'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
-import { PageContainer, PageHeader, StatTile, EmptyState, ErrorBanner, LoadingState, SegTabs, Select, SearchBar, useSnack, ConfirmDialog } from '@/components/ds'
+import { PageContainer, PageHeader, StatTile, EmptyState, ErrorBanner, LoadingState, SegTabs, Select, SearchBar, useSnack, ConfirmDialog, dataTableSx, mobileTableCardSx, DataCell } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData, shiftScheduleStart, resizeScheduleStage, setScheduleStart, setScheduleStage } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -37,7 +41,7 @@ import ScheduleWrite from './ScheduleWrite'
 import EquipmentTabs from './EquipmentTabs'
 import DemoResults from './DemoResults'
 import { NameWithQty, codeRange } from './batchUtil'
-import { useTableSort, sortRows, SortTh } from './sortable'
+import { useTableSort, sortRows, SortHeadCell } from './sortable'
 import { iconSize, layout, radius, shadow, typescale, control } from '@/theme/tokens'
 
 const GANTT_NAME_W = 150 // 장비명 열(축소) — 나머지는 간트가 가변폭으로 채움(가로 스크롤 없음)
@@ -57,11 +61,20 @@ const dueToNum = (due: string): number | null => {
 }
 // 도입 목록 정렬 열(수량 열 제거) — 관리번호·장비명·담당자·구분·현재단계·다음일정·총도입금액
 type ProjCol = 'code' | 'name' | 'mgr' | 'type' | 'stage' | 'due' | 'price'
-const PROJ_COLS: { key: ProjCol; label: string; right?: boolean }[] = [
-  { key: 'code', label: '관리번호' }, { key: 'name', label: '장비명' }, { key: 'mgr', label: '담당자' },
-  { key: 'type', label: '구분' }, { key: 'stage', label: '현재 단계' }, { key: 'due', label: '다음 일정' },
-  { key: 'price', label: '총 도입금액', right: true },
+/**
+ * 열 정렬 규칙(2026-07-13 확정, 2026-08-01 재확인):
+ * 긴 본문성 텍스트 = 좌측 / 짧은 값·칩 = 가운데 / 숫자·금액 = 우측.
+ * 관리번호는 'AN-001 외 1'처럼 뒤에 건수가 붙는 행이 섞여 있어 좌측(장비대장 표와 동일 근거).
+ */
+const PROJ_COLS: { key: ProjCol; label: string; align: 'left' | 'center' | 'right' }[] = [
+  { key: 'code', label: '관리번호', align: 'left' }, { key: 'name', label: '장비명', align: 'left' },
+  { key: 'mgr', label: '담당자', align: 'center' }, { key: 'type', label: '구분', align: 'center' },
+  { key: 'stage', label: '현재 단계', align: 'center' }, { key: 'due', label: '다음 일정', align: 'center' },
+  { key: 'price', label: '총 도입금액', align: 'right' },
 ]
+/** 구 `.eq-ledger .lg-code` / `.lg-primary`(index.css)를 sx로 옮긴 값 — 화면값 그대로 보존 */
+const codeCellSx = { color: 'text.secondary', fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontWeight: 500, whiteSpace: 'nowrap' } as const
+const nameCellSx = { color: 'text.primary', fontWeight: 500, fontSize: typescale.emphasis.size, whiteSpace: 'nowrap' } as const
 const projAccessor = (b: Batch, c: ProjCol): string | number | null => {
   switch (c) {
     case 'code': return b.g.codes[0] || null
@@ -864,39 +877,43 @@ export default function Equipment() {
           </Box>
         ) : (
           /* ── 목록 (수량 열 없음·헤더 정렬) ── */
+          /* 레거시 .eq-ledger/.rtable → MUI Table 이관(2026-08-01). 셀 여백·글자·헤더 룩은
+             theme MuiTableCell 정본이 담당하고, 모바일 세로 카드는 ds/mobileTableCardSx 가 담당한다.
+             정렬은 셀 align prop 으로만 — 표·행 레벨 '& th' sx 는 특이도로 셀 선언을 죽인다.
+
+             sm(≥600)부터 minWidth 720 — 카드화 경계(≤768) 위 구간(769~899)에서도 표 최소폭 유지.
+             ≤768은 mobileTableCardSx 가 minWidth 0 으로 덮어 카드로 스택. */
           <Box sx={{ overflowX: 'auto' }}>
-            {/* sm(≥600)부터 minWidth 720 — 카드화 경계(≤768) 위 구간(769~899)에서도 표 최소폭 유지.
-                ≤768은 .rtable가 min-width:0 !important로 덮어 카드로 스택(md=900이라 md 쓰면 769~899 공백 발생). */}
-            <Box component="table" className="eq-ledger rtable" sx={{ width: '100%', minWidth: { xs: 0, sm: 720 } }}>
-              <Box component="thead">
-                <Box component="tr">
+            <Table size="small" sx={(th) => ({ ...dataTableSx, minWidth: { xs: 0, sm: 720 }, ...mobileTableCardSx(th) })}>
+              <TableHead>
+                <TableRow>
                   {PROJ_COLS.map((col) => (
-                    <SortTh key={col.key} label={col.label} colKey={col.key} right={col.right} active={listSort.col === col.key} dir={listSort.dir} onSort={(c) => listSort.onSort(c as ProjCol)} />
+                    <SortHeadCell key={col.key} label={col.label} colKey={col.key} align={col.align} active={listSort.col === col.key} dir={listSort.dir} onSort={(c) => listSort.onSort(c as ProjCol)} />
                   ))}
-                </Box>
-              </Box>
-              <Box component="tbody">
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {sortedList.map(({ g, info }, idx) => {
                   const chip = phaseChip(info)
                   return (
-                    <Box component="tr" key={g.repCode || idx} onClick={() => setPicked({ g, info })} sx={{ cursor: 'pointer' }}>
-                      <Box component="td" className="lg-code" data-label="관리번호">{codeRange(g)}</Box>
-                      <Box component="td" className="lg-primary rtable-title" data-label="장비명">
+                    <TableRow hover key={g.repCode || idx} onClick={() => setPicked({ g, info })} sx={{ cursor: 'pointer' }}>
+                      <DataCell label="관리번호" align="left" sx={codeCellSx}>{codeRange(g)}</DataCell>
+                      <DataCell align="left" title sx={nameCellSx}>
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                           <NameWithQty name={g.name} count={g.count} fontSize={14} />
                           {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: typescale.small.size, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
-                      </Box>
-                      <Box component="td" data-label="담당자">{g.mgr || '-'}</Box>
-                      <Box component="td" data-label="구분">{g.type || '-'}</Box>
-                      <Box component="td" data-label="현재 단계"><Box component="span" className="lg-chip" sx={{ color: STAGE_DOT(info) }}>{chip.label}</Box></Box>
-                      <Box component="td" data-label="다음 일정">{info.dueMonth || '-'}</Box>
-                      <Box component="td" data-label="총 도입금액" sx={{ textAlign: 'right' }}>{g.price ? `${k(g.price)} 천원` : '-'}</Box>
-                    </Box>
+                      </DataCell>
+                      <DataCell label="담당자">{g.mgr || '-'}</DataCell>
+                      <DataCell label="구분">{g.type || '-'}</DataCell>
+                      <DataCell label="현재 단계"><Box component="span" className="lg-chip" sx={{ color: STAGE_DOT(info) }}>{chip.label}</Box></DataCell>
+                      <DataCell label="다음 일정">{info.dueMonth || '-'}</DataCell>
+                      <DataCell label="총 도입금액" align="right">{g.price ? `${k(g.price)} 천원` : '-'}</DataCell>
+                    </TableRow>
                   )
                 })}
-              </Box>
-            </Box>
+              </TableBody>
+            </Table>
           </Box>
         )}
       </Box>
