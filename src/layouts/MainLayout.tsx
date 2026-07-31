@@ -58,7 +58,6 @@ export default function MainLayout() {
   return (
     <>
       <TopBar />
-      <header style={{ height: 0, padding: 0, border: 'none', overflow: 'hidden' }} />
       <div className="app-shell">
         <SideNav />
         <div className="app-content">

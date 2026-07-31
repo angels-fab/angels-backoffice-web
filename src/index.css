@@ -128,8 +128,10 @@
 }
 body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
-header{background:rgba(19,23,34,.85);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);display:flex;flex-direction:row;align-items:center;padding:0 24px;height:48px;gap:10px;position:sticky;top:0;z-index:10}
-.header-logo{height:21px;width:auto;object-fit:contain}
+/* 구 `header{...}` 전역 규칙(원본 HTML SPA 잔재)과 .header-logo 는 2026-08-01 삭제.
+   요소 이름만으로 잡는 규칙이라, TopBar 를 <div>에서 시맨틱한 <header>로 바꾸자마자
+   height:48px 이 걸려 상단바가 5px 낮아졌다(53→48). MainLayout 에 있던 빈 <header/>도
+   이 규칙을 무력화하려는 우회였어서 함께 제거했다. 상단바 스타일 정본은 TopBar.tsx 의 sx. */
 
 .header-sub{font-size:11px;color:var(--text3)}
 
@@ -974,8 +976,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .page-header{display:flex;align-items:center;gap:12px;margin-bottom:28px}
 .back-btn{background:var(--ink2);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:5px}
 .back-btn:hover{border-color:var(--text);color:var(--text)}
-.topbar{position:sticky;top:0;z-index:50;background:var(--ink);border-bottom:1px solid var(--border)}
-.topbar-inner{margin:0 auto;width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 20px;box-sizing:border-box}
+/* 상단바(.topbar/.topbar-inner/.topbar-brand/.topbar-logo)는 2026-08-01 TopBar.tsx 의 sx 로 이관.
+   .topbar-title/.topbar-bell/.topbar-nav/.navchip 은 사용처가 없어 함께 삭제했다. */
 
 /* ── 좌측 사이드바 (PC) ── */
 .app-shell{display:flex;flex:1;width:100%;align-items:stretch}
@@ -1021,15 +1023,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .snav-rmemo{position:absolute;bottom:4px;left:27px;width:7px;height:7px;border-radius:50%;background:var(--amber);pointer-events:none;transition:opacity .12s ease}
 .snav-panel:hover .snav-rnew,.snav-panel:focus-within .snav-rnew,.snav-panel:hover .snav-rmemo,.snav-panel:focus-within .snav-rmemo{opacity:0}
 @media(prefers-reduced-motion:reduce){.snav-panel,.snav-lcol,.snav-label span,.snav-label::before,.snav-rnew,.snav-rmemo{transition:none}}
-.topbar-bell{margin-left:auto;background:none;border:none;color:var(--text2);cursor:pointer;padding:6px;border-radius:8px;display:flex;align-items:center;flex-shrink:0;transition:color .15s,background .15s}
-.topbar-bell:hover{color:var(--text);background:var(--ink2)}
-.topbar-brand{display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0}
-.topbar-logo{height:34px;width:auto;object-fit:contain;mix-blend-mode:lighten;background:var(--ink)}
-.topbar-title{font-size:15px;font-weight:600;color:var(--text);white-space:nowrap;letter-spacing:-.2px;padding-left:12px;margin-left:2px;border-left:1px solid var(--border)}
-@media(max-width:480px){.topbar-title{font-size:12.5px;padding-left:9px}}
-.topbar-nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.topbar-nav>.navchip{display:none}
-body.in-page .topbar-nav>.navchip{display:inline-flex}
 .navchip svg{font-size:15px}
 .navchip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--ink2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;transition:border-color .15s,color .15s}
 .navchip:hover{border-color:var(--blue);color:var(--text)}
@@ -1167,19 +1160,15 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 
 /* 반응형 레이아웃: PC(기본) / 모바일(<=768px) */
 /* .home-greeting은 웹/모바일 모두 노출 (아래 그룹에서 제외) */
-.eq-summary,.stat-board,.menu-stack,.topbar-title,.topbar-bell,.bottom-nav{display:none}
+.eq-summary,.stat-board,.menu-stack,.bottom-nav{display:none}
 @media(max-width:768px){
   .d-only{display:none !important}
-  .topbar{position:fixed;left:0;right:0;top:0}
   body{padding-top:53px}
   /* 로고 좌측·컨트롤 우측(space-between) + 로고 폭 상한으로 우측 버튼 잘림 방지 */
-  .topbar-inner{justify-content:space-between;padding-left:14px;padding-right:10px}
-  .topbar-logo{height:30px;max-width:52vw}
   .home-greeting{display:flex}
   .eq-summary{display:block}
   .stat-board{display:grid}
   .menu-stack{display:flex}
-  .topbar-bell{display:flex}
   .bottom-nav{display:flex}
   .page{overflow-x:auto}
   .kpi-budget{display:none}
@@ -1202,7 +1191,6 @@ body.in-page .topbar-nav>.navchip{display:inline-flex}
 
 /* ── 라이트 테마 구조 오버라이드 ── 변수만으로 안 되는 개별 규칙(히어로 카드·로고·하단탭·특정 배지) */
 /* 로고 에셋은 '검정 배경 위 흰 글자' JPG라 라이트 상단바(밝음)에선 lighten이면 사라진다 → 반전+multiply로 '흰 배경 위 검정 로고'가 되게 한다 */
-:root[data-theme="light"] .topbar-logo{mix-blend-mode:multiply;filter:invert(1);background:transparent}
 /* 짙은 네이비 히어로 카드(장비예산·홈 장비요약) → 라이트에선 옅은 블루 표면 + 진한 블루 라벨 */
 :root[data-theme="light"] .kpi-big{background:linear-gradient(135deg,#eef4fc,#e2ecf8);border-color:#cfe0f5}
 :root[data-theme="light"] .kpi-big-label{color:#2f6db8}

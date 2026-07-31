@@ -102,11 +102,53 @@ export default function TopBar() {
   }, [])
 
   return (
-    <div className="topbar">
-      <div className="topbar-inner">
-        <div className="topbar-brand" onClick={() => navigate('/')} role="button" tabIndex={0} title="메인화면으로">
-          <img src={topbarLogo} className="topbar-logo" alt="ANGELS FAB 구축 현황" />
-        </div>
+    /* 구 index.css .topbar/.topbar-inner/.topbar-brand/.topbar-logo 를 sx 로 이관(2026-08-01).
+       모바일에서 sticky → fixed 로 바뀌는 이유: 하단탭바와 함께 쓰는 고정 셸이라 스크롤에서 빠진다
+       (body padding-top 53 이 그 자리를 메운다 — index.css 모바일 블록에 남아 있다). */
+    <Box
+      component="header"
+      sx={{
+        position: { xs: 'fixed', shell: 'sticky' },
+        top: 0, left: 0, right: 0,
+        zIndex: 50, // 사이드바(100)보다 아래, MUI 모달(1100+)보다 아래
+        bgcolor: 'background.default',
+        // 구 CSS와 같은 값(--border, 카드 테두리와 동급). divider 는 한 단 옅어 선이 흐려진다
+        borderBottom: '1px solid var(--border)',
+      }}
+    >
+      <Box
+        sx={{
+          mx: 'auto', width: '100%', boxSizing: 'border-box',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5,
+          py: '9px',
+          pl: { xs: '14px', shell: '20px' },
+          pr: { xs: '10px', shell: '20px' },
+        }}
+      >
+        <Box
+          onClick={() => navigate('/')}
+          role="button"
+          tabIndex={0}
+          title="메인화면으로"
+          sx={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flexShrink: 0 }}
+        >
+          {/* 로고는 원본이 흰 배경 PNG라 테마별로 다르게 눌러 없앤다:
+              다크 = lighten 으로 배경을 배경색에 묻고, 라이트 = 반전 후 multiply. */}
+          <Box
+            component="img"
+            src={topbarLogo}
+            alt="ANGELS FAB 구축 현황"
+            sx={(th) => ({
+              height: { xs: 30, shell: 34 },
+              maxWidth: { xs: '52vw', shell: 'none' },
+              width: 'auto',
+              objectFit: 'contain',
+              ...(th.palette.mode === 'light'
+                ? { mixBlendMode: 'multiply', filter: 'invert(1)', background: 'transparent' }
+                : { mixBlendMode: 'lighten', background: th.palette.background.default }),
+            })}
+          />
+        </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {touch && (
@@ -133,8 +175,9 @@ export default function TopBar() {
               <SearchIcon sx={{ fontSize: iconSize.header }} />
             </IconButton>
           </Tooltip>
-          {/* 계정 컨트롤(칩·로그아웃·로그인)은 PC 전용 — 모바일은 하단 탭바/메뉴 드로어가 담당(상단바 잘림 방지) */}
-          <Box className="d-only" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* 계정 컨트롤(칩·로그아웃·로그인)은 PC 전용 — 모바일은 하단 탭바/메뉴 드로어가 담당(상단바 잘림 방지).
+              구 .d-only 클래스를 반응형 display 로 이관 */}
+          <Box sx={{ display: { xs: 'none', shell: 'flex' }, alignItems: 'center', gap: 1 }}>
             {loggedIn ? (
               <>
                 <StatusChip
@@ -152,10 +195,10 @@ export default function TopBar() {
             )}
           </Box>
         </Box>
-      </div>
+      </Box>
 
       <AdminLoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
       <GlobalSearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
-    </div>
+    </Box>
   )
 }

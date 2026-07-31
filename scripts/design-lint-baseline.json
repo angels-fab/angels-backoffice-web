@@ -1,13 +1,13 @@
 {
-  "total": 608,
+  "total": 604,
   "totals": {
     "hex": 72,
     "font": 169,
     "weight": 139,
     "radius": 35,
     "shadow": 24,
-    "z": 7,
-    "class": 162
+    "z": 8,
+    "class": 157
   },
   "files": {
     "src/pages/Calendar/CalEventWrite.tsx": 43,
@@ -28,11 +28,11 @@
     "src/components/WhatsNewDialog.tsx": 16,
     "src/pages/Calendar/CalFilterBar.tsx": 14,
     "src/pages/Equipment/gantt.tsx": 14,
-    "src/layouts/TopBar.tsx": 14,
     "src/pages/Events/SubmitEventModal.tsx": 13,
     "src/pages/Calendar/EventPopover.tsx": 11,
     "src/pages/Calendar/index.tsx": 11,
     "src/layouts/SideNav.tsx": 10,
+    "src/layouts/TopBar.tsx": 10,
     "src/pages/Notice/index.tsx": 9,
     "src/components/richText.tsx": 9,
     "src/pages/Home/dash/ScheduleSection.tsx": 8,
