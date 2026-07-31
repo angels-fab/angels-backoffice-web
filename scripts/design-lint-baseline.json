@@ -1,18 +1,18 @@
 {
-  "total": 614,
+  "total": 610,
   "totals": {
     "hex": 72,
-    "font": 172,
-    "weight": 134,
+    "font": 169,
+    "weight": 136,
     "radius": 35,
     "shadow": 24,
     "z": 7,
-    "class": 170
+    "class": 167
   },
   "files": {
     "src/pages/Calendar/CalEventWrite.tsx": 43,
-    "src/pages/EquipmentOps/index.tsx": 38,
     "src/pages/Equipment/DemoResults.tsx": 35,
+    "src/pages/EquipmentOps/index.tsx": 34,
     "src/pages/Events/eventCard.tsx": 30,
     "src/pages/Equipment/EqCard.tsx": 24,
     "src/pages/Notice/fileTypeIcons.tsx": 24,

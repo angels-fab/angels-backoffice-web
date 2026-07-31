@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { ReactNode } from 'react'
+import type { SxProps, Theme } from '@mui/material/styles'
 import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
+import Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableBody from '@mui/material/TableBody'
+import TableRow from '@mui/material/TableRow'
+import TableCell from '@mui/material/TableCell'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
@@ -8,7 +15,7 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
-import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, LoadingState, Select, SearchBar } from '@/components/ds'
+import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, LoadingState, Select, SearchBar, dataTableSx } from '@/components/ds'
 import { iconSize, radius, control, typescale } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
@@ -19,17 +26,95 @@ import { EQ_STATE, eqStateKey } from './eqMeta'
 import EqDetailDrawer from './EqDetailDrawer'
 import EquipmentTabs from '@/pages/Equipment/EquipmentTabs'
 import { NameWithQty, codeRange, missingLabels, isRegRequired } from '@/pages/Equipment/batchUtil'
-import { useTableSort, sortRows, SortTh } from '@/pages/Equipment/sortable'
+import { useTableSort, sortRows, SortHeadCell } from '@/pages/Equipment/sortable'
 
 const STATE_ORDER: EqStateKey[] = ['운영중', '도입중', '도입예정', '비가동', '미분류']
 
 // 장비대장 정렬 열 — 관리번호·장비명·분류·담당자·운영상태·설치장소·누락정보·최근이력
 type OpsCol = 'code' | 'name' | 'cat' | 'mgr' | 'state' | 'installLoc' | 'missing' | 'recent'
-const OPS_COLS: { key: OpsCol; label: string }[] = [
-  { key: 'code', label: '관리번호' }, { key: 'name', label: '장비명' }, { key: 'cat', label: '분류' },
-  { key: 'mgr', label: '담당자' }, { key: 'state', label: '운영상태' }, { key: 'installLoc', label: '설치장소' },
-  { key: 'missing', label: '누락정보' }, { key: 'recent', label: '최근 이력' },
+/**
+ * 열 정렬 규칙(2026-07-13 확정, 2026-08-01 재확인):
+ * 긴 본문성 텍스트 = 좌측 / 짧은 값·칩·코드 = 가운데 / 숫자·금액 = 우측.
+ * 여기선 장비명만 좌측이고 나머지는 전부 짧은 값이라 가운데.
+ */
+const OPS_COLS: { key: OpsCol; label: string; align: 'left' | 'center' | 'right' }[] = [
+  // 관리번호는 좌측 — 'AN-001 외 1'처럼 뒤에 건수가 붙는 행이 섞여 있어, 가운데로 두면
+  // 코드 자릿수가 행마다 어긋나 한 번에 안 읽힌다(사용자 지적 2026-08-01).
+  { key: 'code', label: '관리번호', align: 'left' }, { key: 'name', label: '장비명', align: 'left' },
+  { key: 'cat', label: '분류', align: 'center' }, { key: 'mgr', label: '담당자', align: 'center' },
+  { key: 'state', label: '운영상태', align: 'center' }, { key: 'installLoc', label: '설치장소', align: 'center' },
+  { key: 'missing', label: '누락정보', align: 'center' }, { key: 'recent', label: '최근 이력', align: 'center' },
 ]
+/**
+ * 구 `.eq-ledger .lg-code` / `.lg-primary`(index.css)를 sx로 옮긴 값 — 화면값 그대로 보존.
+ *
+ * ★ 사다리 구멍: 굵기 500이 typescale 에 없다(400 → 600으로 건너뛴다). 그런데 '행 식별자'의
+ *   실화면 값은 5표 모두 14/500이고(공지 제목 Notice/index.tsx:265 포함), 사다리의
+ *   emphasis 는 14/600이라 문서와 화면이 어긋나 있다. 여기서 임의로 600으로 올리면
+ *   다른 표와 어긋나므로 500을 유지하고, 사다리 정정은 별건으로 남긴다.
+ */
+const codeCellSx = { color: 'text.secondary', fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontWeight: 500, whiteSpace: 'nowrap' } as const
+const nameCellSx = { color: 'text.primary', fontWeight: 500, fontSize: typescale.emphasis.size, whiteSpace: 'nowrap' } as const
+
+/**
+ * 모바일(≤768) 표 → 세로 카드 변환.
+ *
+ * 레거시 .rtable(index.css)과 같은 결과를 sx로 구현한 것 — className 을 새로 늘리지 않기 위해서다
+ * (레거시 CSS 의존을 걷어내는 중이고, className 은 design-lint 위반 항목이기도 하다).
+ * 열 이름은 ::before content:attr() 대신 실제 <span>으로 렌더한다(OpsCell) — emotion 의
+ * content 처리에 기대지 않아 결과가 확정적이다.
+ */
+const mobileCardSx = (th: Theme) => ({
+  [th.breakpoints.down('shell')]: {
+    display: 'block',
+    minWidth: 0,
+    '& thead': { display: 'none' },
+    '& tbody': { display: 'block' },
+    '& tbody tr': {
+      display: 'flex', flexDirection: 'column', gap: '5px',
+      bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider',
+      borderRadius: `${radius.card}px`, p: '11px 14px', mb: '10px',
+    },
+    '& tbody td': {
+      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '14px',
+      border: 0, p: '2px 0', textAlign: 'left', whiteSpace: 'normal',
+    },
+    // 대표 셀(장비명)은 카드 제목처럼 맨 위로
+    '& tbody td[data-title="1"]': {
+      order: -1, justifyContent: 'flex-start', gap: '6px',
+      fontSize: typescale.emphasis.size, fontWeight: typescale.cardTitle.weight,
+      p: '0 0 6px 0', mb: '3px', borderBottom: '1px solid', borderColor: 'divider',
+    },
+  },
+})
+
+/** 표 셀 + 모바일 카드용 열 이름. 데스크톱에선 열 이름이 숨겨져 지금과 동일하게 보인다. */
+function OpsCell({ label, align = 'center', title, sx, children }: {
+  label?: string
+  align?: 'left' | 'center' | 'right'
+  /** 대표 셀(카드 제목이 되는 열) */
+  title?: boolean
+  sx?: SxProps<Theme>
+  children: ReactNode
+}) {
+  return (
+    <TableCell align={align} data-title={title ? '1' : undefined} sx={sx}>
+      {label && (
+        <Box
+          component="span"
+          sx={(th) => ({
+            display: 'none', flex: 'none', color: 'text.disabled',
+            fontWeight: typescale.emphasis.weight, fontSize: typescale.caption.size,
+            [th.breakpoints.down('shell')]: { display: 'inline' },
+          })}
+        >
+          {label}
+        </Box>
+      )}
+      {children}
+    </TableCell>
+  )
+}
 const opsAccessor = (g: EqGroup, c: OpsCol): string | number | null => {
   switch (c) {
     case 'code': return g.codes[0] || null
@@ -209,52 +294,55 @@ export default function EquipmentOps() {
         ) : listed.length === 0 ? (
           <EmptyState size="sm" title="조건에 맞는 장비가 없습니다" />
         ) : (
+          /* 레거시 .eq-ledger → MUI Table 이관(2026-08-01 파일럿).
+             셀 여백·글자·헤더 룩은 theme MuiTableCell 정본이 담당하므로 여기선 선언하지 않는다.
+             정렬은 셀 align prop 으로만 — 표·행 레벨 '& th' sx 는 특이도로 셀 선언을 죽인다. */
           <Box sx={{ overflowX: 'auto' }}>
-            <Box component="table" className="eq-ledger" sx={{ width: '100%', minWidth: 880 }}>
-              <Box component="thead">
-                <Box component="tr">
+            <Table size="small" sx={(th) => ({ ...dataTableSx, minWidth: 880, ...mobileCardSx(th) })}>
+              <TableHead>
+                <TableRow>
                   {OPS_COLS.map((col) => (
-                    <SortTh key={col.key} label={col.label} colKey={col.key} active={sort.col === col.key} dir={sort.dir} onSort={(c) => sort.onSort(c as OpsCol)} />
+                    <SortHeadCell key={col.key} label={col.label} colKey={col.key} align={col.align} active={sort.col === col.key} dir={sort.dir} onSort={(c) => sort.onSort(c as OpsCol)} />
                   ))}
-                </Box>
-              </Box>
-              <Box component="tbody">
+                </TableRow>
+              </TableHead>
+              <TableBody>
                 {sorted.map((g, idx) => {
                   const meta = EQ_STATE[eqStateKey(g.state)]
                   const miss = missingLabels(g)
                   const req = isRegRequired(g.state)
                   return (
-                    <Box component="tr" key={g.repCode || g.name + idx} onClick={() => setPicked(g)} sx={{ cursor: 'pointer' }}>
-                      <Box component="td" className="lg-code">{codeRange(g)}</Box>
-                      <Box component="td" className="lg-primary">
+                    <TableRow hover key={g.repCode || g.name + idx} onClick={() => setPicked(g)} sx={{ cursor: 'pointer' }}>
+                      <OpsCell label="관리번호" align="left" sx={codeCellSx}>{codeRange(g)}</OpsCell>
+                      <OpsCell align="left" title sx={nameCellSx}>
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                           <NameWithQty name={g.name} count={g.count} fontSize={14} />
                           {/* 변형명 부제 — 장비도입 표(Equipment/index.tsx)와 같은 열·같은 역할이라 값도 같게(12/보조톤) */}
                           {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: typescale.small.size, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
-                      </Box>
-                      <Box component="td" sx={{ color: 'text.primary', fontSize: 12 }}>{g.cat || '-'}</Box>
-                      <Box component="td" sx={{ color: 'text.primary', fontSize: 12 }}>{g.mgr || '-'}</Box>
-                      <Box component="td"><StatusChip status={meta.status} label={meta.label} /></Box>
-                      <Box component="td" sx={{ color: g.installLoc ? 'text.secondary' : req ? 'warning.main' : 'text.disabled' }}>{g.installLoc || '미등록'}</Box>
-                      <Box component="td">
+                      </OpsCell>
+                      <OpsCell label="분류">{g.cat || '-'}</OpsCell>
+                      <OpsCell label="담당자">{g.mgr || '-'}</OpsCell>
+                      <OpsCell label="운영상태"><StatusChip status={meta.status} label={meta.label} /></OpsCell>
+                      <OpsCell label="설치장소" sx={{ color: g.installLoc ? 'text.secondary' : req ? 'warning.main' : 'text.disabled' }}>{g.installLoc || '미등록'}</OpsCell>
+                      <OpsCell label="누락정보">
                         {miss.length === 0 ? (
                           <Box component="span" sx={{ color: 'text.disabled' }}>{req ? '없음' : '—'}</Box>
                         ) : (
-                          <Box className="lg-miss">
+                          <Box className="lg-miss" sx={{ justifyContent: 'center' }}>
                             {miss.slice(0, 2).map((m) => (
                               <Box component="span" key={m} className="lg-chip" sx={{ color: 'warning.main', borderColor: (t) => t.palette.warning.main + '66' }}>{m}</Box>
                             ))}
-                            {miss.length > 2 && <Box component="span" sx={{ color: 'text.disabled', fontSize: 11 }}>+{miss.length - 2}</Box>}
+                            {miss.length > 2 && <Box component="span" sx={{ color: 'text.disabled', fontSize: typescale.caption.size }}>+{miss.length - 2}</Box>}
                           </Box>
                         )}
-                      </Box>
-                      <Box component="td" sx={{ color: 'text.disabled' }}>-</Box>
-                    </Box>
+                      </OpsCell>
+                      <OpsCell label="최근 이력" sx={{ color: 'text.disabled' }}>-</OpsCell>
+                    </TableRow>
                   )
                 })}
-              </Box>
-            </Box>
+              </TableBody>
+            </Table>
           </Box>
         )}
       </Box>

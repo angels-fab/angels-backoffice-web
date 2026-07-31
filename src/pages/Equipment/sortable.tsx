@@ -1,18 +1,28 @@
 import { useState } from 'react'
 import Box from '@mui/material/Box'
+import TableCell from '@mui/material/TableCell'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import { iconSize } from '../../theme/tokens'
 
 export type SortDir = 'asc' | 'desc'
 
-/** 목록형 헤더 정렬 상태 — 첫 클릭 asc, 같은 열 재클릭 desc, 다른 열 클릭 asc */
+/**
+ * 목록형 헤더 정렬 상태 — 같은 열을 계속 누르면 3단계로 순환한다:
+ *   오름차순 → 내림차순 → **해제(원래 순서)** → 오름차순 …
+ * 다른 열을 누르면 그 열의 오름차순으로 시작.
+ *
+ * 해제 단계가 필요한 이유: 오름/내림만 있으면 한 번 정렬한 뒤 원래 순서(등록순·그룹순)로
+ * 돌아갈 방법이 없다 — 새로고침 말고는 되돌릴 수 없었다(사용자 지적 2026-08-01).
+ * col=null 이면 sortRows 가 원본 배열을 그대로 돌려준다.
+ */
 export function useTableSort<K extends string>(initial: K | null = null) {
   const [col, setCol] = useState<K | null>(initial)
   const [dir, setDir] = useState<SortDir>('asc')
   const onSort = (c: K) => {
-    if (c === col) setDir((d) => (d === 'asc' ? 'desc' : 'asc'))
-    else { setCol(c); setDir('asc') }
+    if (c !== col) { setCol(c); setDir('asc'); return }
+    if (dir === 'asc') { setDir('desc'); return }
+    setCol(null); setDir('asc') // 3번째 클릭 = 정렬 해제
   }
   return { col, dir, onSort }
 }
@@ -54,6 +64,7 @@ export function SortTh({ label, colKey, active, dir, onSort, right }: {
       component="th"
       onClick={() => onSort(colKey)}
       aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      title={!active ? '클릭: 오름차순' : dir === 'asc' ? '클릭: 내림차순' : '클릭: 정렬 해제'}
       sx={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', '&:hover': { color: 'text.secondary' } }}
     >
       <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.25, justifyContent: right ? 'flex-end' : 'flex-start' }}>
@@ -63,5 +74,46 @@ export function SortTh({ label, colKey, active, dir, onSort, right }: {
           : <ArrowDownwardIcon sx={{ fontSize: iconSize.caption, color: 'primary.main' }} />)}
       </Box>
     </Box>
+  )
+}
+
+/**
+ * 정렬 가능한 헤더 셀 — MUI Table 로 이관한 표용.
+ *
+ * SortTh(위)는 레거시 `.eq-ledger` 표(장비도입) 전용이다. 그쪽은 raw <th> 라 MUI 의
+ * TableCell 컨텍스트를 못 받는다. 장비도입까지 이관이 끝나면 SortTh 는 삭제한다.
+ *
+ * 정렬은 align prop 으로만 준다 — 표·행 레벨 `& th` sx(특이도 0-1-1)로 주면
+ * 셀별 정렬 선언이 조용히 죽는다(공지 작성일 헤더가 실제로 그 상태였다).
+ */
+export function SortHeadCell({ label, colKey, active, dir, onSort, align = 'center' }: {
+  label: string
+  colKey: string
+  active: boolean
+  dir: SortDir
+  onSort: (c: string) => void
+  align?: 'left' | 'center' | 'right'
+}) {
+  return (
+    <TableCell
+      align={align}
+      onClick={() => onSort(colKey)}
+      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+      // 3단계 순환은 눌러보기 전엔 알 수 없다 — 다음 클릭이 무엇을 하는지 알려준다
+      title={!active ? '클릭: 오름차순' : dir === 'asc' ? '클릭: 내림차순' : '클릭: 정렬 해제'}
+      sx={{ cursor: 'pointer', userSelect: 'none', '&:hover': { color: 'text.primary' } }}
+    >
+      <Box
+        sx={{
+          display: 'inline-flex', alignItems: 'center', gap: 0.25,
+          justifyContent: align === 'right' ? 'flex-end' : align === 'center' ? 'center' : 'flex-start',
+        }}
+      >
+        {label}
+        {active && (dir === 'asc'
+          ? <ArrowUpwardIcon sx={{ fontSize: iconSize.caption, color: 'primary.main' }} />
+          : <ArrowDownwardIcon sx={{ fontSize: iconSize.caption, color: 'primary.main' }} />)}
+      </Box>
+    </TableCell>
   )
 }
