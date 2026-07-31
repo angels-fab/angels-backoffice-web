@@ -1,6 +1,6 @@
 import type * as React from 'react'
 import { alpha, createTheme, type Theme } from '@mui/material/styles'
-import { accent, accentTextDark, accentTextLight, darkPalette, hoverShadow, lightPalette, radius, shadow } from './tokens'
+import { accent, accentTextDark, accentTextLight, darkPalette, hoverShadow, lightPalette, radius, shadow, table, typescale } from './tokens'
 
 /**
  * MUI 테마 팩토리. 다크/라이트 모드를 토큰에서 생성한다.
@@ -228,6 +228,35 @@ function buildTheme(mode: Mode): Theme {
       MuiDrawer: {
         styleOverrides: {
           paper: { backgroundImage: 'none', border: 'none' },
+        },
+      },
+      /**
+       * 표 셀 정본 (2026-08-01) — 그동안 공지·개선 표의 셀 여백·글자는 우리가 고른 값이 아니라
+       * MUI TableCell size="small" 기본값(padding 6px 16px · body2 13px · 헤더 line-height 24px)이
+       * 그대로 노출된 것이었다. size prop 하나만 바뀌어도 조용히 깨지는 상태라 여기서 명시한다.
+       * 값은 레거시 .eq-ledger(index.css)와 같은 값 — 두 구현이 어긋나지 않게.
+       */
+      MuiTableCell: {
+        styleOverrides: {
+          root: {
+            padding: `${table.cellPadY}px ${table.cellPadX}px`,
+            borderColor: p.divider,
+          },
+          body: {
+            fontSize: typescale.small.size,
+            lineHeight: 1.5,
+          },
+          head: {
+            fontSize: typescale.small.size,
+            // 600 — 사다리의 emphasis 굵기. cardTitle(700)은 표 헤더엔 과하다
+            fontWeight: typescale.emphasis.weight,
+            lineHeight: 1.5,
+            color: p.textSecondary,
+            letterSpacing: '.02em',
+            whiteSpace: 'nowrap',
+            backgroundColor: 'var(--th-bg)',
+            borderBottom: '1px solid var(--th-line)',
+          },
         },
       },
       MuiTooltip: {

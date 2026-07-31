@@ -64,7 +64,11 @@ export default function DataTable<T>({
       <Table
         size="small"
         sx={{
-          '& th, & td': { borderColor: 'divider', whiteSpace: 'nowrap' },
+          // ★ 여기에 '& th, & td' 를 다시 쓰지 말 것. 이 선택자는 특이도 (0,1,1)이라
+          //   셀 자신의 sx(0,1,0)를 이긴다 — 실제로 구 borderColor 선언이 아래 헤더의
+          //   borderBottom: var(--th-line) 을 죽여, 헤더 구분선이 계속 옅은 divider 로 나왔다.
+          //   구분선 색은 theme MuiTableCell 이 담당한다. 여기서는 본문 줄바꿈만 막는다.
+          '& td': { whiteSpace: 'nowrap' },
         }}
       >
         <TableHead>

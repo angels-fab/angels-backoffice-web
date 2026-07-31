@@ -228,6 +228,17 @@ export const drawer = {
  * 리스트 행(ListRow) 간격 — 목록·표 행의 단일 기준.
  * 페이지마다 gap 7/8/12px·padding 제각각으로 손코딩하지 말 것(→ ds/ListRow 사용).
  */
+/**
+ * 표 셀 규격 (2026-08-01 확정). 소비는 theme.ts 의 MuiTableCell 오버라이드 한 곳.
+ * 레거시 .eq-ledger(index.css:793/795)와 같은 값 — 마크업 이관이 끝날 때까지 두 구현이 공존한다.
+ */
+export const table = {
+  /** 셀 상하 padding — 장비 3표의 실화면 값(8). 공지·개선은 MUI 기본 6이 노출돼 있던 것 */
+  cellPadY: 8,
+  /** 셀 좌우 padding */
+  cellPadX: 16,
+} as const
+
 export const row = {
   /** leading ↔ 내용 ↔ trailing 사이 간격 */
   gap: 10,

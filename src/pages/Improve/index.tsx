@@ -665,7 +665,9 @@ export default function Improve() {
         </FilterToolbar>
 
         <AppCard padding={0} sx={{ overflowX: 'auto' }}>
-          <Table size="small" sx={{ ...dataTableSx, '& th, & td': { borderColor: 'divider', whiteSpace: 'nowrap' } }}>
+          {/* '& th, & td'(특이도 0,1,1)는 셀 sx를 이겨 헤더 밑줄(--th-line)까지 죽인다 — 쓰지 말 것.
+              구분선 색·여백은 theme MuiTableCell 담당, 여기서는 본문 줄바꿈만 막는다. */}
+          <Table size="small" sx={{ ...dataTableSx, '& td': { whiteSpace: 'nowrap' } }}>
             <TableHead>
               <TableRow sx={dataTableHeadSx}>
                 <TableCell sx={{ width: '1%' }}>번호</TableCell>
