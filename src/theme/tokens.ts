@@ -293,9 +293,9 @@ export const motion = {
 export const typescale = {
   /** 타임스탬프·캡션 */
   caption: { size: 11, weight: 500 },
-  /** 표 본문·메타 */
+  /** 메타·셀 부제 (표 본문은 body 13 — 2026-08-01 상향) */
   small: { size: 12, weight: 400 },
-  /** 기본 본문 */
+  /** 기본 본문 · 표 본문 셀 */
   body: { size: 13, weight: 400 },
   /** 강조 본문·행 제목 */
   emphasis: { size: 14, weight: 600 },

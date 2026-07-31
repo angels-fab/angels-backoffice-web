@@ -77,15 +77,9 @@ export default function DataTable<T>({
               <TableCell
                 key={c.key}
                 align={c.align ?? 'left'}
-                sx={{
-                  width: c.width,
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  color: 'text.secondary',
-                  // 헤더 배경 채움(사용자 확정) — sticky 시 스크롤 가림막 겸용
-                  bgcolor: 'var(--th-bg)', // 헤더 띠 정본 — tableStyle.ts·.eq-ledger와 공유
-                  borderBottom: '1px solid var(--th-line)',
-                }}
+                // 글자·배경·구분선은 theme MuiTableCell(head)이 정본 — 여기서 다시 선언하지 말 것.
+                // 다시 쓰면 테마를 고쳐도 이 컴포넌트만 안 따라온다(실제로 셀 글자 12px가 그렇게 굳어 있었다).
+                sx={{ width: c.width }}
               >
                 {c.label}
               </TableCell>
@@ -114,7 +108,7 @@ export default function DataTable<T>({
                 sx={onRowClick ? { cursor: 'pointer' } : undefined}
               >
                 {columns.map((c) => (
-                  <TableCell key={c.key} align={c.align ?? 'left'} sx={{ fontSize: '0.75rem' }}>
+                  <TableCell key={c.key} align={c.align ?? 'left'}>
                     {c.render ? c.render(row) : String((row as Record<string, unknown>)[c.key] ?? '')}
                   </TableCell>
                 ))}

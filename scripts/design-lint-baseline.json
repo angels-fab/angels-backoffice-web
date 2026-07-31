@@ -1,13 +1,13 @@
 {
-  "total": 610,
+  "total": 609,
   "totals": {
     "hex": 72,
     "font": 169,
-    "weight": 136,
+    "weight": 138,
     "radius": 35,
     "shadow": 24,
     "z": 7,
-    "class": 167
+    "class": 164
   },
   "files": {
     "src/pages/Calendar/CalEventWrite.tsx": 43,
@@ -16,7 +16,7 @@
     "src/pages/Events/eventCard.tsx": 30,
     "src/pages/Equipment/EqCard.tsx": 24,
     "src/pages/Notice/fileTypeIcons.tsx": 24,
-    "src/pages/Equipment/index.tsx": 23,
+    "src/pages/Equipment/index.tsx": 22,
     "src/pages/Home/RoadmapCard.tsx": 22,
     "src/components/EqSummaryInner.tsx": 22,
     "src/components/PageImprovementMemo.tsx": 20,

@@ -243,7 +243,9 @@ function buildTheme(mode: Mode): Theme {
             borderColor: p.divider,
           },
           body: {
-            fontSize: typescale.small.size,
+            // 본문 13(body) — 구 12(small)는 한글 획이 빽빽해 작게 읽혔고, 셀 부제(12)와 크기가 같아
+            // 위계가 없었다. 13으로 올려 식별자 14 / 본문 13 / 부제 12 의 3단을 만든다(2026-08-01 확정).
+            fontSize: typescale.body.size,
             lineHeight: 1.5,
           },
           head: {
