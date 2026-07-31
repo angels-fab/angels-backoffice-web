@@ -1,13 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { ReactNode } from 'react'
-import type { SxProps, Theme } from '@mui/material/styles'
 import { useSearchParams } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Table from '@mui/material/Table'
 import TableHead from '@mui/material/TableHead'
 import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
-import TableCell from '@mui/material/TableCell'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import Button from '@mui/material/Button'
@@ -15,7 +12,7 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
-import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, LoadingState, Select, SearchBar, dataTableSx } from '@/components/ds'
+import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, LoadingState, Select, SearchBar, dataTableSx, mobileTableCardSx, DataCell } from '@/components/ds'
 import { iconSize, radius, control, typescale } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
@@ -56,65 +53,6 @@ const OPS_COLS: { key: OpsCol; label: string; align: 'left' | 'center' | 'right'
 const codeCellSx = { color: 'text.secondary', fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontWeight: 500, whiteSpace: 'nowrap' } as const
 const nameCellSx = { color: 'text.primary', fontWeight: 500, fontSize: typescale.emphasis.size, whiteSpace: 'nowrap' } as const
 
-/**
- * 모바일(≤768) 표 → 세로 카드 변환.
- *
- * 레거시 .rtable(index.css)과 같은 결과를 sx로 구현한 것 — className 을 새로 늘리지 않기 위해서다
- * (레거시 CSS 의존을 걷어내는 중이고, className 은 design-lint 위반 항목이기도 하다).
- * 열 이름은 ::before content:attr() 대신 실제 <span>으로 렌더한다(OpsCell) — emotion 의
- * content 처리에 기대지 않아 결과가 확정적이다.
- */
-const mobileCardSx = (th: Theme) => ({
-  [th.breakpoints.down('shell')]: {
-    display: 'block',
-    minWidth: 0,
-    '& thead': { display: 'none' },
-    '& tbody': { display: 'block' },
-    '& tbody tr': {
-      display: 'flex', flexDirection: 'column', gap: '5px',
-      bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider',
-      borderRadius: `${radius.card}px`, p: '11px 14px', mb: '10px',
-    },
-    '& tbody td': {
-      display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '14px',
-      border: 0, p: '2px 0', textAlign: 'left', whiteSpace: 'normal',
-    },
-    // 대표 셀(장비명)은 카드 제목처럼 맨 위로
-    '& tbody td[data-title="1"]': {
-      order: -1, justifyContent: 'flex-start', gap: '6px',
-      fontSize: typescale.emphasis.size, fontWeight: typescale.cardTitle.weight,
-      p: '0 0 6px 0', mb: '3px', borderBottom: '1px solid', borderColor: 'divider',
-    },
-  },
-})
-
-/** 표 셀 + 모바일 카드용 열 이름. 데스크톱에선 열 이름이 숨겨져 지금과 동일하게 보인다. */
-function OpsCell({ label, align = 'center', title, sx, children }: {
-  label?: string
-  align?: 'left' | 'center' | 'right'
-  /** 대표 셀(카드 제목이 되는 열) */
-  title?: boolean
-  sx?: SxProps<Theme>
-  children: ReactNode
-}) {
-  return (
-    <TableCell align={align} data-title={title ? '1' : undefined} sx={sx}>
-      {label && (
-        <Box
-          component="span"
-          sx={(th) => ({
-            display: 'none', flex: 'none', color: 'text.disabled',
-            fontWeight: typescale.emphasis.weight, fontSize: typescale.caption.size,
-            [th.breakpoints.down('shell')]: { display: 'inline' },
-          })}
-        >
-          {label}
-        </Box>
-      )}
-      {children}
-    </TableCell>
-  )
-}
 const opsAccessor = (g: EqGroup, c: OpsCol): string | number | null => {
   switch (c) {
     case 'code': return g.codes[0] || null
@@ -270,7 +208,10 @@ export default function EquipmentOps() {
       </Box>
 
       {/* 장비대장 */}
-      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, bgcolor: 'background.paper', overflow: 'hidden' }}>
+      {/* overflow 는 'hidden' 이 아니라 'clip' — 둘 다 카드 둥근 모서리로 잘라주지만,
+          hidden 은 (사용자가 못 미는) 스크롤 컨테이너를 만들어 표 헤더의 sticky 기준점을
+          이 박스로 뺏어간다. clip 은 스크롤 컨테이너가 아니라 sticky 가 페이지까지 통과한다. */}
+      <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, bgcolor: 'background.paper', overflow: 'clip' }}>
         <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           <Typography sx={{ fontSize: 13, fontWeight: 700 }}>장비대장 <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 500 }}>전체 {c.types}종 · {c.total}대</Box></Typography>
           <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
@@ -296,9 +237,28 @@ export default function EquipmentOps() {
         ) : (
           /* 레거시 .eq-ledger → MUI Table 이관(2026-08-01 파일럿).
              셀 여백·글자·헤더 룩은 theme MuiTableCell 정본이 담당하므로 여기선 선언하지 않는다.
-             정렬은 셀 align prop 으로만 — 표·행 레벨 '& th' sx 는 특이도로 셀 선언을 죽인다. */
-          <Box sx={{ overflowX: 'auto' }}>
-            <Table size="small" sx={(th) => ({ ...dataTableSx, minWidth: 880, ...mobileCardSx(th) })}>
+             정렬은 셀 align prop 으로만 — 표·행 레벨 '& th' sx 는 특이도로 셀 선언을 죽인다.
+
+             아래 래퍼의 overflowX 가 반응형인 이유: 가로 스크롤과 페이지-sticky 는 같은 요소에서
+             공존할 수 없다. overflow-x:auto 는 CSS 규격상 세로축의 visible 을 auto 로 승격시켜
+             (computed auto/auto) 이 박스가 세로 스크롤포트가 되고, 그러면 헤더가 페이지가 아니라
+             이 박스 기준으로 붙어 사실상 고정이 안 된다. 표가 다 들어오는 폭(lg=1200)에서만
+             visible 로 열어 sticky 를 살리고, 그 아래는 가로 스크롤을 유지한다.
+             ★ overflowY 는 선언하지 말 것 — 선언하는 순간 lg 에서도 다시 스크롤포트가 된다. */
+          <Box sx={{ overflowX: { xs: 'auto', lg: 'visible' } }}>
+            <Table
+              size="small"
+              stickyHeader
+              sx={(th) => ({
+                ...dataTableSx,
+                minWidth: 880,
+                // 고정 위치 = 상단바 높이(index.css .topbar / .sidenav top:53px 과 같은 값).
+                // lg 미만은 위 래퍼가 가로 스크롤 컨테이너라 어차피 안 붙는데, 거기서 top 을 주면
+                // sticky 제약 탓에 헤더가 오히려 53px 아래로 밀려 내려간다 → lg 에서만 준다.
+                '& thead th': { top: { lg: 53 } },
+                ...mobileTableCardSx(th),
+              })}
+            >
               <TableHead>
                 <TableRow>
                   {OPS_COLS.map((col) => (
@@ -313,19 +273,19 @@ export default function EquipmentOps() {
                   const req = isRegRequired(g.state)
                   return (
                     <TableRow hover key={g.repCode || g.name + idx} onClick={() => setPicked(g)} sx={{ cursor: 'pointer' }}>
-                      <OpsCell label="관리번호" align="left" sx={codeCellSx}>{codeRange(g)}</OpsCell>
-                      <OpsCell align="left" title sx={nameCellSx}>
+                      <DataCell label="관리번호" align="left" sx={codeCellSx}>{codeRange(g)}</DataCell>
+                      <DataCell align="left" title sx={nameCellSx}>
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                           <NameWithQty name={g.name} count={g.count} fontSize={14} />
                           {/* 변형명 부제 — 장비도입 표(Equipment/index.tsx)와 같은 열·같은 역할이라 값도 같게(12/보조톤) */}
                           {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: typescale.small.size, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
-                      </OpsCell>
-                      <OpsCell label="분류">{g.cat || '-'}</OpsCell>
-                      <OpsCell label="담당자">{g.mgr || '-'}</OpsCell>
-                      <OpsCell label="운영상태"><StatusChip status={meta.status} label={meta.label} /></OpsCell>
-                      <OpsCell label="설치장소" sx={{ color: g.installLoc ? 'text.secondary' : req ? 'warning.main' : 'text.disabled' }}>{g.installLoc || '미등록'}</OpsCell>
-                      <OpsCell label="누락정보">
+                      </DataCell>
+                      <DataCell label="분류">{g.cat || '-'}</DataCell>
+                      <DataCell label="담당자">{g.mgr || '-'}</DataCell>
+                      <DataCell label="운영상태"><StatusChip status={meta.status} label={meta.label} /></DataCell>
+                      <DataCell label="설치장소" sx={{ color: g.installLoc ? 'text.secondary' : req ? 'warning.main' : 'text.disabled' }}>{g.installLoc || '미등록'}</DataCell>
+                      <DataCell label="누락정보">
                         {miss.length === 0 ? (
                           <Box component="span" sx={{ color: 'text.disabled' }}>{req ? '없음' : '—'}</Box>
                         ) : (
@@ -336,8 +296,8 @@ export default function EquipmentOps() {
                             {miss.length > 2 && <Box component="span" sx={{ color: 'text.disabled', fontSize: typescale.caption.size }}>+{miss.length - 2}</Box>}
                           </Box>
                         )}
-                      </OpsCell>
-                      <OpsCell label="최근 이력" sx={{ color: 'text.disabled' }}>-</OpsCell>
+                      </DataCell>
+                      <DataCell label="최근 이력" sx={{ color: 'text.disabled' }}>-</DataCell>
                     </TableRow>
                   )
                 })}
