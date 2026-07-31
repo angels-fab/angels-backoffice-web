@@ -88,7 +88,7 @@ export type { NavBadgeProps } from './NavBadge'
 export { default as DataTable } from './DataTable'
 export type { DataTableProps, DataColumn } from './DataTable'
 
-export { dataTableHeadSx, dataTableSx, mobileTableCardSx } from './tableStyle'
+export { dataTableSx, mobileTableCardSx } from './tableStyle'
 export { default as DataCell } from './DataCell'
 export type { DataCellProps } from './DataCell'
 

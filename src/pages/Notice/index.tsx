@@ -18,7 +18,6 @@ import { TintChip } from '@/components/FilterChip'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import PushPinIcon from '@mui/icons-material/PushPin'
@@ -33,7 +32,6 @@ import {
   SearchBar,
   LoadingState,
   FilterToolbar,
-  dataTableHeadSx,
   dataTableSx,
   statusTextColor,
   useSnack,
@@ -226,7 +224,7 @@ export default function Notice() {
             },
           })}
         >
-          <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+          <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
             {isCopy
               ? <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
               : (
@@ -246,7 +244,7 @@ export default function Notice() {
                 </Box>
               )}
           </TableCell>
-          <TableCell sx={{ textAlign: 'center' }}><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
+          <TableCell align="center"><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
           {/* 아코디언 활성 영역 = 제목 셀만(행 전체 아님) */}
           <TableCell
             role="button"
@@ -275,15 +273,14 @@ export default function Notice() {
               )}
             </Box>
           </TableCell>
-          <TableCell sx={{ color: 'text.secondary', whiteSpace: 'nowrap', textAlign: 'center', display: { xs: 'none', sm: 'table-cell' } }}>{n.author || '-'}</TableCell>
-          <TableCell sx={{ whiteSpace: 'nowrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'flex-end', md: 'space-between' }, gap: 1 }}>
-              <Box component="span" sx={{ color: 'text.secondary', fontFamily: 'monospace', display: { xs: 'none', md: 'inline' } }}>{n.date}</Box>
-              <ExpandMoreIcon sx={{ fontSize: iconSize.action, color: 'text.disabled', transition: 'transform .2s', transform: open ? 'rotate(180deg)' : 'none' }} />
-            </Box>
+          <TableCell align="center" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', display: { xs: 'none', sm: 'table-cell' } }}>{n.author || '-'}</TableCell>
+          {/* 날짜만 — 구 펼침 화살표는 삭제했다(2026-08-01). 클릭 대상은 제목 셀인데 화살표는 이 셀에
+              있어서 눌러도 아무 일이 없는 가짜 버튼이었고, 펼칠 수 있다는 신호는 제목 셀 호버가 이미 준다. */}
+          <TableCell align="center" sx={{ color: 'text.secondary', fontFamily: 'monospace', whiteSpace: 'nowrap', display: { xs: 'none', md: 'table-cell' } }}>
+            {n.date}
           </TableCell>
           {/* 첨부 유무 — DS 표준 첨부 표식 = AttachFile 클립(손그림 플로피 SVG 폐지, 사용자 확정 2026-07-13) */}
-          <TableCell sx={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
+          <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
             {!!n.attachments?.length && (
               <Tooltip title={`첨부파일 ${n.attachments.length}개`}>
                 <AttachFileIcon
@@ -374,13 +371,16 @@ export default function Notice() {
             <Box sx={{ overflowX: 'auto' }}>
               <Table size="small" sx={{ minWidth: { xs: 0, md: 640 }, ...dataTableSx }}>
                 <TableHead>
-                  <TableRow sx={dataTableHeadSx}>
-                    <TableCell sx={{ width: 48 }}>번호</TableCell>
-                    <TableCell sx={{ width: 68 }}>분류</TableCell>
-                    <TableCell sx={{ textAlign: 'left !important' }}>제목</TableCell>
-                    <TableCell sx={{ width: 100, textAlign: 'center', display: { xs: 'none', sm: 'table-cell' } }}>작성자</TableCell>
-                    <TableCell sx={{ width: { xs: 44, md: 120 }, textAlign: { xs: 'right', md: 'left' } }}>작성일</TableCell>
-                    <TableCell sx={{ width: 52, textAlign: 'center' }}>첨부</TableCell>
+                  {/* 정렬은 셀 align prop 으로만 — 구 dataTableHeadSx 의 '& th'(특이도 0-1-1)가
+                      셀 sx(0-1-0)를 이겨서 여기 적힌 정렬이 조용히 죽고 있었다(작성일이 실제로 그랬다).
+                      그래서 제목만 !important 로 버티고 있었는데, 그것도 이제 필요 없다. */}
+                  <TableRow>
+                    <TableCell align="center" sx={{ width: 48 }}>번호</TableCell>
+                    <TableCell align="center" sx={{ width: 68 }}>분류</TableCell>
+                    <TableCell align="left">제목</TableCell>
+                    <TableCell align="center" sx={{ width: 100, display: { xs: 'none', sm: 'table-cell' } }}>작성자</TableCell>
+                    <TableCell align="center" sx={{ width: 120, display: { xs: 'none', md: 'table-cell' } }}>작성일</TableCell>
+                    <TableCell align="center" sx={{ width: 52 }}>첨부</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>

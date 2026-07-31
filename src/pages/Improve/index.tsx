@@ -8,6 +8,7 @@ import TableHead from '@mui/material/TableHead'
 import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
+import Collapse from '@mui/material/Collapse'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import InputBase from '@mui/material/InputBase'
@@ -31,9 +32,9 @@ import PushPinIcon from '@mui/icons-material/PushPin'
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { typescale, iconSize, radius, control } from '@/theme/tokens'
+import { typescale, iconSize, radius, control, table } from '@/theme/tokens'
 import { nextFilterSelection } from '@/utils/filterSelect'
-import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, statusTextColor, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableHeadSx, dataTableSx, useSnack, ConfirmDialog } from '@/components/ds'
+import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, statusTextColor, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableSx, useSnack, ConfirmDialog } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { inlineFieldSx } from '@/components/ds/fields'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -669,15 +670,17 @@ export default function Improve() {
               구분선 색·여백은 theme MuiTableCell 담당, 여기서는 본문 줄바꿈만 막는다. */}
           <Table size="small" sx={{ ...dataTableSx, '& td': { whiteSpace: 'nowrap' } }}>
             <TableHead>
-              <TableRow sx={dataTableHeadSx}>
-                <TableCell sx={{ width: '1%' }}>번호</TableCell>
-                <TableCell sx={{ width: '1%' }}>개선위치</TableCell>
-                <TableCell sx={{ width: '100%', textAlign: 'left !important' }}>제목</TableCell>
-                <TableCell sx={{ width: '1%' }}>작성자</TableCell>
-                <TableCell sx={{ width: '1%' }}>제안일자</TableCell>
-                <TableCell sx={{ width: '1%' }}>상태</TableCell>
-                <TableCell sx={{ width: '1%', textAlign: 'left !important' }}>비고</TableCell>
-                {memoCol && <TableCell sx={{ width: '1%' }}>작업 메모</TableCell>}
+              {/* 정렬은 셀 align prop 으로만 — 구 dataTableHeadSx 의 '& th'(특이도 0-1-1)가
+                  셀 sx(0-1-0)를 이겨서, 제목·비고는 !important 로 버텨야 했다. 이제 불필요. */}
+              <TableRow>
+                <TableCell align="center" sx={{ width: '1%' }}>번호</TableCell>
+                <TableCell align="center" sx={{ width: '1%' }}>개선위치</TableCell>
+                <TableCell align="left" sx={{ width: '100%' }}>제목</TableCell>
+                <TableCell align="center" sx={{ width: '1%' }}>작성자</TableCell>
+                <TableCell align="center" sx={{ width: '1%' }}>제안일자</TableCell>
+                <TableCell align="center" sx={{ width: '1%' }}>상태</TableCell>
+                <TableCell align="center" sx={{ width: '1%' }}>비고</TableCell>
+                {memoCol && <TableCell align="center" sx={{ width: '1%' }}>작업 메모</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -830,10 +833,15 @@ export default function Improve() {
                       </TableCell>
                     )}
                   </TableRow>,
-                  open ? (
-                    <TableRow key={`${t.id}-a`} sx={(th) => ({ '& td': { borderTop: 0, bgcolor: alpha(th.palette.accent.blue, 0.06) } })}>
-                      <TableCell />
-                      <TableCell colSpan={detailSpan} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
+                  /* 펼침 행은 항상 렌더하고 Collapse 가 높이를 애니메이션한다(공지사항 표와 같은 방식).
+                     구 `open ? <TableRow/> : null` 은 조건부 렌더라 내용이 툭 튀어나왔다.
+                     셀은 p:0·border:0 이어야 접혔을 때 빈 띠가 남지 않는다 — 여백·배경은 안쪽 Box 가 갖는다. */
+                  (
+                    <TableRow key={`${t.id}-a`}>
+                      <TableCell sx={{ p: 0, border: 0 }} />
+                      <TableCell colSpan={detailSpan} sx={{ p: 0, border: 0 }}>
+                        <Collapse in={open} timeout="auto" unmountOnExit>
+                          <Box sx={(th) => ({ bgcolor: alpha(th.palette.accent.blue, 0.06), px: `${table.cellPadX}px`, py: `${table.cellPadY}px`, textAlign: 'left', whiteSpace: 'normal' })}>
                         {/* 원문 내용 + (관리자) 개선요청 수정/삭제 */}
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
                           <Box sx={{ fontSize: typescale.body.size, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1 }}>
@@ -858,9 +866,11 @@ export default function Improve() {
                           onEdit={editReplyH}
                           onRequestDelete={(r) => setDelReply(r)}
                         />
+                          </Box>
+                        </Collapse>
                       </TableCell>
                     </TableRow>
-                  ) : null,
+                  ),
                 ]
               })}
             </TableBody>
