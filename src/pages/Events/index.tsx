@@ -136,7 +136,9 @@ export default function Events() {
     const onDown = (ev: MouseEvent) => {
       const t = ev.target as HTMLElement
       if (panelRef.current?.contains(t)) return       // 패널 내부 → 유지
-      if (t.closest('.eq-ledger tbody tr')) return      // 목록 행 → 다른 행사로 전환(onPick)
+      // 목록 행 → 다른 행사로 전환(onPick). 판정 기준을 스타일 클래스(.eq-ledger)가 아니라
+      // 전용 data 속성으로 둔다 — 클래스는 룩이 바뀌면 사라지는데 이건 기능이라 같이 죽으면 안 된다.
+      if (t.closest('[data-ended-list] tbody tr')) return
       if (t.closest('.MuiPopover-root, .MuiModal-root')) return // 관리자 참석자 관리 팝오버 등 → 유지
       setEndedDetail(null)                              // 그 외 바깥 → 닫기
     }

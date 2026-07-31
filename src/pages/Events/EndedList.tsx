@@ -1,4 +1,11 @@
 import Box from '@mui/material/Box'
+import Table from '@mui/material/Table'
+import TableHead from '@mui/material/TableHead'
+import TableBody from '@mui/material/TableBody'
+import TableRow from '@mui/material/TableRow'
+import TableCell from '@mui/material/TableCell'
+import { dataTableSx } from '@/components/ds'
+import { typescale } from '@/theme/tokens'
 import { fmtEventDate, type FabEvent } from '@/constants/events'
 import { eventCategory, CAT_COLOR } from './eventCard'
 import AttendSwitch from './AttendSwitch'
@@ -19,20 +26,25 @@ export default function EndedList({ events, selectedId, onPick, attByEvent, user
 }) {
   const canToggle = isMember && !!user
   return (
+    /* 레거시 .eq-ledger → MUI Table 이관(2026-08-01). 셀 여백·글자·헤더 룩은 theme MuiTableCell 정본이 담당.
+       정렬은 셀 align prop 으로만 — 구 '& th, & td': textAlign center !important 는 .eq-ledger 의
+       좌측정렬(특이도 0-1-1)을 이기려고 붙인 것이라, 클래스가 사라진 지금은 필요 없다.
+       data-ended-list = 상세 패널의 바깥클릭 판정용 기능 훅(Events/index.tsx). 스타일 클래스와 분리해 둔다.
+       모바일은 카드화 대신 열 숨김 유지(2026-08-01 사용자 결정: 카드 전환은 장비대장만). */
     <Box sx={{ overflowX: 'auto' }}>
-      <Box component="table" className="eq-ledger" sx={{ width: '100%', minWidth: { xs: 0, sm: 680 }, '& th, & td': { textAlign: 'center !important' } }}>
-        <Box component="thead">
-          <Box component="tr">
-            <Box component="th" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>구분</Box>
-            <Box component="th">행사명</Box>
-            <Box component="th">기간</Box>
-            <Box component="th" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>장소</Box>
-            <Box component="th" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>참석자</Box>
-            <Box component="th">참/불</Box>
-            {isAdmin && <Box component="th" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>관리</Box>}
-          </Box>
-        </Box>
-        <Box component="tbody">
+      <Table size="small" data-ended-list sx={{ ...dataTableSx, minWidth: { xs: 0, sm: 680 } }}>
+        <TableHead>
+          <TableRow>
+            <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>구분</TableCell>
+            <TableCell align="left">행사명</TableCell>
+            <TableCell align="center">기간</TableCell>
+            <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>장소</TableCell>
+            <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>참석자</TableCell>
+            <TableCell align="center">참/불</TableCell>
+            {isAdmin && <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>관리</TableCell>}
+          </TableRow>
+        </TableHead>
+        <TableBody>
           {events.map((e) => {
             const cat = eventCategory(e.kind)
             const color = CAT_COLOR[cat]
@@ -41,36 +53,37 @@ export default function EndedList({ events, selectedId, onPick, attByEvent, user
             const attendees = e.attendees ?? []
             const mine = !!user && rows.some((r) => r.memberUid && r.name === user)
             return (
-              <Box
-                component="tr"
+              <TableRow
+                hover
                 key={e.id}
                 onClick={() => onPick(e)}
                 sx={(th) => ({ cursor: 'pointer', ...(on && { '& td': { bgcolor: `${th.palette.primary.main}22` } }) })}
               >
-                <Box component="td" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                   <Box component="span" className="lg-chip" sx={{ color, borderColor: color + '66' }}>{cat}</Box>
-                </Box>
-                <Box component="td" className="lg-primary" sx={{ whiteSpace: 'normal' }}>{e.title}</Box>
-                <Box component="td" sx={{ whiteSpace: 'nowrap' }}>{fmtEventDate(e.start, e.end)}</Box>
-                <Box component="td" sx={{ display: { xs: 'none', sm: 'table-cell' }, color: 'text.secondary' }}>{e.venue || '-'}</Box>
-                <Box
-                  component="td"
+                </TableCell>
+                {/* 행사명 = 이 행의 식별자. 구 .lg-primary(14/500 주톤)를 sx로 옮김 */}
+                <TableCell align="left" sx={{ color: 'text.primary', fontWeight: 500, fontSize: typescale.emphasis.size, whiteSpace: 'normal' }}>{e.title}</TableCell>
+                <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>{fmtEventDate(e.start, e.end)}</TableCell>
+                <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, color: 'text.secondary' }}>{e.venue || '-'}</TableCell>
+                <TableCell
+                  align="center"
                   title={attendees.join(', ')}
                   sx={{ display: { xs: 'none', sm: 'table-cell' }, color: 'text.secondary', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 >
                   {attendees.length ? `${attendees.join(', ')} (${attendees.length})` : '-'}
-                </Box>
+                </TableCell>
                 {/* 참/불 스위치 — 로그인 팀원만 토글, 그 외에는 상태 표시(비활성) */}
-                <Box component="td" onClick={(ev) => ev.stopPropagation()} sx={{ cursor: 'default' }}>
+                <TableCell align="center" onClick={(ev) => ev.stopPropagation()} sx={{ cursor: 'default' }}>
                   {canToggle ? (
                     <AttendSwitch checked={mine} disabled={busy} onToggle={() => onToggleSelf(e.id)} />
                   ) : (
-                    <Box component="span" sx={(th) => ({ color: 'text.disabled', fontSize: th.typography.small.fontSize })}>-</Box>
+                    <Box component="span" sx={{ color: 'text.disabled', fontSize: typescale.small.size }}>-</Box>
                   )}
-                </Box>
+                </TableCell>
                 {/* 관리 — 관리자 참석자 추가/제거 */}
                 {isAdmin && (
-                  <Box component="td" onClick={(ev) => ev.stopPropagation()} sx={{ display: { xs: 'none', sm: 'table-cell' }, cursor: 'default' }}>
+                  <TableCell align="center" onClick={(ev) => ev.stopPropagation()} sx={{ display: { xs: 'none', sm: 'table-cell' }, cursor: 'default' }}>
                     <AttendeeManageCell
                       rows={rows}
                       user={user}
@@ -80,13 +93,13 @@ export default function EndedList({ events, selectedId, onPick, attByEvent, user
                       onAddName={(n) => onAddName(e.id, n)}
                       onRemove={onRemove}
                     />
-                  </Box>
+                  </TableCell>
                 )}
-              </Box>
+              </TableRow>
             )
           })}
-        </Box>
-      </Box>
+        </TableBody>
+      </Table>
     </Box>
   )
 }
