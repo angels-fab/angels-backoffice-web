@@ -221,13 +221,11 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .work-prev-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:var(--amber)}
 /* 홈 업무 미리보기 카드 (가로형: 구분 | 제목 | 담당자) */
 .wp-card{background:var(--ink);border:1px solid var(--border);border-radius:8px;padding:6px 9px;display:flex;align-items:center;gap:8px}
-.wp-card .task-cat{flex-shrink:0}
 .wp-title{flex:0 1 auto;min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wp-mgr{font-size:10px;color:var(--text3);white-space:nowrap;flex-shrink:0;margin-left:auto}
 .wp-card .new-badge{flex-shrink:0}
 .wp-more{font-size:11px;color:var(--text3);text-align:center;padding-top:2px}
 .wp-ph{color:var(--text3);font-size:12px;padding:10px 4px;text-align:center}
-@keyframes spin{to{transform:rotate(360deg)}}
 @keyframes liveDotBlink{0%,100%{opacity:1}50%{opacity:.25}}
 .live-dot{animation:liveDotBlink 1.15s ease-in-out infinite}
 /* 업무현황 KPI 진행중 링 — 투명도 숨쉬기(회전·파동 없음) */
@@ -237,8 +235,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 @media (prefers-reduced-motion: reduce){
   @keyframes kpiPulse{0%,100%{transform:scale(1)}}
 }
-.load-spin{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
-.preview-loading{display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text3);font-size:12px;padding:18px 4px}
 .card.c-meeting{grid-column:span 1}
 .card-notice-list{list-style:none;width:100%;margin-top:4px;display:flex;flex-direction:column;gap:9px}
 .card-notice-list li{display:flex;align-items:center;gap:6px;font-size:12.5px}
@@ -279,8 +275,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 
 .task-cb{width:16px;height:16px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
 .task-info{flex:1;min-width:0}
-.task-name{font-size:13px;color:var(--text);font-weight:500}
-.task-name.done-txt{text-decoration:line-through;color:var(--text3)}
 .task-meta{font-size:11px;color:var(--text3);margin-top:2px}
 .task-badge{display:inline-flex;padding:1px 8px;border-radius:4px;font-size:10px;font-weight:600;flex-shrink:0}
 .task-badge.high{background:rgba(224,91,84,.12);color:var(--red-tx);border:1px solid rgba(224,91,84,.25)}
@@ -288,9 +282,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .task-badge.low{background:rgba(77,161,103,.12);color:var(--green-tx);border:1px solid rgba(77,161,103,.25)}
 .task-assignee{font-size:11px;color:var(--text2);flex-shrink:0}
 .task-empty{padding:40px;text-align:center;color:var(--text3);font-size:13px}
-.task-item-wrap{border-bottom:0.5px solid var(--border2);background:transparent;transition:background .15s}
-.task-item-wrap:last-child{border-bottom:none}
-.task-item-wrap:hover{background:var(--ink3)}
 .task-item{display:flex;align-items:center;gap:12px;padding:11px 18px;cursor:pointer;transition:background .12s;border-bottom:none}
 .task-item:hover{background:var(--ink3)}
 .task-item.open{background:var(--ink3)}
@@ -305,29 +296,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .detail-prog-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
 .detail-prog-fill{height:100%;border-radius:2px;transition:width .4s}
 .detail-prog-num{font-size:11px;font-weight:600;min-width:28px}
-.task-cat{font-size:10px;font-weight:600;padding:1px 7px;border-radius:4px;border:1px solid;white-space:nowrap;text-align:center}
-.task-cat-col{flex-shrink:0;width:66px;display:flex;justify-content:center;align-self:flex-start;margin-top:2px}
 /* ── 진행중 업무 전용 표 레이아웃 ── */
 .cur-head{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--ink3)}
 .cur-head>*{font-size:11.5px;color:var(--text2);font-weight:600;letter-spacing:.3px}
-.cur-head .cur-c-body{text-align:center}
-.cur-row{display:flex;align-items:flex-start;gap:12px;padding:13px 18px}
-.cur-c-cat{width:76px;flex-shrink:0;display:flex;justify-content:center;align-self:center}
-.cur-c-body{flex:1;min-width:0}
-.cur-c-mgr{width:58px;flex-shrink:0;text-align:center;font-size:12px;color:var(--text2);align-self:center}
-.cur-c-date{width:92px;flex-shrink:0;text-align:center;font-size:12px;color:var(--text2);align-self:center}
-.cur-title-row{display:flex;align-items:baseline;gap:7px;flex-wrap:nowrap;min-width:0}
-.cur-title-row .task-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:1}
-.cur-leader{flex:1 1 0;min-width:8px;overflow:hidden;white-space:nowrap;color:var(--text3);font-size:11px;letter-spacing:2px;opacity:.55;user-select:none;-webkit-user-select:none}
-.task-no-ref{font-size:11px;color:var(--text3);font-family:"IBM Plex Mono",monospace;flex-shrink:0}
-.cur-c-att{width:44px;flex-shrink:0;display:flex;justify-content:center;align-self:center}
-.cur-att{color:var(--blue-tx);text-decoration:none;font-size:15px;line-height:1}
-.cur-att:hover{filter:brightness(1.3)}
-.cur-dept{font-size:12px;color:var(--text2);font-weight:500;white-space:nowrap;flex-shrink:0}
-.cur-subs{margin-top:5px;font-size:12px;color:var(--text2);line-height:1.6}
-.sub-line{display:flex;gap:5px;align-items:flex-start}
-.sub-mark{flex-shrink:0}
-.sub-text{flex:1;min-width:0;word-break:break-word}
 
 /* ── 업무내용 리치 텍스트 ── */
 /* 글자색 토큰(의미 기반) → 테마 팔레트. 다크/라이트 모두 index.css 변수로 대비 확보 */
@@ -368,9 +339,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wc-editor p.is-editor-empty:first-child::before{content:attr(data-placeholder);color:var(--text3,#7d8590);float:left;height:0;pointer-events:none}
 @media(max-width:620px){
   /* 모바일: 공지 게시판처럼 담당자·발의일자 숨기고 간결하게 */
-  .cur-c-mgr,.cur-c-date{display:none !important}
   .cur-head{padding:9px 14px}
-  .cur-row{padding:12px 14px}
 }
 /* ── 진행중/지난 탭 ── */
 .wkpi-row{display:flex;gap:12px;width:100%;margin-bottom:16px;flex-wrap:wrap}
@@ -405,8 +374,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .work-box-head{display:flex;align-items:center;gap:9px;padding:13px 18px;border-bottom:0.5px solid var(--border2)}
 .work-box-title{font-size:14px;font-weight:600;color:var(--text)}
 .work-box-count{font-size:11px;background:var(--ink3);color:var(--text2);padding:1px 9px;border-radius:99px;font-weight:500}
-.task-item-wrap.pinned{background:rgba(214,162,62,.05)}
-.task-item-wrap.pinned .task-item{border-left:2px solid var(--amber)}
 .task-pin{flex-shrink:0;font-size:12px;margin-right:-4px}
 .work-box-remind{border-color:rgba(214,162,62,.35)}
 .work-box-remind .work-box-head{border-bottom-color:rgba(214,162,62,.25)}
@@ -1048,17 +1015,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .nav-flyout .fl-sub{display:none}
 .page-title{font-size:20px;font-weight:600;display:flex;align-items:center;gap:8px;letter-spacing:-.3px}
 .page-title svg{font-size:22px;color:var(--text2)}
-.ttl-load{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);font-family:'IBM Plex Mono',monospace}
-.load-spin-sm{width:11px;height:11px;border-width:2px}
 
-/* ── 홈: 인사말 ── */
-.home-greeting{width:100%;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:20px}
-.greet-text{flex:0 0 auto;min-width:0}
-.greet-sub{font-size:14px;color:var(--text2);margin-bottom:7px;white-space:nowrap}
-.greet-main{font-size:30px;font-weight:700;color:var(--text);line-height:1.15;margin-bottom:0;letter-spacing:-.5px;white-space:nowrap}
-.greet-date{display:none}
-.greet-illust{flex:1 1 0;min-width:0;height:auto;max-height:58px;object-fit:contain;object-position:right bottom;align-self:flex-end}
-@media(max-width:480px){.greet-main{font-size:23px}.greet-sub{font-size:13px}.greet-illust{max-height:50px}}
+/* 홈 인사말은 Greeting.tsx 의 sx 로 이관 (2026-08-01) */
 
 /* ── 홈: 장비 현황 요약 카드 ── */
 .eq-summary{width:100%;max-width:960px;background:linear-gradient(135deg,#0d2440,#0a1828);border:1px solid #1f4068;border-radius:18px;padding:18px 20px;margin-bottom:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;position:relative;overflow:hidden;-webkit-tap-highlight-color:rgba(84,145,218,.2)}
@@ -1170,13 +1128,10 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .reorder-cell.jiggle{animation:work-jiggle .28s ease-in-out infinite}
 
 /* 반응형 레이아웃: PC(기본) / 모바일(<=768px) */
-/* .home-greeting은 웹/모바일 모두 노출 (아래 그룹에서 제외) */
 .eq-summary,.stat-board,.menu-stack,.bottom-nav{display:none}
 @media(max-width:768px){
   .d-only{display:none !important}
   body{padding-top:53px}
-  /* 로고 좌측·컨트롤 우측(space-between) + 로고 폭 상한으로 우측 버튼 잘림 방지 */
-  .home-greeting{display:flex}
   .eq-summary{display:block}
   .stat-board{display:grid}
   .menu-stack{display:flex}

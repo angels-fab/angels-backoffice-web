@@ -212,7 +212,7 @@ export default function EquipmentOps() {
           hidden 은 (사용자가 못 미는) 스크롤 컨테이너를 만들어 표 헤더의 sticky 기준점을
           이 박스로 뺏어간다. clip 은 스크롤 컨테이너가 아니라 sticky 가 페이지까지 통과한다. */}
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, bgcolor: 'background.paper', overflow: 'clip' }}>
-        <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+        <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           <Typography sx={{ fontSize: typescale.body.size, fontWeight: weight.bold }}>장비대장 <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.medium }}>전체 {c.types}종 · {c.total}대</Box></Typography>
           <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <Select value={stateF} onChange={setStateF} ariaLabel="운영상태"
