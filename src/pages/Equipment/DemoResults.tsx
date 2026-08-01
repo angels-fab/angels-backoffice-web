@@ -25,7 +25,7 @@ import HistoryIcon from '@mui/icons-material/History'
 import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { iconSize, radius, shadow, typescale, weight, neutralFill } from '@/theme/tokens'
+import { iconSize, radius, shadow, solid, typescale, weight, neutralFill } from '@/theme/tokens'
 import { useSnack, LoadingState, ConfirmDialog } from '@/components/ds'
 import { inlineFieldSx } from '@/components/ds/fields'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
@@ -77,7 +77,7 @@ function Photo({ photo, onClick, fit = 'cover' }: { photo?: DemoPhotoRef; onClic
 const roundChip = (active: boolean) => (th: Theme) => ({
   fontSize: typescale.caption.size, fontWeight: active ? 800 : 700, lineHeight: 1, px: '7px', py: '3.5px', borderRadius: `${radius.pill}px`, border: 'none',
   cursor: 'pointer', fontFamily: 'inherit',
-  color: active ? th.palette.primary.main : th.palette.common.white,
+  color: active ? solid.blue : th.palette.common.white,
   bgcolor: active ? th.palette.common.white : 'rgba(255,255,255,.22)',
   '&:hover': active ? {} : { bgcolor: 'rgba(255,255,255,.34)' },
 })
@@ -767,7 +767,7 @@ function MakerLane({ mg, sel, onSel, defs, defsAll, canEdit, onZoom, onAddRound,
   return (
     <Box sx={{ minWidth: 0 }}>
       {/* 색깔 밴드(제목행) — 제조사·모델 왼쪽 + 회차·날짜·첨부·도구 오른쪽(2026-07-24: 사진 위 오버레이에서 이동) */}
-      <Box sx={(th) => ({ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5, rowGap: 0.25, px: 1.25, py: '4px', minHeight: 32, bgcolor: th.palette.primary.main, borderRadius: `${radius.chip}px ${radius.chip}px 0 0`, minWidth: 0 })}>
+      <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5, rowGap: 0.25, px: 1.25, py: '4px', minHeight: 32, bgcolor: solid.blue, borderRadius: `${radius.chip}px ${radius.chip}px 0 0`, minWidth: 0 }}>
         <Box sx={{ flex: '0 1 auto', minWidth: 0, fontSize: typescale.small.size, fontWeight: weight.bold, color: 'common.white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {mg.maker}{mg.model ? <Box component="span" sx={{ opacity: 0.85, fontWeight: weight.medium, ml: 0.5 }}>{mg.model}</Box> : null}
         </Box>

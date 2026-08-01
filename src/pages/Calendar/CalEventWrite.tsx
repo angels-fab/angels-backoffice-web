@@ -33,7 +33,7 @@ import { useRole } from '@/auth/role'
 import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { iconSize, radius, shadow, typescale, weight } from '@/theme/tokens'
+import { iconSize, radius, shadow, solid, typescale, weight } from '@/theme/tokens'
 import { ConfirmDialog } from '@/components/ds'
 import { todaySeoul } from '@/utils/date'
 
@@ -225,7 +225,7 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
                 fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums', borderRadius: radius.circle,
                 color: 'text.secondary',
                 ...(key === today ? { boxShadow: (th) => `inset 0 0 0 1px ${th.palette.primary.main}` } : null),
-                ...((isStart || isEnd) && start ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: weight.bold } : null),
+                ...((isStart || isEnd) && start ? { bgcolor: solid.blue, color: 'common.white', fontWeight: weight.bold } : null),
               }}>
                 {d}
               </Box>
@@ -298,7 +298,7 @@ function TimeColumn({ label, value, onPick }: { label: string; value: string; on
                 display: 'block', width: '100%', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 py: '5px', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums', textAlign: 'center', borderRadius: `${radius.input}px`,
                 ...(on
-                  ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: weight.bold }
+                  ? { bgcolor: solid.blue, color: 'common.white', fontWeight: weight.bold }
                   : { bgcolor: 'transparent', color: 'text.secondary', '&:hover': { bgcolor: 'action.hover', color: 'text.primary' } }),
               }}
             >
@@ -800,7 +800,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                               display: 'block', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                               px: 1.25, py: '7px', fontSize: typescale.body.size, whiteSpace: 'nowrap', borderRadius: `${radius.input}px`,
                               ...(on
-                                ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: weight.bold }
+                                ? { bgcolor: solid.blue, color: 'common.white', fontWeight: weight.bold }
                                 : { bgcolor: 'transparent', color: 'text.primary', '&:hover': { bgcolor: 'action.hover' } }),
                             }}
                           >

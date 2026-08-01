@@ -23,7 +23,7 @@ import { todaySeoul } from '@/utils/date'
 import { ComboField } from '@/pages/Work/inlineFields'
 import { MEMBERS, given } from '@/pages/Calendar/members'
 import { uploadNoticeFile, removeNoticeFiles } from '@/api/notices'
-import { iconSize, radius, typescale, weight } from '@/theme/tokens'
+import { iconSize, radius, solid, typescale, weight } from '@/theme/tokens'
 import { AttachmentIcon, formatBytes } from './attachmentUI'
 import { fileTypeRank } from './fileTypeIcons'
 import NoticeBodyEditor from './NoticeBodyEditor'
@@ -60,7 +60,7 @@ const presetSx = (active: boolean) => (th: Theme) => ({
   fontSize: typescale.small.size, fontWeight: weight.semibold, px: 1.1, py: '3px', borderRadius: `${radius.pill}px`,
   cursor: 'pointer', border: '1px solid', flex: 'none', whiteSpace: 'nowrap', transition: 'background-color .15s',
   ...(active
-    ? { bgcolor: th.palette.primary.main, borderColor: th.palette.primary.main, color: 'common.white' }
+    ? { bgcolor: solid.blue, borderColor: solid.blue, color: 'common.white' }
     : { borderColor: th.palette.divider, color: 'text.secondary' }),
 })
 
