@@ -78,8 +78,11 @@ const roundChip = (active: boolean) => (th: Theme) => ({
   fontSize: typescale.caption.size, fontWeight: active ? 800 : 700, lineHeight: 1, px: '7px', py: '3.5px', borderRadius: `${radius.pill}px`, border: 'none',
   cursor: 'pointer', fontFamily: 'inherit',
   color: active ? solid.blue : th.palette.common.white,
-  bgcolor: active ? th.palette.common.white : 'rgba(255,255,255,.22)',
-  '&:hover': active ? {} : { bgcolor: 'rgba(255,255,255,.34)' },
+  // 비활성은 밴드보다 **어둡게**(2026-08-02). 구 rgba(255,255,255,.22)는 밴드를 밝혀
+  // 흰 글자가 3.70:1 까지 떨어졌다. 검정 베일로 뒤집으면 7.63:1 이고, 밝기 사다리도
+  // 한 방향이 된다 — 비활성 0.088 → 호버 0.111 → 활성 1.000(흰 알약).
+  bgcolor: active ? th.palette.common.white : 'rgba(0,0,0,.18)',
+  '&:hover': active ? {} : { bgcolor: 'rgba(0,0,0,.08)' },
 })
 
 // 회차 칩 옆 '+' — 같은 장비+제조사의 다음 회차 등록(밴드 위 점선 알약)
