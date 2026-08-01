@@ -124,7 +124,7 @@ export default function KpiSection({
           <Typography
             key={pulseKey(zone)}
             component="span"
-            sx={{ fontSize: { xs: 26, md: 30 }, fontWeight: typescale.display.weight, lineHeight: 1, letterSpacing: '-0.04em', color: 'text.primary', ...pulseSx(zone) }}
+            sx={{ fontSize: typescale.display.size, fontWeight: typescale.display.weight, lineHeight: 1, letterSpacing: '-0.04em', color: 'text.primary', ...pulseSx(zone) }}
           >
             {count}
           </Typography>
