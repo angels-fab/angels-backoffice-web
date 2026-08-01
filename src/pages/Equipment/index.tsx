@@ -42,7 +42,7 @@ import EquipmentTabs from './EquipmentTabs'
 import DemoResults from './DemoResults'
 import { NameWithQty, codeRange } from './batchUtil'
 import { useTableSort, sortRows, SortHeadCell } from './sortable'
-import { iconSize, layout, radius, shadow, typescale, control, weight, z } from '@/theme/tokens'
+import { iconSize, layout, radius, shadow, shellMq, typescale, control, weight, z } from '@/theme/tokens'
 
 const GANTT_NAME_W = 150 // 장비명 열(축소) — 나머지는 간트가 가변폭으로 채움(가로 스크롤 없음)
 // 가변폭 간트에서 반월 1칸의 실제 픽셀폭 = 간트영역 폭 / (월수*2). 드래그/리사이즈 스냅 기준.
@@ -74,6 +74,34 @@ const PROJ_COLS: { key: ProjCol; label: string; align: 'left' | 'center' | 'righ
 ]
 /** 구 `.eq-ledger .lg-code` / `.lg-primary`(index.css)를 sx로 옮긴 값 — 화면값 그대로 보존 */
 const codeCellSx = { color: 'text.secondary', fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontWeight: weight.medium, whiteSpace: 'nowrap' } as const
+/**
+ * 구 `.lg-chip`(index.css) — 표 안 상태 칩. 값 그대로 이관.
+ * 배경 `var(--ink3)`·보더 `var(--border)`는 대응 테마 토큰이 미세하게 달라(elevated/divider) CSS 변수를 유지한다.
+ * 장비대장(EquipmentOps/index.tsx)에도 같은 값이 있다 — 한쪽만 바꾸면 두 표의 칩이 어긋난다.
+ */
+const lgChipSx = {
+  display: 'inline-flex', alignItems: 'center', minHeight: 24, px: '8px',
+  border: '1px solid var(--border)', borderRadius: `${radius.chip}px`, bgcolor: 'var(--ink3)',
+  fontSize: typescale.small.size, fontWeight: weight.semibold, whiteSpace: 'nowrap',
+} as const
+/** 구 `.eq-strip` @media(max-width:768px) — 요약 타일을 가로 스와이프로(스크롤바 숨김). 값 그대로 이관 */
+const eqStripMobileSx = {
+  [`@media ${shellMq}`]: {
+    display: 'flex', gridTemplateColumns: 'none', overflowX: 'auto', scrollSnapType: 'x proximity',
+    msOverflowStyle: 'none', scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '& > *': { flex: '0 0 64%', scrollSnapAlign: 'start' },
+  },
+} as const
+/** 구 `.eq-filters` @media(max-width:768px) — 필터 줄을 한 줄 가로 스크롤로(스크롤바 숨김). 값 그대로 이관 */
+const eqFiltersMobileSx = {
+  [`@media ${shellMq}`]: {
+    flexWrap: 'nowrap', overflowX: 'auto', justifyContent: 'flex-start',
+    msOverflowStyle: 'none', scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '& > *': { flex: '0 0 auto' },
+  },
+} as const
 const nameCellSx = { color: 'text.primary', fontWeight: weight.medium, fontSize: typescale.emphasis.size, whiteSpace: 'nowrap' } as const
 const projAccessor = (b: Batch, c: ProjCol): string | number | null => {
   switch (c) {
@@ -729,7 +757,7 @@ export default function Equipment() {
 
       {/* 요약 (종=고유 장비명 / 대=대수) — 데모결과 뷰에는 도입 KPI가 안 맞아 숨김 */}
       {view !== 'demo' && (
-        <Box className="eq-strip" sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 1, mb: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 1, mb: 2, ...eqStripMobileSx }}>
           <StatTile value={counts.types} unit="종" label="전체 도입장비" status="info" sub={`총 ${counts.total}대`} />
           <StatTile value={metrics.progress} unit="종" label="진행중" status="warning" sub={metrics.progNote || '진행 중 단계 없음'} />
           <StatTile value={metrics.late} unit="종" label="일정 지연" status={metrics.late ? 'error' : 'neutral'} sub="예정일 경과" />
@@ -763,7 +791,7 @@ export default function Equipment() {
           />
           {/* 필터 — 데모결과 뷰에는 도입용 필터(단계·담당자·구분) 미적용이라 숨김 */}
           {view !== 'demo' && (
-          <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end', ...eqFiltersMobileSx }}>
             <Select value={fltStage} onChange={setFltStage} ariaLabel="단계"
               options={stageOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 단계' : o }))} />
             <Select value={fltMgr} onChange={setFltMgr} ariaLabel="담당자"
@@ -906,7 +934,7 @@ export default function Equipment() {
                       </DataCell>
                       <DataCell label="담당자">{g.mgr || '-'}</DataCell>
                       <DataCell label="구분">{g.type || '-'}</DataCell>
-                      <DataCell label="현재 단계"><Box component="span" className="lg-chip" sx={{ color: STAGE_DOT(info) }}>{chip.label}</Box></DataCell>
+                      <DataCell label="현재 단계"><Box component="span" sx={{ ...lgChipSx, color: STAGE_DOT(info) }}>{chip.label}</Box></DataCell>
                       <DataCell label="다음 일정">{info.dueMonth || '-'}</DataCell>
                       <DataCell label="총 도입금액" align="right">{g.price ? `${k(g.price)} 천원` : '-'}</DataCell>
                     </TableRow>

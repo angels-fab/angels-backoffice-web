@@ -1,6 +1,8 @@
 // 도입 타임라인 간트차트 — 월 단위 그리드, 각 월 안에 반달(전반/후반) 2칸
 import type { PointerEvent as ReactPointerEvent } from 'react'
+import Box from '@mui/material/Box'
 import type { TlMonth } from '@/types'
+import { typescale, weight } from '@/theme/tokens'
 import { STAGE, STAGE_ORDER } from './stageMeta'
 
 export const TL_VISIBLE_MONTHS = 36 // 표시 최대 월 수 — 실제 구간은 시트에 일정이 있는 범위를 따라감 (eqSlice에서 앞뒤 빈 달 제거)
@@ -8,6 +10,34 @@ export const TL_VISIBLE_MONTHS = 36 // 표시 최대 월 수 — 실제 구간�
 // 단계 색·이름은 stageMeta(디자인 시스템 accent 토큰)에서 통일해 가져온다
 export const TL_STAGE_COLOR: Record<string, string> = Object.fromEntries(STAGE_ORDER.map((c) => [c, STAGE[c].color]))
 export const TL_STAGE_NAME: Record<string, string> = Object.fromEntries(STAGE_ORDER.map((c) => [c, STAGE[c].label]))
+
+// 월 경계 세로선 — 첫 칸은 선 없음, 연도가 바뀌는 칸은 진한 선(레거시 .gantt-grid-col/.gantt-mcell 캐스케이드 동일)
+const monthBorderLeft = (isFirst: boolean, isYearStart: boolean) =>
+  isYearStart ? '1px solid var(--veil-line-strong)' : isFirst ? 'none' : '1px solid var(--veil-line)'
+
+// 리사이즈 손잡이 히트영역 — 칸 안쪽 우측 7px, hover 시 2px 세로선 노출
+const resizeHandleSx = {
+  position: 'absolute' as const,
+  top: 0,
+  right: 0,
+  width: '7px',
+  height: '100%',
+  cursor: 'ew-resize',
+  zIndex: 2,
+  touchAction: 'none',
+  '&::after': {
+    content: '""',
+    position: 'absolute' as const,
+    top: 0,
+    right: 0,
+    width: '2px',
+    height: '100%',
+    background: 'var(--veil-handle)',
+    opacity: 0,
+    transition: 'opacity .1s',
+  },
+  '&:hover::after': { opacity: 1 },
+}
 
 // 모든 월을 동일 비율(1fr)로 — 콘텐츠 폭에 맞춰 균등 배분(가로 스크롤 없이 전체 표시).
 function ganttGridTemplate(months: TlMonth[]): string {
@@ -29,32 +59,63 @@ export function GanttHeader({ months: allMonths }: { months: TlMonth[] }) {
   })
 
   return (
-    <div className="gantt-head-wrap">
-      <div
-        className="gantt-yearrow"
-        style={{ gridTemplateColumns: yearGroups.map(g => g.count + 'fr').join(' ') }}
+    <Box sx={{ gridColumn: 4, display: 'flex', flexDirection: 'column', width: '100%' }}>
+      <Box
+        sx={{
+          display: 'grid',
+          width: '100%',
+          borderBottom: '1px solid var(--border)',
+          gridTemplateColumns: yearGroups.map(g => g.count + 'fr').join(' '),
+        }}
       >
         {yearGroups.map((g, i) => (
-          <div key={i} className="gantt-ycell">
+          <Box
+            key={i}
+            sx={{
+              textAlign: 'center',
+              fontSize: 15,
+              fontWeight: weight.bold,
+              color: 'text.secondary',
+              whiteSpace: 'nowrap',
+              paddingBottom: '4px',
+              boxSizing: 'border-box',
+            }}
+          >
             {(g.year || '').replace('년', '')}
-          </div>
+          </Box>
         ))}
-      </div>
-      <div className="gantt-head" style={{ gridTemplateColumns: ganttGridTemplate(months) }}>
+      </Box>
+      <Box sx={{ display: 'grid', width: '100%', paddingTop: '2px', gridTemplateColumns: ganttGridTemplate(months) }}>
         {months.map((m, i) => {
           const isYearStart = i === 0 || (months[i - 1] && months[i - 1].year !== m.year)
-          const isYearEnd = i === months.length - 1 || (months[i + 1] && months[i + 1].year !== m.year)
           return (
-            <div
+            <Box
               key={i}
-              className={`gantt-mcell${isYearStart ? ' year-start' : ''}${isYearEnd ? ' year-end' : ''}`}
+              sx={{
+                minWidth: 0,
+                height: '18px',
+                fontSize: 9,
+                color: 'text.disabled',
+                textAlign: 'center',
+                position: 'relative',
+                lineHeight: 1,
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderLeft: monthBorderLeft(i === 0, isYearStart),
+                borderRight: i === months.length - 1 ? '1px solid var(--border)' : undefined,
+              }}
             >
-              <span className="gantt-mnum">{(m.month || '').replace('월', '')}</span>
-            </div>
+              <Box component="span" sx={{ fontSize: typescale.body.size, display: 'block', textAlign: 'center', width: '100%' }}>
+                {(m.month || '').replace('월', '')}
+              </Box>
+            </Box>
           )
         })}
-      </div>
-    </div>
+      </Box>
+    </Box>
   )
 }
 
@@ -83,10 +144,9 @@ export function GanttBar({
   for (let mi = 0; mi < months.length; mi++) {
     const m = months[mi]
     const isYearStart = mi === 0 || (months[mi - 1] && months[mi - 1].year !== m.year)
-    const isYearEnd = mi === months.length - 1 || (months[mi + 1] && months[mi + 1].year !== m.year)
     const s1 = (tl[mi * 2] || '').trim()
     const s2 = (tl[mi * 2 + 1] || '').trim()
-    cols.push({ mi, m, isYearStart, isYearEnd, s1, s2 })
+    cols.push({ mi, m, isYearStart, s1, s2 })
   }
 
   // 반월 칸 1개 렌더. 단계의 오른쪽 경계 칸엔 길이조절 핸들, 첫 단계 시작 칸엔 좌측 시작핸들.
@@ -95,57 +155,88 @@ export function GanttBar({
     const isEnd = !!code && (tl[hi + 1] || '').trim() !== code
     const isFirstStart = !!code && hi === firstFilled
     return (
-      <div
-        className="gantt-cell"
-        style={code ? { background: TL_STAGE_COLOR[code] || undefined } : undefined}
+      <Box
+        sx={{
+          minWidth: 0,
+          height: '100%',
+          boxSizing: 'border-box',
+          position: 'relative',
+          background: code ? TL_STAGE_COLOR[code] || undefined : undefined,
+        }}
         title={code ? `${m.year || ''} ${m.month || ''} ${half}: ${TL_STAGE_NAME[code] || code}` : undefined}
       >
         {isFirstStart && onStartResize && (
-          <span
-            className="gantt-resize-h gantt-resize-start"
+          <Box
+            component="span"
             title={`${TL_STAGE_NAME[code] || code} 시작일 조절 (드래그)`}
-            style={{ touchAction: 'none' }}
+            sx={[resizeHandleSx, { right: 'auto', left: 0, '&::after': { right: 'auto', left: 0 } }]}
             onPointerDown={(e) => { e.stopPropagation(); onStartResize(e, code) }}
           />
         )}
         {isEnd && onResizeStart && (
-          <span
-            className="gantt-resize-h"
+          <Box
+            component="span"
             title={`${TL_STAGE_NAME[code] || code} 기간 조절 (드래그)`}
-            style={{ touchAction: 'none' }}
+            sx={resizeHandleSx}
             onPointerDown={(e) => { e.stopPropagation(); onResizeStart(e, code) }}
           />
         )}
-      </div>
+      </Box>
     )
   }
 
   return (
-    <div className="gantt-wrap">
+    /* className='gantt-wrap' 은 index.tsx 의 closest('.gantt-wrap') 폭 측정용 — 스타일 아님, 지우지 말 것 */
+    <Box className="gantt-wrap" sx={{ position: 'relative', width: '100%' }}>
       {/* 월별 세로 격자선 레이어 (막대 뒤에 깔림, 행 전체 높이) */}
-      <div className="gantt-grid" style={{ gridTemplateColumns: template }}>
-        {cols.map(c => (
-          <div
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: 0,
+          width: '100%',
+          display: 'grid',
+          height: '100%',
+          zIndex: 0,
+          pointerEvents: 'none',
+          gridTemplateColumns: template,
+        }}
+      >
+        {cols.map((c, i) => (
+          <Box
             key={c.mi}
-            className={`gantt-grid-col${c.isYearStart ? ' year-start' : ''}${c.isYearEnd ? ' year-end' : ''}`}
+            sx={{
+              borderLeft: monthBorderLeft(i === 0, c.isYearStart),
+              borderRight: i === cols.length - 1 ? '1px solid var(--border)' : undefined,
+            }}
           />
         ))}
-      </div>
-      <div
-        className="gantt-bar"
-        style={{
+      </Box>
+      <Box
+        sx={{
+          display: 'grid',
+          width: '100%',
+          height: '20px',
+          borderRadius: '3px',
+          overflow: 'hidden',
+          border: '0.5px solid',
+          borderColor: 'divider',
+          position: 'relative',
+          zIndex: 1,
+          minWidth: 0,
           gridTemplateColumns: template,
           transform: previewPx ? `translateX(${previewPx}px)` : undefined,
           willChange: previewPx ? 'transform' : undefined,
         }}
       >
         {cols.map(c => (
-          <div key={c.mi} className="gantt-month">
+          <Box key={c.mi} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', height: '100%', boxSizing: 'border-box', minWidth: 0 }}>
             {renderHalf(c.mi * 2, c.m, '전반')}
             {renderHalf(c.mi * 2 + 1, c.m, '후반')}
-          </div>
+          </Box>
         ))}
-      </div>
-    </div>
+      </Box>
+    </Box>
   )
 }

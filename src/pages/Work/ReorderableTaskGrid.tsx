@@ -517,7 +517,7 @@ export default function ReorderableTaskGrid({
         return (
           <Box
             key={num}
-            className={`reorder-cell${reorderMode && !dragNum ? ' jiggle' : ''}`}
+            className="reorder-cell"
             ref={setCellRef(num)}
             aria-selected={selected}
             style={reorderMode ? { animationDelay: `${(i % 4) * 70}ms` } : undefined}
@@ -534,12 +534,23 @@ export default function ReorderableTaskGrid({
             sx={{
               // 카드 본문은 항상 세로 스크롤 허용(pan-y). 순서 드래그는 손잡이(≡)만 touch-action:none으로 잡음.
               position: 'relative', minWidth: 0, touchAction: 'pan-y',
+              // 롱프레스 시 모바일 네이티브 텍스트 선택·iOS 콜아웃 방지(카드는 탭/드래그 대상)
+              WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none',
+              // 단, 수정 모드의 입력·서식편집기는 텍스트 선택 허용(편집 가능해야 함)
+              '& input, & textarea, & [contenteditable]': { WebkitUserSelect: 'text', userSelect: 'text' },
               '& > *:not([data-reorder-handle])': { height: '100%' },
               borderRadius: `${radius.card}px`,
               ...(isDragSource ? { opacity: 0.35 } : {}),
               ...(awaiting ? { opacity: awaitingHidden ? 0 : 0.32, pointerEvents: 'none' } : {}),
               ...(hidingNums.has(num) ? { opacity: 0, pointerEvents: 'none' } : {}),
               transition: 'opacity .15s',
+              // 순서 편집(흔들림) 모드 — 카드를 끌어 재정렬 중임을 알리는 미세 wobble
+              ...(reorderMode && !dragNum
+                ? {
+                    '@keyframes work-jiggle': { '0%': { transform: 'rotate(-0.7deg)' }, '50%': { transform: 'rotate(0.7deg)' }, '100%': { transform: 'rotate(-0.7deg)' } },
+                    animation: 'work-jiggle .28s ease-in-out infinite',
+                  }
+                : {}),
             }}
           >
             {reorderMode && (

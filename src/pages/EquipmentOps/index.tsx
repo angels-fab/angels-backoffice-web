@@ -13,7 +13,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, LoadingState, Select, SearchBar, dataTableSx, mobileTableCardSx, DataCell } from '@/components/ds'
-import { iconSize, radius, control, typescale, weight } from '@/theme/tokens'
+import { iconSize, radius, control, shellMq, typescale, weight } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -52,6 +52,36 @@ const OPS_COLS: { key: OpsCol; label: string; align: 'left' | 'center' | 'right'
  */
 const codeCellSx = { color: 'text.secondary', fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontWeight: weight.medium, whiteSpace: 'nowrap' } as const
 const nameCellSx = { color: 'text.primary', fontWeight: weight.medium, fontSize: typescale.emphasis.size, whiteSpace: 'nowrap' } as const
+/**
+ * 구 `.lg-chip`(index.css) — 표 안 상태 칩. 값 그대로 이관.
+ * 배경 `var(--ink3)`·보더 `var(--border)`는 대응 테마 토큰이 미세하게 달라(elevated/divider) CSS 변수를 유지한다.
+ * 장비도입(Equipment/index.tsx)에도 같은 값이 있다 — 한쪽만 바꾸면 두 표의 칩이 어긋난다.
+ */
+const lgChipSx = {
+  display: 'inline-flex', alignItems: 'center', minHeight: 24, px: '8px',
+  border: '1px solid var(--border)', borderRadius: `${radius.chip}px`, bgcolor: 'var(--ink3)',
+  fontSize: typescale.small.size, fontWeight: weight.semibold, whiteSpace: 'nowrap',
+} as const
+/** 구 `.lg-miss`(index.css) — 누락정보 칩 묶음 */
+const lgMissSx = { display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' } as const
+/** 구 `.eq-strip` @media(max-width:768px) — 요약 카드를 가로 스와이프로(스크롤바 숨김). 값 그대로 이관 */
+const eqStripMobileSx = {
+  [`@media ${shellMq}`]: {
+    display: 'flex', gridTemplateColumns: 'none', overflowX: 'auto', scrollSnapType: 'x proximity',
+    msOverflowStyle: 'none', scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '& > *': { flex: '0 0 64%', scrollSnapAlign: 'start' },
+  },
+} as const
+/** 구 `.eq-filters` @media(max-width:768px) — 필터 줄을 한 줄 가로 스크롤로(스크롤바 숨김). 값 그대로 이관 */
+const eqFiltersMobileSx = {
+  [`@media ${shellMq}`]: {
+    flexWrap: 'nowrap', overflowX: 'auto', justifyContent: 'flex-start',
+    msOverflowStyle: 'none', scrollbarWidth: 'none',
+    '&::-webkit-scrollbar': { display: 'none' },
+    '& > *': { flex: '0 0 auto' },
+  },
+} as const
 
 const opsAccessor = (g: EqGroup, c: OpsCol): string | number | null => {
   switch (c) {
@@ -176,7 +206,7 @@ export default function EquipmentOps() {
       <EquipmentTabs />
 
       {/* 요약 3카드 */}
-      <Box className="eq-strip" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1.4fr 1fr 1fr' }, gap: 1, mb: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1.4fr 1fr 1fr' }, gap: 1, mb: 2, ...eqStripMobileSx }}>
         <AppCard padding={16}>
           <Typography sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 1 }}>전체 장비</Typography>
           <Typography sx={{ fontSize: 26, fontWeight: weight.heavy, lineHeight: 1 }}>{c.total}<Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.semibold, ml: 0.5 }}>대 · {c.types}종</Box></Typography>
@@ -214,7 +244,7 @@ export default function EquipmentOps() {
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, bgcolor: 'background.paper', overflow: 'clip' }}>
         <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           <Typography sx={{ fontSize: typescale.body.size, fontWeight: weight.bold }}>장비대장 <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.medium }}>전체 {c.types}종 · {c.total}대</Box></Typography>
-          <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end', ...eqFiltersMobileSx }}>
             <Select value={stateF} onChange={setStateF} ariaLabel="운영상태"
               options={stateOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 상태' : (EQ_STATE[o as EqStateKey]?.label || o) }))} />
             <Select value={catF} onChange={setCatF} ariaLabel="분류"
@@ -289,9 +319,9 @@ export default function EquipmentOps() {
                         {miss.length === 0 ? (
                           <Box component="span" sx={{ color: 'text.disabled' }}>{req ? '없음' : '—'}</Box>
                         ) : (
-                          <Box className="lg-miss" sx={{ justifyContent: 'center' }}>
+                          <Box sx={{ ...lgMissSx, justifyContent: 'center' }}>
                             {miss.slice(0, 2).map((m) => (
-                              <Box component="span" key={m} className="lg-chip" sx={{ color: 'warning.main', borderColor: (t) => t.palette.warning.main + '66' }}>{m}</Box>
+                              <Box component="span" key={m} sx={{ ...lgChipSx, color: 'warning.main', borderColor: (t) => t.palette.warning.main + '66' }}>{m}</Box>
                             ))}
                             {miss.length > 2 && <Box component="span" sx={{ color: 'text.disabled', fontSize: typescale.caption.size }}>+{miss.length - 2}</Box>}
                           </Box>

@@ -123,9 +123,6 @@
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
 /* 모바일 입력창 16px — iOS 사파리가 16px 미만 입력에 포커스 시 자동 확대(줌)하는 것 방지 */
-@media (max-width:768px){
-  .eq-search,.eq-select{font-size:16px}
-}
 body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,system-ui,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 
 /* 구 `header{...}` 전역 규칙(원본 HTML SPA 잔재)과 .header-logo 는 2026-08-01 삭제.
@@ -227,7 +224,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wp-more{font-size:11px;color:var(--text3);text-align:center;padding-top:2px}
 .wp-ph{color:var(--text3);font-size:12px;padding:10px 4px;text-align:center}
 @keyframes liveDotBlink{0%,100%{opacity:1}50%{opacity:.25}}
-.live-dot{animation:liveDotBlink 1.15s ease-in-out infinite}
 /* 업무현황 KPI 진행중 링 — 투명도 숨쉬기(회전·파동 없음) */
 @keyframes kpiBreath{0%,100%{opacity:1}50%{opacity:.32}}
 /* 드롭 반영 직후 KPI 숫자 펄스(가볍게 확대 후 복귀) */
@@ -260,7 +256,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .sc-prev-name{font-size:11px;font-weight:500;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sc-prev-arrow{font-size:10px;color:var(--text3);flex-shrink:0}
 .card-desc{font-size:11px;color:var(--text2);line-height:1.5}
-
 
 /* ── Work page ── */
 .work-tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:0}
@@ -314,8 +309,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .wc-hl[data-color="blue"]{background:var(--hl-blue)}
 .wc-hl[data-color="pink"]{background:var(--hl-pink)}
 /* TipTap 본문 에디터(작성/수정) — 프레임(.wc-field)이 툴바+본문을 함께 감쌈(서식툴 작성란 내부 규칙) */
-.wc-field{background:var(--field-bg);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
-.wc-field:focus-within{border-color:var(--green)}
 .wc-editor{outline:none;min-height:66px;font-size:13px;line-height:1.6;color:var(--text);
   overflow-wrap:anywhere;word-break:break-word}
 .wc-editor p{margin:0}
@@ -418,7 +411,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .eq-cell.name{font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:6px}
 .eq-cell.name .eq-count{font-size:11px;color:var(--text3);font-weight:400}
 
-
 .eq-d-card{background:var(--ink2);border:0.5px solid var(--border);border-radius:8px;padding:10px 12px}
 .eq-d-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .eq-d-val{font-size:12px;color:var(--text);font-weight:500}
@@ -430,8 +422,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .ph-ctr-s{background:rgba(214,162,62,.15);color:var(--amber-tx);border-color:rgba(214,162,62,.3)}
 .ph-mfg-s{background:rgba(224,91,84,.15);color:var(--red-tx);border-color:rgba(224,91,84,.3)}
 .ph-ins-s{background:rgba(70,183,190,.15);color:var(--teal-tx);border-color:rgba(70,183,190,.3)}
-
-
 
 /* ── Calendar ── */
 .cal-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
@@ -611,8 +601,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .gcal-detail-row svg{color:var(--text3);flex-shrink:0}
 .gcal-detail-badge{font-size:11px;font-weight:600;padding:2px 9px;border-radius:5px}
 
-
-
 /* ── Roadmap timeline ── */
 .rm-timeline-wrap{position:relative;padding:26px 0 12px;overflow-x:auto}
 .rm-steps{display:flex;gap:0;justify-content:space-between;position:relative;min-width:480px}
@@ -670,11 +658,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .ms-title{font-size:13px;font-weight:600;color:var(--text)}
 .ms-desc{font-size:11px;color:var(--text2);line-height:1.6}
 
-
-
 /* ── 장비 타임라인 ── */
-
-
 
 /* 타임라인 범례 */
 .tl-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:7px;width:100%}
@@ -683,8 +667,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* ── KPI 카드 ── */
 .kpi-wrap{display:flex;flex-direction:column;gap:38px;width:100%}
 .kpi-top{display:grid;grid-template-columns:1.3fr 2fr;gap:12px}
-.kpi-big{background:linear-gradient(135deg,#0d2440,#0a1828);border:1px solid #1f4068;border-radius:14px;padding:20px 22px;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden}
-.kpi-big-label{font-size:16px;font-weight:700;color:var(--blue-tx);margin-bottom:6px}
 .kpi-big-num{font-size:48px;font-weight:800;color:var(--text);line-height:1}
 .kpi-big-num span{font-size:20px;font-weight:600;color:var(--text2);margin-left:4px}
 .kpi-big-sub{font-size:12px;color:var(--text3);margin-top:8px}
@@ -697,7 +679,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .kpi-small-num{font-size:26px;font-weight:800;color:var(--text);line-height:1}
 .kpi-small-num span{font-size:13px;font-weight:500;color:var(--text2);margin-left:2px}
 .kpi-small-pct{font-size:13px;font-weight:600}
-.kpi-budget{background:var(--ink2);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
 .kpi-budget-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .kpi-budget-title{font-size:17px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
 .kpi-budget-unit{font-size:12px;color:var(--text3)}
@@ -713,37 +694,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .kpi-bcard-icon img{height:100%;width:auto;object-fit:contain}
 @media(max-width:900px){.kpi-top{grid-template-columns:1fr}.kpi-small-grid{grid-column:auto}.kpi-budget-grid{grid-template-columns:1fr}.kpi-budget-layout{grid-template-columns:1fr}.kpi-budget-subgrid{grid-template-columns:1fr}}
 
-/* ── 간트차트 ── */
-.eq-tl-cell{width:100%;overflow:visible;position:relative;align-self:stretch;display:flex;align-items:center;margin:-7px 0}
-.gantt-wrap{position:relative;width:100%}
-/* 월별 세로 격자선 - 각 행 높이에 맞춤 (겹침 방지) */
-.gantt-grid{position:absolute;top:0;bottom:0;left:0;width:100%;display:grid;height:100%;z-index:0;pointer-events:none}
-.gantt-grid-col{border-left:1px solid var(--veil-line)}
-.gantt-grid-col:first-child{border-left:none}
-.gantt-grid-col:last-child{border-right:1px solid var(--border)}
-.gantt-grid-col.year-start{border-left:1px solid var(--veil-line-strong)}
-.gantt-bar{display:grid;width:100%;height:20px;border-radius:3px;overflow:hidden;border:0.5px solid var(--border2);position:relative;z-index:1;min-width:0}
-.gantt-month{display:grid;grid-template-columns:1fr 1fr;height:100%;box-sizing:border-box;min-width:0}
-.gantt-cell{min-width:0;height:100%;box-sizing:border-box;position:relative}
-/* 단계 길이 리사이즈 핸들 (단계 오른쪽 끝 칸 안쪽 우측) */
-.gantt-resize-h{position:absolute;top:0;right:0;width:7px;height:100%;cursor:ew-resize;z-index:2}
-.gantt-resize-h::after{content:'';position:absolute;top:0;right:0;width:2px;height:100%;background:var(--veil-handle);opacity:0;transition:opacity .1s}
-.gantt-resize-h:hover::after{opacity:1}
-/* 첫 단계 시작점 핸들 (첫 단계 왼쪽 끝) */
-.gantt-resize-start{right:auto;left:0}
-.gantt-resize-start::after{right:auto;left:0}
-/* 월 헤더 바 */
-.gantt-header-slot{width:100%}
-.gantt-head-wrap{grid-column:4;display:flex;flex-direction:column;width:100%}
-.gantt-yearrow{display:grid;width:100%;border-bottom:1px solid var(--border)}
-.gantt-ycell{text-align:center;font-size:15px;font-weight:700;color:var(--text2);white-space:nowrap;padding-bottom:4px;box-sizing:border-box}
-.gantt-head{display:grid;width:100%;padding-top:2px}
-.gantt-mcell{min-width:0;height:18px;font-size:9px;color:var(--text3);text-align:center;position:relative;line-height:1;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid var(--veil-line)}
-.gantt-mcell:first-child{border-left:none}
-.gantt-mcell:last-child{border-right:1px solid var(--border)}
-.gantt-mcell.year-start{border-left:1px solid var(--veil-line-strong)}
-.gantt-year{position:absolute;top:0;left:0;width:100%;text-align:center;font-size:15px;font-weight:700;color:var(--text2);white-space:nowrap}
-.gantt-mnum{font-size:13px;display:block;text-align:center;width:100%}
+/* 간트차트(.gantt-*)는 2026-08-01 gantt.tsx 의 sx 로 이관 */
 
 .eq-tl-inline{overflow-x:auto;overflow-y:hidden;height:100%;display:flex;align-items:center}
 .eq-tl-inline .tl-scroll{display:flex;flex-direction:column;gap:2px}
@@ -762,11 +713,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .tl-cell{width:22px;height:20px;flex-shrink:0;font-size:9px;display:flex;align-items:center;justify-content:center;border:0.5px solid var(--border2);color:var(--text3)}
 
 /* ── 장비관리 v2 (워크스페이스 컨트롤 · 장비대장 테이블) ── */
-.eq-select{height:33px;padding:0 26px 0 10px;border:1px solid var(--border);border-radius:8px;background:var(--ink) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%237d8899' stroke-width='1.4'/></svg>") no-repeat right 9px center;color:var(--text2);font-size:12.5px;font-family:inherit;cursor:pointer;-webkit-appearance:none;appearance:none;flex:0 0 auto;max-width:150px}
-.eq-select:focus{outline:none;border-color:var(--blue)}
-.eq-search{height:33px;min-width:160px;max-width:240px;flex:0 1 220px;padding:0 11px;border:1px solid var(--border);border-radius:8px;background:var(--ink);color:var(--text);font-size:13px;font-family:inherit;outline:none}
-.eq-search:focus{border-color:var(--blue)}
-.eq-search::placeholder{color:var(--text3)}
 
 /* 표 5개가 모두 MUI Table 로 이관되어(2026-08-01) 레거시 표 CSS는 삭제했다.
    후속 정본 위치 — 셀 여백·글자·헤더 룩: theme.ts MuiTableCell / 행 hover: ds/tableStyle.ts
@@ -777,19 +723,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
    구 값(높이 21·반경 6·굵기 미지정)이라 한 줄 안에서 두 종류 칩처럼 보였음.
    아직 장비도입·장비대장·행사 표에서 쓰여 남겨둔다(ds 칩으로 수렴은 별건). */
 .lg-chip{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border:1px solid var(--border);border-radius:8px;background:var(--ink3);font-size:12px;font-weight:600;white-space:nowrap}
-.lg-miss{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
 
 /* 모바일(<=768px): 요약·필터 가로 스와이프, 테이블 가로 스크롤(스크롤바 숨김·터치 가능).
    sx(emotion) 특이도를 넘기 위해 레이아웃만 !important로 덮음(스크롤바 숨김은 sx 미적용 속성). */
-@media (max-width:768px){
-  .eq-strip{display:flex !important;grid-template-columns:none !important;overflow-x:auto;scroll-snap-type:x proximity;-ms-overflow-style:none;scrollbar-width:none}
-  .eq-strip::-webkit-scrollbar{display:none}
-  .eq-strip>*{flex:0 0 64% !important;scroll-snap-align:start}
-  .eq-filters{flex-wrap:nowrap !important;overflow-x:auto;justify-content:flex-start !important;-ms-overflow-style:none;scrollbar-width:none}
-  .eq-filters::-webkit-scrollbar{display:none}
-  .eq-filters>*{flex:0 0 auto}
-  .eq-search{flex:0 0 200px}
-}
 
 /* ── Eq list v2 ── */
 .eq-item{border:1px solid var(--border2);border-top:none}
@@ -861,7 +797,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .nb-행사{background:rgba(77,161,103,.12);color:var(--green-tx);border:1px solid rgba(77,161,103,.25)}
 /* 레이아웃만 담당 — 크기·굵기·색은 Notice/index.tsx의 sx가 단일 소스.
    (여기 font-size/weight를 두면 sx와 같은 특이도라 로드 순서로 승부가 갈려 변경이 안 먹는다) */
-.notice-title{flex:1;overflow:hidden;text-overflow:ellipsis}
 .notice-meta{font-size:11px;color:var(--text3);flex-shrink:0;display:flex;gap:12px}
 .notice-new{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--blue);margin-left:5px;vertical-align:middle;flex-shrink:0}
 .new-badge{display:inline-block;background:var(--red-solid);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:6px;vertical-align:middle;letter-spacing:.3px;line-height:1.6}
@@ -957,54 +892,8 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* 상단바(.topbar/.topbar-inner/.topbar-brand/.topbar-logo)는 2026-08-01 TopBar.tsx 의 sx 로 이관.
    .topbar-title/.topbar-bell/.topbar-nav/.navchip 은 사용처가 없어 함께 삭제했다. */
 
-/* ── 좌측 사이드바 (PC) ── */
-.app-shell{display:flex;flex:1;width:100%;align-items:stretch}
-.app-content{flex:1;min-width:0;display:flex;flex-direction:column}
-/* 사이드 레일(2026-07-23 확정): 평소 64px 아이콘 레일, 호버·키보드 포커스 시 오버레이로 펼침.
-   펼침 폭 = 고정값이 아니라 "메뉴명 길이만큼"(.snav-lcol 0fr↔1fr — 콘텐츠 폭 추종, 사용자 확정).
-   진입 지연 0(스치면 즉시)·이탈만 .12s(경계 깜빡임 방지). 콘텐츠는 밀리지 않음(오버레이). */
-/* z=100: 페이지 콘텐츠(최대 z30 — Work 스티키 KPI)보다 항상 위, MUI 모달·드로어·스낵바(1100+)보다는 아래.
-   펼침 패널(.snav-panel)은 이 컨텍스트를 상속하므로 여기 하나만 관리(2026-07-24 전수조사 결과) */
-.sidenav{width:64px;flex-shrink:0;position:sticky;top:53px;height:calc(100vh - 53px);z-index:100}
-/* 서랍 방식(2026-07-24 재작업): 애니메이션을 이름 칸이 아니라 '패널 폭'에 건다.
-   이름은 항상 제자리에 렌더되어 있고(아이콘 뒤 22px 간격 = 접힘 64px 경계 밖), 패널이
-   max-width 64↔200으로 커튼처럼 열리고 닫히며 이름을 드러냈다 가린다 — "가려졌다 스르륵" */
-.snav-panel{position:absolute;left:0;top:0;bottom:0;width:max-content;min-width:64px;max-width:64px;box-sizing:border-box;background:var(--ink);border-right:1px solid var(--border);padding:18px 12px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;overflow-x:hidden;transition:max-width .3s cubic-bezier(.4,0,.2,1) .12s,box-shadow .3s ease .12s}
-.snav-panel:hover,.snav-panel:focus-within{max-width:200px;box-shadow:var(--shadow-md);transition-delay:0s}
-.snav-group{display:flex;flex-direction:column;gap:2px}
-/* 그룹 라벨 — 접힘 땐 텍스트 대신 헤어라인(요소 높이 고정이라 세로 위치 불변) */
-.snav-label{position:relative;height:16px;display:flex;align-items:center;padding:0 10px;margin-bottom:5px}
-.snav-label span{font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:.09em;white-space:nowrap;opacity:0;transition:opacity .12s ease .12s}
-.snav-label::before{content:'';position:absolute;left:11px;width:18px;top:50%;height:1px;background:var(--border);transition:opacity .12s ease .12s}
-.snav-panel:hover .snav-label span,.snav-panel:focus-within .snav-label span{opacity:1;transition-delay:0s}
-.snav-panel:hover .snav-label::before,.snav-panel:focus-within .snav-label::before{opacity:0;transition-delay:0s}
-.snav-item{position:relative;display:flex;align-items:center;width:100%;padding:9px 10px;border:none;border-radius:8px;background:none;color:var(--text2);font-size:13px;font-weight:500;font-family:inherit;cursor:pointer;text-align:left;transition:background .15s,color .15s;-webkit-tap-highlight-color:transparent}
-/* 아이콘 가시성(2026-07-23): 20px + 본문보다 밝은 색. 접힘 레일에선 아래 타일 배경까지 더해 버튼처럼 도드라짐 */
-.snav-item svg{font-size:20px;flex-shrink:0;color:var(--nav-icon);transition:color .15s}
-.snav-item:hover{background:var(--ink2);color:var(--text)}
-.snav-item:hover svg{color:var(--text)}
-.snav-item.active{background:rgba(84,145,218,.12);color:var(--blue-tx);font-weight:700}
-.snav-item.active svg{color:var(--blue-tx)}
-/* (아이콘 타일 배경은 2026-07-24 사용자 요청으로 제거 — 아이콘 크기·밝은 색만으로 가시성 확보) */
-/* 메뉴명 칸 — 접힘 max-width:0 ↔ 펼침 시 내용(이름) 폭만큼. max-width는 전환용 상한일 뿐,
-   실제 폭은 콘텐츠가 결정 → 패널이 메뉴명 길이만큼만 늘어난다. (0fr↔1fr은 절대배치 패널의
-   자동 폭과 상성이 안 맞아 실측 후 교체 — 이름 칸이 안 열리는 버그)
-   ※ 상한(140px)은 실제 내용 폭(~115px)에 가깝게 유지할 것 — 상한이 내용보다 크게 남으면
-   펼침이 절반 시점에 뚝 끝나 보여 부드럽지 않다(2026-07-23 스무스 조정: 220→140 + 감속 스프링 + 텍스트 페이드) */
-/* 메뉴명 — 애니메이션 없음. 항상 제자리에 렌더되고, 접힘 상태에선 패널 64px 경계 밖(아이콘 뒤 22px
-   간격: 12+10+20+22=64)이라 잘려서 안 보인다. 패널(위 max-width)이 열리며 커튼처럼 드러남 */
-.snav-lcol{min-width:0}
-.snav-lin{min-width:0;display:inline-flex;align-items:flex-start;gap:3px;white-space:nowrap;padding-left:22px}
-.snav-name{min-width:0;overflow:hidden;text-overflow:ellipsis}
-/* 접힘 상태 배지 — 아이콘 우상단 빨강 숫자·우하단 앰버 점. 펼치면 숨고 D7 위첨자(NavBadge)가 대신 보임 */
-.snav-rnew{position:absolute;top:2px;left:24px;min-width:14px;height:14px;padding:0 3px;border-radius:999px;background:var(--red-solid);color:#fff;font-size:9px;font-weight:700;line-height:14px;text-align:center;pointer-events:none;transition:opacity .12s ease}
-.snav-rmemo{position:absolute;bottom:4px;left:27px;width:7px;height:7px;border-radius:50%;background:var(--amber);pointer-events:none;transition:opacity .12s ease}
-.snav-panel:hover .snav-rnew,.snav-panel:focus-within .snav-rnew,.snav-panel:hover .snav-rmemo,.snav-panel:focus-within .snav-rmemo{opacity:0}
-@media(prefers-reduced-motion:reduce){.snav-panel,.snav-lcol,.snav-label span,.snav-label::before,.snav-rnew,.snav-rmemo{transition:none}}
-.navchip svg{font-size:15px}
-.navchip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--ink2);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;white-space:nowrap;transition:border-color .15s,color .15s}
-.navchip:hover{border-color:var(--blue);color:var(--text)}
-.navchip.active{background:transparent;border:1.5px solid var(--blue);color:var(--blue-tx);font-weight:700;font-size:14px;padding:8px 16px}
+/* 좌측 사이드바(.sidenav/.snav-*)는 2026-08-01 SideNav.tsx 의 sx 로 이관.
+   서랍 방식·펼침 폭·배지 위치 등 설계 근거는 그 파일 주석에 옮겨 두었다. */
 .nav-dd{position:relative;display:inline-flex}
 .nav-flyout{position:absolute;top:100%;right:0;padding-top:8px;width:max-content;min-width:0;display:none;flex-direction:column;align-items:flex-end;z-index:60}
 .nav-dd:hover .nav-flyout{display:flex}
@@ -1019,12 +908,7 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* 홈 인사말은 Greeting.tsx 의 sx 로 이관 (2026-08-01) */
 
 /* ── 홈: 장비 현황 요약 카드 ── */
-.eq-summary{width:100%;max-width:960px;background:linear-gradient(135deg,#0d2440,#0a1828);border:1px solid #1f4068;border-radius:18px;padding:18px 20px;margin-bottom:14px;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;position:relative;overflow:hidden;-webkit-tap-highlight-color:rgba(84,145,218,.2)}
-.eq-summary:hover{border-color:var(--blue);box-shadow:var(--shadow-md);transform:translateY(-2px)}
-.eq-summary-page{cursor:default;margin-bottom:0;max-width:none}
-.eq-summary-page:hover{border-color:#1f4068;box-shadow:none;transform:none}
 .eqs-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.eqs-title{font-size:14px;font-weight:700;color:#cfe3ff}
 .eqs-arrow{color:var(--text2);font-size:20px;line-height:1}
 .eqs-big{display:flex;flex-direction:column;justify-content:center}
 .eqs-big .big-types{font-size:38px;font-weight:800;color:var(--text);line-height:1}
@@ -1079,7 +963,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .bento-panel{background:var(--ink2);border:1px solid var(--border2);border-radius:18px;padding:6px 22px 16px}
 
 /* ── 홈: 현황판 (4 stat) ── */
-.stat-board{width:100%;max-width:960px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:26px}
 .stat-item{background:var(--ink2);border:1px solid var(--border);border-radius:12px;padding:12px 11px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .15s,transform .15s;-webkit-tap-highlight-color:rgba(214,162,62,.15)}
 .stat-item:hover{border-color:var(--text3);transform:translateY(-2px)}
 .stat-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
@@ -1091,8 +974,6 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 @media(max-width:640px){.stat-board{grid-template-columns:repeat(2,1fr);gap:8px}}
 
 /* ── 홈: 메뉴 카드 (세로 스택 + 전체보기) ── */
-.menu-stack{width:100%;max-width:960px;display:flex;flex-direction:column;gap:14px}
-.menu-stack .card{padding-top:8px}
 .card-top{display:flex;align-items:center;gap:8px;width:100%}
 .card-top .icon{width:28px;height:28px;font-size:15px;border-radius:7px}
 .card-top .card-name{text-align:left;font-size:14px}
@@ -1109,47 +990,24 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .cal-date-badge{padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;flex-shrink:0;white-space:nowrap}
 .ntc-cat{padding:1px 7px;border-radius:4px;font-size:10px;font-weight:700;flex-shrink:0;white-space:nowrap;text-align:center;min-width:34px}
 
-/* ── 하단 탭 내비게이션 ── */
-.bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:55;display:flex;background:rgba(19,23,34,.92);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-top:1px solid var(--border);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
-.bnav-item{flex:1;background:none;border:none;color:var(--text2);font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;font-size:10px;font-weight:500;transition:color .15s;-webkit-tap-highlight-color:transparent}
-.bnav-item .bnav-ico{font-size:18px;line-height:1}
-.bnav-item.active{color:var(--blue-tx)}
-.bnav-ico-wrap svg{width:23px;height:23px;display:block}
-.bnav-item::after{content:"";display:block;width:16px;height:3px;border-radius:2px;background:transparent;margin-top:2px}
-.bnav-item.active::after{background:var(--blue)}
-.bnav-ico-wrap{position:relative;display:inline-flex;line-height:1}
-
+/* 하단 탭바(.bottom-nav/.bnav-*)는 2026-08-01 BottomNav.tsx 의 sx 로 이관 */
 /* 업무 카드 셀 — 롱프레스 시 모바일 네이티브 텍스트 선택·iOS 콜아웃 방지(카드는 탭/드래그 대상) */
 .reorder-cell,.sdg-cell{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* 단, 수정 모드의 입력·서식편집기는 텍스트 선택 허용(편집 가능해야 함) */
 .reorder-cell input,.reorder-cell textarea,.reorder-cell [contenteditable],.sdg-cell input,.sdg-cell textarea,.sdg-cell [contenteditable]{-webkit-user-select:text;user-select:text}
 /* 순서 편집(흔들림) 모드 — 모바일에서 카드를 끌어 재정렬 중임을 알리는 미세 wobble */
 @keyframes work-jiggle{0%,100%{transform:rotate(-0.7deg)}50%{transform:rotate(0.7deg)}}
-.reorder-cell.jiggle{animation:work-jiggle .28s ease-in-out infinite}
 
 /* 반응형 레이아웃: PC(기본) / 모바일(<=768px) */
-.eq-summary,.stat-board,.menu-stack,.bottom-nav{display:none}
 @media(max-width:768px){
-  .d-only{display:none !important}
   body{padding-top:53px}
-  .eq-summary{display:block}
-  .stat-board{display:grid}
-  .menu-stack{display:flex}
-  .bottom-nav{display:flex}
   .page{overflow-x:auto}
-  .kpi-budget{display:none}
-  .kpi-status{display:none}
   main{padding-bottom:84px}
 }
 
 /* === 업무일정 필터바 (CalFilterBar) — 팀원/종류 2줄 고정 ===
    검색은 상단 툴바로 이동. 두 줄을 항상 스택하고, 라벨을 좌측에 절대배치 + 동일 들여쓰기(padding-left)로
    두 줄의 라벨 x좌표·첫 칩 시작 x좌표·간격을 일치시킨다. 칩이 넘치면 같은 들여쓰기로 줄바꿈(행잉 인덴트). */
-.cal-fb{container-type:inline-size;display:flex;flex-direction:column;align-items:stretch;gap:8px}
-.cal-fb__team,.cal-fb__cats{display:flex;align-items:flex-start;gap:0;position:relative;padding-left:27px;min-width:0}
-.cal-fb__teamlbl,.cal-fb__catlbl{position:absolute;left:0;top:6px;margin:0}
-.cal-fb__chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
-.cal-fb__sep{display:none}
 
 /* 업무일정 날짜 클릭·범위 드래그 미리보기 — 칸 전체 옅은 강조(구글식).
    (구) 고정 위치 '(제목 없음)' 가짜 바는 그 칸 첫 일정을 덮는 결함이 있어 폐지 — 기존 일정이 그대로 보인다. */
@@ -1158,10 +1016,4 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 /* ── 라이트 테마 구조 오버라이드 ── 변수만으로 안 되는 개별 규칙(히어로 카드·로고·하단탭·특정 배지) */
 /* 로고 에셋은 '검정 배경 위 흰 글자' JPG라 라이트 상단바(밝음)에선 lighten이면 사라진다 → 반전+multiply로 '흰 배경 위 검정 로고'가 되게 한다 */
 /* 짙은 네이비 히어로 카드(장비예산·홈 장비요약) → 라이트에선 옅은 블루 표면 + 진한 블루 라벨 */
-:root[data-theme="light"] .kpi-big{background:linear-gradient(135deg,#eef4fc,#e2ecf8);border-color:#cfe0f5}
-:root[data-theme="light"] .kpi-big-label{color:#2f6db8}
-:root[data-theme="light"] .eq-summary{background:linear-gradient(135deg,#eef4fc,#e2ecf8);border-color:#cfe0f5}
-:root[data-theme="light"] .eq-summary-page:hover{border-color:#cfe0f5}
-:root[data-theme="light"] .eqs-title{color:#2f6db8}
 /* 모바일 하단 탭바 — 라이트에선 흰 반투명(다크는 짙은 네이비 반투명) */
-:root[data-theme="light"] .bottom-nav{background:rgba(255,255,255,.92)}

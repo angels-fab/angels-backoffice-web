@@ -15,6 +15,7 @@ import { Extension, InputRule } from '@tiptap/core'
 import { circledNumber } from './workMeta'
 import { serializeContentFmt, parseContentFmt, plainToDoc } from './richContent'
 import { ColorTokenMark, HighlightTokenMark, listExtensions, RichToolbar } from '@/components/richText'
+import { radius } from '@/theme/tokens'
 
 // 입력 규칙: 'ㅇN ' → 들여쓴 동그라미 숫자(①…) — 업무 글쓰기 관례('- '는 BulletList 기본 규칙이 진짜 목록으로 처리)
 const CircledNumRule = Extension.create({
@@ -81,7 +82,17 @@ export default function RichContentEditor({
   useEffect(() => { editor?.setEditable(!disabled) }, [disabled, editor])
 
   return (
-    <Box className="wc-field" sx={{ width: '100%' }}>
+    // TipTap 본문 프레임 — 툴바+본문을 함께 감싼다(서식툴 작성란 내부 규칙). 구 .wc-field
+    <Box
+      sx={(t) => ({
+        width: '100%',
+        background: 'var(--field-bg)',
+        border: '1px solid var(--border)',
+        borderRadius: `${radius.chip}px`,
+        padding: '6px 8px',
+        '&:focus-within': { borderColor: t.palette.accent.green },
+      })}
+    >
       {!disabled && <RichToolbar editor={editor} />}
       <EditorContent editor={editor} />
     </Box>

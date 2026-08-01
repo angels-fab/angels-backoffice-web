@@ -260,7 +260,7 @@ export default function Notice() {
               {/* 행의 식별자 — variant body2는 테마에서 색이 보조톤이라 주 톤을 명시해야 제목이 눌리지 않는다 */}
               {/* 제목은 14px + 주 톤만으로 이미 식별자 — 굵기는 "상단고정"을 알리는 신호로 아껴 쓴다
                   (전부 700으로 두면 굵기가 아무 정보도 전달하지 못함) */}
-              <Typography className="notice-title" variant="body2" sx={{ color: isExpired(n) ? 'text.secondary' : 'text.primary', fontSize: typescale.emphasis.size, fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
+              <Typography variant="body2" sx={{ flex: 1, color: isExpired(n) ? 'text.secondary' : 'text.primary', fontSize: typescale.emphasis.size, fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
               </Typography>
               {n.isNew && (

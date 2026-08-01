@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import Box from '@mui/material/Box'
 import TopBar from './TopBar'
 import SideNav from './SideNav'
 import BottomNav from './BottomNav'
@@ -58,12 +59,13 @@ export default function MainLayout() {
   return (
     <>
       <TopBar />
-      <div className="app-shell">
+      {/* 앱 골격: 좌 사이드바 + 우 콘텐츠(구 .app-shell/.app-content) */}
+      <Box sx={{ display: 'flex', flex: 1, width: '100%', alignItems: 'stretch' }}>
         <SideNav />
-        <div className="app-content">
+        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <Outlet />
-        </div>
-      </div>
+        </Box>
+      </Box>
       <BottomNav />
       {/* 새 기능 안내(개인화) — 팀원+ 로그인 후 계정당 1회(whatsnew.seen 버전 저장) */}
       <WhatsNewDialog />

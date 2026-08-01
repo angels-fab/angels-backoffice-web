@@ -28,6 +28,12 @@ export const toneColor = (th: Theme, tone: 'green' | 'amber' | 'gray') =>
 
 const posterUrl = (poster?: string) => (poster ? `${import.meta.env.BASE_URL}${poster}` : undefined)
 
+// 진행중(green) 상태 점만 깜빡임 — 구 .live-dot / @keyframes liveDotBlink
+const LIVE_DOT_BLINK = {
+  '@keyframes liveDotBlink': { '0%': { opacity: 1 }, '50%': { opacity: 0.25 }, '100%': { opacity: 1 } },
+  animation: 'liveDotBlink 1.15s ease-in-out infinite',
+} as const
+
 // 분류 → 아이콘 (포스터 없을 때 카드 가운데에 크게)
 function categoryIcon(kind?: string) {
   const k = kind ?? ''
@@ -278,7 +284,7 @@ export function EventCardInner({ e, open, attend }: { e: FabEvent; open: boolean
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
           <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: 12, sm: 13 }, fontWeight: weight.heavy, letterSpacing: '.02em', px: '10px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: 12, sm: 13 }, fontWeight: weight.bold, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
-            <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
+            <Box component="span" sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone), ...(st.tone === 'green' ? LIVE_DOT_BLINK : null) })} />
             {st.label}
           </Box>
         </Box>
@@ -367,7 +373,7 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
         <Box sx={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: typescale.small.size, fontWeight: weight.heavy, px: '9px', py: '5px', borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: typescale.small.size, fontWeight: weight.bold, px: '10px', py: '5px', borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
-            <Box component="span" className={st.tone === 'green' ? 'live-dot' : undefined} sx={(th) => ({ width: 8, height: 8, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone) })} />
+            <Box component="span" sx={(th) => ({ width: 8, height: 8, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone), ...(st.tone === 'green' ? LIVE_DOT_BLINK : null) })} />
             {st.label}
           </Box>
         </Box>

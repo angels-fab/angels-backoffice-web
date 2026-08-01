@@ -332,6 +332,10 @@ export default function StatusDragGrid({
             // 선택 표시는 카드(TaskAccordion)가 상태 대표색으로 직접 그림 — 셀 래퍼의 공통 파란 outline 제거
             sx={{
               position: 'relative', minWidth: 0, touchAction: 'pan-y',
+              // 롱프레스 시 모바일 네이티브 텍스트 선택·iOS 콜아웃 방지(카드는 탭/드래그 대상)
+              WebkitUserSelect: 'none', userSelect: 'none', WebkitTouchCallout: 'none',
+              // 단, 수정 모드의 입력·서식편집기는 텍스트 선택 허용(편집 가능해야 함)
+              '& input, & textarea, & [contenteditable]': { WebkitUserSelect: 'text', userSelect: 'text' },
               '& > *:first-of-type': { height: '100%' },
               borderRadius: `${radius.card}px`,
               ...(isDragSource ? { opacity: 0.35 } : {}),
