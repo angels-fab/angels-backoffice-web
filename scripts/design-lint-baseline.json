@@ -1,7 +1,7 @@
 {
-  "total": 98,
+  "total": 94,
   "totals": {
-    "hex": 4,
+    "hex": 0,
     "font": 37,
     "weight": 1,
     "radius": 18,
@@ -12,7 +12,6 @@
   "files": {
     "src/pages/Calendar/CalEventWrite.tsx": 14,
     "src/pages/Equipment/DemoResults.tsx": 13,
-    "src/pages/Home/RoadmapCard.tsx": 7,
     "src/components/WhatsNewDialog.tsx": 7,
     "src/pages/Work/TaskAccordion.tsx": 5,
     "src/components/richText.tsx": 5,
@@ -21,6 +20,7 @@
     "src/pages/Work/KanbanBoard.tsx": 4,
     "src/pages/Equipment/index.tsx": 3,
     "src/pages/EquipmentOps/index.tsx": 3,
+    "src/pages/Home/RoadmapCard.tsx": 3,
     "src/pages/Work/WorkAttachments.tsx": 3,
     "src/layouts/BottomNav.tsx": 3,
     "src/pages/Calendar/index.tsx": 2,

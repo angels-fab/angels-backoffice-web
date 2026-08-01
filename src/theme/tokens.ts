@@ -431,6 +431,32 @@ export const domain = {
     done: '#4f8bff',
     current: '#35d39a',
     plan: '#9fb0c4',
+    /**
+     * 히어로 카드 크롬 — RoadmapCard 에 흩어져 있던 값을 **그대로** 옮긴 것(2026-08-02, 화면 무변화).
+     *
+     * 여기 그라데이션은 `domain.events.grad` 와 목적이 반대라 공유하지 않는다:
+     *   events.grad — 포스터 없는 행사 카드를 대신 채우는 배경. 어두운 곳 → 밝은 곳으로 튀어오른다.
+     *   여기 tileBg  — 아이콘을 받쳐주는 자리. 밝은 곳 → 어두운 곳으로 가라앉는다.
+     * 한쪽을 다른 쪽으로 바꾸면 타일이 아이콘보다 튄다.
+     */
+    hero: {
+      cardBg: {
+        dark: 'linear-gradient(160deg,#141d2b,#0e151f)',
+        light: 'linear-gradient(160deg,#ffffff,#eef3fb)',
+      },
+      /** 제목 옆 48px 아이콘 타일 */
+      tileBg: {
+        dark: 'linear-gradient(155deg,#2a4a86,#1a2740)',
+        light: 'linear-gradient(155deg,#dce8fb,#bcd3f2)',
+      },
+      tileIcon: { dark: '#7eb0ff', light: '#2f6db8' },
+    },
+    /** 진행중 노드 채움 — current(#35d39a)보다 한 단 밝은 민트→그린 */
+    currentNodeBg: 'linear-gradient(158deg,#43e0a6,#21b381)',
+    /** 진행중 노드 아래로 깔리는 그림자의 색 */
+    currentNodeShadow: '#21b381',
+    /** 예정 노드 숫자 글자색 */
+    planNodeText: '#5d6f86',
   },
   /** 업무(Work) — 담당자 채움 칩(고정 4인 + 해시 fallback) · 카드 상태톤(rgb 트리플릿) */
   manager: {
