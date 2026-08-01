@@ -2,6 +2,7 @@
  * 업무현황 KPI 드롭존 공용 유틸 — 드래그 상태변경(진행중/보류/완료/Remind).
  * 존 요소는 KpiSection이 data-dropzone 속성으로 렌더하고, 그리드가 포인터 좌표로 히트테스트한다.
  */
+import { z } from '@/theme/tokens'
 
 /** 메인 목록 뷰 — KPI 버튼이 전환 */
 export type WorkView = 'inProgress' | 'hold' | 'check' | 'done' | 'remind'
@@ -160,7 +161,7 @@ export function genieOverlayInto(src: HTMLElement, zoneRect: DOMRect, flashEl?: 
       Object.assign(clone.style, {
         position: 'fixed', left: `${cx - w / 2}px`, top: `${cy - h / 2}px`,
         width: `${w}px`, height: `${h}px`, margin: '0', pointerEvents: 'none',
-        zIndex: '2000', transition: 'none', animation: 'none', opacity: '0.96',
+        zIndex: String(z.dragTip), transition: 'none', animation: 'none', opacity: '0.96',
         transform: `scale(${s})`, transformOrigin: '50% 50%',
         willChange: 'transform, opacity, clip-path',
       })

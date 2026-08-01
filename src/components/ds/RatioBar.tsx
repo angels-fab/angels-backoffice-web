@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import type { Theme } from '@mui/material/styles'
 import type { StatusKind } from './StatusChip'
-import { weight } from '@/theme/tokens'
+import { weight, radius } from '@/theme/tokens'
 
 export interface RatioSegment {
   label: string
@@ -51,7 +51,7 @@ export default function RatioBar({ segments, height = 10, showLegend = true }: R
           display: 'flex',
           width: '100%',
           height,
-          borderRadius: 999,
+          borderRadius: `${radius.pill}px`,
           overflow: 'hidden',
           bgcolor: 'background.elevated',
           gap: '2px',

@@ -39,7 +39,9 @@ const CHECKS = [
   { key: 'font', re: /fontSize\s*:\s*['"`{]?\s*[\d.]/g },
   { key: 'weight', re: /fontWeight\s*:\s*['"`]?\d{3}/g },
   // 리터럴 숫자/px + bare `radius.X`(sx에서 12배 함정) 둘 다 위반. 안전형 `${radius.X}px`는 통과.
-  { key: 'radius', re: /borderRadius\s*:\s*(?:['"`]?\d|radius\.)/g },
+  // ★ radius.circle 만 예외 — 값이 '50%' **문자열**이라 MUI 의 shape.borderRadius(12) 곱셈을
+  //   타지 않는다(숫자만 곱해진다). 원형은 px 로 쓸 수도 없어 이 형태가 유일한 정답이다.
+  { key: 'radius', re: /borderRadius\s*:\s*(?:['"`]?\d|radius\.(?!circle\b))/g },
   { key: 'shadow', re: /boxShadow\s*:\s*['"`]/g },
   { key: 'z', re: /zIndex\s*:\s*['"`]?\d{2,}/g },
   { key: 'class', re: /className\s*=/g },

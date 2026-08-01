@@ -4,6 +4,7 @@ import Drawer from '@mui/material/Drawer'
 import IconButton from '@mui/material/IconButton'
 import MenuIcon from '@mui/icons-material/Menu'
 import type { ReactNode } from 'react'
+import { z } from '@/theme/tokens'
 
 export interface AppLayoutProps {
   /** 사이드바 내용(내비게이션 등) */
@@ -78,7 +79,7 @@ export default function AppLayout({ sidebar, children, sidebarWidth = 256, brand
             px: 1.5,
             position: 'sticky',
             top: 0,
-            zIndex: 10,
+            zIndex: z.layer,
             bgcolor: 'background.sidebar',
             borderBottom: 1,
             borderColor: 'divider',

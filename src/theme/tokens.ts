@@ -201,6 +201,39 @@ export const touchTarget = 44 as const
  * 이 6개 밖의 값 금지. sx 숫자 borderRadius(1/2/3…)는 12배수 함정이 있으므로
  * 항상 이 토큰 또는 px 문자열로 지정한다.
  */
+/**
+ * 겹침 순서 사다리 (2026-08-01 신설). **현재 화면의 값을 그대로 이름만 붙인 것**이다 —
+ * 순서를 바꾸면 겹침이 어긋나는데 모든 조합을 확인할 방법이 없어, 재배치는 별건으로 둔다.
+ *
+ * 남의 층과 부딪히는 지점(이름을 보고 판단하라는 뜻에서 남긴다):
+ *   MUI 기본  — appBar 1100 · drawer 1200 · modal 1300 · snackbar 1400 · tooltip 1500
+ *   FullCalendar — '+N건' more-link 팝오버 9999
+ * 그래서 dragTip(2000)·pendingConfirm(2100)은 MUI 모달보다 **위**에 있고,
+ * calendarPopover(10000)는 FullCalendar 팝오버를 넘기 위한 값이다. 둘 다 의도된 예외.
+ *
+ * 0~9 는 컴포넌트 안 지역 쌓임(간트 막대·로드맵 선 등)이라 토큰을 쓰지 않는다.
+ */
+export const z = {
+  /** 레이아웃 내부 레이어(AppLayout) */
+  layer: 10,
+  /** 스크롤 중 붙는 페이지 내부 요소(업무 KPI) */
+  sticky: 30,
+  /** 상단바 — 사이드바보다 아래로 미끄러져 들어간다 */
+  topbar: 50,
+  /** 화면 하단 고정 바(업무 선택 액션) */
+  bottomBar: 60,
+  /** PC 사이드바 — 페이지 콘텐츠(최대 sticky 30) 위, MUI 모달 아래 */
+  sidenav: 100,
+  /** 우측 상세 패널(행사 종료 상세) — MUI drawer 와 같은 층 */
+  sidePanel: 1200,
+  /** 드래그 중 따라다니는 안내 — 모달 위에 떠야 한다 */
+  dragTip: 2000,
+  /** 포인터 근처 확인 UI(장비 일정 변경) — dragTip 바로 위 */
+  pendingConfirm: 2100,
+  /** 캘린더 일정 팝오버 — FullCalendar 자체 팝오버(9999) 위 */
+  calendarPopover: 10000,
+} as const
+
 export const radius = {
   /** 칩·작은 라벨 */
   chip: 8,

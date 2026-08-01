@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography'
 import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
 import { ContentSection, focusRingSx } from '@/components/ds'
-import { iconSize, radius, shadow, typescale } from '@/theme/tokens'
+import { iconSize, radius, shadow, typescale, z } from '@/theme/tokens'
 import { chiefPurple } from './chiefCheck'
 import type { DropZone, WorkView } from './dropZones'
 
@@ -139,7 +139,7 @@ export default function KpiSection({
               sx={(t) => ({
                 position: 'absolute', zIndex: 2, left: 'calc(100% + 7px)', top: '50%', transform: 'translateY(-50%)',
                 width: { xs: 23, md: 24 }, height: { xs: 23, md: 24 },
-                border: '1px solid', borderColor: chiefPurple.border(t), borderRadius: '999px',
+                border: '1px solid', borderColor: chiefPurple.border(t), borderRadius: `${radius.pill}px`,
                 // 타일 위에 **얹혀 있는** 배지라 타일 호버색이 비쳐서는 안 된다(사용자 지적).
                 // 반투명이면 아래 STRONG[zone]이 그대로 올라오므로, 타일 표면색 위에 같은 알파를
                 // 덧칠해 불투명하게 만든다 — 호버해도 배지 색은 그대로.
@@ -181,7 +181,7 @@ export default function KpiSection({
         // PC(md+): topbar 아래 sticky. 칩 돌출(-15px)을 배경으로 받치는 하단 패딩 포함.
         position: { xs: 'static', md: 'sticky' },
         top: { md: `${stickyTop}px` },
-        zIndex: 30,
+        zIndex: z.sticky,
         bgcolor: { md: 'background.default' },
         pt: { md: '6px' },
         pb: { md: '15px' },
@@ -216,7 +216,7 @@ export default function KpiSection({
                   position: 'absolute', zIndex: 4, left: '50%', bottom: { xs: -14, md: -15 },
                   transform: 'translateX(-50%)',
                   height: { xs: 28, md: 30 }, px: '12px',
-                  border: '1px solid', borderColor: chiefPurple.border(t), borderRadius: '999px',
+                  border: '1px solid', borderColor: chiefPurple.border(t), borderRadius: `${radius.pill}px`,
                   // 색은 카드 배지·KPI 숫자 배지와 같은 토큰(chiefPurple). 다만 이 칩은 타일 사이 틈에
                   // 걸쳐 있어 **불투명이어야** 뒤 테두리가 비치지 않는다 → 페이지색 위에 같은 알파를
                   // 덧칠해 합성 결과는 같으면서 불투명하게(배경색 + 같은 색 그라데이션 1겹).

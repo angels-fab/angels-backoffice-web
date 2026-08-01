@@ -160,7 +160,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                         bgcolor: 'primary.main',
                         width: 22,
                         height: 22,
-                        borderRadius: '50%',
+                        borderRadius: radius.circle,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -196,7 +196,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                 sx={{
                   width: 28,
                   height: 28,
-                  borderRadius: '50%',
+                  borderRadius: radius.circle,
                   bgcolor: m.color,
                   color: 'common.white',
                   display: 'flex',

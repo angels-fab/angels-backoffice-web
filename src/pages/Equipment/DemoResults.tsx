@@ -486,7 +486,7 @@ function MemoRow({ m, own, busy, onEdit, onDelete }: { m: DemoChatMsg; own: bool
   const save = async () => { try { await onEdit(body); setEditing(false) } catch { /* 스낵바는 상위에서 */ } }
   return (
     <Box sx={{ display: 'flex', gap: 1.25, py: 1.1, alignItems: 'flex-start', '& + &': { borderTop: 1, borderColor: 'divider' }, '&:hover .memo-act': { opacity: 1 } }}>
-      <Box aria-hidden sx={{ flex: 'none', width: 26, height: 26, borderRadius: '50%', bgcolor: c, color: 'common.white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: typescale.caption.size, fontWeight: weight.bold, mt: '1px' }}>{(given(m.author) || m.author || '?').charAt(0)}</Box>
+      <Box aria-hidden sx={{ flex: 'none', width: 26, height: 26, borderRadius: radius.circle, bgcolor: c, color: 'common.white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: typescale.caption.size, fontWeight: weight.bold, mt: '1px' }}>{(given(m.author) || m.author || '?').charAt(0)}</Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         {editing ? (
           <Box>

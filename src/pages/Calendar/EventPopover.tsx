@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
-import { accent, radius, shadow, typescale, weight } from '../../theme/tokens'
+import { accent, radius, shadow, typescale, weight, z } from '../../theme/tokens'
 import { catTextColor, toneOfColor } from './catMeta'
 
 /** 일정 상세 데이터 — 원본 제목 그대로(장소-목적 분리 안 함) + 시간 + 전체 해당자 + 분류. */
@@ -61,7 +61,7 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
         position: 'fixed',
         left: pos.left,
         top: pos.top,
-        zIndex: 10000, // FullCalendar '+N건' more-link 팝오버(z-index 9999) 위에 떠야 함
+        zIndex: z.calendarPopover,
         pointerEvents: locked ? 'auto' : 'none',
         width: 300,
         maxWidth: 'calc(100vw - 20px)',

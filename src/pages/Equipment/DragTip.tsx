@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom'
 import Box from '@mui/material/Box'
-import { radius, shadow, typescale } from '../../theme/tokens'
+import { radius, shadow, typescale, z } from '../../theme/tokens'
 
 /** 드래그(이동/리사이즈) 중 실시간 안내 툴팁 데이터 — 표시 전용(저장·상태 변경 없음) */
 export interface DragTipData {
@@ -23,7 +23,7 @@ export default function DragTip({ tip }: { tip: DragTipData | null }) {
         left: tip.x + (flipX ? -14 : 14),
         top: tip.y + (flipY ? -16 : 16),
         transform: `translate(${flipX ? '-100%' : '0'}, ${flipY ? '-100%' : '0'})`,
-        zIndex: 2000,
+        zIndex: z.dragTip,
         pointerEvents: 'none',
         bgcolor: 'background.paper',
         border: 1,

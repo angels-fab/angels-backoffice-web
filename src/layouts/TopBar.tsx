@@ -17,7 +17,7 @@ import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
 import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
 import { useThemeMode } from '@/theme/mode'
-import { iconSize } from '@/theme/tokens'
+import { iconSize, z } from '@/theme/tokens'
 import topbarLogo from '@/assets/topbar-logo.jpg'
 
 /**
@@ -110,7 +110,7 @@ export default function TopBar() {
       sx={{
         position: { xs: 'fixed', shell: 'sticky' },
         top: 0, left: 0, right: 0,
-        zIndex: 50, // 사이드바(100)보다 아래, MUI 모달(1100+)보다 아래
+        zIndex: z.topbar,
         bgcolor: 'background.default',
         // 구 CSS와 같은 값(--border, 카드 테두리와 동급). divider 는 한 단 옅어 선이 흐려진다
         borderBottom: '1px solid var(--border)',

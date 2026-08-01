@@ -208,7 +208,7 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
               sx={{
                 position: 'relative', height: 34, border: 'none', bgcolor: 'transparent', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit', p: 0,
-                '&:hover [data-num]': { bgcolor: 'action.hover', borderRadius: '50%' },
+                '&:hover [data-num]': { bgcolor: 'action.hover', borderRadius: radius.circle },
               }}
             >
               {inRange && (
@@ -222,7 +222,7 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
               )}
               <Box data-num sx={{
                 position: 'relative', zIndex: 1, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12.5, fontVariantNumeric: 'tabular-nums', borderRadius: '50%',
+                fontSize: 12.5, fontVariantNumeric: 'tabular-nums', borderRadius: radius.circle,
                 color: 'text.secondary',
                 ...(key === today ? { boxShadow: (th) => `inset 0 0 0 1px ${th.palette.primary.main}` } : null),
                 ...((isStart || isEnd) && start ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: weight.bold } : null),
@@ -616,7 +616,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 aria-label={`참석자 ${name}`}
                 title={name}
                 sx={{
-                  width: 28, height: 28, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                  width: 28, height: 28, borderRadius: radius.circle, border: 'none', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: typescale.caption.size, fontWeight: weight.bold, lineHeight: 1,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background .15s, box-shadow .15s, color .15s',

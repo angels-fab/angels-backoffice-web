@@ -1,6 +1,6 @@
 import Box from '@mui/material/Box'
 import type { SxProps, Theme } from '@mui/material/styles'
-import { weight } from '@/theme/tokens'
+import { weight, radius } from '@/theme/tokens'
 
 export interface NavBadgeProps {
   count: number
@@ -35,7 +35,7 @@ export default function NavBadge({ count, kind = 'new', sx }: NavBadgeProps) {
           minWidth: 15,
           height: 15,
           px: '4px',
-          borderRadius: '999px',
+          borderRadius: `${radius.pill}px`,
           fontSize: 10,
           fontWeight: weight.bold,
           lineHeight: 1,

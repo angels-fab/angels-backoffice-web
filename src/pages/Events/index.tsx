@@ -7,7 +7,7 @@ import CoPresentIcon from '@mui/icons-material/CoPresent'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, SegTabs, ConfirmDialog, useSnack } from '@/components/ds'
-import { radius, shadow } from '@/theme/tokens'
+import { radius, shadow, z } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
 import { fetchAttendees, addAttendee, removeAttendee, fetchSubmissions, type AttendeeRow, type EventSubmissionRow } from '@/api/events'
@@ -227,7 +227,7 @@ export default function Events() {
           aria-label={`${endedDetail.title} 상세`}
           sx={{
             position: 'fixed', top: { xs: 48, md: 54 }, right: 0, bottom: { xs: 60, md: 0 },
-            width: 380, maxWidth: '92vw', zIndex: 1200,
+            width: 380, maxWidth: '92vw', zIndex: z.sidePanel,
             bgcolor: 'background.default', borderLeft: 1, borderColor: 'divider',
             boxShadow: '-8px 0 26px rgba(0,0,0,.42)', p: 1.5, overflowY: 'auto',
           }}

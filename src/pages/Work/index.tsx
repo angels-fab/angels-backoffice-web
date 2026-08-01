@@ -30,7 +30,7 @@ import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
 import ViewKanbanIcon from '@mui/icons-material/ViewKanban'
 import { alpha, darken, lighten } from '@mui/material/styles'
-import { radius, shadow, iconSize, typescale } from '@/theme/tokens'
+import { radius, shadow, iconSize, typescale, z } from '@/theme/tokens'
 import {
   PageContainer,
   PageHeader,
@@ -1470,7 +1470,7 @@ export default function Work() {
       {reorderMode && view === 'inProgress' && (
         <Box
           sx={{
-            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 60,
+            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: z.bottomBar,
             bgcolor: 'primary.main', color: 'primary.contrastText',
             px: 2, py: 1.25, display: 'flex', alignItems: 'center', gap: 1.5,
             boxShadow: '0 -2px 12px rgba(0,0,0,.3)',

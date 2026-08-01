@@ -42,7 +42,7 @@ import EquipmentTabs from './EquipmentTabs'
 import DemoResults from './DemoResults'
 import { NameWithQty, codeRange } from './batchUtil'
 import { useTableSort, sortRows, SortHeadCell } from './sortable'
-import { iconSize, layout, radius, shadow, typescale, control, weight } from '@/theme/tokens'
+import { iconSize, layout, radius, shadow, typescale, control, weight, z } from '@/theme/tokens'
 
 const GANTT_NAME_W = 150 // 장비명 열(축소) — 나머지는 간트가 가변폭으로 채움(가로 스크롤 없음)
 // 가변폭 간트에서 반월 1칸의 실제 픽셀폭 = 간트영역 폭 / (월수*2). 드래그/리사이즈 스냅 기준.
@@ -984,7 +984,7 @@ function PendingConfirm({ p, onApply, onCancel }: { p: PendingChange; onApply: (
         left: p.x + (flipX ? -16 : 16),
         top: p.y + (flipY ? -16 : 16),
         transform: `translate(${flipX ? '-100%' : '0'}, ${flipY ? '-100%' : '0'})`,
-        zIndex: 2100, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`,
+        zIndex: z.pendingConfirm, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`,
         boxShadow: shadow.md, p: 1, minWidth: 150,
       }}
     >
