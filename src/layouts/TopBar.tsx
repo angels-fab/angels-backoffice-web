@@ -26,20 +26,31 @@ import topbarLogo from '@/assets/topbar-logo.jpg'
  * 뼈대는 MUI 공식 데모 `MaterialUISwitch`(Switch 문서의 Customization 예제)다.
  * 치수(62×34·썸 32·translateX 6/22·SVG 20)·트랙색(#aab4be/#8796A5)·아이콘 흰색은 순정.
  *
- * 순정에서 벗어난 곳은 셋뿐이고 전부 사용자 지시(2026-08-01)다:
- *   ① 썸 색 = 검정 — 순정은 #001e3c(라이트)/#003892(다크). 남색이 별로라는 판단.
+ * 순정에서 벗어난 곳은 넷이고 전부 사용자 지시(2026-08-01~02)다:
+ *   ① 썸 색 = 무채색 — 순정은 #001e3c(라이트)/#003892(다크). 남색이 별로라는 판단.
  *   ② 트랙 높이 20 → 16 — 좀 더 낮게.
- *   ③ viewTransitionName — 모양이 아니라 애니메이션 고침(아래 주석 참조).
+ *   ③ 다크의 썸만 흰색으로 뒤집음 + 아이콘 동반 반전 (아래 ★).
+ *   ④ viewTransitionName — 모양이 아니라 애니메이션 고침(아래 주석 참조).
  *
- * ★ ①+② 의 대가: 썸(32px)이 트랙(16px) 위아래로 8px 씩 나오므로, 나온 부분의 대비는
- *   트랙이 아니라 **페이지 배경**이 정한다. 라이트는 검정 알이 아주 또렷하지만(10:1),
- *   다크는 검은 배경 위 검은 알이라 1.10:1 이다 — 흰 달만 떠 보이는 인상이 의도인지
- *   확인하고, 아니면 다크의 썸 색만 따로 올릴 것.
+ * ★ 왜 다크만 흰 썸인가 — 썸(32px)이 트랙(16px) 위아래로 8px 씩 나오므로 그 부분의 대비는
+ *   트랙이 아니라 **헤더 배경**이 정한다. 검정 썸은 헤더 #0F1117 위에서 1.11:1 로 묻혔다
+ *   (WCAG 1.4.11 그래픽 최소 3:1 미달). 무채색 축의 반대끝인 흰색으로 뒤집어 18.87:1 확보.
+ *   ※ "라이트만큼(19.38:1)"은 sRGB 상 불가능하다 — #0F1117 위에서는 순백조차 18.87 이 천장
+ *     (그 이상은 썸 휘도 L=1.029 가 필요). 97.4% 가 물리적 최대이고 1.11 → 18.87 은 17배다.
+ *
+ * ★ 다크에서 "그림자"의 의미 — 검정 기반 그림자는 헤더 #0F1117 위에서 **알파를 1.0 으로
+ *   올려도 1.11:1**, 즉 값을 키워 해결되는 문제가 아니라 상한이다. 그래서 다크의 그림자는
+ *   부양감이 아니라 두 가지 일만 한다: (a) 트랙(#8796A5) 위 접촉 그림자 4.7:1,
+ *   (b) 1px 검정 링 — 흰 썸이 되며 잃은 썸↔트랙 경계를 3.03 → 4.58:1 로 복구.
+ *   흰 글로우는 금지 — theme.ts 의 focusRing 과 생김새가 겹쳐 상시 포커스로 오독된다.
  *
  * (참고: 앞서 이 값들을 손으로 고쳐 라이트가 "흰 알 + 갈색(#B26A00) 해"가 돼 있었다.
  *  흰 알이 흰 상단바에 묻히고(1.07:1) 해가 갈색으로 보이던 원인.)
  */
-const ThemeSwitch = styled(Switch)(({ theme }) => ({
+const ThemeSwitch = styled(Switch)(({ theme }) => {
+  // 썸이 테마별로 뒤집히므로 해/달 글리프도 같이 뒤집어야 보인다(항상 썸의 반대극).
+  const glyph = encodeURIComponent(theme.palette.mode === 'dark' ? '#000' : '#fff')
+  return {
   width: 62,
   height: 34,
   padding: 7,
@@ -55,7 +66,7 @@ const ThemeSwitch = styled(Switch)(({ theme }) => ({
       color: '#fff',
       transform: 'translateX(22px)',
       '& .MuiSwitch-thumb:before': {
-        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L8.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`,
+        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${glyph}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L8.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`,
       },
       '& + .MuiSwitch-track': {
         opacity: 1,
@@ -65,8 +76,14 @@ const ThemeSwitch = styled(Switch)(({ theme }) => ({
     },
   },
   '& .MuiSwitch-thumb': {
-    // [비순정 ①] 순정 #001e3c / 다크 #003892 → 두 테마 모두 검정(사용자 지시)
+    // [비순정 ①] 순정 #001e3c / 다크 #003892 → 무채색. 라이트는 검정, 헤더 #F4F6F8 대비 19.38:1
     backgroundColor: '#000',
+    // [비순정 ③] 다크는 흰색으로 뒤집는다(위 ★ 두 항목 참조). 스프레드는 반드시 '&::before' **앞**에
+    // 둔다 — 뒤에 두면 이 객체가 '&::before' 키를 갖게 되는 순간 해/달 backgroundImage 를 통째로 덮는다.
+    ...theme.applyStyles('dark', {
+      backgroundColor: '#fff',
+      boxShadow: '0 2px 4px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.7)',
+    }),
     width: 32,
     height: 32,
     '&::before': {
@@ -78,7 +95,7 @@ const ThemeSwitch = styled(Switch)(({ theme }) => ({
       top: 0,
       backgroundRepeat: 'no-repeat',
       backgroundPosition: 'center',
-      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`,
+      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${glyph}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`,
     },
   },
   '& .MuiSwitch-track': {
@@ -93,7 +110,8 @@ const ThemeSwitch = styled(Switch)(({ theme }) => ({
     borderRadius: 16 / 2,
     ...theme.applyStyles('dark', { backgroundColor: '#8796A5' }),
   },
-}))
+  }
+})
 
 export default function TopBar() {
   const navigate = useNavigate()
