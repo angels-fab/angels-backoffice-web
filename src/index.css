@@ -349,11 +349,22 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   overflow-wrap:anywhere;word-break:break-word}
 .wc-editor p{margin:0}
 /* 목록(글머리·번호) — 에디터 안에서 들여쓰기·마커 표시(마커 폭 최소치 18px) */
-.wc-editor ul,.wc-editor ol{margin:0;padding-left:18px}
-.wc-editor ul{list-style:disc}
-.wc-editor ol{list-style:decimal}
-.wc-editor li{margin:1px 0}
-.wc-editor li>p{margin:0}
+/* 목록 = 보기 모드(TaskAccordion 본문 줄)와 같은 모양으로 맞춘다. 구현이 달라서 수정 모드에
+   들어가면 불릿 크기와 들여쓰기가 튀었다(사용자 지적 2026-08-01):
+     보기   = '•' 글자(13px) + flex gap 6px, 1단계 들여쓰기 0 / 한 단계당 +18px
+     구 수정 = 브라우저 list-marker(disc, 더 작음) + padding-left 18px(1단계부터 들여씀)
+   그래서 브라우저 마커를 끄고 ::before 로 같은 글자를 같은 간격에 찍는다. */
+.wc-editor ul,.wc-editor ol{margin:0;padding-left:0;list-style:none}
+.wc-editor li ul,.wc-editor li ol{padding-left:18px}
+.wc-editor li{margin:1px 0;display:flex;align-items:flex-start;gap:6px}
+.wc-editor li::before{flex:none}
+.wc-editor ul>li::before{content:'•'}
+.wc-editor ol{counter-reset:wc-ol}
+.wc-editor ol>li{counter-increment:wc-ol}
+.wc-editor ol>li::before{content:counter(wc-ol) '.'}
+.wc-editor li>p{margin:0;flex:1;min-width:0}
+/* li 안의 중첩 목록은 flex 자식이라 폭을 스스로 못 잡는다 → 줄바꿈시켜 전체 폭 사용 */
+.wc-editor li>ul,.wc-editor li>ol{flex-basis:100%}
 .wc-editor p.is-editor-empty:first-child::before{content:attr(data-placeholder);color:var(--text3,#7d8590);float:left;height:0;pointer-events:none}
 @media(max-width:620px){
   /* 모바일: 공지 게시판처럼 담당자·발의일자 숨기고 간결하게 */
