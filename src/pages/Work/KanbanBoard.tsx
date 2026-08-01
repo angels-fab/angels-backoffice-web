@@ -6,7 +6,7 @@ import TimelapseIcon from '@mui/icons-material/Timelapse'
 import PauseIcon from '@mui/icons-material/Pause'
 import TaskAltIcon from '@mui/icons-material/TaskAlt'
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates'
-import { radius, shadow, typescale } from '@/theme/tokens'
+import { radius, shadow, typescale, weight } from '@/theme/tokens'
 import { StatusChip, focusRingSx } from '@/components/ds'
 import ManagerChip from '@/components/ds/ManagerChip'
 import { fmtDate, dateSortValue } from '@/utils/date'
@@ -81,9 +81,9 @@ function CardInner({ t }: { t: WorkItem }) {
     <>
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
         {isWorkNew(t) && (
-          <Box component="span" sx={{ flexShrink: 0, mt: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (th) => th.palette.accent.red, color: (th) => th.palette.getContrastText(th.palette.accent.red), fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+          <Box component="span" sx={{ flexShrink: 0, mt: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (th) => th.palette.accent.red, color: (th) => th.palette.getContrastText(th.palette.accent.red), fontSize: 9.5, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
         )}
-        <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 600, wordBreak: 'break-word', lineHeight: 1.45, color: 'text.primary' }}>
+        <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: weight.semibold, wordBreak: 'break-word', lineHeight: 1.45, color: 'text.primary' }}>
           {taskTitle(t)}
         </Typography>
         {t.chief && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="purple" label="Check" /></Box>}
@@ -529,7 +529,7 @@ export default function KanbanBoard({
               {/* 제목띠 — 상태색 옅은 채움으로 열을 한눈에 구분(구: 배경 없음 + 중립 구분선) */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.5, py: 1.1, bgcolor: c(0.1), borderBottom: `1px solid ${c(0.2)}` }}>
                 {/* 아이콘·제목은 "글자"이므로 채움색(accent)이 아니라 글자용 색(accentText) — 라이트에서 대비 확보 */}
-                <Icon sx={(th: { palette: { accentText: Record<string, string> } }) => ({ fontSize: 18, color: th.palette.accentText[accent] })} />
+                <Icon sx={(th: { palette: { accentText: Record<string, string> } }) => ({ fontSize: typescale.sectionTitle.size, color: th.palette.accentText[accent] })} />
                 <Typography sx={(th) => ({ fontSize: typescale.emphasis.size, fontWeight: typescale.pageTitle.weight, color: th.palette.accentText[accent as keyof typeof th.palette.accentText] })}>{title}</Typography>
                 <Typography sx={{ fontSize: typescale.body.size, color: 'text.disabled' }}>{list.length}</Typography>
               </Box>

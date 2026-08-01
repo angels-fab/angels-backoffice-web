@@ -290,6 +290,28 @@ export const motion = {
  *   "굵지만 흐린 제목"이 된다(실측 라이트 5.1:1 vs 정상 13.1:1). 제목은 emphasis(subtitle1) 또는
  *   body2 + color:'text.primary' 명시.
  */
+/**
+ * 굵기 사다리 (2026-08-01 신설) — 크기와 분리한다.
+ *
+ * typescale 은 "역할 = 크기+굵기 한 벌"이라, 굵기만 필요할 때 쓰면 이름이 거짓말이 된다
+ * (12px 글자에 typescale.cardTitle.weight(700)를 쓰는 식). 굵기만 쓸 자리는 이걸 쓴다.
+ *
+ * 특히 medium(500)은 typescale 어느 칸에도 크기와 짝지어 있지 않은데 실화면에서는
+ * '행 식별자'(표의 장비명·공지 제목·행사명)가 전부 14/500이라 손코딩이 20곳 생겨 있었다.
+ */
+export const weight = {
+  /** 본문 */
+  regular: 400,
+  /** 행 식별자·코드셀 — 본문보다 한 단만 또렷하게 */
+  medium: 500,
+  /** 라벨·표 헤더·강조 본문 */
+  semibold: 600,
+  /** 카드/섹션 제목 */
+  bold: 700,
+  /** 페이지 제목·대형 숫자 */
+  heavy: 800,
+} as const
+
 export const typescale = {
   /** 타임스탬프·캡션 */
   caption: { size: 11, weight: 500 },

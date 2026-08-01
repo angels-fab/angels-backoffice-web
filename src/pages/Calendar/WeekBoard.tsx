@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
-import { accent, radius } from '@/theme/tokens'
+import { accent, radius, typescale, weight } from '@/theme/tokens'
 import type { CalEvent } from '@/types'
 import { CAT_META } from './catMeta'
 import { given, memberById, membersForEvent, eventContent, eventParticipants, splitPlacePurpose, type TeamMember } from './members'
@@ -51,7 +51,7 @@ function Chip({ ev }: { ev: CalEvent }) {
           borderRadius: `${radius.chip}px`,
           borderLeft: `3px solid ${color}`,
           bgcolor: alpha(color, 0.18),
-          fontSize: 12,
+          fontSize: typescale.small.size,
           color: 'text.primary',
           lineHeight: 1.5,
           minWidth: 0,
@@ -120,8 +120,8 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
           sx={{
             ...CELL,
             p: '12px 14px',
-            fontSize: 11,
-            fontWeight: 700,
+            fontSize: typescale.caption.size,
+            fontWeight: weight.bold,
             color: 'text.disabled',
             letterSpacing: '0.04em',
             display: 'flex',
@@ -146,7 +146,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                 bgcolor: isToday ? 'background.elevated' : 'transparent',
               }}
             >
-              <Box component="span" sx={{ fontSize: 11, fontWeight: 600, color: dowColor(dow) }}>
+              <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.semibold, color: dowColor(dow) }}>
                 {DOW[dow]}
               </Box>
               <Box
@@ -154,8 +154,8 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                 sx={
                   isToday
                     ? {
-                        fontSize: 13,
-                        fontWeight: 700,
+                        fontSize: typescale.body.size,
+                        fontWeight: weight.bold,
                         color: 'common.white',
                         bgcolor: 'primary.main',
                         width: 22,
@@ -165,7 +165,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                         alignItems: 'center',
                         justifyContent: 'center',
                       }
-                    : { fontSize: 14, fontWeight: 700, color: 'text.secondary' }
+                    : { fontSize: typescale.emphasis.size, fontWeight: weight.bold, color: 'text.secondary' }
                 }
               >
                 {d.getDate()}
@@ -176,7 +176,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
 
         {/* 팀원 행들 */}
         {members.length === 0 && (
-          <Box sx={{ gridColumn: '1 / -1', p: 4, textAlign: 'center', color: 'text.disabled', fontSize: 13 }}>
+          <Box sx={{ gridColumn: '1 / -1', p: 4, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>
             표시할 팀원이 없습니다
           </Box>
         )}
@@ -202,8 +202,8 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 12,
-                  fontWeight: 700,
+                  fontSize: typescale.small.size,
+                  fontWeight: weight.bold,
                   flex: 'none',
                   letterSpacing: '-0.02em',
                 }}
@@ -211,11 +211,11 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                 {given(m.name)}
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2, minWidth: 0 }}>
-                <Box component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.primary' }}>
+                <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: weight.semibold, color: 'text.primary' }}>
                   {m.name}
                 </Box>
                 {m.role && (
-                  <Box component="span" sx={{ fontSize: 11, color: 'text.disabled' }}>
+                  <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>
                     {m.role}
                   </Box>
                 )}

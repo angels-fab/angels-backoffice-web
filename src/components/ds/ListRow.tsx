@@ -3,7 +3,7 @@ import { mergeSx } from './sxMerge'
 import Typography from '@mui/material/Typography'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
-import { row } from '@/theme/tokens'
+import { row, typescale, weight } from '@/theme/tokens'
 
 export interface ListRowProps {
   /** 좌측 고정 요소 — 아이콘·StatusChip·dot 등. 안 줄어든다. */
@@ -41,8 +41,8 @@ function TitleText({ children }: { children: ReactNode }) {
         sx={{
           // 목록 행 제목 정본 = 14px + 주 톤. 굵기는 500 — 크기·색으로 이미 식별자이고,
           // 모든 행이 굵으면 굵기가 아무 정보도 전달하지 못한다(강조 상태에만 700을 쓴다).
-          fontSize: 14,
-          fontWeight: 500,
+          fontSize: typescale.emphasis.size,
+          fontWeight: weight.medium,
           lineHeight: 1.4,
           minWidth: 0,
           overflow: 'hidden',

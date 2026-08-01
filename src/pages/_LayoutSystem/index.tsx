@@ -26,6 +26,7 @@ import {
   KpiCard,
   AppCard,
 } from '@/components/ds'
+import { typescale, weight } from '@/theme/tokens'
 
 const NAV = [
   { icon: <HomeIcon />, label: '홈', active: true },
@@ -40,7 +41,7 @@ const NAV = [
 function DemoSidebar() {
   return (
     <Box sx={{ p: 1.5 }}>
-      <Typography sx={{ px: 1.5, py: 1, fontWeight: 700, fontSize: 14, color: 'text.primary' }}>
+      <Typography sx={{ px: 1.5, py: 1, fontWeight: weight.bold, fontSize: typescale.emphasis.size, color: 'text.primary' }}>
         ANGELS FAB
       </Typography>
       <List dense disablePadding>
@@ -57,7 +58,7 @@ function DemoSidebar() {
             }}
           >
             <ListItemIcon>{n.icon}</ListItemIcon>
-            <ListItemText slotProps={{ primary: { sx: { fontSize: 13, fontWeight: 600 } } }}>{n.label}</ListItemText>
+            <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.body.size, fontWeight: weight.semibold } } }}>{n.label}</ListItemText>
           </ListItemButton>
         ))}
       </List>
@@ -73,7 +74,7 @@ function DemoSidebar() {
 export default function LayoutSystemShowcase() {
   return (
     <ScopedCssBaseline>
-      <AppLayout sidebar={<DemoSidebar />} brand={<Typography sx={{ fontWeight: 700, fontSize: 14 }}>ANGELS FAB</Typography>}>
+      <AppLayout sidebar={<DemoSidebar />} brand={<Typography sx={{ fontWeight: weight.bold, fontSize: typescale.emphasis.size }}>ANGELS FAB</Typography>}>
         <PageContainer>
           <PageHeader
             icon={<MonitorIcon />}

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
-import { layout, radius, shadow } from '@/theme/tokens'
+import { layout, radius, shadow, typescale, weight } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
 import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 import SwipeableCard, { type WorkSwipeConfig } from './SwipeableCard'
@@ -394,7 +394,7 @@ export default function StatusDragGrid({
                 position: 'absolute', top: -10, right: -10, zIndex: 2,
                 px: 1, py: 0.4, borderRadius: `${radius.pill}px`,
                 bgcolor: th.palette.accent.blue, color: th.palette.common.white,
-                fontSize: 13, fontWeight: 700, lineHeight: 1,
+                fontSize: typescale.body.size, fontWeight: weight.bold, lineHeight: 1,
               })}>
                 {multiCount}건
               </Box>

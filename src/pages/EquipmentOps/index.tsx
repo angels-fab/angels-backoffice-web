@@ -13,7 +13,7 @@ import RefreshIcon from '@mui/icons-material/Refresh'
 import Snackbar from '@mui/material/Snackbar'
 import Alert from '@mui/material/Alert'
 import { PageContainer, PageHeader, AppCard, StatusChip, EmptyState, ErrorBanner, LoadingState, Select, SearchBar, dataTableSx, mobileTableCardSx, DataCell } from '@/components/ds'
-import { iconSize, radius, control, typescale } from '@/theme/tokens'
+import { iconSize, radius, control, typescale, weight } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
 import { selectEqCounts } from '@/store/selectors'
@@ -50,8 +50,8 @@ const OPS_COLS: { key: OpsCol; label: string; align: 'left' | 'center' | 'right'
  *   emphasis 는 14/600이라 문서와 화면이 어긋나 있다. 여기서 임의로 600으로 올리면
  *   다른 표와 어긋나므로 500을 유지하고, 사다리 정정은 별건으로 남긴다.
  */
-const codeCellSx = { color: 'text.secondary', fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontWeight: 500, whiteSpace: 'nowrap' } as const
-const nameCellSx = { color: 'text.primary', fontWeight: 500, fontSize: typescale.emphasis.size, whiteSpace: 'nowrap' } as const
+const codeCellSx = { color: 'text.secondary', fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontWeight: weight.medium, whiteSpace: 'nowrap' } as const
+const nameCellSx = { color: 'text.primary', fontWeight: weight.medium, fontSize: typescale.emphasis.size, whiteSpace: 'nowrap' } as const
 
 const opsAccessor = (g: EqGroup, c: OpsCol): string | number | null => {
   switch (c) {
@@ -178,32 +178,32 @@ export default function EquipmentOps() {
       {/* 요약 3카드 */}
       <Box className="eq-strip" sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1.4fr 1fr 1fr' }, gap: 1, mb: 2 }}>
         <AppCard padding={16}>
-          <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 1 }}>전체 장비</Typography>
-          <Typography sx={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{c.total}<Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 600, ml: 0.5 }}>대 · {c.types}종</Box></Typography>
-          <Box sx={{ display: 'flex', gap: 1.5, mt: 1.25, flexWrap: 'wrap', color: 'text.disabled', fontSize: 11 }}>
+          <Typography sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 1 }}>전체 장비</Typography>
+          <Typography sx={{ fontSize: 26, fontWeight: weight.heavy, lineHeight: 1 }}>{c.total}<Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.semibold, ml: 0.5 }}>대 · {c.types}종</Box></Typography>
+          <Box sx={{ display: 'flex', gap: 1.5, mt: 1.25, flexWrap: 'wrap', color: 'text.disabled', fontSize: typescale.caption.size }}>
             {Object.entries(overview.catUnits).map(([cat, n]) => (
-              <span key={cat}>{cat} <Box component="span" sx={{ color: 'text.secondary', fontWeight: 700 }}>{n}</Box></span>
+              <span key={cat}>{cat} <Box component="span" sx={{ color: 'text.secondary', fontWeight: weight.bold }}>{n}</Box></span>
             ))}
-            <span>담당자 <Box component="span" sx={{ color: 'text.secondary', fontWeight: 700 }}>{overview.mgrCount}명</Box></span>
+            <span>담당자 <Box component="span" sx={{ color: 'text.secondary', fontWeight: weight.bold }}>{overview.mgrCount}명</Box></span>
           </Box>
         </AppCard>
 
         <AppCard padding={16}>
-          <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 1 }}>운영 상태</Typography>
-          <Typography sx={{ fontSize: 26, fontWeight: 800, lineHeight: 1 }}>{c.units[dominant]}<Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 600, ml: 0.5 }}>대 {EQ_STATE[dominant].label}</Box></Typography>
-          <Box sx={{ display: 'flex', gap: 1.5, mt: 1.25, flexWrap: 'wrap', color: 'text.disabled', fontSize: 11 }}>
+          <Typography sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 1 }}>운영 상태</Typography>
+          <Typography sx={{ fontSize: 26, fontWeight: weight.heavy, lineHeight: 1 }}>{c.units[dominant]}<Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.semibold, ml: 0.5 }}>대 {EQ_STATE[dominant].label}</Box></Typography>
+          <Box sx={{ display: 'flex', gap: 1.5, mt: 1.25, flexWrap: 'wrap', color: 'text.disabled', fontSize: typescale.caption.size }}>
             {STATE_ORDER.filter((s) => s !== dominant && c.units[s] > 0).map((s) => (
-              <span key={s}>{EQ_STATE[s].label} <Box component="span" sx={{ color: 'text.secondary', fontWeight: 700 }}>{c.units[s]}</Box></span>
+              <span key={s}>{EQ_STATE[s].label} <Box component="span" sx={{ color: 'text.secondary', fontWeight: weight.bold }}>{c.units[s]}</Box></span>
             ))}
           </Box>
         </AppCard>
 
         <AppCard padding={16} sx={{ borderColor: overview.missTypes ? 'warning.main' : undefined }}>
-          <Typography sx={{ fontSize: 12, color: 'text.secondary', mb: 1 }}>필수정보 누락</Typography>
-          <Typography sx={{ fontSize: 26, fontWeight: 800, lineHeight: 1, color: overview.missTypes ? 'warning.main' : 'text.primary' }}>
-            {overview.missTypes}<Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 600, ml: 0.5 }}>종 · {overview.missUnits}대</Box>
+          <Typography sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 1 }}>필수정보 누락</Typography>
+          <Typography sx={{ fontSize: 26, fontWeight: weight.heavy, lineHeight: 1, color: overview.missTypes ? 'warning.main' : 'text.primary' }}>
+            {overview.missTypes}<Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.semibold, ml: 0.5 }}>종 · {overview.missUnits}대</Box>
           </Typography>
-          <Typography sx={{ mt: 1.25, fontSize: 11, color: 'warning.main' }}>제조사·모델명·설치장소·NFEC 확인 필요</Typography>
+          <Typography sx={{ mt: 1.25, fontSize: typescale.caption.size, color: 'warning.main' }}>제조사·모델명·설치장소·NFEC 확인 필요</Typography>
         </AppCard>
       </Box>
 
@@ -213,7 +213,7 @@ export default function EquipmentOps() {
           이 박스로 뺏어간다. clip 은 스크롤 컨테이너가 아니라 sticky 가 페이지까지 통과한다. */}
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, bgcolor: 'background.paper', overflow: 'clip' }}>
         <Box className="eq-wshead" sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>장비대장 <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', fontWeight: 500 }}>전체 {c.types}종 · {c.total}대</Box></Typography>
+          <Typography sx={{ fontSize: typescale.body.size, fontWeight: weight.bold }}>장비대장 <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.medium }}>전체 {c.types}종 · {c.total}대</Box></Typography>
           <Box className="eq-filters" sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <Select value={stateF} onChange={setStateF} ariaLabel="운영상태"
               options={stateOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 상태' : (EQ_STATE[o as EqStateKey]?.label || o) }))} />
@@ -222,7 +222,7 @@ export default function EquipmentOps() {
             <Select value={mgrF} onChange={setMgrF} ariaLabel="담당자"
               options={mgrOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 담당자' : o }))} />
             <SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호·제조사 검색" width={220} />
-            <Button size="small" variant={missingOnly ? 'contained' : 'outlined'} onClick={() => setMissingOnly((m) => !m)} sx={{ flexShrink: 0, py: 0.4, fontSize: 13, minHeight: control.height, color: missingOnly ? undefined : 'text.secondary', borderColor: 'divider' }}>
+            <Button size="small" variant={missingOnly ? 'contained' : 'outlined'} onClick={() => setMissingOnly((m) => !m)} sx={{ flexShrink: 0, py: 0.4, fontSize: typescale.body.size, minHeight: control.height, color: missingOnly ? undefined : 'text.secondary', borderColor: 'divider' }}>
               누락정보만
             </Button>
           </Box>
@@ -278,7 +278,7 @@ export default function EquipmentOps() {
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                           <NameWithQty name={g.name} count={g.count} fontSize={14} />
                           {/* 변형명 부제 — 장비도입 표(Equipment/index.tsx)와 같은 열·같은 역할이라 값도 같게(12/보조톤) */}
-                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: typescale.small.size, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
+                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: weight.regular, fontSize: typescale.small.size, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
                       </DataCell>
                       <DataCell label="분류">{g.cat || '-'}</DataCell>

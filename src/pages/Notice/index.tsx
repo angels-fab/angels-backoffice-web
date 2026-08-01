@@ -38,7 +38,7 @@ import {
   ConfirmDialog,
 } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
-import { iconSize, radius, control } from '@/theme/tokens'
+import { iconSize, radius, control, typescale, weight } from '@/theme/tokens'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { useMarkSeen } from '@/layouts/useNavBadges'
 import { bumpNoticeViews, loadNoticeData } from '@/store/slices/noticeSlice'
@@ -236,7 +236,7 @@ export default function Notice() {
                     minWidth: 22, height: 22, px: '4px', borderRadius: radius.circle, fontVariantNumeric: 'tabular-nums',
                     transition: 'border-color .15s, color .15s',
                     ...(openKey === `pin-${n.num}`
-                      ? { border: `1.5px solid ${th.palette.accent.amber}`, color: th.palette.accentText.amber, fontWeight: 700 }
+                      ? { border: `1.5px solid ${th.palette.accent.amber}`, color: th.palette.accentText.amber, fontWeight: weight.bold }
                       : { color: th.palette.text.secondary }),
                   })}
                 >
@@ -260,11 +260,11 @@ export default function Notice() {
               {/* 행의 식별자 — variant body2는 테마에서 색이 보조톤이라 주 톤을 명시해야 제목이 눌리지 않는다 */}
               {/* 제목은 14px + 주 톤만으로 이미 식별자 — 굵기는 "상단고정"을 알리는 신호로 아껴 쓴다
                   (전부 700으로 두면 굵기가 아무 정보도 전달하지 못함) */}
-              <Typography className="notice-title" variant="body2" sx={{ color: isExpired(n) ? 'text.secondary' : 'text.primary', fontSize: 14, fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
+              <Typography className="notice-title" variant="body2" sx={{ color: isExpired(n) ? 'text.secondary' : 'text.primary', fontSize: typescale.emphasis.size, fontWeight: isCopy ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: { xs: 'normal', md: 'nowrap' }, minWidth: 0 }}>
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
               </Typography>
               {n.isNew && (
-                <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: 9.5, fontWeight: 700, lineHeight: 1 }}>N</Box>
+                <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: 9.5, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
               )}
               {link && (
                 <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
@@ -354,8 +354,8 @@ export default function Notice() {
               >
                 {/* 라벨은 중립톤 — 분류색은 배경 틴트가 이미 전달한다. 글자에 accent를 쓰면
                     같은 색 틴트 위라 대비가 2.1~3.6:1로 무너짐(개선요청·업무·일정 칩과 동일 규칙) */}
-                <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: (t) => (on ? statusTextColor(t, noticeCatStatus(c)) : t.palette.text.secondary) }}>{c}</Box>
-                <Box component="span" sx={{ fontSize: 11, color: 'text.secondary' }}>{catCounts[c] || 0}</Box>
+                <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.semibold, color: (t) => (on ? statusTextColor(t, noticeCatStatus(c)) : t.palette.text.secondary) }}>{c}</Box>
+                <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.secondary' }}>{catCounts[c] || 0}</Box>
               </TintChip>
             )
           })}

@@ -6,7 +6,7 @@ import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined
 import RefreshIcon from '@mui/icons-material/Refresh'
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined'
 import { reportError } from '@/utils/reportError'
-import { radius } from '@/theme/tokens'
+import { radius, typescale } from '@/theme/tokens'
 
 interface Props {
   children: ReactNode
@@ -84,7 +84,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               bgcolor: 'background.paper',
             }}
           >
-            <Box component="summary" sx={{ cursor: 'pointer', fontSize: 12, color: 'text.disabled', userSelect: 'none' }}>
+            <Box component="summary" sx={{ cursor: 'pointer', fontSize: typescale.small.size, color: 'text.disabled', userSelect: 'none' }}>
               오류 상세
             </Box>
             <Box
@@ -92,7 +92,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               sx={{
                 mt: 1,
                 mb: 0,
-                fontSize: 11,
+                fontSize: typescale.caption.size,
                 color: 'text.disabled',
                 whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',

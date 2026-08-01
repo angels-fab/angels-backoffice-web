@@ -5,7 +5,7 @@ import LinkIcon from '@mui/icons-material/Link'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { ContentSection, PageContainer, PageHeader } from '@/components/ds'
 import { QUICK_LINK_GROUPS } from '@/constants/links'
-import { radius, typescale } from '@/theme/tokens'
+import { radius, typescale, weight } from '@/theme/tokens'
 
 export default function Links() {
   return (
@@ -36,7 +36,7 @@ export default function Links() {
                   '&:hover .lk-ext': { opacity: 1 },
                 })}
               >
-                <OpenInNewIcon className="lk-ext" sx={{ position: 'absolute', top: 8, right: 8, fontSize: 14, color: 'primary.main', opacity: 0, transition: 'opacity .15s' }} />
+                <OpenInNewIcon className="lk-ext" sx={{ position: 'absolute', top: 8, right: 8, fontSize: typescale.emphasis.size, color: 'primary.main', opacity: 0, transition: 'opacity .15s' }} />
                 <Box
                   sx={{
                     height: 48, width: l.wide ? 92 : 48, px: '6px', boxSizing: 'border-box', flex: 'none',
@@ -47,7 +47,7 @@ export default function Links() {
                   {l.logo ? (
                     <Box component="img" src={l.logo} alt="" sx={{ maxWidth: '100%', maxHeight: '74%', objectFit: 'contain' }} />
                   ) : (
-                    <Typography sx={{ fontSize: typescale.caption.size, fontWeight: 700, letterSpacing: '.4px', color: l.fallbackColor }}>
+                    <Typography sx={{ fontSize: typescale.caption.size, fontWeight: weight.bold, letterSpacing: '.4px', color: l.fallbackColor }}>
                       {l.fallbackText}
                     </Typography>
                   )}

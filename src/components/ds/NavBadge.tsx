@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box'
 import type { SxProps, Theme } from '@mui/material/styles'
+import { weight } from '@/theme/tokens'
 
 export interface NavBadgeProps {
   count: number
@@ -36,7 +37,7 @@ export default function NavBadge({ count, kind = 'new', sx }: NavBadgeProps) {
           px: '4px',
           borderRadius: '999px',
           fontSize: 10,
-          fontWeight: 700,
+          fontWeight: weight.bold,
           lineHeight: 1,
           whiteSpace: 'nowrap',
           bgcolor: kind === 'new' ? t.palette.accent.red : t.palette.accent.amber,

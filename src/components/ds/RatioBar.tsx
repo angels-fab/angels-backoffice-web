@@ -2,6 +2,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import type { Theme } from '@mui/material/styles'
 import type { StatusKind } from './StatusChip'
+import { weight } from '@/theme/tokens'
 
 export interface RatioSegment {
   label: string
@@ -76,7 +77,7 @@ export default function RatioBar({ segments, height = 10, showLegend = true }: R
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 {s.label}
               </Typography>
-              <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: 700 }}>
+              <Typography variant="caption" sx={{ color: 'text.primary', fontWeight: weight.bold }}>
                 {s.value}
               </Typography>
             </Box>

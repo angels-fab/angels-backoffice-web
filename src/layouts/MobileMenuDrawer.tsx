@@ -97,7 +97,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
               </ListItemIcon>
               {/* 아이폰식 위첨자 배지(D7 표준) — 메뉴명 우상단, 빨강=새 글·앰버=메모. 행 오른쪽 배지 폐지 */}
               <ListItemText
-                slotProps={{ primary: { sx: { fontSize: 14 } } }}
+                slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }}
                 primary={
                   <Box component="span" sx={{ position: 'relative', display: 'inline-block' }}>
                     {r.label}
@@ -147,7 +147,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
                 <ListItemIcon sx={{ minWidth: 40, color: isActive('/settings') ? 'primary.main' : 'text.secondary' }}>
                   <SettingsIcon />
                 </ListItemIcon>
-                <ListItemText slotProps={{ primary: { sx: { fontSize: 14 } } }} primary="설정" />
+                <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary="설정" />
               </ListItemButton>
             )}
             <ListItemButton
@@ -160,7 +160,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
               <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
                 <LogoutIcon />
               </ListItemIcon>
-              <ListItemText slotProps={{ primary: { sx: { fontSize: 14 } } }} primary="로그아웃" />
+              <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary="로그아웃" />
             </ListItemButton>
           </List>
         </>

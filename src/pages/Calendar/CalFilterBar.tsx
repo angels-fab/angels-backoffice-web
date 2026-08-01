@@ -14,7 +14,7 @@ import type { SvgIconComponent } from '@mui/icons-material'
 import { type TeamMember } from './members'
 import type { RealCat } from './catMeta'
 import { TintChip, PillChip } from '@/components/FilterChip'
-import { iconSize, radius } from '@/theme/tokens'
+import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 
 export interface FilterMember {
   member: TeamMember
@@ -51,7 +51,7 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
   etc: MoreHorizIcon,
 }
 
-const LABEL = { fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none' } as const
+const LABEL = { fontSize: typescale.caption.size, fontWeight: weight.bold, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none' } as const
 
 // 팀원 선택 칩 — 공용 PillChip. 선택=색 배경+흰 글자 / 미선택=옅은 배경+테두리.
 function MemberPill({ m, on, multi, onToggle }: { m: TeamMember; on: boolean; multi: boolean; onToggle: (additive: boolean) => void }) {
@@ -83,8 +83,8 @@ function CatChip({ icon: Icon, label, color, count, on, rotate, onToggle }: {
       sx={{ p: '4px 9px' }}
     >
       <Icon sx={{ fontSize: iconSize.caption, color, ...(rotate ? { transform: 'rotate(45deg)' } : {}) }} />
-      <Box component="span" sx={{ fontSize: 12, fontWeight: 600, color: on ? 'text.primary' : 'text.secondary' }}>{label.split('/')[0]}</Box>
-      <Box component="span" sx={{ fontSize: 12, color: 'text.secondary' }}>{count}</Box>
+      <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.semibold, color: on ? 'text.primary' : 'text.secondary' }}>{label.split('/')[0]}</Box>
+      <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.secondary' }}>{count}</Box>
     </TintChip>
   )
 }
@@ -124,7 +124,7 @@ export default function CalFilterBar({
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleMulti() } }}
               sx={(t) => ({
                 ml: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px', height: 26, px: '8px',
-                borderRadius: `${radius.chip}px`, fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', cursor: 'pointer', flex: 'none', userSelect: 'none',
+                borderRadius: `${radius.chip}px`, fontSize: typescale.small.size, fontWeight: weight.bold, whiteSpace: 'nowrap', cursor: 'pointer', flex: 'none', userSelect: 'none',
                 border: '1px solid',
                 ...(multiSelect
                   ? { bgcolor: alpha(t.palette.primary.main, 0.16), color: 'primary.main', borderColor: t.palette.primary.main }

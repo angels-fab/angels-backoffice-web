@@ -7,7 +7,7 @@ import { useAppSelector } from '@/store/hooks'
 import { CAL_CAT_MAP } from '@/constants/calendar'
 import { hexA } from '@/utils/color'
 import { todaySeoul } from '@/utils/date'
-import { accent, radius } from '@/theme/tokens'
+import { accent, radius, typescale, weight } from '@/theme/tokens'
 import type { CalEvent } from '@/types'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
@@ -21,8 +21,8 @@ function TypeBadge({ cat }: { cat: CalEvent['cat'] }) {
       component="span"
       sx={{
         flexShrink: 0,
-        fontSize: 11,
-        fontWeight: 600,
+        fontSize: typescale.caption.size,
+        fontWeight: weight.semibold,
         px: 0.75,
         py: '2px',
         borderRadius: `${radius.chip}px`,
@@ -44,15 +44,15 @@ function ScheduleRow({ left, title, right, leftColor }: { left: string; title: s
         sx={{
           flexShrink: 0,
           minWidth: 64,
-          fontSize: 12,
-          fontWeight: 700,
+          fontSize: typescale.small.size,
+          fontWeight: weight.bold,
           fontFamily: 'monospace',
           color: leftColor || 'text.secondary',
         }}
       >
         {left}
       </Box>
-      <Typography sx={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <Typography sx={{ flex: 1, minWidth: 0, fontSize: typescale.emphasis.size, fontWeight: weight.semibold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {title}
       </Typography>
       {right}
@@ -143,8 +143,8 @@ export default function ScheduleSection() {
                     component="span"
                     sx={{
                       flexShrink: 0,
-                      fontSize: 12,
-                      fontWeight: 700,
+                      fontSize: typescale.small.size,
+                      fontWeight: weight.bold,
                       px: 0.75,
                       py: '2px',
                       borderRadius: `${radius.chip}px`,

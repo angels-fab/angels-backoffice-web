@@ -5,7 +5,7 @@ import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
 import { dataTableSx } from '@/components/ds'
-import { typescale } from '@/theme/tokens'
+import { typescale, weight } from '@/theme/tokens'
 import { fmtEventDate, type FabEvent } from '@/constants/events'
 import { eventCategory, CAT_COLOR } from './eventCard'
 import AttendSwitch from './AttendSwitch'
@@ -63,7 +63,7 @@ export default function EndedList({ events, selectedId, onPick, attByEvent, user
                   <Box component="span" className="lg-chip" sx={{ color, borderColor: color + '66' }}>{cat}</Box>
                 </TableCell>
                 {/* 행사명 = 이 행의 식별자. 구 .lg-primary(14/500 주톤)를 sx로 옮김 */}
-                <TableCell align="left" sx={{ color: 'text.primary', fontWeight: 500, fontSize: typescale.emphasis.size, whiteSpace: 'normal' }}>{e.title}</TableCell>
+                <TableCell align="left" sx={{ color: 'text.primary', fontWeight: weight.medium, fontSize: typescale.emphasis.size, whiteSpace: 'normal' }}>{e.title}</TableCell>
                 <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>{fmtEventDate(e.start, e.end)}</TableCell>
                 <TableCell align="center" sx={{ display: { xs: 'none', sm: 'table-cell' }, color: 'text.secondary' }}>{e.venue || '-'}</TableCell>
                 <TableCell

@@ -1,5 +1,6 @@
 import type { EqGroup, TlMonth } from '@/types'
 import { GanttBar } from './gantt'
+import { typescale } from '@/theme/tokens'
 
 // 장비 상태 색상 매핑
 const EQ_STATE_COLOR: Record<string, string> = {
@@ -36,7 +37,7 @@ export default function EqItem({ eq, index, months }: Props) {
           <span className="eq-name">
             {eq.name}
             {eq.count > 1 && (
-              <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 4 }}>({eq.count}대)</span>
+              <span style={{ fontSize: typescale.caption.size, color: 'var(--text3)', marginLeft: 4 }}>({eq.count}대)</span>
             )}
           </span>
         </div>

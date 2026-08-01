@@ -4,7 +4,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import { AppCard, AppDrawer, CardGrid, StatusChip, EmptyState, LoadingState } from '@/components/ds'
-import { radius } from '@/theme/tokens'
+import { radius, typescale } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
 import type { Notice } from '@/types'
 import { noticeBodyHTML, noticeCatStatus } from '@/pages/Notice/noticeMeta'
@@ -132,7 +132,7 @@ export default function NoticeSection() {
               {sel.author && <StatusChip status="neutral" label={sel.author} />}
             </Box>
             <Box
-              sx={{ fontSize: 14, lineHeight: 1.7, color: 'text.secondary', '& a': { color: 'primary.main' }, '& img': { maxWidth: '100%', borderRadius: `${radius.card}px` }, '& p': { m: 0, mb: 1 } }}
+              sx={{ fontSize: typescale.emphasis.size, lineHeight: 1.7, color: 'text.secondary', '& a': { color: 'primary.main' }, '& img': { maxWidth: '100%', borderRadius: `${radius.card}px` }, '& p': { m: 0, mb: 1 } }}
               dangerouslySetInnerHTML={{ __html: noticeBodyHTML(sel.body) }}
             />
           </Box>

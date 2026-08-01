@@ -1,6 +1,6 @@
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
-import { radius } from '@/theme/tokens'
+import { radius, typescale, weight } from '@/theme/tokens'
 
 /**
  * 안드로이드형 참석 스위치.
@@ -37,7 +37,7 @@ export default function AttendSwitch({ checked, disabled, onToggle }: {
         component="span"
         sx={(th) => ({
           position: 'absolute', top: 0, height: '100%', display: 'flex', alignItems: 'center',
-          fontSize: 11, fontWeight: 800, letterSpacing: '.02em', lineHeight: 1, pointerEvents: 'none',
+          fontSize: typescale.caption.size, fontWeight: weight.heavy, letterSpacing: '.02em', lineHeight: 1, pointerEvents: 'none',
           // 꺼짐 트랙은 alpha(text.primary,.22)라 테마에 따라 뒤집힌다(다크 진회색 / 라이트 연회색).
           // 라벨을 흰색으로 고정하면 라이트에서 1.53:1로 사라지므로 text.primary를 쓴다
           // (다크 text.primary=흰색 6.8:1 / 라이트=진남색 10.6:1 — 한 값으로 양쪽 해결).

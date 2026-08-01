@@ -1,6 +1,6 @@
 import TextField from '@mui/material/TextField'
 import { mergeSx } from './sxMerge'
-import { control } from '@/theme/tokens'
+import { control, typescale } from '@/theme/tokens'
 import InputAdornment from '@mui/material/InputAdornment'
 import IconButton from '@mui/material/IconButton'
 import SearchIcon from '@mui/icons-material/Search'
@@ -45,13 +45,13 @@ export default function SearchBar({
         input: {
           startAdornment: (
             <InputAdornment position="start">
-              <SearchIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+              <SearchIcon sx={{ fontSize: typescale.sectionTitle.size, color: 'text.disabled' }} />
             </InputAdornment>
           ),
           endAdornment: value ? (
             <InputAdornment position="end">
               <IconButton size="small" aria-label="지우기" onClick={() => onChange('')}>
-                <CloseIcon sx={{ fontSize: 16 }} />
+                <CloseIcon sx={{ fontSize: typescale.cardTitle.size }} />
               </IconButton>
             </InputAdornment>
           ) : undefined,

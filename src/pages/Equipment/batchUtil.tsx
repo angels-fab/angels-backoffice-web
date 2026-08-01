@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import type { EqGroup, EqRawItem } from '@/types'
 import { eqStateKey } from '@/pages/EquipmentOps/eqMeta'
+import { typescale, weight } from '@/theme/tokens'
 
 /** 대표 관리번호 표기 — 여러 대면 'CL-001 외 1' */
 export const codeRange = (g: EqGroup) =>
@@ -14,9 +15,9 @@ export function NameWithQty({ name, count, fontSize = 14, color = 'text.primary'
   return (
     <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, minWidth: 0 }}>
       {/* 행 제목 정본 = 14px/500 — 크기·색으로 이미 식별자다. 굵기(700)는 강조 상태 전용 */}
-      <Box component="span" sx={{ fontSize, fontWeight: 500, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</Box>
+      <Box component="span" sx={{ fontSize, fontWeight: weight.medium, color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</Box>
       {count > 1 && (
-        <Box component="span" sx={{ fontSize: 12, fontWeight: 500, color: 'text.secondary', flexShrink: 0 }}>{count}대</Box>
+        <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.medium, color: 'text.secondary', flexShrink: 0 }}>{count}대</Box>
       )}
     </Box>
   )

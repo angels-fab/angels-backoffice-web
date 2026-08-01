@@ -28,7 +28,7 @@ import type { ImprovementItem } from '@/types'
 import ReplyThread from '@/pages/Improve/ReplyThread'
 import { StatusChip, useSnack, ConfirmDialog } from '@/components/ds'
 import { IMP_STATUSES, impKind, needsReason, normStatus, isSettled } from '@/pages/Improve/improveMeta'
-import { radius, iconSize } from '@/theme/tokens'
+import { radius, iconSize, typescale, weight } from '@/theme/tokens'
 
 /** '개선 메모 N' 칩 — 제목 옆. 클릭 시 패널 토글(열 때 각 항목은 접힌 상태로 시작). */
 function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
@@ -50,8 +50,8 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
         py: '5px',
         cursor: 'pointer',
         font: 'inherit',
-        fontSize: 12,
-        fontWeight: 800,
+        fontSize: typescale.small.size,
+        fontWeight: weight.heavy,
         color: th.palette.accentText.amber,
         bgcolor: alpha(th.palette.accent.amber, open ? 0.2 : 0.12),
         transition: 'background-color .15s ease',
@@ -70,8 +70,8 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
           height: 18,
           px: '4px',
           borderRadius: `${radius.pill}px`,
-          fontSize: 11,
-          fontWeight: 800,
+          fontSize: typescale.caption.size,
+          fontWeight: weight.heavy,
           bgcolor: th.palette.accent.amber,
           color: th.palette.getContrastText(th.palette.accent.amber),
         })}
@@ -100,8 +100,8 @@ function ReplyCountChip({ count, onClick }: { count: number; onClick: () => void
         bgcolor: alpha(th.palette.accent.blue, 0.14),
         color: th.palette.accentText.blue,
         font: 'inherit',
-        fontSize: 11,
-        fontWeight: 700,
+        fontSize: typescale.caption.size,
+        fontWeight: weight.bold,
         lineHeight: 1,
         whiteSpace: 'nowrap',
         cursor: 'pointer',
@@ -138,14 +138,14 @@ function MemoRow({
   return (
     <Box sx={{ py: 1.25, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-        <Box component="span" sx={(th) => ({ fontSize: 11, fontWeight: 800, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
+        <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
           요청 #{t.num}
         </Box>
-        <Box component="span" sx={{ fontSize: 13, fontWeight: 700, color: 'text.primary', minWidth: 0 }}>{t.title}</Box>
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: 'text.secondary' }}>
+        <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: weight.bold, color: 'text.primary', minWidth: 0 }}>{t.title}</Box>
+        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: typescale.caption.size, color: 'text.secondary' }}>
           <PersonOutlineIcon sx={{ fontSize: iconSize.caption }} />{t.author || '-'}
         </Box>
-        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: 11, color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: `${radius.pill}px` })}>
+        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: typescale.caption.size, color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: `${radius.pill}px` })}>
           <PlaceOutlinedIcon sx={{ fontSize: iconSize.caption }} />{t.loc || '-'}
         </Box>
         {/* 상태 — 메인 보드와 동일 값·색. 관리자는 여기서 바로 변경(보류·완료·불가는 확인 팝업). */}
@@ -160,7 +160,7 @@ function MemoRow({
             renderValue={(v) => <StatusChip status={impKind(v)} label={v} />}
             sx={{ '& .MuiSelect-select': { p: 0, pr: '0 !important' } }}
           >
-            {IMP_STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: 13 }}>{s}</MenuItem>)}
+            {IMP_STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: typescale.body.size }}>{s}</MenuItem>)}
           </Select>
         ) : (
           <StatusChip status={impKind(st)} label={st || '-'} />
@@ -172,11 +172,11 @@ function MemoRow({
             onClick={onToggle}
             aria-expanded={open}
             startIcon={open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-            sx={{ minWidth: 0, fontSize: 12, color: 'text.secondary', px: 1 }}
+            sx={{ minWidth: 0, fontSize: typescale.small.size, color: 'text.secondary', px: 1 }}
           >
             {open ? '접기' : '펼치기'}
           </Button>
-          <Button size="small" color="warning" onClick={onRemove} disabled={removing} sx={{ minWidth: 0, fontSize: 12, px: 1 }}>
+          <Button size="small" color="warning" onClick={onRemove} disabled={removing} sx={{ minWidth: 0, fontSize: typescale.small.size, px: 1 }}>
             메모 해제
           </Button>
         </Box>
@@ -184,7 +184,7 @@ function MemoRow({
       {open && (
         <Box sx={{ mt: 1 }}>
           {/* 1·2: 개선요청 내용 */}
-          <Box sx={{ fontSize: 13, color: 'text.secondary', lineHeight: 1.7 }}>
+          <Box sx={{ fontSize: typescale.body.size, color: 'text.secondary', lineHeight: 1.7 }}>
             {t.content ? <RichBodyView html={t.content} /> : '내용 없음'}
           </Box>
           {/* 3·4·5·6: 답글 +N · 목록 · 입력창 · 등록 (게시판과 동일 데이터/컴포넌트) */}
@@ -323,7 +323,7 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
       <Dialog open={!!statusDlg} onClose={() => savingStatusNum === null && setStatusDlg(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
         <DialogTitle>상태를 '{statusDlg?.status}'(으)로 변경할까요?</DialogTitle>
         <DialogContent>
-          <Box sx={{ fontSize: 13, color: 'text.secondary', mb: statusDlg && needsReason(statusDlg.status) ? 1.5 : 0 }}>「{statusDlg?.row.title}」</Box>
+          <Box sx={{ fontSize: typescale.body.size, color: 'text.secondary', mb: statusDlg && needsReason(statusDlg.status) ? 1.5 : 0 }}>「{statusDlg?.row.title}」</Box>
           {statusDlg && needsReason(statusDlg.status) && (
             <TextField
               autoFocus fullWidth multiline minRows={3}
@@ -375,8 +375,8 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
       })}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.75, py: 1, borderBottom: '1px solid', borderColor: (th) => alpha(th.palette.accent.amber, 0.18) }}>
-        <Box sx={(th) => ({ fontSize: 12, fontWeight: 800, color: th.palette.accentText.amber })}>이 화면에서 확인할 개선요청</Box>
-        <Button size="small" onClick={() => setOpen(false)} sx={{ minWidth: 0, fontSize: 12, color: 'text.secondary', px: 1 }}>접기</Button>
+        <Box sx={(th) => ({ fontSize: typescale.small.size, fontWeight: weight.heavy, color: th.palette.accentText.amber })}>이 화면에서 확인할 개선요청</Box>
+        <Button size="small" onClick={() => setOpen(false)} sx={{ minWidth: 0, fontSize: typescale.small.size, color: 'text.secondary', px: 1 }}>접기</Button>
       </Box>
       <Box sx={{ px: 1.75 }}>
         {memos.map((t) => (

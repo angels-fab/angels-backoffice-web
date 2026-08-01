@@ -32,7 +32,7 @@ import PushPinIcon from '@mui/icons-material/PushPin'
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { typescale, iconSize, radius, control, table } from '@/theme/tokens'
+import { typescale, iconSize, radius, control, table, weight } from '@/theme/tokens'
 import { nextFilterSelection } from '@/utils/filterSelect'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, statusTextColor, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableSx, useSnack, ConfirmDialog } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
@@ -763,7 +763,7 @@ export default function Improve() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: iconSize.action, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
                         {/* 제목은 14px + 주 톤으로 이미 식별자 — 굵기는 강조 상태에만 쓴다(전부 굵으면 신호가 사라짐) */}
-                        <Box component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: 500, color: 'text.primary' }}>{t.title}</Box>
+                        <Box component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.medium, color: 'text.primary' }}>{t.title}</Box>
                         {/* 제목 → 최근글 N칩 → 답글 +N칩 → 링크 순. 모두 줄어들지 않게 flexShrink:0 */}
                         {isNew && (
                           <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: 9.5, fontWeight: typescale.cardTitle.weight, lineHeight: 1 }}>N</Box>

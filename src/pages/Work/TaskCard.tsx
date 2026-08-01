@@ -3,7 +3,7 @@ import Typography from '@mui/material/Typography'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import { alpha } from '@mui/material/styles'
 import { AppCard, StatusChip } from '@/components/ds'
-import { iconSize } from '@/theme/tokens'
+import { iconSize, weight } from '@/theme/tokens'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
 import { W_STATUS, classify, taskTitle, catKind } from './workMeta'
@@ -40,7 +40,7 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
           <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accentText.purple', flexShrink: 0 }} />
-          <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600, color: 'text.primary' }}>{taskTitle(t)}</Typography>
+          <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: weight.semibold, color: 'text.primary' }}>{taskTitle(t)}</Typography>
           <Box sx={{ flexShrink: 0 }}><StatusChip status={catKind(t.cat)} label={t.cat || '미분류'} /></Box>
         </Box>
       </AppCard>

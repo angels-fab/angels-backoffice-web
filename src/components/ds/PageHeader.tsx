@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { alpha } from '@mui/material/styles'
 import type { ReactNode } from 'react'
-import { layout, radius } from '@/theme/tokens'
+import { layout, radius, typescale } from '@/theme/tokens'
 import { usePageImprovementMemo } from '@/components/PageImprovementMemo'
 
 export interface PageHeaderProps {
@@ -59,7 +59,7 @@ export default function PageHeader({ title, icon, subtitle, updatedAt, actions }
                 // 아이콘과 같은 강조색의 옅은 틴트로 두면 두 테마 모두에서 형태가 드러난다.
                 bgcolor: (t) => alpha(t.palette.primary.main, t.palette.mode === 'light' ? 0.1 : 0.16),
                 color: 'primary.main',
-                '& svg': { fontSize: 22 },
+                '& svg': { fontSize: typescale.pageTitle.size },
               }}
             >
               {icon}

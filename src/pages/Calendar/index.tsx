@@ -31,7 +31,7 @@ import ChipContent, { type ChipContentProps } from './ChipContent'
 import EventPopover, { type EventDetail } from './EventPopover'
 import CalEventWrite, { type CalDraft } from './CalEventWrite'
 import { updateCalEvent } from '@/api/calendar'
-import { iconSize, radius, control } from '@/theme/tokens'
+import { iconSize, radius, control, typescale, weight } from '@/theme/tokens'
 import AddIcon from '@mui/icons-material/Add'
 import { useRole } from '@/auth/role'
 
@@ -75,7 +75,7 @@ function renderEventContent(arg: EventContentArg) {
   // 새 일정 초안 막대(모달 열림 중 미리보기) — 단순 흰 글자 바
   if (arg.event.extendedProps.draft) {
     return (
-      <Box sx={{ px: '4px', fontSize: 11.5, fontWeight: 700, color: 'common.white', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+      <Box sx={{ px: '4px', fontSize: 11.5, fontWeight: weight.bold, color: 'common.white', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
         {arg.event.title}
       </Box>
     )
@@ -564,14 +564,14 @@ export default function Calendar() {
               <Box role="group" aria-label="기간 이동" sx={{ display: 'inline-flex', alignItems: 'stretch', height: 34, border: '1px solid', borderColor: 'divider', borderRadius: `${radius.button}px`, overflow: 'hidden', bgcolor: 'background.paper' }}>
                 <Box component="button" aria-label="이전" onClick={() => shift(-1)} sx={{ ...navBtn, width: 32 }}><ChevronLeftIcon sx={{ fontSize: iconSize.header }} /></Box>
                 <Box sx={sep} />
-                <Box component="button" onClick={goToday} sx={{ ...navBtn, px: '14px', fontSize: 13, fontWeight: 600 }}>오늘</Box>
+                <Box component="button" onClick={goToday} sx={{ ...navBtn, px: '14px', fontSize: typescale.body.size, fontWeight: weight.semibold }}>오늘</Box>
                 <Box sx={sep} />
                 <Box component="button" aria-label="다음" onClick={() => shift(1)} sx={{ ...navBtn, width: 32 }}><ChevronRightIcon sx={{ fontSize: iconSize.header }} /></Box>
               </Box>
             )
           })()}
 
-          <Typography component="span" sx={{ ml: '2px', fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+          <Typography component="span" sx={{ ml: '2px', fontSize: typescale.cardTitle.size, fontWeight: weight.bold, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
             {periodLabel}
           </Typography>
         </Box>
@@ -591,7 +591,7 @@ export default function Calendar() {
             borderColor: showWeekends ? 'primary.main' : 'divider',
             color: showWeekends ? 'primary.main' : 'text.secondary',
             bgcolor: showWeekends ? 'background.elevated' : 'background.paper',
-            fontSize: 13, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .12s',
+            fontSize: typescale.body.size, fontWeight: weight.semibold, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .12s',
           }}
         >
           {showWeekends ? '주말 숨기기' : '주말 보기'}
@@ -805,7 +805,7 @@ export default function Calendar() {
             첫 로드 실패(오류배너 표시 중·데이터 0)에는 '없어요' 안내가 모순이라 숨김(적대 리뷰 확정) */}
         {ready && !(error && allEvents.length === 0) && !draft && visibleCount === 0 && view !== 'agenda' && (
           <Box sx={{ position: 'absolute', left: 0, right: 0, top: '42%', display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: 4 }}>
-            <Box sx={{ px: 2, py: 1, borderRadius: `${radius.pill}px`, bgcolor: 'background.elevated', border: 1, borderColor: 'divider', fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>
+            <Box sx={{ px: 2, py: 1, borderRadius: `${radius.pill}px`, bgcolor: 'background.elevated', border: 1, borderColor: 'divider', fontSize: typescale.body.size, fontWeight: weight.semibold, color: 'text.secondary' }}>
               {selCats.length > 0 || selMembers.length > 0 || searchTrim
                 ? '조건에 맞는 일정이 없어요 — 필터·검색을 확인해 보세요'
                 : '이 기간에는 일정이 없어요'}

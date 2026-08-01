@@ -98,7 +98,7 @@ export default function StatusChip({
           // 6색 칩이 멀리서 회색 알약으로 뭉쳐 보였다(분류 신호가 죽음). 라벨은 .18 면 위에서도 4.5 통과.
           bgcolor: selected ? c : alpha(c, 0.18),
           borderColor: selected ? c : alpha(c, 0.6),
-          '& .MuiChip-icon': { color: 'inherit', fontSize: 16 },
+          '& .MuiChip-icon': { color: 'inherit', fontSize: typescale.cardTitle.size },
           // lineHeight:1 통일 + 글자 0.5px 하향 — 다른 칩과 동일 규격으로 한글 정중앙(실측)
           '& .MuiChip-label': { lineHeight: 1, transform: 'translateY(0.5px)' },
           ...(onClick && {

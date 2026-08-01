@@ -19,7 +19,7 @@ import AddIcon from '@mui/icons-material/Add'
 import HistoryIcon from '@mui/icons-material/History'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { typescale, iconSize, radius } from '@/theme/tokens'
+import { typescale, iconSize, radius, weight } from '@/theme/tokens'
 import { LoadingState } from '@/components/ds'
 import { inlineFieldSx } from '@/components/ds/fields'
 import {
@@ -152,7 +152,7 @@ export function MetricHistoryDialog({ open, equipment, onClose }: { open: boolea
               const label = (h.after?.label as string) || (h.before?.label as string) || h.metricKey
               return (
                 <Box key={h.id} sx={(th) => ({ display: 'flex', gap: 1, p: 0.9, borderRadius: `${radius.chip}px`, border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper' })}>
-                  <Box component="span" sx={(th) => ({ flex: 'none', alignSelf: 'flex-start', fontSize: typescale.caption.size, fontWeight: 700, px: '7px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: alpha(th.palette.primary.main, 0.12), color: 'primary.main' })}>{METRIC_ACTION_LABEL[h.action] ?? h.action}</Box>
+                  <Box component="span" sx={(th) => ({ flex: 'none', alignSelf: 'flex-start', fontSize: typescale.caption.size, fontWeight: weight.bold, px: '7px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: alpha(th.palette.primary.main, 0.12), color: 'primary.main' })}>{METRIC_ACTION_LABEL[h.action] ?? h.action}</Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Box sx={{ fontSize: typescale.body.size, fontWeight: typescale.emphasis.weight }}>{label}</Box>
                     <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary' }}>{diffText(h)}</Box>
@@ -197,7 +197,7 @@ export function ValueHistoryDialog({ open, equipment, defs, onClose }: { open: b
               const ds = diffs(h)
               return (
                 <Box key={h.id} sx={(th) => ({ display: 'flex', gap: 1, p: 0.9, borderRadius: `${radius.chip}px`, border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper' })}>
-                  <Box component="span" sx={(th) => ({ flex: 'none', alignSelf: 'flex-start', fontSize: typescale.caption.size, fontWeight: 700, px: '7px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: alpha(th.palette.warning.main, 0.14), color: 'warning.main' })}>{h.maker} {h.round}차</Box>
+                  <Box component="span" sx={(th) => ({ flex: 'none', alignSelf: 'flex-start', fontSize: typescale.caption.size, fontWeight: weight.bold, px: '7px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: alpha(th.palette.warning.main, 0.14), color: 'warning.main' })}>{h.maker} {h.round}차</Box>
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Box sx={{ fontSize: typescale.small.size, color: 'text.primary' }}>{ds.length ? ds.join(' · ') : '변경'}</Box>
                   </Box>

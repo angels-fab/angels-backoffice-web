@@ -4,6 +4,7 @@ import Typography from '@mui/material/Typography'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 import AppCard from './AppCard'
+import { typescale, weight } from '@/theme/tokens'
 
 export interface KpiCardProps {
   /** 큰 숫자(강조). 예: 20, "29" */
@@ -51,9 +52,9 @@ export default function KpiCard({
             // 숫자는 "글자"이므로 채움색(accent)이 아니라 글자용 값(accentText)을 쓴다 — 라이트에서 대비 확보
             color: (t) => t.palette.accentText[accentColor],
             opacity: 0.28,
-            fontSize: 28,
+            fontSize: typescale.display.size,
             display: 'flex',
-            '& svg': { fontSize: 28 },
+            '& svg': { fontSize: typescale.display.size },
           }}
         >
           {icon}
@@ -65,7 +66,7 @@ export default function KpiCard({
           component="span"
           sx={{
             fontSize: 34,
-            fontWeight: 800,
+            fontWeight: weight.heavy,
             lineHeight: 1,
             // 숫자는 "글자"이므로 채움색(accent)이 아니라 글자용 값(accentText)을 쓴다 — 라이트에서 대비 확보
             color: (t) => t.palette.accentText[accentColor],
@@ -74,13 +75,13 @@ export default function KpiCard({
           {value}
         </Typography>
         {unit && (
-          <Typography component="span" sx={{ fontSize: 15, fontWeight: 600, color: 'text.secondary' }}>
+          <Typography component="span" sx={{ fontSize: 15, fontWeight: weight.semibold, color: 'text.secondary' }}>
             {unit}
           </Typography>
         )}
       </Box>
       {/* 라벨 */}
-      <Typography sx={{ mt: 1, fontSize: 13, fontWeight: 600, color: 'text.primary' }}>{label}</Typography>
+      <Typography sx={{ mt: 1, fontSize: typescale.body.size, fontWeight: weight.semibold, color: 'text.primary' }}>{label}</Typography>
       {sub && (
         <Typography variant="caption" sx={{ display: 'block', mt: 0.25 }}>
           {sub}

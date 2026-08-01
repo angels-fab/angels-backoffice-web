@@ -7,7 +7,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import AddIcon from '@mui/icons-material/Add'
 import GroupsIcon from '@mui/icons-material/Groups'
 import { alpha } from '@mui/material/styles'
-import { iconSize, radius, typescale } from '@/theme/tokens'
+import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 import { inlineFieldSx } from '@/components/ds/fields'
 import type { AttendeeRow } from '@/api/events'
 
@@ -26,7 +26,7 @@ export default function AttendeeSection({ rows, user, isMember, isAdmin, busy, h
   return (
     <Box sx={{ mb: 1.5, borderTop: 1, borderColor: 'divider', pt: 1.25 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.8 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, color: 'text.disabled', fontSize: typescale.small.size, fontWeight: 700, letterSpacing: '.03em' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, color: 'text.disabled', fontSize: typescale.small.size, fontWeight: weight.bold, letterSpacing: '.03em' }}>
           <GroupsIcon sx={{ fontSize: iconSize.body }} /> 참석자 {rows.length}명
         </Box>
         {!hideSelfToggle && isMember && user && onToggleSelf && (

@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
-import { accent, radius, shadow } from '../../theme/tokens'
+import { accent, radius, shadow, typescale, weight } from '../../theme/tokens'
 import { catTextColor, toneOfColor } from './catMeta'
 
 /** 일정 상세 데이터 — 원본 제목 그대로(장소-목적 분리 안 함) + 시간 + 전체 해당자 + 분류. */
@@ -78,20 +78,20 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
         {/* 글자는 catTextColor(글자용 짝) — 채움색(catColor)을 그대로 쓰면 자기 틴트 위 1.8:1로 사라진다 */}
-        <Box component="span" sx={(th) => ({ px: '8px', py: '3px', borderRadius: `${radius.pill}px`, fontSize: 11, fontWeight: 800, color: catTextColor(th, toneOfColor(detail.catColor)), bgcolor: alpha(detail.catColor, 0.22) })}>
+        <Box component="span" sx={(th) => ({ px: '8px', py: '3px', borderRadius: `${radius.pill}px`, fontSize: typescale.caption.size, fontWeight: weight.heavy, color: catTextColor(th, toneOfColor(detail.catColor)), bgcolor: alpha(detail.catColor, 0.22) })}>
           {detail.catLabel}
         </Box>
         {detail.time && (
-          <Box component="span" sx={{ fontSize: 12, fontWeight: 700, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+          <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.bold, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
             {detail.time}
           </Box>
         )}
       </Box>
-      <Box sx={{ fontSize: 13, fontWeight: 700, lineHeight: 1.5, mb: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+      <Box sx={{ fontSize: typescale.body.size, fontWeight: weight.bold, lineHeight: 1.5, mb: 1, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
         {detail.title}
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1.25, rowGap: '4px', fontSize: 12, lineHeight: 1.5 }}>
-        <Box sx={{ color: 'text.disabled', fontWeight: 600 }}>해당자</Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1.25, rowGap: '4px', fontSize: typescale.small.size, lineHeight: 1.5 }}>
+        <Box sx={{ color: 'text.disabled', fontWeight: weight.semibold }}>해당자</Box>
         <Box sx={{ color: 'text.primary' }}>{detail.members.length ? detail.members.join(' · ') : '센터'}</Box>
       </Box>
       {locked && onEdit && (
@@ -101,7 +101,7 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
             type="button"
             onClick={onEdit}
             sx={{
-              font: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+              font: 'inherit', fontSize: typescale.small.size, fontWeight: weight.bold, cursor: 'pointer',
               px: 1.25, py: '5px', borderRadius: `${radius.chip}px`,
               color: 'accentText.blue', bgcolor: alpha(accent.blue, 0.14), border: `1px solid ${alpha(accent.blue, 0.4)}`,
               '&:hover': { bgcolor: alpha(accent.blue, 0.24) },

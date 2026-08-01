@@ -2,6 +2,7 @@ import { useAppSelector } from '@/store/hooks'
 import budgetMoneyImg from '@/assets/budgetimg-money.png'
 import budgetMapImg from '@/assets/budgetimg-map.png'
 import budgetBankImg from '@/assets/budgetimg-bank.png'
+import { typescale, weight } from '@/theme/tokens'
 
 const fitImg: React.CSSProperties = { width: '100%', height: '100%', objectFit: 'contain' }
 
@@ -45,7 +46,7 @@ export default function EqKpi() {
             <div className="kpi-bcard" style={{ background: 'var(--ink3)' }}>
               <div className="kpi-bcard-label" style={{ color: 'var(--text2)' }}>
                 국비 예산{' '}
-                <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>(예상)</span>
+                <span style={{ fontSize: typescale.caption.size, color: 'var(--text3)', fontWeight: weight.medium }}>(예상)</span>
               </div>
               <div className="kpi-bcard-num">{k(natFund)}</div>
               <div className="kpi-bcard-icon" style={{ height: '55%' }}>

@@ -25,7 +25,7 @@ import HistoryIcon from '@mui/icons-material/History'
 import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { iconSize, radius, shadow, typescale } from '@/theme/tokens'
+import { iconSize, radius, shadow, typescale, weight } from '@/theme/tokens'
 import { useSnack, LoadingState, ConfirmDialog } from '@/components/ds'
 import { inlineFieldSx } from '@/components/ds/fields'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
@@ -84,7 +84,7 @@ const roundChip = (active: boolean) => (th: Theme) => ({
 
 // 회차 칩 옆 '+' — 같은 장비+제조사의 다음 회차 등록(밴드 위 점선 알약)
 const plusChip = (th: Theme) => ({
-  fontSize: typescale.caption.size, fontWeight: 700, lineHeight: 1, px: '6px', py: '2.5px', borderRadius: `${radius.pill}px`,
+  fontSize: typescale.caption.size, fontWeight: weight.bold, lineHeight: 1, px: '6px', py: '2.5px', borderRadius: `${radius.pill}px`,
   cursor: 'pointer', fontFamily: 'inherit', color: th.palette.common.white, bgcolor: 'transparent',
   border: '1px dashed rgba(255,255,255,.6)', '&:hover': { bgcolor: 'rgba(255,255,255,.18)' },
 })
@@ -316,7 +316,7 @@ function PhotoCarousel({ photos, cover, onZoom, children }: {
                 <Box aria-hidden sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '44%', zIndex: 2, pointerEvents: 'none', background: SCRIM_GRAD }} />
                 <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, pointerEvents: 'none', px: 1.5, pb: '20px', display: 'flex', alignItems: 'flex-end', gap: 1 }}>
                   <Box sx={{ flex: 1, minWidth: 0, fontSize: typescale.body.size, lineHeight: 1.5, color: '#f0f4f9', textShadow: '0 1px 2px rgba(0,0,0,.55)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.caption || ''}</Box>
-                  {n > 1 && <Box sx={{ flex: 'none', fontSize: typescale.caption.size, fontWeight: 500, letterSpacing: '.04em', color: 'rgba(255,255,255,.8)', fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{i + 1} / {n}</Box>}
+                  {n > 1 && <Box sx={{ flex: 'none', fontSize: typescale.caption.size, fontWeight: weight.medium, letterSpacing: '.04em', color: 'rgba(255,255,255,.8)', fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{i + 1} / {n}</Box>}
                 </Box>
               </>
             )}
@@ -389,10 +389,10 @@ function ChipRow({ round, defs, defsAll, canEdit, onEditChip, onAddChip }: {
             ...(canEdit ? { cursor: 'pointer', transition: 'border-color .15s ease', '&:hover': { borderColor: th.palette.primary.main } } : {}),
           })}>
           {/* 가독성(2026-07-24): 라벨·단위·조건을 한 단계 키우고(11→12) 조건은 흐림→보조색으로 */}
-          <Box sx={{ fontSize: typescale.small.size, fontWeight: 500, color: 'text.secondary', lineHeight: 1.3 }}>{c.label}</Box>
+          <Box sx={{ fontSize: typescale.small.size, fontWeight: weight.medium, color: 'text.secondary', lineHeight: 1.3 }}>{c.label}</Box>
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-            <Box component="span" sx={{ fontSize: typescale.cardTitle.size, fontWeight: 700, color: 'text.primary', lineHeight: 1.25, fontVariantNumeric: 'tabular-nums' }}>{c.value}</Box>
-            {c.unit && <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: 500, color: 'text.secondary' }}>{c.unit}</Box>}
+            <Box component="span" sx={{ fontSize: typescale.cardTitle.size, fontWeight: weight.bold, color: 'text.primary', lineHeight: 1.25, fontVariantNumeric: 'tabular-nums' }}>{c.value}</Box>
+            {c.unit && <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.medium, color: 'text.secondary' }}>{c.unit}</Box>}
           </Box>
           {c.cond && (
             <Tooltip title={c.cond} placement="bottom-start" enterDelay={400}>
@@ -486,7 +486,7 @@ function MemoRow({ m, own, busy, onEdit, onDelete }: { m: DemoChatMsg; own: bool
   const save = async () => { try { await onEdit(body); setEditing(false) } catch { /* 스낵바는 상위에서 */ } }
   return (
     <Box sx={{ display: 'flex', gap: 1.25, py: 1.1, alignItems: 'flex-start', '& + &': { borderTop: 1, borderColor: 'divider' }, '&:hover .memo-act': { opacity: 1 } }}>
-      <Box aria-hidden sx={{ flex: 'none', width: 26, height: 26, borderRadius: '50%', bgcolor: c, color: 'common.white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: typescale.caption.size, fontWeight: 700, mt: '1px' }}>{(given(m.author) || m.author || '?').charAt(0)}</Box>
+      <Box aria-hidden sx={{ flex: 'none', width: 26, height: 26, borderRadius: '50%', bgcolor: c, color: 'common.white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: typescale.caption.size, fontWeight: weight.bold, mt: '1px' }}>{(given(m.author) || m.author || '?').charAt(0)}</Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         {editing ? (
           <Box>
@@ -500,13 +500,13 @@ function MemoRow({ m, own, busy, onEdit, onDelete }: { m: DemoChatMsg; own: bool
         ) : (
           <>
             {/* 구버전(제목 있는 카드) 호환 — 제목은 굵은 첫 줄로 */}
-            {m.title && <Box sx={{ fontSize: typescale.body.size, fontWeight: 600, lineHeight: 1.45, wordBreak: 'break-word' }}>{m.title}</Box>}
+            {m.title && <Box sx={{ fontSize: typescale.body.size, fontWeight: weight.semibold, lineHeight: 1.45, wordBreak: 'break-word' }}>{m.title}</Box>}
             {m.body && <Box sx={{ fontSize: typescale.body.size, lineHeight: 1.55, color: 'text.primary', wordBreak: 'break-word' }}><RichBodyView html={m.body} /></Box>}
           </>
         )}
       </Box>
       <Box sx={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 0.75, mt: '2px' }}>
-        <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: 500, color: c }}>{given(m.author) || m.author}</Box>
+        <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.medium, color: c }}>{given(m.author) || m.author}</Box>
         <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>{fmtDay(m.createdAt)}</Box>
         {own && !editing && (
           <Box className="memo-act" sx={{ display: 'flex', gap: 0.25, opacity: 0, transition: 'opacity .12s' }}>
@@ -532,8 +532,10 @@ function MemoStream({ memos, canPost, canModerate, user, busy, onPost, onEdit, o
   return (
     <Box sx={{ mt: 2, borderTop: 1, borderColor: 'divider', pt: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, mb: 0.25 }}>
-        <Box sx={{ fontSize: typescale.body.size, fontWeight: 800, letterSpacing: '.02em', color: 'text.secondary' }}>검토 메모</Box>
-        <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', opacity: 0.85 }}>{memos.length > 0 ? `${memos.length}건 · ` : ''}장비 공용(제조사 무관)</Box>
+        {/* 위 그룹 제목띠와 같은 성격의 소제목 — 한 단 낮춰 emphasis(14/600).
+            13/800 은 굵기로 크기를 때운 조합이었다. 설명의 opacity 도 보조톤으로 대체. */}
+        <Box sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.semibold, letterSpacing: '.02em', color: 'text.primary' }}>검토 메모</Box>
+        <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary' }}>{memos.length > 0 ? `${memos.length}건 · ` : ''}장비 공용(제조사 무관)</Box>
       </Box>
       {memos.map((m) => (
         <MemoRow key={m.id} m={m} own={ownOf(m)} busy={busy}
@@ -741,8 +743,8 @@ function LaneInfo({ r, defs, defsAll, canEdit, onEditChip, onAddChip, onSaveMeta
       {metaVisible && (
         <Box sx={{ mt: 0.75, fontSize: typescale.small.size, color: 'text.secondary', lineHeight: 1.6, display: 'flex', flexWrap: 'wrap', columnGap: 1.25, rowGap: 0 }}>
           {/* multiline 필수 — 폼이 여러 줄(\n)로 저장하는 필드라 한 줄 인풋이면 개행이 뭉개져 저장됨 */}
-          <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: 500 }}>샘플</Box><EditText text={r.sample} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { sample: v })} /></Box>
-          <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: 500 }}>조건</Box><EditText text={r.conditions} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { conditions: v })} /></Box>
+          <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: weight.medium }}>샘플</Box><EditText text={r.sample} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { sample: v })} /></Box>
+          <Box sx={{ display: 'inline-flex', gap: 0.5, minWidth: 0, maxWidth: '100%' }}><Box component="span" sx={{ flex: 'none', fontWeight: weight.medium }}>조건</Box><EditText text={r.conditions} canEdit={canEdit} multiline onCommit={(v) => onSaveMeta(r.id, { conditions: v })} /></Box>
         </Box>
       )}
       {/* 지표 칩박스 — 측정한 것만, 이 제조사 열 아래 */}
@@ -766,8 +768,8 @@ function MakerLane({ mg, sel, onSel, defs, defsAll, canEdit, onZoom, onAddRound,
     <Box sx={{ minWidth: 0 }}>
       {/* 색깔 밴드(제목행) — 제조사·모델 왼쪽 + 회차·날짜·첨부·도구 오른쪽(2026-07-24: 사진 위 오버레이에서 이동) */}
       <Box sx={(th) => ({ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5, rowGap: 0.25, px: 1.25, py: '4px', minHeight: 32, bgcolor: th.palette.primary.main, borderRadius: `${radius.chip}px ${radius.chip}px 0 0`, minWidth: 0 })}>
-        <Box sx={{ flex: '0 1 auto', minWidth: 0, fontSize: typescale.small.size, fontWeight: 700, color: 'common.white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {mg.maker}{mg.model ? <Box component="span" sx={{ opacity: 0.85, fontWeight: 500, ml: 0.5 }}>{mg.model}</Box> : null}
+        <Box sx={{ flex: '0 1 auto', minWidth: 0, fontSize: typescale.small.size, fontWeight: weight.bold, color: 'common.white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {mg.maker}{mg.model ? <Box component="span" sx={{ opacity: 0.85, fontWeight: weight.medium, ml: 0.5 }}>{mg.model}</Box> : null}
         </Box>
         <Box sx={{ flex: 1, minWidth: 4 }} />
         {/* 회차 칩 + '+'(다음 회차) */}
@@ -782,7 +784,7 @@ function MakerLane({ mg, sel, onSel, defs, defsAll, canEdit, onZoom, onAddRound,
           )}
         </Box>
         {/* 방문일 */}
-        {r.date && <Box sx={{ flex: 'none', fontSize: typescale.caption.size, fontWeight: 600, color: 'rgba(255,255,255,.85)', fontVariantNumeric: 'tabular-nums' }}>{fmtDate(r.date)}</Box>}
+        {r.date && <Box sx={{ flex: 'none', fontSize: typescale.caption.size, fontWeight: weight.semibold, color: 'rgba(255,255,255,.85)', fontVariantNumeric: 'tabular-nums' }}>{fmtDate(r.date)}</Box>}
         {/* 첨부파일 */}
         {r.files.length > 0 && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4, flex: 'none' }}>
@@ -878,8 +880,12 @@ function EquipGroup({ equipment, defs, defsAll, makers, messages, canEdit, canMo
     <Box sx={{ mb: 3, border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, bgcolor: 'background.paper', boxShadow: shadow.sm, overflow: 'hidden' }}>
       {/* 제목띠 — 장비명 + 지표편집·변경이력 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.75, py: '8px', bgcolor: 'background.elevated', color: 'text.primary' }}>
-        <Box sx={{ fontSize: typescale.emphasis.size, fontWeight: 800 }}>{equipment}</Box>
-        <Box sx={{ fontSize: typescale.caption.size, opacity: 0.8 }}>데모 기록 · 지표는 각 사 조건 기준</Box>
+        {/* 이 띠는 그룹 카드의 제목이라 사다리상 cardTitle(16/700). 구 14/800 은 크기가 모자란 걸
+            굵기로 때운 조합이라 작아 보였다(사용자 지적 2026-08-01).
+            설명은 caption(11)+opacity 대신 small(12)+보조톤 — 글자를 opacity 로 흐리게 하면
+            배경마다 실제 대비가 달라진다. */}
+        <Box sx={{ fontSize: typescale.cardTitle.size, fontWeight: weight.bold }}>{equipment}</Box>
+        <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary' }}>데모 기록 · 지표는 각 사 조건 기준</Box>
         <Box sx={{ flex: 1 }} />
         {canEdit && <Tooltip title="표준 지표 관리(자동완성 후보)"><IconButton size="small" aria-label="지표 편집" onClick={onEditMetrics} sx={{ p: '3px', color: 'text.secondary', '&:hover': { color: 'text.primary' } }}><TuneIcon sx={{ fontSize: iconSize.body }} /></IconButton></Tooltip>}
         <Tooltip title={latestValueChange ? `변경 이력 — 최근: ${latestValueChange.maker} · ${latestValueChange.changedBy}` : '변경 이력'} arrow>
@@ -903,7 +909,7 @@ function EquipGroup({ equipment, defs, defsAll, makers, messages, canEdit, canMo
           {makers.length === 1 && (
             // 1개사 — 2번 사진 자리 = 지표 패널(샘플·조건 + 칩박스)
             <Box sx={(th) => ({ minWidth: 0, alignSelf: 'stretch', p: 1.25, border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`, display: 'flex', flexDirection: 'column' })}>
-              <Box sx={{ fontSize: typescale.small.size, fontWeight: 700, color: 'text.secondary', mb: 0.25 }}>지표</Box>
+              <Box sx={{ fontSize: typescale.small.size, fontWeight: weight.bold, color: 'text.secondary', mb: 0.25 }}>지표</Box>
               <LaneInfo r={shown(makers[0])} defs={defs} defsAll={defsAll} canEdit={canEdit}
                 onEditChip={(round, chip) => setChipDlg({ round, mode: 'edit', chip })}
                 onAddChip={(round) => setChipDlg({ round, mode: 'add' })}

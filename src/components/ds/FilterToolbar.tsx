@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import { mergeSx } from './sxMerge'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
-import { layout, radius } from '@/theme/tokens'
+import { layout, radius, typescale, weight } from '@/theme/tokens'
 
 /**
  * FilterToolbar — 목록 페이지 상단 필터 바 표준 (박스 + 라벨 + 칩 + 검색 + 액션).
@@ -33,7 +33,7 @@ export interface FilterToolbarProps {
 }
 
 const LABEL_SX = {
-  fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none',
+  fontSize: typescale.caption.size, fontWeight: weight.bold, letterSpacing: '0.04em', color: 'text.disabled', flex: 'none',
 } as const
 
 export default function FilterToolbar({ label, children, search, actions, sx }: FilterToolbarProps) {

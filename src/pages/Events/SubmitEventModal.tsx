@@ -12,7 +12,7 @@ import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { CAT_COLOR, type EventCat } from './eventCard'
-import { radius, iconSize } from '@/theme/tokens'
+import { radius, iconSize, typescale, weight } from '@/theme/tokens'
 import { uploadSubmissionPoster, submitEvent } from '@/api/events'
 import { FormField, DateField } from '@/components/ds'
 import { inlineFieldSx } from '@/components/ds/fields'
@@ -26,7 +26,7 @@ const SUMMARY_PRESETS: Record<EventCat, string[]> = {
 }
 const presetRows = (c: EventCat) => SUMMARY_PRESETS[c].map((l) => ({ label: l, value: '' }))
 const field = (th: Theme) => ({ ...inlineFieldSx(th), py: '8px', width: '100%' })
-const label = { fontSize: 12, fontWeight: 700, color: 'text.disabled', letterSpacing: '.02em', mb: 0.4 }
+const label = { fontSize: typescale.small.size, fontWeight: weight.bold, color: 'text.disabled', letterSpacing: '.02em', mb: 0.4 }
 
 /**
  * 새 행사 '신청' 팝업 — 팀원이 최소 정보 + URL + 포스터를 올려 제출(대기 상태).
@@ -83,7 +83,7 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
     <Dialog open={open} onClose={close} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: `${radius.modal}px` } } }}>
       <Box sx={{ position: 'relative', p: { xs: 1.5, sm: 2 } }}>
         <IconButton onClick={close} aria-label="닫기" size="small" sx={{ position: 'absolute', top: 8, right: 8, zIndex: 5, color: 'text.secondary' }}><CloseIcon fontSize="small" /></IconButton>
-        <Box sx={{ fontSize: 16, fontWeight: 800, color: 'text.primary', mb: 1.5 }}>새 행사 신청</Box>
+        <Box sx={{ fontSize: typescale.cardTitle.size, fontWeight: weight.heavy, color: 'text.primary', mb: 1.5 }}>새 행사 신청</Box>
 
         {/* 포스터 첨부 영역 — 드래그&드롭 또는 클릭. 좌상단 분류(학술/교육/전시) 선택. */}
         <input ref={inputRef} type="file" accept="image/*,application/pdf" hidden onChange={(e) => pickFile(e.target.files?.[0])} />
@@ -104,12 +104,12 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
           ) : file ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, color: 'text.secondary', py: 3 }}>
               <PictureAsPdfIcon sx={{ fontSize: 40, color: '#e2453c' }} />
-              <Box sx={{ fontSize: 13 }}>{file.name}</Box>
+              <Box sx={{ fontSize: typescale.body.size }}>{file.name}</Box>
             </Box>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.8, color: 'text.disabled', py: 4, px: 2, textAlign: 'center' }}>
               <UploadFileIcon sx={{ fontSize: 34 }} />
-              <Box sx={{ fontSize: 13 }}>포스터 이미지(또는 PDF)를 여기로 끌어오거나 클릭해서 첨부</Box>
+              <Box sx={{ fontSize: typescale.body.size }}>포스터 이미지(또는 PDF)를 여기로 끌어오거나 클릭해서 첨부</Box>
             </Box>
           )}
           {/* 좌상단 분류 선택 칩 — 클릭이 파일선택으로 번지지 않게 정지 */}
@@ -124,7 +124,7 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
                   onClick={() => chooseCat(c)}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); chooseCat(c) } }}
                   sx={{
-                    fontSize: 12, fontWeight: 800, px: '10px', py: '5px', borderRadius: `${radius.pill}px`, cursor: 'pointer', userSelect: 'none',
+                    fontSize: typescale.small.size, fontWeight: weight.heavy, px: '10px', py: '5px', borderRadius: `${radius.pill}px`, cursor: 'pointer', userSelect: 'none',
                     border: `1.5px solid ${color}`,
                     ...(on ? { bgcolor: color, color: 'common.white' } : { bgcolor: 'rgba(0,0,0,.5)', color: 'common.white' }),
                   }}
@@ -172,7 +172,7 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
             {summary.map((r, i) => (
               <Box key={i} sx={{ display: 'flex', gap: 0.75, alignItems: 'center' }}>
-                <Box sx={{ width: 92, flex: 'none', fontSize: 13, fontWeight: 700, color: 'text.secondary', textAlign: 'right', pr: 0.5, whiteSpace: 'nowrap' }}>{r.label}</Box>
+                <Box sx={{ width: 92, flex: 'none', fontSize: typescale.body.size, fontWeight: weight.bold, color: 'text.secondary', textAlign: 'right', pr: 0.5, whiteSpace: 'nowrap' }}>{r.label}</Box>
                 <Box sx={{ flex: 1 }}>
                   <FormField variant="inline" value={r.value} onChange={(v) => setSum(i, { value: v })} placeholder={`${r.label} 내용`} />
                 </Box>

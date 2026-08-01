@@ -17,7 +17,7 @@ import TouchAppIcon from '@mui/icons-material/TouchApp'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import DownloadIcon from '@mui/icons-material/Download'
 import CheckIcon from '@mui/icons-material/Check'
-import { iconSize, radius, typescale, domain } from '@/theme/tokens'
+import { iconSize, radius, typescale, domain, weight } from '@/theme/tokens'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
 import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -44,20 +44,20 @@ function EventCrop({ state }: { state: 'before' | 'after' }) {
     <Box sx={{ position: 'relative', height: 86, borderRadius: `${radius.card}px`, overflow: 'hidden', background: domain.events.grad.blue, border: 1, borderColor: 'divider' }}>
       {/* 좌상단 상태 pill(예정=앰버 점) · 우상단 참석 버튼 — 실제 카드와 동일 문법 */}
       <Box sx={{ position: 'absolute', top: 8, left: 8, right: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5 }}>
-        <Box sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: 10, fontWeight: 700, px: '8px', height: 20, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', color: 'common.white', flexShrink: 0, '& .dot': { width: 7, height: 7, borderRadius: radius.circle, bgcolor: th.palette.accent.amber } })}>
+        <Box sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: 10, fontWeight: weight.bold, px: '8px', height: 20, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', color: 'common.white', flexShrink: 0, '& .dot': { width: 7, height: 7, borderRadius: radius.circle, bgcolor: th.palette.accent.amber } })}>
           <Box component="span" className="dot" />예정 D-12
         </Box>
         <Box
           component="span"
           sx={{
             display: 'inline-flex', alignItems: 'center', gap: '3px', height: 20, px: '8px',
-            borderRadius: `${radius.pill}px`, fontSize: 10, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+            borderRadius: `${radius.pill}px`, fontSize: 10, fontWeight: weight.bold, whiteSpace: 'nowrap', flexShrink: 0,
             ...(after
               ? { bgcolor: '#16a34a', color: 'common.white', border: '1px solid #16a34a' }
               : { bgcolor: 'rgba(0,0,0,.42)', color: '#c9f4dc', border: '1px solid rgba(52,211,153,.7)' }),
           }}
         >
-          {after && <CheckIcon sx={{ fontSize: 12 }} />}참석 예정
+          {after && <CheckIcon sx={{ fontSize: typescale.small.size }} />}참석 예정
         </Box>
       </Box>
       {/* 전 상태: 버튼을 가리키는 탭 손가락 */}
@@ -65,7 +65,7 @@ function EventCrop({ state }: { state: 'before' | 'after' }) {
         <TouchAppIcon sx={{ position: 'absolute', top: 26, right: 14, fontSize: iconSize.header, color: 'common.white', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))' }} />
       )}
       {/* 하단 제목 자리(실카드의 제목 오버레이 축약) */}
-      <Box sx={{ position: 'absolute', left: 10, right: 10, bottom: 8, fontSize: 10, fontWeight: 700, color: 'common.white', opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <Box sx={{ position: 'absolute', left: 10, right: 10, bottom: 8, fontSize: 10, fontWeight: weight.bold, color: 'common.white', opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         ISPSA 2026 국제심포지엄
       </Box>
     </Box>
@@ -98,7 +98,7 @@ function WorkAttachDemo() {
     <Box sx={{ border: `1px solid ${c(0.24)}`, bgcolor: c(0.055), borderRadius: `${radius.card}px`, overflow: 'hidden' }}>
       {/* 제목줄(축약) */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.75, bgcolor: c(0.09), borderBottom: `1px solid ${c(0.14)}` }}>
-        <Box component="span" sx={(th) => ({ fontSize: 10, fontWeight: 600, px: '7px', py: '2px', borderRadius: `${radius.chip}px`, color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.16), border: `1px solid ${alpha(th.palette.accent.blue, 0.35)}` })}>회의</Box>
+        <Box component="span" sx={(th) => ({ fontSize: 10, fontWeight: weight.semibold, px: '7px', py: '2px', borderRadius: `${radius.chip}px`, color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.16), border: `1px solid ${alpha(th.palette.accent.blue, 0.35)}` })}>회의</Box>
         <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>클린룸 공조 설계 검토회의</Box>
       </Box>
       {/* 본문(축약) */}
@@ -140,7 +140,7 @@ export default function WhatsNewDialog() {
   return (
     <Dialog open={open} onClose={() => setDismissed(true)} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.25, pb: 1 }}>
-        <AutoAwesomeIcon sx={{ color: 'primary.main', fontSize: 22 }} />
+        <AutoAwesomeIcon sx={{ color: 'primary.main', fontSize: typescale.pageTitle.size }} />
         새로워진 포털 — 새 기능 안내
       </DialogTitle>
       <DialogContent sx={{ pb: 1 }}>

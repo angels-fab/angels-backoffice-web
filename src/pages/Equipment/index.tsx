@@ -42,7 +42,7 @@ import EquipmentTabs from './EquipmentTabs'
 import DemoResults from './DemoResults'
 import { NameWithQty, codeRange } from './batchUtil'
 import { useTableSort, sortRows, SortHeadCell } from './sortable'
-import { iconSize, layout, radius, shadow, typescale, control } from '@/theme/tokens'
+import { iconSize, layout, radius, shadow, typescale, control, weight } from '@/theme/tokens'
 
 const GANTT_NAME_W = 150 // 장비명 열(축소) — 나머지는 간트가 가변폭으로 채움(가로 스크롤 없음)
 // 가변폭 간트에서 반월 1칸의 실제 픽셀폭 = 간트영역 폭 / (월수*2). 드래그/리사이즈 스냅 기준.
@@ -73,8 +73,8 @@ const PROJ_COLS: { key: ProjCol; label: string; align: 'left' | 'center' | 'righ
   { key: 'price', label: '총 도입금액', align: 'right' },
 ]
 /** 구 `.eq-ledger .lg-code` / `.lg-primary`(index.css)를 sx로 옮긴 값 — 화면값 그대로 보존 */
-const codeCellSx = { color: 'text.secondary', fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontWeight: 500, whiteSpace: 'nowrap' } as const
-const nameCellSx = { color: 'text.primary', fontWeight: 500, fontSize: typescale.emphasis.size, whiteSpace: 'nowrap' } as const
+const codeCellSx = { color: 'text.secondary', fontFamily: '"IBM Plex Mono", ui-monospace, monospace', fontWeight: weight.medium, whiteSpace: 'nowrap' } as const
+const nameCellSx = { color: 'text.primary', fontWeight: weight.medium, fontSize: typescale.emphasis.size, whiteSpace: 'nowrap' } as const
 const projAccessor = (b: Batch, c: ProjCol): string | number | null => {
   switch (c) {
     case 'code': return b.g.codes[0] || null
@@ -775,7 +775,7 @@ export default function Equipment() {
               <Button
                 size="small" variant={editMode ? 'contained' : 'outlined'} startIcon={<EditCalendarIcon sx={{ fontSize: iconSize.body }} />}
                 onClick={() => (editMode ? requestExitEdit() : startEditMode())}
-                sx={{ flexShrink: 0, py: 0.4, fontSize: 13, color: editMode ? undefined : 'text.secondary', borderColor: 'divider' }}
+                sx={{ flexShrink: 0, py: 0.4, fontSize: typescale.body.size, color: editMode ? undefined : 'text.secondary', borderColor: 'divider' }}
               >
                 {editMode ? '편집 종료' : '일정 편집'}
               </Button>
@@ -801,9 +801,9 @@ export default function Equipment() {
             {/* 헤더 */}
             <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
               <Box sx={{ width: GANTT_NAME_W, flexShrink: 0, px: 1.25, py: 0.75, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5, borderRight: 1, borderColor: 'divider' }}>
-                <Typography sx={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.02em', color: 'text.disabled', whiteSpace: 'nowrap' }}>장비</Typography>
+                <Typography sx={{ fontSize: 10, fontWeight: weight.bold, letterSpacing: '0.02em', color: 'text.disabled', whiteSpace: 'nowrap' }}>장비</Typography>
                 {todayFrac >= 0 && (
-                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, fontSize: 9, fontWeight: 600, color: 'primary.main' }}>
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, fontSize: 9, fontWeight: weight.semibold, color: 'primary.main' }}>
                     <Box sx={{ width: 2, height: 11, borderRadius: 1, bgcolor: 'primary.main' }} /> 오늘
                   </Box>
                 )}
@@ -850,11 +850,11 @@ export default function Equipment() {
             {stageBoard.map((col) => (
               <Box key={col.label} sx={{ minHeight: 360, p: 1, border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`, bgcolor: 'background.default' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, color: 'text.secondary' }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 700, color: 'text.primary' }}>{col.label}</Typography>
-                  <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{col.items.length}건</Typography>
+                  <Typography sx={{ fontSize: typescale.small.size, fontWeight: weight.bold, color: 'text.primary' }}>{col.label}</Typography>
+                  <Typography sx={{ fontSize: typescale.small.size, color: 'text.secondary' }}>{col.items.length}건</Typography>
                 </Box>
                 {col.items.length === 0 ? (
-                  <Typography sx={{ mt: 4, textAlign: 'center', color: 'text.disabled', fontSize: 11 }}>해당 장비 없음</Typography>
+                  <Typography sx={{ mt: 4, textAlign: 'center', color: 'text.disabled', fontSize: typescale.caption.size }}>해당 장비 없음</Typography>
                 ) : (
                   col.items.map(({ g, info }, i) => (
                     <Box
@@ -866,7 +866,7 @@ export default function Equipment() {
                       <Box sx={{ mb: 0.5 }}>
                         <NameWithQty name={g.name} count={g.count} fontSize={14} />
                       </Box>
-                      <Typography sx={{ fontSize: 12, color: 'text.primary' }}>
+                      <Typography sx={{ fontSize: typescale.small.size, color: 'text.primary' }}>
                         {g.mgr || '미지정'}{info.dueMonth ? ` · ${info.dueMonth}` : ''}{g.variantNames.length ? ` · ${g.variantNames.join('/')}` : ''}
                       </Typography>
                     </Box>
@@ -901,7 +901,7 @@ export default function Equipment() {
                       <DataCell align="left" title sx={nameCellSx}>
                         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
                           <NameWithQty name={g.name} count={g.count} fontSize={14} />
-                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: 400, fontSize: typescale.small.size, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
+                          {g.variantNames.length ? <Box component="span" sx={{ color: 'text.secondary', fontWeight: weight.regular, fontSize: typescale.small.size, whiteSpace: 'nowrap' }}>{g.variantNames.join('/')}</Box> : null}
                         </Box>
                       </DataCell>
                       <DataCell label="담당자">{g.mgr || '-'}</DataCell>
@@ -988,10 +988,10 @@ function PendingConfirm({ p, onApply, onCancel }: { p: PendingChange; onApply: (
         boxShadow: shadow.md, p: 1, minWidth: 150,
       }}
     >
-      <Typography sx={{ fontSize: 13, fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
+      <Typography sx={{ fontSize: typescale.body.size, fontWeight: weight.bold, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
         {p.stageName ? `${p.stageName}  ` : ''}<Box component="span" sx={{ color: 'primary.main' }}>{p.delta}</Box>
       </Typography>
-      <Typography sx={{ fontSize: 12, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', mt: 0.25 }}>
+      <Typography sx={{ fontSize: typescale.small.size, color: 'text.secondary', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', mt: 0.25 }}>
         {p.before} → {p.after}{p.qty > 1 ? `  (${p.qty}대)` : ''}
       </Typography>
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 0.5 }}>

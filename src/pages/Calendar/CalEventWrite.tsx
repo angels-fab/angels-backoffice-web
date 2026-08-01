@@ -33,7 +33,7 @@ import { useRole } from '@/auth/role'
 import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { iconSize, radius } from '@/theme/tokens'
+import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 import { ConfirmDialog } from '@/components/ds'
 import { todaySeoul } from '@/utils/date'
 
@@ -182,13 +182,13 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
   return (
     <Box sx={{ bgcolor: 'background.elevated', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, p: '10px 12px 8px', width: 306, maxWidth: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: '2px', pb: 0.75 }}>
-        <IconButton size="small" aria-label="이전 달" onClick={() => move(-1)} sx={{ color: 'text.secondary' }}><ChevronLeftIcon sx={{ fontSize: 18 }} /></IconButton>
-        <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{y}년 {m}월</Typography>
-        <IconButton size="small" aria-label="다음 달" onClick={() => move(1)} sx={{ color: 'text.secondary' }}><ChevronRightIcon sx={{ fontSize: 18 }} /></IconButton>
+        <IconButton size="small" aria-label="이전 달" onClick={() => move(-1)} sx={{ color: 'text.secondary' }}><ChevronLeftIcon sx={{ fontSize: typescale.sectionTitle.size }} /></IconButton>
+        <Typography sx={{ fontSize: typescale.body.size, fontWeight: weight.bold }}>{y}년 {m}월</Typography>
+        <IconButton size="small" aria-label="다음 달" onClick={() => move(1)} sx={{ color: 'text.secondary' }}><ChevronRightIcon sx={{ fontSize: typescale.sectionTitle.size }} /></IconButton>
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
         {WEEKDAYS.map((w, i) => (
-          <Box key={w} sx={{ fontSize: 10.5, fontWeight: 700, textAlign: 'center', pb: '5px', color: i === 0 ? 'error.main' : i === 6 ? 'primary.main' : 'text.disabled' }}>{w}</Box>
+          <Box key={w} sx={{ fontSize: 10.5, fontWeight: weight.bold, textAlign: 'center', pb: '5px', color: i === 0 ? 'error.main' : i === 6 ? 'primary.main' : 'text.disabled' }}>{w}</Box>
         ))}
         {Array.from({ length: firstDow }, (_, i) => <Box key={`b${i}`} />)}
         {Array.from({ length: days }, (_, i) => {
@@ -225,7 +225,7 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
                 fontSize: 12.5, fontVariantNumeric: 'tabular-nums', borderRadius: '50%',
                 color: 'text.secondary',
                 ...(key === today ? { boxShadow: (th) => `inset 0 0 0 1px ${th.palette.primary.main}` } : null),
-                ...((isStart || isEnd) && start ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: 700 } : null),
+                ...((isStart || isEnd) && start ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: weight.bold } : null),
               }}>
                 {d}
               </Box>
@@ -233,9 +233,9 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
           )
         })}
       </Box>
-      <Box sx={{ fontSize: 11, color: 'text.disabled', textAlign: 'center', pt: '7px', mt: '4px', borderTop: 1, borderColor: 'divider' }}>
+      <Box sx={{ fontSize: typescale.caption.size, color: 'text.disabled', textAlign: 'center', pt: '7px', mt: '4px', borderTop: 1, borderColor: 'divider' }}>
         {picking
-          ? <>종료일을 누르세요 <Box component="span" sx={{ color: 'primary.main', fontWeight: 700 }}>(같은 날 = 하루)</Box></>
+          ? <>종료일을 누르세요 <Box component="span" sx={{ color: 'primary.main', fontWeight: weight.bold }}>(같은 날 = 하루)</Box></>
           : n > 1 ? `${n}일 일정 — 다시 누르면 새로 선택` : '하루 일정 — 다시 누르면 새로 선택'}
       </Box>
     </Box>
@@ -254,7 +254,7 @@ function SummaryChip({ label, active, ariaLabel, onClick }: { label: ReactNode; 
       sx={(th) => ({
         display: 'inline-flex', alignItems: 'center', gap: 0.75, fontFamily: 'inherit', cursor: 'pointer',
         bgcolor: 'background.elevated', border: 1, borderColor: active ? 'primary.main' : 'divider',
-        borderRadius: `${radius.chip}px`, px: 1.5, py: '6px', fontSize: 13, fontWeight: 600, color: 'text.primary',
+        borderRadius: `${radius.chip}px`, px: 1.5, py: '6px', fontSize: typescale.body.size, fontWeight: weight.semibold, color: 'text.primary',
         whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', transition: 'border-color .15s, box-shadow .15s',
         ...(active ? { boxShadow: `0 0 0 3px ${alpha(th.palette.primary.main, 0.22)}` } : null),
         '&:hover': { borderColor: active ? 'primary.main' : th.palette.text.disabled },
@@ -283,7 +283,7 @@ function TimeColumn({ label, value, onPick }: { label: string; value: string; on
   }, []) // 팝업이 열릴 때 1회만 — 이후 선택은 스크롤 위치 유지
   return (
     <Box>
-      <Typography variant="caption" sx={{ display: 'block', color: 'text.disabled', fontWeight: 700, textAlign: 'center', pb: 0.5 }}>{label}</Typography>
+      <Typography variant="caption" sx={{ display: 'block', color: 'text.disabled', fontWeight: weight.bold, textAlign: 'center', pb: 0.5 }}>{label}</Typography>
       <Box ref={listRef} data-timelist="" sx={{ position: 'relative', width: 88, height: 216, overflowY: 'auto', overscrollBehavior: 'contain', borderRadius: `${radius.input}px` }}>
         {opts.map((t) => {
           const on = t === value
@@ -296,9 +296,9 @@ function TimeColumn({ label, value, onPick }: { label: string; value: string; on
               aria-pressed={on}
               sx={{
                 display: 'block', width: '100%', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                py: '5px', fontSize: 13, fontVariantNumeric: 'tabular-nums', textAlign: 'center', borderRadius: `${radius.input}px`,
+                py: '5px', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums', textAlign: 'center', borderRadius: `${radius.input}px`,
                 ...(on
-                  ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: 700 }
+                  ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: weight.bold }
                   : { bgcolor: 'transparent', color: 'text.secondary', '&:hover': { bgcolor: 'action.hover', color: 'text.primary' } }),
               }}
             >
@@ -575,7 +575,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       >
         {/* 헤더 — 모드 캡션(작게) + 닫기. 취소·저장은 하단 유지(사용자 확정 — 헤더 이동 금지) */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-          <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: 700, letterSpacing: '.06em' }}>
+          <Typography variant="caption" sx={{ color: 'text.disabled', fontWeight: weight.bold, letterSpacing: '.06em' }}>
             {mode === 'add' ? '일정 추가' : '일정 수정'}
           </Typography>
           <IconButton onClick={onClose} disabled={busy} aria-label="닫기" size="small" sx={{ ml: 'auto', color: 'text.secondary' }}>
@@ -592,7 +592,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           fullWidth
           inputProps={{ 'aria-label': '제목' }}
           sx={{
-            fontSize: 19, fontWeight: 700, pb: '6px',
+            fontSize: 19, fontWeight: weight.bold, pb: '6px',
             borderBottom: '2px solid', borderColor: 'divider', borderRadius: 0,
             transition: 'border-color .15s',
             '&.Mui-focused': { borderColor: 'primary.main' },
@@ -617,7 +617,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 title={name}
                 sx={{
                   width: 28, height: 28, borderRadius: '50%', border: 'none', cursor: 'pointer',
-                  fontFamily: 'inherit', fontSize: 11, fontWeight: 700, lineHeight: 1,
+                  fontFamily: 'inherit', fontSize: typescale.caption.size, fontWeight: weight.bold, lineHeight: 1,
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background .15s, box-shadow .15s, color .15s',
                   ...(on
@@ -662,7 +662,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 <Icon />
                 <Box component="span" sx={{
                   maxWidth: on ? 88 : 0, opacity: on ? 1 : 0, ml: on ? '5px' : 0,
-                  overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 11.5, fontWeight: 700, color: 'text.primary',
+                  overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 11.5, fontWeight: weight.bold, color: 'text.primary',
                   transition: 'max-width .24s ease, opacity .18s ease, margin-left .24s ease',
                 }}>
                   {CAT_META[c].label}
@@ -676,7 +676,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, mt: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
             <SummaryChip
-              label={<><AccessTimeIcon sx={{ fontSize: 14, color: 'text.disabled', mr: '5px' }} />{rangeLabel}</>}
+              label={<><AccessTimeIcon sx={{ fontSize: typescale.emphasis.size, color: 'text.disabled', mr: '5px' }} />{rangeLabel}</>}
               active={!!calAnchor}
               ariaLabel="기간 선택"
               onClick={(e) => { const el = e.currentTarget; setCalAnchor((a) => (a ? null : el)); setTimeAnchor(null); setRepeatAnchor(null); setPicking(false) }}
@@ -699,7 +699,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                 display: 'inline-flex', alignItems: 'center', fontFamily: 'inherit', cursor: 'pointer',
                 bgcolor: allDay ? alpha(th.palette.primary.main, 0.18) : 'transparent',
                 border: 1, borderColor: allDay ? 'primary.main' : 'divider',
-                borderRadius: `${radius.chip}px`, px: 1.25, py: '6px', fontSize: 13, fontWeight: 600,
+                borderRadius: `${radius.chip}px`, px: 1.25, py: '6px', fontSize: typescale.body.size, fontWeight: weight.semibold,
                 color: allDay ? 'text.primary' : 'text.disabled', whiteSpace: 'nowrap',
                 transition: 'border-color .15s, color .15s, background-color .15s',
                 '&:hover': { borderColor: allDay ? 'primary.main' : th.palette.text.disabled },
@@ -757,7 +757,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
             {mode === 'add' && (
               <SummaryChip
-                label={<><RepeatIcon sx={{ fontSize: 14, color: 'text.disabled', mr: '5px' }} />{repeatOptions(date).find((o) => o.value === repeat)?.label ?? '반복 안 함'}</>}
+                label={<><RepeatIcon sx={{ fontSize: typescale.emphasis.size, color: 'text.disabled', mr: '5px' }} />{repeatOptions(date).find((o) => o.value === repeat)?.label ?? '반복 안 함'}</>}
                 active={!!repeatAnchor}
                 ariaLabel="반복"
                 onClick={(e) => { const el = e.currentTarget; setRepeatAnchor((a) => (a ? null : el)); setCalAnchor(null); setTimeAnchor(null); setPicking(false) }}
@@ -765,14 +765,14 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
             )}
             {/* 장소 — 대시 보더 칩형 입력(남는 폭 채움) */}
             <Box sx={{ flex: 1, minWidth: 110, display: 'flex', alignItems: 'center', gap: '5px', border: '1px dashed', borderColor: 'divider', borderRadius: `${radius.chip}px`, px: 1.25, py: '5px', '&:focus-within': { borderColor: 'primary.main', borderStyle: 'solid' } }}>
-              <PlaceOutlinedIcon sx={{ fontSize: 14, color: 'text.disabled', flex: 'none' }} />
+              <PlaceOutlinedIcon sx={{ fontSize: typescale.emphasis.size, color: 'text.disabled', flex: 'none' }} />
               <InputBase
                 value={loc}
                 onChange={(e) => setLoc(e.target.value)}
                 placeholder="장소 추가"
                 fullWidth
                 inputProps={{ 'aria-label': '장소' }}
-                sx={{ fontSize: 13, p: 0, '& input': { p: 0 }, '& input::placeholder': { color: 'text.disabled', opacity: 1 } }}
+                sx={{ fontSize: typescale.body.size, p: 0, '& input': { p: 0 }, '& input::placeholder': { color: 'text.disabled', opacity: 1 } }}
               />
             </Box>
           </Box>
@@ -798,9 +798,9 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                             }}
                             sx={{
                               display: 'block', width: '100%', textAlign: 'left', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                              px: 1.25, py: '7px', fontSize: 13, whiteSpace: 'nowrap', borderRadius: `${radius.input}px`,
+                              px: 1.25, py: '7px', fontSize: typescale.body.size, whiteSpace: 'nowrap', borderRadius: `${radius.input}px`,
                               ...(on
-                                ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: 700 }
+                                ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: weight.bold }
                                 : { bgcolor: 'transparent', color: 'text.primary', '&:hover': { bgcolor: 'action.hover' } }),
                             }}
                           >

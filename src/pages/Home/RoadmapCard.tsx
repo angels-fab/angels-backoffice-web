@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import { alpha } from '@mui/material/styles'
 import { ROADMAP_STEPS, type RoadmapStatus } from '@/constants/roadmap'
-import { domain, radius, iconSize } from '@/theme/tokens'
+import { domain, radius, iconSize, typescale, weight } from '@/theme/tokens'
 
 /**
  * FAB 구축 로드맵 — Claude Design 시안 "FAB Construction Roadmap" 재현.
@@ -127,24 +127,24 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
           <TrendingUpIcon fontSize="inherit" />
         </Box>
         <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
-          <Box sx={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.4px', lineHeight: 1.2 }}>
+          <Box sx={{ fontSize: typescale.pageTitle.size, fontWeight: weight.heavy, color: 'var(--text)', letterSpacing: '-0.4px', lineHeight: 1.2 }}>
             FAB 구축 로드맵
           </Box>
-          <Box sx={{ fontSize: 13, color: 'var(--text2)', mt: '4px' }}>
+          <Box sx={{ fontSize: typescale.body.size, color: 'var(--text2)', mt: '4px' }}>
             GIST 첨단AI반도체팹센터 구축 단계별 진행 현황
           </Box>
         </Box>
         {showLegend && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '0 0 auto' }}>
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: 'var(--text2)' }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: typescale.small.size, color: 'var(--text2)' }}>
               <LegendDot color={domain.roadmap.done} />
               완료
             </Box>
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: 'var(--text2)' }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: typescale.small.size, color: 'var(--text2)' }}>
               <LegendDot color={domain.roadmap.current} ring={`0 0 0 3px ${alpha(domain.roadmap.current, 0.22)}`} />
               진행중
             </Box>
-            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: 12, color: 'var(--text2)' }}>
+            <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: typescale.small.size, color: 'var(--text2)' }}>
               <LegendDot color="var(--ink3)" border="1.5px solid var(--border)" />
               예정
             </Box>
@@ -236,8 +236,8 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
                       sx={{
                         display: 'inline-block',
                         whiteSpace: 'nowrap',
-                        fontSize: 11,
-                        fontWeight: 700,
+                        fontSize: typescale.caption.size,
+                        fontWeight: weight.bold,
                         p: '3px 10px',
                         borderRadius: '999px',
                         letterSpacing: '0.2px',
@@ -253,8 +253,8 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
                   {/* 제목 */}
                   <Box
                     sx={{
-                      fontSize: 16,
-                      fontWeight: 700,
+                      fontSize: typescale.cardTitle.size,
+                      fontWeight: weight.bold,
                       color: 'var(--text)',
                       mt: showBadges ? '9px' : '15px',
                       lineHeight: 1.3,
@@ -265,7 +265,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
                   </Box>
 
                   {/* 기간 */}
-                  <Box sx={{ fontSize: 12, color: 'var(--text3)', mt: '5px', fontVariantNumeric: 'tabular-nums' }}>
+                  <Box sx={{ fontSize: typescale.small.size, color: 'var(--text3)', mt: '5px', fontVariantNumeric: 'tabular-nums' }}>
                     {step.period}
                   </Box>
                 </Box>

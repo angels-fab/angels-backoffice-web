@@ -13,7 +13,7 @@ import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
 import { inlineFieldSx } from '@/components/ds/fields'
-import { radius, iconSize, typescale } from '@/theme/tokens'
+import { radius, iconSize, typescale, weight } from '@/theme/tokens'
 
 /**
  * 인라인 새 업무 폼에서 공용으로 쓰는 입력 위젯 모음.
@@ -278,7 +278,7 @@ function Wheel({ items, value, onChange, ariaLabel }: { items: string[]; value: 
             justifyContent: 'center',
             scrollSnapAlign: 'center',
             cursor: 'pointer',
-            fontSize: 16,
+            fontSize: typescale.cardTitle.size,
             fontVariantNumeric: 'tabular-nums',
             color: it === value ? 'text.primary' : 'text.disabled',
             fontWeight: it === value ? 700 : 400,
@@ -302,7 +302,7 @@ function WheelGroup({
 }) {
   return (
     <Box>
-      <Box sx={{ textAlign: 'center', fontSize: 12, color: 'text.secondary', mb: 0.5 }}>{label}</Box>
+      <Box sx={{ textAlign: 'center', fontSize: typescale.small.size, color: 'text.secondary', mb: 0.5 }}>{label}</Box>
       <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {/* 중앙 선택 밴드 */}
         <Box
@@ -314,7 +314,7 @@ function WheelGroup({
           })}
         />
         <Wheel items={HOURS} value={hm.h} onChange={onHour} ariaLabel={`${label} 시`} />
-        <Box sx={{ fontWeight: 700, fontSize: 16, px: 0.25 }}>:</Box>
+        <Box sx={{ fontWeight: weight.bold, fontSize: typescale.cardTitle.size, px: 0.25 }}>:</Box>
         <Wheel items={MINUTES} value={hm.m} onChange={onMinute} ariaLabel={`${label} 분`} />
       </Box>
     </Box>
@@ -411,7 +411,7 @@ export function LinkButton({ value, onChange }: { value: string; onChange: (v: s
         slotProps={{ paper: { sx: popoverPaperSx } }}
       >
         <Box sx={{ p: 1.5, width: 320 }}>
-          <Box sx={{ fontSize: 12, color: 'text.secondary', mb: 0.5 }}>관련 링크</Box>
+          <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 0.5 }}>관련 링크</Box>
           <InputBase
             autoFocus
             value={value}
@@ -458,7 +458,7 @@ export function AttachButton({ count = 0, onFiles, disabled }: {
                 position: 'absolute', top: -1, right: -1, minWidth: 14, height: 14, px: '3px',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 borderRadius: `${radius.pill}px`, bgcolor: th.palette.accent.green, color: th.palette.common.white,
-                fontSize: typescale.caption.size, fontWeight: 700, lineHeight: 1,
+                fontSize: typescale.caption.size, fontWeight: weight.bold, lineHeight: 1,
               })}>{count}</Box>
             )}
           </IconButton>

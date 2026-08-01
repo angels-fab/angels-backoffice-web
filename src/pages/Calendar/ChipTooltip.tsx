@@ -2,7 +2,7 @@ import type { ReactElement } from 'react'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
-import { radius, shadow, typescale } from '../../theme/tokens'
+import { radius, shadow, typescale, weight } from '../../theme/tokens'
 import { catTextColor, toneOfColor } from './catMeta'
 
 /** 일정 칩 호버 상세 — 목적을 제목으로, 장소를 세부정보로 분리해 보여준다. */
@@ -22,21 +22,21 @@ function DetailBody({ d }: { d: EventDetail }) {
         {/* 글자는 catTextColor(글자용 짝) — 채움색을 그대로 쓰면 자기 틴트 위에서 대비가 무너진다 */}
         <Box
           component="span"
-          sx={(th) => ({ px: '7px', py: '3px', borderRadius: `${radius.pill}px`, fontSize: typescale.caption.size, fontWeight: 800, color: catTextColor(th, toneOfColor(d.catColor)), bgcolor: alpha(d.catColor, 0.22) })}
+          sx={(th) => ({ px: '7px', py: '3px', borderRadius: `${radius.pill}px`, fontSize: typescale.caption.size, fontWeight: weight.heavy, color: catTextColor(th, toneOfColor(d.catColor)), bgcolor: alpha(d.catColor, 0.22) })}
         >
           {d.catLabel}
         </Box>
         {d.time && (
-          <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: 700, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+          <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.bold, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
             {d.time}
           </Box>
         )}
       </Box>
-      <Box sx={{ fontSize: typescale.body.size, fontWeight: 700, lineHeight: 1.45, color: 'text.primary', mb: 1 }}>{d.purpose}</Box>
+      <Box sx={{ fontSize: typescale.body.size, fontWeight: weight.bold, lineHeight: 1.45, color: 'text.primary', mb: 1 }}>{d.purpose}</Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1.25, rowGap: '4px', fontSize: typescale.caption.size, lineHeight: 1.5 }}>
-        <Box sx={{ color: 'text.disabled', fontWeight: 600 }}>장소</Box>
+        <Box sx={{ color: 'text.disabled', fontWeight: weight.semibold }}>장소</Box>
         <Box sx={{ color: 'text.primary' }}>{d.place || '미지정'}</Box>
-        <Box sx={{ color: 'text.disabled', fontWeight: 600 }}>해당자</Box>
+        <Box sx={{ color: 'text.disabled', fontWeight: weight.semibold }}>해당자</Box>
         <Box sx={{ color: 'text.primary' }}>{d.members.length ? d.members.join(' · ') : '미지정'}</Box>
       </Box>
     </Box>

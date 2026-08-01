@@ -6,7 +6,7 @@ import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import { iconSize, radius, typescale } from '@/theme/tokens'
+import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 
 /** 스와이프 트레이의 상태 변경 옵션(유효 존만) */
 export interface SwipeStatusOption {
@@ -255,7 +255,7 @@ function TrayButton({ label, color, onClick, children }: { label: string; color:
       }}
     >
       {children}
-      <Typography component="span" sx={{ fontSize: typescale.caption.size, fontWeight: 700, lineHeight: 1 }}>{label}</Typography>
+      <Typography component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.bold, lineHeight: 1 }}>{label}</Typography>
     </ButtonBase>
   )
 }

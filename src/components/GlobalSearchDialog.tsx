@@ -10,7 +10,7 @@ import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import MonitorIcon from '@mui/icons-material/Monitor'
 import { SearchBar, StatusChip, EmptyState } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
-import { radius } from '@/theme/tokens'
+import { radius, weight } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
 import { classify, taskTitle, W_STATUS } from '@/pages/Work/workMeta'
 import { noticeCatStatus } from '@/pages/Notice/noticeMeta'
@@ -245,7 +245,7 @@ export default function GlobalSearchDialog({ open, onClose }: GlobalSearchDialog
                 >
                   {hit.status && <StatusChip status={hit.status.kind} label={hit.status.label} />}
                   <Box sx={{ minWidth: 0, flex: 1 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Typography variant="body2" sx={{ fontWeight: weight.medium, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {hit.title}
                     </Typography>
                     {hit.subtitle && (

@@ -17,7 +17,7 @@ import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { iconSize, radius, typescale } from '@/theme/tokens'
+import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 import { inlineFieldSx } from '@/components/ds/fields'
 import { ComboField } from '@/pages/Work/inlineFields'
 import { AttachmentIcon, formatBytes } from '@/pages/Notice/attachmentUI'
@@ -25,7 +25,7 @@ import { addDemoResult, uploadDemoFile, createMetricDef, updateMetricDef, type D
 import { prepDemoPhoto, isPhotoFile } from '@/utils/imagePrep'
 
 const field = (th: Theme) => ({ ...inlineFieldSx(th), py: '7px', width: '100%' })
-const label = { fontSize: typescale.caption.size, fontWeight: 700, color: 'text.disabled', letterSpacing: '.02em', mb: 0.35 }
+const label = { fontSize: typescale.caption.size, fontWeight: weight.bold, color: 'text.disabled', letterSpacing: '.02em', mb: 0.35 }
 
 type Pic = { file: File; url: string; name: string }
 /** 폼 지표 행 — 표준 지표 프리필(수정 가능) + 신규 추가. 저장 시 정의 생성/수정 후 값 매핑 */

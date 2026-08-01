@@ -1,6 +1,6 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import { layout } from '@/theme/tokens'
+import { layout, typescale, weight } from '@/theme/tokens'
 import AppCard from './AppCard'
 import StatusChip, { type StatusKind } from './StatusChip'
 
@@ -30,11 +30,11 @@ export default function StatTile({ value, unit, label, status, sub, onClick, sel
       sx={selected ? { borderColor: 'primary.main', boxShadow: (t) => `inset 0 0 0 1px ${t.palette.primary.main}` } : undefined}
     >
       <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-        <Typography component="span" sx={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
+        <Typography component="span" sx={{ fontSize: typescale.display.size, fontWeight: weight.heavy, lineHeight: 1 }}>
           {value}
         </Typography>
         {unit && (
-          <Typography component="span" sx={{ fontSize: 13, fontWeight: 600, color: 'text.secondary' }}>
+          <Typography component="span" sx={{ fontSize: typescale.body.size, fontWeight: weight.semibold, color: 'text.secondary' }}>
             {unit}
           </Typography>
         )}

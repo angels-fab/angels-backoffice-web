@@ -33,7 +33,7 @@ import {
   DateField,
   DataTable,
 } from '@/components/ds'
-import { layout } from '@/theme/tokens'
+import { layout, typescale } from '@/theme/tokens'
 
 /** 쇼케이스 내 소제목 블록 */
 function Demo({ name, desc, children }: { name: string; desc: string; children: ReactNode }) {
@@ -129,7 +129,7 @@ export default function DesignSystemShowcase() {
           <Demo name="<ListRow>" desc="목록·표의 한 행 (④ 리스트 통일) — 카드 안 divider 나열">
             <AppCard padding={0}>
               <ListRow
-                leading={<CampaignIcon sx={{ fontSize: 18, color: 'accentText.amber' }} />}
+                leading={<CampaignIcon sx={{ fontSize: typescale.sectionTitle.size, color: 'accentText.amber' }} />}
                 title="7월 정기 안전교육 일정 안내드립니다"
                 subtitle="운영지원팀 · 김담당"
                 trailing={
@@ -156,7 +156,7 @@ export default function DesignSystemShowcase() {
                 leading={<StatusChip status="success" label="국내" />}
                 title="ASML TWINSCAN NXT:1980Di 노광장비 설치 검수 결과 보고 및 후속 조치 사항"
                 titleTrailing={<StatusChip status="neutral" label="박연구" />}
-                trailing={<ChevronRightIcon sx={{ fontSize: 18, color: 'text.disabled' }} />}
+                trailing={<ChevronRightIcon sx={{ fontSize: typescale.sectionTitle.size, color: 'text.disabled' }} />}
                 onClick={() => {}}
               />
             </AppCard>

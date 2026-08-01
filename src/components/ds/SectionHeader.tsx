@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import type { ReactNode } from 'react'
-import { layout } from '@/theme/tokens'
+import { layout, typescale, weight } from '@/theme/tokens'
 
 export interface SectionHeaderProps {
   /** 섹션 제목 */
@@ -74,15 +74,15 @@ export default function SectionHeader({
               bgcolor: 'transparent',
               cursor: 'pointer',
               color: 'text.secondary',
-              fontSize: 13,
-              fontWeight: 600,
+              fontSize: typescale.body.size,
+              fontWeight: weight.semibold,
               fontFamily: 'inherit',
               p: 0,
               '&:hover': { color: 'primary.main' },
             }}
           >
             {actionLabel ?? '더보기'}
-            <ChevronRightIcon sx={{ fontSize: 18 }} />
+            <ChevronRightIcon sx={{ fontSize: typescale.sectionTitle.size }} />
           </Box>
         ))}
     </Box>

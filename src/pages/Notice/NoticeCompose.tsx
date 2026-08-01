@@ -23,7 +23,7 @@ import { todaySeoul } from '@/utils/date'
 import { ComboField } from '@/pages/Work/inlineFields'
 import { MEMBERS, given } from '@/pages/Calendar/members'
 import { uploadNoticeFile, removeNoticeFiles } from '@/api/notices'
-import { iconSize, radius } from '@/theme/tokens'
+import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 import { AttachmentIcon, formatBytes } from './attachmentUI'
 import { fileTypeRank } from './fileTypeIcons'
 import NoticeBodyEditor from './NoticeBodyEditor'
@@ -57,7 +57,7 @@ function parseTargets(raw: string): string[] {
 
 // 해당자 프리셋 버튼 스타일(센터(전체)/센터(직원)) — 활성=파랑 채움
 const presetSx = (active: boolean) => (th: Theme) => ({
-  fontSize: 12, fontWeight: 600, px: 1.1, py: '3px', borderRadius: `${radius.pill}px`,
+  fontSize: typescale.small.size, fontWeight: weight.semibold, px: 1.1, py: '3px', borderRadius: `${radius.pill}px`,
   cursor: 'pointer', border: '1px solid', flex: 'none', whiteSpace: 'nowrap', transition: 'background-color .15s',
   ...(active
     ? { bgcolor: th.palette.primary.main, borderColor: th.palette.primary.main, color: 'common.white' }
@@ -101,7 +101,7 @@ function LinkField({ value, onChange }: { value: string; onChange: (v: string) =
       </Tooltip>
       <Popover open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: `${radius.button}px`, mt: 0.5 } } }}>
         <Box sx={{ p: 1.5, width: 300 }}>
-          <Box sx={{ fontSize: 12, color: 'text.secondary', mb: 0.5 }}>관련자료 / 첨부 링크</Box>
+          <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 0.5 }}>관련자료 / 첨부 링크</Box>
           <InputBase autoFocus value={value} onChange={(e) => onChange(e.target.value)} placeholder="https://…" inputProps={{ 'aria-label': '관련자료 링크' }} sx={(th) => ({ ...inputSx(th), width: '100%', py: 0.5 })} />
         </Box>
       </Popover>
@@ -125,7 +125,7 @@ function CatDrop({ value, onChange }: { value: string; onChange: (v: string) => 
         '& .MuiSelect-icon': { right: 2, color: 'text.secondary' },
       })}
     >
-      {NOTICE_CATS.map((c) => <MenuItem key={c} value={c} sx={{ fontSize: 13 }}>{c}</MenuItem>)}
+      {NOTICE_CATS.map((c) => <MenuItem key={c} value={c} sx={{ fontSize: typescale.body.size }}>{c}</MenuItem>)}
     </Select>
   )
 }
@@ -250,8 +250,8 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
             sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 13 }}>{mode === 'new' ? author : (notice?.author || '-')}</TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{mode === 'new' ? author : (notice?.author || '-')}</TableCell>
+        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell />
       </TableRow>
       <TableRow sx={{ '& td': { borderTop: 0, bgcolor: amber, py: 0.75, verticalAlign: 'top' } }}>
@@ -266,7 +266,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
               <Box sx={{ width: 80, maxWidth: '100%' }}>
                 <ComboField value={deptMgr} onChange={setDeptMgr} options={deptMgrOptions} placeholder="담당자" ariaLabel="부서담당자" />
               </Box>
-              <Box component="span" sx={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', color: 'text.disabled', ml: 0.5 }}>해당자</Box>
+              <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.bold, letterSpacing: '0.04em', color: 'text.disabled', ml: 0.5 }}>해당자</Box>
               {/* 프리셋 — 센터(전체)=4명 자동선택 / 센터(직원)=신현진 제외 3명 */}
               <Box role="button" tabIndex={0} aria-label="센터(전체) 선택" onClick={setAllTargets} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAllTargets() } }} sx={presetSx(isAllTargets)}>센터(전체)</Box>
               <Box role="button" tabIndex={0} aria-label="센터(직원) 선택" onClick={setStaffTargets} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStaffTargets() } }} sx={presetSx(isStaffTargets)}>센터(직원)</Box>
@@ -283,7 +283,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                     style={{ backgroundColor: m.color, color: '#fff', filter: on ? 'none' : 'grayscale(1)', opacity: on ? 1 : 0.6 }}
                     sx={{
                       width: 32, height: 32, borderRadius: radius.circle, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 13, fontWeight: 700, letterSpacing: '-0.5px', cursor: 'pointer', flex: 'none',
+                      fontSize: typescale.body.size, fontWeight: weight.bold, letterSpacing: '-0.5px', cursor: 'pointer', flex: 'none',
                       transition: 'opacity .15s, filter .15s',
                     }}
                   >
@@ -306,7 +306,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                   sx={(th) => ({
                     display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 1, py: '5px', borderRadius: `${radius.pill}px`,
                     border: '1px dashed', borderColor: th.palette.divider, color: 'text.secondary', cursor: 'pointer',
-                    fontSize: 12, fontWeight: 600, flex: 'none', transition: 'color .15s, border-color .15s',
+                    fontSize: typescale.small.size, fontWeight: weight.semibold, flex: 'none', transition: 'color .15s, border-color .15s',
                     '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main },
                   })}
                 >
@@ -332,8 +332,8 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                             : err
                               ? <ErrorOutlineIcon sx={{ fontSize: iconSize.body, color: 'error.main', flex: 'none' }} />
                               : <AttachmentIcon type={u.type} name={u.name} size={17} />}
-                          <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: 12, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
-                          <Box component="span" sx={{ fontSize: 11, color: 'text.disabled', flex: 'none' }}>
+                          <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: typescale.small.size, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
+                          <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', flex: 'none' }}>
                             {u.status === 'uploading' ? '업로드 중' : err ? '실패' : formatBytes(u.size)}
                           </Box>
                           {u.status !== 'uploading' && (
@@ -350,7 +350,7 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                 </Box>
               )}
             </Box>
-            {uploading && <Box sx={{ fontSize: 11, color: 'text.disabled', mt: -0.25 }}>파일 업로드 중… 완료 후 저장하세요.</Box>}
+            {uploading && <Box sx={{ fontSize: typescale.caption.size, color: 'text.disabled', mt: -0.25 }}>파일 업로드 중… 완료 후 저장하세요.</Box>}
           </Box>
         </TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'center', verticalAlign: 'top', pt: 1 }}>
