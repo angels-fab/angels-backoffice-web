@@ -251,7 +251,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
         position: 'relative',
         bgcolor: alpha(th.palette.accent.green, 0.1),
         border: 1, borderColor: th.palette.accent.green,
-        boxShadow: `inset 0 0 0 1px ${th.palette.accent.green}`,
+        boxShadow: `inset 0 0 0 1px ${th.palette.accent.green}`, /* design-lint-ok(shadow): inset 링 — 위 border 와 겹쳐 초록 테두리를 2px 로 만든다 */
         borderRadius: `${radius.card}px`, overflow: 'hidden',
       })}
     >

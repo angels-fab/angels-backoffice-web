@@ -17,7 +17,7 @@ import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
 import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
 import { useThemeMode } from '@/theme/mode'
-import { iconSize, z } from '@/theme/tokens'
+import { iconSize, radius, z } from '@/theme/tokens'
 import topbarLogo from '@/assets/topbar-logo.jpg'
 
 /**
@@ -38,7 +38,7 @@ const ThemeSwitch = styled(Switch)({
     transform: 'translateX(4px)',
     '&.Mui-checked': {
       transform: 'translateX(24px)',
-      '& .MuiSwitch-thumb': { backgroundColor: '#0B1C3A', boxShadow: '0 1px 2px rgba(0,0,0,.45)' }, // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
+      '& .MuiSwitch-thumb': { backgroundColor: '#0B1C3A', boxShadow: '0 1px 2px rgba(0,0,0,.45)' }, // design-lint-ok(hex,shadow): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
       '& .MuiSwitch-thumb:before': {
         // 달(다크) — 남색 알 위라 흰색
         backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L6.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`, // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
@@ -50,7 +50,7 @@ const ThemeSwitch = styled(Switch)({
   // 구현: 기본(미체크)=라이트, 위 '&.Mui-checked' 블록이 다크로 덮는다.
   '& .MuiSwitch-thumb': {
     backgroundColor: '#FDFEFF', // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
-    boxShadow: '0 1px 2px rgba(20,37,66,.28)',
+    boxShadow: '0 1px 2px rgba(20,37,66,.28)', /* design-lint-ok(shadow): 28px 스위치 알의 경계용 마이크로 입체 — 카드 스케일 3단과 다른 축 */
     width: 28,
     height: 28,
     position: 'relative',
@@ -70,7 +70,7 @@ const ThemeSwitch = styled(Switch)({
   '& .MuiSwitch-track': {
     opacity: 1,
     backgroundColor: '#aab4be', // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
-    borderRadius: 20 / 2,
+    borderRadius: `${radius.pill}px`,
   },
 })
 

@@ -1473,7 +1473,7 @@ export default function Work() {
             position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: z.bottomBar,
             bgcolor: 'primary.main', color: 'primary.contrastText',
             px: 2, py: 1.25, display: 'flex', alignItems: 'center', gap: 1.5,
-            boxShadow: '0 -2px 12px rgba(0,0,0,.3)',
+            boxShadow: '0 -2px 12px rgba(0,0,0,.3)', /* design-lint-ok(shadow): 하단 고정 바가 위로 드리우는 역방향 그림자 — 토큰 3단은 전부 아래 방향 */
             pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
           }}
         >

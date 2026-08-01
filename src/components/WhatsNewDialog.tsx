@@ -104,7 +104,7 @@ function WorkAttachDemo() {
       {/* 본문(축약) */}
       <Box sx={{ px: 1.25, py: 0.75, fontSize: typescale.caption.size, color: 'text.secondary' }}>• 공조 조닝 변경안 도면 검토</Box>
       {/* 첨부 트레이 — 새로 생긴 구역(파랑 링으로 강조) */}
-      <Box sx={(th) => ({ borderTop: `1px solid ${c(0.14)}`, bgcolor: alpha(th.palette.common.black, 0.16), px: 1.25, pt: 0.75, pb: 1, boxShadow: `inset 0 0 0 2px ${alpha(th.palette.primary.main, 0.55)}` })}>
+      <Box sx={(th) => ({ borderTop: `1px solid ${c(0.14)}`, bgcolor: alpha(th.palette.common.black, 0.16), px: 1.25, pt: 0.75, pb: 1, boxShadow: `inset 0 0 0 2px ${alpha(th.palette.primary.main, 0.55)}` /* design-lint-ok(shadow): inset 링 — 새로 생긴 구역 강조 테두리 */ })}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
           <AttachFileIcon sx={{ fontSize: iconSize.caption, color: 'text.disabled' }} />
           <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.emphasis.weight, letterSpacing: '0.04em', color: 'text.disabled' }}>첨부파일</Box>

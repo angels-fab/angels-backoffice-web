@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
-import { typescale } from '@/theme/tokens'
+import { radius, typescale } from '@/theme/tokens'
 
 // 장비관리 상단 탭 — 장비도입(/equipment) · 장비운영(/equipment-ops) 전환.
 // 세그먼트(SegTabs)에서 **밑줄형 상위 탭**으로 승격: 이 둘은 '보기 전환'이 아니라 서로 다른 화면(라우트)이라
@@ -42,7 +42,7 @@ export default function EquipmentTabs() {
               // 활성 밑줄 — 컨테이너의 1px 경계선 위에 2px로 얹힌다
               '&::after': {
                 content: '""', position: 'absolute', left: 0, right: 0, bottom: '-1px', height: '2px',
-                bgcolor: 'primary.main', borderRadius: '2px 2px 0 0',
+                bgcolor: 'primary.main', borderRadius: `${radius.pill}px ${radius.pill}px 0 0`,
                 opacity: on ? 1 : 0, transition: 'opacity .14s',
               },
               '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '2px', borderRadius: '4px' },

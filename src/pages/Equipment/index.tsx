@@ -832,7 +832,7 @@ export default function Equipment() {
                 <Typography sx={{ fontSize: typescale.micro.size, fontWeight: weight.bold, letterSpacing: '0.02em', color: 'text.disabled', whiteSpace: 'nowrap' }}>장비</Typography>
                 {todayFrac >= 0 && (
                   <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, fontSize: typescale.micro.size, fontWeight: weight.semibold, color: 'primary.main' }}>
-                    <Box sx={{ width: 2, height: 11, borderRadius: 1, bgcolor: 'primary.main' }} /> 오늘
+                    <Box sx={{ width: 2, height: 11, borderRadius: `${radius.pill}px`, bgcolor: 'primary.main' }} /> 오늘
                   </Box>
                 )}
               </Box>

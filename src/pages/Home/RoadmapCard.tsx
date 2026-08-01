@@ -120,7 +120,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
             justifyContent: 'center',
             color: domain.roadmap.hero.tileIcon[t.palette.mode],
             flex: '0 0 auto',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,.07)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,.07)', /* design-lint-ok(shadow): inset 상단 1px 하이라이트 — 깊이 그림자가 아니다 */
             '& svg': { fontSize: iconSize.feature },
           })}
         >
@@ -163,7 +163,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
               right: '6%',
               top: 23,
               height: 3,
-              borderRadius: '3px',
+              borderRadius: `${radius.pill}px`,
               background: `linear-gradient(90deg,${domain.roadmap.done} 0%,${domain.roadmap.done} 40%,${domain.roadmap.current} 50%,var(--border) 60%,var(--border) 100%)`,
               opacity: 0.75,
               zIndex: 0,

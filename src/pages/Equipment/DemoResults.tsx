@@ -93,7 +93,7 @@ const plusChip = (th: Theme) => ({
  * 인라인 편집 텍스트 — 평소엔 텍스트, 호버 시 연필. 클릭하면 그 항목만 앰버 밑줄 인풋으로.
  * Enter=저장(변경 시 onCommit), Esc/바깥클릭=취소. 샘플·조건 줄에서 사용.
  */
-const editInputSx = (th: Theme) => ({ font: 'inherit', color: 'inherit', bgcolor: alpha(th.palette.warning.main, 0.11), boxShadow: `inset 0 -2px 0 ${alpha(th.palette.warning.main, 0.75)}`, borderRadius: '3px', p: 0 })
+const editInputSx = (th: Theme) => ({ font: 'inherit', color: 'inherit', bgcolor: alpha(th.palette.warning.main, 0.11), boxShadow: `inset 0 -2px 0 ${alpha(th.palette.warning.main, 0.75)}`, /* design-lint-ok(shadow): inset 밑줄 2px — border-bottom 대용(p:0 인라인 편집칸) */ borderRadius: '3px', p: 0 })
 function SaveCancel({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.25 }}>
@@ -291,7 +291,7 @@ function PhotoCarousel({ photos, cover, onZoom, children }: {
         '&:focus-visible': { opacity: 1, outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-2px' },
         '@media (hover: none)': { display: 'none' },
       }}>
-      {dir < 0 ? <ChevronLeftIcon sx={{ fontSize: 30, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} /> : <ChevronRightIcon sx={{ fontSize: 30, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} />}
+      {dir < 0 ? <ChevronLeftIcon sx={{ /* design-lint-ok(font): 사진 넘김 화살표 — 조작 타겟 크기라 글자 사다리 관할 아님(이 줄 좌우 2건) */ fontSize: 30, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} /> : <ChevronRightIcon sx={{ fontSize: 30, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} />}
     </Box>
   )
 
@@ -332,7 +332,7 @@ function PhotoCarousel({ photos, cover, onZoom, children }: {
             <Box key={i} component="button" type="button" aria-label={`${i + 1}번째 사진`} aria-selected={i === active} role="tab"
               onClick={(e) => { e.stopPropagation(); go(i) }}
               sx={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', width: i === active ? 26 : 16, height: 16, p: 0, border: 0, background: 'none', cursor: 'pointer', transition: 'width .24s cubic-bezier(0.22, 1, 0.36, 1)' }}>
-              <Box component="span" sx={{ display: 'block', width: 'calc(100% - 10px)', height: 6, borderRadius: `${radius.pill}px`, bgcolor: i === active ? 'common.white' : 'rgba(255,255,255,.45)', boxShadow: '0 1px 3px rgba(0,0,0,.55)', transition: 'background-color .2s ease', '&:hover': { bgcolor: i === active ? 'common.white' : 'rgba(255,255,255,.75)' } }} />
+              <Box component="span" sx={{ display: 'block', width: 'calc(100% - 10px)', height: 6, borderRadius: `${radius.pill}px`, bgcolor: i === active ? 'common.white' : 'rgba(255,255,255,.45)', boxShadow: '0 1px 3px rgba(0,0,0,.55)', /* design-lint-ok(shadow): 사진 위 6px 인디케이터 가독성용 윤곽 — 깊이 표현이 아니다 */ transition: 'background-color .2s ease', '&:hover': { bgcolor: i === active ? 'common.white' : 'rgba(255,255,255,.75)' } }} />
             </Box>
           ))}
         </Box>
@@ -586,8 +586,8 @@ function Lightbox({ photos, idx, onIdx, onClose }: { photos: DemoPhotoRef[]; idx
         '&:hover': { opacity: 1 },
       }}>
       {dir < 0
-        ? <ChevronLeftIcon sx={{ fontSize: 38, color: 'common.white', ml: 0.5, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} />
-        : <ChevronRightIcon sx={{ fontSize: 38, color: 'common.white', mr: 0.5, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} />}
+        ? <ChevronLeftIcon sx={{ /* design-lint-ok(font): 라이트박스 넘김 화살표 — 뷰포트가 달라 30과 의도적으로 2단 */ fontSize: 38, color: 'common.white', ml: 0.5, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} />
+        : <ChevronRightIcon sx={{ /* design-lint-ok(font): 위와 같은 라이트박스 화살표(우) */ fontSize: 38, color: 'common.white', mr: 0.5, filter: 'drop-shadow(0 1px 4px rgba(0,0,0,.7))' }} />}
     </Box>
   )
   return (
@@ -612,7 +612,7 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
   if (url) return <Box component="img" src={url} alt={photo?.name || ''} sx={{ maxWidth: '90vw', maxHeight: '74vh', objectFit: 'contain', borderRadius: `${radius.card}px` }} />
   return (
     <Box sx={{ width: 'min(78vw,520px)', height: 'min(56vh,360px)', bgcolor: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.15)', borderRadius: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, color: 'rgba(255,255,255,.6)' }}>
-      <ImageOutlinedIcon sx={{ fontSize: 44 }} /><Box sx={{ fontSize: typescale.small.size }}>미리보기 (샘플 — 사진 업로드 시 표시)</Box>
+      <ImageOutlinedIcon sx={{ /* design-lint-ok(font): 빈 상태 일러스트 — 아이콘이 아니라 플레이스홀더 그래픽 */ fontSize: 44 }} /><Box sx={{ fontSize: typescale.small.size }}>미리보기 (샘플 — 사진 업로드 시 표시)</Box>
     </Box>
   )
 }

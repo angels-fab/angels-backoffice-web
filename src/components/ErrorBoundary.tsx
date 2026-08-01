@@ -54,7 +54,7 @@ export default class ErrorBoundary extends Component<Props, State> {
         }}
       >
         <Box sx={{ maxWidth: 440, width: '100%', textAlign: 'center' }}>
-          <ReportProblemOutlinedIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1.5 }} />
+          <ReportProblemOutlinedIcon sx={{ /* design-lint-ok(font): 전체화면 오류 복구 화면의 대표 그래픽 — 빈 상태 일러스트와 같은 축 */ fontSize: 48, color: 'text.disabled', mb: 1.5 }} />
           <Typography variant="h2" component="h1" sx={{ mb: 1 }}>
             문제가 발생했어요
           </Typography>

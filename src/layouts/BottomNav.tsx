@@ -10,14 +10,14 @@ import MenuIcon from '@mui/icons-material/Menu'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import { useRole } from '@/auth/role'
 import { NavBadge } from '@/components/ds'
-import { motion, weight, z, typescale } from '@/theme/tokens'
+import { motion, radius, weight, z, typescale } from '@/theme/tokens'
 import { useNavBadges } from './useNavBadges'
 import MobileMenuDrawer from './MobileMenuDrawer'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 
 // 아이콘 우상단 위첨자(D7 표준 NavBadge) — 하단탭 배경과 분리용 잉크 링
 function Badge({ n }: { n: number }) {
-  return <NavBadge count={n} kind="new" sx={{ position: 'absolute', top: -6, right: -10, boxShadow: '0 0 0 2px var(--ink)' }} />
+  return <NavBadge count={n} kind="new" sx={{ position: 'absolute', top: -6, right: -10, boxShadow: '0 0 0 2px var(--ink)' /* design-lint-ok(shadow): 0 0 0 = 배경색으로 배지를 오려내는 컷아웃 링 */ }} />
 }
 
 /** 하단 탭바 컨테이너 — PC는 숨김, ≤768px에서만 flex로 노출(셸 분기) */
@@ -62,7 +62,7 @@ const itemSx = (active: boolean) => (t: Theme) => ({
     display: 'block',
     width: '16px',
     height: '3px',
-    borderRadius: '2px',
+    borderRadius: `${radius.pill}px`,
     background: active ? t.palette.accent.blue : 'transparent',
     marginTop: '2px',
   },

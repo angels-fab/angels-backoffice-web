@@ -55,7 +55,7 @@ export default function AttendSwitch({ checked, disabled, onToggle }: {
           position: 'absolute', top: PAD, width: KNOB, height: KNOB, borderRadius: radius.circle,
           // 라이트 꺼짐 트랙(연회색)에 흰 손잡이는 1.9:1이라 윤곽이 안 잡힌다 — 얇은 테두리로 경계 확보
           bgcolor: th.palette.common.white, border: '1px solid', borderColor: alpha(th.palette.common.black, 0.2),
-          boxSizing: 'border-box', boxShadow: '0 1px 3px rgba(0,0,0,.4)', transition: 'left .2s ease',
+          boxSizing: 'border-box', boxShadow: '0 1px 3px rgba(0,0,0,.4)', /* design-lint-ok(shadow): 스위치 손잡이 경계용 마이크로 입체 — shadow.sm 은 blur 10px 이라 손잡이에 헤일로가 생긴다 */ transition: 'left .2s ease',
           left: checked ? W - KNOB - PAD : PAD,
         })}
       />

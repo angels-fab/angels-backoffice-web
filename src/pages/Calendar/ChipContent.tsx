@@ -76,7 +76,7 @@ function NamePill({ text, color }: { text: string; color: string }) {
         whiteSpace: 'nowrap',
         flex: 'none',
         border: '1px solid rgba(255,255,255,.28)',
-        boxShadow: '0 0 0 0.5px rgba(0,0,0,.25)',
+        boxShadow: '0 0 0 0.5px rgba(0,0,0,.25)', /* design-lint-ok(shadow): 0 0 0 = 0.5px 헤어라인 테두리(레이아웃을 밀지 않으려고 boxShadow 로 그린다) */
       }}
     >
       {/* 한글 잉크 상단쏠림 보정 — ManagerChip과 동일하게 글자만 0.5px 하향(실측 중앙정렬) */}

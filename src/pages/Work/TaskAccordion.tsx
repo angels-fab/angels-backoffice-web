@@ -148,14 +148,14 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             ? {
                 ...sel,
                 '& .task-head': { bgcolor: c(0.21) },
-                '&:hover': { ...sel, boxShadow: `0 0 0 2px ${toneRingCss}, var(--shadow-lg)` },
+                '&:hover': { ...sel, boxShadow: `0 0 0 2px ${toneRingCss}, ${shadow.lg}` /* design-lint-ok(shadow): 앞 레이어는 선택 링 */ },
                 '&:hover .task-head': { bgcolor: c(0.21) },
               }
             : {
                 borderColor: toneBorderCss,
                 bgcolor: toneBody.base,
                 '& .task-head': { bgcolor: c(0.09) },
-                '&:hover': { borderColor: toneBorderHoverCss, bgcolor: toneBody.hover, boxShadow: `0 0 0 1px ${toneRingHoverCss}, var(--shadow-md)` },
+                '&:hover': { borderColor: toneBorderHoverCss, bgcolor: toneBody.hover, boxShadow: `0 0 0 1px ${toneRingHoverCss}, ${shadow.md}` /* design-lint-ok(shadow): 앞 레이어는 호버 링 */ },
                 '&:hover .task-head': { bgcolor: c(0.14) },
               }),
           // 키보드 포커스 — 공통 focusRingSx(B#4)로 수렴(상태색과 무관한 표준 링)

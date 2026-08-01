@@ -115,7 +115,7 @@ interface BoardCardProps {
 }
 const BoardCard = memo(function BoardCard({ t, zone, tone, selected, draggable, onPointerDown, onClick, register }: BoardCardProps) {
   const c = toneCss
-  const sel = selected ? { borderColor: c(0.92), bgcolor: c(0.15), boxShadow: `0 0 0 2px ${c(0.22)}` } : null
+  const sel = selected ? { borderColor: c(0.92), bgcolor: c(0.15), boxShadow: `0 0 0 2px ${c(0.22)}` /* design-lint-ok(shadow): 0 0 0 = 선택 링(상태 대표색 파생) */ } : null
   return (
     <Box
       data-kanban-card
@@ -141,9 +141,9 @@ const BoardCard = memo(function BoardCard({ t, zone, tone, selected, draggable, 
         touchAction: draggable ? 'pan-y' : 'auto',
         transition: 'border-color .14s, background-color .14s, box-shadow .14s',
         // 떠오름 없음 — 그리드 카드와 동일 규칙(호버로 카드가 움직이면 조준이 어긋난다)
-        '&:hover': { borderColor: c(0.78), bgcolor: c(0.09), boxShadow: 'var(--shadow-md)' },
+        '&:hover': { borderColor: c(0.78), bgcolor: c(0.09), boxShadow: shadow.md },
         // 선택 > 호버 — 선택 시 호버에도 선택 모습 유지(TaskAccordion과 동일 규칙)
-        ...(sel ? { ...sel, '&:hover': { ...sel, boxShadow: `0 0 0 2px ${c(0.22)}, var(--shadow-lg)` } } : {}),
+        ...(sel ? { ...sel, '&:hover': { ...sel, boxShadow: `0 0 0 2px ${c(0.22)}, ${shadow.lg}` /* design-lint-ok(shadow): 앞 레이어는 선택 링 — 테두리 대용이라 그림자 토큰 대상 아님 */ } } : {}),
         ...(focusRingSx as object),
       }}
     >

@@ -157,7 +157,7 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
     })}>
       <HintTip title={title}>
         <IconButton ref={mainRef} size="small" aria-label={title} aria-pressed={active} onMouseDown={(e) => e.preventDefault()} onClick={onApply}
-          sx={{ p: '3px 4px', borderRadius: 0, color: 'text.secondary' }}>
+          sx={{ p: '3px 4px', borderRadius: 0, /* design-lint-ok(radius): 부모가 모서리 담당(overflow:hidden) — MuiIconButton 전역 10px 리셋용 0 */ color: 'text.secondary' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
             {/* 글리프 고정 높이 박스 — '가'/아이콘 높이가 달라도 아래 색상 바가 같은 높이에 정렬되게 */}
             <Box sx={{ height: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{glyph}</Box>
@@ -167,7 +167,7 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
       </HintTip>
       <HintTip title={`${title} 선택`}>
         <IconButton size="small" aria-label={`${title} 선택`} aria-haspopup="menu" onMouseDown={(e) => e.preventDefault()} onClick={() => mainRef.current && onOpen(mainRef.current)}
-          sx={{ p: 0, width: 15, borderRadius: 0, color: 'text.secondary' }}>
+          sx={{ p: 0, width: 15, borderRadius: 0, /* design-lint-ok(radius): 위와 같은 이유 — 스플릿 버튼 두 짝이 갈라지지 않게 0 유지 */ color: 'text.secondary' }}>
           <ArrowDropDownIcon sx={{ fontSize: iconSize.body }} />
         </IconButton>
       </HintTip>
@@ -371,7 +371,7 @@ export function RichToolbar({ editor, compact = false }: { editor: Editor | null
         {/* 색 없음 = 형광펜 mark만 제거(글자색·마지막 색 불변) — 빨간 사선 네모 */}
         <MenuItem onClick={() => applyHl('none')} aria-label="색 없음" disableGutters sx={SWATCH_ITEM_SX}>
           <Box component="span" sx={(th) => ({
-            ...SWATCH_BOX, bgcolor: 'transparent', boxShadow: `inset 0 0 0 1px ${th.palette.text.secondary}`, position: 'relative', overflow: 'hidden',
+            ...SWATCH_BOX, bgcolor: 'transparent', boxShadow: `inset 0 0 0 1px ${th.palette.text.secondary}`, /* design-lint-ok(shadow): inset 링 — 투명 스와치 경계선(크기 고정용) */ position: 'relative', overflow: 'hidden',
             '&::after': { content: '""', position: 'absolute', top: '50%', left: '-20%', width: '140%', height: '1.5px', bgcolor: th.palette.error.main, transform: 'rotate(-45deg)' },
           })} />
         </MenuItem>

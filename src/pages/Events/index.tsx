@@ -229,7 +229,7 @@ export default function Events() {
             position: 'fixed', top: { xs: 48, md: 54 }, right: 0, bottom: { xs: 60, md: 0 },
             width: 380, maxWidth: '92vw', zIndex: z.sidePanel,
             bgcolor: 'background.default', borderLeft: 1, borderColor: 'divider',
-            boxShadow: '-8px 0 26px rgba(0,0,0,.42)', p: 1.5, overflowY: 'auto',
+            boxShadow: '-8px 0 26px rgba(0,0,0,.42)', /* design-lint-ok(shadow): 우측 패널이 왼쪽으로 드리우는 가로 그림자 — 토큰 3단은 전부 아래 방향(0 +Npx)이라 대체 불가 */ p: 1.5, overflowY: 'auto',
           }}
         >
           <IconButton

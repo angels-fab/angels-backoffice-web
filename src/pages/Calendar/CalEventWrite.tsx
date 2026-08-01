@@ -214,9 +214,9 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
               {inRange && (
                 <Box sx={{
                   ...bandSx,
-                  ...(single ? { left: '12%', right: '12%', borderRadius: '14px' }
-                    : isStart ? { left: '12%', borderRadius: '14px 0 0 14px' }
-                    : isEnd ? { right: '12%', borderRadius: '0 14px 14px 0' }
+                  ...(single ? { left: '12%', right: '12%', borderRadius: `${radius.pill}px` }
+                    : isStart ? { left: '12%', borderRadius: `${radius.pill}px 0 0 ${radius.pill}px` }
+                    : isEnd ? { right: '12%', borderRadius: `0 ${radius.pill}px ${radius.pill}px 0` }
                     : null),
                 }} />
               )}
@@ -256,7 +256,7 @@ function SummaryChip({ label, active, ariaLabel, onClick }: { label: ReactNode; 
         bgcolor: 'background.elevated', border: 1, borderColor: active ? 'primary.main' : 'divider',
         borderRadius: `${radius.chip}px`, px: 1.5, py: '6px', fontSize: typescale.body.size, fontWeight: weight.semibold, color: 'text.primary',
         whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums', transition: 'border-color .15s, box-shadow .15s',
-        ...(active ? { boxShadow: `0 0 0 3px ${alpha(th.palette.primary.main, 0.22)}` } : null),
+        ...(active ? { boxShadow: `0 0 0 3px ${alpha(th.palette.primary.main, 0.22)}` /* design-lint-ok(shadow): 0 0 0 = 활성 링(focusRing 과 같은 3px 계열) */ } : null),
         '&:hover': { borderColor: active ? 'primary.main' : th.palette.text.disabled },
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
       })}
@@ -593,7 +593,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           inputProps={{ 'aria-label': '제목' }}
           sx={{
             fontSize: typescale.sectionTitle.size, fontWeight: weight.bold, pb: '6px',
-            borderBottom: '2px solid', borderColor: 'divider', borderRadius: 0,
+            borderBottom: '2px solid', borderColor: 'divider',
             transition: 'border-color .15s',
             '&.Mui-focused': { borderColor: 'primary.main' },
             '& input::placeholder': { color: 'text.disabled', opacity: 1 },
@@ -621,7 +621,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background .15s, box-shadow .15s, color .15s',
                   ...(on
-                    ? { bgcolor: c, color: 'common.white', boxShadow: `0 0 0 2px ${alpha(c, 0.35)}` }
+                    ? { bgcolor: c, color: 'common.white', boxShadow: `0 0 0 2px ${alpha(c, 0.35)}` /* design-lint-ok(shadow): 0 0 0 = 아바타 선택 링(참석자 개인색 파생) */ }
                     : { bgcolor: alpha(c, 0.15), color: 'text.secondary', '&:hover': { bgcolor: alpha(c, 0.3), color: 'text.primary' } }),
                   '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
                 }}
