@@ -509,7 +509,9 @@ function MemoRow({ m, own, busy, onEdit, onDelete }: { m: DemoChatMsg; own: bool
         )}
       </Box>
       <Box sx={{ flex: 'none', display: 'flex', alignItems: 'center', gap: 0.75, mt: '2px' }}>
-        <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.medium, color: c }}>{given(m.author) || m.author}</Box>
+        {/* 이름은 보조 글자색 — 담당자 색(c)은 흰 글자를 얹는 **채움**용이라 글자로 쓰면 다크에서
+            2.98:1 로 무너진다(2026-08-02 contrast-audit 발견). 색 신호는 바로 왼쪽 아바타가 이미 진다. */}
+        <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.medium, color: 'text.secondary' }}>{given(m.author) || m.author}</Box>
         <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>{fmtDay(m.createdAt)}</Box>
         {own && !editing && (
           <Box className="memo-act" sx={{ display: 'flex', gap: 0.25, opacity: 0, transition: 'opacity .12s' }}>
