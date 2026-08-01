@@ -22,39 +22,47 @@ import topbarLogo from '@/assets/topbar-logo.jpg'
 
 /**
  * 라이트/다크 토글 스위치 — 다크=ON(우측·달), 라이트=OFF(좌측·해).
- * 네이비 썸(달/해 아이콘 내장) + 회색 트랙. 아이콘은 SVG 데이터URI(이모지 아님).
+ *
+ * ★ MUI 공식 데모 `MaterialUISwitch`(Switch 문서의 Customization 예제) **순정 그대로**다.
+ *   치수(62×34·썸 32·translateX 6/22·SVG 20)·색(#001e3c/#003892·#aab4be/#8796A5)·
+ *   아이콘 흰색을 손대지 않는다. 사용자 지시(2026-08-01): "mui switch 순정 그대로".
+ *
+ *   앞서 이 값들을 손으로 고쳐 라이트에서 "흰 알 + 갈색(#B26A00) 해"가 돼 있었다.
+ *   흰 알이 흰 상단바에 묻히고(1.07:1) 해가 갈색으로 보이던 원인. 순정은 두 테마 모두
+ *   "짙은 알 + 흰 아이콘"이라 그 문제가 없다.
+ *
+ *   유일한 비순정 한 줄이 viewTransitionName 이다(모양이 아니라 애니메이션 고침) — 아래 주석 참조.
  */
-const ThemeSwitch = styled(Switch)({
-  width: 58,
-  height: 32,
+const ThemeSwitch = styled(Switch)(({ theme }) => ({
+  width: 62,
+  height: 34,
   padding: 7,
-  // 테마 전환은 화면 전체를 한 장으로 크로스페이드(View Transitions)하는데, 그러면 스위치의 슬라이드가
-  // 그 페이드에 묻혀 "밀리는 게 아니라 흐려졌다 나타나는" 것처럼 보인다.
-  // 자기 이름을 주면 스위치만 따로 잡혀서 실제로 미끄러지는 게 보인다.
+  // [비순정] 테마 전환은 화면 전체를 한 장으로 크로스페이드(View Transitions)하는데, 그러면 스위치의
+  // 슬라이드가 그 페이드에 묻혀 "밀리는 게 아니라 흐려졌다 나타나는" 것처럼 보인다.
+  // 자기 이름을 주면 스위치만 따로 잡혀서 실제로 미끄러지는 게 보인다. 색·치수와 무관해 유지한다.
   viewTransitionName: 'theme-switch',
   '& .MuiSwitch-switchBase': {
     margin: 1,
     padding: 0,
-    transform: 'translateX(4px)',
+    transform: 'translateX(6px)',
     '&.Mui-checked': {
-      transform: 'translateX(24px)',
-      '& .MuiSwitch-thumb': { backgroundColor: '#0B1C3A', boxShadow: '0 1px 2px rgba(0,0,0,.45)' },
+      color: '#fff',
+      transform: 'translateX(22px)',
       '& .MuiSwitch-thumb:before': {
-        // 달(다크) — 남색 알 위라 흰색
-        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L6.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`,
+        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L8.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`,
       },
-      '& + .MuiSwitch-track': { opacity: 1, backgroundColor: '#5A6B80' },
+      '& + .MuiSwitch-track': {
+        opacity: 1,
+        backgroundColor: '#aab4be',
+        ...theme.applyStyles('dark', { backgroundColor: '#8796A5' }),
+      },
     },
   },
-  // 썸 — 라이트(해)는 밝은 알 + 진한 해, 다크(달)는 남색 알 + 흰 달.
-  // 구현: 기본(미체크)=라이트, 위 '&.Mui-checked' 블록이 다크로 덮는다.
   '& .MuiSwitch-thumb': {
-    backgroundColor: '#FDFEFF',
-    boxShadow: '0 1px 2px rgba(20,37,66,.28)',
-    width: 28,
-    height: 28,
-    position: 'relative',
-    '&:before': {
+    backgroundColor: '#001e3c',
+    width: 32,
+    height: 32,
+    '&::before': {
       content: "''",
       position: 'absolute',
       width: '100%',
@@ -63,16 +71,17 @@ const ThemeSwitch = styled(Switch)({
       top: 0,
       backgroundRepeat: 'no-repeat',
       backgroundPosition: 'center',
-      // 해(라이트) — 밝은 알 위라 진한 앰버
-      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#B26A00')}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`,
+      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`,
     },
+    ...theme.applyStyles('dark', { backgroundColor: '#003892' }),
   },
   '& .MuiSwitch-track': {
     opacity: 1,
     backgroundColor: '#aab4be',
     borderRadius: 20 / 2,
+    ...theme.applyStyles('dark', { backgroundColor: '#8796A5' }),
   },
-})
+}))
 
 export default function TopBar() {
   const navigate = useNavigate()
