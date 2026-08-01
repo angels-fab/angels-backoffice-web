@@ -53,8 +53,8 @@ function EventCrop({ state }: { state: 'before' | 'after' }) {
             display: 'inline-flex', alignItems: 'center', gap: '3px', height: 20, px: '8px',
             borderRadius: `${radius.pill}px`, fontSize: 10, fontWeight: weight.bold, whiteSpace: 'nowrap', flexShrink: 0,
             ...(after
-              ? { bgcolor: '#16a34a', color: 'common.white', border: '1px solid #16a34a' }
-              : { bgcolor: 'rgba(0,0,0,.42)', color: '#c9f4dc', border: '1px solid rgba(52,211,153,.7)' }),
+              ? { bgcolor: '#16a34a', color: 'common.white', border: '1px solid #16a34a' } // design-lint-ok: eventCard 의 사진 위 신청완료 칩과 같은 스펙(두 곳이 나란히 보임)
+              : { bgcolor: 'rgba(0,0,0,.42)', color: '#c9f4dc', border: '1px solid rgba(52,211,153,.7)' }), // design-lint-ok: 위와 같은 사진 위 스크림 조합
           }}
         >
           {after && <CheckIcon sx={{ fontSize: typescale.small.size }} />}참석 예정

@@ -1,27 +1,6 @@
-import type { CSSProperties } from 'react'
-
-// 구분(카테고리)별 색상 — 값이 무엇이든 해시로 일관된 색 부여
-const WORK_CAT_PALETTE: CSSProperties[] = [
-  { background: 'rgba(84,145,218,.15)', color: '#5491DA', borderColor: 'rgba(84,145,218,.3)' },
-  { background: 'rgba(214,162,62,.15)', color: '#D6A23E', borderColor: 'rgba(214,162,62,.3)' },
-  { background: 'rgba(70,183,190,.15)', color: '#46B7BE', borderColor: 'rgba(70,183,190,.3)' },
-  { background: 'rgba(169,138,224,.15)', color: '#A98AE0', borderColor: 'rgba(169,138,224,.3)' },
-  { background: 'rgba(77,161,103,.15)', color: '#4DA167', borderColor: 'rgba(77,161,103,.3)' },
-  { background: 'rgba(224,91,84,.15)', color: '#E05B54', borderColor: 'rgba(224,91,84,.3)' },
-]
-
-export function workCatStyle(cat?: string): CSSProperties {
-  if (!cat) {
-    return {
-      background: 'rgba(139,148,158,.12)',
-      color: 'var(--text2)',
-      borderColor: 'var(--border)',
-    }
-  }
-  let h = 0
-  for (let i = 0; i < cat.length; i++) h = (h * 31 + cat.charCodeAt(i)) >>> 0
-  return WORK_CAT_PALETTE[h % WORK_CAT_PALETTE.length]
-}
+// 구분(카테고리)별 색상표(WORK_CAT_PALETTE)와 workCatStyle 은 2026-08-02 삭제.
+// 사용처가 0이었고, 채움색(accent)을 그대로 글자색으로 쓰고 있어 토큰 규칙에도 어긋났다
+// (글자에는 accentText 를 쓴다). 현재 구분 칩은 workMeta 의 톤 체계가 그린다.
 
 // 업무구분 우선순위 (대소문자·공백·,·/ 차이는 무시하고 매칭)
 const WORK_CAT_ORDER = [

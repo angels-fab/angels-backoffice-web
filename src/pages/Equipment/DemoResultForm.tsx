@@ -225,7 +225,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
                 {photos.map((p, i) => (
                   <Box key={i} sx={{ position: 'relative', height: 64, borderRadius: `${radius.chip}px`, overflow: 'hidden', border: i === cover ? '2px solid' : '1px solid', borderColor: i === cover ? 'primary.main' : 'divider' }}>
                     <Box component="img" src={p.url} alt={p.name} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    <Tooltip title={i === cover ? '대표사진' : '대표로 지정'}><IconButton size="small" onClick={() => setCover(i)} sx={{ position: 'absolute', top: 1, left: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}>{i === cover ? <StarIcon sx={{ fontSize: iconSize.caption, color: '#ffca28' }} /> : <StarBorderIcon sx={{ fontSize: iconSize.caption }} />}</IconButton></Tooltip>
+                    <Tooltip title={i === cover ? '대표사진' : '대표로 지정'}><IconButton size="small" onClick={() => setCover(i)} sx={{ position: 'absolute', top: 1, left: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}>{i === cover ? <StarIcon sx={{ fontSize: iconSize.caption, color: '#ffca28' }} /> : <StarBorderIcon sx={{ fontSize: iconSize.caption }} />}</IconButton></Tooltip> // design-lint-ok: 사진 썸네일 위 대표사진 별 — 토큰 앰버(#D6A23E)는 사진 위에서 탁해 보인다
                     <IconButton size="small" onClick={() => rmPic(i)} sx={{ position: 'absolute', top: 1, right: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton>
                   </Box>
                 ))}

@@ -103,7 +103,7 @@ export default function SubmitEventModal({ open, onClose, user, onSubmitted, onE
             <Box component="img" src={preview} alt="포스터 미리보기" sx={{ display: 'block', width: '100%', height: 'auto', maxHeight: 360, objectFit: 'contain' }} />
           ) : file ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, color: 'text.secondary', py: 3 }}>
-              <PictureAsPdfIcon sx={{ fontSize: 40, color: '#e2453c' }} />
+              <PictureAsPdfIcon sx={{ fontSize: 40, color: '#e2453c' }} /> // design-lint-ok: Adobe PDF 브랜드 빨강 — 파일 종류 식별용
               <Box sx={{ fontSize: typescale.body.size }}>{file.name}</Box>
             </Box>
           ) : (

@@ -25,7 +25,7 @@ import HistoryIcon from '@mui/icons-material/History'
 import AddIcon from '@mui/icons-material/Add'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { iconSize, radius, shadow, typescale, weight } from '@/theme/tokens'
+import { iconSize, radius, shadow, typescale, weight, neutralFill } from '@/theme/tokens'
 import { useSnack, LoadingState, ConfirmDialog } from '@/components/ds'
 import { inlineFieldSx } from '@/components/ds/fields'
 import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
@@ -48,7 +48,7 @@ const fmtDate = (d: string) => (d ? d.replace(/-/g, '.').slice(2) : '')
 const fmtDay = (iso: string) => { try { return new Date(iso).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit' }).replace(/\s/g, '').replace(/\.$/, '') } catch { return '' } }
 /** 작성자 색 — 업무/일정 담당자 색과 동일 출처 */
 const memberOf = (name: string) => MEMBERS.find((m) => m.name === name || given(m.name) === name)
-const AUTHOR_FALLBACK = '#8a8f98'
+const AUTHOR_FALLBACK = neutralFill
 
 // 서명 URL 캐시 — 사진(비공개 버킷)을 매번 재요청하지 않도록
 const urlCache = new Map<string, string>()
@@ -315,7 +315,7 @@ function PhotoCarousel({ photos, cover, onZoom, children }: {
               <>
                 <Box aria-hidden sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '44%', zIndex: 2, pointerEvents: 'none', background: SCRIM_GRAD }} />
                 <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 3, pointerEvents: 'none', px: 1.5, pb: '20px', display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                  <Box sx={{ flex: 1, minWidth: 0, fontSize: typescale.body.size, lineHeight: 1.5, color: '#f0f4f9', textShadow: '0 1px 2px rgba(0,0,0,.55)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.caption || ''}</Box>
+                  <Box sx={{ flex: 1, minWidth: 0, fontSize: typescale.body.size, lineHeight: 1.5, color: '#f0f4f9', textShadow: '0 1px 2px rgba(0,0,0,.55)' /* design-lint-ok: 사진 위 캡션 — 스크림 그라데이션 위 전용 */, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.caption || ''}</Box>
                   {n > 1 && <Box sx={{ flex: 'none', fontSize: typescale.caption.size, fontWeight: weight.medium, letterSpacing: '.04em', color: 'rgba(255,255,255,.8)', fontVariantNumeric: 'tabular-nums', textShadow: '0 1px 3px rgba(0,0,0,.6)' }}>{i + 1} / {n}</Box>}
                 </Box>
               </>
@@ -691,7 +691,7 @@ function PhotoManageDialog({ round, maker, user, onClose, onSaved }: {
                 <Box key={`k${i}`}>
                   <Box sx={tileSx(i === cover)}>
                     <Photo photo={p} />
-                    <Tooltip title={i === cover ? '대표사진' : '대표로 지정'}><IconButton size="small" onClick={() => setCover(i)} sx={{ position: 'absolute', top: 1, left: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}>{i === cover ? <StarIcon sx={{ fontSize: iconSize.caption, color: '#ffca28' }} /> : <StarBorderIcon sx={{ fontSize: iconSize.caption }} />}</IconButton></Tooltip>
+                    <Tooltip title={i === cover ? '대표사진' : '대표로 지정'}><IconButton size="small" onClick={() => setCover(i)} sx={{ position: 'absolute', top: 1, left: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}>{i === cover ? <StarIcon sx={{ fontSize: iconSize.caption, color: '#ffca28' }} /> : <StarBorderIcon sx={{ fontSize: iconSize.caption }} />}</IconButton></Tooltip> // design-lint-ok: 사진 썸네일 위 대표사진 별 — 토큰 앰버(#D6A23E)는 사진 위에서 탁해 보인다
                     <IconButton size="small" aria-label="사진 삭제" onClick={() => rmAt(i)} sx={{ position: 'absolute', top: 1, right: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton>
                   </Box>
                   {capInput(kept[i].caption || '', (v2) => setKeptCaption(i, v2))}
@@ -703,7 +703,7 @@ function PhotoManageDialog({ round, maker, user, onClose, onSaved }: {
                   <Box key={`a${j}`}>
                     <Box sx={tileSx(i === cover, true)}>
                       <Box component="img" src={a.url} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <Tooltip title={i === cover ? '대표사진' : '대표로 지정'}><IconButton size="small" onClick={() => setCover(i)} sx={{ position: 'absolute', top: 1, left: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}>{i === cover ? <StarIcon sx={{ fontSize: iconSize.caption, color: '#ffca28' }} /> : <StarBorderIcon sx={{ fontSize: iconSize.caption }} />}</IconButton></Tooltip>
+                      <Tooltip title={i === cover ? '대표사진' : '대표로 지정'}><IconButton size="small" onClick={() => setCover(i)} sx={{ position: 'absolute', top: 1, left: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}>{i === cover ? <StarIcon sx={{ fontSize: iconSize.caption, color: '#ffca28' }} /> : <StarBorderIcon sx={{ fontSize: iconSize.caption }} />}</IconButton></Tooltip> // design-lint-ok: 사진 썸네일 위 대표사진 별 — 토큰 앰버(#D6A23E)는 사진 위에서 탁해 보인다
                       <IconButton size="small" aria-label="사진 삭제" onClick={() => rmAt(i)} sx={{ position: 'absolute', top: 1, right: 1, p: '2px', color: 'common.white', bgcolor: 'rgba(0,0,0,.4)' }}><CloseIcon sx={{ fontSize: iconSize.caption }} /></IconButton>
                     </Box>
                     {capInput(a.caption, (v2) => setAddedCaption(j, v2))}

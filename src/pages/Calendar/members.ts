@@ -1,4 +1,4 @@
-import { managerColor } from '@/theme/tokens'
+import { managerColor, neutralFill } from '@/theme/tokens'
 
 /**
  * 팀원(담당자) — 캘린더 데이터에는 사람 필드가 없어 일정 제목에서 추출한다.
@@ -46,7 +46,8 @@ const NAMED: string[] = MEMBERS.filter((m) => m.id !== '센터').map((m) => m.na
 const byId = new Map(MEMBERS.map((m) => [m.id, m]))
 
 export function memberById(id: string): TeamMember {
-  return byId.get(id) || { id, name: id, color: '#888' }
+  // 명단에 없는 외부 참석자 — 색을 정할 수 없으므로 중립 폴백
+  return byId.get(id) || { id, name: id, color: neutralFill }
 }
 
 /**

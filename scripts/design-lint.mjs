@@ -93,10 +93,23 @@ for (const f of files) {
   } catch {
     continue
   }
+  // 세기 전에 두 가지를 걷어낸다 — 안 그러면 "빚"이 아닌 것까지 빚으로 잡힌다.
+  //   ① 주석 — 설명문에 적힌 hex 는 화면에 안 나온다("구 #7D8899 는 …" 같은 이력 서술)
+  //   ② design-lint-ok 가 달린 줄 — 토큰화가 **틀린** 자리(벤더 브랜드색, 사진 위 전용 색 등).
+  //      반드시 같은 줄에 이유를 적을 것. 이유 없는 면제는 그냥 빚을 숨기는 것이다.
+  // ★ 면제 표시를 먼저 걸러야 한다 — 주석을 먼저 지우면 같은 줄의 design-lint-ok 가 함께
+  //   사라져서 그 줄의 hex 가 도로 잡힌다.
+  const scanned = src
+    .split('\n')
+    .filter((l) => !l.includes('design-lint-ok'))
+    .join('\n')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
+
   const counts = {}
   let score = 0
   for (const c of CHECKS) {
-    const n = (src.match(c.re) || []).length
+    const n = (scanned.match(c.re) || []).length
     counts[c.key] = n
     totals[c.key] += n
     score += n

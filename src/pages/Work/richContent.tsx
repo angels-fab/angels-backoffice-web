@@ -39,7 +39,7 @@ export const HL_VAR: Record<HlToken, string> = {
 }
 export const HL_LABEL: Record<HlToken, string> = { yellow: '노랑', green: '초록', blue: '파랑', pink: '분홍' }
 /** 형광펜 색(불투명) — 커서 촉·툴바 색상 바용. 실제 형광펜 배경(--hl-*)과 동일한 PPT 원색 */
-export const HL_SOLID: Record<HlToken, string> = { yellow: '#FFFF00', green: '#00FF00', blue: '#00FFFF', pink: '#FF00FF' }
+export const HL_SOLID: Record<HlToken, string> = { yellow: '#FFFF00', green: '#00FF00', blue: '#00FFFF', pink: '#FF00FF' } // design-lint-ok: PPT·Word 형광펜 표준 원색 — 채도를 낮추면 형광펜이 아니게 된다
 
 // ── PM 문서(직렬화 대상)의 최소 타입 ──
 interface PMMark { type: string; attrs?: { token?: string } }

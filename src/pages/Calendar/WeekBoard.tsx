@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import { alpha } from '@mui/material/styles'
+import type { Theme } from '@mui/material/styles'
 import { accent, radius, typescale, weight } from '@/theme/tokens'
 import type { CalEvent } from '@/types'
 import { CAT_META } from './catMeta'
@@ -26,8 +27,13 @@ export interface WeekBoardProps {
   showWeekends: boolean
 }
 
-function dowColor(dow: number): string {
-  return dow === 0 ? '#E0726B' : dow === 6 ? '#6AA0E8' : 'inherit'
+/**
+ * 요일 글자색 — 달력 관례(일=빨강·토=파랑)는 유지하되 색은 **글자용** 토큰을 쓴다.
+ * 구 하드코딩 #E0726B/#6AA0E8 은 채움색 계열이라 라이트 표면에서 대비가 얕았다
+ * (채움은 accent, 글자는 accentText — tokens.ts 규칙). 평일은 상속 유지.
+ */
+function dowColor(t: Theme, dow: number): string {
+  return dow === 0 ? t.palette.accentText.red : dow === 6 ? t.palette.accentText.blue : 'inherit'
 }
 
 function Chip({ ev }: { ev: CalEvent }) {
@@ -146,7 +152,7 @@ export default function WeekBoard({ weekStart, members, events, todayKey, showWe
                 bgcolor: isToday ? 'background.elevated' : 'transparent',
               }}
             >
-              <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.semibold, color: dowColor(dow) }}>
+              <Box component="span" sx={(t) => ({ fontSize: typescale.caption.size, fontWeight: weight.semibold, color: dowColor(t, dow) })}>
                 {DOW[dow]}
               </Box>
               <Box

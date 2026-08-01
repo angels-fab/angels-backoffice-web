@@ -7,7 +7,7 @@ import Button from '@mui/material/Button'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import ImageIcon from '@mui/icons-material/Image'
 import { alpha } from '@mui/material/styles'
-import { typescale, iconSize, radius } from '@/theme/tokens'
+import { typescale, iconSize, radius, neutralFill } from '@/theme/tokens'
 import { StatusChip } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
 import { fmtEventDate } from '@/constants/events'
@@ -50,7 +50,7 @@ export default function SubmissionsAdmin({ open, onClose, submissions, onChanged
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
             {sorted.map((s) => {
-              const catColor = CAT_COLOR[(s.category as EventCat)] ?? '#888'
+              const catColor = CAT_COLOR[(s.category as EventCat)] ?? neutralFill
               return (
                 <Box key={s.id} sx={(th) => ({ border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.button}px`, p: 1.25, bgcolor: alpha(th.palette.text.primary, 0.02) })}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 0.75 }}>

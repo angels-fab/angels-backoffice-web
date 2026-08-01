@@ -200,7 +200,7 @@ export default function SideNav() {
                       padding: '0 3px',
                       borderRadius: `${radius.pill}px`,
                       background: 'var(--red-solid)',
-                      color: '#fff',
+                      color: 'common.white',
                       fontSize: '9px',
                       fontWeight: weight.bold,
                       lineHeight: '14px',
