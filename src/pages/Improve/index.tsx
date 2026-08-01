@@ -766,7 +766,7 @@ export default function Improve() {
                         <Box component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.medium, color: 'text.primary' }}>{t.title}</Box>
                         {/* 제목 → 최근글 N칩 → 답글 +N칩 → 링크 순. 모두 줄어들지 않게 flexShrink:0 */}
                         {isNew && (
-                          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: 9.5, fontWeight: typescale.cardTitle.weight, lineHeight: 1 }}>N</Box>
+                          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: typescale.micro.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1 }}>N</Box>
                         )}
                         {/* 답글 +N — 삭제 안 된 답글이 있을 때만. 파란 칩(왼쪽 점 없음), 상태와 무관. 클릭 시 행 토글로 아코디언 펼침 */}
                         {rowReplies.length > 0 && (

@@ -209,7 +209,7 @@ export default function EquipmentOps() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '1.4fr 1fr 1fr' }, gap: 1, mb: 2, ...eqStripMobileSx }}>
         <AppCard padding={16}>
           <Typography sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 1 }}>전체 장비</Typography>
-          <Typography sx={{ fontSize: 26, fontWeight: weight.heavy, lineHeight: 1 }}>{c.total}<Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.semibold, ml: 0.5 }}>대 · {c.types}종</Box></Typography>
+          <Typography sx={{ fontSize: typescale.display.size, fontWeight: weight.heavy, lineHeight: 1 }}>{c.total}<Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.semibold, ml: 0.5 }}>대 · {c.types}종</Box></Typography>
           <Box sx={{ display: 'flex', gap: 1.5, mt: 1.25, flexWrap: 'wrap', color: 'text.disabled', fontSize: typescale.caption.size }}>
             {Object.entries(overview.catUnits).map(([cat, n]) => (
               <span key={cat}>{cat} <Box component="span" sx={{ color: 'text.secondary', fontWeight: weight.bold }}>{n}</Box></span>
@@ -220,7 +220,7 @@ export default function EquipmentOps() {
 
         <AppCard padding={16}>
           <Typography sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 1 }}>운영 상태</Typography>
-          <Typography sx={{ fontSize: 26, fontWeight: weight.heavy, lineHeight: 1 }}>{c.units[dominant]}<Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.semibold, ml: 0.5 }}>대 {EQ_STATE[dominant].label}</Box></Typography>
+          <Typography sx={{ fontSize: typescale.display.size, fontWeight: weight.heavy, lineHeight: 1 }}>{c.units[dominant]}<Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.semibold, ml: 0.5 }}>대 {EQ_STATE[dominant].label}</Box></Typography>
           <Box sx={{ display: 'flex', gap: 1.5, mt: 1.25, flexWrap: 'wrap', color: 'text.disabled', fontSize: typescale.caption.size }}>
             {STATE_ORDER.filter((s) => s !== dominant && c.units[s] > 0).map((s) => (
               <span key={s}>{EQ_STATE[s].label} <Box component="span" sx={{ color: 'text.secondary', fontWeight: weight.bold }}>{c.units[s]}</Box></span>
@@ -230,7 +230,7 @@ export default function EquipmentOps() {
 
         <AppCard padding={16} sx={{ borderColor: overview.missTypes ? 'warning.main' : undefined }}>
           <Typography sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 1 }}>필수정보 누락</Typography>
-          <Typography sx={{ fontSize: 26, fontWeight: weight.heavy, lineHeight: 1, color: overview.missTypes ? 'warning.main' : 'text.primary' }}>
+          <Typography sx={{ fontSize: typescale.display.size, fontWeight: weight.heavy, lineHeight: 1, color: overview.missTypes ? 'warning.main' : 'text.primary' }}>
             {overview.missTypes}<Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.semibold, ml: 0.5 }}>종 · {overview.missUnits}대</Box>
           </Typography>
           <Typography sx={{ mt: 1.25, fontSize: typescale.caption.size, color: 'warning.main' }}>제조사·모델명·설치장소·NFEC 확인 필요</Typography>

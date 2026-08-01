@@ -1579,7 +1579,7 @@ export default function Work() {
             }
           }}
         >
-          <DeleteOutlineIcon sx={{ fontSize: 26 }} />
+          <DeleteOutlineIcon sx={{ fontSize: iconSize.feature }} />
           놓으면 삭제
         </Box>
       )}

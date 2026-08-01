@@ -73,7 +73,7 @@ export function GanttHeader({ months: allMonths }: { months: TlMonth[] }) {
             key={i}
             sx={{
               textAlign: 'center',
-              fontSize: 15,
+              fontSize: typescale.emphasis.size,
               fontWeight: weight.bold,
               color: 'text.secondary',
               whiteSpace: 'nowrap',

@@ -264,7 +264,7 @@ export default function Notice() {
                 {n.dept ? `[${n.dept}] ` : ''}{n.title}
               </Typography>
               {n.isNew && (
-                <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: 9.5, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
+                <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: typescale.micro.size, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
               )}
               {link && (
                 <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>

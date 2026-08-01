@@ -176,7 +176,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
         {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
         {/* 새 업무 N 배지 — 진행중+발의 7일(공지 N칩과 동일 디자인). 제목 말줄임과 안 겹치게 flexShrink:0 */}
         {isWorkNew(t) && (
-          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (th) => th.palette.accent.red, color: (th) => th.palette.getContrastText(th.palette.accent.red), fontSize: 9.5, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
+          <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (th) => th.palette.accent.red, color: (th) => th.palette.getContrastText(th.palette.accent.red), fontSize: typescale.micro.size, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
         )}
         <Typography variant="body1" sx={{ flex: 1, minWidth: 120, fontWeight: weight.semibold, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
         {/* 우측 묶음 — Check · 담당자 · 별을 한 덩어리로. 제목 길이와 무관하게 셋이 오른쪽 끝에 붙는다 */}

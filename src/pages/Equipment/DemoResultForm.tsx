@@ -218,7 +218,7 @@ export default function DemoResultForm({ open, onClose, defs, rows, initialEquip
             sx={(th) => ({ border: '2px dashed', borderColor: drag ? th.palette.primary.main : th.palette.divider, bgcolor: drag ? alpha(th.palette.primary.main, 0.06) : 'transparent', borderRadius: `${radius.input}px`, p: 1, cursor: 'pointer', textAlign: 'center' })}>
             {photos.length === 0 ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, color: 'text.disabled', py: 1 }}>
-                <AddPhotoAlternateOutlinedIcon sx={{ fontSize: 26 }} /><Box sx={{ fontSize: typescale.small.size }}>사진을 끌어놓거나 클릭해 추가</Box>
+                <AddPhotoAlternateOutlinedIcon sx={{ fontSize: iconSize.feature }} /><Box sx={{ fontSize: typescale.small.size }}>사진을 끌어놓거나 클릭해 추가</Box>
               </Box>
             ) : (
               <Box onClick={(e) => e.stopPropagation()} sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 0.75 }}>

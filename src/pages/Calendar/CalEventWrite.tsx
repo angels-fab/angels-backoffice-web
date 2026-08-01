@@ -188,7 +188,7 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
       </Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
         {WEEKDAYS.map((w, i) => (
-          <Box key={w} sx={{ fontSize: 10.5, fontWeight: weight.bold, textAlign: 'center', pb: '5px', color: i === 0 ? 'error.main' : i === 6 ? 'primary.main' : 'text.disabled' }}>{w}</Box>
+          <Box key={w} sx={{ fontSize: typescale.micro.size, fontWeight: weight.bold, textAlign: 'center', pb: '5px', color: i === 0 ? 'error.main' : i === 6 ? 'primary.main' : 'text.disabled' }}>{w}</Box>
         ))}
         {Array.from({ length: firstDow }, (_, i) => <Box key={`b${i}`} />)}
         {Array.from({ length: days }, (_, i) => {
@@ -222,7 +222,7 @@ function MiniCalendar({ ym, onYm, start, end, picking, onPick }: {
               )}
               <Box data-num sx={{
                 position: 'relative', zIndex: 1, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12.5, fontVariantNumeric: 'tabular-nums', borderRadius: radius.circle,
+                fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums', borderRadius: radius.circle,
                 color: 'text.secondary',
                 ...(key === today ? { boxShadow: (th) => `inset 0 0 0 1px ${th.palette.primary.main}` } : null),
                 ...((isStart || isEnd) && start ? { bgcolor: 'primary.main', color: 'common.white', fontWeight: weight.bold } : null),
@@ -592,7 +592,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           fullWidth
           inputProps={{ 'aria-label': '제목' }}
           sx={{
-            fontSize: 19, fontWeight: weight.bold, pb: '6px',
+            fontSize: typescale.sectionTitle.size, fontWeight: weight.bold, pb: '6px',
             borderBottom: '2px solid', borderColor: 'divider', borderRadius: 0,
             transition: 'border-color .15s',
             '&.Mui-focused': { borderColor: 'primary.main' },
@@ -655,14 +655,14 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                   boxShadow: on ? `inset 0 0 0 1px ${alpha(color, 0.55)}` : 'none',
                   transition: 'opacity .15s, background-color .2s, box-shadow .2s',
                   '&:hover': { opacity: on ? 1 : 0.85 },
-                  '& svg': { fontSize: 15, color, flex: 'none', ...(c === 'trip_intl' ? { transform: 'rotate(45deg)' } : null) },
+                  '& svg': { fontSize: iconSize.body, color, flex: 'none', ...(c === 'trip_intl' ? { transform: 'rotate(45deg)' } : null) },
                   '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
                 }}
               >
                 <Icon />
                 <Box component="span" sx={{
                   maxWidth: on ? 88 : 0, opacity: on ? 1 : 0, ml: on ? '5px' : 0,
-                  overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 11.5, fontWeight: weight.bold, color: 'text.primary',
+                  overflow: 'hidden', whiteSpace: 'nowrap', fontSize: typescale.small.size, fontWeight: weight.bold, color: 'text.primary',
                   transition: 'max-width .24s ease, opacity .18s ease, margin-left .24s ease',
                 }}>
                   {CAT_META[c].label}

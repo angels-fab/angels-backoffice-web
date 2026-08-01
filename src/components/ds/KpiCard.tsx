@@ -65,7 +65,7 @@ export default function KpiCard({
         <Typography
           component="span"
           sx={{
-            fontSize: 34,
+            fontSize: typescale.displayLg.size,
             fontWeight: weight.heavy,
             lineHeight: 1,
             // 숫자는 "글자"이므로 채움색(accent)이 아니라 글자용 값(accentText)을 쓴다 — 라이트에서 대비 확보
@@ -75,7 +75,7 @@ export default function KpiCard({
           {value}
         </Typography>
         {unit && (
-          <Typography component="span" sx={{ fontSize: 15, fontWeight: weight.semibold, color: 'text.secondary' }}>
+          <Typography component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.semibold, color: 'text.secondary' }}>
             {unit}
           </Typography>
         )}

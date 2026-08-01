@@ -75,7 +75,7 @@ function renderEventContent(arg: EventContentArg) {
   // 새 일정 초안 막대(모달 열림 중 미리보기) — 단순 흰 글자 바
   if (arg.event.extendedProps.draft) {
     return (
-      <Box sx={{ px: '4px', fontSize: 11.5, fontWeight: weight.bold, color: 'common.white', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+      <Box sx={{ px: '4px', fontSize: typescale.small.size, fontWeight: weight.bold, color: 'common.white', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
         {arg.event.title}
       </Box>
     )

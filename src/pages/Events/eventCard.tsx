@@ -310,7 +310,7 @@ export function EventCardInner({ e, open, attend }: { e: FabEvent; open: boolean
               '&:focus-visible': { outline: '2px solid #34d399', outlineOffset: 2 }, // design-lint-ok(hex): 사진 위 포커스 링 — 어떤 사진에서도 보이도록 밝은 민트
             }}
           >
-            {attend.mine && <CheckIcon sx={{ fontSize: 15 }} />}
+            {attend.mine && <CheckIcon sx={{ fontSize: iconSize.body }} />}
             {attendLabel}
           </Box>
         )}

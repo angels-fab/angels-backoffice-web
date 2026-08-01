@@ -123,7 +123,7 @@ export default function SideNav() {
                   component="span"
                   data-snav="labeltext"
                   sx={{
-                    fontSize: '10.5px',
+                    fontSize: typescale.micro.size,
                     fontWeight: weight.bold,
                     color: 'text.disabled',
                     letterSpacing: '.09em',
@@ -201,7 +201,7 @@ export default function SideNav() {
                       borderRadius: `${radius.pill}px`,
                       background: 'var(--red-solid)',
                       color: 'common.white',
-                      fontSize: '9px',
+                      fontSize: typescale.micro.size,
                       fontWeight: weight.bold,
                       lineHeight: '14px',
                       textAlign: 'center',

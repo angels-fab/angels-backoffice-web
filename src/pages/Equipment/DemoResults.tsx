@@ -683,7 +683,7 @@ function PhotoManageDialog({ round, maker, user, onClose, onSaved }: {
           sx={(th) => ({ border: '2px dashed', borderColor: drag ? th.palette.primary.main : th.palette.divider, bgcolor: drag ? alpha(th.palette.primary.main, 0.06) : 'transparent', borderRadius: `${radius.button}px`, p: 1, cursor: 'pointer' })}>
           {total === 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, color: 'text.disabled', py: 1.5 }}>
-              <AddPhotoAlternateOutlinedIcon sx={{ fontSize: 26 }} /><Box sx={{ fontSize: typescale.small.size }}>사진을 끌어놓거나 클릭해 추가</Box>
+              <AddPhotoAlternateOutlinedIcon sx={{ fontSize: iconSize.feature }} /><Box sx={{ fontSize: typescale.small.size }}>사진을 끌어놓거나 클릭해 추가</Box>
             </Box>
           ) : (
             <Box onClick={(e) => e.stopPropagation()} sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 0.75 }}>

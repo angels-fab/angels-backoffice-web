@@ -831,7 +831,7 @@ export default function Equipment() {
               <Box sx={{ width: GANTT_NAME_W, flexShrink: 0, px: 1.25, py: 0.75, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5, borderRight: 1, borderColor: 'divider' }}>
                 <Typography sx={{ fontSize: typescale.micro.size, fontWeight: weight.bold, letterSpacing: '0.02em', color: 'text.disabled', whiteSpace: 'nowrap' }}>장비</Typography>
                 {todayFrac >= 0 && (
-                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, fontSize: 9, fontWeight: weight.semibold, color: 'primary.main' }}>
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.4, fontSize: typescale.micro.size, fontWeight: weight.semibold, color: 'primary.main' }}>
                     <Box sx={{ width: 2, height: 11, borderRadius: 1, bgcolor: 'primary.main' }} /> 오늘
                   </Box>
                 )}

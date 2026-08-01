@@ -81,7 +81,7 @@ function CardInner({ t }: { t: WorkItem }) {
     <>
       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
         {isWorkNew(t) && (
-          <Box component="span" sx={{ flexShrink: 0, mt: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (th) => th.palette.accent.red, color: (th) => th.palette.getContrastText(th.palette.accent.red), fontSize: 9.5, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
+          <Box component="span" sx={{ flexShrink: 0, mt: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (th) => th.palette.accent.red, color: (th) => th.palette.getContrastText(th.palette.accent.red), fontSize: typescale.micro.size, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
         )}
         <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: weight.semibold, wordBreak: 'break-word', lineHeight: 1.45, color: 'text.primary' }}>
           {taskTitle(t)}
