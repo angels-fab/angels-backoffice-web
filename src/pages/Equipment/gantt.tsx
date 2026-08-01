@@ -94,7 +94,7 @@ export function GanttHeader({ months: allMonths }: { months: TlMonth[] }) {
               sx={{
                 minWidth: 0,
                 height: '18px',
-                fontSize: 9,
+                // 구 fontSize: 9 삭제 — 유일한 자식 span 이 body(13)로 덮어 화면에 나온 적이 없는 죽은 선언
                 color: 'text.disabled',
                 textAlign: 'center',
                 position: 'relative',

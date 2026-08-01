@@ -10,7 +10,7 @@ import MenuIcon from '@mui/icons-material/Menu'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import { useRole } from '@/auth/role'
 import { NavBadge } from '@/components/ds'
-import { motion, weight, z } from '@/theme/tokens'
+import { motion, weight, z, typescale } from '@/theme/tokens'
 import { useNavBadges } from './useNavBadges'
 import MobileMenuDrawer from './MobileMenuDrawer'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
@@ -52,8 +52,8 @@ const itemSx = (active: boolean) => (t: Theme) => ({
   alignItems: 'center',
   gap: '3px',
   padding: '5px 2px',
-  // 10px — 타이포 사다리 최소(caption 11) 아래라 리터럴 유지
-  fontSize: 10,
+  // 크롬 최소 단(micro 10) — 배지·탭 라벨 전용. 사다리 바닥
+  fontSize: typescale.micro.size,
   fontWeight: weight.medium,
   transition: `color ${motion.base}`,
   WebkitTapHighlightColor: 'transparent',

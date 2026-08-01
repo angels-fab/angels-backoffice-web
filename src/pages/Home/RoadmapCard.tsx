@@ -121,7 +121,7 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
             color: domain.roadmap.hero.tileIcon[t.palette.mode],
             flex: '0 0 auto',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,.07)',
-            '& svg': { fontSize: 24 },
+            '& svg': { fontSize: iconSize.feature },
           })}
         >
           <TrendingUpIcon fontSize="inherit" />

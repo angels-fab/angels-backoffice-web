@@ -4,6 +4,7 @@ import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import type { ReactNode } from 'react'
+import { iconSize } from '@/theme/tokens'
 
 export interface FormDialogProps {
   open: boolean
@@ -53,7 +54,7 @@ export default function FormDialog({
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 3, pt: 2.5, pb: 1.5 }}>
         {icon != null && (
-          <Box sx={{ display: 'flex', alignItems: 'center', color: 'primary.main', '& svg': { fontSize: 20 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', color: 'primary.main', '& svg': { fontSize: iconSize.header } }}>
             {icon}
           </Box>
         )}

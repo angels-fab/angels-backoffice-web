@@ -305,9 +305,9 @@ export function EventCardInner({ e, open, attend }: { e: FabEvent; open: boolean
               fontFamily: 'inherit', fontSize: { xs: 12, sm: 13 }, fontWeight: weight.bold, lineHeight: 1, whiteSpace: 'nowrap',
               cursor: attend.busy ? 'default' : 'pointer',
               ...(attend.mine
-                ? { bgcolor: '#16a34a', color: 'common.white', border: '1px solid #16a34a' } // design-lint-ok: 행사 포스터 사진 위 — 배경을 예측할 수 없어 표면용 accent.green(#4DA167)보다 진한 초록이 필요
-                : { bgcolor: 'rgba(0,0,0,.42)', backdropFilter: 'blur(4px)', color: '#c9f4dc', border: '1px solid rgba(52,211,153,.7)', '&:hover': { bgcolor: 'rgba(16,120,70,.55)' } }), // design-lint-ok: 위와 같은 사진 위 스크림 조합
-              '&:focus-visible': { outline: '2px solid #34d399', outlineOffset: 2 }, // design-lint-ok: 사진 위 포커스 링 — 어떤 사진에서도 보이도록 밝은 민트
+                ? { bgcolor: '#16a34a', color: 'common.white', border: '1px solid #16a34a' } // design-lint-ok(hex): 행사 포스터 사진 위 — 배경을 예측할 수 없어 표면용 accent.green(#4DA167)보다 진한 초록이 필요
+                : { bgcolor: 'rgba(0,0,0,.42)', backdropFilter: 'blur(4px)', color: '#c9f4dc', border: '1px solid rgba(52,211,153,.7)', '&:hover': { bgcolor: 'rgba(16,120,70,.55)' } }), // design-lint-ok(hex): 위와 같은 사진 위 스크림 조합
+              '&:focus-visible': { outline: '2px solid #34d399', outlineOffset: 2 }, // design-lint-ok(hex): 사진 위 포커스 링 — 어떤 사진에서도 보이도록 밝은 민트
             }}
           >
             {attend.mine && <CheckIcon sx={{ fontSize: 15 }} />}

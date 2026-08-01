@@ -35,8 +35,10 @@ const EXCLUDE = ['src/components/ds']
 
 const CHECKS = [
   { key: 'hex', re: /['"`]#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})['"`]/g },
-  // 숫자 리터럴만 위반 — 토큰 경유(fontSize: iconSize.body 등)는 합법
-  { key: 'font', re: /fontSize\s*:\s*['"`{]?\s*[\d.]/g },
+  // 숫자 리터럴만 위반 — 토큰 경유(fontSize: iconSize.body 등)는 합법.
+  // 두 번째 갈래는 반응형 객체 `fontSize: { xs: 26, md: 30 }` — 구 정규식은 여는 중괄호 다음에
+  // 곧바로 숫자가 와야 매치돼서 이 형태를 통째로 놓쳤다(살아있는 KpiSection KPI 숫자 등).
+  { key: 'font', re: /fontSize\s*:\s*(?:['"`]?[\d.]|\{[^}]*?:\s*['"`]?[\d.])/g },
   { key: 'weight', re: /fontWeight\s*:\s*['"`]?\d{3}/g },
   // 리터럴 숫자/px + bare `radius.X`(sx에서 12배 함정) 둘 다 위반. 안전형 `${radius.X}px`는 통과.
   // ★ radius.circle 만 예외 — 값이 '50%' **문자열**이라 MUI 의 shape.borderRadius(12) 곱셈을
@@ -95,20 +97,28 @@ for (const f of files) {
   }
   // 세기 전에 두 가지를 걷어낸다 — 안 그러면 "빚"이 아닌 것까지 빚으로 잡힌다.
   //   ① 주석 — 설명문에 적힌 hex 는 화면에 안 나온다("구 #7D8899 는 …" 같은 이력 서술)
-  //   ② design-lint-ok 가 달린 줄 — 토큰화가 **틀린** 자리(벤더 브랜드색, 사진 위 전용 색 등).
+  //   ② design-lint-ok(항목) 이 달린 줄 — 토큰화가 **틀린** 자리(벤더 브랜드색, 사진 위 전용 색 등).
   //      반드시 같은 줄에 이유를 적을 것. 이유 없는 면제는 그냥 빚을 숨기는 것이다.
-  // ★ 면제 표시를 먼저 걸러야 한다 — 주석을 먼저 지우면 같은 줄의 design-lint-ok 가 함께
-  //   사라져서 그 줄의 hex 가 도로 잡힌다.
-  const scanned = src
-    .split('\n')
-    .filter((l) => !l.includes('design-lint-ok'))
-    .join('\n')
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
+  //
+  // ★ 면제는 **항목을 지정해야** 한다 — design-lint-ok(hex) 처럼. 줄 전체를 통째로 빼면
+  //   색 때문에 단 표시가 그 줄의 글자 크기·모서리까지 함께 면제한다(실제로 SubmitEventModal 의
+  //   fontSize: 40 이 색 사유로 조용히 빠져 있었다). 여러 항목은 쉼표로: design-lint-ok(hex,font)
+  // ★ 면제 표시를 주석 제거보다 **먼저** 봐야 한다 — 주석을 먼저 지우면 같은 줄의 표시가
+  //   함께 사라져 그 줄이 도로 잡힌다.
+  const exempt = new Map() // 줄번호 → 면제할 항목 Set
+  const lines = src.split('\n')
+  lines.forEach((l, i) => {
+    const m = l.match(/design-lint-ok\(([^)]*)\)/)
+    if (m) exempt.set(i, new Set(m[1].split(',').map((s) => s.trim()).filter(Boolean)))
+  })
+
+  const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/[^\n]*/g, '$1 ')
 
   const counts = {}
   let score = 0
   for (const c of CHECKS) {
+    // 이 항목이 면제된 줄만 빼고 센다
+    const scanned = strip(lines.filter((_, i) => !exempt.get(i)?.has(c.key)).join('\n'))
     const n = (scanned.match(c.re) || []).length
     counts[c.key] = n
     totals[c.key] += n

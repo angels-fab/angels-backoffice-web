@@ -32,7 +32,7 @@ function SourceCard({ icon, name, detail }: { icon: React.ReactNode; name: strin
   return (
     <AppCard padding={16}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box sx={{ display: 'flex', color: 'primary.main', '& svg': { fontSize: 24 } }}>{icon}</Box>
+        <Box sx={{ display: 'flex', color: 'primary.main', '& svg': { fontSize: iconSize.feature } }}>{icon}</Box>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle1">{name}</Typography>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>{detail}</Typography>

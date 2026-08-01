@@ -39,9 +39,9 @@ import { COLOR_PALETTE, COLOR_LABEL, COLOR_VAR, HL_TOKENS, HL_LABEL, HL_VAR, HL_
 function hlCursorCss(hex: string): string {
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'>`
     + `<g transform='rotate(35 10 30)'>`
-    + `<rect x='5.5' y='4' width='9' height='15' rx='2.5' fill='#2f3542' stroke='#f2f4f8' stroke-width='1.1'/>` // design-lint-ok: 형광펜 도구 아이콘 SVG 그림 자체의 색 — UI 색이 아니다
-    + `<rect x='6.4' y='8' width='7.2' height='2.6' rx='1' fill='#dfe6f2'/>` // design-lint-ok: 형광펜 도구 아이콘 SVG 그림 자체의 색 — UI 색이 아니다
-    + `<path d='M5.5 19 h9 v1.5 h-9 z' fill='#3a4150'/>` // design-lint-ok: 형광펜 도구 아이콘 SVG 그림 자체의 색 — UI 색이 아니다
+    + `<rect x='5.5' y='4' width='9' height='15' rx='2.5' fill='#2f3542' stroke='#f2f4f8' stroke-width='1.1'/>` // design-lint-ok(hex): 형광펜 도구 아이콘 SVG 그림 자체의 색 — UI 색이 아니다
+    + `<rect x='6.4' y='8' width='7.2' height='2.6' rx='1' fill='#dfe6f2'/>` // design-lint-ok(hex): 형광펜 도구 아이콘 SVG 그림 자체의 색 — UI 색이 아니다
+    + `<path d='M5.5 19 h9 v1.5 h-9 z' fill='#3a4150'/>` // design-lint-ok(hex): 형광펜 도구 아이콘 SVG 그림 자체의 색 — UI 색이 아니다
     + `<path d='M5.5 20.5 L14.5 20.5 L14.5 27 L5.5 22.8 Z' fill='${hex}' stroke='rgba(0,0,0,.28)' stroke-width='0.6' stroke-linejoin='round'/>`
     + `</g></svg>`
   // 핫스팟 = 45° 촉이 회전 후 지면에 닿는 촉 끝(≈ 이미지 15,28)

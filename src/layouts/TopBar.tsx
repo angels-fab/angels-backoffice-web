@@ -38,18 +38,18 @@ const ThemeSwitch = styled(Switch)({
     transform: 'translateX(4px)',
     '&.Mui-checked': {
       transform: 'translateX(24px)',
-      '& .MuiSwitch-thumb': { backgroundColor: '#0B1C3A', boxShadow: '0 1px 2px rgba(0,0,0,.45)' }, // design-lint-ok: MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
+      '& .MuiSwitch-thumb': { backgroundColor: '#0B1C3A', boxShadow: '0 1px 2px rgba(0,0,0,.45)' }, // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
       '& .MuiSwitch-thumb:before': {
         // 달(다크) — 남색 알 위라 흰색
-        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L6.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`, // design-lint-ok: MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
+        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L6.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`, // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
       },
-      '& + .MuiSwitch-track': { opacity: 1, backgroundColor: '#5A6B80' }, // design-lint-ok: MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
+      '& + .MuiSwitch-track': { opacity: 1, backgroundColor: '#5A6B80' }, // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
     },
   },
   // 썸 — 라이트(해)는 밝은 알 + 진한 해, 다크(달)는 남색 알 + 흰 달.
   // 구현: 기본(미체크)=라이트, 위 '&.Mui-checked' 블록이 다크로 덮는다.
   '& .MuiSwitch-thumb': {
-    backgroundColor: '#FDFEFF', // design-lint-ok: MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
+    backgroundColor: '#FDFEFF', // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
     boxShadow: '0 1px 2px rgba(20,37,66,.28)',
     width: 28,
     height: 28,
@@ -64,12 +64,12 @@ const ThemeSwitch = styled(Switch)({
       backgroundRepeat: 'no-repeat',
       backgroundPosition: 'center',
       // 해(라이트) — 밝은 알 위라 진한 앰버
-      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#B26A00')}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`, // design-lint-ok: MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
+      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#B26A00')}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`, // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
     },
   },
   '& .MuiSwitch-track': {
     opacity: 1,
-    backgroundColor: '#aab4be', // design-lint-ok: MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
+    backgroundColor: '#aab4be', // design-lint-ok(hex): MUI 공식 데모 MaterialUISwitch 값 — 순정 유지가 사용자 결정(2026-08-02)
     borderRadius: 20 / 2,
   },
 })

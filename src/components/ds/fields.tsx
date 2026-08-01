@@ -6,7 +6,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { alpha, type SxProps, type Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
-import { radius } from '@/theme/tokens'
+import { radius, typescale } from '@/theme/tokens'
 
 /**
  * 폼 필드 표준 (P2-1, D4 확정: 단일 컴포넌트 + 2 variant).
@@ -29,7 +29,7 @@ export const inlineFieldSx = (th: Theme) => ({
   borderRadius: `${radius.input}px`,
   px: 1,
   minHeight: 30,
-  fontSize: '0.8125rem', // body(13px) — variant 밖 컨텍스트라 rem 직접
+  fontSize: typescale.body.size, // 구 '0.8125rem' — 루트 16px 기준 정확히 13px 이라 값 동일(브라우저 실측)
   color: th.palette.text.primary,
   transition: 'border-color .12s, box-shadow .12s',
   '&:hover': { borderColor: alpha(th.palette.text.secondary, 0.55) },
