@@ -33,7 +33,7 @@ import { useRole } from '@/auth/role'
 import type { CalEvent } from '@/types'
 import { MEMBERS, given, eventParticipants } from './members'
 import { CAT_META, CAT_ORDER, type RealCat } from './catMeta'
-import { iconSize, radius, typescale, weight } from '@/theme/tokens'
+import { iconSize, radius, shadow, typescale, weight } from '@/theme/tokens'
 import { ConfirmDialog } from '@/components/ds'
 import { todaySeoul } from '@/utils/date'
 
@@ -716,7 +716,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           <Popper open={!!calAnchor} anchorEl={calAnchor} placement="bottom-start" transition sx={{ zIndex: (th) => th.zIndex.modal + 1 }}>
             {({ TransitionProps }) => (
               <Grow {...TransitionProps} style={{ transformOrigin: 'top left' }}>
-                <Box onMouseDown={(e) => e.preventDefault()} sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' }}>
+                <Box onMouseDown={(e) => e.preventDefault()} sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: shadow.md }}>
                   {/* mousedown 기준 감지 — 팝업을 연 클릭 자체가 새 팝업을 도로 닫는 레이스 차단(칩 전환 원클릭).
                       앵커 칩 위는 제외: 닫기/열기 토글은 칩 onClick이 담당(mousedown 닫힘+click 재열림 이중동작 방지) */}
                   <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (calAnchor && e.target instanceof Node && calAnchor.contains(e.target)) return; setCalAnchor(null); setPicking(false) }}>
@@ -740,7 +740,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
                     if (t.hasAttribute('data-timelist')) { requestAnimationFrame(() => timeAnchor?.focus()); return }
                     e.preventDefault()
                   }}
-                  sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' }}
+                  sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: shadow.md }}
                 >
                   <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (timeAnchor && e.target instanceof Node && timeAnchor.contains(e.target)) return; setTimeAnchor(null) }}>
                     <Box sx={{ display: 'flex', gap: 0.75, p: 1, bgcolor: 'background.elevated', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px` }}>
@@ -780,7 +780,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
           <Popper open={!!repeatAnchor} anchorEl={repeatAnchor} placement="bottom-start" transition sx={{ zIndex: (th) => th.zIndex.modal + 1 }}>
             {({ TransitionProps }) => (
               <Grow {...TransitionProps} style={{ transformOrigin: 'top left' }}>
-                <Box onMouseDown={(e) => e.preventDefault()} sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: '0 10px 32px rgba(0,0,0,.5)' }}>
+                <Box onMouseDown={(e) => e.preventDefault()} sx={{ mt: 0.5, borderRadius: `${radius.card}px`, boxShadow: shadow.md }}>
                   <ClickAwayListener mouseEvent="onMouseDown" touchEvent="onTouchStart" onClickAway={(e) => { if (repeatAnchor && e.target instanceof Node && repeatAnchor.contains(e.target)) return; setRepeatAnchor(null) }}>
                     <Box sx={{ p: 0.5, bgcolor: 'background.elevated', border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, minWidth: 176 }}>
                       {repeatOptions(date).map((o) => {

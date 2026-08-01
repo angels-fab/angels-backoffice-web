@@ -26,7 +26,7 @@ import {
   KpiCard,
   AppCard,
 } from '@/components/ds'
-import { typescale, weight } from '@/theme/tokens'
+import { radius, typescale, weight } from '@/theme/tokens'
 
 const NAV = [
   { icon: <HomeIcon />, label: '홈', active: true },
@@ -50,7 +50,7 @@ function DemoSidebar() {
             key={n.label}
             selected={n.active}
             sx={{
-              borderRadius: 2,
+              borderRadius: `${radius.chip}px`,
               mb: 0.25,
               color: n.active ? 'text.primary' : 'text.secondary',
               '&.Mui-selected': { bgcolor: 'background.elevated' },

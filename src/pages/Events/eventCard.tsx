@@ -182,7 +182,7 @@ function InCardDetail({ e }: { e: FabEvent }) {
     >
       {/* 접기 chevron (카드 클릭으로 닫힘 — 시각적 안내) */}
       <Box aria-hidden sx={{ position: 'absolute', top: { xs: 1, sm: 3 }, left: 0, right: 0, display: 'flex', justifyContent: 'center', color: 'rgba(255,255,255,.6)', pointerEvents: 'none' }}>
-        <KeyboardArrowDownIcon sx={{ fontSize: { xs: 20, sm: 22 } }} />
+        <KeyboardArrowDownIcon sx={{ fontSize: { xs: iconSize.header, sm: iconSize.feature } }} />
       </Box>
       {/* 제목 */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', columnGap: '0.3em', fontSize: { xs: typescale.body.size, sm: typescale.emphasis.size }, fontWeight: weight.heavy, color: 'common.white', lineHeight: 1.3, mb: { xs: 0.7, sm: 1 }, textShadow: '0 1px 6px rgba(0,0,0,.6)', maxHeight: '2.6em', overflow: 'hidden' }}>{splitTitle(e.title)}</Box>

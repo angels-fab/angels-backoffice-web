@@ -93,7 +93,7 @@ const plusChip = (th: Theme) => ({
  * 인라인 편집 텍스트 — 평소엔 텍스트, 호버 시 연필. 클릭하면 그 항목만 앰버 밑줄 인풋으로.
  * Enter=저장(변경 시 onCommit), Esc/바깥클릭=취소. 샘플·조건 줄에서 사용.
  */
-const editInputSx = (th: Theme) => ({ font: 'inherit', color: 'inherit', bgcolor: alpha(th.palette.warning.main, 0.11), boxShadow: `inset 0 -2px 0 ${alpha(th.palette.warning.main, 0.75)}`, /* design-lint-ok(shadow): inset 밑줄 2px — border-bottom 대용(p:0 인라인 편집칸) */ borderRadius: '3px', p: 0 })
+const editInputSx = (th: Theme) => ({ font: 'inherit', color: 'inherit', bgcolor: alpha(th.palette.warning.main, 0.11), boxShadow: `inset 0 -2px 0 ${alpha(th.palette.warning.main, 0.75)}`, /* design-lint-ok(shadow): inset 밑줄 2px — border-bottom 대용(p:0 인라인 편집칸) */ borderRadius: `${radius.chip}px`, p: 0 })
 function SaveCancel({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   return (
     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.25 }}>
@@ -611,7 +611,7 @@ function LightboxImg({ photo }: { photo?: DemoPhotoRef }) {
   useEffect(() => { let alive = true; if (path) demoFileUrl(path).then((u) => { urlCache.set(path, u); if (alive) setUrl(u) }).catch(() => {}); else setUrl(null); return () => { alive = false } }, [path])
   if (url) return <Box component="img" src={url} alt={photo?.name || ''} sx={{ maxWidth: '90vw', maxHeight: '74vh', objectFit: 'contain', borderRadius: `${radius.card}px` }} />
   return (
-    <Box sx={{ width: 'min(78vw,520px)', height: 'min(56vh,360px)', bgcolor: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.15)', borderRadius: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, color: 'rgba(255,255,255,.6)' }}>
+    <Box sx={{ width: 'min(78vw,520px)', height: 'min(56vh,360px)', bgcolor: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.15)', borderRadius: `${radius.card}px`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, color: 'rgba(255,255,255,.6)' }}>
       <ImageOutlinedIcon sx={{ /* design-lint-ok(font): 빈 상태 일러스트 — 아이콘이 아니라 플레이스홀더 그래픽 */ fontSize: 44 }} /><Box sx={{ fontSize: typescale.small.size }}>미리보기 (샘플 — 사진 업로드 시 표시)</Box>
     </Box>
   )
@@ -670,7 +670,7 @@ function PhotoManageDialog({ round, maker, user, onClose, onSaved }: {
 
   const capInput = (value: string, onChange: (v: string) => void) => (
     <InputBase value={value} onChange={(e) => onChange(e.target.value)} placeholder="캡션(선택)"
-      sx={(th) => ({ mt: '3px', width: '100%', fontSize: typescale.caption.size, color: 'text.secondary', px: 0.5, py: '1px', borderRadius: '4px', border: `1px solid transparent`, '&.Mui-focused': { border: `1px solid ${th.palette.primary.main}`, color: 'text.primary' }, '&:hover': { border: `1px solid ${th.palette.divider}` }, '& input': { p: 0 } })} />
+      sx={(th) => ({ mt: '3px', width: '100%', fontSize: typescale.caption.size, color: 'text.secondary', px: 0.5, py: '1px', borderRadius: `${radius.chip}px`, border: `1px solid transparent`, '&.Mui-focused': { border: `1px solid ${th.palette.primary.main}`, color: 'text.primary' }, '&:hover': { border: `1px solid ${th.palette.divider}` }, '& input': { p: 0 } })} />
   )
   const tileSx = (isCover: boolean, dashed = false) => ({ position: 'relative', height: 68, borderRadius: `${radius.chip}px`, overflow: 'hidden', border: isCover ? '2px solid' : `1px ${dashed ? 'dashed' : 'solid'}`, borderColor: isCover ? 'primary.main' : 'divider' }) as const
 

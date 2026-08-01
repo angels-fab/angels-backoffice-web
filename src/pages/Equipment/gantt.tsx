@@ -2,7 +2,7 @@
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import Box from '@mui/material/Box'
 import type { TlMonth } from '@/types'
-import { typescale, weight } from '@/theme/tokens'
+import { radius, typescale, weight } from '@/theme/tokens'
 import { STAGE, STAGE_ORDER } from './stageMeta'
 
 export const TL_VISIBLE_MONTHS = 36 // 표시 최대 월 수 — 실제 구간은 시트에 일정이 있는 범위를 따라감 (eqSlice에서 앞뒤 빈 달 제거)
@@ -218,7 +218,7 @@ export function GanttBar({
           display: 'grid',
           width: '100%',
           height: '20px',
-          borderRadius: '3px',
+          borderRadius: `${radius.chip}px`,
           overflow: 'hidden',
           border: '0.5px solid',
           borderColor: 'divider',

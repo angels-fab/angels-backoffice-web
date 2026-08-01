@@ -45,7 +45,7 @@ export default function EquipmentTabs() {
                 bgcolor: 'primary.main', borderRadius: `${radius.pill}px ${radius.pill}px 0 0`,
                 opacity: on ? 1 : 0, transition: 'opacity .14s',
               },
-              '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '2px', borderRadius: '4px' },
+              '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '2px', borderRadius: `${radius.chip}px` },
             }}
           >
             {t.label}

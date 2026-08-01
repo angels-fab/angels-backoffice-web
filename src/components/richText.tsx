@@ -161,7 +161,7 @@ function SplitBtn({ title, glyph, barColor, active, onApply, onOpen }: {
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1 }}>
             {/* 글리프 고정 높이 박스 — '가'/아이콘 높이가 달라도 아래 색상 바가 같은 높이에 정렬되게 */}
             <Box sx={{ height: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{glyph}</Box>
-            <Box sx={{ width: 15, height: 3, borderRadius: '1px', mt: '2px', bgcolor: barColor }} />
+            <Box sx={{ width: 15, height: 3, borderRadius: `${radius.pill}px`, mt: '2px', bgcolor: barColor }} />
           </Box>
         </IconButton>
       </HintTip>

@@ -127,7 +127,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
         const sel = {
           borderColor: toneBorderSelCss,
           bgcolor: toneBody.selected,
-          boxShadow: `0 0 0 2px ${toneRingCss}, 0 10px 26px rgba(0,0,0,.2)`,
+          boxShadow: `0 0 0 2px ${toneRingCss}, ${shadow.md}`, /* design-lint-ok(shadow): 앞 레이어는 선택 링 */
         }
         return {
           '--card-tone': toneVar(tone),
