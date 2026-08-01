@@ -1,5 +1,5 @@
 {
-  "total": 226,
+  "total": 196,
   "totals": {
     "hex": 56,
     "font": 36,
@@ -7,24 +7,22 @@
     "radius": 16,
     "shadow": 24,
     "z": 0,
-    "class": 93
+    "class": 63
   },
   "files": {
     "src/pages/Notice/fileTypeIcons.tsx": 24,
     "src/pages/Equipment/DemoResults.tsx": 18,
-    "src/pages/Work/WorkRow.tsx": 18,
     "src/pages/Calendar/CalEventWrite.tsx": 14,
     "src/pages/Equipment/gantt.tsx": 14,
     "src/layouts/SideNav.tsx": 10,
     "src/components/richText.tsx": 9,
     "src/components/WhatsNewDialog.tsx": 9,
     "src/layouts/TopBar.tsx": 9,
-    "src/pages/EquipmentOps/index.tsx": 8,
     "src/pages/Events/eventCard.tsx": 8,
     "src/pages/Calendar/CalFilterBar.tsx": 7,
-    "src/pages/Equipment/index.tsx": 7,
+    "src/pages/EquipmentOps/index.tsx": 7,
     "src/pages/Home/RoadmapCard.tsx": 7,
-    "src/pages/Home/Greeting.tsx": 6,
+    "src/pages/Equipment/index.tsx": 6,
     "src/layouts/BottomNav.tsx": 6,
     "src/pages/Work/TaskAccordion.tsx": 5,
     "src/pages/Work/KanbanBoard.tsx": 4,
@@ -37,8 +35,6 @@
     "src/pages/Equipment/EquipmentTabs.tsx": 2,
     "src/pages/Notice/index.tsx": 2,
     "src/pages/Work/index.tsx": 2,
-    "src/components/PreviewLoading.tsx": 2,
-    "src/components/TitleLoad.tsx": 2,
     "src/layouts/MainLayout.tsx": 2,
     "src/pages/Calendar/ChipContent.tsx": 1,
     "src/pages/Calendar/members.ts": 1,
