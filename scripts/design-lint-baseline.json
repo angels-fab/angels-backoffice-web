@@ -1,7 +1,7 @@
 {
-  "total": 158,
+  "total": 157,
   "totals": {
-    "hex": 60,
+    "hex": 59,
     "font": 41,
     "weight": 1,
     "radius": 18,
@@ -13,9 +13,9 @@
     "src/pages/Notice/fileTypeIcons.tsx": 24,
     "src/pages/Equipment/DemoResults.tsx": 18,
     "src/pages/Calendar/CalEventWrite.tsx": 14,
-    "src/layouts/TopBar.tsx": 10,
     "src/components/richText.tsx": 9,
     "src/components/WhatsNewDialog.tsx": 9,
+    "src/layouts/TopBar.tsx": 9,
     "src/pages/Home/RoadmapCard.tsx": 7,
     "src/pages/Events/eventCard.tsx": 6,
     "src/pages/Equipment/gantt.tsx": 5,
