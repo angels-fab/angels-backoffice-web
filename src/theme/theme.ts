@@ -1,6 +1,6 @@
 import type * as React from 'react'
-import { alpha, createTheme, type Theme } from '@mui/material/styles'
-import { accent, accentTextDark, accentTextLight, darkPalette, hoverShadow, lightPalette, radius, shadow, table, typescale } from './tokens'
+import { alpha, createTheme, darken, type Theme } from '@mui/material/styles'
+import { accent, accentTextDark, accentTextLight, darkPalette, hoverShadow, lightPalette, radius, shadow, solid, table, typescale } from './tokens'
 
 /**
  * MUI 테마 팩토리. 다크/라이트 모드를 토큰에서 생성한다.
@@ -185,7 +185,33 @@ function buildTheme(mode: Mode): Theme {
           // size="small" 전역에 minHeight를 걸지 말 것 — 문장 속 인라인 버튼이나 py를 직접 줄여
           // 압축을 의도한 버튼(예: py:0.1, py:'2px')까지 늘어난다(minHeight가 padding을 이긴다).
           // 검색창과 나란히 서는 헤더 액션 버튼만 호출부에서 minHeight: control.height를 준다.
+
+          /**
+           * 채운 기본 버튼은 solid.blue 로 (2026-08-02, 사용자 결정).
+           *
+           * MUI 는 contained 채움을 palette.primary.main 에서 가져오는데, 이 레포의 primary.main 은
+           * accentText 다(위 semantic 참조 — 다크 #79AEF2 / 라이트 #225BB4). 글자용이라 다크에서
+           * 하늘색이 되고, MUI 가 대비를 맞추려 글자를 검정으로 자동 전환한다. 결과가 둘이었다:
+           *   ① 같은 화면의 헤더 밴드(solid.blue)와 파랑이 두 갈래로 보인다
+           *   ② 다크에서 버튼 글자만 검정이라 다른 요소(전부 흰 글자)와 따로 논다
+           * solid 는 테마 공통이라 두 문제가 함께 사라진다. 흰 글자 5.74:1.
+           *
+           * ★ 글자로 쓰는 primary.main(color:'primary.main')은 건드리지 않는다 — 그쪽은
+           *   배경 위 가독성 때문에 테마별로 뒤집히는 게 맞다.
+           */
         },
+        // MUI v9 에는 containedPrimary 슬롯이 없다 — variants API 로 지정한다
+        variants: [
+          {
+            props: { variant: 'contained', color: 'primary' },
+            style: {
+              backgroundColor: solid.blue,
+              color: '#FFFFFF',
+              // 호버는 MUI 관행대로 한 단 진하게(기본 contained 와 같은 방향)
+              '&:hover': { backgroundColor: darken(solid.blue, 0.18) },
+            },
+          },
+        ],
       },
       MuiIconButton: {
         styleOverrides: {
