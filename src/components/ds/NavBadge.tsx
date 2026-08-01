@@ -41,8 +41,9 @@ export default function NavBadge({ count, kind = 'new', sx }: NavBadgeProps) {
           lineHeight: 1,
           whiteSpace: 'nowrap',
           bgcolor: kind === 'new' ? t.palette.accent.red : t.palette.accent.amber,
-          // 앰버 위 글자는 어둡게(가독) — 빨강 위는 흰색
-          color: kind === 'new' ? '#fff' : '#1b1c22',
+          // 앰버 위 글자는 어둡게(가독) — 빨강 위는 흰색.
+          // 어두운 쪽은 팔레트에 대응 토큰이 없어(형광펜 글자용 --hl-ink와 같은 값) 리터럴로 남긴다.
+          color: kind === 'new' ? t.palette.common.white : '#1b1c22',
         }),
         ...(Array.isArray(sx) ? sx : sx ? [sx] : []),
       ]}

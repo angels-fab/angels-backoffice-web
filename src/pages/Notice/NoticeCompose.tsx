@@ -280,9 +280,12 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
                     title={m.name}
                     onClick={() => toggleTarget(m.name)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTarget(m.name) } }}
-                    style={{ backgroundColor: m.color, color: '#fff', filter: on ? 'none' : 'grayscale(1)', opacity: on ? 1 : 0.6 }}
+                    // 배경만 동적(사람색)이라 style 에 남기고, 글자색은 토큰으로 — 솔리드 사람색 칩 위
+                    // 흰 글자는 이 저장소 공통 패턴(ChipContent NamePill·WeekBoard·eventCard와 같은 자리)
+                    style={{ backgroundColor: m.color, filter: on ? 'none' : 'grayscale(1)', opacity: on ? 1 : 0.6 }}
                     sx={{
                       width: 32, height: 32, borderRadius: radius.circle, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'common.white',
                       fontSize: typescale.body.size, fontWeight: weight.bold, letterSpacing: '-0.5px', cursor: 'pointer', flex: 'none',
                       transition: 'opacity .15s, filter .15s',
                     }}

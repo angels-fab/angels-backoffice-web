@@ -1,23 +1,19 @@
 {
-  "total": 334,
+  "total": 253,
   "totals": {
-    "hex": 72,
-    "font": 37,
+    "hex": 56,
+    "font": 36,
     "weight": 1,
     "radius": 35,
     "shadow": 24,
     "z": 8,
-    "class": 157
+    "class": 93
   },
   "files": {
-    "src/pages/Equipment/EqCard.tsx": 24,
     "src/pages/Notice/fileTypeIcons.tsx": 24,
-    "src/components/EqSummaryInner.tsx": 22,
     "src/pages/Equipment/DemoResults.tsx": 19,
     "src/pages/Work/WorkRow.tsx": 18,
     "src/pages/Calendar/CalEventWrite.tsx": 17,
-    "src/pages/Equipment/EqItem.tsx": 17,
-    "src/pages/Equipment/EqKpi.tsx": 17,
     "src/pages/Equipment/gantt.tsx": 14,
     "src/pages/Home/RoadmapCard.tsx": 11,
     "src/pages/Events/eventCard.tsx": 10,
@@ -44,7 +40,6 @@
     "src/pages/Equipment/EquipmentTabs.tsx": 2,
     "src/pages/Events/AttendSwitch.tsx": 2,
     "src/pages/Events/index.tsx": 2,
-    "src/pages/Notice/NoticeCompose.tsx": 2,
     "src/components/PreviewLoading.tsx": 2,
     "src/components/TitleLoad.tsx": 2,
     "src/layouts/MainLayout.tsx": 2,
@@ -56,6 +51,7 @@
     "src/pages/Events/SubmissionsAdmin.tsx": 1,
     "src/pages/Improve/index.tsx": 1,
     "src/pages/Links/index.tsx": 1,
+    "src/pages/Notice/NoticeCompose.tsx": 1,
     "src/pages/Settings/index.tsx": 1,
     "src/pages/Work/dropZones.ts": 1,
     "src/pages/Work/NewTaskCard.tsx": 1,
