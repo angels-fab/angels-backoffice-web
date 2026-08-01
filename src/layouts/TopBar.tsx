@@ -22,71 +22,39 @@ import topbarLogo from '@/assets/topbar-logo.jpg'
 
 /**
  * 라이트/다크 토글 스위치 — 다크=ON(우측·달), 라이트=OFF(좌측·해).
- *
- * 뼈대는 MUI 공식 데모 `MaterialUISwitch`(Switch 문서의 Customization 예제)다.
- * 치수(62×34·썸 32·translateX 6/22·SVG 20)·트랙색(#aab4be/#8796A5)·아이콘 흰색은 순정.
- *
- * 순정에서 벗어난 곳은 넷이고 전부 사용자 지시(2026-08-01~02)다:
- *   ① 썸 색 = 무채색 — 순정은 #001e3c(라이트)/#003892(다크). 남색이 별로라는 판단.
- *   ② 트랙 높이 20 → 16 — 좀 더 낮게.
- *   ③ 다크의 썸만 흰색으로 뒤집음 + 아이콘 동반 반전 (아래 ★).
- *   ④ viewTransitionName — 모양이 아니라 애니메이션 고침(아래 주석 참조).
- *
- * ★ 왜 다크만 흰 썸인가 — 썸(32px)이 트랙(16px) 위아래로 8px 씩 나오므로 그 부분의 대비는
- *   트랙이 아니라 **헤더 배경**이 정한다. 검정 썸은 헤더 #0F1117 위에서 1.11:1 로 묻혔다
- *   (WCAG 1.4.11 그래픽 최소 3:1 미달). 무채색 축의 반대끝인 흰색으로 뒤집어 18.87:1 확보.
- *   ※ "라이트만큼(19.38:1)"은 sRGB 상 불가능하다 — #0F1117 위에서는 순백조차 18.87 이 천장
- *     (그 이상은 썸 휘도 L=1.029 가 필요). 97.4% 가 물리적 최대이고 1.11 → 18.87 은 17배다.
- *
- * ★ 다크에서 "그림자"의 의미 — 검정 기반 그림자는 헤더 #0F1117 위에서 **알파를 1.0 으로
- *   올려도 1.11:1**, 즉 값을 키워 해결되는 문제가 아니라 상한이다. 그래서 다크의 그림자는
- *   부양감이 아니라 두 가지 일만 한다: (a) 트랙(#8796A5) 위 접촉 그림자 4.7:1,
- *   (b) 1px 검정 링 — 흰 썸이 되며 잃은 썸↔트랙 경계를 3.03 → 4.58:1 로 복구.
- *   흰 글로우는 금지 — theme.ts 의 focusRing 과 생김새가 겹쳐 상시 포커스로 오독된다.
- *
- * (참고: 앞서 이 값들을 손으로 고쳐 라이트가 "흰 알 + 갈색(#B26A00) 해"가 돼 있었다.
- *  흰 알이 흰 상단바에 묻히고(1.07:1) 해가 갈색으로 보이던 원인.)
+ * 네이비 썸(달/해 아이콘 내장) + 회색 트랙. 아이콘은 SVG 데이터URI(이모지 아님).
  */
-const ThemeSwitch = styled(Switch)(({ theme }) => {
-  // 썸이 테마별로 뒤집히므로 해/달 글리프도 같이 뒤집어야 보인다(항상 썸의 반대극).
-  const glyph = encodeURIComponent(theme.palette.mode === 'dark' ? '#000' : '#fff')
-  return {
-  width: 62,
-  height: 34,
+const ThemeSwitch = styled(Switch)({
+  width: 58,
+  height: 32,
   padding: 7,
-  // [비순정] 테마 전환은 화면 전체를 한 장으로 크로스페이드(View Transitions)하는데, 그러면 스위치의
-  // 슬라이드가 그 페이드에 묻혀 "밀리는 게 아니라 흐려졌다 나타나는" 것처럼 보인다.
-  // 자기 이름을 주면 스위치만 따로 잡혀서 실제로 미끄러지는 게 보인다. 색·치수와 무관해 유지한다.
+  // 테마 전환은 화면 전체를 한 장으로 크로스페이드(View Transitions)하는데, 그러면 스위치의 슬라이드가
+  // 그 페이드에 묻혀 "밀리는 게 아니라 흐려졌다 나타나는" 것처럼 보인다.
+  // 자기 이름을 주면 스위치만 따로 잡혀서 실제로 미끄러지는 게 보인다.
   viewTransitionName: 'theme-switch',
   '& .MuiSwitch-switchBase': {
     margin: 1,
     padding: 0,
-    transform: 'translateX(6px)',
+    transform: 'translateX(4px)',
     '&.Mui-checked': {
-      color: '#fff',
-      transform: 'translateX(22px)',
+      transform: 'translateX(24px)',
+      '& .MuiSwitch-thumb': { backgroundColor: '#0B1C3A', boxShadow: '0 1px 2px rgba(0,0,0,.45)' },
       '& .MuiSwitch-thumb:before': {
-        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${glyph}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L8.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`,
+        // 달(다크) — 남색 알 위라 흰색
+        backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#fff')}" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L6.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z"/></svg>')`,
       },
-      '& + .MuiSwitch-track': {
-        opacity: 1,
-        backgroundColor: '#aab4be',
-        ...theme.applyStyles('dark', { backgroundColor: '#8796A5' }),
-      },
+      '& + .MuiSwitch-track': { opacity: 1, backgroundColor: '#5A6B80' },
     },
   },
+  // 썸 — 라이트(해)는 밝은 알 + 진한 해, 다크(달)는 남색 알 + 흰 달.
+  // 구현: 기본(미체크)=라이트, 위 '&.Mui-checked' 블록이 다크로 덮는다.
   '& .MuiSwitch-thumb': {
-    // [비순정 ①] 순정 #001e3c / 다크 #003892 → 무채색. 라이트는 검정, 헤더 #F4F6F8 대비 19.38:1
-    backgroundColor: '#000',
-    // [비순정 ③] 다크는 흰색으로 뒤집는다(위 ★ 두 항목 참조). 스프레드는 반드시 '&::before' **앞**에
-    // 둔다 — 뒤에 두면 이 객체가 '&::before' 키를 갖게 되는 순간 해/달 backgroundImage 를 통째로 덮는다.
-    ...theme.applyStyles('dark', {
-      backgroundColor: '#fff',
-      boxShadow: '0 2px 4px rgba(0,0,0,.55), 0 1px 2px rgba(0,0,0,.35), 0 0 0 1px rgba(0,0,0,.7)',
-    }),
-    width: 32,
-    height: 32,
-    '&::before': {
+    backgroundColor: '#FDFEFF',
+    boxShadow: '0 1px 2px rgba(20,37,66,.28)',
+    width: 28,
+    height: 28,
+    position: 'relative',
+    '&:before': {
       content: "''",
       position: 'absolute',
       width: '100%',
@@ -95,22 +63,15 @@ const ThemeSwitch = styled(Switch)(({ theme }) => {
       top: 0,
       backgroundRepeat: 'no-repeat',
       backgroundPosition: 'center',
-      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 0 20 20"><path fill="${glyph}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`,
+      // 해(라이트) — 밝은 알 위라 진한 앰버
+      backgroundImage: `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" height="18" width="18" viewBox="0 0 20 20"><path fill="${encodeURIComponent('#B26A00')}" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z"/></svg>')`,
     },
   },
   '& .MuiSwitch-track': {
     opacity: 1,
     backgroundColor: '#aab4be',
-    // [비순정 ②] 순정은 트랙이 안쪽 상자(62-14 × 34-14 = 48×20)를 꽉 채운다.
-    // 높이만 16으로 줄이고 남는 4px 의 절반만큼 내려 세로 가운데를 맞춘다.
-    // (padding 을 키우면 트랙 '폭'까지 줄어 썸의 좌우 끝과 어긋난다 — 높이만 건드릴 것)
-    height: 16,
-    position: 'relative',
-    top: 2,
-    borderRadius: 16 / 2,
-    ...theme.applyStyles('dark', { backgroundColor: '#8796A5' }),
+    borderRadius: 20 / 2,
   },
-  }
 })
 
 export default function TopBar() {
