@@ -10,15 +10,12 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { alpha } from '@mui/material/styles'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
-import GroupsIcon from '@mui/icons-material/Groups'
-import EventAvailableIcon from '@mui/icons-material/EventAvailable'
-import AttachFileIcon from '@mui/icons-material/AttachFile'
-import TouchAppIcon from '@mui/icons-material/TouchApp'
+import ViewKanbanIcon from '@mui/icons-material/ViewKanban'
+import Brightness4Icon from '@mui/icons-material/Brightness4'
+import EventBusyIcon from '@mui/icons-material/EventBusy'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import DownloadIcon from '@mui/icons-material/Download'
-import CheckIcon from '@mui/icons-material/Check'
-import { iconSize, radius, typescale, domain, weight } from '@/theme/tokens'
-import { AttachmentIcon } from '@/pages/Notice/attachmentUI'
+import TouchAppIcon from '@mui/icons-material/TouchApp'
+import { darkPalette, domain, iconSize, lightPalette, radius, typescale, weight } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
@@ -32,90 +29,146 @@ import { putSetting } from '@/store/slices/userSettingsSlice'
  * 서버 저장 — 기기 무관). 체크 없이 확인/닫기 = 이번 세션만 닫힘 → 다음 접속(로그인·새 페이지 로드)마다 다시 뜸.
  * 새 기능 배포 시 VERSION을 올리고 본문을 교체하면 영구 확인자에게도 다시 안내됨.
  * 게이트: loadedOk(설정 로드 성공) 전에는 판단 보류 — 로드 실패 세션은 안 띄움(반복 출현·저장 불가 방지).
+ *
+ * 이번 회차(2026-08-03): 7/20 이후 쌓인 것 중 **팀원이 실제로 쓸 기능**만 셋 골랐다.
+ * 같은 기간 작업의 대부분은 토큰·죽은 코드·대비 교정 같은 바닥 공사여서 화면 변화가 없다 —
+ * 공지할 것이 아니므로 넣지 않는다(사용자 결정).
  */
-const VERSION = '2026-07-20-attend-attach-v2'
+const VERSION = '2026-08-03-theme-kanban-leave'
 
-// ── 미니 데모: 행사 카드 상단 크롭(실물 재현 — eventCard.tsx 참석 버튼·칩 스타일 그대로) ──
+// ── 미니 데모 ①: 테마 토글(실물 재현 — TopBar.tsx ThemeSwitch 치수·색 그대로) ──
 
-/** 행사 포스터 카드 상단 크롭 1장 — 상태 pill + 참석 버튼(전: 테두리 / 후: 초록 배지) */
-function EventCrop({ state }: { state: 'before' | 'after' }) {
-  const after = state === 'after'
+/** 상단바 해/달 스위치 1개 — dark=false면 해(라이트), true면 달(다크) */
+function ThemeSwitchMini({ dark }: { dark: boolean }) {
   return (
-    <Box sx={{ position: 'relative', height: 86, borderRadius: `${radius.card}px`, overflow: 'hidden', background: domain.events.grad.blue, border: 1, borderColor: 'divider' }}>
-      {/* 좌상단 상태 pill(예정=앰버 점) · 우상단 참석 버튼 — 실제 카드와 동일 문법 */}
-      <Box sx={{ position: 'absolute', top: 8, left: 8, right: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5 }}>
-        <Box sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: typescale.micro.size, fontWeight: weight.bold, px: '8px', height: 20, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', color: 'common.white', flexShrink: 0, '& .dot': { width: 7, height: 7, borderRadius: radius.circle, bgcolor: th.palette.accent.amber } })}>
-          <Box component="span" className="dot" />예정 D-12
-        </Box>
-        <Box
-          component="span"
-          sx={{
-            display: 'inline-flex', alignItems: 'center', gap: '3px', height: 20, px: '8px',
-            borderRadius: `${radius.pill}px`, fontSize: typescale.micro.size, fontWeight: weight.bold, whiteSpace: 'nowrap', flexShrink: 0,
-            ...(after
-              ? { bgcolor: '#16a34a', color: 'common.white', border: '1px solid #16a34a' } // design-lint-ok(hex): eventCard 의 사진 위 신청완료 칩과 같은 스펙(두 곳이 나란히 보임)
-              : { bgcolor: 'rgba(0,0,0,.42)', color: '#c9f4dc', border: '1px solid rgba(52,211,153,.7)' }), // design-lint-ok(hex): 위와 같은 사진 위 스크림 조합
-          }}
-        >
-          {after && <CheckIcon sx={{ fontSize: typescale.small.size }} />}참석 예정
-        </Box>
-      </Box>
-      {/* 전 상태: 버튼을 가리키는 탭 손가락 */}
-      {!after && (
-        <TouchAppIcon sx={{ position: 'absolute', top: 26, right: 14, fontSize: iconSize.header, color: 'common.white', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,.6))' }} />
-      )}
-      {/* 하단 제목 자리(실카드의 제목 오버레이 축약) */}
-      <Box sx={{ position: 'absolute', left: 10, right: 10, bottom: 8, fontSize: typescale.micro.size, fontWeight: weight.bold, color: 'common.white', opacity: 0.85, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        ISPSA 2026 국제심포지엄
+    <Box sx={{ position: 'relative', width: 58, height: 32, flexShrink: 0 }}>
+      {/* 트랙 44x18 — 실물과 같은 치수 */}
+      <Box sx={{ position: 'absolute', left: 7, top: 7, width: 44, height: 18, borderRadius: `${radius.pill}px`, bgcolor: dark ? '#5A6B80' : '#aab4be' /* design-lint-ok(hex): TopBar ThemeSwitch 실물 값 재현 — 데모가 실물과 어긋나면 안내가 거짓이 된다 */ }} />
+      {/* 알 28 — 라이트는 밝은 알 + 진한 해, 다크는 남색 알 + 흰 달 */}
+      <Box
+        sx={{
+          position: 'absolute', top: 2, left: dark ? 25 : 5, width: 28, height: 28,
+          borderRadius: radius.circle, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          bgcolor: dark ? '#0B1C3A' : '#FDFEFF', // design-lint-ok(hex): 위와 같은 실물 재현
+          boxShadow: dark ? '0 1px 2px rgba(0,0,0,.45)' : '0 1px 2px rgba(20,37,66,.28)', // design-lint-ok(shadow): 실물 스위치 알의 마이크로 입체 재현
+        }}
+      >
+        {dark ? (
+          <Box component="svg" viewBox="0 0 20 20" sx={{ width: 18, height: 18 }}>
+            <path /* design-lint-ok(hex): TopBar ThemeSwitch 달 아이콘 실물 재현 */ fill="#fff" d="M4.2 2.5l-.7 1.8-1.8.7 1.8.7.7 1.8.6-1.8L6.7 5l-1.9-.7-.6-1.8zm15 8.3a6.7 6.7 0 11-6.6-6.6 5.8 5.8 0 006.6 6.6z" />
+          </Box>
+        ) : (
+          <Box component="svg" viewBox="0 0 20 20" sx={{ width: 18, height: 18 }}>
+            <path /* design-lint-ok(hex): TopBar ThemeSwitch 해 아이콘 실물 재현 */ fill="#B26A00" d="M9.305 1.667V3.75h1.389V1.667h-1.39zm-4.707 1.95l-.982.982L5.09 6.072l.982-.982-1.473-1.473zm10.802 0L13.927 5.09l.982.982 1.473-1.473-.982-.982zM10 5.139a4.872 4.872 0 00-4.862 4.86A4.872 4.872 0 0010 14.862 4.872 4.872 0 0014.86 10 4.872 4.872 0 0010 5.139zm0 1.389A3.462 3.462 0 0113.471 10a3.462 3.462 0 01-3.473 3.472A3.462 3.462 0 016.527 10 3.462 3.462 0 0110 6.528zM1.665 9.305v1.39h2.083v-1.39H1.666zm14.583 0v1.39h2.084v-1.39h-2.084zM5.09 13.928L3.616 15.4l.982.982 1.473-1.473-.982-.982zm9.82 0l-.982.982 1.473 1.473.982-.982-1.473-1.473zM9.305 16.25v2.083h1.389V16.25h-1.39z" />
+          </Box>
+        )}
       </Box>
     </Box>
   )
 }
 
-function EventAttendDemo() {
+/**
+ * 테마별 화면 맛보기 한 조각.
+ * ★ theme.palette 를 못 쓴다 — 한 화면에 두 테마를 **나란히** 놓아야 하는데 palette 는 현재 테마
+ *   하나만 준다. 대신 팔레트 토큰을 직접 import 해서 쓴다(하드코딩 금지, 토큰이 바뀌면 따라온다).
+ */
+function ThemeSwatch({ dark }: { dark: boolean }) {
+  const p = dark ? darkPalette : lightPalette
+  return (
+    <Box sx={{ bgcolor: p.background, border: `1px solid ${p.border}`, borderRadius: `${radius.card}px`, p: 1, height: 64, boxSizing: 'border-box' }}>
+      <Box sx={{ bgcolor: p.paper, border: `1px solid ${p.border}`, borderRadius: `${radius.chip}px`, px: 1, py: 0.75 }}>
+        <Box sx={{ fontSize: typescale.micro.size, fontWeight: weight.bold, color: p.text, mb: '3px' }}>클린룸 공조 설계 검토</Box>
+        <Box sx={{ fontSize: typescale.micro.size, color: p.textSecondary }}>담당 조성범 · 08.05</Box>
+      </Box>
+    </Box>
+  )
+}
+
+function ThemeDemo() {
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 1, alignItems: 'center' }}>
       <Box>
-        <EventCrop state="before" />
-        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.disabled', mt: 0.5 }}>카드 위 참석 버튼 누르기</Typography>
+        <ThemeSwatch dark={false} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.75 }}><ThemeSwitchMini dark={false} /></Box>
       </Box>
-      <ArrowForwardIcon sx={{ fontSize: iconSize.header, color: 'text.disabled', mb: 2.5 }} />
+      <ArrowForwardIcon sx={{ fontSize: iconSize.header, color: 'text.disabled', mb: 3 }} />
       <Box>
-        <EventCrop state="after" />
-        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.disabled', mt: 0.5 }}>참석 표시 완료 — 명단에 등록</Typography>
+        <ThemeSwatch dark />
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 0.75 }}><ThemeSwitchMini dark /></Box>
       </Box>
     </Box>
   )
 }
 
-// ── 미니 데모: 업무카드 + 첨부 트레이(실물 재현 — TaskAccordion 톤·WorkAttachments 칩 스타일 그대로) ──
+// ── 미니 데모 ②: 업무현황 칸반 보드(실물 재현 — workTone 4색·카드 톤 문법 그대로) ──
 
-const TONE = '114 199 141' // workTone.green(진행중)
+const COLS: { label: string; tone: string; n: number }[] = [
+  { label: '진행중', tone: domain.workTone.green, n: 2 },
+  { label: '보류', tone: domain.workTone.amber, n: 1 },
+  { label: '완료', tone: domain.workTone.blue, n: 1 },
+  { label: 'Remind', tone: domain.workTone.purple, n: 1 },
+]
 
-function WorkAttachDemo() {
-  const c = (a: number) => `rgb(${TONE} / ${a})`
+function KanbanDemo() {
   return (
-    <Box sx={{ border: `1px solid ${c(0.24)}`, bgcolor: c(0.055), borderRadius: `${radius.card}px`, overflow: 'hidden' }}>
-      {/* 제목줄(축약) */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 0.75, bgcolor: c(0.09), borderBottom: `1px solid ${c(0.14)}` }}>
-        <Box component="span" sx={(th) => ({ fontSize: typescale.micro.size, fontWeight: weight.semibold, px: '7px', py: '2px', borderRadius: `${radius.chip}px`, color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.16), border: `1px solid ${alpha(th.palette.accent.blue, 0.35)}` })}>회의</Box>
-        <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>클린룸 공조 설계 검토회의</Box>
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0.75 }}>
+      {COLS.map((col) => {
+        const c = (a: number) => `rgb(${col.tone} / ${a})`
+        return (
+          <Box key={col.label} sx={{ border: `1px solid ${c(0.24)}`, bgcolor: c(0.055), borderRadius: `${radius.chip}px`, overflow: 'hidden' }}>
+            {/* 열 머리 — 상태 이름 + 건수 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5, px: 0.75, py: '5px', bgcolor: c(0.14) }}>
+              <Box component="span" sx={{ fontSize: typescale.micro.size, fontWeight: weight.bold, color: 'text.primary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{col.label}</Box>
+              <Box component="span" sx={{ fontSize: typescale.micro.size, fontWeight: weight.bold, color: 'text.secondary' }}>{col.n}</Box>
+            </Box>
+            {/* 카드 자리 — 실제 카드의 제목줄만 축약 */}
+            <Box sx={{ p: '5px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {Array.from({ length: col.n }).map((_, i) => (
+                <Box key={i} sx={{ height: 16, borderRadius: `${radius.card}px`, bgcolor: c(0.18), border: `1px solid ${c(0.28)}` }} />
+              ))}
+            </Box>
+          </Box>
+        )
+      })}
+    </Box>
+  )
+}
+
+// ── 미니 데모 ③: 지난 휴가 자동 숨김(실물 재현 — 달력 칸 + 연차 칩) ──
+
+/** 달력 한 칸 — past=true면 지난 날(연차 칩이 사라진 뒤) */
+function CalCell({ day, leave }: { day: number; leave?: boolean }) {
+  return (
+    <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`, p: '5px', minHeight: 52, bgcolor: 'background.paper' }}>
+      <Box sx={{ fontSize: typescale.micro.size, fontWeight: weight.bold, color: 'text.secondary', mb: '4px' }}>{day}</Box>
+      {leave && (
+        <Box sx={(th) => ({ display: 'inline-flex', alignItems: 'center', maxWidth: '100%', px: '5px', py: '2px', borderRadius: `${radius.chip}px`, fontSize: typescale.micro.size, fontWeight: weight.semibold, color: 'common.white', bgcolor: th.palette.accent.rose, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>
+          연차 신현진
+        </Box>
+      )}
+    </Box>
+  )
+}
+
+function LeaveHideDemo() {
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 1, alignItems: 'center' }}>
+      <Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.5 }}>
+          <CalCell day={1} leave />
+          <CalCell day={2} leave />
+          <CalCell day={3} />
+        </Box>
+        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.disabled', mt: 0.5 }}>지난 연차가 달력에 계속 남음</Typography>
       </Box>
-      {/* 본문(축약) */}
-      <Box sx={{ px: 1.25, py: 0.75, fontSize: typescale.caption.size, color: 'text.secondary' }}>• 공조 조닝 변경안 도면 검토</Box>
-      {/* 첨부 트레이 — 새로 생긴 구역(파랑 링으로 강조) */}
-      <Box sx={(th) => ({ borderTop: `1px solid ${c(0.14)}`, bgcolor: alpha(th.palette.common.black, 0.16), px: 1.25, pt: 0.75, pb: 1, boxShadow: `inset 0 0 0 2px ${alpha(th.palette.primary.main, 0.55)}` /* design-lint-ok(shadow): inset 링 — 새로 생긴 구역 강조 테두리 */ })}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
-          <AttachFileIcon sx={{ fontSize: iconSize.caption, color: 'text.disabled' }} />
-          <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.emphasis.weight, letterSpacing: '0.04em', color: 'text.disabled' }}>첨부파일</Box>
-          <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>1</Box>
+      <ArrowForwardIcon sx={{ fontSize: iconSize.header, color: 'text.disabled', mb: 2.5 }} />
+      <Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.5 }}>
+          <CalCell day={1} />
+          <CalCell day={2} />
+          <CalCell day={3} />
         </Box>
-        <Box sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: 0.75, pl: 0.9, pr: 1, py: '4px', borderRadius: `${radius.chip}px`, border: `1px solid ${th.palette.divider}`, bgcolor: 'background.paper', maxWidth: '100%' })}>
-          <AttachmentIcon name="설계검토안.pdf" size={16} />
-          <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>공조설계_검토안.pdf</Box>
-          <Box component="span" sx={{ fontSize: typescale.micro.size, color: 'text.disabled', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>2.4 MB</Box>
-          <DownloadIcon sx={{ fontSize: iconSize.caption, color: 'primary.main', flexShrink: 0 }} />
-        </Box>
+        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.disabled', mt: 0.5 }}>끝난 다음 날 자동으로 사라짐</Typography>
       </Box>
     </Box>
   )
@@ -141,10 +194,10 @@ export default function WhatsNewDialog() {
     <Dialog open={open} onClose={() => setDismissed(true)} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.25, pb: 1 }}>
         <AutoAwesomeIcon sx={{ color: 'primary.main', fontSize: typescale.pageTitle.size }} />
-        새로워진 포털 — 새 기능 안내
+        새로워진 포털 — 그동안 달라진 것
       </DialogTitle>
       <DialogContent sx={{ pb: 1 }}>
-        {/* 핵심 안내 문구 — 이번 회차는 팀이 함께 쓰는 기능임을 먼저 */}
+        {/* 핵심 안내 문구 — 조용히 들어와 모르고 지나쳤을 것들임을 먼저 */}
         <Box
           sx={(th) => ({
             display: 'flex', alignItems: 'center', gap: 1.25,
@@ -153,31 +206,41 @@ export default function WhatsNewDialog() {
             border: `1px solid ${alpha(th.palette.primary.main, 0.35)}`,
           })}
         >
-          <GroupsIcon sx={{ color: 'primary.main', fontSize: iconSize.header, flexShrink: 0 }} />
+          <TouchAppIcon sx={{ color: 'primary.main', fontSize: iconSize.header, flexShrink: 0 }} />
           <Typography variant="body2" sx={{ fontWeight: typescale.emphasis.weight }}>
-            <Box component="span" sx={{ color: 'primary.main' }}>팀이 함께 쓰는 기능</Box> 두 가지가 생겼어요 —
-            내가 표시한 참석과 올린 첨부는 팀원 모두에게 보입니다.
+            <Box component="span" sx={{ color: 'primary.main' }}>모르고 지나치셨을 기능</Box> 셋을 모았어요 —
+            이미 화면에 들어와 있어 바로 쓰실 수 있습니다.
           </Typography>
         </Box>
 
-        {/* ① 행사 사전 참석 */}
+        {/* ① 테마 전환 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <EventAvailableIcon sx={{ color: 'primary.main', fontSize: iconSize.action }} />
-          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>행사 참석, 미리 표시하세요</Typography>
+          <Brightness4Icon sx={{ color: 'primary.main', fontSize: iconSize.action }} />
+          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>화면을 밝게도, 어둡게도</Typography>
         </Box>
-        <EventAttendDemo />
+        <ThemeDemo />
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, mb: 2.5 }}>
-          학술·교육·전시의 진행중·예정 행사에서 버튼 한 번이면 끝 — 다시 누르면 취소돼요.
+          상단바 오른쪽 해/달 스위치를 누르면 바뀝니다 — 선택은 이 기기에 기억돼요.
         </Typography>
 
-        {/* ② 업무 첨부파일 */}
+        {/* ② 칸반 보드 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <AttachFileIcon sx={{ color: 'primary.main', fontSize: iconSize.action }} />
-          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>업무에 파일을 첨부하세요</Typography>
+          <ViewKanbanIcon sx={{ color: 'primary.main', fontSize: iconSize.action }} />
+          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>업무를 보드로 한눈에</Typography>
         </Box>
-        <WorkAttachDemo />
+        <KanbanDemo />
+        <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, mb: 2.5 }}>
+          업무현황 오른쪽 위 보기 전환에서 골라요 — 진행중·보류·완료·Remind가 한 화면에 섭니다.
+        </Typography>
+
+        {/* ③ 지난 휴가 자동 숨김 */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <EventBusyIcon sx={{ color: 'primary.main', fontSize: iconSize.action }} />
+          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>지난 휴가는 알아서 비켜요</Typography>
+        </Box>
+        <LeaveHideDemo />
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
-          새 업무 작성·카드 더블클릭(수정)에서 올려요 — 파일을 카드에 끌어다 놓아도 됩니다(파일당 10MB).
+          업무일정에서 끝난 연차·휴가는 다음 날부터 안 보입니다 — 지워진 게 아니라 가려진 거예요.
         </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
