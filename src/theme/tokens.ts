@@ -114,8 +114,12 @@ export const accent = {
 export const solid = {
   /** 흰 글자 5.74:1 */
   blue: '#2563C4',
-  /** 흰 글자 6.08:1 */
+  /** 흰 글자 6.08:1 — accent.red(#E05B54)는 3.62 로 미달 */
   red: '#B72F29',
+  /** 흰 글자 5.77:1 — accent.green(#4DA167)은 3.18 로 미달 */
+  green: '#2A7346',
+  /** 흰 글자 5.93:1 — accent.purple(#A98AE0)은 2.84 로 미달 */
+  purple: '#6B4FC4',
 } as const
 
 /**
@@ -465,14 +469,17 @@ export const iconSize = {
 export const domain = {
   /** 행사(Events) — 분류칩·사이트 버튼 (D5-2 확정: accent 통합 — 팔레트 1계열화) */
   events: {
+    // 넷 다 **흰 글자를 얹는 면**이라 solid 를 쓴다(2026-08-02).
+    // 구 accent 는 채움이지만 글자를 안 얹는 자리용이라 흰 글자가 2.84~3.62:1 로 미달이었다
+    // (감사 도구가 '전시' 2.84 를 잡았고, 나머지 셋은 화면에 안 떠 있어 코드로 찾아냈다).
     /** 분류칩: 학술 */
-    academic: accent.blue,
+    academic: solid.blue,
     /** 분류칩: 교육 */
-    education: accent.green,
+    education: solid.green,
     /** 분류칩: 전시 */
-    exhibition: accent.purple,
+    exhibition: solid.purple,
     /** 하단 '행사 사이트' 버튼 */
-    link: accent.blue,
+    link: solid.blue,
     /** 포스터 없는 카드 배경 그라데이션(EventAccent별) */
     grad: {
       blue: 'linear-gradient(150deg,#1e3a6b,#2f5fa6 60%,#3f7bd0)',
