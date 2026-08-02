@@ -282,7 +282,7 @@ export function EventCardInner({ e, open, attend }: { e: FabEvent; open: boolean
       {/* 좌상단 칩(분류·상태) + 우상단 참석 버튼 — 항상 선명(스크림 위) */}
       <Box sx={{ position: 'absolute', top: 11, left: 11, right: 11, zIndex: 3, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: typescale.small.size, sm: typescale.body.size }, fontWeight: weight.heavy, letterSpacing: '.02em', px: '10px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: typescale.small.size, sm: typescale.body.size }, fontWeight: weight.bold, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: typescale.small.size, sm: typescale.body.size }, fontWeight: weight.bold, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
             <Box component="span" sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone), ...(st.tone === 'green' ? LIVE_DOT_BLINK : null) })} />
             {st.label}
@@ -371,7 +371,7 @@ export function EventDrawerDetail({ e, attendeeSlot }: { e: FabEvent; attendeeSl
           </Box>
         )}
         <Box sx={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: typescale.small.size, fontWeight: weight.heavy, px: '9px', py: '5px', borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: typescale.small.size, fontWeight: weight.bold, px: '10px', py: '5px', borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
           <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: typescale.small.size, fontWeight: weight.bold, px: '10px', py: '5px', borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.55)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
             <Box component="span" sx={(th) => ({ width: 8, height: 8, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone), ...(st.tone === 'green' ? LIVE_DOT_BLINK : null) })} />
             {st.label}
