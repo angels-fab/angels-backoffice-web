@@ -120,6 +120,8 @@ export const solid = {
   green: '#2A7346',
   /** 흰 글자 5.93:1 — accent.purple(#A98AE0)은 2.84 로 미달 */
   purple: '#6B4FC4',
+  /** 흰 글자 6.18:1 — accent.rose(#D87CA6)는 2.86 으로 미달 */
+  rose: '#A6386B',
 } as const
 
 /**

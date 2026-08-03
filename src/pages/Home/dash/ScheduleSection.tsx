@@ -8,6 +8,7 @@ import { CAL_CAT_MAP } from '@/constants/calendar'
 import { hexA } from '@/utils/color'
 import { todaySeoul } from '@/utils/date'
 import { accent, radius, typescale, weight } from '@/theme/tokens'
+import { catTextColor, toneOfColor } from '@/pages/Calendar/catMeta'
 import type { CalEvent } from '@/types'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
@@ -26,7 +27,8 @@ function TypeBadge({ cat }: { cat: CalEvent['cat'] }) {
         px: 0.75,
         py: '2px',
         borderRadius: `${radius.chip}px`,
-        color,
+        // 글자는 채움색(accent)이 아니라 글자용 값 — 14% 틴트 면 위에서 accent 는 2.83:1 로 무너진다
+        color: (th) => catTextColor(th, toneOfColor(color)),
         bgcolor: hexA(color, 0.14),
         border: `1px solid ${hexA(color, 0.32)}`,
       }}

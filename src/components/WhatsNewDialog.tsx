@@ -15,7 +15,7 @@ import Brightness4Icon from '@mui/icons-material/Brightness4'
 import EventBusyIcon from '@mui/icons-material/EventBusy'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import TouchAppIcon from '@mui/icons-material/TouchApp'
-import { darkPalette, domain, iconSize, lightPalette, radius, typescale, weight } from '@/theme/tokens'
+import { darkPalette, domain, iconSize, lightPalette, radius, solid, typescale, weight } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
@@ -142,7 +142,7 @@ function CalCell({ day, leave }: { day: number; leave?: boolean }) {
     <Box sx={{ border: 1, borderColor: 'divider', borderRadius: `${radius.chip}px`, p: '5px', minHeight: 52, bgcolor: 'background.paper' }}>
       <Box sx={{ fontSize: typescale.micro.size, fontWeight: weight.bold, color: 'text.secondary', mb: '4px' }}>{day}</Box>
       {leave && (
-        <Box sx={(th) => ({ display: 'inline-flex', alignItems: 'center', maxWidth: '100%', px: '5px', py: '2px', borderRadius: `${radius.chip}px`, fontSize: typescale.micro.size, fontWeight: weight.semibold, color: 'common.white', bgcolor: th.palette.accent.rose, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' })}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', maxWidth: '100%', px: '5px', py: '2px', borderRadius: `${radius.chip}px`, fontSize: typescale.micro.size, fontWeight: weight.semibold, color: 'common.white', bgcolor: solid.rose, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           연차 신현진
         </Box>
       )}
