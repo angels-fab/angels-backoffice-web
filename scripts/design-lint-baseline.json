@@ -1,5 +1,5 @@
 {
-  "total": 17,
+  "total": 16,
   "totals": {
     "hex": 0,
     "font": 0,
@@ -7,7 +7,7 @@
     "radius": 1,
     "shadow": 0,
     "z": 0,
-    "class": 15
+    "class": 14
   },
   "files": {
     "src/pages/Equipment/DemoResults.tsx": 3,
@@ -21,7 +21,6 @@
     "src/pages/Work/ReorderableTaskGrid.tsx": 1,
     "src/pages/Work/StatusDragGrid.tsx": 1,
     "src/pages/Work/TaskAccordion.tsx": 1,
-    "src/components/richText.tsx": 1,
-    "src/components/WhatsNewDialog.tsx": 1
+    "src/components/richText.tsx": 1
   }
 }
