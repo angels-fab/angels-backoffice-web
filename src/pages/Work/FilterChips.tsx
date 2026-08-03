@@ -1,8 +1,9 @@
 import Box from '@mui/material/Box'
 import type { Theme } from '@mui/material/styles'
+import type { ReactNode } from 'react'
 import { statusTextColor, type StatusKind } from '@/components/ds'
 import { TintChip, PillChip } from '@/components/FilterChip'
-import { typescale } from '@/theme/tokens'
+import { iconSize, typescale } from '@/theme/tokens'
 
 /**
  * 업무현황 구분·담당자 필터 칩 — 공용 FilterChip(TintChip/PillChip) 위에 얹은 얇은 래퍼.
@@ -29,7 +30,7 @@ interface ChipBaseProps {
 }
 
 /** 구분 필터 칩 — 업무일정 종류 칩 스타일(틴트 pill + off는 dim) */
-export function CatFilterChip({ label, count, on, kind, onToggle }: ChipBaseProps & { kind: StatusKind }) {
+export function CatFilterChip({ label, count, on, kind, icon, onToggle }: ChipBaseProps & { kind: StatusKind; icon?: ReactNode }) {
   return (
     <TintChip
       on={on}
@@ -39,8 +40,19 @@ export function CatFilterChip({ label, count, on, kind, onToggle }: ChipBaseProp
       hover
       sx={{ p: '4px 10px' }}
     >
-      {/* 켜짐 = 카드 구분칩과 같은 글자색(같은 구분임을 색으로 잇는다) / 꺼짐 = 채움이 없으므로 중립 */}
-      <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: (t: Theme) => (on ? statusTextColor(t, kind) : t.palette.text.secondary) }}>{label}</Box>
+      {/*
+        아이콘이 분류 색을 나른다 — 카드 구분칩과 같은 규칙. 꺼짐은 채움이 없으므로 함께 dim.
+        색은 채움용 kindHex(accent)가 아니라 글자용 statusTextColor(accentText) — 아이콘이 정보를
+        나르므로 3:1 을 지켜야 하는데 accent 는 라이트 틴트 위에서 2.01~2.70 으로 미달한다.
+      */}
+      {icon && (
+        <Box sx={{ display: 'flex', color: (t: Theme) => (on ? statusTextColor(t, kind) : t.palette.text.disabled), '& svg': { display: 'block', fontSize: iconSize.caption } }}>{icon}</Box>
+      )}
+      {/*
+        아이콘이 있으면 글자는 중립 — 색을 나르는 일을 아이콘이 맡는다(카드 구분칩과 동일 규칙).
+        아이콘이 없을 때만 종전대로 켜짐 = 카드 구분칩과 같은 글자색(같은 구분임을 색으로 잇는다).
+      */}
+      <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: typescale.emphasis.weight, color: (t: Theme) => (on ? (icon ? t.palette.text.primary : statusTextColor(t, kind)) : t.palette.text.secondary) }}>{label}</Box>
       <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.secondary' }}>{count}</Box>
     </TintChip>
   )

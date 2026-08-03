@@ -12,7 +12,7 @@ import ManagerChip from '@/components/ds/ManagerChip'
 import { fmtDate, dateSortValue } from '@/utils/date'
 import { isWorkNew } from '@/utils/newPost'
 import type { WorkItem } from '@/types'
-import { classify, taskTitle, catKind, toneVar, toneCss } from './workMeta'
+import { classify, taskTitle, catKind, catIcon, toneVar, toneCss } from './workMeta'
 import type { CardTone } from './workMeta'
 import { zoneAt, genieOverlayInto } from './dropZones'
 import type { DropZone, StatusDropResult } from './dropZones'
@@ -89,7 +89,7 @@ function CardInner({ t }: { t: WorkItem }) {
         {t.chief && <Box component="span" sx={{ flexShrink: 0 }}><StatusChip status="purple" label="Check" /></Box>}
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5, mt: 0.75 }}>
-        {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
+        {t.cat && <StatusChip status={catKind(t.cat)} icon={catIcon(t.cat)} label={t.cat} />}
         <ManagerChip name={t.mgr} />
         <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', height: 22, fontSize: typescale.small.size, borderRadius: `${radius.chip}px`, px: 0.75, color: 'text.secondary', bgcolor: alpha(th.palette.text.secondary, 0.12), fontFamily: 'monospace', whiteSpace: 'nowrap', marginLeft: 'auto' })}>
           {fmtDate(t.start)}

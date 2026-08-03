@@ -23,7 +23,7 @@ import { StatusChip } from '@/components/ds'
 import { radius, iconSize, typescale } from '@/theme/tokens'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { taskTitle, taskLink, catKind } from './workMeta'
+import { taskTitle, taskLink, catKind, catIcon } from './workMeta'
 import ManagerChip from '@/components/ds/ManagerChip'
 import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
@@ -82,7 +82,7 @@ export default function TaskGridAccordion({ items, tone, isAdmin, onEdit, onComp
   // ── 공유: 카드 본문(칩·제목·메뉴·셰브론) ──
   const cardBody = (t: WorkItem, on: boolean, showChevron: boolean, hideMenu?: boolean) => (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
-      {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
+      {t.cat && <StatusChip status={catKind(t.cat)} icon={catIcon(t.cat)} label={t.cat} />}
       {t.dept && <StatusChip status="neutral" label={t.dept} />}
       <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: typescale.emphasis.weight, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'text.primary' }}>
         {taskTitle(t)}

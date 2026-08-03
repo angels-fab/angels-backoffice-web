@@ -1,7 +1,7 @@
 import Chip from '@mui/material/Chip'
 import { darken } from '@mui/material/styles'
 import type { ReactNode } from 'react'
-import { typescale } from '@/theme/tokens'
+import { iconSize, typescale } from '@/theme/tokens'
 import { flatten } from '@/utils/color'
 
 /** 의미 상태 — 색 매핑의 단일 기준 */
@@ -94,7 +94,12 @@ export default function StatusChip({
           fontSize: typescale.small.size,
           // 채움(selected) 라벨은 흰색 고정이 아니라 채움색 대비로 자동 선택 —
           // 앰버·틸 같은 밝은 채움 위 흰 글자는 2.3:1까지 떨어진다(getContrastText가 검은 라벨을 고름).
-          color: selected ? t.palette.getContrastText(c) : textC,
+          //
+          // ★ 아이콘이 있으면 글자는 **중립색**으로 넘긴다(2026-08-04). 색을 나르는 일을 아이콘이
+          //   맡으므로 글자가 색을 벗어도 분류 신호가 안 죽고, 틴트 면과 글자가 같은 계열이 아니게
+          //   되어 대비가 저절로 벌어진다 — 업무 구분 칩 실측 5.05~6.15 → 14.1:1.
+          //   아이콘이 없는 칩은 글자가 유일한 색 신호이므로 종전대로 accentText 를 쓴다.
+          color: selected ? t.palette.getContrastText(c) : icon ? t.palette.text.primary : textC,
           // 미선택 칩의 면·보더 농도. 구 값(.12/.32)은 카드 대비 면 1.10~1.26·보더 1.29~1.86이라
           // 6색 칩이 멀리서 회색 알약으로 뭉쳐 보였다(분류 신호가 죽음).
           //
@@ -108,7 +113,22 @@ export default function StatusChip({
           //   같은 규칙이 된다.
           bgcolor: selected ? c : flatten(c, 0.18, t.palette.background.paper),
           borderColor: selected ? c : flatten(c, 0.6, t.palette.background.paper),
-          '& .MuiChip-icon': { color: 'inherit', fontSize: typescale.cardTitle.size },
+          // 아이콘이 분류 색을 나른다 — 글자가 중립이 된 만큼 색 신호가 여기로 옮겨왔다.
+          //
+          // ★ 채움용 accent(c)가 아니라 **글자용 accentText**(textC)를 쓴다. 아이콘이 정보를
+          //   나르므로 WCAG 1.4.11 의 3:1 을 지켜야 하는데, accent 를 쓰면 라이트에서
+          //   인사 2.01 · 교육세미나 2.41 · 행정 2.70 으로 전부 미달한다(실측 2026-08-04).
+          //   accentText 는 애초에 "틴트 면 위 4.5:1"을 보장하려고 만든 계층이라 그대로 통과한다.
+          //   다크는 accent 로도 3.66~5.16 이었지만, 테마마다 다른 계층을 쓰면 규칙이 둘로 갈린다.
+          // 채움(selected) 칩은 배경이 원색이라 아이콘도 라벨과 같은 대비색을 따라간다.
+          // 13(iconSize.caption) = 업무일정 종류 칩과 같은 값. 여백은 MUI 기본(ml 5 / mr -6)이
+          //  12px 라벨 옆에서 뜨므로 좁힌다.
+          '& .MuiChip-icon': {
+            color: selected ? 'inherit' : textC,
+            fontSize: iconSize.caption,
+            marginLeft: '1px',
+            marginRight: '-3px',
+          },
           // lineHeight:1 통일 + 글자 0.5px 하향 — 다른 칩과 동일 규격으로 한글 정중앙(실측)
           '& .MuiChip-label': { lineHeight: 1, transform: 'translateY(0.5px)' },
           ...(onClick && {

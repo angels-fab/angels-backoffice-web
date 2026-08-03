@@ -1,0 +1,380 @@
+<title>장비 · 예산 아이콘 후보</title>
+<style>
+  :root{ --bg:#EEF1F5; --fg:#1A1D23; --sub:#555E6B; --line:#DCE2EA; --card:#FFFFFF; --dim:#9AA3B0;
+         --ok:#196533; --warn:#7F5B00; --bad:#A82B26; --winbg:#F2F7FF; --winline:#98BDE9; --ico-neutral:#555E6B }
+  @media (prefers-color-scheme:dark){ :root{ --bg:#0B0D12; --fg:#FFFFFF; --sub:#AAB4C3; --line:#242C3A;
+         --card:#141922; --dim:#5A6472; --ok:#6FC98A; --warn:#E0B155; --bad:#F5837C;
+         --winbg:#101A29; --winline:#2E568C; --ico-neutral:#AAB4C3 } }
+  :root[data-theme="dark"]{ --bg:#0B0D12; --fg:#FFFFFF; --sub:#AAB4C3; --line:#242C3A; --card:#141922;
+         --dim:#5A6472; --ok:#6FC98A; --warn:#E0B155; --bad:#F5837C; --winbg:#101A29; --winline:#2E568C;
+         --ico-neutral:#AAB4C3 }
+  :root[data-theme="light"]{ --bg:#EEF1F5; --fg:#1A1D23; --sub:#555E6B; --line:#DCE2EA; --card:#FFFFFF;
+         --dim:#9AA3B0; --ok:#196533; --warn:#7F5B00; --bad:#A82B26; --winbg:#F2F7FF; --winline:#98BDE9;
+         --ico-neutral:#555E6B }
+
+  body{ margin:0; background:var(--bg); color:var(--fg);
+        font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',-apple-system,system-ui,sans-serif;
+        -webkit-font-smoothing:antialiased }
+  .wrap{ max-width:1120px; margin:0 auto; padding:26px 16px 60px; display:flex; flex-direction:column; gap:24px }
+  h1{ font-size:21px; font-weight:800; letter-spacing:-.02em; margin:0 0 7px }
+  .lede{ font-size:13px; line-height:1.65; color:var(--sub); margin:0; max-width:66ch }
+  code{ font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace; font-size:11px; font-weight:500 }
+
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:15px 16px;
+          display:flex; flex-direction:column; gap:12px }
+  .panel > h3{ font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase;
+               color:var(--sub); margin:0 }
+
+  .chip{ display:inline-flex; align-items:center; gap:4px; height:24px; padding:0 9px; border-radius:8px;
+         font-size:12px; font-weight:600; line-height:1; border:1px solid; color:#1A1D23;
+         box-sizing:border-box; white-space:nowrap }
+  .oncard{ display:flex; flex-wrap:wrap; gap:7px; background:#c9e0d3; padding:9px 10px;
+           border-radius:10px; border:1px solid #a8d2ba }
+  .combo{ display:flex; flex-direction:column; gap:6px }
+  .combo-h{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap }
+  .combo-h b{ font-size:12.5px; font-weight:700 }
+  .combo-h span{ font-size:11.5px; color:var(--sub) }
+
+  .grp{ display:flex; flex-direction:column; gap:10px }
+  .grp h2{ display:flex; align-items:baseline; gap:8px; font-size:14px; font-weight:800; margin:0; flex-wrap:wrap }
+  .grp h2 em{ font-style:normal; font-size:11.5px; font-weight:500; color:var(--sub) }
+  .dot{ width:9px; height:9px; border-radius:3px; flex:none; align-self:center }
+  .cells{ display:grid; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); gap:9px }
+  .cell{ background:var(--card); border:1px solid var(--line); border-radius:11px; padding:11px 11px 12px;
+         display:flex; flex-direction:column; gap:6px; min-width:0 }
+  .cell.win{ background:var(--winbg); border-color:var(--winline) }
+  .cell.gone{ opacity:.62 }
+  .ico{ display:flex; justify-content:center; padding:5px 0 2px }
+  .real{ display:flex; align-items:center; justify-content:center; gap:5px; padding:4px 0;
+         border-top:1px dashed var(--line); border-bottom:1px dashed var(--line) }
+  .real span{ font-size:10px; color:var(--sub) }
+  .cell code{ color:var(--fg); font-weight:600; word-break:break-all; text-align:center }
+  .m{ font-style:normal; font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px;
+      align-self:center; white-space:nowrap }
+  .m1{ background:rgba(77,161,103,.18); color:var(--ok) }
+  .m2{ background:rgba(214,162,62,.2); color:var(--warn) }
+  .m3{ background:rgba(144,156,174,.22); color:var(--sub) }
+  .mx{ background:rgba(224,91,84,.16); color:var(--bad) }
+  .why{ font-size:11px; line-height:1.55; color:var(--sub); margin:0 }
+  .risk{ font-size:10.5px; line-height:1.5; color:var(--sub); margin:0; opacity:.9 }
+  .risk b{ color:var(--fg); font-weight:700 }
+  .clash b{ color:var(--bad) }
+
+  .note{ font-size:12px; line-height:1.65; color:var(--sub); margin:0 }
+  .note b{ color:var(--fg) }
+  table{ width:100%; border-collapse:collapse; font-size:12px }
+  th,td{ text-align:left; padding:6px 9px; border-bottom:1px solid var(--line) }
+  th{ font-size:11px; font-weight:700; color:var(--sub) }
+  .tw{ overflow-x:auto; border:1px solid var(--line); border-radius:10px }
+</style>
+
+<div class="wrap">
+
+  <div>
+    <h1>장비 · 예산 아이콘 후보</h1>
+    <p class="lede">확정하신 4종(인사 <code>Person</code> · 행정 <code>Description</code> · 교육세미나 <code>School</code> · 설계적정성 <code>SquareFoot</code>)을 고정해 두고, <b>그것들과 형태가 안 겹치는지</b>를 첫 기준으로 다시 골랐습니다. 그림은 전부 실제 MUI 도형입니다.</p>
+  </div>
+
+  <div class="panel">
+    <h3>세트로 보기 — 업무 카드 위 실제 크기</h3>
+    <div class="combo">
+  <div class="combo-h"><b>① Monitor + Payments</b><span>세 관점 모두의 1순위</span></div>
+  <div class="oncard"><span class="chip" style="background:#e0e2e4;border-color:#999ea6"><svg viewBox="0 0 24 24" width="13" height="13" fill="#555E6B" style="display:block;flex:none"><path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h3l-1 1v2h12v-2l-1-1h3c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 13H4V5h16z"/></svg><span>장비</span></span><span class="chip" style="background:#f8eedc;border-color:#e6c78b"><svg viewBox="0 0 24 24" width="13" height="13" fill="#D6A23E" style="display:block;flex:none"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4"/></svg><span>인사</span></span><span class="chip" style="background:#f9e1e0;border-color:#ec9d98"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2m-9-1c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3m13-6v11c0 1.1-.9 2-2 2H4v-2h17V7z"/></svg><span>예산</span></span><span class="chip" style="background:#e0ebf8;border-color:#98bde9"><svg viewBox="0 0 24 24" width="13" height="13" fill="#5491DA" style="display:block;flex:none"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8zm2 16H8v-2h8zm0-4H8v-2h8zm-3-5V3.5L18.5 9z"/></svg><span>행정</span></span><span class="chip" style="background:#f0eaf9;border-color:#cbb9ec"><svg viewBox="0 0 24 24" width="13" height="13" fill="#A98AE0" style="display:block;flex:none"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17zM12 3 1 9l11 6 9-4.91V17h2V9z"/></svg><span>교육세미나</span></span><span class="chip" style="background:#dfeee4;border-color:#94c7a4"><svg viewBox="0 0 24 24" width="13" height="13" fill="#4DA167" style="display:block;flex:none"><path d="m17.66 17.66-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06L9.7 9.7l-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06L4 4v14c0 1.1.9 2 2 2h14zM7 17v-5.76L12.76 17z"/></svg><span>설계적정성</span></span></div></div>
+    <div class="combo">
+  <div class="combo-h"><b>② Memory + Payments</b><span>장비를 반도체 칩으로</span></div>
+  <div class="oncard"><span class="chip" style="background:#e0e2e4;border-color:#999ea6"><svg viewBox="0 0 24 24" width="13" height="13" fill="#555E6B" style="display:block;flex:none"><path d="M15 9H9v6h6zm-2 4h-2v-2h2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2zm-4 6H7V7h10z"/></svg><span>장비</span></span><span class="chip" style="background:#f8eedc;border-color:#e6c78b"><svg viewBox="0 0 24 24" width="13" height="13" fill="#D6A23E" style="display:block;flex:none"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4"/></svg><span>인사</span></span><span class="chip" style="background:#f9e1e0;border-color:#ec9d98"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2m-9-1c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3m13-6v11c0 1.1-.9 2-2 2H4v-2h17V7z"/></svg><span>예산</span></span><span class="chip" style="background:#e0ebf8;border-color:#98bde9"><svg viewBox="0 0 24 24" width="13" height="13" fill="#5491DA" style="display:block;flex:none"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8zm2 16H8v-2h8zm0-4H8v-2h8zm-3-5V3.5L18.5 9z"/></svg><span>행정</span></span><span class="chip" style="background:#f0eaf9;border-color:#cbb9ec"><svg viewBox="0 0 24 24" width="13" height="13" fill="#A98AE0" style="display:block;flex:none"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17zM12 3 1 9l11 6 9-4.91V17h2V9z"/></svg><span>교육세미나</span></span><span class="chip" style="background:#dfeee4;border-color:#94c7a4"><svg viewBox="0 0 24 24" width="13" height="13" fill="#4DA167" style="display:block;flex:none"><path d="m17.66 17.66-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06L9.7 9.7l-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06L4 4v14c0 1.1.9 2 2 2h14zM7 17v-5.76L12.76 17z"/></svg><span>설계적정성</span></span></div></div>
+    <div class="combo">
+  <div class="combo-h"><b>③ DeveloperBoard + Payments</b><span>칩 계열이되 문서와 더 멀리</span></div>
+  <div class="oncard"><span class="chip" style="background:#e0e2e4;border-color:#999ea6"><svg viewBox="0 0 24 24" width="13" height="13" fill="#555E6B" style="display:block;flex:none"><path d="M22 9V7h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2v-2h-2V9zm-4 10H4V5h14zM6 13h5v4H6zm6-6h4v3h-4zM6 7h5v5H6zm6 4h4v6h-4z"/></svg><span>장비</span></span><span class="chip" style="background:#f8eedc;border-color:#e6c78b"><svg viewBox="0 0 24 24" width="13" height="13" fill="#D6A23E" style="display:block;flex:none"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4"/></svg><span>인사</span></span><span class="chip" style="background:#f9e1e0;border-color:#ec9d98"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2m-9-1c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3m13-6v11c0 1.1-.9 2-2 2H4v-2h17V7z"/></svg><span>예산</span></span><span class="chip" style="background:#e0ebf8;border-color:#98bde9"><svg viewBox="0 0 24 24" width="13" height="13" fill="#5491DA" style="display:block;flex:none"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8zm2 16H8v-2h8zm0-4H8v-2h8zm-3-5V3.5L18.5 9z"/></svg><span>행정</span></span><span class="chip" style="background:#f0eaf9;border-color:#cbb9ec"><svg viewBox="0 0 24 24" width="13" height="13" fill="#A98AE0" style="display:block;flex:none"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17zM12 3 1 9l11 6 9-4.91V17h2V9z"/></svg><span>교육세미나</span></span><span class="chip" style="background:#dfeee4;border-color:#94c7a4"><svg viewBox="0 0 24 24" width="13" height="13" fill="#4DA167" style="display:block;flex:none"><path d="m17.66 17.66-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06L9.7 9.7l-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06L4 4v14c0 1.1.9 2 2 2h14zM7 17v-5.76L12.76 17z"/></svg><span>설계적정성</span></span></div></div>
+    <div class="combo">
+  <div class="combo-h"><b>④ Monitor + Savings</b><span>달러 기호가 싫을 때의 예산 대안</span></div>
+  <div class="oncard"><span class="chip" style="background:#e0e2e4;border-color:#999ea6"><svg viewBox="0 0 24 24" width="13" height="13" fill="#555E6B" style="display:block;flex:none"><path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h3l-1 1v2h12v-2l-1-1h3c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 13H4V5h16z"/></svg><span>장비</span></span><span class="chip" style="background:#f8eedc;border-color:#e6c78b"><svg viewBox="0 0 24 24" width="13" height="13" fill="#D6A23E" style="display:block;flex:none"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4m0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4"/></svg><span>인사</span></span><span class="chip" style="background:#f9e1e0;border-color:#ec9d98"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="m19.83 7.5-2.27-2.27c.07-.42.18-.81.32-1.15.08-.18.12-.37.12-.58 0-.83-.67-1.5-1.5-1.5-1.64 0-3.09.79-4 2h-5C4.46 4 2 6.46 2 9.5S4.5 21 4.5 21H10v-2h2v2h5.5l1.68-5.59 2.82-.94V7.5zM13 9H8V7h5zm3 2c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1"/></svg><span>예산</span></span><span class="chip" style="background:#e0ebf8;border-color:#98bde9"><svg viewBox="0 0 24 24" width="13" height="13" fill="#5491DA" style="display:block;flex:none"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8zm2 16H8v-2h8zm0-4H8v-2h8zm-3-5V3.5L18.5 9z"/></svg><span>행정</span></span><span class="chip" style="background:#f0eaf9;border-color:#cbb9ec"><svg viewBox="0 0 24 24" width="13" height="13" fill="#A98AE0" style="display:block;flex:none"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17zM12 3 1 9l11 6 9-4.91V17h2V9z"/></svg><span>교육세미나</span></span><span class="chip" style="background:#dfeee4;border-color:#94c7a4"><svg viewBox="0 0 24 24" width="13" height="13" fill="#4DA167" style="display:block;flex:none"><path d="m17.66 17.66-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06L9.7 9.7l-1.06 1.06-.71-.71 1.06-1.06-1.94-1.94-1.06 1.06-.71-.71 1.06-1.06L4 4v14c0 1.1.9 2 2 2h14zM7 17v-5.76L12.76 17z"/></svg><span>설계적정성</span></span></div></div>
+  </div>
+
+  <div class="panel">
+    <h3>예산 — 왜 Payments 로 모였나</h3>
+    <p class="note"><b>MUI 에 원화(₩) 아이콘이 없습니다.</b> <code>CurrencyYen</code>·<code>CurrencyPound</code> 같은 것은 있어도 Won 은 없어서, 돈 아이콘 대부분이 <b>달러 기호를 달고</b> 옵니다. 한국 포털에 $ 를 박는 게 걸립니다.</p>
+    <p class="note"><code>Payments</code> 는 후보 중 <b>유일하게 통화 기호가 한 획도 없습니다</b> — 지폐 두 장이 겹치고 앞장에 동전 구멍이 뚫린 그림이라, 기호 없이 '돈'을 전달합니다. 기호가 싫으면 <code>Savings</code>(저금통)가 같은 성질의 대안입니다.</p>
+  </div>
+
+  <div class="panel">
+    <h3>결정에 필요한 사실 — 이미 쓰고 있는 아이콘</h3>
+    <p class="note">후보 셋 다 <b>이 앱에서 이미 쓰이고 있습니다.</b> 직접 확인한 결과입니다.</p>
+    <div class="tw"><table>
+      <thead><tr><th>아이콘</th><th>현재 쓰이는 곳</th><th>뜻</th></tr></thead>
+      <tbody>
+        <tr><td><code>Monitor</code></td><td>사이드바 '장비관리' · 장비현황 · 장비운영 · 통합검색 · 모바일메뉴</td><td>내비게이션의 <b>장비</b></td></tr>
+        <tr><td><code>Memory</code></td><td>홈 KPI '전체 장비' · 마일스톤 '연구장비'</td><td>데이터로서의 <b>장비</b></td></tr>
+        <tr><td><code>Payments</code></td><td>홈 KPI '도입 예산'</td><td><b>예산</b></td></tr>
+        <tr><td><code>AccountBalance</code></td><td>마일스톤 '예산·건축'</td><td>예산 (이번엔 탈락)</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note"><b>이게 왜 중요하냐면</b> — 칩에 <code>Memory</code> 를 쓰면 같은 화면에서 사이드바 '장비관리'는 모니터, 칩 '장비'는 칩이 됩니다. 반대로 <code>Monitor</code> 를 쓰면 홈 KPI '전체 장비'(칩 그림)와 갈립니다. <b>어느 쪽을 택해도 한 군데는 안 맞으므로</b>, 맞추고 싶은 쪽을 고르시면 나머지도 함께 바꾸겠습니다.</p>
+  </div>
+
+  <section class="grp">
+  <h2><span class="dot" style="background:#E05B54"></span>예산<em>돈 · budget 이 연상되는 것</em></h2>
+  <div class="cells"><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m.88 15.76V19h-1.75v-1.29c-.74-.18-2.39-.77-3.02-2.96l1.65-.67c.06.22.58 2.09 2.4 2.09.93 0 1.98-.48 1.98-1.61 0-.96-.7-1.46-2.28-2.03-1.1-.39-3.35-1.03-3.35-3.31 0-.1.01-2.4 2.62-2.96V5h1.75v1.24c1.84.32 2.51 1.79 2.66 2.23l-1.58.67c-.11-.35-.59-1.34-1.9-1.34-.7 0-1.81.37-1.81 1.39 0 .95.86 1.31 2.64 1.9 2.4.83 3.01 2.05 3.01 3.45 0 2.63-2.5 3.13-3.02 3.22"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m.88 15.76V19h-1.75v-1.29c-.74-.18-2.39-.77-3.02-2.96l1.65-.67c.06.22.58 2.09 2.4 2.09.93 0 1.98-.48 1.98-1.61 0-.96-.7-1.46-2.28-2.03-1.1-.39-3.35-1.03-3.35-3.31 0-.1.01-2.4 2.62-2.96V5h1.75v1.24c1.84.32 2.51 1.79 2.66 2.23l-1.58.67c-.11-.35-.59-1.34-1.9-1.34-.7 0-1.81.37-1.81 1.39 0 .95.86 1.31 2.64 1.9 2.4.83 3.01 2.05 3.01 3.45 0 2.63-2.5 3.13-3.02 3.22"/></svg><span>실물 13px</span></div>
+    <code>Paid</code><i class="m m2">2순위 1표</i>
+    <p class="why">꽉 찬 동전 한 닢 — 13px 에서 형태가 무너지지 않는 유일한 화폐 아이콘이라 이 갈래 1순위.</p>
+    <p class="risk"><b>13px 약점</b> 뚫린 $ 획이 13px 에서 거의 메워져 '민무늬 동전'으로 보일 수 있음(다만 동전으로는 여전히 읽힘). 그 $ 가 살아 보일 경우엔 달러라 원화 맥락과 어긋남. 이름 뜻이 '지불 완료'라 코드 읽는 사람에게 예산과 살짝 다르게 읽힘.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M13.92 11H18v2h-5v2h5v2h-5v4h-2v-4H6v-2h5v-2H6v-2h4.08L5 3h2.37L12 10.29 16.63 3H19z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M13.92 11H18v2h-5v2h5v2h-5v4h-2v-4H6v-2h5v-2H6v-2h4.08L5 3h2.37L12 10.29 16.63 3H19z"/></svg><span>실물 13px</span></div>
+    <code>CurrencyYen</code>
+    <p class="why">MUI 에 존재하는 기호 중 원화 ₩ 와 구조가 가장 닮은 것 — 세로 기둥에 가로 2줄이라는 ₩ 의 결정적 특징을 공유한다.</p>
+    <p class="risk"><b>13px 약점</b> 13px 에서 2단위 굵기 가로 바 2개가 약 1px 로 눌려 서로 붙거나 사라짐 → '¥' 가 아니라 그냥 '↑' 같은 얼룩이 될 수 있음(이 갈래 최대 약점). 의미상으로도 엄연히 엔화라, 크게 보이는 화면에서는 한국 포털에 일본 통화가 박힌 셈이 됨. 참고로 CurrencyYuan 은 가로 바가 1개뿐이라 ₩ 와 더 멀다.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16"/></svg><span>실물 13px</span></div>
+    <code>MonetizationOn</code><i class="m m2">2순위 2표</i>
+    <p class="why">Paid 와 같은 동전 disc 인데 안쪽 $ 획이 더 가늘고 각져서, $ 를 좀 더 또렷이 남기고 싶을 때의 대안.</p>
+    <p class="risk"><b>13px 약점</b> Paid 와 실루엣이 사실상 동일해 둘 중 하나만 의미 있음. 획이 더 가늘어 13px 에서 $ 가 Paid 보다 먼저 뭉갬. 역시 달러 기호.</p>
+    
+  </div><div class="cell win">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2m-9-1c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3m13-6v11c0 1.1-.9 2-2 2H4v-2h17V7z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M19 14V6c0-1.1-.9-2-2-2H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2m-9-1c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3m13-6v11c0 1.1-.9 2-2 2H4v-2h17V7z"/></svg><span>실물 13px</span></div>
+    <code>Payments</code><i class="m m1">1순위 3표</i>
+    <p class="why">지폐 여러 장이 겹친 '돈다발' — 한국 사무직이 예산/비용으로 즉시 읽는 관습적 그림.</p>
+    <p class="risk"><b>13px 약점</b> 요소 3개라 13px 기준선에 걸침 — 뒤쪽 장의 얇은 ㄱ 자 윤곽이 먼저 뭉개져 '원 하나 든 사각형'으로 퇴화할 수 있음. 그 상태가 되면 LocalAtm 과 구별이 안 됨.</p><p class="risk clash"><b>확정 4종 충돌</b> 약한 겹침 — Description 과 같은 사각 계열이나, 이쪽은 가로로 누운 카드이고 Description 은 세로로 긴 종이라 방향이 반대여서 13px 에서도 갈림. 다만 '사각 덩어리' 라는 인상은 공유함.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="m19.83 7.5-2.27-2.27c.07-.42.18-.81.32-1.15.08-.18.12-.37.12-.58 0-.83-.67-1.5-1.5-1.5-1.64 0-3.09.79-4 2h-5C4.46 4 2 6.46 2 9.5S4.5 21 4.5 21H10v-2h2v2h5.5l1.68-5.59 2.82-.94V7.5zM13 9H8V7h5zm3 2c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="m19.83 7.5-2.27-2.27c.07-.42.18-.81.32-1.15.08-.18.12-.37.12-.58 0-.83-.67-1.5-1.5-1.5-1.64 0-3.09.79-4 2h-5C4.46 4 2 6.46 2 9.5S4.5 21 4.5 21H10v-2h2v2h5.5l1.68-5.59 2.82-.94V7.5zM13 9H8V7h5zm3 2c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1"/></svg><span>실물 13px</span></div>
+    <code>Savings</code><i class="m m3">3순위 3표</i>
+    <p class="why">돼지저금통 — 통화 기호를 쓰지 않고도 돈을 뜻하는, 확정 4종 어느 것과도 안 닮은 완전히 독립된 실루엣.</p>
+    <p class="risk"><b>13px 약점</b> 요소가 5개 이상이라 이 목록에서 가장 복잡함 — 13px 에서 다리 파임과 슬롯이 사라져 '정체불명의 둥근 얼룩'이 되기 쉬움. 의미도 '저축·저금'이지 '예산 집행'은 아니라 어긋남. 톤이 귀여워서 팹 구축 관리 포털의 다른 아이콘들(Description·SquareFoot)과 문체가 안 맞을 수 있음.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M15 4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8m0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6M3 12c0-2.61 1.67-4.83 4-5.65V4.26C3.55 5.15 1 8.27 1 12s2.55 6.85 6 7.74v-2.09c-2.33-.82-4-3.04-4-5.65"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M15 4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8-3.58-8-8-8m0 14c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6M3 12c0-2.61 1.67-4.83 4-5.65V4.26C3.55 5.15 1 8.27 1 12s2.55 6.85 6 7.74v-2.09c-2.33-.82-4-3.04-4-5.65"/></svg><span>실물 13px</span></div>
+    <code>Toll</code>
+    <p class="why">동전 두 닢이 겹친 모양 — '돈'을 기호 없이 최소 요소로 표현하고, 통화 종류를 안 정하므로 원화 맥락과 충돌하지 않음.</p>
+    <p class="risk"><b>13px 약점</b> 두께 2 의 링이 13px 에서 약 1px 로 눌려 두 링 사이 간격이 메워지고 '뭉친 8자'나 검은 얼룩이 되기 쉬움. 통화 기호가 없어 '돈'보다 '통행료·토큰'으로 읽힐 소지도 있음.</p><p class="risk clash"><b>확정 4종 충돌</b> 약한 겹침 — Person 의 머리 원과 같은 '원' 요소를 쓰지만, Person 은 원+어깨 덩어리가 세로로 붙은 상반신이고 이쪽은 원 두 개가 가로로 나란해서 갈림.</p>
+    
+  </div><div class="cell gone">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--dim)" style="display:block;flex:none"><path d="M11 17h2v-1h1c.55 0 1-.45 1-1v-3c0-.55-.45-1-1-1h-3v-1h4V8h-2V7h-2v1h-1c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1h3v1H9v2h2zm9-13H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2m0 14H4V6h16z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--dim)" style="display:block;flex:none"><path d="M11 17h2v-1h1c.55 0 1-.45 1-1v-3c0-.55-.45-1-1-1h-3v-1h4V8h-2V7h-2v1h-1c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1h3v1H9v2h2zm9-13H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2m0 14H4V6h16z"/></svg><span>실물 13px</span></div>
+    <code>LocalAtm</code><i class="m mx">탈락 · 3표</i>
+    <p class="why">지폐 한 장에 통화 기호가 들어간 가장 표준적인 '현금' 아이콘 — 뜻 전달은 이 목록에서 최상급.</p>
+    <p class="risk"><b>13px 약점</b> 내부 글리프가 사각 안에 갇혀 있어 13px 에서 가장 먼저 메워짐 → '빈 가로 사각형'으로 퇴화. 그 상태면 화폐로 안 읽히고 그냥 카드·창처럼 보임. 내부 기호도 달러 계열.</p><p class="risk clash"><b>확정 4종 충돌</b> 중간 겹침 — Description 과 같은 '테두리 있는 사각' 계열. 가로/세로 방향이 반대이고 Description 은 속이 꽉 찬 종이(+접힌 모서리)라 결정적으로 다르지만, 칩이 여러 개 나란히 놓이면 둘 다 '네모'로 묶여 보일 위험이 이 목록에서 두 번째로 큼.</p>
+    <p class="risk clash"><b>탈락 사유</b> 둘 다 속 빈 가로 사각 테두리(두께 2) 안에 글리프가 갇힌 구조라, 13px에서 내부가 먼저 메워져 '빈 가로 사각형'으로 퇴화합니다. 그 상태면 화폐로 안 읽히면서 문서·카드 계열로 묶이는 최악의 조합이 됩니다. 내부 기호도 달러 계열.</p>
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M5 8h2v8H5zm7 0H9c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h3c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1m-1 6h-1v-4h1zm7-6h-3c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h3c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1m-1 6h-1v-4h1z"/><path d="M2 4v16h20V4zm2 14V6h16v12z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M5 8h2v8H5zm7 0H9c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h3c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1m-1 6h-1v-4h1zm7-6h-3c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h3c.55 0 1-.45 1-1V9c0-.55-.45-1-1-1m-1 6h-1v-4h1z"/><path d="M2 4v16h20V4zm2 14V6h16v12z"/></svg><span>실물 13px</span></div>
+    <code>Money</code>
+    <p class="why">액면가가 찍힌 지폐 — 기호 대신 숫자 덩어리를 써서 통화 중립적이고 '화폐 자체'라는 갈래 정의에 가장 정직하게 부합.</p>
+    <p class="risk"><b>13px 약점</b> 내부 요소가 3개라 13px 에서 '100' 이 검은 띠 하나로 뭉개짐 → LocalAtm 과 마찬가지로 빈 사각형으로 퇴화. 이 목록에서 축소 내구성이 가장 나쁨.</p><p class="risk clash"><b>확정 4종 충돌</b> 중간 겹침 — LocalAtm 과 같은 사유(Description 과 사각 계열 공유). 다만 내부가 세로 막대라, Description 내부의 가로줄 2개와는 방향이 달라 그 부분은 안 겹침.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4"/></svg><span>실물 13px</span></div>
+    <code>AttachMoney</code>
+    <p class="why">컨테이너 없는 통화 기호 단독 — 요소가 1개뿐이라 확정 4종과 형태군이 절대 안 겹치고, 칩 안에서 글자처럼 얹힌다.</p>
+    <p class="risk"><b>13px 약점</b> 달러 기호라는 점이 이 목록에서 가장 직접적으로 원화 맥락과 어긋남 — 한국 포털의 '예산'에 $ 를 다는 셈이라, 크게 보이는 화면에서 사용자가 즉시 이질감을 느낄 소지가 큼(₩ 가 있었다면 이 자리를 대신했을 형태). 획 굵기도 약 2단위라 13px 에서 가늘게 흔들림.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M12.89 11.1c-1.78-.59-2.64-.96-2.64-1.9 0-1.02 1.11-1.39 1.81-1.39 1.31 0 1.79.99 1.9 1.34l1.58-.67c-.15-.45-.82-1.92-2.54-2.24V5h-2v1.26c-2.48.56-2.49 2.86-2.49 2.96 0 2.27 2.25 2.91 3.35 3.31 1.58.56 2.28 1.07 2.28 2.03 0 1.13-1.05 1.61-1.98 1.61-1.82 0-2.34-1.87-2.4-2.09l-1.66.67c.63 2.19 2.28 2.78 2.9 2.96V19h2v-1.24c.4-.09 2.9-.59 2.9-3.22 0-1.39-.61-2.61-3.01-3.44M3 21H1v-6h6v2H4.52c1.61 2.41 4.36 4 7.48 4 4.97 0 9-4.03 9-9h2c0 6.08-4.92 11-11 11-3.72 0-7.01-1.85-9-4.67zm-2-9C1 5.92 5.92 1 12 1c3.72 0 7.01 1.85 9 4.67V3h2v6h-6V7h2.48C17.87 4.59 15.12 3 12 3c-4.97 0-9 4.03-9 9z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M12.89 11.1c-1.78-.59-2.64-.96-2.64-1.9 0-1.02 1.11-1.39 1.81-1.39 1.31 0 1.79.99 1.9 1.34l1.58-.67c-.15-.45-.82-1.92-2.54-2.24V5h-2v1.26c-2.48.56-2.49 2.86-2.49 2.96 0 2.27 2.25 2.91 3.35 3.31 1.58.56 2.28 1.07 2.28 2.03 0 1.13-1.05 1.61-1.98 1.61-1.82 0-2.34-1.87-2.4-2.09l-1.66.67c.63 2.19 2.28 2.78 2.9 2.96V19h2v-1.24c.4-.09 2.9-.59 2.9-3.22 0-1.39-.61-2.61-3.01-3.44M3 21H1v-6h6v2H4.52c1.61 2.41 4.36 4 7.48 4 4.97 0 9-4.03 9-9h2c0 6.08-4.92 11-11 11-3.72 0-7.01-1.85-9-4.67zm-2-9C1 5.92 5.92 1 12 1c3.72 0 7.01 1.85 9 4.67V3h2v6h-6V7h2.48C17.87 4.59 15.12 3 12 3c-4.97 0-9 4.03-9 9z"/></svg><span>실물 13px</span></div>
+    <code>CurrencyExchange</code>
+    <p class="why">환전(돈의 흐름) — 갈래 정의에 명시된 '환전'을 담당하는 유일한 아이콘이고, 예산의 '집행·이동' 뉘앙스까지 담는다.</p>
+    <p class="risk"><b>13px 약점</b> 이 목록에서 13px 내구성이 가장 나쁨 — 화살표 획이 1단위 수준이라 축소하면 $ 주위에 지저분한 점들이 흩뿌려진 얼룩이 됨. 요소 3개 제약을 정면으로 위반. 의미도 '환전·재발행'이라 예산과 어긋나고 기호는 달러. 참고용으로만 포함.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2zm-9-2h10V8H12zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M21 18v1c0 1.1-.9 2-2 2H5c-1.11 0-2-.9-2-2V5c0-1.1.89-2 2-2h14c1.1 0 2 .9 2 2v1h-9c-1.11 0-2 .9-2 2v8c0 1.1.89 2 2 2zm-9-2h10V8H12zm4-2.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5"/></svg><span>실물 13px</span></div>
+    <code>AccountBalanceWallet</code>
+    <p class="why">카드가 꽂힌 지갑 — '돈을 담는 것'이라는 이 갈래 정의에 가장 문자 그대로 맞는다.</p>
+    <p class="risk"><b>13px 약점</b> 안쪽 칸과 원이 뭉개지면 '그냥 채워진 가로 사각형'이 된다. 요소가 3개(본체·칸·원)라 13px 경계선.</p><p class="risk clash"><b>확정 4종 충돌</b> 중간 — Description 과 같은 '꽉 찬 사각형' 계열. 가로:세로 비율이 반대라 나란히 놓으면 구분되지만 단독으로는 헷갈릴 수 있다</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M18 4H6C3.79 4 2 5.79 2 8v8c0 2.21 1.79 4 4 4h12c2.21 0 4-1.79 4-4V8c0-2.21-1.79-4-4-4m-1.86 9.77c-.24.2-.57.28-.88.2L4.15 11.25C4.45 10.52 5.16 10 6 10h12c.67 0 1.26.34 1.63.84zM6 6h12c1.1 0 2 .9 2 2v.55c-.59-.34-1.27-.55-2-.55H6c-.73 0-1.41.21-2 .55V8c0-1.1.9-2 2-2"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M18 4H6C3.79 4 2 5.79 2 8v8c0 2.21 1.79 4 4 4h12c2.21 0 4-1.79 4-4V8c0-2.21-1.79-4-4-4m-1.86 9.77c-.24.2-.57.28-.88.2L4.15 11.25C4.45 10.52 5.16 10 6 10h12c.67 0 1.26.34 1.63.84zM6 6h12c1.1 0 2 .9 2 2v.55c-.59-.34-1.27-.55-2-.55H6c-.73 0-1.41.21-2 .55V8c0-1.1.9-2 2-2"/></svg><span>실물 13px</span></div>
+    <code>Wallet</code>
+    <p class="why">요소가 2개뿐인 가장 단순한 지갑 — 작은 크기에 유리한 쪽으로 정리된 신형 아이콘.</p>
+    <p class="risk"><b>13px 약점</b> 사선 띠가 13px 에서 사라지면 '둥근 가로 막대'만 남아 아이콘이라기보다 배경 도형처럼 보인다.</p><p class="risk clash"><b>확정 4종 충돌</b> 중간 — 채워진 사각형이라 Description 과 같은 군. 다만 코너 반경이 커서 훨씬 부드럽고 가로로 눕는다</p>
+    
+  </div><div class="cell gone">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--dim)" style="display:block;flex:none"><path d="M4 10h3v7H4zm6.5 0h3v7h-3zM2 19h20v3H2zm15-9h3v7h-3zm-5-9L2 6v2h20V6z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--dim)" style="display:block;flex:none"><path d="M4 10h3v7H4zm6.5 0h3v7h-3zM2 19h20v3H2zm15-9h3v7h-3zm-5-9L2 6v2h20V6z"/></svg><span>실물 13px</span></div>
+    <code>AccountBalance</code><i class="m mx">탈락 · 3표</i>
+    <p class="why">은행 건물 = 재정·자금. 한국 사무직에게 '예산'의 관습적 기호로 통한다.</p>
+    <p class="risk"><b>13px 약점</b> 기둥 3개 사이 간격이 1.5/24 라 13px 에서 붙어 한 덩어리가 되고, 남는 건 '넓은 상단 + 아래 블록'뿐이다. 이 목록에서 가장 요소가 많다.</p><p class="risk clash"><b>확정 4종 충돌</b> 강함 — 좌우로 넓은 각진 상단 덩어리라 School(넓은 마름모 학사모)과 같은 형태군으로 묶일 위험이 크다</p>
+    <p class="risk clash"><b>탈락 사유</b> (12,1)-(2,6)-(22,8)의 넓고 낮은 삼각 지붕이 지시하신 '위가 넓은 각진 덩어리'에 정확히 해당합니다. School의 가로로 넓은 마름모, SquareFoot의 직각삼각형과 13px에서 같은 형태군으로 묶입니다. 기둥 3개도 간격 1.5단위라 붙어버려 결국 '넓은 상단 + 아래 블록'만 남습니다. 참고로 현재 Milestone/model.tsx의 '예산·건축' 카테고리 아이콘이 이것이라, 이번 세트를 쓰면 그쪽과의 정합성도 같이 정리해야 합니다.</p>
+  </div><div class="cell gone">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--dim)" style="display:block;flex:none"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-5.97 4.06L14.09 6l1.41 1.41L16.91 6l1.06 1.06-1.41 1.41 1.41 1.41-1.06 1.06-1.41-1.4-1.41 1.41-1.06-1.06 1.41-1.41zm-6.78.66h5v1.5h-5zM11.5 16h-2v2H8v-2H6v-1.5h2v-2h1.5v2h2zm6.5 1.25h-5v-1.5h5zm0-2.5h-5v-1.5h5z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--dim)" style="display:block;flex:none"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-5.97 4.06L14.09 6l1.41 1.41L16.91 6l1.06 1.06-1.41 1.41 1.41 1.41-1.06 1.06-1.41-1.4-1.41 1.41-1.06-1.06 1.41-1.41zm-6.78.66h5v1.5h-5zM11.5 16h-2v2H8v-2H6v-1.5h2v-2h1.5v2h2zm6.5 1.25h-5v-1.5h5zm0-2.5h-5v-1.5h5z"/></svg><span>실물 13px</span></div>
+    <code>Calculate</code><i class="m mx">탈락 · 3표</i>
+    <p class="why">계산기는 예산 편성·집행·정산이라는 "행위"를 가장 정확히 지시한다.</p>
+    <p class="risk"><b>13px 약점</b> 안쪽 부호 획이 1~1.5단위라 13px에서 대부분 메워져 "무늬 있는 정사각형"이 된다. 요소 수가 5개로 이 목록에서 가장 많다.</p><p class="risk clash"><b>확정 4종 충돌</b> 주의 필요 — Description과 같은 "각진 꽉 찬 면" 계열이다. 다만 Calculate는 1:1 정사각(18×18)이고 Description은 세로로 긴 16×20 + 오른쪽 위 접힌 노치라, 비율과 모서리 노치로 갈린다. 13px에서 나란히 두면 구분되나 여유는 크지 않다.</p>
+    <p class="risk clash"><b>탈락 사유</b> 3..21 꽉 찬 정사각인데 내부 −×+= 부호 획이 1~1.5단위라 13px에서 대부분 메워집니다. 그러면 '무늬 든 채워진 면'만 남아 Description과 같은 군으로 묶입니다. 요소 수도 5개로 이 세트 최다.</p>
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="#E05B54" style="display:block;flex:none"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2m0 14H4v-6h16zm0-10H4V6h16z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="#E05B54" style="display:block;flex:none"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2m0 14H4v-6h16zm0-10H4V6h16z"/></svg><span>실물 13px</span></div>
+    <code>CreditCard</code>
+    <p class="why">요소가 사각형+띠 단 2개뿐이라 13px에서 형태가 가장 안 무너지면서 결제·비용으로 읽힌다.</p>
+    <p class="risk"><b>13px 약점</b> 예산 "편성"보다 "결제·카드"로 좁게 읽힐 수 있다. 또 띠 하나뿐이라 Description의 가로줄 2개와 인상이 비슷해질 여지가 있다.</p><p class="risk clash"><b>확정 4종 충돌</b> 낮음~보통 — 가로 20 × 세로 16의 뚜렷한 가로형이라 Description의 세로형과 방향이 반대다. 다만 둘 다 "안에 가로줄이 든 사각형"이라는 점은 겹친다.</p>
+    
+  </div><div class="cell gone">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--dim)" style="display:block;flex:none"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8zm1 10h-4v1h3c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1h-1v1h-2v-1H9v-2h4v-1h-3c-.55 0-1-.45-1-1v-3c0-.55.45-1 1-1h1V9h2v1h2zm-2-4V3.5L17.5 8z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--dim)" style="display:block;flex:none"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8zm1 10h-4v1h3c.55 0 1 .45 1 1v3c0 .55-.45 1-1 1h-1v1h-2v-1H9v-2h4v-1h-3c-.55 0-1-.45-1-1v-3c0-.55.45-1 1-1h1V9h2v1h2zm-2-4V3.5L17.5 8z"/></svg><span>실물 13px</span></div>
+    <code>RequestQuote</code><i class="m mx">탈락 · 3표</i>
+    <p class="why">견적·예산요구서라는 뜻은 이 갈래에 가장 정확하지만, 형태가 확정 아이콘과 사실상 같아 쓸 수 없다는 것을 확인용으로 남긴다.</p>
+    <p class="risk"><b>13px 약점</b> 안쪽 $ 는 13px에서 사라지고 외곽만 남는데, 그 외곽이 Description과 좌표까지 같다. 두 칩이 같은 아이콘으로 보인다.</p><p class="risk clash"><b>확정 4종 충돌</b> 정면 충돌 — path 외곽 데이터가 Description과 동일하다. 사실상 사용 불가. (Receipt·ReceiptLong도 같은 이유로 제외했다: 세로 종이 + 가로줄 계열)</p>
+    <p class="risk clash"><b>탈락 사유</b> path를 직접 열어 확인했습니다. 외곽이 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8z' 로 Description과 좌표까지 완전히 동일합니다. 안쪽만 가로줄 2개 대신 $인데 그 $는 13px에서 먼저 메워지므로, 두 칩이 같은 아이콘으로 보입니다. 사용 불가.</p>
+  </div></div>
+</section>
+<section class="grp">
+  <h2><span class="dot" style="background:#555E6B"></span>장비 — 칩 계열<em>Memory 처럼 반도체 · IC · 기판</em></h2>
+  <div class="cells"><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M15 9H9v6h6zm-2 4h-2v-2h2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2zm-4 6H7V7h10z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M15 9H9v6h6zm-2 4h-2v-2h2zm8-2V9h-2V7c0-1.1-.9-2-2-2h-2V3h-2v2h-2V3H9v2H7c-1.1 0-2 .9-2 2v2H3v2h2v2H3v2h2v2c0 1.1.9 2 2 2h2v2h2v-2h2v2h2v-2h2c1.1 0 2-.9 2-2v-2h2v-2h-2v-2zm-4 6H7V7h10z"/></svg><span>실물 13px</span></div>
+    <code>Memory</code><i class="m m2">2순위 2표</i>
+    <p class="why">사각 본체 네 변에 다리가 뻗은 DIP 패키지 그대로라 반도체 팹에서 '칩'으로 즉시 읽힌다.</p>
+    <p class="risk"><b>13px 약점</b> 다리가 2px 스텁이라 13px 로 줄면 가장자리가 뭉개져 톱니처럼 지저분해질 수 있음. 앱 내부에서 이미 Milestone/model.tsx·Home/dash/KpiOverview.tsx·_DesignSystem 에서 쓰는 중이라 같은 화면에 겹치면 의미가 흐려짐.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M22 9V7h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2v-2h-2V9zm-4 10H4V5h14zM6 13h5v4H6zm6-6h4v3h-4zM6 7h5v5H6zm6 4h4v6h-4z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M22 9V7h-2V5c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-2h2v-2h-2v-2h2v-2h-2V9zm-4 10H4V5h14zM6 13h5v4H6zm6-6h4v3h-4zM6 7h5v5H6zm6 4h4v6h-4z"/></svg><span>실물 13px</span></div>
+    <code>DeveloperBoard</code><i class="m m3">3순위 2표</i>
+    <p class="why">Memory 와 같은 IC 세계이면서 '기판(PCB)'이라 장비 구축이라는 뜻에 더 가깝고, 대칭이 아니라서 Memory 와도 안 헷갈린다.</p>
+    <p class="risk"><b>13px 약점</b> 내부 블록 4개가 13px 에서 뭉쳐 회색 덩어리가 되면서 '뭔가 든 상자'로 읽힐 수 있음. Outlined 변형은 path 가 filled 와 완전히 같아서(직접 비교 확인) 속 빈 대안이 존재하지 않음 — 무게 조절 불가.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-8 14H7v-4h4zm0-6H7V7h4zm6 6h-4v-4h4zm0-6h-4V7h4z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m-8 14H7v-4h4zm0-6H7V7h4zm6 6h-4v-4h4zm0-6h-4V7h4z"/></svg><span>실물 13px</span></div>
+    <code>Dataset</code>
+    <p class="why">칩 다이(die) 위 셀 배열처럼 읽히고, 요소가 프레임+블록4개뿐이라 이 목록에서 13px 생존력이 가장 높다.</p>
+    <p class="risk"><b>13px 약점</b> 실루엣은 튼튼하지만 의미가 '격자·표·데이터'로도 읽혀서 한국 사무직이 곧바로 '장비'로 연결하지 못할 수 있음. GridView·Window·ViewModule 과 실루엣이 사실상 같은 계열이라 개성은 약함.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M15 9H9v6h6zm-2 4h-2v-2h2zm8-2V9h-2V5h-4V3h-2v2h-2V3H9v2H5v4H3v2h2v2H3v2h2v4h4v2h2v-2h2v2h2v-2h4v-4h2v-2h-2v-2zm-4 6H7V7h10z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M15 9H9v6h6zm-2 4h-2v-2h2zm8-2V9h-2V5h-4V3h-2v2h-2V3H9v2H5v4H3v2h2v2H3v2h2v4h4v2h2v-2h2v2h2v-2h4v-4h2v-2h-2v-2zm-4 6H7V7h10z"/></svg><span>실물 13px</span></div>
+    <code>MemorySharp</code>
+    <p class="why">사용자가 고른 Memory 와 실루엣이 동일하면서 모서리만 각져서, 13px 축소 시 다리 끝이 뭉개지지 않고 더 또렷하게 남는다.</p>
+    <p class="risk"><b>13px 약점</b> Memory 와 나란히 두면 차이를 못 알아볼 정도라 '새 후보'로서의 값어치는 낮음. 프로젝트가 filled 기본형(Sharp 아님)으로 통일돼 있으면 이것 하나만 Sharp 인 게 어색해질 수 있음.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1M7 19c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2M20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1M7 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M20 13H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1v-6c0-.55-.45-1-1-1M7 19c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2M20 3H4c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1M7 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2"/></svg><span>실물 13px</span></div>
+    <code>Dns</code><i class="m m3">3순위 1표</i>
+    <p class="why">서버 랙 형태라 '설비·장치'라는 물리적 하드웨어 뉘앙스가 있고, 가로 줄무늬라 확정 4종 어느 것과도 시각적으로 안 부딪친다.</p>
+    <p class="risk"><b>13px 약점</b> 막대가 두꺼워 생존은 하지만 안의 원 2개가 막대 안에서 뭉개지면 그냥 '줄 2개'가 되어 목록·메뉴처럼 보일 수 있음. 의미도 IT 인프라(서버)라 반도체 장비와는 결이 한 단계 멀다.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M13 22h8v-7h-3v-4h-5V9h3V2H8v7h3v2H6v4H3v7h8v-7H8v-2h8v2h-3z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M13 22h8v-7h-3v-4h-5V9h3V2H8v7h3v2H6v4H3v7h8v-7H8v-2h8v2h-3z"/></svg><span>실물 13px</span></div>
+    <code>Lan</code>
+    <p class="why">굵은 사각 3개가 연결된 형태라 '장비 구성·계통'으로 읽히고, 블록이 커서 축소 내성이 좋다.</p>
+    <p class="risk"><b>13px 약점</b> 연결선이 2px 라 13px 에서 거의 사라지고 네모 3개가 떠 있는 상태가 됨. 요소가 3개라 제약 상한이고, 의미도 '네트워크'로 먼저 읽힌다.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 18H4V4h16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.38-1-1.72V8h3v8H8V8h2V6H6v12h12z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 18H4V4h16zM18 6h-5c-1.1 0-2 .9-2 2v2.28c-.6.35-1 .98-1 1.72 0 1.1.9 2 2 2s2-.9 2-2c0-.74-.4-1.38-1-1.72V8h3v8H8V8h2V6H6v12h12z"/></svg><span>실물 13px</span></div>
+    <code>Nfc</code>
+    <p class="why">정사각 테두리 안에 칩+안테나가 들어간 구조로, 회로 은유가 명확하고 Memory 와 같은 '사각 프레임' 계열이면서 속이 비어 변별된다.</p>
+    <p class="risk"><b>13px 약점</b> 13px 에서 가장 위험. 내부 ㄷ자 나선과 원이 2px 선이라 뭉개지면 '빈 네모' 하나만 남아 아이콘 구실을 못 함. 이름·의미도 NFC 라 한국 사무직이 '장비'로 읽을 가능성이 낮다.</p>
+    
+  </div><div class="cell gone">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--dim)" style="display:block;flex:none"><path d="M19.99 4c0-1.1-.89-2-1.99-2h-8L4 8v12c0 1.1.9 2 2 2h12.01c1.1 0 1.99-.9 1.99-2zM9 19H7v-2h2zm8 0h-2v-2h2zm-8-4H7v-4h2zm4 4h-2v-4h2zm0-6h-2v-2h2zm4 2h-2v-4h2z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--dim)" style="display:block;flex:none"><path d="M19.99 4c0-1.1-.89-2-1.99-2h-8L4 8v12c0 1.1.9 2 2 2h12.01c1.1 0 1.99-.9 1.99-2zM9 19H7v-2h2zm8 0h-2v-2h2zm-8-4H7v-4h2zm4 4h-2v-4h2zm0-6h-2v-2h2zm4 2h-2v-4h2z"/></svg><span>실물 13px</span></div>
+    <code>SimCard</code><i class="m mx">탈락 · 3표</i>
+    <p class="why">금색 접점이 박힌 칩 카드 그 자체라 반도체 도메인 적중률은 후보 중 최상이다.</p>
+    <p class="risk"><b>13px 약점</b> ★ 확정 4종 중 Description 과 정면 충돌 위험이 가장 크다. Description 도 4,2–20,22 세로 직사각에 모서리 하나가 대각으로 잘린 형태라 좌표까지 거의 같다. 잘린 모서리가 왼쪽(SimCard) 대 오른쪽(Description)이고 내부가 패드 격자 대 가로줄 2개라는 차이뿐이라, 13px 에서 두 칩이 한 화면에 같이 뜨면 같은 형태군으로 묶여 보일 가능성이 높다. 반드시 나란히 렌더해서 눈으로 확인 후 결정할 것.</p><p class="risk clash"><b>확정 4종 충돌</b> Description 과 강하게 겹침(세로 직사각 + 모서리 대각 커팅이라는 형태군 자체가 동일). 나머지 3종과는 무관.</p>
+    <p class="risk clash"><b>탈락 사유</b> path 확인 결과 4..20 × 2..22 세로 직사각에 좌상단이 (10,2)→(4,8)로 대각 커팅됐습니다. Description(같은 세로 직사각 + 우상단 대각 노치)과 좌우만 뒤집힌 같은 형태군입니다. 반도체 도메인 적중률은 최상이지만 정면 충돌이라 탈락.</p>
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M8.4 18.2c.38.5.6 1.12.6 1.8 0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3c.44 0 .85.09 1.23.26l1.41-1.77c-.92-1.03-1.29-2.39-1.09-3.69l-2.03-.68c-.54.83-1.46 1.38-2.52 1.38-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3c0 .07 0 .14-.01.21l2.03.68c.64-1.21 1.82-2.09 3.22-2.32V5.91C9.96 5.57 9 4.4 9 3c0-1.66 1.34-3 3-3s3 1.34 3 3c0 1.4-.96 2.57-2.25 2.91v2.16c1.4.23 2.58 1.11 3.22 2.32L18 9.71V9.5c0-1.66 1.34-3 3-3s3 1.34 3 3-1.34 3-3 3c-1.06 0-1.98-.55-2.52-1.37l-2.03.68c.2 1.29-.16 2.65-1.09 3.69l1.41 1.77Q17.34 17 18 17c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3c0-.68.22-1.3.6-1.8l-1.41-1.77c-1.35.75-3.01.76-4.37 0z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M8.4 18.2c.38.5.6 1.12.6 1.8 0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3c.44 0 .85.09 1.23.26l1.41-1.77c-.92-1.03-1.29-2.39-1.09-3.69l-2.03-.68c-.54.83-1.46 1.38-2.52 1.38-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3c0 .07 0 .14-.01.21l2.03.68c.64-1.21 1.82-2.09 3.22-2.32V5.91C9.96 5.57 9 4.4 9 3c0-1.66 1.34-3 3-3s3 1.34 3 3c0 1.4-.96 2.57-2.25 2.91v2.16c1.4.23 2.58 1.11 3.22 2.32L18 9.71V9.5c0-1.66 1.34-3 3-3s3 1.34 3 3-1.34 3-3 3c-1.06 0-1.98-.55-2.52-1.37l-2.03.68c.2 1.29-.16 2.65-1.09 3.69l1.41 1.77Q17.34 17 18 17c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3c0-.68.22-1.3.6-1.8l-1.41-1.77c-1.35.75-3.01.76-4.37 0z"/></svg><span>실물 13px</span></div>
+    <code>Hub</code>
+    <p class="why">중심 코어에 노드가 붙은 모양이라 '집적·연결된 설비'라는 은유가 되고, 원 기반이라 각진 확정 4종과 톤이 완전히 갈린다.</p>
+    <p class="risk"><b>13px 약점</b> 요소가 6개로 제약(3개 이상 위험)을 크게 초과. 연결선이 얇아 13px 에서 먼저 증발하고 점만 남으면 의미가 무너진다. 뜻도 '허브·네트워크'라 장비로 직결되지 않음.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M2 20h20v-4H2zm2-3h2v2H4zM2 4v4h20V4zm4 3H4V5h2zm-4 7h20v-4H2zm2-3h2v2H4z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M2 20h20v-4H2zm2-3h2v2H4zM2 4v4h20V4zm4 3H4V5h2zm-4 7h20v-4H2zm2-3h2v2H4z"/></svg><span>실물 13px</span></div>
+    <code>Storage</code>
+    <p class="why">디스크 어레이·랙 형태로 하드웨어 계열이고, 가로 3단 줄무늬가 확정 4종과 형태군이 전혀 겹치지 않는다.</p>
+    <p class="risk"><b>13px 약점</b> 이 목록에서 13px 판독력이 가장 낮다. 막대 두께 4가 13px 로 줄면 약 2px 이 되고 사이 간격도 1px 라 세 줄이 붙어 회색 띠가 되기 쉬움 — 햄버거 메뉴·목록으로 오독될 확률이 높다. 앱 내 Settings/index.tsx·Milestone/model.tsx 에서 이미 사용 중.</p>
+    
+  </div></div>
+</section>
+<section class="grp">
+  <h2><span class="dot" style="background:#555E6B"></span>장비 — 화면 계열<em>Monitor 처럼 모니터 · 단말 · 계측기</em></h2>
+  <div class="cells"><div class="cell win">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h3l-1 1v2h12v-2l-1-1h3c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 13H4V5h16z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h3l-1 1v2h12v-2l-1-1h3c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 13H4V5h16z"/></svg><span>실물 13px</span></div>
+    <code>Monitor</code><i class="m m1">1순위 3표</i>
+    <p class="why">가로 빈 화면 + 폭 12짜리 넓은 받침이 붙어 있어 13px에서도 '모니터'로 즉시 읽히는 이 계열의 기준점이다.</p>
+    <p class="risk"><b>13px 약점</b> 없음 — 덩어리가 액자·받침 2개뿐이라 뭉갤 요소가 없다. MonitorOutlined 는 path 가 완전히 동일하므로 따로 쓸 이유 없음(같은 그림).</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 12H3V4h18z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7l-2 3v1h8v-1l-2-3h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 12H3V4h18z"/></svg><span>실물 13px</span></div>
+    <code>DesktopMacOutlined</code><i class="m m2">2순위 1표</i>
+    <p class="why">18×10 으로 이 계열에서 가장 납작해 세로 문서와 가장 멀고, 아래로 벌어지는 사다리꼴 다리가 외곽 돌출을 만든다.</p>
+    <p class="risk"><b>13px 약점</b> 화면 테두리가 2단위로 얇은 편이라 아주 낮은 해상도에서 선이 가늘어 보일 수 있다. 대신 가로로 길어 형태 자체는 안 무너진다.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2zM4 6h16v10H4z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2zM4 6h16v10H4z"/></svg><span>실물 13px</span></div>
+    <code>Computer</code>
+    <p class="why">빈 화면 아래에 화면보다 넓은 전폭(0~24) 가로 막대가 깔려 '책상 위 장치'라는 바닥 앵커가 13px에서 제일 또렷하다.</p>
+    <p class="risk"><b>13px 약점</b> 전폭 막대 때문에 좌우 여백이 0이라 칩 안에서 옆 글자와 붙어 보일 수 있다. Laptop·ComputerOutlined 가 사실상 같은 path 라 셋 중 하나만 쓰면 된다.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 14H3V4h18z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2m0 14H3V4h18z"/></svg><span>실물 13px</span></div>
+    <code>DesktopWindowsOutlined</code>
+    <p class="why">가는 목 + 발받침의 T자 스탠드가 붙어 '사무실 모니터'로 읽히는 정도가 Monitor 다음으로 높다.</p>
+    <p class="risk"><b>13px 약점</b> 목이 폭 4·높이 2로 가늘어 13px(축소율 약 0.54)에서 1px 남짓이 된다 — 목이 사라지면 화면과 발받침이 분리된 두 덩어리로 보일 수 있다.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2m0 14H3V5h18z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2m0 14H3V5h18z"/></svg><span>실물 13px</span></div>
+    <code>Tv</code>
+    <p class="why">빈 화면 + 짧은 발 2덩어리뿐인 이 계열 최소 구성이라 13px 뭉갬 위험이 가장 낮다.</p>
+    <p class="risk"><b>13px 약점</b> 화면이 18×12 로 계열 중 가장 정사각형에 가까워 '가로로 눕는다'는 이점이 약하다. TvOutlined·PersonalVideo 와 path 가 사실상 동일(중복 후보).</p><p class="risk clash"><b>확정 4종 충돌</b> 약함. 속이 비어 Description 과 잉크가 반대이고 발받침도 있지만, 화면 비가 1.5:1 로 덜 납작해 DesktopMacOutlined 보다는 문서와의 거리가 가깝다.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 13H3V5h18z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2m0 13H3V5h18z"/></svg><span>실물 13px</span></div>
+    <code>VideoLabel</code>
+    <p class="why">위는 빈 화면·아래는 두꺼운 통짜 띠로 명암이 위아래로 갈려, 작게 줄여도 두 층 구조가 살아남는다.</p>
+    <p class="risk"><b>13px 약점</b> 받침 띠가 화면 폭과 똑같아 외곽으로 튀어나오는 다리가 없다 — 스탠드가 아니라 '자막 바'로 읽힐 여지가 있다. 장비보다 영상·미디어 뉘앙스.</p><p class="risk clash"><b>확정 4종 충돌</b> 낮음. 위쪽이 비어 있어 Description 처럼 전면이 잉크로 차지 않지만, 외곽 돌출이 없는 만큼 스탠드형 후보들보다는 종이와의 분리 폭이 좁다.</p>
+    
+  </div><div class="cell gone">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--dim)" style="display:block;flex:none"><path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h6l-2 2v1h8v-1l-2-2h6c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--dim)" style="display:block;flex:none"><path d="M20 3H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h6l-2 2v1h8v-1l-2-2h6c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2"/></svg><span>실물 13px</span></div>
+    <code>DesktopMac</code><i class="m mx">탈락 · 3표</i>
+    <p class="why">화면이 통으로 채워진 유일한 유력 후보라 13px에서 대비가 가장 강하고 형태가 절대 흐려지지 않는다.</p>
+    <p class="risk"><b>13px 약점</b> 채워진 사각 덩어리라 아이콘이 무겁고, 다른 칩과 나란히 두면 혼자 진하게 튄다.</p><p class="risk clash"><b>확정 4종 충돌</b> 주의 필요 — Description 과 '통으로 채워진 사각 덩어리'라는 질감이 같다. 갈리는 근거는 방향(가로 16×13 vs 세로)과 사다리꼴 다리뿐이므로, 확정 4종과 나란히 놓고 실제로 비교해 본 뒤 채택할 것.</p>
+    <p class="risk clash"><b>탈락 사유</b> 이 계열에서 유일하게 화면이 통으로 채워져 있어 '꽉 찬 각진 면'이라는 질감이 Description과 같습니다. 갈리는 근거가 방향(가로 16×13)과 사다리꼴 다리뿐이라, 같은 목적을 더 안전하게 하는 Monitor가 있는 이상 굳이 감수할 위험이 아닙니다.</p>
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="m20.38 8.57-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="m20.38 8.57-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83"/></svg><span>실물 13px</span></div>
+    <code>Speed</code>
+    <p class="why">계측기 갈래를 대표하며, 유일하게 둥근 실루엣이라 각진 확정 4종과 형태군이 원천적으로 겹치지 않는다.</p>
+    <p class="risk"><b>13px 약점</b> 게이지 링 두께가 약 2단위라 13px에서 얇아지고, 바늘이 사라지면 그냥 아치로만 보인다. 뜻도 '장비'보다 '속도·성능 지표'로 읽힐 확률이 있다.</p>
+    
+  </div><div class="cell">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M2 20h20v-4H2zm2-3h2v2H4zM2 4v4h20V4zm4 3H4V5h2zm-4 7h20v-4H2zm2-3h2v2H4z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--ico-neutral)" style="display:block;flex:none"><path d="M2 20h20v-4H2zm2-3h2v2H4zM2 4v4h20V4zm4 3H4V5h2zm-4 7h20v-4H2zm2-3h2v2H4z"/></svg><span>실물 13px</span></div>
+    <code>Storage</code>
+    <p class="why">가로 막대 3단이라 세로 문서와 정반대 방향이고, 서버·랙 같은 설비 장치로 읽힌다.</p>
+    <p class="risk"><b>13px 약점</b> 막대 사이 간격이 2단위라 13px에서 붙어 한 덩어리로 뭉칠 수 있고, 그러면 '목록·메뉴'로 오독된다. 모니터가 아니라 서버 쪽 뉘앙스.</p><p class="risk clash"><b>확정 4종 충돌</b> 주의 — 뭉갰을 때 Description 내부의 가로줄 2개와 같은 '줄무늬' 인상으로 수렴할 수 있다. 다만 Description 은 줄 주위에 종이 테두리가 있고 이건 막대만 있어 외곽선 유무로 갈린다.</p>
+    
+  </div><div class="cell gone">
+    <div class="ico"><svg viewBox="0 0 24 24" width="34" height="34" fill="var(--dim)" style="display:block;flex:none"><path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2m0 14H5V8h14z"/></svg></div>
+    <div class="real"><svg viewBox="0 0 24 24" width="13" height="13" fill="var(--dim)" style="display:block;flex:none"><path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.89-2-2-2m0 14H5V8h14z"/></svg><span>실물 13px</span></div>
+    <code>WebAsset</code><i class="m mx">탈락 · 3표</i>
+    <p class="why">상단 제목표시줄 띠 + 빈 본문의 창 형태로, 단말기 화면이라는 뜻은 분명히 전달된다.</p>
+    <p class="risk"><b>13px 약점</b> 이 계열에서 유일하게 받침·다리가 없고 14×16 으로 거의 정사각이라, 축소하면 그냥 '카드'로 보인다. WebAssetOutlined 도 path 동일.</p><p class="risk clash"><b>확정 4종 충돌</b> 가장 위험한 후보 — 외곽 돌출이 없어 Description 과 갈리는 근거가 '속이 비었다' 하나뿐이다. 13px에서 테두리가 두꺼워 보이면 문서 카드와 혼동될 수 있으니 다른 후보가 통과하면 이건 제외 권장.</p>
+    <p class="risk clash"><b>탈락 사유</b> 14×16으로 거의 정사각인 카드인데 받침·다리 같은 외곽 돌출이 전혀 없습니다. Description과 갈릴 근거가 '속이 비었다' 하나뿐이라, 13px에서 테두리가 두껍게 뭉치면 문서 카드와 구분이 안 됩니다. Monitor·DesktopMacOutlined 같은 스탠드형이 통과하므로 쓸 이유가 없습니다.</p>
+  </div></div>
+</section>
+
+</div>

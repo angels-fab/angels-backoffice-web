@@ -1,4 +1,6 @@
-import MemoryIcon from '@mui/icons-material/Memory'
+// 장비 = Monitor 로 통일(2026-08-04) — 사이드바 '장비관리'·장비현황·장비운영·통합검색이 쓰는 그림이고,
+// 업무 구분 칩의 '장비'도 이 아이콘이다. 구 MemoryIcon(반도체 칩)은 같은 뜻에 다른 그림이었다.
+import MonitorIcon from '@mui/icons-material/Monitor'
 import PaymentsIcon from '@mui/icons-material/Payments'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import TodayIcon from '@mui/icons-material/Today'
@@ -32,7 +34,7 @@ export default function KpiOverview() {
 
   return (
     <CardGrid columns={6}>
-      <KpiCard value={eq.types} unit="종" label="전체 장비" sub={`${eq.total}대 보유`} icon={<MemoryIcon />} accentColor="blue" />
+      <KpiCard value={eq.types} unit="종" label="전체 장비" sub={`${eq.total}대 보유`} icon={<MonitorIcon />} accentColor="blue" />
       <KpiCard value={budgetVal} unit="억" label="도입 예산" sub={`평균 ${avgUk.toFixed(1)}억/대`} icon={<PaymentsIcon />} accentColor="green" />
       <KpiCard value={wc.inProgress} unit="건" label="진행중 업무" sub={`완료 ${wc.done}건`} icon={<AssignmentIcon />} accentColor="teal" />
       <KpiCard value={todayCnt} unit="건" label="오늘 일정" sub={`7일내 ${weekCnt}건`} icon={<TodayIcon />} accentColor="purple" />

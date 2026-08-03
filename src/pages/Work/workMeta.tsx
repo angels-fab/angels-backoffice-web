@@ -1,3 +1,9 @@
+import MonitorIcon from '@mui/icons-material/Monitor'
+import PersonIcon from '@mui/icons-material/Person'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import DescriptionIcon from '@mui/icons-material/Description'
+import SchoolIcon from '@mui/icons-material/School'
+import SquareFootIcon from '@mui/icons-material/SquareFoot'
 import type { StatusKind } from '@/components/ds'
 import type { WorkItem } from '@/types'
 import { normCat } from '@/utils/workCat'
@@ -54,19 +60,40 @@ export const toneBody = {
 } as const
 
 // 업무구분 → 칩 색(캡처 기준): 설계적정성=초록·예산=빨강·인사=노랑·행정=파랑·장비=회색·교육세미나=보라
-const CAT_KIND: { key: string; kind: StatusKind }[] = [
-  { key: '설계적정성', kind: 'success' },
-  { key: '예산', kind: 'error' },
-  { key: '인사', kind: 'warning' },
-  { key: '행정', kind: 'info' },
-  { key: '장비', kind: 'neutral' },
-  { key: '교육세미나', kind: 'purple' },
+//
+// ★ 아이콘 (2026-08-04) — 색만으로는 6종을 못 외운다. 아이콘이 색과 **모양** 둘 다로 구분하므로
+//   색약인 사람도 읽히고, 글자를 중립색으로 되돌릴 수 있게 된다(StatusChip 참조 — 글자가 색을
+//   벗으면 대비가 5점대에서 14점대로 올라간다). 업무일정 종류 칩이 원래 이 구조다(CalFilterBar).
+//
+//   6종이 13px 에서 **서로 안 헷갈리는지**가 선정의 첫 기준이었다. 형태군을 일부러 갈랐다 —
+//   가로 속 빈 액자(Monitor) · 상반신(Person) · 가로 꽉 찬 지폐(Payments) · 세로 종이(Description)
+//   · 가로 마름모(School) · 비대칭 직각삼각형(SquareFoot). 남은 최대 위험은 Monitor↔Description
+//   으로, 방향(가로:세로)과 밀도(속 빔:꽉 참)로 갈린다 — **이 세트에 사각형을 더 넣으면 무너진다.**
+//
+//   Monitor 는 이 앱이 이미 '장비'로 쓰던 그림이다(nav.tsx 사이드바·Equipment·EquipmentOps·
+//   GlobalSearchDialog·MobileMenuDrawer). Payments 도 홈 KPI '도입 예산'과 같다.
+//   후보 조사·탈락 근거는 docs/mockups/work-cat-icons.html(6종 36후보) 과
+//   work-cat-icons-2.html(장비·예산 재탐색) 참조. 아이콘 색은 accent 가 아니라 accentText 다 —
+//   이유는 StatusChip 의 `.MuiChip-icon` 주석.
+const CAT_KIND: { key: string; kind: StatusKind; icon: () => JSX.Element }[] = [
+  { key: '설계적정성', kind: 'success', icon: () => <SquareFootIcon /> },
+  { key: '예산', kind: 'error', icon: () => <PaymentsIcon /> },
+  { key: '인사', kind: 'warning', icon: () => <PersonIcon /> },
+  { key: '행정', kind: 'info', icon: () => <DescriptionIcon /> },
+  { key: '장비', kind: 'neutral', icon: () => <MonitorIcon /> },
+  { key: '교육세미나', kind: 'purple', icon: () => <SchoolIcon /> },
 ]
+const catMeta = (cat?: string) => {
+  const n = normCat(cat || '')
+  return CAT_KIND.find((c) => n.startsWith(normCat(c.key)))
+}
 /** 업무구분 라벨 → StatusChip 색(kind). 매칭 없으면 neutral. */
 export function catKind(cat?: string): StatusKind {
-  const n = normCat(cat || '')
-  const m = CAT_KIND.find((c) => n.startsWith(normCat(c.key)))
-  return m ? m.kind : 'neutral'
+  return catMeta(cat)?.kind ?? 'neutral'
+}
+/** 업무구분 라벨 → 칩 아이콘. 매칭 없으면 undefined(아이콘 없이 = 글자가 색을 나른다). */
+export function catIcon(cat?: string): JSX.Element | undefined {
+  return catMeta(cat)?.icon()
 }
 
 // 관련부서 칩은 무채색(StatusChip status="neutral") — 구 deptKind는 부서명 **해시**로 색을 뽑았는데,

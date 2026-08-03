@@ -6,7 +6,7 @@ import { AppCard, StatusChip } from '@/components/ds'
 import { iconSize, weight } from '@/theme/tokens'
 import { fmtDate } from '@/utils/date'
 import type { WorkItem } from '@/types'
-import { W_STATUS, classify, taskTitle, catKind } from './workMeta'
+import { W_STATUS, classify, taskTitle, catKind, catIcon } from './workMeta'
 import ManagerChip from '@/components/ds/ManagerChip'
 
 export interface TaskCardProps {
@@ -41,7 +41,7 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
           <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accentText.purple', flexShrink: 0 }} />
           <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: weight.semibold, color: 'text.primary' }}>{taskTitle(t)}</Typography>
-          <Box sx={{ flexShrink: 0 }}><StatusChip status={catKind(t.cat)} label={t.cat || '미분류'} /></Box>
+          <Box sx={{ flexShrink: 0 }}><StatusChip status={catKind(t.cat)} icon={catIcon(t.cat)} label={t.cat || '미분류'} /></Box>
         </Box>
       </AppCard>
     )
@@ -63,7 +63,7 @@ export default function TaskCard({ t, onPick, selected = false, onSelect, compac
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
           <PushPinIcon sx={{ fontSize: iconSize.body, color: 'accentText.purple', flexShrink: 0 }} />
           <StatusChip status={st.status} label={st.label} />
-          {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
+          {t.cat && <StatusChip status={catKind(t.cat)} icon={catIcon(t.cat)} label={t.cat} />}
           <ManagerChip name={t.mgr} sx={{ ml: 'auto' }} />
           <Typography variant="caption" sx={{ color: 'text.disabled', fontFamily: 'monospace' }}>{fmtDate(t.start)}</Typography>
         </Box>

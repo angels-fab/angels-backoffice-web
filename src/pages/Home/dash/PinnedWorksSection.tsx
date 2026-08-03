@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography'
 import { AppCard, StatusChip, ManagerChip } from '@/components/ds'
 import { typescale } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
-import { taskTitle, catKind, classify, W_STATUS } from '@/pages/Work/workMeta'
+import { taskTitle, catKind, catIcon, classify, W_STATUS } from '@/pages/Work/workMeta'
 import WorkPinButton from '@/pages/Work/WorkPinButton'
 
 /** 홈 '관심 업무' 데이터 훅 — 핀(num) 순서대로 실제 업무 매칭(삭제·미존재는 자동 제외) */
@@ -32,7 +32,7 @@ export default function PinnedWorksSection() {
           <AppCard key={t.num} interactive padding={10} onClick={() => navigate('/work')}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
               <WorkPinButton num={t.num} />
-              {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
+              {t.cat && <StatusChip status={catKind(t.cat)} icon={catIcon(t.cat)} label={t.cat} />}
               <Typography variant="body2" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'text.primary', fontWeight: typescale.emphasis.weight }}>
                 {taskTitle(t)}
               </Typography>

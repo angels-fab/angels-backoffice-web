@@ -57,7 +57,7 @@ import { dateSortValue } from '@/utils/date'
 import { normCat, workCatRank } from '@/utils/workCat'
 import type { WorkItem } from '@/types'
 import { nextFilterSelection } from '@/utils/filterSelect'
-import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS, catKind, mgrColor, W_STATUS } from './workMeta'
+import { classify, taskTitle, dashToBullet, bulletToDash, WORK_CAT_OPTIONS, WORK_MGR_OPTIONS, catKind, catIcon, mgrColor, W_STATUS } from './workMeta'
 import ManagerChip from '@/components/ds/ManagerChip'
 import type { CardTone } from './workMeta'
 import { CatFilterChip, MgrFilterChip } from './FilterChips'
@@ -1286,6 +1286,7 @@ export default function Work() {
                 <CatFilterChip
                   key={c}
                   kind={catKind(c)}
+                  icon={catIcon(c)}
                   label={c}
                   count={catCounts[normCat(c)] || 0}
                   on={selCats.size === 0 || selCats.has(normCat(c))}

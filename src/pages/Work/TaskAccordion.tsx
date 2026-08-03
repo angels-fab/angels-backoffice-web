@@ -14,7 +14,7 @@ import { StatusChip, focusRingSx } from '@/components/ds'
 import { fmtDate } from '@/utils/date'
 import { isWorkNew } from '@/utils/newPost'
 import type { WorkItem } from '@/types'
-import { taskTitle, taskLink, catKind, toneVar, toneCss, toneBody, toneBorderCss, toneBorderHoverCss, toneBorderSelCss, toneRingCss, toneRingHoverCss } from './workMeta'
+import { taskTitle, taskLink, catKind, catIcon, toneVar, toneCss, toneBody, toneBorderCss, toneBorderHoverCss, toneBorderSelCss, toneRingCss, toneRingHoverCss } from './workMeta'
 import ManagerChip from '@/components/ds/ManagerChip'
 import type { CardTone } from './workMeta'
 import { workBodyLines } from './richContent'
@@ -173,7 +173,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
           transition: 'background-color .16s ease',
         }}
       >
-        {t.cat && <StatusChip status={catKind(t.cat)} label={t.cat} />}
+        {t.cat && <StatusChip status={catKind(t.cat)} icon={catIcon(t.cat)} label={t.cat} />}
         {/* 새 업무 N 배지 — 진행중+발의 7일(공지 N칩과 동일 디자인). 제목 말줄임과 안 겹치게 flexShrink:0 */}
         {isWorkNew(t) && (
           <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (th) => th.palette.accent.red, color: (th) => th.palette.getContrastText(th.palette.accent.red), fontSize: typescale.micro.size, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
