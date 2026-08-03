@@ -25,7 +25,7 @@ import { putSetting } from '@/store/slices/userSettingsSlice'
  * 목적: 새 기능은 화면에 조용히 들어와 팀원이 모르고 지나침 → 글 대신 실물 재현 미니 데모로 안내
  * (사용자 피드백 2026-07-20: 긴 설명 대신 화면캡처 같은 시각자료 — 캡처 대신 실제 UI 스타일을
  *  그대로 축소 재현해 다크테마·해상도 무관하게 항상 실물과 일치).
- * 동작(사용자 확정): '다시 보지 않기' 체크 + 확인했어요 = 영구 확인(`whatsnew.seen` = 버전 문자열,
+ * 동작(사용자 확정): '다시 보지 않기' 체크 + 확인 = 영구 확인(`whatsnew.seen` = 버전 문자열,
  * 서버 저장 — 기기 무관). 체크 없이 확인/닫기 = 이번 세션만 닫힘 → 다음 접속(로그인·새 페이지 로드)마다 다시 뜸.
  * 새 기능 배포 시 VERSION을 올리고 본문을 교체하면 영구 확인자에게도 다시 안내됨.
  * 게이트: loadedOk(설정 로드 성공) 전에는 판단 보류 — 로드 실패 세션은 안 띄움(반복 출현·저장 불가 방지).
@@ -159,7 +159,7 @@ function LeaveHideDemo() {
           <CalCell day={2} leave />
           <CalCell day={3} />
         </Box>
-        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.disabled', mt: 0.5 }}>지난 연차가 달력에 계속 남음</Typography>
+        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.disabled', mt: 0.5 }}>끝난 연차가 계속 보임</Typography>
       </Box>
       <ArrowForwardIcon sx={{ fontSize: iconSize.header, color: 'text.disabled', mb: 2.5 }} />
       <Box>
@@ -168,7 +168,7 @@ function LeaveHideDemo() {
           <CalCell day={2} />
           <CalCell day={3} />
         </Box>
-        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.disabled', mt: 0.5 }}>끝난 다음 날 자동으로 사라짐</Typography>
+        <Typography variant="caption" sx={{ display: 'block', textAlign: 'center', color: 'text.disabled', mt: 0.5 }}>다음 날부터 숨김</Typography>
       </Box>
     </Box>
   )
@@ -181,7 +181,7 @@ export default function WhatsNewDialog() {
   const seen = useAppSelector((s) => s.userSettings.settings['whatsnew.seen'])
   // 세션 내 재출현 방지 — 닫으면 이번 세션엔 다시 안 뜸(체크 안 했으면 다음 접속 때 다시 뜸)
   const [dismissed, setDismissed] = useState(false)
-  // '다시 보지 않기' 체크 — 체크 + 확인했어요일 때만 영구 확인 저장
+  // '다시 보지 않기' 체크 — 체크 + 확인일 때만 영구 확인 저장
   const [noMore, setNoMore] = useState(false)
 
   const open = loggedIn && isMember && loadedOk && !dismissed && seen !== VERSION
@@ -194,7 +194,7 @@ export default function WhatsNewDialog() {
     <Dialog open={open} onClose={() => setDismissed(true)} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.25, pb: 1 }}>
         <AutoAwesomeIcon sx={{ color: 'primary.main', fontSize: typescale.pageTitle.size }} />
-        새로워진 포털 — 그동안 달라진 것
+        새 기능 안내
       </DialogTitle>
       <DialogContent sx={{ pb: 1 }}>
         {/* 핵심 안내 문구 — 조용히 들어와 모르고 지나쳤을 것들임을 먼저 */}
@@ -208,39 +208,38 @@ export default function WhatsNewDialog() {
         >
           <TouchAppIcon sx={{ color: 'primary.main', fontSize: iconSize.header, flexShrink: 0 }} />
           <Typography variant="body2" sx={{ fontWeight: typescale.emphasis.weight }}>
-            <Box component="span" sx={{ color: 'primary.main' }}>모르고 지나치셨을 기능</Box> 셋을 모았어요 —
-            이미 화면에 들어와 있어 바로 쓰실 수 있습니다.
+            <Box component="span" sx={{ color: 'primary.main' }}>새로 추가된 기능</Box> 셋입니다. 이미 적용되어 있어 바로 쓸 수 있습니다.
           </Typography>
         </Box>
 
         {/* ① 테마 전환 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <Brightness4Icon sx={{ color: 'primary.main', fontSize: iconSize.action }} />
-          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>화면을 밝게도, 어둡게도</Typography>
+          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>테마 전환 — 밝게 / 어둡게</Typography>
         </Box>
         <ThemeDemo />
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, mb: 2.5 }}>
-          상단바 오른쪽 해/달 스위치를 누르면 바뀝니다 — 선택은 이 기기에 기억돼요.
+          상단바 오른쪽 해·달 스위치로 바꿉니다. 선택은 기기에 저장됩니다.
         </Typography>
 
         {/* ② 칸반 보드 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <ViewKanbanIcon sx={{ color: 'primary.main', fontSize: iconSize.action }} />
-          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>업무를 보드로 한눈에</Typography>
+          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>업무현황 칸반 보드</Typography>
         </Box>
         <KanbanDemo />
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, mb: 2.5 }}>
-          업무현황 오른쪽 위 보기 전환에서 골라요 — 진행중·보류·완료·Remind가 한 화면에 섭니다.
+          업무현황 오른쪽 위에서 보기를 바꿉니다. 진행중·보류·완료·Remind가 한 화면에 나옵니다.
         </Typography>
 
         {/* ③ 지난 휴가 자동 숨김 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
           <EventBusyIcon sx={{ color: 'primary.main', fontSize: iconSize.action }} />
-          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>지난 휴가는 알아서 비켜요</Typography>
+          <Typography variant="body2" sx={{ fontWeight: typescale.cardTitle.weight }}>지난 휴가 자동 숨김</Typography>
         </Box>
         <LeaveHideDemo />
         <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
-          업무일정에서 끝난 연차·휴가는 다음 날부터 안 보입니다 — 지워진 게 아니라 가려진 거예요.
+          업무일정에서 끝난 연차·휴가는 다음 날부터 표시되지 않습니다. 삭제된 것은 아닙니다.
         </Typography>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2, gap: 1, flexWrap: 'wrap' }}>
@@ -250,7 +249,7 @@ export default function WhatsNewDialog() {
           control={<Checkbox size="small" checked={noMore} onChange={(e) => setNoMore(e.target.checked)} />}
           label="다시 보지 않기"
         />
-        <Button variant="contained" onClick={confirm}>확인했어요</Button>
+        <Button variant="contained" onClick={confirm}>확인</Button>
       </DialogActions>
     </Dialog>
   )
