@@ -1,7 +1,8 @@
 import Chip from '@mui/material/Chip'
-import { alpha, darken } from '@mui/material/styles'
+import { darken } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 import { typescale } from '@/theme/tokens'
+import { flatten } from '@/utils/color'
 
 /** 의미 상태 — 색 매핑의 단일 기준 */
 export type StatusKind = 'success' | 'info' | 'warning' | 'error' | 'neutral' | 'purple' | 'teal'
@@ -95,16 +96,25 @@ export default function StatusChip({
           // 앰버·틸 같은 밝은 채움 위 흰 글자는 2.3:1까지 떨어진다(getContrastText가 검은 라벨을 고름).
           color: selected ? t.palette.getContrastText(c) : textC,
           // 미선택 칩의 면·보더 농도. 구 값(.12/.32)은 카드 대비 면 1.10~1.26·보더 1.29~1.86이라
-          // 6색 칩이 멀리서 회색 알약으로 뭉쳐 보였다(분류 신호가 죽음). 라벨은 .18 면 위에서도 4.5 통과.
-          bgcolor: selected ? c : alpha(c, 0.18),
-          borderColor: selected ? c : alpha(c, 0.6),
+          // 6색 칩이 멀리서 회색 알약으로 뭉쳐 보였다(분류 신호가 죽음).
+          //
+          // ★ 틴트를 **표면 위에 미리 합성**해 불투명하게 만든다(2026-08-04). 반투명으로 두면
+          //   뒤에 무엇이 오느냐에 따라 결과가 달라진다 — 업무 카드는 상태 톤이 깔려 있어
+          //   칩 틴트에 카드 색이 섞이고, 대비가 3.77:1 까지 떨어지며(실측) 칩 색까지 왜곡됐다
+          //   (파란 '행정' 칩 배경이 청록 #b4d2d4, 앰버 '인사'가 올리브 #ccd5b8).
+          //   합성 후 5.06~6.15:1, 어느 카드 위에서든 같은 색.
+          //   "라벨은 .18 면 위에서도 4.5 통과"라던 옛 주석은 **색 없는 카드**에서만 참이었다.
+          //   같은 카드의 담당자 칩(ManagerChip)은 원래부터 불투명 솔리드라, 이 변경으로 두 칩이
+          //   같은 규칙이 된다.
+          bgcolor: selected ? c : flatten(c, 0.18, t.palette.background.paper),
+          borderColor: selected ? c : flatten(c, 0.6, t.palette.background.paper),
           '& .MuiChip-icon': { color: 'inherit', fontSize: typescale.cardTitle.size },
           // lineHeight:1 통일 + 글자 0.5px 하향 — 다른 칩과 동일 규격으로 한글 정중앙(실측)
           '& .MuiChip-label': { lineHeight: 1, transform: 'translateY(0.5px)' },
           ...(onClick && {
             cursor: 'pointer',
             // 선택 > 호버 — 선택 칩은 호버에도 솔리드 유지, 미선택 칩만 같은 색으로 조금 더 선명하게
-            '&:hover': { bgcolor: selected ? c : alpha(c, 0.2), borderColor: selected ? c : alpha(c, 0.5) },
+            '&:hover': { bgcolor: selected ? c : flatten(c, 0.2, t.palette.background.paper), borderColor: selected ? c : flatten(c, 0.5, t.palette.background.paper) },
           }),
         }
       }}
