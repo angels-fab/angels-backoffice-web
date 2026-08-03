@@ -197,6 +197,27 @@ export const FAB_EVENTS: FabEvent[] = [
     ],
   },
   {
+    // 포털 신청(event_submissions #1, 박세리 2026-07-27) → 공식 사이트 대조 후 게시.
+    // 신청서와 다른 점: 주관을 'SSA 조직위원회'로 냈으나 실제는 한양대 CH3IPS 등 6개 기관 공동,
+    // 구분을 '학술'로 냈으나 프로그램이 강의식 세미나라 교육으로 넣음(논문발표 아님).
+    // 포스터: 공식 사이트에 2026년판이 없어 accent 그라데이션으로 둔다(사이트의 popup 이미지는
+    //   등록 안내 공지, asml_poster_pop 은 2024년 타사 광고라 둘 다 못 씀).
+    id: 'ssa2026',
+    title: 'Smart Semiconductor Academy 2026 - 제7회 스마트 반도체 아카데미',
+    kind: '교육세미나',
+    start: '2026-08-24',
+    end: '2026-08-26',
+    venue: '세종대학교 대양AI센터 12층 AI홀',
+    organizer: '한양대학교 CH3IPS 혁신연구센터·RISE지산학협력단, 인하대 반도체특성화사업단, 명지대 반도체공정진단연구소, 한국PCB반도체패키징산업협회(KPCA), 페디셈(주)',
+    link: 'https://ssakorea.kr/',
+    accent: 'green',
+    summary: [
+      { label: '신청기간', value: '사전등록 2026.06.15~08.14 · 이후 현장등록' },
+      { label: '참가비', value: '3일권 일반·기업체 50만원 / 학생 32만원 (1일권 25만·15만)' },
+      { label: '주요 강사', speakers: ['김정호(KAIST·기조강연)', '정은승(한양대)', '서재현(Amkor Korea)', '장정환(STATS ChipPAC)', '윤재윤(SKKU)'] },
+    ],
+  },
+  {
     id: 'asps2026',
     title: 'ASPS 2026 - 차세대 반도체 패키징 산업전',
     kind: '전시회',
