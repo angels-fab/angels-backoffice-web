@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -343,7 +343,18 @@ export default function StickyMemoLayer() {
   const theme = useTheme()
   const isDesktop = useMediaQuery(theme.breakpoints.up('shell'))
   const dispatch = useAppDispatch()
-  const layerRef = useRef<HTMLDivElement>(null)
+  // 레이어는 ref(자식의 clamp용)와 state(기본 자리 재계산 트리거) 둘 다로 잡는다.
+  // 예전에는 boolean 플래그로 '측정했음'을 표시했는데, 이 레이어는 MainLayout에 있어
+  // 메모 없는 페이지로 가면 언마운트된다. 그때 ref는 null이 되는데 플래그는 true로 남아서,
+  // 그 페이지에서 첫 메모를 만들면 재계산이 안 걸리고 폴백 자리에 그대로 붙어 있었다
+  // (새로고침하면 플래그가 초기화돼 정상 — 2026-08-05 사용자 신고). state로 두면
+  // 마운트·언마운트마다 값이 바뀌므로 매번 정확히 한 번 다시 계산된다.
+  const layerRef = useRef<HTMLDivElement | null>(null)
+  const [layerEl, setLayerEl] = useState<HTMLDivElement | null>(null)
+  const attachLayer = useCallback((el: HTMLDivElement | null) => {
+    layerRef.current = el
+    setLayerEl(el)
+  }, [])
 
   const items = useAppSelector((s) => s.improve.items)
   const replyItems = useAppSelector((s) => s.reply.items)
@@ -357,19 +368,14 @@ export default function StickyMemoLayer() {
     return m
   }, [replyItems])
 
-  // 기본 자리는 메모 버튼 위치를 재서 정하므로 레이어가 DOM에 붙은 뒤 한 번 다시 계산한다.
-  // useLayoutEffect라 그리기 전에 반영된다 — 폴백 자리가 잠깐 보였다 튀지 않는다.
-  const [anchored, setAnchored] = useState(false)
-  useLayoutEffect(() => { if (layerRef.current) setAnchored(true) }, [memos.length])
-
-  // 좌표 객체의 참조를 고정한다 — 렌더마다 새로 만들면 아직 저장 전인 기본 위치가 되돌아간다
+  // 좌표 객체의 참조를 고정한다 — 렌더마다 새로 만들면 아직 저장 전인 기본 위치가 되돌아간다.
+  // layerEl 이 붙는 순간(콜백 ref = 커밋 단계) 다시 계산되고, 그 리렌더는 그리기 전에 끝나
+  // 폴백 자리가 잠깐 보였다 튀지 않는다.
   const positions = useMemo(() => {
     const m: PosMap = {}
-    memos.forEach((t, i) => { m[t.num] = saved?.[t.num] || defaultPos(layerRef.current, i) })
+    memos.forEach((t, i) => { m[t.num] = saved?.[t.num] || defaultPos(layerEl, i) })
     return m
-    // anchored: 레이어 측정 후 재계산 트리거(값 자체는 안 씀)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [memos, saved, anchored])
+  }, [memos, saved, layerEl])
 
   // 옮긴 위치는 개인 설정에 저장(디바운스 병합) — 다른 사람 화면은 움직이지 않는다
   const onMoveEnd = useCallback((num: string, pos: Pos) => {
@@ -380,7 +386,7 @@ export default function StickyMemoLayer() {
 
   return (
     <Box
-      ref={layerRef}
+      ref={attachLayer}
       aria-label="화면 메모"
       sx={{
         position: 'fixed',
