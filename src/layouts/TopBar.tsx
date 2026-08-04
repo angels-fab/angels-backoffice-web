@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import ButtonBase from '@mui/material/ButtonBase'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import SearchIcon from '@mui/icons-material/Search'
@@ -10,14 +11,14 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows'
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone'
 import Switch from '@mui/material/Switch'
-import { styled } from '@mui/material/styles'
-import { StatusChip } from '@/components/ds'
+import { alpha, styled } from '@mui/material/styles'
+import { StatusChip, focusRingSx } from '@/components/ds'
 import { useRole, ROLE_LABEL } from '@/auth/role'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
 import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
 import { useThemeMode } from '@/theme/mode'
-import { iconSize, radius, z } from '@/theme/tokens'
+import { control, iconSize, radius, typescale, z } from '@/theme/tokens'
 import topbarLogo from '@/assets/topbar-logo.jpg'
 
 /**
@@ -80,6 +81,8 @@ export default function TopBar() {
   const { mode, toggle: toggleTheme } = useThemeMode()
   const [loginOpen, setLoginOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
+  // 단축키 표기 — 바인딩은 Ctrl·⌘ 둘 다 받으므로(아래 onKey) 기기에 맞는 쪽만 보여준다
+  const [modKey] = useState(() => (/Mac|iPhone|iPad/.test(navigator.userAgent) ? '⌘' : 'Ctrl'))
   // 모바일에서 데스크톱(PC) 레이아웃 보기 토글 (터치 기기에서만 노출)
   const [touch] = useState(isTouchDevice)
   const [desktopView, setDesktopView] = useState(isForceDesktop)
@@ -163,17 +166,57 @@ export default function TopBar() {
               </IconButton>
             </Tooltip>
           )}
+          {/* 통합검색 진입점(PC) — 아이콘만으로는 검색인지 읽히지 않아 '숨은 기능'이 되므로 입력창 모양으로 노출.
+              실제 입력은 다이얼로그가 하므로 input 이 아니라 버튼이다(클릭·Enter·Space 로 열림).
+              테두리는 앱의 입력창(--border)보다 한 단 진하게 — 상단바에서 눈에 띄어야 제 역할을 한다(사용자 결정).
+              상단바를 잠식하지 않도록 고정 200px. 모바일은 바로 아래 아이콘 버튼이 대신한다. */}
+          <ButtonBase
+            onClick={() => setSearchOpen(true)}
+            aria-label={`통합검색 열기 (${modKey}+K)`}
+            sx={(th) => ({
+              display: { xs: 'none', shell: 'flex' },
+              alignItems: 'center', gap: 1,
+              width: 200, height: control.height, flexShrink: 0, px: 1.25,
+              border: '1px solid', borderColor: alpha(th.palette.text.primary, 0.28),
+              borderRadius: `${radius.input}px`,
+              bgcolor: 'background.paper', color: 'text.secondary',
+              transition: 'border-color .14s, background-color .14s',
+              '&:hover': { borderColor: alpha(th.palette.text.primary, 0.45), bgcolor: 'background.elevated' },
+              ...(focusRingSx as object),
+            })}
+          >
+            <SearchIcon sx={{ fontSize: typescale.sectionTitle.size, color: 'text.disabled' }} />
+            <Box component="span" sx={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: typescale.body.size, whiteSpace: 'nowrap' }}>
+              통합검색
+            </Box>
+            {/* 단축키 키캡 — 얇은 테두리는 라이트에서 흐려지므로 옅은 채움으로 형태를 만든다 */}
+            {[modKey, 'K'].map((k) => (
+              <Box
+                key={k}
+                component="span"
+                sx={(th) => ({
+                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  minWidth: 18, height: 18, px: '5px', borderRadius: `${radius.chip}px`,
+                  bgcolor: alpha(th.palette.text.primary, 0.09), color: 'text.disabled',
+                  fontSize: typescale.caption.size, fontWeight: typescale.caption.weight, lineHeight: 1,
+                })}
+              >
+                {k}
+              </Box>
+            ))}
+          </ButtonBase>
+          {/* 모바일 전용 — PC는 위 검색창이 대신한다(중복 노출 방지) */}
+          <Tooltip title={`통합검색 (${modKey}+K)`}>
+            <IconButton aria-label="통합검색" onClick={() => setSearchOpen(true)} size="small" sx={{ display: { xs: 'inline-flex', shell: 'none' }, color: 'text.secondary' }}>
+              <SearchIcon sx={{ fontSize: iconSize.header }} />
+            </IconButton>
+          </Tooltip>
           <Tooltip title={mode === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}>
             <ThemeSwitch
               checked={mode === 'dark'}
               onChange={toggleTheme}
               slotProps={{ input: { 'aria-label': mode === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환' } }}
             />
-          </Tooltip>
-          <Tooltip title="통합검색 (Ctrl+K)">
-            <IconButton aria-label="통합검색" onClick={() => setSearchOpen(true)} size="small" sx={{ color: 'text.secondary' }}>
-              <SearchIcon sx={{ fontSize: iconSize.header }} />
-            </IconButton>
           </Tooltip>
           {/* 계정 컨트롤(칩·로그아웃·로그인)은 PC 전용 — 모바일은 하단 탭바/메뉴 드로어가 담당(상단바 잘림 방지).
               구 .d-only 클래스를 반응형 display 로 이관 */}
