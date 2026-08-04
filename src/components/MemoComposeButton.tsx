@@ -56,7 +56,9 @@ export default function MemoComposeButton() {
     try {
       const num = await createImprovement({
         author: user, key: authKey, loc: loc || '기타',
-        title: t, content: content.trim(), mgr: '',
+        // 담당자 = 작성자. 게시판의 일괄등록(improve_create_batch)도 mgr=my_name()으로 넣는다.
+        // 비워두면 삭제 권한자가 없어져 게시판에서 지울 수 없는 글이 된다.
+        title: t, content: content.trim(), mgr: user,
       })
       // 연결되는 화면이 있을 때만 쪽지로 띄운다('기타'는 띄울 화면이 없다)
       if (loc) await updateImprovement({ author: user, key: authKey, num, memo: true })

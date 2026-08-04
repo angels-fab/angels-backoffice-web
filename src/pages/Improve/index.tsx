@@ -249,9 +249,14 @@ export default function Improve() {
   // 필터 선택 규칙은 정본(utils/filterSelect)에 위임 — 업무현황·공지와 동일
   const onTab = (s: ImpStatus, shift: boolean) => setSelected((prev) => nextFilterSelection(prev, s, shift))
 
-  // 수정(상태·위치·유형·내용·사유·메모) = 로그인 관리자 전체 / 삭제 = 해당 글 담당자(작성자)만
+  // 수정(상태·위치·유형·내용·사유·메모) = 로그인 관리자 전체 / 삭제 = 해당 글 담당자(작성자)만.
+  // 담당자 미지정(mgr='')은 관리자 누구나 삭제 — RLS improvements_delete(mgr='' or mgr=my_name())와 같은 기준.
+  // 이 조건이 빠져 있어 담당자 없는 글이 화면에서 영영 못 지워졌다(DB는 허용하는데 버튼만 안 나옴).
   const canEdit = isAdmin && !!user && !!authKey
-  const canDelete = (t: ImprovementItem) => isAdmin && !!user && user === (t.mgr || '').trim()
+  const canDelete = (t: ImprovementItem) => {
+    const mgr = (t.mgr || '').trim()
+    return isAdmin && !!user && (mgr === '' || user === mgr)
+  }
   // 작업 메모·더보기 열은 로그인 관리자에게만 노출(게스트 미노출). 두 열 노출 조건이 같아 memoCol 하나로 판단한다.
   // 열 개수 = 게스트 7(번호·개선위치·제목·작성자·제안일자·상태·비고) / 관리자 9(+작업 메모·더보기).
   const memoCol = canEdit
