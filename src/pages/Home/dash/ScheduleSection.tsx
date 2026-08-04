@@ -9,14 +9,13 @@ import { hexA } from '@/utils/color'
 import { todaySeoul } from '@/utils/date'
 import { accent, radius, typescale, weight } from '@/theme/tokens'
 import { catTextColor, toneOfColor } from '@/pages/Calendar/catMeta'
+import { FAB_EVENTS } from '@/constants/events'
 import type { CalEvent } from '@/types'
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토']
 
-/** 일정 유형 배지 (캘린더 카테고리 색) */
-function TypeBadge({ cat }: { cat: CalEvent['cat'] }) {
-  const c = CAL_CAT_MAP[cat]
-  const color = c?.color || accent.blue
+/** 유형 배지 — 캘린더 카테고리 색 또는 행사 자체 색을 그대로 쓴다 */
+function TypeBadge({ label, color }: { label: string; color: string }) {
   return (
     <Box
       component="span"
@@ -33,16 +32,22 @@ function TypeBadge({ cat }: { cat: CalEvent['cat'] }) {
         border: `1px solid ${hexA(color, 0.32)}`,
       }}
     >
-      {c?.label || '기타'}
+      {label}
     </Box>
   )
 }
 
-function ScheduleRow({ left, title, right, leftColor }: { left: string; title: string; right?: ReactNode; leftColor?: string }) {
+/** 캘린더 카테고리 배지 — 라벨·색을 카테고리 표에서 찾아 넘긴다 */
+function CatBadge({ cat }: { cat: CalEvent['cat'] }) {
+  const c = CAL_CAT_MAP[cat]
+  return <TypeBadge label={c?.label || '기타'} color={c?.color || accent.blue} />
+}
+
+/** subLeft = 날짜 아래 시간(있을 때만) — 종일·행사는 비운다 */
+function ScheduleRow({ left, subLeft, title, right, leftColor }: { left: string; subLeft?: string; title: string; right?: ReactNode; leftColor?: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, py: 1, borderBottom: 1, borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}>
       <Box
-        component="span"
         sx={{
           flexShrink: 0,
           minWidth: 64,
@@ -50,9 +55,15 @@ function ScheduleRow({ left, title, right, leftColor }: { left: string; title: s
           fontWeight: weight.bold,
           fontFamily: 'monospace',
           color: leftColor || 'text.secondary',
+          lineHeight: 1.35,
         }}
       >
         {left}
+        {subLeft && (
+          <Box component="span" sx={{ display: 'block', fontWeight: weight.medium, color: 'text.disabled' }}>
+            {subLeft}
+          </Box>
+        )}
       </Box>
       <Typography sx={{ flex: 1, minWidth: 0, fontSize: typescale.emphasis.size, fontWeight: weight.semibold, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {title}
@@ -83,14 +94,40 @@ export default function ScheduleSection() {
       return a.time.localeCompare(b.time)
     })
 
-  // 다가오는 일정 — 향후 1~7일, id 기준 dedupe(가장 이른 날짜), 날짜순 5건
+  // 다가오는 일정 — 캘린더 일정 + 행사(FAB_EVENTS)를 한 줄기로 합친다.
+  // 행사는 그동안 행사 페이지에만 있어 홈에서 안 보였다(행사 시작일이 이 창에 들면 함께 노출).
+  // 창은 두 출처 공통으로 향후 1~7일. 캘린더는 id 기준 dedupe(가장 이른 날짜) 후 날짜순 5건.
   const seen = new Set<string>()
-  const upcoming = events
+  const calUpcoming = events
     .map((e) => ({ ...e, d: new Date(e.date + 'T00:00:00') }))
     .map((e) => ({ ...e, diff: Math.round((e.d.getTime() - todayMid.getTime()) / 86400000) }))
     .filter((e) => e.diff >= 1 && e.diff <= 7)
     .sort((a, b) => a.d.getTime() - b.d.getTime())
     .filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true)))
+    .map((e) => ({
+      key: e.id,
+      d: e.d,
+      diff: e.diff,
+      title: e.title,
+      // 시간 표기 — 종일은 왼쪽 날짜에 붙이지 않고 비운다(날짜만으로 충분)
+      time: e.time === '종일' ? '' : e.time.slice(0, 5),
+      badge: <CatBadge cat={e.cat} />,
+    }))
+  const eventUpcoming = FAB_EVENTS
+    .map((ev) => ({ ...ev, d: new Date(ev.start + 'T00:00:00') }))
+    .map((ev) => ({ ...ev, diff: Math.round((ev.d.getTime() - todayMid.getTime()) / 86400000) }))
+    .filter((ev) => ev.diff >= 1 && ev.diff <= 7)
+    .map((ev) => ({
+      key: `ev-${ev.id}`,
+      d: ev.d,
+      diff: ev.diff,
+      title: ev.title,
+      time: '',
+      // 행사는 자기 강조색(accent)과 구분(kind)을 그대로 보여 캘린더 일정과 섞여도 출처가 읽힌다
+      badge: <TypeBadge label={ev.kind} color={accent[ev.accent ?? 'blue']} />,
+    }))
+  const upcoming = [...calUpcoming, ...eventUpcoming]
+    .sort((a, b) => a.d.getTime() - b.d.getTime())
     .slice(0, 5)
 
   return (
@@ -117,7 +154,7 @@ export default function ScheduleSection() {
                         {e.loc}
                       </Typography>
                     )}
-                    <TypeBadge cat={e.cat} />
+                    <CatBadge cat={e.cat} />
                   </Box>
                 }
               />
@@ -135,26 +172,30 @@ export default function ScheduleSection() {
           <EmptyState size="sm" title="다가오는 일정이 없습니다" />
         ) : (
           <Box>
-            {upcoming.map((e, i) => (
+            {upcoming.map((e) => (
               <ScheduleRow
-                key={`${e.id}-${i}`}
+                key={e.key}
                 left={`${String(e.d.getMonth() + 1).padStart(2, '0')}/${String(e.d.getDate()).padStart(2, '0')}(${DOW[e.d.getDay()]})`}
+                subLeft={e.time}
                 title={e.title}
                 right={
-                  <Box
-                    component="span"
-                    sx={{
-                      flexShrink: 0,
-                      fontSize: typescale.small.size,
-                      fontWeight: weight.bold,
-                      px: 0.75,
-                      py: '2px',
-                      borderRadius: `${radius.chip}px`,
-                      color: e.diff <= 2 ? 'warning.main' : 'text.secondary',
-                      bgcolor: 'background.elevated',
-                    }}
-                  >
-                    {`D-${e.diff}`}
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexShrink: 0 }}>
+                    {e.badge}
+                    <Box
+                      component="span"
+                      sx={{
+                        flexShrink: 0,
+                        fontSize: typescale.small.size,
+                        fontWeight: weight.bold,
+                        px: 0.75,
+                        py: '2px',
+                        borderRadius: `${radius.chip}px`,
+                        color: e.diff <= 2 ? 'warning.main' : 'text.secondary',
+                        bgcolor: 'background.elevated',
+                      }}
+                    >
+                      {`D-${e.diff}`}
+                    </Box>
                   </Box>
                 }
               />
