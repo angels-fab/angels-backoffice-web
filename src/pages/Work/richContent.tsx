@@ -247,8 +247,9 @@ function flattenBlocks(blocks: PMBlock[], depth: number, out: BodyLine[]): void 
       let markerUsed = false
       for (const c of item.content || []) {
         if (c.type === 'paragraph') {
-          // 1단계 목록 = 들여쓰기 0(기존 텍스트 글머리 '• '와 동일 위치), 단계당 +18px
-          out.push(paragraphToBodyLine(c, depth * LIST_INDENT_PX, markerUsed ? undefined : marker))
+          // 마커 줄(항목 첫 문단) = 1단계 목록이면 들여쓰기 0(기존 텍스트 글머리 '• '와 동일 위치), 단계당 +18px.
+          // 같은 항목에 딸린 후속 문단(① 등)은 에디터의 li 안 문단(.wc-editor ul{padding-left:18px})처럼 한 단계 더 들여쓴다
+          out.push(paragraphToBodyLine(c, (depth + (markerUsed ? 1 : 0)) * LIST_INDENT_PX, markerUsed ? undefined : marker))
           markerUsed = true
         } else {
           flattenBlocks([c], depth + 1, out)
