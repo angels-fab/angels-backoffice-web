@@ -320,7 +320,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
             valueJson={initial?.bodyFmt ?? ''}
             valuePlain={initial?.body ?? ''}
             onChange={({ json, text }) => { setBody(text); setBodyFmt(json) }}
-            placeholder="업무 내용 — '- ' → •  ·  'ㅇ1 ' → ①  ·  Shift+Enter → 들여쓴 줄"
+            placeholder="업무 내용 — - → •  ·  ㅇ1 → ①  ·  Shift+Enter → 들여쓰기"
             disabled={saving}
             ariaLabel="업무 내용"
           />
