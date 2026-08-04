@@ -197,7 +197,10 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
 
   const st = normStatus(item.status)
   const folded = (
-    <Box sx={(th) => ({ display: 'grid', placeItems: 'center', width: 34, height: 34, color: th.palette.accentText.amber })}>
+    // 압정은 글자가 아니라 그림이므로 채움 토큰(accent.amber)을 쓴다.
+    // 글자용 accentText.amber 는 라이트에서 #7F5B00(갈색)이라 압정이 갈색으로 보였다.
+    // 게시판 '작업 메모' 열의 켜진 핀과 같은 값 — 두 화면의 같은 표시는 같은 색이어야 한다.
+    <Box sx={(th) => ({ display: 'grid', placeItems: 'center', width: 34, height: 34, color: th.palette.accent.amber })}>
       <PushPinIcon sx={{ fontSize: iconSize.header }} />
     </Box>
   )
@@ -238,7 +241,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
               background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.13)}, transparent 70%)`,
             })}
           >
-            <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
+            <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
             <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
               요청 #{item.num}
             </Box>
