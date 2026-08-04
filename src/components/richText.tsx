@@ -20,7 +20,7 @@ import { alpha } from '@mui/material/styles'
 import { iconSize, radius, typescale } from '@/theme/tokens'
 import { useEditor, EditorContent } from '@tiptap/react'
 import type { Editor } from '@tiptap/react'
-import { Mark, mergeAttributes } from '@tiptap/core'
+import { Extension, Mark, mergeAttributes } from '@tiptap/core'
 import Document from '@tiptap/extension-document'
 import Paragraph from '@tiptap/extension-paragraph'
 import Text from '@tiptap/extension-text'
@@ -85,8 +85,36 @@ export const HighlightTokenMark = Mark.create({
   renderHTML({ HTMLAttributes }) { return ['mark', mergeAttributes({ class: 'wc-hl' }, HTMLAttributes), 0] },
 })
 
-/** 목록 확장(글머리·번호·항목) — Tab/Shift-Tab 들여쓰기·자동 이어쓰기 포함(ListItem 기본 키맵) */
-export const listExtensions = [BulletList, OrderedList, ListItem]
+/**
+ * 목록 키 동작을 워드·노션 표준으로 맞추는 두 규칙.
+ *
+ * - **줄 맨 앞 Backspace** = 글머리만 없애고 한 단계 내어쓰기(1단계면 목록 해제). 기본 동작은 그 줄을
+ *   윗줄에 합쳐 버려서, 새 글머리를 지우려다 줄이 통째로 위로 올라가 버렸다.
+ *   항목 안 후속 줄에서는 규칙을 적용하지 않는다 — 거기선 윗줄과 합치는 게 맞다.
+ * - **Shift+Enter** = 같은 항목 안에서 줄바꿈. 글머리를 새로 만들지 않고 항목에 딸린 줄(①② 등)을 잇는다.
+ *   (표시는 SubLine이 한 단계 들여쓴다 — richContent.tsx flattenBlocks)
+ *
+ * 공식 확장(@tiptap/extension-list-keymap)은 Backspace에서 윗줄과 **글자를 합쳐** 표준과 달라 쓰지 않는다.
+ */
+const ListStandardKeys = Extension.create({
+  name: 'listStandardKeys',
+  addKeyboardShortcuts() {
+    return {
+      Backspace: ({ editor }) => {
+        const { empty, $from } = editor.state.selection
+        if (!empty || $from.parentOffset > 0) return false // 줄 맨 앞에서 커서만 있을 때
+        const item = $from.node(-1)
+        if (!item || item.type.name !== 'listItem') return false
+        if ($from.index(-1) !== 0) return false // 항목의 첫 문단일 때만(후속 줄은 기본 동작)
+        return editor.commands.liftListItem('listItem')
+      },
+      'Shift-Enter': ({ editor }) => (editor.isActive('listItem') ? editor.commands.splitBlock() : false),
+    }
+  },
+})
+
+/** 목록 확장(글머리·번호·항목) — Tab/Shift-Tab 들여쓰기·자동 이어쓰기(ListItem 기본 키맵) + 표준 키 규칙 */
+export const listExtensions = [BulletList, OrderedList, ListItem, ListStandardKeys]
 
 /**
  * 툴바 힌트 툴팁 — 버튼 위(placement top)로 떠서 아래 본문을 가리지 않고,

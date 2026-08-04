@@ -1,5 +1,9 @@
 # 인계 노트 (집 ↔ 사무실 이어가기)
 
+## ✅ 목록 키 동작 표준화 (2026-08-04, 완료)
+
+줄 맨 앞 Backspace = 글머리만 지우고 한 단계 내어쓰기(윗줄에 안 합쳐짐), Shift+Enter = 같은 항목 안 줄바꿈. `richText.tsx`의 `listExtensions`에 `ListStandardKeys` 추가(공식 list-keymap은 글자를 합쳐서 미채택). jsdom 헤드리스로 7가지 상황 실측 — [fix-list-keys-standard.md](fix-list-keys-standard.md).
+
 ## ✅ 업무 카드 계층 들여쓰기 복구 (2026-08-04, 완료)
 
 `•` 항목에 딸린 `①②③` 줄이 0px로 찍혀 계층이 사라지던 버그(업무 149·152번). `flattenBlocks`에서 목록 항목의 **후속 문단**만 한 단계(18px) 더 들여쓰도록 한 줄 수정 — 에디터의 `.wc-editor ul{padding-left:18px}`와 같은 폭. 실측·전수조사·잔여 항목은 [fix-work-card-indent.md](fix-work-card-indent.md).
