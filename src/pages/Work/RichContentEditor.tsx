@@ -18,6 +18,7 @@ import { ColorTokenMark, HighlightTokenMark, listExtensions, RichToolbar } from 
 import { radius } from '@/theme/tokens'
 
 // 입력 규칙: 'ㅇN ' → 들여쓴 동그라미 숫자(①…) — 업무 글쓰기 관례('- '는 BulletList 기본 규칙이 진짜 목록으로 처리)
+// 글머리 항목 안에서는 앞 공백을 넣지 않는다 — 목록 구조가 이미 한 단계 들여쓰므로 겹치면 두 배로 밀린다
 const CircledNumRule = Extension.create({
   name: 'workCircledNum',
   addInputRules() {
@@ -27,7 +28,10 @@ const CircledNumRule = Extension.create({
         handler: ({ state, range, match }) => {
           const ch = circledNumber(parseInt(match[2], 10))
           if (!ch) return
-          const indent = (match[1] || '').length >= 2 ? match[1] : '  '
+          const $from = state.doc.resolve(range.from)
+          let inList = false
+          for (let d = $from.depth; d > 0; d -= 1) if ($from.node(d).type.name === 'listItem') { inList = true; break }
+          const indent = inList ? '' : (match[1] || '').length >= 2 ? match[1] : '  '
           state.tr.insertText(indent + ch + ' ', range.from, range.to)
         },
       }),
