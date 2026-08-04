@@ -61,30 +61,42 @@ const DRAG_SLOP = 3
 const PIN = 34
 /** 버튼 아래로 띄우는 간격(px) */
 const ANCHOR_GAP = 8
+/** 슬롯 간격(px) — 핀 한 변 + 여유 6 */
+const SLOT = PIN + 6
+/** 빈 슬롯 탐색 상한 — 무한루프 방지 */
+const MAX_SLOT = 200
 
 /**
- * 저장된 좌표가 없을 때의 기본 자리 = **상단바 메모 버튼 바로 아래**.
- * 화면 한가운데에 뜨면 보던 내용을 가려서 방해가 된다(사용자 피드백 2026-08-05).
- * 버튼을 못 찾으면(레이어가 아직 안 붙었거나 게시판 핀으로 켠 메모) 우상단으로 폴백한다.
- *
- * 여러 장은 **버튼 아래로 곧게 한 줄**로 쌓는다. 대각선으로 흘리면 뒤로 갈수록 버튼에서
- * 멀어져 '버튼 아래'가 아니게 되고 오른쪽 화면 끝으로 밀린다(2026-08-05 사용자 신고).
- * 간격은 핀 한 변 + 6이라 겹치지 않는다.
+ * 슬롯 n의 자리(px, 레이어 기준) — **메모 버튼 바로 아래에서 오른쪽으로 한 줄**.
+ * 한 줄이 화면 오른쪽 끝에 닿으면 그다음 줄로 넘어간다.
+ * 버튼을 못 찾으면(게시판 핀으로 켠 메모 등) 우상단을 기준점으로 삼는다.
  */
-function defaultPos(layer: HTMLElement | null, index: number): Pos {
-  const fallback = { x: 88, y: 3 }
-  if (!layer) return fallback
+function slotPx(layer: HTMLElement, n: number): { x: number; y: number } {
   const W = layer.clientWidth, H = layer.clientHeight
-  if (W <= 0 || H <= 0) return fallback
   const anchor = document.querySelector('[data-memo-anchor]')
   const l = layer.getBoundingClientRect()
-  const px = anchor
+  const baseX = anchor
     ? anchor.getBoundingClientRect().left + anchor.getBoundingClientRect().width / 2 - l.left - PIN / 2
     : W - PIN - 16
-  const x = Math.min(Math.max(px, 0), Math.max(W - PIN, 0))
-  const y = Math.min(ANCHOR_GAP + index * (PIN + 6), Math.max(H - PIN, 0))
-  return { x: +(x / W * 100).toFixed(2), y: +(y / H * 100).toFixed(2) }
+  const perRow = Math.max(1, Math.floor((W - baseX - PIN) / SLOT) + 1)
+  const row = Math.floor(n / perRow), col = n % perRow
+  return {
+    x: Math.min(Math.max(baseX + col * SLOT, 0), Math.max(W - PIN, 0)),
+    y: Math.min(ANCHOR_GAP + row * SLOT, Math.max(H - PIN, 0)),
+  }
 }
+
+const toPct = (layer: HTMLElement, p: { x: number; y: number }): Pos => ({
+  x: +(p.x / layer.clientWidth * 100).toFixed(2),
+  y: +(p.y / layer.clientHeight * 100).toFixed(2),
+})
+const toPx = (layer: HTMLElement, p: Pos) => ({
+  x: p.x / 100 * layer.clientWidth,
+  y: p.y / 100 * layer.clientHeight,
+})
+/** 이미 다른 쪽지가 차지한 자리인지(핀 한 변 안이면 겹친 것으로 본다) */
+const overlaps = (p: { x: number; y: number }, taken: { x: number; y: number }[]) =>
+  taken.some((q) => Math.abs(q.x - p.x) < PIN && Math.abs(q.y - p.y) < PIN)
 
 interface NoteProps {
   item: ImprovementItem
@@ -217,6 +229,9 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
         left: `${live.x}%`,
         top: `${live.y}%`,
         width: open ? OPEN_W : 'auto',
+        // 펼친 쪽지는 항상 맨 위 — 안 그러면 DOM 순서상 뒤에 오는 압정들이 본문을 덮는다
+        // (요청번호 순으로 그려지므로 번호가 큰 쪽지가 위로 올라온다). 집는 중인 것도 위로.
+        zIndex: open ? 3 : 1,
         pointerEvents: 'auto',
         cursor: 'grab',
         touchAction: 'none',
@@ -226,8 +241,8 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
         borderRadius: `${radius.card}px`,
         boxShadow: th.shadows[8],
         transition: 'border-color .15s, box-shadow .15s',
-        '&:hover': { borderColor: th.palette.accent.amber },
-        '&:active': { cursor: 'grabbing' },
+        '&:hover': { borderColor: th.palette.accent.amber, zIndex: 2 },
+        '&:active': { cursor: 'grabbing', zIndex: 4 },
         '& input': { cursor: 'text', userSelect: 'text' },
       })}
     >
@@ -374,14 +389,32 @@ export default function StickyMemoLayer() {
     return m
   }, [replyItems])
 
-  // 좌표 객체의 참조를 고정한다 — 렌더마다 새로 만들면 아직 저장 전인 기본 위치가 되돌아간다.
-  // layerEl 이 붙는 순간(콜백 ref = 커밋 단계) 다시 계산되고, 그 리렌더는 그리기 전에 끝나
-  // 폴백 자리가 잠깐 보였다 튀지 않는다.
-  const positions = useMemo(() => {
-    const m: PosMap = {}
-    memos.forEach((t, i) => { m[t.num] = saved?.[t.num] || defaultPos(layerEl, i) })
-    return m
-  }, [memos, saved, layerEl])
+  /**
+   * 자리가 없는 쪽지에 **빈 슬롯을 배정하고 즉시 저장**한다.
+   *
+   * 예전에는 목록에서의 순번(index)으로 자리를 계산했다. 그러면 앞의 쪽지를 하나 떼는
+   * 순간 뒤 쪽지들의 순번이 당겨져 자리가 우르르 이동했다(2026-08-05 사용자 신고:
+   * "몇 개 삭제하면 주변 압정들이 그 자리를 채우듯 이동"). 한 번 정해진 자리는 본인이
+   * 옮기기 전엔 고정이어야 하므로, 배정하는 순간 좌표로 굳혀 둔다.
+   *
+   * 빈 슬롯 = 이미 다른 쪽지가 있는 자리를 건너뛴 첫 자리. 그래서 떼어낸 자리는
+   * 다음에 만드는 쪽지가 자연스럽게 다시 쓴다.
+   */
+  useEffect(() => {
+    if (!layerEl || memos.length === 0) return
+    const need = memos.filter((t) => !saved?.[t.num])
+    if (need.length === 0) return
+    const taken = memos.filter((t) => saved?.[t.num]).map((t) => toPx(layerEl, saved![t.num]))
+    const patch: PosMap = {}
+    for (const t of need) {
+      let n = 0
+      while (n < MAX_SLOT && overlaps(slotPx(layerEl, n), taken)) n++
+      const px = slotPx(layerEl, n)
+      taken.push(px)
+      patch[t.num] = toPct(layerEl, px)
+    }
+    dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), ...patch } }))
+  }, [layerEl, memos, saved, dispatch])
 
   // 옮긴 위치는 개인 설정에 저장(디바운스 병합) — 다른 사람 화면은 움직이지 않는다
   const onMoveEnd = useCallback((num: string, pos: Pos) => {
@@ -404,18 +437,24 @@ export default function StickyMemoLayer() {
         zIndex: z.stickyMemo,
       }}
     >
-      {memos.map((t) => (
-        <StickyNote
-          key={t.num}
-          item={t}
-          replies={repliesByReq[t.num] || []}
-          pos={positions[t.num]}
-          layerRef={layerRef}
-          canEdit={isAdmin && !!user && !!authKey}
-          user={user}
-          onMoveEnd={onMoveEnd}
-        />
-      ))}
+      {memos.map((t) => {
+        // 자리가 아직 없으면 이번 프레임만 건너뛴다 — 위 useEffect가 곧바로 배정한다.
+        // 임시 자리에 그렸다가 옮기면 쪽지가 튀어 보인다.
+        const pos = saved?.[t.num]
+        if (!pos) return null
+        return (
+          <StickyNote
+            key={t.num}
+            item={t}
+            replies={repliesByReq[t.num] || []}
+            pos={pos}
+            layerRef={layerRef}
+            canEdit={isAdmin && !!user && !!authKey}
+            user={user}
+            onMoveEnd={onMoveEnd}
+          />
+        )
+      })}
     </Box>
   )
 }
