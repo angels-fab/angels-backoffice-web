@@ -16,6 +16,8 @@ import { StatusChip, focusRingSx } from '@/components/ds'
 import { useRole, ROLE_LABEL } from '@/auth/role'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
+import MemoComposeButton from '@/components/MemoComposeButton'
+import NotificationBell from './NotificationBell'
 import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
 import { useThemeMode } from '@/theme/mode'
 import { control, iconSize, radius, typescale, z } from '@/theme/tokens'
@@ -166,51 +168,55 @@ export default function TopBar() {
               </IconButton>
             </Tooltip>
           )}
-          {/* 통합검색 진입점(PC) — 아이콘만으로는 검색인지 읽히지 않아 '숨은 기능'이 되므로 입력창 모양으로 노출.
+          {/* 통합검색 진입점(PC) — 아이콘만 두면 검색인지 안 읽혀 단축키 키캡을 함께 노출한다.
               실제 입력은 다이얼로그가 하므로 input 이 아니라 버튼이다(클릭·Enter·Space 로 열림).
-              테두리는 앱의 입력창(--border)보다 한 단 진하게 — 상단바에서 눈에 띄어야 제 역할을 한다(사용자 결정).
-              상단바를 잠식하지 않도록 고정 200px. 모바일은 바로 아래 아이콘 버튼이 대신한다. */}
-          <ButtonBase
-            onClick={() => setSearchOpen(true)}
-            aria-label={`통합검색 열기 (${modKey}+K)`}
-            sx={(th) => ({
-              display: { xs: 'none', shell: 'flex' },
-              alignItems: 'center', gap: 1,
-              width: 200, height: control.height, flexShrink: 0, px: 1.25,
-              border: '1px solid', borderColor: alpha(th.palette.text.primary, 0.28),
-              borderRadius: `${radius.input}px`,
-              bgcolor: 'background.paper', color: 'text.secondary',
-              transition: 'border-color .14s, background-color .14s',
-              '&:hover': { borderColor: alpha(th.palette.text.primary, 0.45), bgcolor: 'background.elevated' },
-              ...(focusRingSx as object),
-            })}
-          >
-            <SearchIcon sx={{ fontSize: typescale.sectionTitle.size, color: 'text.disabled' }} />
-            <Box component="span" sx={{ flex: 1, minWidth: 0, textAlign: 'left', fontSize: typescale.body.size, whiteSpace: 'nowrap' }}>
-              통합검색
-            </Box>
-            {/* 단축키 키캡 — 얇은 테두리는 라이트에서 흐려지므로 옅은 채움으로 형태를 만든다 */}
-            {[modKey, 'K'].map((k) => (
-              <Box
-                key={k}
-                component="span"
-                sx={(th) => ({
-                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  minWidth: 18, height: 18, px: '5px', borderRadius: `${radius.chip}px`,
-                  bgcolor: alpha(th.palette.text.primary, 0.09), color: 'text.disabled',
-                  fontSize: typescale.caption.size, fontWeight: typescale.caption.weight, lineHeight: 1,
-                })}
-              >
-                {k}
-              </Box>
-            ))}
-          </ButtonBase>
+              테두리 없이 옅은 면으로만 구분(사용자 결정) · 폭은 내용만큼(라벨 없음). 모바일은 아래 아이콘 버튼이 대신한다. */}
+          <Tooltip title={`통합검색 (${modKey}+K)`}>
+            <ButtonBase
+              onClick={() => setSearchOpen(true)}
+              aria-label={`통합검색 열기 (${modKey}+K)`}
+              sx={(th) => ({
+                display: { xs: 'none', shell: 'flex' },
+                alignItems: 'center', gap: 0.75,
+                height: control.height, flexShrink: 0, px: 1,
+                // 테두리 없이 '한 톤 들어간 면'으로만 구분 — paper(흰색)는 라이트 상단바와 1.08:1 로 묻힌다.
+                // 글자색 알파라 라이트=옅은 회색·다크=옅은 밝음으로 두 테마가 같은 만큼 떠오른다.
+                border: 'none', borderRadius: `${radius.input}px`,
+                bgcolor: alpha(th.palette.text.primary, 0.08),
+                color: 'text.secondary',
+                transition: 'background-color .14s',
+                '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.14) },
+                ...(focusRingSx as object),
+              })}
+            >
+              <SearchIcon sx={{ fontSize: typescale.sectionTitle.size, color: 'text.disabled' }} />
+              {/* 단축키 키캡 — 얇은 테두리는 라이트에서 흐려지므로 옅은 채움으로 형태를 만든다 */}
+              {[modKey, 'K'].map((k) => (
+                <Box
+                  key={k}
+                  component="span"
+                  sx={(th) => ({
+                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 18, height: 18, px: '5px', borderRadius: `${radius.chip}px`,
+                    bgcolor: alpha(th.palette.text.primary, 0.09), color: 'text.disabled',
+                    fontSize: typescale.caption.size, fontWeight: typescale.caption.weight, lineHeight: 1,
+                  })}
+                >
+                  {k}
+                </Box>
+              ))}
+            </ButtonBase>
+          </Tooltip>
           {/* 모바일 전용 — PC는 위 검색창이 대신한다(중복 노출 방지) */}
           <Tooltip title={`통합검색 (${modKey}+K)`}>
             <IconButton aria-label="통합검색" onClick={() => setSearchOpen(true)} size="small" sx={{ display: { xs: 'inline-flex', shell: 'none' }, color: 'text.secondary' }}>
               <SearchIcon sx={{ fontSize: iconSize.header }} />
             </IconButton>
           </Tooltip>
+          {/* 이 화면에 메모 붙이기 — 게시판 폼을 거치지 않는 개선요청 입력 창구(쓰기 권한자만 렌더) */}
+          <MemoComposeButton />
+          {/* 알림 센터 — 로그인 사용자만(읽음 상태가 계정에 저장되므로 게스트에겐 제 역할을 못 한다) */}
+          {loggedIn && <NotificationBell />}
           <Tooltip title={mode === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}>
             <ThemeSwitch
               checked={mode === 'dark'}

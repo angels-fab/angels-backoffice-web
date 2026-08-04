@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { isWorkNew, isImproveNew } from '@/utils/newPost'
 import { putSetting } from '@/store/slices/userSettingsSlice'
+import { fmtDate } from '@/utils/date'
+import { taskTitle } from '@/pages/Work/workMeta'
 
 /**
  * 네비게이션 배지 = "내가 안 본 새 글" 수 (사이드바·하단 탭바 공용, 개인화 Stage 2).
@@ -40,6 +42,56 @@ export function useNavBadges() {
     work: unseenCount(workNums, settings[seenKey('work')]),
     improve: unseenCount(improveNums, settings[seenKey('improve')]),
   }
+}
+
+/** 알림 목록 한 줄 — 배지 숫자를 '무엇이 새로 왔는지'로 펼친 것 */
+export interface UnseenItem {
+  menu: SeenMenu
+  num: string
+  title: string
+  /** YYYY-MM-DD */
+  date: string
+  /** 클릭 시 이동할 경로(통합검색과 같은 딥링크 규칙) */
+  to: string
+}
+
+const MENU_LABEL: Record<SeenMenu, string> = { notice: '공지', work: '업무', improve: '개선요청' }
+export { MENU_LABEL }
+
+/**
+ * 알림 센터용 — 배지와 **같은 모집단**('안 본 새 글')을 숫자가 아니라 항목으로 돌려준다.
+ * 새 개념·새 테이블 없음: 여기서 세던 것을 그대로 펼치는 것뿐이라 배지 수와 항상 일치한다.
+ * 정렬은 날짜 내림차순(최신 먼저).
+ */
+export function useUnseenItems(): UnseenItem[] {
+  const workReady = useAppSelector(s => s.work.ready)
+  const workItems = useAppSelector(s => s.work.items)
+  const noticeItems = useAppSelector(s => s.notice.items)
+  const improveItems = useAppSelector(s => s.improve.items)
+  const settings = useAppSelector(s => s.userSettings.settings)
+
+  const keep = (menu: SeenMenu, num: string) => {
+    const seen = settings[seenKey(menu)]
+    return !Array.isArray(seen) || !seen.map(String).includes(num)
+  }
+
+  const out: UnseenItem[] = []
+  for (const n of noticeItems) {
+    if (!n.isNew || !keep('notice', String(n.num))) continue
+    out.push({ menu: 'notice', num: String(n.num), title: n.title || '(제목 없음)', date: fmtDate(n.date), to: `/notice/${encodeURIComponent(n.num)}` })
+  }
+  if (workReady) {
+    for (const t of workItems) {
+      if (!isWorkNew(t) || !keep('work', String(t.num))) continue
+      out.push({ menu: 'work', num: String(t.num), title: taskTitle(t), date: fmtDate(t.start), to: `/work?focus=${t.id}` })
+    }
+  }
+  for (const i of improveItems) {
+    if (!isImproveNew(i) || !keep('improve', String(i.num))) continue
+    // 개선요청은 딥링크가 없어 목록으로 이동한다(통합검색도 동일)
+    out.push({ menu: 'improve', num: String(i.num), title: i.title || '(제목 없음)', date: fmtDate(i.date), to: '/improve' })
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date))
 }
 
 /**
