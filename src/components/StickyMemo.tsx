@@ -66,7 +66,10 @@ const ANCHOR_GAP = 8
  * 저장된 좌표가 없을 때의 기본 자리 = **상단바 메모 버튼 바로 아래**.
  * 화면 한가운데에 뜨면 보던 내용을 가려서 방해가 된다(사용자 피드백 2026-08-05).
  * 버튼을 못 찾으면(레이어가 아직 안 붙었거나 게시판 핀으로 켠 메모) 우상단으로 폴백한다.
- * 여러 장이면 조금씩 어긋나게 겹쳐 쌓는다 — 완전히 겹치면 뒤엣것을 집을 수 없다.
+ *
+ * 여러 장은 **버튼 아래로 곧게 한 줄**로 쌓는다. 대각선으로 흘리면 뒤로 갈수록 버튼에서
+ * 멀어져 '버튼 아래'가 아니게 되고 오른쪽 화면 끝으로 밀린다(2026-08-05 사용자 신고).
+ * 간격은 핀 한 변 + 6이라 겹치지 않는다.
  */
 function defaultPos(layer: HTMLElement | null, index: number): Pos {
   const fallback = { x: 88, y: 3 }
@@ -78,8 +81,8 @@ function defaultPos(layer: HTMLElement | null, index: number): Pos {
   const px = anchor
     ? anchor.getBoundingClientRect().left + anchor.getBoundingClientRect().width / 2 - l.left - PIN / 2
     : W - PIN - 16
-  const x = Math.min(Math.max(px + index * (PIN + 6), 0), Math.max(W - PIN, 0))
-  const y = Math.min(ANCHOR_GAP + index * 6, Math.max(H - PIN, 0))
+  const x = Math.min(Math.max(px, 0), Math.max(W - PIN, 0))
+  const y = Math.min(ANCHOR_GAP + index * (PIN + 6), Math.max(H - PIN, 0))
   return { x: +(x / W * 100).toFixed(2), y: +(y / H * 100).toFixed(2) }
 }
 
