@@ -30,7 +30,8 @@ export interface PageHeaderProps {
  *   actions={<Button variant="contained">추가</Button>} />
  */
 export default function PageHeader({ title, icon, subtitle, updatedAt, actions }: PageHeaderProps) {
-  // 현재 경로에 활성 개선 메모가 있으면 제목 옆 칩 + 아래 패널을 렌더(없으면 모두 null → 변화 없음)
+  // 현재 경로에 활성 개선 메모가 있으면 제목 옆 칩 + 아래 패널을 렌더(없으면 모두 null → 변화 없음).
+  // PC에서는 화면 붙임쪽지(StickyMemo)가 같은 메모를 띄우므로 칩·패널은 모바일에서만 — 중복 표시 방지.
   const { chip, panel, snackbar } = usePageImprovementMemo()
   return (
     <Box sx={{ mb: `${layout.pageHeaderGap}px` }}>
@@ -74,7 +75,7 @@ export default function PageHeader({ title, icon, subtitle, updatedAt, actions }
               <Typography variant="h2" component="h1">
                 {title}
               </Typography>
-              {chip}
+              {chip && <Box sx={{ display: { xs: 'contents', shell: 'none' } }}>{chip}</Box>}
             </Box>
             {subtitle && (
               <Typography variant="body2" sx={{ mt: 0.5 }}>
@@ -93,8 +94,8 @@ export default function PageHeader({ title, icon, subtitle, updatedAt, actions }
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexShrink: 0, minHeight: layout.headerRowHeight }}>{actions}</Box>
         )}
       </Box>
-      {/* 칩 클릭 시 제목 아래 메모 패널 */}
-      {panel}
+      {/* 칩 클릭 시 제목 아래 메모 패널 — PC는 붙임쪽지가 대신하므로 모바일에서만 */}
+      {panel && <Box sx={{ display: { xs: 'block', shell: 'none' } }}>{panel}</Box>}
       {snackbar}
     </Box>
   )

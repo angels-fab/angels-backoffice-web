@@ -1,0 +1,162 @@
+import { useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import ButtonBase from '@mui/material/ButtonBase'
+import Popover from '@mui/material/Popover'
+import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
+import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined'
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
+import { alpha } from '@mui/material/styles'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { loadImproveData } from '@/store/slices/improveSlice'
+import { createImprovement, updateImprovement } from '@/api/improve'
+import { useRole } from '@/auth/role'
+import { memoCountByPath, pathToLocation, memosForPath } from '@/utils/improveMemo'
+import { useSnack, focusRingSx } from '@/components/ds'
+import { control, iconSize, radius, typescale, weight } from '@/theme/tokens'
+
+/**
+ * 상단바 '메모' 버튼 — 붙임쪽지의 입력 창구.
+ *
+ * 게시판의 새 요청 폼(유형·긴급·담당자·링크…)이 번거로워 요청이 안 올라오던 문제를 입력 쪽에서 푼 것.
+ * 여기서는 제목·내용만 받고, **보고 있던 화면이 곧 개선위치**가 된다(상태는 '접수').
+ * 저장되는 곳은 기존 improvements 그대로라 게시판 목록·상태·통계는 하나도 바뀌지 않는다.
+ *
+ * 등록 직후 memo=true 로 올려 그 화면에 쪽지로 뜨게 한다(StickyMemo). 매핑되는 위치가 없는
+ * 경로(기타)면 쪽지 없이 게시판 접수만 되고, 그 사실을 폼에서 미리 알린다.
+ */
+export default function MemoComposeButton() {
+  const { pathname } = useLocation()
+  const { isAdmin, user, authKey } = useRole()
+  const dispatch = useAppDispatch()
+  const snack = useSnack()
+  const anchorRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  const items = useAppSelector((s) => s.improve.items)
+  // 버튼 옆 건수 = 지금 이 화면에 떠 있는 쪽지 수(사이드바 배지와 같은 기준)
+  const here = memosForPath(items, pathname).length
+  const total = Object.values(memoCountByPath(items)).reduce((a, b) => a + b, 0)
+  const loc = pathToLocation(pathname)
+
+  // 쓰기 권한은 게시판(canEdit)과 동일 — 게스트·유관자에게는 버튼 자체를 노출하지 않는다
+  if (!isAdmin || !user || !authKey) return null
+
+  const close = () => { if (!busy) setOpen(false) }
+
+  const save = async () => {
+    const t = title.trim()
+    if (!t) return snack('한 줄 요약을 입력해주세요.', 'error')
+    setBusy(true)
+    try {
+      const num = await createImprovement({
+        author: user, key: authKey, loc: loc || '기타',
+        title: t, content: content.trim(), mgr: '',
+      })
+      // 연결되는 화면이 있을 때만 쪽지로 띄운다('기타'는 띄울 화면이 없다)
+      if (loc) await updateImprovement({ author: user, key: authKey, num, memo: true })
+      setTitle('')
+      setContent('')
+      setOpen(false)
+      snack(loc ? `이 화면에 메모를 붙였습니다. (요청 #${num})` : `게시판에 접수했습니다. (요청 #${num})`, 'success')
+      dispatch(loadImproveData())
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '메모 등록에 실패했습니다', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <>
+      <Tooltip title={total > 0 ? `화면 메모 — 이 화면 ${here}건 / 전체 ${total}건` : '이 화면에 메모 붙이기'}>
+        <ButtonBase
+          ref={anchorRef}
+          onClick={() => setOpen((o) => !o)}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-label="이 화면에 메모 붙이기"
+          sx={(th) => ({
+            display: 'inline-flex', alignItems: 'center', gap: 0.75,
+            height: control.height, px: 1.25, flexShrink: 0,
+            border: '1px solid', borderColor: alpha(th.palette.accent.amber, 0.5),
+            borderRadius: `${radius.input}px`,
+            bgcolor: alpha(th.palette.accent.amber, 0.14),
+            color: th.palette.accentText.amber,
+            fontSize: typescale.body.size, fontWeight: weight.heavy,
+            transition: 'background-color .14s, border-color .14s',
+            '&:hover': { bgcolor: alpha(th.palette.accent.amber, 0.24), borderColor: alpha(th.palette.accent.amber, 0.72) },
+            ...(focusRingSx as object),
+          })}
+        >
+          <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.header }} />
+          <Box component="span" sx={{ display: { xs: 'none', shell: 'inline' } }}>메모</Box>
+          {here > 0 && (
+            <Box
+              component="span"
+              sx={(th) => ({
+                display: 'inline-grid', placeItems: 'center', minWidth: 17, height: 17, px: '4px',
+                borderRadius: `${radius.pill}px`, bgcolor: th.palette.accent.amber,
+                color: th.palette.getContrastText(th.palette.accent.amber),
+                fontSize: typescale.caption.size, fontWeight: weight.heavy, lineHeight: 1,
+              })}
+            >
+              {here}
+            </Box>
+          )}
+        </ButtonBase>
+      </Tooltip>
+
+      <Popover
+        open={open}
+        anchorEl={anchorRef.current}
+        onClose={close}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        slotProps={{ paper: { sx: { mt: 1, width: 340, p: 2, bgcolor: 'background.paper', borderRadius: `${radius.modal}px` } } }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: typescale.cardTitle.size, fontWeight: weight.heavy, mb: 0.5 }}>
+          <StickyNote2OutlinedIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
+          메모 남기기
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontSize: typescale.caption.size, color: 'text.secondary', mb: 1.5 }}>
+          <PlaceOutlinedIcon sx={{ fontSize: iconSize.caption }} />
+          {loc ? (
+            <>개선위치 <b style={{ color: 'inherit' }}>{loc}</b> · 상태 <b>접수</b> — 자동</>
+          ) : (
+            <>이 화면은 연결된 개선위치가 없어 <b>게시판 접수만</b> 됩니다</>
+          )}
+        </Box>
+        <TextField
+          autoFocus fullWidth size="small"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void save() } }}
+          placeholder="한 줄 요약 (예: 담당 필터가 초기화됨)"
+          slotProps={{ htmlInput: { maxLength: 60, 'aria-label': '한 줄 요약' } }}
+          disabled={busy}
+        />
+        <TextField
+          fullWidth size="small" multiline minRows={3}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="무엇이 어떻게 불편한지 (선택)"
+          slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
+          disabled={busy}
+          sx={{ mt: 1 }}
+        />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.5 }}>
+          <Button size="small" onClick={close} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
+          <Button size="small" variant="contained" onClick={save} disabled={busy || !title.trim()}>
+            {busy ? '붙이는 중…' : '붙이기'}
+          </Button>
+        </Box>
+      </Popover>
+    </>
+  )
+}

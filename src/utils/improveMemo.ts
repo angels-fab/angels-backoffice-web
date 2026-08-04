@@ -54,6 +54,30 @@ export function memosForPath(items: ImprovementItem[], pathname: string): Improv
   })
 }
 
+/**
+ * 현재 경로 → 개선위치 (상단바 메모 버튼이 자동 지정할 값).
+ * 위 MEMO_LOCATION_PATH의 역방향인데, 여러 위치가 한 경로를 공유하므로(장비도입/운영/관리 → /equipment)
+ * 경로당 대표값 하나를 여기서 명시한다. 하위 경로가 먼저 걸리도록 '/'는 맨 뒤에 둔다.
+ */
+const PATH_LOCATION: { path: string; loc: string }[] = [
+  { path: '/notice', loc: '공지사항' },
+  { path: '/calendar', loc: '업무일정' },
+  { path: '/work', loc: '업무현황' },
+  { path: '/equipment', loc: '장비운영관리' },
+  { path: '/milestone', loc: '마일스톤' },
+  { path: '/events', loc: '학술·교육·전시' },
+  { path: '/improve', loc: '포털개선요청' },
+  { path: '/links', loc: '바로가기' },
+  { path: '/settings', loc: '설정' },
+  { path: '/', loc: '홈' },
+]
+
+/** 현재 경로의 개선위치(없으면 null = 연결할 위치 없음 → '기타'로 접수, 쪽지는 안 뜸) */
+export function pathToLocation(pathname: string): string | null {
+  for (const e of PATH_LOCATION) if (matchesPath(pathname, e.path)) return e.loc
+  return null
+}
+
 /** 경로별 활성 메모 건수 — 장비도입/장비운영은 /equipment로 합산 (SideNav 배지용) */
 export function memoCountByPath(items: ImprovementItem[]): Record<string, number> {
   const m: Record<string, number> = {}

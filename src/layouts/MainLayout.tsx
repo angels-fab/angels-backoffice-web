@@ -5,6 +5,7 @@ import TopBar from './TopBar'
 import SideNav from './SideNav'
 import BottomNav from './BottomNav'
 import WhatsNewDialog from '@/components/WhatsNewDialog'
+import StickyMemoLayer from '@/components/StickyMemo'
 import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadEqData } from '@/store/slices/eqSlice'
@@ -67,6 +68,8 @@ export default function MainLayout() {
         </Box>
       </Box>
       <BottomNav />
+      {/* 이 화면에 붙은 개선요청 쪽지(PC 전용) — 콘텐츠 위에 고정으로 뜬다 */}
+      <StickyMemoLayer />
       {/* 새 기능 안내(개인화) — 팀원+ 로그인 후 계정당 1회(whatsnew.seen 버전 저장) */}
       <WhatsNewDialog />
     </>

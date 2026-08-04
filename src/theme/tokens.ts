@@ -266,6 +266,8 @@ export const z = {
   bottomNav: 55,
   /** 화면 하단 고정 바(업무 선택 액션) */
   bottomBar: 60,
+  /** 화면 붙임쪽지(StickyMemo) — 페이지 콘텐츠 위, 사이드바 호버 패널 아래 */
+  stickyMemo: 90,
   /** PC 사이드바 — 페이지 콘텐츠(최대 sticky 30) 위, MUI 모달 아래 */
   sidenav: 100,
   /** 우측 상세 패널(행사 종료 상세) — MUI drawer 와 같은 층 */
