@@ -326,13 +326,15 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
    그래서 브라우저 마커를 끄고 ::before 로 같은 글자를 같은 간격에 찍는다. */
 .wc-editor ul,.wc-editor ol{margin:0;padding-left:0;list-style:none}
 .wc-editor li ul,.wc-editor li ol{padding-left:18px}
-.wc-editor li{margin:1px 0;display:flex;align-items:flex-start;gap:6px}
+.wc-editor li{margin:1px 0;display:flex;flex-wrap:wrap;align-items:flex-start;gap:0 6px}
 .wc-editor li::before{flex:none}
 .wc-editor ul>li::before{content:'•'}
 .wc-editor ol{counter-reset:wc-ol}
 .wc-editor ol>li{counter-increment:wc-ol}
 .wc-editor ol>li::before{content:counter(wc-ol) '.'}
 .wc-editor li>p{margin:0;flex:1;min-width:0}
+/* 같은 항목의 후속 줄(Shift+Enter) — flex 한 줄에 나란히 붙지 않게 줄바꿈시키고, 보기 모드처럼 한 단계 들여쓴다 */
+.wc-editor li>p~p{flex-basis:100%;margin-left:18px}
 /* li 안의 중첩 목록은 flex 자식이라 폭을 스스로 못 잡는다 → 줄바꿈시켜 전체 폭 사용 */
 .wc-editor li>ul,.wc-editor li>ol{flex-basis:100%}
 .wc-editor p.is-editor-empty:first-child::before{content:attr(data-placeholder);color:var(--text3,#7d8590);float:left;height:0;pointer-events:none}

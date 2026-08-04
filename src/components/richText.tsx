@@ -91,8 +91,9 @@ export const HighlightTokenMark = Mark.create({
  * - **줄 맨 앞 Backspace** = 글머리만 없애고 한 단계 내어쓰기(1단계면 목록 해제). 기본 동작은 그 줄을
  *   윗줄에 합쳐 버려서, 새 글머리를 지우려다 줄이 통째로 위로 올라가 버렸다.
  *   항목 안 후속 줄에서는 규칙을 적용하지 않는다 — 거기선 윗줄과 합치는 게 맞다.
- * - **Shift+Enter** = 같은 항목 안에서 줄바꿈. 글머리를 새로 만들지 않고 항목에 딸린 줄(①② 등)을 잇는다.
- *   (표시는 SubLine이 한 단계 들여쓴다 — richContent.tsx flattenBlocks)
+ * - **Shift+Enter** = 줄바꿈. 목록 항목 안이면 글머리를 새로 만들지 않고 항목에 딸린 줄(①② 등)을 잇고,
+ *   목록 밖이면 그냥 다음 줄로 넘어간다(문단 분리 = 화면상 새 줄).
+ *   (표시는 SubLine이 항목 안 후속 줄을 한 단계 들여쓴다 — richContent.tsx flattenBlocks)
  *
  * 공식 확장(@tiptap/extension-list-keymap)은 Backspace에서 윗줄과 **글자를 합쳐** 표준과 달라 쓰지 않는다.
  */
@@ -103,12 +104,20 @@ const ListStandardKeys = Extension.create({
       Backspace: ({ editor }) => {
         const { empty, $from } = editor.state.selection
         if (!empty || $from.parentOffset > 0) return false // 줄 맨 앞에서 커서만 있을 때
-        const item = $from.node(-1)
-        if (!item || item.type.name !== 'listItem') return false
-        if ($from.index(-1) !== 0) return false // 항목의 첫 문단일 때만(후속 줄은 기본 동작)
-        return editor.commands.liftListItem('listItem')
+        const parent = $from.node(-1)
+        if (!parent) return false
+        if (parent.type.name === 'listItem') {
+          // 항목의 첫 문단이면 한 단계 내어쓰기, 후속 줄이면 기본 동작(윗줄과 합치기)
+          return $from.index(-1) === 0 ? editor.commands.liftListItem('listItem') : false
+        }
+        // 목록 바로 뒤 문단 — 기본 동작이 이 줄을 다시 목록 항목으로 만들어(글머리 되살아남) 지웠다 생겼다 반복했다.
+        // 글자만 윗줄에 합친다.
+        const idx = $from.index(-1)
+        const prev = idx > 0 ? parent.child(idx - 1) : null
+        if (!prev || (prev.type.name !== 'bulletList' && prev.type.name !== 'orderedList')) return false
+        return editor.commands.joinTextblockBackward()
       },
-      'Shift-Enter': ({ editor }) => (editor.isActive('listItem') ? editor.commands.splitBlock() : false),
+      'Shift-Enter': ({ editor }) => editor.commands.splitBlock(),
     }
   },
 })
