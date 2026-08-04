@@ -13,6 +13,7 @@ import History from '@tiptap/extension-history'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Extension, InputRule } from '@tiptap/core'
 import { canJoin } from '@tiptap/pm/transform'
+import { TextSelection } from '@tiptap/pm/state'
 import { circledNumber } from './workMeta'
 import { serializeContentFmt, parseContentFmt, plainToDoc } from './richContent'
 import { ColorTokenMark, HighlightTokenMark, listExtensions, RichToolbar } from '@/components/richText'
@@ -47,7 +48,20 @@ const CircledNumRule = Extension.create({
             }
             return
           }
-          // 항목에 딸린 줄은 목록 구조가 이미 들여쓰므로 공백 없이, 목록 밖에서는 관례대로 2칸
+          const parent = $from.node(-1)
+          const prev = !inItem && $from.index(-1) > 0 ? parent.child($from.index(-1) - 1) : null
+          const onlyTyped = $from.parent.textContent.length === range.to - range.from // 줄에 다른 글자가 없을 때만
+          if (prev && onlyTyped && (prev.type.name === 'bulletList' || prev.type.name === 'orderedList')) {
+            // 글머리를 지운 줄(= 목록 바로 뒤 문단)에서 동그라미 숫자 → 그 목록의 마지막 항목에 딸린 줄로 옮긴다.
+            // 들여쓰기가 글머리 줄에서 쓴 경우와 같아진다(공백 2칸짜리 얕은 들여쓰기 방지)
+            const tr = state.tr
+            const pStart = $from.before()
+            tr.delete(pStart, $from.after())
+            tr.insert(pStart - 2, state.schema.nodes.paragraph.create(null, state.schema.text(ch + ' '))) // -2 = 앞 목록 마지막 항목 안
+            tr.setSelection(TextSelection.create(tr.doc, pStart + 1))
+            return
+          }
+          // 항목에 딸린 줄은 목록 구조가 이미 들여쓰므로 공백 없이, 그 외에는 관례대로 2칸
           const indent = inItem ? '' : (match[1] || '').length >= 2 ? match[1] : '  '
           state.tr.insertText(indent + ch + ' ', range.from, range.to)
         },
