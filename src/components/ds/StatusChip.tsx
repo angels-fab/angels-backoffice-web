@@ -10,8 +10,8 @@ export type StatusKind = 'success' | 'info' | 'warning' | 'error' | 'neutral' | 
 export interface StatusChipProps {
   /** 상태 종류. 색을 결정한다. */
   status: StatusKind
-  /** 표시 텍스트 */
-  label: string
+  /** 표시 내용 — 문자열이 기본. 필터 칩의 '라벨 + 흐린 건수'처럼 조각을 나눠 꾸밀 땐 ReactNode(MUI Chip label 에 그대로 전달) */
+  label: ReactNode
   /** 선택형(클릭 토글) 칩일 때 선택 여부 — 채워진 스타일 */
   selected?: boolean
   icon?: ReactNode

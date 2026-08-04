@@ -124,6 +124,24 @@ export default function Milestone() {
 
   const filterActive = statusFilter !== '전체' || !!catFilter || !!qFilter || !!search.trim()
 
+  // 상태 칩 건수 — 자기 축(상태)만 빼고 나머지 필터(분야·마감분기·검색)를 적용한 교차집계.
+  // 즉 "지금 상태에서 이 칩을 고르면 목록에 남을 건수"를 고르기 전에 보여준다.
+  // '전체'는 나머지 필터·검색만 적용한 총계.
+  const statusCounts = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    const base = items.filter((r) => {
+      if (catFilter && r.category !== catFilter) return false
+      if (qFilter && r.endQ !== qFilter) return false
+      if (q && !`${r.title} ${r.content} ${r.deliverable} ${r.owner}`.toLowerCase().includes(q)) return false
+      return true
+    })
+    const m: Record<'전체' | DerivedStatus, number> = {
+      전체: base.length, 예정: 0, 진행중: 0, 완료: 0, 보류: 0, 지연: 0,
+    }
+    base.forEach((r) => { m[deriveStatus(r, curIdx)] += 1 })
+    return m
+  }, [items, catFilter, qFilter, search, curIdx])
+
   // 목록 표시 순서(분야 그룹 순) — [저장 후 다음]의 이동 순서이기도 함
   const orderedIds = useMemo(
     () => CATEGORIES.flatMap((cat) => filtered.filter((r) => r.category === cat.full)).map((r) => r.id),
@@ -555,15 +573,28 @@ export default function Milestone() {
                 ariaLabel="목록·간트 전환"
               />
             )}
-            {STATUS_FILTERS.map((s) => (
-              <StatusChip
-                key={s}
-                status={s === '전체' ? 'neutral' : STATUS_KIND[s]}
-                label={s}
-                selected={statusFilter === s}
-                onClick={() => setStatusFilter(s)}
-              />
-            ))}
+            {/* 상태 칩 — 라벨 뒤 숫자가 "이걸 고르면 남을 건수"(자기 축 제외 교차집계).
+                건수는 개선요청·업무현황 칩과 같은 흐린 표기. 선택 시엔 칩이 솔리드로 채워지므로
+                그때만 글자색을 상속받아(inherit) 대비를 잃지 않게 한다. */}
+            {STATUS_FILTERS.map((s) => {
+              const on = statusFilter === s
+              return (
+                <StatusChip
+                  key={s}
+                  status={s === '전체' ? 'neutral' : STATUS_KIND[s]}
+                  label={
+                    <>
+                      {s}
+                      <Box component="span" sx={{ ml: 0.5, fontSize: typescale.caption.size, color: on ? 'inherit' : 'text.secondary' }}>
+                        {statusCounts[s]}
+                      </Box>
+                    </>
+                  }
+                  selected={on}
+                  onClick={() => setStatusFilter(s)}
+                />
+              )
+            })}
             <Select
               value={catFilter || '전체'}
               onChange={(v) => setCatFilter(v === '전체' ? null : v)}

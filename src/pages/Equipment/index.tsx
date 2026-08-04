@@ -239,6 +239,50 @@ export default function Equipment() {
     })
   }, [enriched, fltStage, fltMgr, fltType, query])
 
+  /**
+   * 필터 옵션별 건수 — 자기 축(그 필터 자신)은 빼고 나머지 필터 + 검색어를 적용한 결과의 건수.
+   * = "지금 상태에서 이 옵션으로 바꾸면 화면에 남을 건수". '전체'는 나머지 필터+검색만 적용한 총계.
+   * 술어는 filtered와 동일하게 유지할 것(한쪽만 바꾸면 표시 건수와 실제 결과가 어긋난다).
+   */
+  const optCounts = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const matchQuery = ({ g }: Batch) =>
+      !q || `${g.name} ${g.codes.join(' ')} ${g.mgr} ${g.maker} ${g.model} ${g.variantNames.join(' ')}`.toLowerCase().includes(q)
+    const matchStage = ({ info }: Batch) => fltStage === '전체' || phaseChip(info).label === fltStage
+    const matchMgr = ({ g }: Batch) => fltMgr === '전체' || (g.mgr || '') === fltMgr
+    const matchType = ({ g }: Batch) => fltType === '전체' || (g.type || '') === fltType
+
+    const stage: Record<string, number> = {}, mgr: Record<string, number> = {}, type: Record<string, number> = {}
+    let stageAll = 0, mgrAll = 0, typeAll = 0
+    for (const b of enriched) {
+      if (!matchQuery(b)) continue
+      if (matchMgr(b) && matchType(b)) {
+        stageAll++
+        const key = phaseChip(b.info).label
+        stage[key] = (stage[key] || 0) + 1
+      }
+      if (matchStage(b) && matchType(b)) {
+        mgrAll++
+        const key = b.g.mgr || ''
+        if (key) mgr[key] = (mgr[key] || 0) + 1
+      }
+      if (matchStage(b) && matchMgr(b)) {
+        typeAll++
+        const key = b.g.type || ''
+        if (key) type[key] = (type[key] || 0) + 1
+      }
+    }
+    return { stage, mgr, type, stageAll, mgrAll, typeAll }
+  }, [enriched, fltStage, fltMgr, fltType, query])
+
+  // 필터 옵션 라벨 + 건수(본문보다 작고 흐리게, '건' 없이 숫자만)
+  const optLabel = (text: string, n: number) => (
+    <>
+      {text}
+      <Box component="span" sx={{ ml: 0.5, fontSize: typescale.caption.size, color: 'text.secondary' }}>{n}</Box>
+    </>
+  )
+
   // 목록형 헤더 정렬(검색·필터 적용된 filtered 위에서 수행)
   const listSort = useTableSort<ProjCol>()
   const sortedList = useMemo(() => sortRows(filtered, listSort.col, listSort.dir, projAccessor), [filtered, listSort.col, listSort.dir])
@@ -793,11 +837,11 @@ export default function Equipment() {
           {view !== 'demo' && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end', ...eqFiltersMobileSx }}>
             <Select value={fltStage} onChange={setFltStage} ariaLabel="단계"
-              options={stageOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 단계' : o }))} />
+              options={stageOpts.map((o) => ({ value: o, label: o === '전체' ? optLabel('전체 단계', optCounts.stageAll) : optLabel(o, optCounts.stage[o] || 0) }))} />
             <Select value={fltMgr} onChange={setFltMgr} ariaLabel="담당자"
-              options={mgrOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 담당자' : o }))} />
+              options={mgrOpts.map((o) => ({ value: o, label: o === '전체' ? optLabel('전체 담당자', optCounts.mgrAll) : optLabel(o, optCounts.mgr[o] || 0) }))} />
             <Select value={fltType} onChange={setFltType} ariaLabel="내자/외자"
-              options={typeOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 구분' : o }))} />
+              options={typeOpts.map((o) => ({ value: o, label: o === '전체' ? optLabel('전체 구분', optCounts.typeAll) : optLabel(o, optCounts.type[o] || 0) }))} />
             <SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호 검색" width={200} />
             {isAdmin && (
               <Button

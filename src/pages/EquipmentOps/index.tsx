@@ -64,6 +64,9 @@ const lgChipSx = {
 } as const
 /** 구 `.lg-miss`(index.css) — 누락정보 칩 묶음 */
 const lgMissSx = { display: 'inline-flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' } as const
+/** 필터 옵션 라벨 뒤 건수 — 라벨보다 작고 흐리게(읽는 순서: 라벨 먼저, 건수는 보조) */
+// 필터 옵션의 건수 — 개선요청·업무현황 칩과 같은 표기(본문보다 작고 한 톤 흐리게)
+const filterCountSx = { fontSize: typescale.caption.size, color: 'text.secondary', ml: 0.5 } as const
 /** 구 `.eq-strip` @media(max-width:768px) — 요약 카드를 가로 스와이프로(스크롤바 숨김). 값 그대로 이관 */
 const eqStripMobileSx = {
   [`@media ${shellMq}`]: {
@@ -172,6 +175,35 @@ export default function EquipmentOps() {
     })
   }, [groups, stateF, catF, mgrF, missingOnly, query])
 
+  /**
+   * 필터 옵션 옆 건수 — 자기 축(그 필터 자신)만 빼고 나머지 필터 + 누락정보만 + 검색을 적용한 교차 집계.
+   * "이 옵션으로 바꾸면 화면에 남을 건수"를 뜻한다(업무현황 catCounts·mgrCounts와 같은 방식).
+   * '전체' 건수는 나머지 필터+검색만 적용한 총계라, 분류·담당자가 비어 있는 그룹도 포함된다
+   * → Record 키 합계로는 구할 수 없어 별도 카운터(*All)로 센다.
+   * 술어는 위 listed 와 동일해야 한다(한쪽만 바꾸면 건수와 실제 목록이 어긋난다).
+   */
+  const optCounts = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const okState = (g: EqGroup) => stateF === '전체' || eqStateKey(g.state) === stateF
+    const okCat = (g: EqGroup) => catF === '전체' || g.cat === catF
+    const okMgr = (g: EqGroup) => mgrF === '전체' || (g.mgr || '') === mgrF
+    const okRest = (g: EqGroup) =>
+      (!missingOnly || missingLabels(g).length > 0) &&
+      (!q || `${g.name} ${g.codes.join(' ')} ${g.mgr} ${g.maker} ${g.model} ${g.variantNames.join(' ')}`.toLowerCase().includes(q))
+
+    const state: Record<string, number> = {}
+    const cat: Record<string, number> = {}
+    const mgr: Record<string, number> = {}
+    let stateAll = 0, catAll = 0, mgrAll = 0
+    for (const g of groups) {
+      if (!okRest(g)) continue
+      if (okCat(g) && okMgr(g)) { stateAll++; const k = eqStateKey(g.state); state[k] = (state[k] || 0) + 1 }
+      if (okState(g) && okMgr(g)) { catAll++; if (g.cat) cat[g.cat] = (cat[g.cat] || 0) + 1 }
+      if (okState(g) && okCat(g)) { mgrAll++; if (g.mgr) mgr[g.mgr] = (mgr[g.mgr] || 0) + 1 }
+    }
+    return { state, cat, mgr, stateAll, catAll, mgrAll }
+  }, [groups, stateF, catF, mgrF, missingOnly, query])
+
   // 헤더 정렬(검색·필터 적용된 결과 위에서 수행)
   const sort = useTableSort<OpsCol>()
   const sorted = useMemo(() => sortRows(listed, sort.col, sort.dir, opsAccessor), [listed, sort.col, sort.dir])
@@ -245,12 +277,37 @@ export default function EquipmentOps() {
         <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
           <Typography sx={{ fontSize: typescale.body.size, fontWeight: weight.bold }}>장비대장 <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontWeight: weight.medium }}>전체 {c.types}종 · {c.total}대</Box></Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', justifyContent: 'flex-end', ...eqFiltersMobileSx }}>
+            {/* 라벨 뒤 건수 = '이걸 고르면 화면에 남을 건수'(optCounts) — 고르기 전에 미리 보이게 */}
             <Select value={stateF} onChange={setStateF} ariaLabel="운영상태"
-              options={stateOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 상태' : (EQ_STATE[o as EqStateKey]?.label || o) }))} />
+              options={stateOpts.map((o) => ({
+                value: o,
+                label: (
+                  <>
+                    {o === '전체' ? '전체 상태' : (EQ_STATE[o as EqStateKey]?.label || o)}
+                    <Box component="span" sx={filterCountSx}>{o === '전체' ? optCounts.stateAll : (optCounts.state[o] || 0)}</Box>
+                  </>
+                ),
+              }))} />
             <Select value={catF} onChange={setCatF} ariaLabel="분류"
-              options={catOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 분류' : o }))} />
+              options={catOpts.map((o) => ({
+                value: o,
+                label: (
+                  <>
+                    {o === '전체' ? '전체 분류' : o}
+                    <Box component="span" sx={filterCountSx}>{o === '전체' ? optCounts.catAll : (optCounts.cat[o] || 0)}</Box>
+                  </>
+                ),
+              }))} />
             <Select value={mgrF} onChange={setMgrF} ariaLabel="담당자"
-              options={mgrOpts.map((o) => ({ value: o, label: o === '전체' ? '전체 담당자' : o }))} />
+              options={mgrOpts.map((o) => ({
+                value: o,
+                label: (
+                  <>
+                    {o === '전체' ? '전체 담당자' : o}
+                    <Box component="span" sx={filterCountSx}>{o === '전체' ? optCounts.mgrAll : (optCounts.mgr[o] || 0)}</Box>
+                  </>
+                ),
+              }))} />
             <SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호·제조사 검색" width={220} />
             <Button size="small" variant={missingOnly ? 'contained' : 'outlined'} onClick={() => setMissingOnly((m) => !m)} sx={{ flexShrink: 0, py: 0.4, fontSize: typescale.body.size, minHeight: control.height, color: missingOnly ? undefined : 'text.secondary', borderColor: 'divider' }}>
               누락정보만

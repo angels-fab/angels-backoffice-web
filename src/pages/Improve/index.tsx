@@ -622,7 +622,15 @@ export default function Improve() {
         />
       )}
 
-      <ContentSection title="개선요청 목록" count={`${listed.length}건`} last>
+      {/* 헤더 건수 — 상태 칩이나 검색어가 걸려 있으면 '전체 N건 중 M건'으로 걸러진 상태임을 드러낸다.
+          필터가 없으면(빈 선택 = 전체 + 검색어 없음) 기존처럼 'N건'. */}
+      <ContentSection
+        title="개선요청 목록"
+        count={selected.size > 0 || query.trim() !== ''
+          ? `전체 ${items.length}건 중 ${listed.length}건`
+          : `${listed.length}건`}
+        last
+      >
         {/* 상태 필터 — 공용 FilterToolbar(공지와 동일 박스+검색+새글). 0건 상태 숨김·재클릭=전체·Shift=중복. */}
         <FilterToolbar
           label="상태"
