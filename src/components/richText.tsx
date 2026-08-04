@@ -118,6 +118,18 @@ const ListStandardKeys = Extension.create({
         return editor.commands.joinTextblockBackward()
       },
       'Shift-Enter': ({ editor }) => editor.commands.splitBlock(),
+      // 목록 안에서는 Tab이 항상 들여쓰기 키다 — 더 들일 수 없어도(첫 항목 등) 키를 삼켜서
+      // 포커스가 옆 버튼으로 튀지 않게 한다. 목록 밖에서는 기존대로 폼 이동.
+      Tab: ({ editor }) => {
+        if (!editor.isActive('listItem')) return false
+        editor.commands.sinkListItem('listItem')
+        return true
+      },
+      'Shift-Tab': ({ editor }) => {
+        if (!editor.isActive('listItem')) return false
+        editor.commands.liftListItem('listItem')
+        return true
+      },
     }
   },
 })

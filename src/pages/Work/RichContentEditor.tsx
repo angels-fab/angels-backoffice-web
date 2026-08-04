@@ -12,6 +12,7 @@ import Strike from '@tiptap/extension-strike'
 import History from '@tiptap/extension-history'
 import Placeholder from '@tiptap/extension-placeholder'
 import { Extension, InputRule } from '@tiptap/core'
+import { canJoin } from '@tiptap/pm/transform'
 import { circledNumber } from './workMeta'
 import { serializeContentFmt, parseContentFmt, plainToDoc } from './richContent'
 import { ColorTokenMark, HighlightTokenMark, listExtensions, RichToolbar } from '@/components/richText'
@@ -25,13 +26,29 @@ const CircledNumRule = Extension.create({
     return [
       new InputRule({
         find: /^([ \t]*)[ㅇᄋ](\d{1,2})\s$/,
-        handler: ({ state, range, match }) => {
+        handler: ({ state, range, match, commands }) => {
           const ch = circledNumber(parseInt(match[2], 10))
           if (!ch) return
           const $from = state.doc.resolve(range.from)
-          let inList = false
-          for (let d = $from.depth; d > 0; d -= 1) if ($from.node(d).type.name === 'listItem') { inList = true; break }
-          const indent = inList ? '' : (match[1] || '').length >= 2 ? match[1] : '  '
+          const item = $from.node(-1)
+          const inItem = item?.type.name === 'listItem'
+          if (inItem && $from.index(-1) === 0) {
+            // 글머리 줄에서 동그라미 숫자 = 한 줄에 글머리 두 개. 글머리를 떼고, 앞 항목에 딸린 줄로 만든다
+            // (Shift+Enter로 만든 줄과 같은 자리 = 한 단계 들여쓰기)
+            const tr = state.tr
+            tr.delete(range.from, range.to)
+            const posBefore = $from.before(-1) // 이 항목이 시작하는 자리 = 앞 항목과의 경계
+            if (canJoin(tr.doc, posBefore)) {
+              tr.join(posBefore) // 앞 항목과 합쳐 그 항목에 딸린 줄로
+              tr.insertText(ch + ' ', tr.selection.from)
+            } else {
+              commands.liftListItem('listItem') // 앞 항목이 없으면(첫 항목) 목록 밖 줄로
+              commands.insertContent(ch + ' ')
+            }
+            return
+          }
+          // 항목에 딸린 줄은 목록 구조가 이미 들여쓰므로 공백 없이, 목록 밖에서는 관례대로 2칸
+          const indent = inItem ? '' : (match[1] || '').length >= 2 ? match[1] : '  '
           state.tr.insertText(indent + ch + ' ', range.from, range.to)
         },
       }),
