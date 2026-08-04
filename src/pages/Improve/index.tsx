@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
+import Checkbox from '@mui/material/Checkbox'
 import { TintChip } from '@/components/FilterChip'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -36,7 +37,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { typescale, iconSize, radius, control, table, weight } from '@/theme/tokens'
+import { typescale, iconSize, radius, control, table, weight, z } from '@/theme/tokens'
 import { nextFilterSelection } from '@/utils/filterSelect'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, statusTextColor, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableSx, useSnack, ConfirmDialog } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
@@ -243,6 +244,7 @@ export default function Improve() {
   }, [items, selected, query])
 
   // 개선위치 드롭다운 — 현재 내비게이션 메뉴(@/constants/nav)에서 파생 + '포털'(포털 전체) 항목.
+  // (선택 대상·전체선택 판정은 canDelete 정의 뒤에 있다 — 아래 pickable 참조)
   // 메뉴를 추가/삭제하면 이 목록에 즉시 반영된다(미리 정해둔 목록·시트 불필요).
   const locOptions = useMemo(() => ['포털', ...NAV_LABELS], [])
 
@@ -257,12 +259,36 @@ export default function Improve() {
     const mgr = (t.mgr || '').trim()
     return isAdmin && !!user && (mgr === '' || user === mgr)
   }
-  // 작업 메모·더보기 열은 로그인 관리자에게만 노출(게스트 미노출). 두 열 노출 조건이 같아 memoCol 하나로 판단한다.
-  // 열 개수 = 게스트 7(번호·개선위치·제목·작성자·제안일자·상태·비고) / 관리자 9(+작업 메모·더보기).
+  // 여러 건 선택(요청번호 집합) — 한 건씩 지우던 걸 모아서 지우기 위한 것.
+  // 이름이 picked 인 이유: 이 파일의 selected 는 상태 필터 선택이라 이미 쓰이고 있다.
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const togglePick = (num: string) => setPicked((prev) => {
+    const next = new Set(prev)
+    if (next.has(num)) next.delete(num); else next.add(num)
+    return next
+  })
+  // 선택 대상 = 지금 보이는 목록 중 지울 수 있는 것(담당자 본인 또는 담당자 미지정).
+  // 필터·검색으로 안 보이는 행까지 '전체 선택'에 끌려오면 모르는 걸 지우게 된다.
+  const pickable = listed.filter(canDelete)
+  const allPicked = pickable.length > 0 && pickable.every((t) => picked.has(t.num))
+  // 필터·검색을 바꿔 목록에서 사라진 행은 선택에서도 뺀다.
+  // 안 그러면 화면에 없는 요청이 선택된 채로 남아 '삭제'가 안 보이는 걸 지운다.
+  useEffect(() => {
+    setPicked((prev) => {
+      if (prev.size === 0) return prev
+      const visible = new Set(listed.map((t) => t.num))
+      const next = new Set([...prev].filter((n) => visible.has(n)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [listed])
+  // 선택·작업 메모·더보기 열은 로그인 관리자에게만 노출(게스트 미노출). 세 열 노출 조건이 같아 memoCol 하나로 판단한다.
+  // 열 개수 = 게스트 7(번호·개선위치·제목·작성자·제안일자·상태·비고) / 관리자 10(선택 + … + 작업 메모·더보기).
   const memoCol = canEdit
   // detailSpan = 펼침행에서 앞 빈 셀 1개를 뺀 나머지, fullSpan = 전체 열 수
-  const detailSpan = memoCol ? 8 : 6
-  const fullSpan = memoCol ? 9 : 7
+  const detailSpan = memoCol ? 9 : 6
+  const fullSpan = memoCol ? 10 : 7
 
   const saveStatus = async (row: ImprovementItem, status: string, reason: string) => {
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
@@ -441,6 +467,32 @@ export default function Improve() {
     }
   }
 
+  /**
+   * 선택한 요청 일괄 삭제 — 한 건씩 지우던 걸 모아서. 실패한 건은 남기고 결과를 알린다
+   * (중간에 멈추면 어디까지 지워졌는지 알 수 없어 전부 시도한다).
+   */
+  const handleBulkDelete = async () => {
+    if (!user || !authKey || picked.size === 0) return
+    setBulkBusy(true)
+    const nums = [...picked]
+    const failed: string[] = []
+    for (const num of nums) {
+      try {
+        await deleteImprovement({ author: user, key: authKey, num })
+      } catch {
+        failed.push(num)
+      }
+    }
+    setBulkBusy(false)
+    setBulkOpen(false)
+    setPicked(new Set())
+    const done = nums.length - failed.length
+    if (failed.length === 0) showSnack(`${done}건을 삭제했습니다.`, 'success')
+    else if (done === 0) showSnack(`삭제하지 못했습니다. (담당자만 지울 수 있습니다)`, 'error')
+    else showSnack(`${done}건 삭제 · ${failed.length}건 실패(#${failed.join(', #')})`, 'error')
+    dispatch(loadImproveData())
+  }
+
   const handleDelete = async () => {
     if (!deleteDlg) return
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
@@ -518,6 +570,8 @@ export default function Improve() {
     const kb = `compose-${c.key}`
     return [
       <TableRow key={`${kb}-1`} sx={{ '& td': { verticalAlign: 'middle', bgcolor: composeGreen, py: 1 } }}>
+        {/* 선택 열 자리(작성 중에는 비움) */}
+        {memoCol && <TableCell padding="checkbox" />}
         <TableCell sx={{ textAlign: 'center' }}><Box sx={{ display: 'flex', justifyContent: 'center' }}><UrgentBox on={c.urgent} onToggle={() => patchCard(c.key, { urgent: !c.urgent })} /></Box></TableCell>
         <TableCell><DropField value={c.loc} onChange={(v) => patchCard(c.key, { loc: v })} options={locOptions} placeholder="위치" /></TableCell>
         <TableCell sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
@@ -541,6 +595,7 @@ export default function Improve() {
         {memoCol && <TableCell />}
       </TableRow>,
       <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: composeGreen, py: 0.75, verticalAlign: 'middle' } }}>
+        {memoCol && <TableCell padding="checkbox" />}
         <TableCell />
         <TableCell />
         <TableCell colSpan={memoCol ? 6 : 4} sx={{ textAlign: 'left' }}>
@@ -571,6 +626,8 @@ export default function Improve() {
     const greenBg = (th: Theme) => alpha(th.palette.accent.green, 0.06)
     return [
       <TableRow key={`${kb}-1`} onClick={onCancel} sx={{ cursor: 'pointer', '& td': { verticalAlign: 'middle', bgcolor: greenBg, py: 1 } }}>
+        {/* 선택 열 자리(수정 중에는 비움) */}
+        {memoCol && <TableCell padding="checkbox" />}
         <TableCell onClick={stop} sx={{ textAlign: 'center' }}><Box sx={{ display: 'flex', justifyContent: 'center' }}><UrgentBox on={cUrgent} onToggle={() => setCUrgent((v) => !v)} /></Box></TableCell>
         <TableCell onClick={stop}><DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="위치" /></TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'left', whiteSpace: 'normal' }}>
@@ -592,6 +649,7 @@ export default function Improve() {
         {memoCol && <TableCell />}
       </TableRow>,
       <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, py: 0.75, verticalAlign: 'middle' } }}>
+        {memoCol && <TableCell padding="checkbox" />}
         <TableCell />
         <TableCell />
         <TableCell colSpan={memoCol ? 6 : 4} onClick={stop} sx={{ textAlign: 'left' }}>
@@ -705,6 +763,19 @@ export default function Improve() {
               {/* 정렬은 셀 align prop 으로만 — 구 dataTableHeadSx 의 '& th'(특이도 0-1-1)가
                   셀 sx(0-1-0)를 이겨서, 제목·비고는 !important 로 버텨야 했다. 이제 불필요. */}
               <TableRow>
+                {/* 선택 열 — 지울 수 있는 행만 대상. 머리 체크박스는 '보이는 목록 중 지울 수 있는 것' 전체 토글 */}
+                {memoCol && (
+                  <TableCell padding="checkbox" sx={{ width: '1%' }}>
+                    <Checkbox
+                      size="small"
+                      slotProps={{ input: { 'aria-label': '보이는 요청 전체 선택' } }}
+                      disabled={pickable.length === 0}
+                      checked={pickable.length > 0 && allPicked}
+                      indeterminate={picked.size > 0 && !allPicked}
+                      onChange={() => setPicked(allPicked ? new Set() : new Set(pickable.map((t) => t.num)))}
+                    />
+                  </TableCell>
+                )}
                 <TableCell align="center" sx={{ width: '1%' }}>번호</TableCell>
                 <TableCell align="center" sx={{ width: '1%' }}>개선위치</TableCell>
                 <TableCell align="left" sx={{ width: '100%' }}>제목</TableCell>
@@ -785,6 +856,22 @@ export default function Improve() {
                       },
                     })}
                   >
+                    {/* 선택 — 셀 onClick stop 으로 아코디언 토글 방지. 담당자가 아니면 비활성 + 이유 안내 */}
+                    {memoCol && (
+                      <TableCell padding="checkbox" onClick={stop}>
+                        <Tooltip title={removable ? '' : '담당자만 삭제할 수 있습니다'} disableHoverListener={removable}>
+                          <span>
+                            <Checkbox
+                              size="small"
+                              slotProps={{ input: { 'aria-label': `요청 ${t.num} 선택` } }}
+                              disabled={!removable}
+                              checked={picked.has(t.num)}
+                              onChange={() => togglePick(t.num)}
+                            />
+                          </span>
+                        </Tooltip>
+                      </TableCell>
+                    )}
                     <TableCell sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>{t.num}</TableCell>
                     {/* 개선위치 — 흰색 칩(번호와 제목 사이). 관리자는 셀에서 즉시 변경(드롭다운), 셀 onClick stop으로 아코디언 토글 방지 */}
                     <TableCell onClick={editable ? stop : undefined} sx={{ maxWidth: 140, ...(editable && { cursor: 'pointer' }) }}>
@@ -990,6 +1077,44 @@ export default function Improve() {
         busy={saving}
         onConfirm={handleDelete}
         onClose={() => setDeleteDlg(null)}
+      />
+
+      {/* 선택 액션 바 — 업무현황 하단 고정 바와 같은 형식(z.bottomBar). 고른 게 있을 때만 뜬다. */}
+      {memoCol && picked.size > 0 && (
+        <Box
+          sx={{
+            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: z.bottomBar,
+            bgcolor: 'primary.main', color: 'primary.contrastText',
+            px: 2, py: 1.25, display: 'flex', alignItems: 'center', gap: 1.5,
+            boxShadow: '0 -2px 12px rgba(0,0,0,.3)', /* design-lint-ok(shadow): 하단 고정 바가 위로 드리우는 역방향 그림자 — 토큰 3단은 전부 아래 방향 */
+            pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
+          <Box sx={{ flex: 1, fontSize: typescale.emphasis.size, fontWeight: weight.bold }}>
+            {picked.size}건 선택됨
+          </Box>
+          <Button size="small" onClick={() => setPicked(new Set())} sx={{ color: 'inherit' }}>선택 해제</Button>
+          <Button
+            size="small"
+            variant="contained"
+            startIcon={<DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />}
+            onClick={() => setBulkOpen(true)}
+            sx={{ bgcolor: 'common.white', color: 'error.main', '&:hover': { bgcolor: 'grey.100' } }}
+          >
+            삭제
+          </Button>
+        </Box>
+      )}
+
+      <ConfirmDialog
+        open={bulkOpen}
+        destructive
+        title={`선택한 요청 ${picked.size}건을 삭제할까요?`}
+        description="삭제 후 되돌릴 수 없습니다. 답글도 함께 사라집니다."
+        confirmLabel="삭제"
+        busy={bulkBusy}
+        onConfirm={handleBulkDelete}
+        onClose={() => !bulkBusy && setBulkOpen(false)}
       />
 
       {/* 답글 삭제 확인 (소프트 삭제 — 되돌릴 수 없다는 문구는 쓰지 않는다) */}
