@@ -13,6 +13,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import SendIcon from '@mui/icons-material/SendRounded'
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import EditIcon from '@mui/icons-material/Edit'
+import { RichBodyEditor } from '@/components/richText'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { addReply } from '@/store/slices/replySlice'
@@ -94,6 +96,12 @@ const toPx = (layer: HTMLElement, p: Pos) => ({
   x: p.x / 100 * layer.clientWidth,
   y: p.y / 100 * layer.clientHeight,
 })
+/**
+ * 끌기·접기 대상에서 빼야 하는 지점 — 버튼·입력칸, 그리고 리치 에디터(contenteditable).
+ * 에디터는 input/textarea 가 아니라서 빠뜨리면 글을 쓰려고 누르는 순간 쪽지가 접히거나 끌린다.
+ */
+const isInteractive = (el: HTMLElement) => !!el.closest('button, input, textarea, a, [contenteditable]')
+
 /** 이미 다른 쪽지가 차지한 자리인지(핀 한 변 안이면 겹친 것으로 본다) */
 const overlaps = (p: { x: number; y: number }, taken: { x: number; y: number }[]) =>
   taken.some((q) => Math.abs(q.x - p.x) < PIN && Math.abs(q.y - p.y) < PIN)
@@ -116,6 +124,10 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [reply, setReply] = useState('')
+  // 쪽지에서 바로 제목·내용 수정 — 게시판까지 가지 않아도 고칠 수 있게(수정 권한은 게시판과 동일)
+  const [editing, setEditing] = useState(false)
+  const [eTitle, setETitle] = useState('')
+  const [eContent, setEContent] = useState('')
   const [live, setLive] = useState<Pos>(pos)
   const drag = useRef({ on: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0 })
   // 놓는 순간 저장할 좌표는 ref로 따로 들고 간다 — state(live)는 마지막 move가 아직 반영 안 됐을 수 있다
@@ -148,7 +160,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
   }, [clamp, open, replies.length])
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button, input, textarea, a')) return
+    if (isInteractive(e.target as HTMLElement)) return
     const el = elRef.current
     if (!el) return
     drag.current = { on: true, moved: false, sx: e.clientX, sy: e.clientY, ox: el.offsetLeft, oy: el.offsetTop }
@@ -173,7 +185,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
     if (!d.on) return
     d.on = false
     if (d.moved) { onMoveEnd(item.num, latest.current); return }   // 끌었으면 위치만 저장하고 토글하지 않는다
-    if ((e.target as HTMLElement).closest('button, input, textarea, a')) return
+    if (isInteractive(e.target as HTMLElement)) return
     setOpen((o) => !o)                                    // 제자리 클릭 = 펼침/접힘 토글
   }
 
@@ -186,6 +198,28 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
       dispatch(loadImproveData())
     } catch (err) {
       snack(err instanceof Error ? err.message : '쪽지 떼기에 실패했습니다', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const startEdit = () => {
+    setETitle(item.title || '')
+    setEContent(item.content || '')
+    setEditing(true)
+  }
+
+  const saveEdit = async () => {
+    const t = eTitle.trim()
+    if (!t) return snack('제목을 입력해주세요.', 'error')
+    setBusy(true)
+    try {
+      await updateImprovement({ author: user || '', key: 'session', num: item.num, title: t, content: eContent })
+      setEditing(false)
+      snack('수정했습니다.', 'success')
+      dispatch(loadImproveData())
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '수정에 실패했습니다', 'error')
     } finally {
       setBusy(false)
     }
@@ -262,6 +296,13 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
             </Box>
             <StatusChip status={impKind(st)} label={st || '-'} />
             <Box sx={{ ml: 'auto', display: 'flex', gap: 0.25 }}>
+              {canEdit && !editing && (
+                <Tooltip title="제목·내용 수정">
+                  <IconButton size="small" aria-label="메모 수정" onClick={startEdit} sx={{ color: 'text.secondary', p: 0.5 }}>
+                    <EditIcon sx={{ fontSize: iconSize.body }} />
+                  </IconButton>
+                </Tooltip>
+              )}
               <Tooltip title="접기">
                 <IconButton size="small" aria-label="쪽지 접기" onClick={() => setOpen(false)} sx={{ color: 'text.secondary', p: 0.5 }}>
                   <UnfoldLessIcon sx={{ fontSize: iconSize.body }} />
@@ -278,11 +319,47 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
           </Box>
 
           <Box sx={{ px: 1.5, pt: 1.25, pb: 1.5 }}>
-            <Box sx={{ fontSize: typescale.body.size, fontWeight: weight.heavy, color: 'text.primary', lineHeight: 1.45, mb: 0.5 }}>
-              {item.title}
-            </Box>
-            {item.content && (
-              <RichBodyView html={item.content} sx={{ fontSize: typescale.small.size, lineHeight: 1.65, color: 'text.secondary', maxHeight: 168, overflowY: 'auto' }} />
+            {editing ? (
+              /* 수정 — 게시판까지 가지 않고 여기서 바로. 본문은 게시판과 같은 리치 에디터라
+                 서식이 있는 글을 열어도 깨지지 않는다(평문 textarea 로 받으면 태그가 드러난다). */
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  autoFocus
+                  value={eTitle}
+                  onChange={(e) => setETitle(e.target.value)}
+                  placeholder="제목"
+                  disabled={busy}
+                  slotProps={{ htmlInput: { maxLength: 60, 'aria-label': '메모 제목' } }}
+                  sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size, py: 0.75 } }}
+                />
+                <RichBodyEditor
+                  value={eContent}
+                  onChange={setEContent}
+                  placeholder="내용"
+                  ariaLabel="메모 내용"
+                  fontSize={typescale.small.size}
+                  minHeight={64}
+                  framed
+                  onCtrlEnter={() => void saveEdit()}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                  <Button size="small" onClick={() => setEditing(false)} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
+                  <Button size="small" variant="contained" onClick={saveEdit} disabled={busy || !eTitle.trim()}>
+                    {busy ? '저장 중…' : '저장'}
+                  </Button>
+                </Box>
+              </Box>
+            ) : (
+              <>
+                <Box sx={{ fontSize: typescale.body.size, fontWeight: weight.heavy, color: 'text.primary', lineHeight: 1.45, mb: 0.5 }}>
+                  {item.title}
+                </Box>
+                {item.content && (
+                  <RichBodyView html={item.content} sx={{ fontSize: typescale.small.size, lineHeight: 1.65, color: 'text.secondary', maxHeight: 168, overflowY: 'auto' }} />
+                )}
+              </>
             )}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mt: 1.25 }}>
               <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: typescale.caption.size, color: 'text.secondary' }}>

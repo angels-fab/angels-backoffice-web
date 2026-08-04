@@ -5,7 +5,7 @@ import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import Typography from '@mui/material/Typography'
-import type { ReactNode } from 'react'
+import type { KeyboardEvent, ReactNode } from 'react'
 
 export interface ConfirmDialogProps {
   open: boolean
@@ -50,8 +50,23 @@ export default function ConfirmDialog({
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
+  /**
+   * Enter = 확인. MUI Dialog 는 기본적으로 Enter 를 처리하지 않아서, 확인창이 떴는데
+   * Enter 를 눌러도 아무 일이 없었다(사용자 신고 2026-08-05). ESC 로 닫는 것과 짝을 맞춘다.
+   *
+   * 여러 줄 입력(textarea·리치에디터)에서는 Enter 가 줄바꿈이어야 하므로 건드리지 않는다.
+   * description 에 임의 본문을 넣을 수 있어(사유 입력 등) 이 분기가 반드시 필요하다.
+   */
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== 'Enter' || busy || e.nativeEvent.isComposing) return
+    const el = e.target as HTMLElement
+    if (el.tagName === 'TEXTAREA' || el.isContentEditable) return
+    e.preventDefault()
+    onConfirm()
+  }
+
   return (
-    <Dialog open={open} onClose={busy ? undefined : onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={busy ? undefined : onClose} onKeyDown={onKeyDown} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ pb: description ? 1 : 2 }}>
         <Typography component="span" variant="h4">
           {title}

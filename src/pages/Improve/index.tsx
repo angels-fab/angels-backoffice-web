@@ -37,7 +37,7 @@ import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { typescale, iconSize, radius, control, table, weight, z } from '@/theme/tokens'
+import { typescale, iconSize, radius, control, table, weight } from '@/theme/tokens'
 import { nextFilterSelection } from '@/utils/filterSelect'
 import { PageContainer, PageHeader, ContentSection, AppCard, StatusChip, statusTextColor, ErrorBanner, LoadingState, FilterToolbar, SearchBar, dataTableSx, useSnack, ConfirmDialog } from '@/components/ds'
 import type { StatusKind } from '@/components/ds'
@@ -755,6 +755,36 @@ export default function Improve() {
           )}
         </FilterToolbar>
 
+        {/* 선택 액션 줄 — 표 바로 위. 처음엔 화면 하단 고정 바로 뒀는데 표에서 체크하는
+            동안 시선이 아래로 안 가서 '복수선택은 되는데 삭제는 개별로 해야 한다'는 신고가
+            나왔다. 체크박스 바로 옆에 두면 놓칠 수 없다(메일함들이 쓰는 방식). */}
+        {memoCol && picked.size > 0 && (
+          <Box
+            sx={(th) => ({
+              display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap',
+              mb: 1.5, px: 1.75, py: 1.25,
+              borderRadius: `${radius.card}px`,
+              border: '1px solid', borderColor: alpha(th.palette.accent.blue, 0.4),
+              bgcolor: alpha(th.palette.accent.blue, 0.1),
+            })}
+          >
+            <Box sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.heavy, color: 'text.primary' }}>
+              {picked.size}건 선택됨
+            </Box>
+            <Button size="small" onClick={() => setPicked(new Set())} sx={{ color: 'text.secondary' }}>선택 해제</Button>
+            <Box sx={{ flex: 1 }} />
+            <Button
+              size="small"
+              variant="contained"
+              color="error"
+              startIcon={<DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />}
+              onClick={() => setBulkOpen(true)}
+            >
+              선택한 {picked.size}건 삭제
+            </Button>
+          </Box>
+        )}
+
         <AppCard padding={0} sx={{ overflowX: 'auto' }}>
           {/* '& th, & td'(특이도 0,1,1)는 셀 sx를 이겨 헤더 밑줄(--th-line)까지 죽인다 — 쓰지 말 것.
               구분선 색·여백은 theme MuiTableCell 담당, 여기서는 본문 줄바꿈만 막는다. */}
@@ -1078,33 +1108,6 @@ export default function Improve() {
         onConfirm={handleDelete}
         onClose={() => setDeleteDlg(null)}
       />
-
-      {/* 선택 액션 바 — 업무현황 하단 고정 바와 같은 형식(z.bottomBar). 고른 게 있을 때만 뜬다. */}
-      {memoCol && picked.size > 0 && (
-        <Box
-          sx={{
-            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: z.bottomBar,
-            bgcolor: 'primary.main', color: 'primary.contrastText',
-            px: 2, py: 1.25, display: 'flex', alignItems: 'center', gap: 1.5,
-            boxShadow: '0 -2px 12px rgba(0,0,0,.3)', /* design-lint-ok(shadow): 하단 고정 바가 위로 드리우는 역방향 그림자 — 토큰 3단은 전부 아래 방향 */
-            pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
-          }}
-        >
-          <Box sx={{ flex: 1, fontSize: typescale.emphasis.size, fontWeight: weight.bold }}>
-            {picked.size}건 선택됨
-          </Box>
-          <Button size="small" onClick={() => setPicked(new Set())} sx={{ color: 'inherit' }}>선택 해제</Button>
-          <Button
-            size="small"
-            variant="contained"
-            startIcon={<DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />}
-            onClick={() => setBulkOpen(true)}
-            sx={{ bgcolor: 'common.white', color: 'error.main', '&:hover': { bgcolor: 'grey.100' } }}
-          >
-            삭제
-          </Button>
-        </Box>
-      )}
 
       <ConfirmDialog
         open={bulkOpen}
