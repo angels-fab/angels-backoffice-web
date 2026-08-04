@@ -10,7 +10,10 @@ import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
 import Collapse from '@mui/material/Collapse'
 import Select from '@mui/material/Select'
+import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
 import InputBase from '@mui/material/InputBase'
 import Popover from '@mui/material/Popover'
 import Tooltip from '@mui/material/Tooltip'
@@ -30,6 +33,7 @@ import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import PushPinIcon from '@mui/icons-material/PushPin'
 import PushPinOutlinedIcon from '@mui/icons-material/PushPinOutlined'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 import { alpha } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { typescale, iconSize, radius, control, table, weight } from '@/theme/tokens'
@@ -193,6 +197,8 @@ export default function Improve() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleteDlg, setDeleteDlg] = useState<ImprovementItem | null>(null)
+  // 목록 더보기 메뉴 — 행을 펼치지 않고 바로 수정·삭제(기존 핸들러 재사용)
+  const [menuFor, setMenuFor] = useState<{ el: HTMLElement; t: ImprovementItem } | null>(null)
   const [cUrgent, setCUrgent] = useState(false)
   const [cTitle, setCTitle] = useState('')
   const [cLoc, setCLoc] = useState('')
@@ -246,11 +252,12 @@ export default function Improve() {
   // 수정(상태·위치·유형·내용·사유·메모) = 로그인 관리자 전체 / 삭제 = 해당 글 담당자(작성자)만
   const canEdit = isAdmin && !!user && !!authKey
   const canDelete = (t: ImprovementItem) => isAdmin && !!user && user === (t.mgr || '').trim()
-  // 작업 메모 열은 로그인 관리자에게만 노출(게스트 미노출). 열 개수 = 메모열 유무에 따라 8/9.
+  // 작업 메모·더보기 열은 로그인 관리자에게만 노출(게스트 미노출). 두 열 노출 조건이 같아 memoCol 하나로 판단한다.
+  // 열 개수 = 게스트 7(번호·개선위치·제목·작성자·제안일자·상태·비고) / 관리자 9(+작업 메모·더보기).
   const memoCol = canEdit
-  // 유형 열 제거로 열 수 1 감소
-  const detailSpan = memoCol ? 7 : 6
-  const fullSpan = memoCol ? 8 : 7
+  // detailSpan = 펼침행에서 앞 빈 셀 1개를 뺀 나머지, fullSpan = 전체 열 수
+  const detailSpan = memoCol ? 8 : 6
+  const fullSpan = memoCol ? 9 : 7
 
   const saveStatus = async (row: ImprovementItem, status: string, reason: string) => {
     if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
@@ -492,6 +499,14 @@ export default function Improve() {
 
   const stop = (e: React.MouseEvent) => e.stopPropagation()
 
+  // 더보기 메뉴 실행 — 전파를 막고 기존 핸들러를 그대로 호출한 뒤 메뉴를 닫는다
+  const closeMenu = () => setMenuFor(null)
+  const menuAct = (fn: (t: ImprovementItem) => void) => (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (menuFor) fn(menuFor.t)
+    closeMenu()
+  }
+
   // 새 요청 인라인 카드(표 상단·목록과 동일 열 구조). 배경 클릭으로 닫히지 않음(입력만 반응).
   const composeGreen = (th: Theme) => alpha(th.palette.accent.green, 0.06)
   const renderComposeCard = (c: DraftCard, idx: number) => {
@@ -516,12 +531,14 @@ export default function Improve() {
         <TableCell sx={{ textAlign: 'center' }}>
           <Tooltip title="이 요청 삭제"><span><IconButton size="small" color="error" aria-label={`요청 ${idx + 1} 삭제`} onClick={() => removeCard(c.key)} disabled={savingDraft || publishing}><DeleteOutlineIcon sx={{ fontSize: iconSize.action }} /></IconButton></span></Tooltip>
         </TableCell>
+        {/* 작업 메모·더보기 열 자리(작성 중에는 비움) */}
+        {memoCol && <TableCell />}
         {memoCol && <TableCell />}
       </TableRow>,
       <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: composeGreen, py: 0.75, verticalAlign: 'middle' } }}>
         <TableCell />
         <TableCell />
-        <TableCell colSpan={memoCol ? 5 : 4} sx={{ textAlign: 'left' }}>
+        <TableCell colSpan={memoCol ? 6 : 4} sx={{ textAlign: 'left' }}>
           <RichBodyEditor
             value={c.content}
             onChange={(v) => patchCard(c.key, { content: v })}
@@ -565,12 +582,14 @@ export default function Improve() {
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status={stKind} label={stLabel} /></TableCell>
         <TableCell />
+        {/* 작업 메모·더보기 열 자리(수정 중에는 비움) */}
+        {memoCol && <TableCell />}
         {memoCol && <TableCell />}
       </TableRow>,
       <TableRow key={`${kb}-2`} sx={{ '& td': { borderTop: 0, bgcolor: greenBg, py: 0.75, verticalAlign: 'middle' } }}>
         <TableCell />
         <TableCell />
-        <TableCell colSpan={memoCol ? 5 : 4} onClick={stop} sx={{ textAlign: 'left' }}>
+        <TableCell colSpan={memoCol ? 6 : 4} onClick={stop} sx={{ textAlign: 'left' }}>
           <RichBodyEditor
             value={cContent}
             onChange={setCContent}
@@ -689,6 +708,8 @@ export default function Improve() {
                 <TableCell align="center" sx={{ width: '1%' }}>상태</TableCell>
                 <TableCell align="center" sx={{ width: '1%' }}>비고</TableCell>
                 {memoCol && <TableCell align="center" sx={{ width: '1%' }}>작업 메모</TableCell>}
+                {/* 더보기 열 — 머리글 없음(액션 열). 스크린리더용 이름만 부여 */}
+                {memoCol && <TableCell align="center" aria-label="관리" sx={{ width: '1%' }} />}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -840,6 +861,19 @@ export default function Improve() {
                         </Tooltip>
                       </TableCell>
                     )}
+                    {/* 더보기 — 행을 펼치지 않고 수정·삭제. 셀 onClick stop 으로 아코디언 토글 방지 */}
+                    {memoCol && (
+                      <TableCell onClick={stop} sx={{ textAlign: 'center' }}>
+                        <IconButton
+                          size="small"
+                          aria-label="더보기"
+                          onClick={(e) => { e.stopPropagation(); setMenuFor({ el: e.currentTarget, t }) }}
+                          sx={{ color: 'text.secondary', p: 0.25, flexShrink: 0 }}
+                        >
+                          <MoreVertIcon sx={{ fontSize: iconSize.action }} />
+                        </IconButton>
+                      </TableCell>
+                    )}
                   </TableRow>,
                   /* 펼침 행은 항상 렌더하고 Collapse 가 높이를 애니메이션한다(공지사항 표와 같은 방식).
                      구 `open ? <TableRow/> : null` 은 조건부 렌더라 내용이 툭 튀어나왔다.
@@ -885,6 +919,29 @@ export default function Improve() {
           </Table>
         </AppCard>
       </ContentSection>
+
+      {/* 목록 더보기 메뉴 — 펼치지 않고 바로 처리. 수정 = 로그인 관리자 전체 / 삭제 = 담당자(작성자)만 */}
+      {canEdit && (
+        <Menu
+          anchorEl={menuFor?.el ?? null}
+          open={!!menuFor}
+          onClose={closeMenu}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', minWidth: 140 } } }}
+        >
+          <MenuItem onClick={menuAct(openEdit)}>
+            <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>수정</ListItemText>
+          </MenuItem>
+          {menuFor && canDelete(menuFor.t) && (
+            <MenuItem onClick={menuAct(setDeleteDlg)} sx={{ color: 'error.main' }}>
+              <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
+              <ListItemText>삭제</ListItemText>
+            </MenuItem>
+          )}
+        </Menu>
+      )}
 
       {/* 작성 중 닫기 확인 — 미저장 변경이 있을 때만. 임시저장 후 닫기 / 저장 안 함 / 계속 작성 */}
       <Dialog open={closeConfirm} onClose={() => !savingDraft && setCloseConfirm(false)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>

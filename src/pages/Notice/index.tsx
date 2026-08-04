@@ -12,6 +12,10 @@ import TableBody from '@mui/material/TableBody'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
 import Collapse from '@mui/material/Collapse'
+import Menu from '@mui/material/Menu'
+import MenuItem from '@mui/material/MenuItem'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
 import { alpha, useTheme } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
 import { TintChip } from '@/components/FilterChip'
@@ -21,6 +25,9 @@ import EditNoteIcon from '@mui/icons-material/EditNote'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import PushPinIcon from '@mui/icons-material/PushPin'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import {
   PageContainer,
   PageHeader,
@@ -86,6 +93,8 @@ export default function Notice() {
   const [deleting, setDeleting] = useState(false)
   const snack = useSnack()
   const [openKey, setOpenKey] = useState<string | null>(null) // 펼친 행 키('번호' 또는 'pin-번호')
+  // 행 끝 '더보기' 메뉴 — 펼치지 않고 목록에서 바로 수정·삭제(팀원 이상)
+  const [menuFor, setMenuFor] = useState<{ el: HTMLElement; n: NoticeItem } | null>(null)
 
   const today = todaySeoul()
 
@@ -123,6 +132,14 @@ export default function Notice() {
   const pinnedCopies = useMemo(() => filtered.filter((n) => n.pinned && !(n.end && n.end < today)), [filtered, today])
 
   const stop = (e: MouseEvent) => e.stopPropagation()
+
+  const closeMenu = () => setMenuFor(null)
+  // 메뉴 항목 실행 — 기존 핸들러(startEdit·setDeleteTarget)를 그대로 재사용
+  const act = (fn: (n: NoticeItem) => void) => (e: MouseEvent) => {
+    e.stopPropagation()
+    if (menuFor) fn(menuFor.n)
+    closeMenu()
+  }
 
   const refresh = () => {
     setSelCats([]); setQuery(''); setComposing(false); setEditingId(null)
@@ -290,9 +307,22 @@ export default function Notice() {
               </Tooltip>
             )}
           </TableCell>
+          {/* 더보기 — 펼치지 않고 목록에서 바로 수정·삭제(팀원 이상, 게스트는 열 자체가 없음) */}
+          {isMember && (
+            <TableCell align="center" onClick={stop} sx={{ whiteSpace: 'nowrap' }}>
+              <IconButton
+                size="small"
+                aria-label="더보기"
+                onClick={(e) => { e.stopPropagation(); setMenuFor({ el: e.currentTarget, n }) }}
+                sx={{ color: 'text.secondary', p: 0.25, flexShrink: 0 }}
+              >
+                <MoreVertIcon sx={{ fontSize: iconSize.action }} />
+              </IconButton>
+            </TableCell>
+          )}
         </TableRow>
         <TableRow>
-          <TableCell colSpan={6} sx={{ p: 0, border: 0 }}>
+          <TableCell colSpan={isMember ? 7 : 6} sx={{ p: 0, border: 0 }}>
             <Collapse in={open} timeout="auto" unmountOnExit>
               <NoticeDetail notice={n} canEdit={isMember} onEdit={startEdit} onDelete={setDeleteTarget} />
             </Collapse>
@@ -381,6 +411,8 @@ export default function Notice() {
                     <TableCell align="center" sx={{ width: 100, display: { xs: 'none', sm: 'table-cell' } }}>작성자</TableCell>
                     <TableCell align="center" sx={{ width: 120, display: { xs: 'none', md: 'table-cell' } }}>작성일</TableCell>
                     <TableCell align="center" sx={{ width: 52 }}>첨부</TableCell>
+                    {/* 더보기 열 — 라벨 없음(팀원 이상만) */}
+                    {isMember && <TableCell align="center" sx={{ width: 52 }} />}
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -393,7 +425,7 @@ export default function Notice() {
                   {pinnedCopies.length > 0 && pinnedCopies.map((n) => renderRow(n, true))}
                   {filtered.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>공지사항이 없습니다</TableCell>
+                      <TableCell colSpan={isMember ? 7 : 6} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>공지사항이 없습니다</TableCell>
                     </TableRow>
                   )}
                   {/* 전체 최신순(원본) */}
@@ -410,6 +442,27 @@ export default function Notice() {
           </AppCard>
         )}
       </ContentSection>
+
+      {/* 행 끝 더보기 메뉴 — 삭제는 기존 확인 다이얼로그(아래)로 이어진다 */}
+      {isMember && (
+        <Menu
+          anchorEl={menuFor?.el ?? null}
+          open={!!menuFor}
+          onClose={closeMenu}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', minWidth: 140 } } }}
+        >
+          <MenuItem onClick={act(startEdit)}>
+            <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
+            <ListItemText>수정</ListItemText>
+          </MenuItem>
+          <MenuItem onClick={act(setDeleteTarget)} sx={{ color: 'error.main' }}>
+            <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
+            <ListItemText>삭제</ListItemText>
+          </MenuItem>
+        </Menu>
+      )}
 
       <ConfirmDialog
         open={!!deleteTarget}

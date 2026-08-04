@@ -253,6 +253,8 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{mode === 'new' ? author : (notice?.author || '-')}</TableCell>
         <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell />
+        {/* 더보기 열 자리 — 이 폼은 팀원에게만 렌더되므로 목록 표의 더보기 열이 항상 있다(빠지면 폼 배경이 오른쪽 끝까지 안 닿음) */}
+        <TableCell />
       </TableRow>
       <TableRow sx={{ '& td': { borderTop: 0, bgcolor: amber, py: 0.75, verticalAlign: 'top' } }}>
         <TableCell />
@@ -368,6 +370,8 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
             </Tooltip>
           </Box>
         </TableCell>
+        <TableCell />
+        {/* 더보기 열 자리 (위 행과 같은 이유) */}
         <TableCell />
       </TableRow>
     </>
