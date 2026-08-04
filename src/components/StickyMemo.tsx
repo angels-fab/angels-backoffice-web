@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -57,9 +57,30 @@ const OPEN_W = 300
 /** 끌었다고 볼 최소 이동량(px) — 이보다 작으면 '제자리 클릭'으로 본다 */
 const DRAG_SLOP = 3
 
-/** 저장된 좌표가 없을 때의 기본 자리 — 계단식으로 흩어 겹치지 않게 */
-function defaultPos(index: number): Pos {
-  return { x: 58 + (index % 3) * 7, y: 12 + (index % 5) * 13 }
+/** 접힌 핀 한 변(px) — 기본 자리를 버튼 중심에 맞출 때 쓴다 */
+const PIN = 34
+/** 버튼 아래로 띄우는 간격(px) */
+const ANCHOR_GAP = 8
+
+/**
+ * 저장된 좌표가 없을 때의 기본 자리 = **상단바 메모 버튼 바로 아래**.
+ * 화면 한가운데에 뜨면 보던 내용을 가려서 방해가 된다(사용자 피드백 2026-08-05).
+ * 버튼을 못 찾으면(레이어가 아직 안 붙었거나 게시판 핀으로 켠 메모) 우상단으로 폴백한다.
+ * 여러 장이면 조금씩 어긋나게 겹쳐 쌓는다 — 완전히 겹치면 뒤엣것을 집을 수 없다.
+ */
+function defaultPos(layer: HTMLElement | null, index: number): Pos {
+  const fallback = { x: 88, y: 3 }
+  if (!layer) return fallback
+  const W = layer.clientWidth, H = layer.clientHeight
+  if (W <= 0 || H <= 0) return fallback
+  const anchor = document.querySelector('[data-memo-anchor]')
+  const l = layer.getBoundingClientRect()
+  const px = anchor
+    ? anchor.getBoundingClientRect().left + anchor.getBoundingClientRect().width / 2 - l.left - PIN / 2
+    : W - PIN - 16
+  const x = Math.min(Math.max(px + index * (PIN + 6), 0), Math.max(W - PIN, 0))
+  const y = Math.min(ANCHOR_GAP + index * 6, Math.max(H - PIN, 0))
+  return { x: +(x / W * 100).toFixed(2), y: +(y / H * 100).toFixed(2) }
 }
 
 interface NoteProps {
@@ -336,12 +357,19 @@ export default function StickyMemoLayer() {
     return m
   }, [replyItems])
 
+  // 기본 자리는 메모 버튼 위치를 재서 정하므로 레이어가 DOM에 붙은 뒤 한 번 다시 계산한다.
+  // useLayoutEffect라 그리기 전에 반영된다 — 폴백 자리가 잠깐 보였다 튀지 않는다.
+  const [anchored, setAnchored] = useState(false)
+  useLayoutEffect(() => { if (layerRef.current) setAnchored(true) }, [memos.length])
+
   // 좌표 객체의 참조를 고정한다 — 렌더마다 새로 만들면 아직 저장 전인 기본 위치가 되돌아간다
   const positions = useMemo(() => {
     const m: PosMap = {}
-    memos.forEach((t, i) => { m[t.num] = saved?.[t.num] || defaultPos(i) })
+    memos.forEach((t, i) => { m[t.num] = saved?.[t.num] || defaultPos(layerRef.current, i) })
     return m
-  }, [memos, saved])
+    // anchored: 레이어 측정 후 재계산 트리거(값 자체는 안 씀)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memos, saved, anchored])
 
   // 옮긴 위치는 개인 설정에 저장(디바운스 병합) — 다른 사람 화면은 움직이지 않는다
   const onMoveEnd = useCallback((num: string, pos: Pos) => {

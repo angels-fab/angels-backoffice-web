@@ -76,28 +76,33 @@ export default function MemoComposeButton() {
 
   return (
     <>
+      {/* data-memo-anchor = 새 쪽지의 기본 자리 기준점(StickyMemo가 이 버튼 바로 아래에 붙인다) */}
       <Tooltip title={total > 0 ? `화면 메모 — 이 화면 ${here}건 / 전체 ${total}건` : '이 화면에 메모 붙이기'}>
         <ButtonBase
           ref={anchorRef}
+          data-memo-anchor=""
           onClick={() => setOpen((o) => !o)}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-label="이 화면에 메모 붙이기"
+          /* 상단바 컨트롤은 '테두리 없이 옅은 면으로만 구분'이 정본(바로 옆 통합검색과 같은 처리).
+             앰버 채움+앰버 테두리로 두면 상단바에서 혼자 튀고, 무엇보다 그 테두리(amber 50%)가
+             배경 대비 라이트 1.44:1 · 다크 2.88:1 로 WCAG 1.4.11(비텍스트 3:1) 미달이라
+             라이트에서는 테두리가 보이지도 않았다(2026-08-05 실측). 색은 건수 배지에만 남긴다. */
           sx={(th) => ({
             display: 'inline-flex', alignItems: 'center', gap: 0.75,
             height: control.height, px: 1.25, flexShrink: 0,
-            border: '1px solid', borderColor: alpha(th.palette.accent.amber, 0.5),
-            borderRadius: `${radius.input}px`,
-            bgcolor: alpha(th.palette.accent.amber, 0.14),
-            color: th.palette.accentText.amber,
-            fontSize: typescale.body.size, fontWeight: weight.heavy,
-            transition: 'background-color .14s, border-color .14s',
-            '&:hover': { bgcolor: alpha(th.palette.accent.amber, 0.24), borderColor: alpha(th.palette.accent.amber, 0.72) },
+            border: 'none', borderRadius: `${radius.input}px`,
+            bgcolor: alpha(th.palette.text.primary, 0.08),
+            color: 'text.secondary',
+            fontSize: typescale.body.size, fontWeight: weight.bold,
+            whiteSpace: 'nowrap',
+            transition: 'background-color .14s',
+            '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.14) },
             ...(focusRingSx as object),
           })}
         >
-          <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.header }} />
-          <Box component="span" sx={{ display: { xs: 'none', shell: 'inline' } }}>메모</Box>
+          메모
           {here > 0 && (
             <Box
               component="span"
