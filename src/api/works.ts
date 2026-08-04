@@ -5,12 +5,12 @@ import type { NoticeFile } from '@/types'
 
 // 사무실망 토큰갱신 스톨 대비 — 모든 write는 ensureSession + withTimeout (공지와 동일 안전장치)
 const DB_TIMEOUT = 20_000
-/** 업로드 1건 타임아웃(ms) — 스톨 시 무한 대기 방지(공지 UPLOAD_TIMEOUT과 동일) */
-const UPLOAD_TIMEOUT = 30_000
+/** 업로드 1건 타임아웃(ms) — 스톨 시 무한 대기 방지. 50MB 파일은 사무실망에서 30초를 넘길 수 있어 2분 */
+const UPLOAD_TIMEOUT = 120_000
 /** 첨부 저장 버킷(비공개) — 업로드=팀원(member)+, 열람=인증 사용자. 마이그레이션 work_attachments_column_and_bucket */
 export const WORK_BUCKET = 'work-files'
-/** 파일당 최대 크기(10MB) — 버킷 file_size_limit과 일치. 초과 시 업로드 전 클라이언트 차단 */
-export const WORK_FILE_MAX = 10 * 1024 * 1024
+/** 파일당 최대 크기(50MB) — 버킷 file_size_limit과 일치. 초과 시 업로드 전 클라이언트 차단 */
+export const WORK_FILE_MAX = 50 * 1024 * 1024
 
 /**
  * 업무현황 API — Supabase 전환(2단계). 시그니처·반환 계약은 기존 sheets.ts와 동일해서
@@ -183,11 +183,11 @@ const fileExt = (name: string) => {
 
 /**
  * 첨부파일 1건 업로드 → 메타데이터 반환. 저장 키는 충돌 방지용 UUID(원본 파일명은 name에 보존).
- * 10MB 초과는 업로드 전에 차단, 30초 스톨 시 타임아웃. 업로드 권한은 RLS(is_member)가 최종 검증.
+ * 50MB 초과는 업로드 전에 차단, 2분 스톨 시 타임아웃. 업로드 권한은 RLS(is_member)가 최종 검증.
  */
 export async function uploadWorkFile(file: File): Promise<NoticeFile> {
   if (file.size > WORK_FILE_MAX) {
-    throw new Error(`파일이 너무 큽니다(최대 10MB): ${file.name}`)
+    throw new Error(`파일이 너무 큽니다(최대 50MB): ${file.name}`)
   }
   await ensureSession()
   const path = `work/${crypto.randomUUID()}${fileExt(file.name)}`
