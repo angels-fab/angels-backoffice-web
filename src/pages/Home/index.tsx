@@ -20,9 +20,9 @@ import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import RoadmapCard from './RoadmapCard'
-import UpcomingSection from './dash/UpcomingSection'
-import HomeKpi from './dash/HomeKpi'
-import WorkMixCard from './dash/WorkMixCard'
+import TodaySection from './dash/TodaySection'
+import EventsSection from './dash/EventsSection'
+import { EqIntroSection, EqOpsSection } from './dash/EqSections'
 import WorkStatusSection from './dash/WorkStatusSection'
 import StatusSummary from './dash/StatusSummary'
 import NoticeSection from './dash/NoticeSection'
@@ -42,29 +42,30 @@ import PinnedWorksSection, { usePinnedWorks } from './dash/PinnedWorksSection'
  * 나머지는 2027년까지 안 바뀌는 값), `equipment`(현황 줄로 흡수).
  * 저장된 순서에 옛 id가 남아 있어도 isSectionId 가 걸러내므로 마이그레이션은 필요 없다.
  */
-const SECTION_IDS = ['kpi', 'today', 'mix', 'work', 'notice', 'pins', 'status'] as const
+const SECTION_IDS = ['today', 'work', 'notice', 'events', 'eqIntro', 'eqOps', 'pins', 'status'] as const
 type SectionId = (typeof SECTION_IDS)[number]
 const SECTION_LABEL: Record<SectionId, string> = {
-  kpi: '안 본 새 글',
-  today: '다가오는 일정',
-  mix: '업무 구성',
+  today: '오늘 일정',
   work: '진행 중 업무',
   notice: '공지사항',
+  events: '참석 예정 행사',
+  eqIntro: '장비 도입',
+  eqOps: '장비 운영',
   pins: '관심 업무',
   status: '현황 (로드맵 · 장비)',
 }
 /**
- * 기본 배치 — 3열 그리드(2026-08-05 사용자 지시, B안 확정).
- *   1행: 다가오는 일정(달력 위·다음 일정 아래) · 공지사항 · 진행 중 업무
- *   2행: 안 본 새 글 · 업무 구성(2칸)
+ * 기본 배치 — 3열 그리드(2026-08-06 사용자 지시).
+ *   1행: 오늘 일정 · 공지사항 · 진행 중 업무
+ *   2행: 참석 예정 행사 · 장비 도입 · 장비 운영
  *   그 아래: 관심 업무 · 현황(전폭, 접힘)
- * '다가오는 일정'을 한 칸으로 좁히고 세로로 쌓기로 해(사용자 확정) 첫 줄에 카드 셋이 나란히 선다.
- * 업무 구성이 2칸인 것은 그래야 둘째 줄에 빈칸이 안 남기 때문이다.
+ * 없앤 것: '안 본 새 글'(kpi) · '업무 구성'(mix) — 사용자 지시.
+ * 저장된 순서에 옛 id 가 남아 있어도 isSectionId 가 걸러내므로 마이그레이션은 필요 없다.
  */
-const DEFAULT_ORDER: SectionId[] = ['today', 'notice', 'work', 'kpi', 'mix', 'pins', 'status']
+const DEFAULT_ORDER: SectionId[] = ['today', 'notice', 'work', 'events', 'eqIntro', 'eqOps', 'pins', 'status']
 /** 넓은 자리가 필요한 카드는 칸을 합친다 */
 const SECTION_SPAN: Record<SectionId, number> = {
-  today: 1, work: 1, notice: 1, kpi: 1, mix: 2, pins: 3, status: 3,
+  today: 1, work: 1, notice: 1, events: 1, eqIntro: 1, eqOps: 1, pins: 3, status: 3,
 }
 const isSectionId = (v: unknown): v is SectionId => typeof v === 'string' && (SECTION_IDS as readonly string[]).includes(v)
 
@@ -121,11 +122,12 @@ export default function Home() {
 
   // 각 카드가 제목·건수·전체보기를 스스로 그린다(HomeCard 공용 규격) — 바깥에서 제목을 또 붙이지 않는다
   const sectionNode: Record<SectionId, ReactNode> = {
-    kpi: <HomeKpi />,
-    today: <UpcomingSection variant="stack" />,
-    mix: <WorkMixCard />,
+    today: <TodaySection />,
     work: <WorkStatusSection />,
     notice: <NoticeSection />,
+    events: <EventsSection />,
+    eqIntro: <EqIntroSection />,
+    eqOps: <EqOpsSection />,
     pins: <PinnedWorksSection />,
     status: <StatusSummary />,
   }
