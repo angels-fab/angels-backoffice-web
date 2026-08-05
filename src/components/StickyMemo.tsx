@@ -841,6 +841,9 @@ export default function StickyMemoLayer() {
         {/* 그리기 판 — 진입하면 쪽지는 접히고 화면 전체가 그리기 대상이 된다 */}
         {isAdmin && drawFor && (
           <MemoDraw
+            /* key = 대상 번호 — MemoDraw 는 initial 을 처음 마운트 때만 읽는다(useState 초기값).
+               key 가 없으면 대상이 바뀌어도 같은 인스턴스가 살아남아 이전 획이 그대로 남는다. */
+            key={drawFor}
             layerRef={layerRef}
             initial={drawTarget?.drawing}
             onDone={(strokes) => void finishDrawing(strokes)}
