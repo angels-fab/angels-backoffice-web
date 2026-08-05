@@ -154,6 +154,10 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
   const dispatch = useAppDispatch()
   const snack = useSnack()
   const elRef = useRef<HTMLDivElement>(null)
+  // 상태 메뉴 기준점은 ref 로 잡는다 — 클릭 시점의 currentTarget 을 state 에 담아 두면
+  // 쪽지가 다시 그려질 때 그 노드가 떨어져 나가 메뉴가 화면 좌상단(0,0)에 뜬다(2026-08-05 사용자 신고).
+  // 상단바 메모 버튼(MemoComposeButton)도 같은 이유로 ref 방식을 쓴다.
+  const stBtnRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [reply, setReply] = useState('')
@@ -161,7 +165,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
   const [editing, setEditing] = useState(false)
   const [eTitle, setETitle] = useState('')
   const [eContent, setEContent] = useState('')
-  const [stAnchor, setStAnchor] = useState<HTMLElement | null>(null)                 // 상태 메뉴 기준점
+  const [stOpen, setStOpen] = useState(false)                                        // 상태 메뉴 열림
   const [delAsk, setDelAsk] = useState(false)                                        // 요청 삭제 확인
   const [statusAsk, setStatusAsk] = useState<{ status: string; reason: string } | null>(null) // 종결 확인(+사유)
   const [live, setLive] = useState<Pos>(pos)
@@ -374,28 +378,15 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
                 MUI Select 를 쓰면 드롭다운 화살표가 칩 글자를 덮어(2026-08-05 사용자 신고) 칩 자체를
                 버튼으로 삼고 Menu 를 띄운다. 버튼이라 끌기 판정(isInteractive)에서도 자동으로 빠진다. */}
             {canEdit ? (
-              <>
-                <ButtonBase
-                  onClick={(e) => setStAnchor(e.currentTarget)}
-                  disabled={busy}
-                  aria-label={`상태 변경 (현재 ${st || '-'})`}
-                  sx={{ borderRadius: `${radius.pill}px` }}
-                >
-                  <StatusChip status={impKind(st)} label={st || '-'} />
-                </ButtonBase>
-                <Menu anchorEl={stAnchor} open={!!stAnchor} onClose={() => setStAnchor(null)}>
-                  {IMP_STATUSES.map((s) => (
-                    <MenuItem
-                      key={s}
-                      selected={s === st}
-                      onClick={() => { setStAnchor(null); onStatusPick(s) }}
-                      sx={{ fontSize: typescale.body.size }}
-                    >
-                      {s}
-                    </MenuItem>
-                  ))}
-                </Menu>
-              </>
+              <ButtonBase
+                ref={stBtnRef}
+                onClick={() => setStOpen(true)}
+                disabled={busy}
+                aria-label={`상태 변경 (현재 ${st || '-'})`}
+                sx={{ borderRadius: `${radius.pill}px` }}
+              >
+                <StatusChip status={impKind(st)} label={st || '-'} />
+              </ButtonBase>
             ) : (
               <StatusChip status={impKind(st)} label={st || '-'} />
             )}
@@ -532,9 +523,23 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
     </Box>
   )
 
-  // 확인창은 MUI가 body로 포털하므로 쪽지의 끌기·토글 핸들러와 섞이지 않는다
+  // 메뉴·확인창은 MUI가 body로 포털하므로 쪽지의 끌기·토글 핸들러와 섞이지 않는다.
+  // 쪽지 안이 아니라 여기(형제 자리)에 두는 것도 같은 이유 — 쪽지가 다시 그려져도 영향을 안 받는다.
   const dialogs = (
     <>
+      {/* 기준점이 없으면 아예 열지 않는다 — MUI Popover 는 anchorEl 이 없으면 좌상단(0,0)에 뜬다 */}
+      <Menu anchorEl={stBtnRef.current} open={stOpen && !!stBtnRef.current} onClose={() => setStOpen(false)}>
+        {IMP_STATUSES.map((s) => (
+          <MenuItem
+            key={s}
+            selected={s === st}
+            onClick={() => { setStOpen(false); onStatusPick(s) }}
+            sx={{ fontSize: typescale.body.size }}
+          >
+            {s}
+          </MenuItem>
+        ))}
+      </Menu>
       <ConfirmDialog
         open={delAsk}
         destructive
