@@ -96,6 +96,9 @@ export function HomeCard({ icon, title, stat, actionLabel, onAction, children }:
   )
 }
 
+/** 목록 한 줄 높이(px) — 카드끼리 줄을 맞추는 기준값. 아래 HomeRow 주석 참고 */
+export const ROW_H = 40
+
 /**
  * 홈 카드 안의 목록 한 줄 — 왼쪽 표시(시간·날짜·칩) · 제목 · 오른쪽 보조.
  * 제목은 한 줄 줄임표. onClick 이 있으면 행 전체가 눌린다.
@@ -111,7 +114,10 @@ export function HomeRow({ lead, title, trail, onClick }: {
       {...(onClick ? { role: 'button', tabIndex: 0, onClick, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } } } : {})}
       sx={{
         display: 'flex', alignItems: 'center', gap: 1.25,
-        py: 1.25, px: 0.5, mx: -0.5,
+        // 높이를 값으로 고정한다 — 칩이 있는 행(공지)과 제목뿐인 행(업무)이 나란히 설 때
+        // 내용에 따라 높이가 달라져 두 카드의 줄이 서로 어긋났다(2026-08-06 사용자 지적)
+        minHeight: ROW_H, boxSizing: 'border-box',
+        py: 1, px: 0.5, mx: -0.5,
         borderTop: 1, borderColor: 'divider',
         '&:first-of-type': { borderTop: 0 },
         borderRadius: `${radius.chip}px`,

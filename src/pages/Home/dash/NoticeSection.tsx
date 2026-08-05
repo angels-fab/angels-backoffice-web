@@ -2,9 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import { AppDrawer, StatusChip, EmptyState, LoadingState } from '@/components/ds'
+import ButtonBase from '@mui/material/ButtonBase'
+import { AppDrawer, StatusChip, EmptyState, LoadingState, focusRingSx } from '@/components/ds'
 import CampaignIcon from '@mui/icons-material/Campaign'
 import { iconSize, radius, typescale } from '@/theme/tokens'
+
+/** 처음에 보여줄 줄 수 — 진행 중 업무 카드와 같은 값(옆에 나란히 서므로 행 수가 달라지면 안 맞는다) */
+const HEAD = 3
 import { useAppSelector } from '@/store/hooks'
 import type { Notice } from '@/types'
 import { noticeBodyHTML, noticeCatStatus } from '@/pages/Notice/noticeMeta'
@@ -29,7 +33,9 @@ export default function NoticeSection() {
   const ready = useAppSelector((s) => s.notice.ready)
   const [sel, setSel] = useState<Notice | null>(null)
 
-  const recent = items.slice(0, 3) // store에서 상단고정→연번 최신순 정렬됨. 3줄 = 홈 간소화 기준(2026-08-05)
+  const [all, setAll] = useState(false)
+  // store에서 상단고정→연번 최신순 정렬됨. 3줄 = 진행 중 업무 카드와 같은 기준(옆에 나란히 서므로)
+  const recent = all ? items : items.slice(0, HEAD)
   // 카드 이름이 '새 공지'이므로 건수도 **새 글**만 센다 — 전체 공지 수(17)를 쓰면 이름과 숫자가 서로 다른
   // 말을 한다(2026-08-06 사용자 지적: "17건은 총공지수인데?")
   const fresh = items.filter((n) => n.isNew).length
@@ -48,15 +54,28 @@ export default function NoticeSection() {
         ) : recent.length === 0 ? (
           <EmptyState size="sm" title="등록된 공지가 없습니다" />
         ) : (
-          recent.map((n) => (
-            <HomeRow
-              key={n.id}
-              onClick={() => setSel(n)}
-              lead={n.isNew ? <StatusChip status="error" label="NEW" /> : <StatusChip status={noticeCatStatus(n.cat)} label={n.cat} />}
-              title={n.title}
-              trail={<HomeMeta mono>{fmtMD(n.date)}</HomeMeta>}
-            />
-          ))
+          <Box>
+            {recent.map((n) => (
+              <HomeRow
+                key={n.id}
+                onClick={() => setSel(n)}
+                lead={n.isNew ? <StatusChip status="error" label="NEW" /> : <StatusChip status={noticeCatStatus(n.cat)} label={n.cat} />}
+                title={n.title}
+                trail={<HomeMeta mono>{fmtMD(n.date)}</HomeMeta>}
+              />
+            ))}
+            {/* '더 보기'는 진행 중 업무 카드와 같은 방식 — 나란히 서는 두 카드가 다르게 동작하면 안 된다 */}
+            {items.length > HEAD && (
+              <Box sx={{ pt: 1 }}>
+                <ButtonBase
+                  onClick={() => setAll((v) => !v)}
+                  sx={{ fontSize: typescale.body.size, color: 'primary.main', px: 0.5, py: 0.25, borderRadius: `${radius.chip}px`, ...(focusRingSx as object) }}
+                >
+                  {all ? '접기' : `${items.length - HEAD}건 더 보기`}
+                </ButtonBase>
+              </Box>
+            )}
+          </Box>
         )}
       </HomeCard>
 

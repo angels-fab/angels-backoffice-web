@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import TrendingUpIcon from '@mui/icons-material/TrendingUp'
 import { alpha } from '@mui/material/styles'
 import { AppCard } from '@/components/ds'
 import { ROADMAP_STEPS, type RoadmapStatus } from '@/constants/roadmap'
@@ -32,8 +33,19 @@ export default function RoadmapStrip() {
   return (
     <AppCard padding={20}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5 }}>
-        {/* 제목 — 두 줄로 꺾어 세로 공간을 아낀다 */}
+        {/* 제목 — 원래 쓰던 아이콘 타일을 제목 위에 두고 두 줄로 꺾어 세로 공간을 아낀다(사용자 지시) */}
         <Box sx={{ flexShrink: 0, pr: 2.5, borderRight: 1, borderColor: 'divider' }}>
+          <Box
+            sx={(t) => ({
+              width: 34, height: 34, mb: 1, borderRadius: `${radius.card}px`,
+              background: domain.roadmap.hero.tileBg[t.palette.mode],
+              color: domain.roadmap.hero.tileIcon[t.palette.mode],
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              '& svg': { fontSize: typescale.sectionTitle.size },
+            })}
+          >
+            <TrendingUpIcon fontSize="inherit" />
+          </Box>
           <Typography sx={{ fontSize: typescale.sectionTitle.size, fontWeight: typescale.sectionTitle.weight, lineHeight: 1.3 }}>
             FAB 구축
             <br />
@@ -59,17 +71,34 @@ export default function RoadmapStrip() {
                 const isCurrent = step.status === 'current'
                 return (
                   <Box key={step.label} sx={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                    <Box
-                      sx={{
-                        width: NODE, height: NODE, borderRadius: radius.circle,
-                        border: `2px solid ${s.border}`, color: s.color,
-                        background: s.bg, boxShadow: s.ring, /* design-lint-ok(shadow): 진행중 노드 강조 링 — 깊이 그림자가 아니다 */
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        '& svg': { fontSize: typescale.cardTitle.size },
-                        position: 'relative', zIndex: 1,
-                      }}
-                    >
-                      {step.icon}
+                    <Box sx={{ position: 'relative', width: NODE, height: NODE, zIndex: 1 }}>
+                      {/* 진행중 펄스 링 — 히어로 카드와 같은 효과(반주기 어긋난 링 둘로 빈도 2배).
+                          한 줄 판으로 줄이면서 빠뜨렸던 것을 되살린다(2026-08-06 사용자 지적) */}
+                      {isCurrent && [0, -1.1].map((delay) => (
+                        <Box
+                          key={delay}
+                          sx={{
+                            position: 'absolute', top: 0, left: 0, width: NODE, height: NODE,
+                            borderRadius: radius.circle,
+                            border: `2px solid ${domain.roadmap.current}`,
+                            animation: 'ringPulse 2.2s ease-out infinite',
+                            animationDelay: `${delay}s`,
+                            pointerEvents: 'none',
+                          }}
+                        />
+                      ))}
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          width: NODE, height: NODE, borderRadius: radius.circle,
+                          border: `2px solid ${s.border}`, color: s.color,
+                          background: s.bg, boxShadow: s.ring, /* design-lint-ok(shadow): 진행중 노드 강조 링 — 깊이 그림자가 아니다 */
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          '& svg': { fontSize: typescale.cardTitle.size },
+                        }}
+                      >
+                        {step.icon}
+                      </Box>
                     </Box>
                     <Typography
                       sx={{

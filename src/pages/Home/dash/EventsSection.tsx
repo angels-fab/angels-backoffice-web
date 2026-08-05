@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import { EmptyState, LoadingState } from '@/components/ds'
+import { EmptyState, LoadingState, StatusChip } from '@/components/ds'
+import type { StatusKind } from '@/components/ds/StatusChip'
 import { useRole } from '@/auth/role'
 import { fetchAttendees, type AttendeeRow } from '@/api/events'
 // 학술·교육·전시 메뉴가 사이드바·페이지 헤더에서 쓰는 그 아이콘(nav.tsx 단일 출처) — 다른 것 고르지 말 것
@@ -17,6 +18,19 @@ import { HomeCard } from './HomeCard'
  * 영문명 + 국문 부제로 되어 있어, 카드에서는 앞 이름만으로 충분하고 두 줄로 넘치지도 않는다.
  */
 const shortName = (title: string) => title.split(/\s[-–—]\s/)[0].trim() || title
+
+/**
+ * 행사 종류 → 칩 색. kind 는 자유 문자열(국제학회·국내학회·컨퍼런스·교육·교육세미나·워크숍·전시회…)이라
+ * 정확히 일치가 아니라 낱말이 들어 있는지로 가른다. 새 종류가 생겨도 중립 회색으로 무난히 떨어진다.
+ */
+function kindStatus(kind: string): StatusKind {
+  const k = kind || ''
+  if (k.includes('학회') || k.includes('컨퍼런스') || k.includes('심포지엄')) return 'info'
+  if (k.includes('교육') || k.includes('세미나') || k.includes('워크숍') || k.includes('아카데미')) return 'success'
+  if (k.includes('전시') || k.includes('산업전')) return 'warning'
+  if (k.includes('채용')) return 'purple'
+  return 'neutral'
+}
 
 /**
  * 홈 '참석 예정 행사' (2026-08-06 신설, 사용자 지시).
@@ -67,42 +81,47 @@ export default function EventsSection({ attendees: givenAtt, user: givenUser }: 
       ) : !head ? (
         <EmptyState size="sm" title="신청한 행사가 없습니다" />
       ) : (
-        <Box>
-          {/* 행 규격은 '오늘 일정'과 동일 — D-day 가 시각 자리, 가장 가까운 것만 파랗게 */}
-          {mine.map((e, i) => {
-            const first = i === 0
-            return (
-              <Box key={e.id} sx={{ py: 1, borderTop: first ? 0 : 1, borderColor: 'divider', minWidth: 0 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-                  <Typography
-                    sx={{
-                      flexShrink: 0, width: 42, fontSize: typescale.small.size, fontVariantNumeric: 'tabular-nums',
-                      fontWeight: first ? weight.bold : weight.medium,
-                      color: first ? 'primary.main' : 'text.disabled',
-                    }}
-                  >
-                    {eventStatus(e.start, e.end).label}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      fontSize: typescale.emphasis.size,
-                      fontWeight: first ? weight.bold : typescale.emphasis.weight,
-                      color: first ? 'text.primary' : 'text.secondary',
-                    }}
-                  >
-                    {shortName(e.title)}
-                  </Typography>
-                </Box>
-                {/* 날짜·장소는 가장 가까운 것에만 — 전부 적으면 다시 읽을 것이 많아진다 */}
-                {first && (
-                  <Typography sx={{ mt: 0.25, ml: '50px', fontSize: typescale.body.size, color: 'text.secondary' }}>
-                    {fmtEventDate(e.start, e.end)} · {e.venue}
-                  </Typography>
-                )}
+        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            {/* 행 앞에는 종류 칩 — 교육·학회·전시가 한눈에 갈리게(사용자 지시 2026-08-06) */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+              <StatusChip status={kindStatus(head.kind)} label={head.kind} />
+              <Typography
+                sx={{
+                  flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight,
+                }}
+              >
+                {shortName(head.title)}
+              </Typography>
+            </Box>
+            <Typography sx={{ mt: 0.5, fontSize: typescale.body.size, color: 'text.secondary' }}>
+              {fmtEventDate(head.start, head.end)} · {head.venue}
+            </Typography>
+
+            {/* 나머지는 종류 칩 + 이름 + D-n 만 */}
+            {mine.slice(1).map((e) => (
+              <Box key={e.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.25, pt: 1.25, borderTop: 1, borderColor: 'divider', minWidth: 0 }}>
+                <StatusChip status={kindStatus(e.kind)} label={e.kind} />
+                <Typography sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>
+                  {shortName(e.title)}
+                </Typography>
+                <Typography sx={{ flexShrink: 0, fontSize: typescale.small.size, fontWeight: weight.medium, color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
+                  {eventStatus(e.start, e.end).label}
+                </Typography>
               </Box>
-            )
-          })}
+            ))}
+          </Box>
+
+          {/* 가장 가까운 행사의 남은 일수 — 자리·크기는 종전대로 본문 우측에 크게(사용자 지시) */}
+          <Typography
+            sx={{
+              flexShrink: 0, fontSize: typescale.display.size, fontWeight: typescale.display.weight,
+              lineHeight: 1.1, color: 'primary.main', fontVariantNumeric: 'tabular-nums',
+            }}
+          >
+            {eventStatus(head.start, head.end).label}
+          </Typography>
         </Box>
       )}
     </HomeCard>

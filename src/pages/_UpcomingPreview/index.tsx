@@ -10,6 +10,8 @@ import TodaySection from '@/pages/Home/dash/TodaySection'
 import EventsSection from '@/pages/Home/dash/EventsSection'
 import { EqIntroSection, EqOpsSection } from '@/pages/Home/dash/EqSections'
 import RoadmapStrip from '@/pages/Home/RoadmapStrip'
+import NoticeSection from '@/pages/Home/dash/NoticeSection'
+import WorkStatusSection from '@/pages/Home/dash/WorkStatusSection'
 
 /**
  * 홈 카드 시안 화면 (2026-08-06, 검토용).
@@ -89,14 +91,12 @@ export default function UpcomingPreview() {
           <RoadmapStrip />
         </Frame>
 
+        {/* 공지·업무는 스토어에서 읽으므로 로그인 없이는 목록이 비어 있다.
+            그래도 카드 머리(아이콘·제목·건수)와 카드 높이는 여기서 확인된다. */}
         <Frame label="홈 3열 그리드 — 1행">
           <TodaySection events={SAMPLE} now={NOW} />
-          <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, display: 'grid', placeItems: 'center', color: 'text.disabled', fontSize: typescale.small.size, minHeight: 180 }}>
-            (공지사항 자리)
-          </Box>
-          <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, display: 'grid', placeItems: 'center', color: 'text.disabled', fontSize: typescale.small.size, minHeight: 180 }}>
-            (진행 중 업무 자리)
-          </Box>
+          <NoticeSection />
+          <WorkStatusSection />
         </Frame>
 
         <Frame label="홈 3열 그리드 — 2행">

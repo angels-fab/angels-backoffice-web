@@ -9,7 +9,7 @@ import { selectEqCounts } from '@/store/selectors'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import MonitorIcon from '@mui/icons-material/Monitor'
 import { iconSize, typescale, weight } from '@/theme/tokens'
-import { HomeCard } from './HomeCard'
+import { HomeCard, ROW_H } from './HomeCard'
 
 /**
  * 홈 '장비 도입' · '장비 운영' 두 카드 (2026-08-06 신설, 사용자 지시).
@@ -21,13 +21,30 @@ import { HomeCard } from './HomeCard'
  * 숫자는 장비 화면과 같은 집계(selectEqCounts)를 쓴다 — 두 화면의 대수가 갈리지 않게.
  */
 
-/** 상태 한 줄 — 이름과 대수만 */
+/**
+ * 상태 한 줄 — 이름 · 대수 · 종수.
+ * 글자 규격은 다른 카드의 목록 행과 같게 맞춘다(이름 emphasis 14/600 · 높이 ROW_H) —
+ * 종전에는 body 13 secondary 라 옆 카드 목록보다 흐리고 작아 잘 안 읽혔다(2026-08-06 사용자 지적).
+ */
 function Line({ label, units, types, first }: { label: string; units: number; types: number; first?: boolean }) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ...(first ? {} : { mt: 1, pt: 1, borderTop: 1, borderColor: 'divider' }) }}>
-      <Typography sx={{ flex: 1, minWidth: 0, fontSize: typescale.body.size, color: 'text.secondary' }}>{label}</Typography>
-      <Typography sx={{ fontSize: typescale.body.size, fontWeight: weight.bold, fontVariantNumeric: 'tabular-nums' }}>{units}</Typography>
-      <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled' }}>{types}종</Typography>
+    <Box
+      sx={{
+        display: 'flex', alignItems: 'center', gap: 1,
+        minHeight: ROW_H, boxSizing: 'border-box', py: 1,
+        ...(first ? {} : { borderTop: 1, borderColor: 'divider' }),
+      }}
+    >
+      <Typography sx={{ flex: 1, minWidth: 0, fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight }}>
+        {label}
+      </Typography>
+      <Typography sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.bold, fontVariantNumeric: 'tabular-nums' }}>
+        {units}
+        <Box component="span" sx={{ ml: 0.25, fontSize: typescale.small.size, fontWeight: weight.medium, color: 'text.secondary' }}>대</Box>
+      </Typography>
+      <Typography sx={{ flexShrink: 0, minWidth: 34, textAlign: 'right', fontSize: typescale.body.size, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+        {types}종
+      </Typography>
     </Box>
   )
 }

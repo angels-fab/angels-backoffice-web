@@ -12,7 +12,7 @@ import type { RealCat } from '@/pages/Calendar/catMeta'
 import { CAT_ICON } from '@/pages/Calendar/ChipContent'
 import { eventContent, eventMembers, given, memberById } from '@/pages/Calendar/members'
 import type { CalEvent } from '@/types'
-import { HomeCard } from './HomeCard'
+import { HomeCard, ROW_H } from './HomeCard'
 
 /**
  * 홈 첫 카드 '오늘 일정' (2026-08-06 재정리).
@@ -159,6 +159,7 @@ export default function TodaySection({ events: givenEvents, now: nowProp }: { ev
                 key={`${e.id}-${i}`}
                 sx={{
                   display: 'flex', alignItems: 'center', gap: 1, py: 1,
+                  minHeight: ROW_H, boxSizing: 'border-box',
                   borderTop: i === 0 ? 0 : 1, borderColor: 'divider', minWidth: 0,
                 }}
               >
