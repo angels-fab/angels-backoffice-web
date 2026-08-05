@@ -26,7 +26,7 @@ import { todaySeoul } from '@/utils/date'
 import { RichBodyView } from '@/utils/richBody'
 import { StatusChip, useSnack } from '@/components/ds'
 import { impKind, normStatus } from '@/pages/Improve/improveMeta'
-import { iconSize, radius, typescale, weight, z } from '@/theme/tokens'
+import { iconSize, layout, radius, typescale, weight, z } from '@/theme/tokens'
 import type { ImprovementItem } from '@/types'
 import type { ReplyRow } from '@/api/sheets'
 
@@ -40,13 +40,22 @@ import type { ReplyRow } from '@/api/sheets'
  *  - 평소엔 핀 하나로 접힘. 마우스를 올리면 제목이 뜨고, 클릭하면 펼쳐진다.
  *  - 제자리 클릭이면 펼침/접힘 토글, 3px 넘게 움직였으면 '끈 것'이라 토글하지 않는다.
  *  - 접혔든 펼쳤든 어디를 잡아도 끌린다(버튼·입력칸만 예외).
- *  - 좌표는 %로 저장한다. 픽셀로 저장하면 좁은 화면에서 쪽지가 밖으로 나간다.
+ *  - 좌표는 **본문 칸 좌상단 기준 px**으로 저장한다(아래 POS_KEY 주석).
  *  - 위치는 개인(user_settings), 내용은 공유(improvements) — 남이 옮겨도 내 화면은 안 움직인다.
  *  - PC 전용. 모바일은 좁아서 자유 배치가 스크롤과 싸우기만 하므로 기존 헤더 패널을 그대로 쓴다.
  */
 
-/** 개인 좌표 저장 키(user_settings) — 요청번호 → 레이어 대비 % 좌표 */
-const POS_KEY = 'memo.pos'
+/**
+ * 개인 좌표 저장 키(user_settings) — 요청번호 → **본문 칸 좌상단 기준 px** 좌표.
+ *
+ * v1(`memo.pos`)은 '사이드바 오른쪽 끝 ~ 화면 오른쪽 끝' 전체를 100%로 본 비율이었다.
+ * 본문은 가운데 정렬 + 최대 1400이라 같이 넓어지지 않으므로, 해상도가 바뀌면 같은 %가
+ * 표에서 한참 떨어진 여백에 찍혔다(2026-08-05 사용자 신고: "화면에 따라 다른 곳에 고정돼 보인다").
+ * 그래서 기준을 본문 칸으로 옮기고 단위도 px으로 바꿨다 — 표는 폭·행 높이가 고정이라
+ * 비율보다 px이 '표의 그 지점 옆'을 그대로 지킨다. 기준이 달라 v1 값은 이어 쓸 수 없어 키를 새로 뒀다
+ * (v1 좌표를 가진 쪽지는 기본 자리로 한 번 돌아가고, 다시 옮기면 그 자리에 굳는다).
+ */
+const POS_KEY = 'memo.pos2'
 type Pos = { x: number; y: number }
 type PosMap = Record<string, Pos>
 
@@ -69,9 +78,10 @@ const SLOT = PIN + 6
 const MAX_SLOT = 200
 
 /**
- * 슬롯 n의 자리(px, 레이어 기준) — **메모 버튼 바로 아래에서 오른쪽으로 한 줄**.
- * 한 줄이 화면 오른쪽 끝에 닿으면 그다음 줄로 넘어간다.
+ * 슬롯 n의 자리(px, 본문 칸 기준) — **메모 버튼 바로 아래에서 오른쪽으로 한 줄**.
+ * 한 줄이 본문 칸 오른쪽 끝에 닿으면 그다음 줄로 넘어간다.
  * 버튼을 못 찾으면(게시판 핀으로 켠 메모 등) 우상단을 기준점으로 삼는다.
+ * 넓은 화면에서는 버튼(상단바 오른쪽 끝)이 본문 칸보다 바깥이라 오른쪽 끝으로 붙는다.
  */
 function slotPx(layer: HTMLElement, n: number): { x: number; y: number } {
   const W = layer.clientWidth, H = layer.clientHeight
@@ -88,14 +98,6 @@ function slotPx(layer: HTMLElement, n: number): { x: number; y: number } {
   }
 }
 
-const toPct = (layer: HTMLElement, p: { x: number; y: number }): Pos => ({
-  x: +(p.x / layer.clientWidth * 100).toFixed(2),
-  y: +(p.y / layer.clientHeight * 100).toFixed(2),
-})
-const toPx = (layer: HTMLElement, p: Pos) => ({
-  x: p.x / 100 * layer.clientWidth,
-  y: p.y / 100 * layer.clientHeight,
-})
 /**
  * 끌기·접기 대상에서 빼야 하는 지점 — 버튼·입력칸, 그리고 리치 에디터(contenteditable).
  * 에디터는 input/textarea 가 아니라서 빠뜨리면 글을 쓰려고 누르는 순간 쪽지가 접히거나 끌린다.
@@ -137,16 +139,15 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
   // 외부(다른 기기에서 옮긴 위치 등)에서 좌표가 바뀌면 따라간다 — 끄는 중에는 무시
   useEffect(() => { if (!drag.current.on) { latest.current = pos; setLive(pos) } }, [pos])
 
-  /** 커진 만큼(펼침·창 축소) 화면 밖으로 나갔으면 레이어 안으로 되당긴다 */
+  /** 커진 만큼(펼침·창 축소) 밖으로 나갔으면 본문 칸 안으로 되당긴다 */
   const clamp = useCallback((p: Pos): Pos => {
     const layer = layerRef.current, el = elRef.current
     if (!layer || !el) return p
     const W = layer.clientWidth, H = layer.clientHeight
     if (W <= 0 || H <= 0) return p
-    const maxX = Math.max(W - el.offsetWidth, 0), maxY = Math.max(H - el.offsetHeight, 0)
     return {
-      x: +(Math.min(Math.max(p.x / 100 * W, 0), maxX) / W * 100).toFixed(2),
-      y: +(Math.min(Math.max(p.y / 100 * H, 0), maxY) / H * 100).toFixed(2),
+      x: Math.min(Math.max(p.x, 0), Math.max(W - el.offsetWidth, 0)),
+      y: Math.min(Math.max(p.y, 0), Math.max(H - el.offsetHeight, 0)),
     }
   }, [layerRef])
 
@@ -175,9 +176,10 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy
     if (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP) d.moved = true
     const W = layer.clientWidth, H = layer.clientHeight
-    const px = Math.min(Math.max(d.ox + dx, 0), Math.max(W - el.offsetWidth, 0))
-    const py = Math.min(Math.max(d.oy + dy, 0), Math.max(H - el.offsetHeight, 0))
-    place({ x: +(px / W * 100).toFixed(2), y: +(py / H * 100).toFixed(2) })
+    place({
+      x: Math.min(Math.max(d.ox + dx, 0), Math.max(W - el.offsetWidth, 0)),
+      y: Math.min(Math.max(d.oy + dy, 0), Math.max(H - el.offsetHeight, 0)),
+    })
   }
 
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -260,8 +262,8 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
       onPointerCancel={() => { drag.current.on = false }}
       sx={(th) => ({
         position: 'absolute',
-        left: `${live.x}%`,
-        top: `${live.y}%`,
+        left: `${live.x}px`,
+        top: `${live.y}px`,
         width: open ? OPEN_W : 'auto',
         // 펼친 쪽지는 항상 맨 위 — 안 그러면 DOM 순서상 뒤에 오는 압정들이 본문을 덮는다
         // (요청번호 순으로 그려지므로 번호가 큰 쪽지가 위로 올라온다). 집는 중인 것도 위로.
@@ -481,14 +483,14 @@ export default function StickyMemoLayer() {
     if (!layerEl || memos.length === 0) return
     const need = memos.filter((t) => !saved?.[t.num])
     if (need.length === 0) return
-    const taken = memos.filter((t) => saved?.[t.num]).map((t) => toPx(layerEl, saved![t.num]))
+    const taken = memos.filter((t) => saved?.[t.num]).map((t) => saved![t.num])
     const patch: PosMap = {}
     for (const t of need) {
       let n = 0
       while (n < MAX_SLOT && overlaps(slotPx(layerEl, n), taken)) n++
       const px = slotPx(layerEl, n)
       taken.push(px)
-      patch[t.num] = toPct(layerEl, px)
+      patch[t.num] = px
     }
     dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), ...patch } }))
   }, [layerEl, memos, saved, dispatch])
@@ -502,7 +504,6 @@ export default function StickyMemoLayer() {
 
   return (
     <Box
-      ref={attachLayer}
       aria-label="화면 메모"
       sx={{
         position: 'fixed',
@@ -510,28 +511,33 @@ export default function StickyMemoLayer() {
         left: `${RAIL_W}px`,
         right: 0,
         bottom: 0,
-        pointerEvents: 'none',   // 레이어 자체는 클릭을 통과시키고, 쪽지만 받는다
+        pointerEvents: 'none',   // 레이어 자체는 클릭을 통과시키고, 쪽지만 받는다(pointer-events는 상속된다)
         zIndex: z.stickyMemo,
       }}
     >
-      {memos.map((t) => {
-        // 자리가 아직 없으면 이번 프레임만 건너뛴다 — 위 useEffect가 곧바로 배정한다.
-        // 임시 자리에 그렸다가 옮기면 쪽지가 튀어 보인다.
-        const pos = saved?.[t.num]
-        if (!pos) return null
-        return (
-          <StickyNote
-            key={t.num}
-            item={t}
-            replies={repliesByReq[t.num] || []}
-            pos={pos}
-            layerRef={layerRef}
-            canEdit={isAdmin && !!user && !!authKey}
-            user={user}
-            onMoveEnd={onMoveEnd}
-          />
-        )
-      })}
+      {/* 좌표 기준 = 본문 칸. PageContainer(최대 1400·가운데 정렬)와 같은 상자를 겹쳐 두고
+          그 좌상단을 (0,0)으로 삼는다. 그래야 해상도가 달라져도 쪽지가 표의 같은 지점 옆에 남는다
+          — 화면 전체를 기준으로 삼으면 본문은 안 넓어지는데 좌표만 벌어져 여백으로 밀려난다. */}
+      <Box ref={attachLayer} sx={{ position: 'relative', height: '100%', width: '100%', maxWidth: `${layout.maxWidthWide}px`, mx: 'auto' }}>
+        {memos.map((t) => {
+          // 자리가 아직 없으면 이번 프레임만 건너뛴다 — 위 useEffect가 곧바로 배정한다.
+          // 임시 자리에 그렸다가 옮기면 쪽지가 튀어 보인다.
+          const pos = saved?.[t.num]
+          if (!pos) return null
+          return (
+            <StickyNote
+              key={t.num}
+              item={t}
+              replies={repliesByReq[t.num] || []}
+              pos={pos}
+              layerRef={layerRef}
+              canEdit={isAdmin && !!user && !!authKey}
+              user={user}
+              onMoveEnd={onMoveEnd}
+            />
+          )
+        })}
+      </Box>
     </Box>
   )
 }

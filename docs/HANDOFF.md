@@ -1,5 +1,9 @@
 # 인계 노트 (집 ↔ 사무실 이어가기)
 
+## ✅ 붙임쪽지 압정 위치 — 해상도가 달라도 같은 자리 (2026-08-05, 완료)
+
+압정 좌표를 **화면 폭의 %**로 저장하던 것을 **본문 칸(PageContainer 1400·가운데 정렬) 좌상단 기준 px**으로 바꿈. 본문은 안 넓어지는데 좌표만 벌어져, 넓은 화면에서 압정이 표 옆이 아니라 여백에 찍히던 문제. 저장 키 `memo.pos`→`memo.pos2`(기준이 달라 옛 값 승계 불가 — 기존 쪽지는 기본 자리로 한 번 복귀). 1366/1920에서 레이어 경계가 본문 칸과 픽셀 단위로 일치함을 실측 — [fix-memo-pin-anchor.md](fix-memo-pin-anchor.md). **로그인 화면의 실제 쪽지는 미검증**(프리뷰에 세션 없음).
+
 ## ✅ 목록 키 동작 표준화 (2026-08-04, 완료)
 
 줄 맨 앞 Backspace = 글머리만 지우고 한 단계 내어쓰기(윗줄에 안 합쳐짐), Shift+Enter = 같은 항목 안 줄바꿈. `richText.tsx`의 `listExtensions`에 `ListStandardKeys` 추가(공식 list-keymap은 글자를 합쳐서 미채택). jsdom 헤드리스로 7가지 상황 실측 — [fix-list-keys-standard.md](fix-list-keys-standard.md).
