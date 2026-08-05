@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import { AppCard, AppDrawer, CardGrid, StatusChip, EmptyState, LoadingState } from '@/components/ds'
+import { AppDrawer, StatusChip, EmptyState, LoadingState } from '@/components/ds'
 import { radius, typescale } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
 import type { Notice } from '@/types'
 import { noticeBodyHTML, noticeCatStatus } from '@/pages/Notice/noticeMeta'
+import { HomeCard, HomeRow, HomeMeta } from './HomeCard'
 
 const fmtMD = (d: string) => {
   const m = String(d).match(/\d{4}-(\d{2})-(\d{2})/)
@@ -15,7 +15,12 @@ const fmtMD = (d: string) => {
 }
 
 /**
- * Section 5 — 공지사항 최근 5건(카드형 리스트). 클릭 시 AppDrawer 상세(본문 DOMPurify 살균).
+ * 홈 '공지사항' — **한 장의 카드 안에 목록**.
+ *
+ * 종전에는 공지 5건이 각각 별도 카드로 흩어져 홈 한 구역을 통째로 차지했고, 카드마다 제목·칩·메타
+ * 위치가 달라 눈이 갈 곳을 못 찾았다(2026-08-05 사용자: "카드 여러 개 흐트려놓지 말고 카드 안에").
+ * 다른 홈 카드와 같은 규격(HomeCard/HomeRow)을 쓰므로 제목이 카드 밖으로 새지 않는다.
+ * 클릭 시 상세는 종전 그대로 AppDrawer(본문 DOMPurify 살균).
  */
 export default function NoticeSection() {
   const navigate = useNavigate()
@@ -25,80 +30,25 @@ export default function NoticeSection() {
 
   const recent = items.slice(0, 5) // store에서 상단고정→연번 최신순 정렬됨
 
-  if (!ready) {
-    return (
-      <AppCard padding={16}>
-        <LoadingState size="sm" />
-      </AppCard>
-    )
-  }
-  if (recent.length === 0) {
-    return (
-      <AppCard padding={0}>
-        <EmptyState size="sm" title="등록된 공지가 없습니다" />
-      </AppCard>
-    )
-  }
-
   return (
     <>
-      <CardGrid minColWidth={320}>
-        {recent.map((n) => {
-          const meta = [n.dept, n.author].filter(Boolean).join(' · ')
-          return (
-            <Box
+      <HomeCard title="공지사항" count={`${items.length}건`} actionLabel="전체보기" onAction={() => navigate('/notice')}>
+        {!ready ? (
+          <LoadingState size="md" />
+        ) : recent.length === 0 ? (
+          <EmptyState size="sm" title="등록된 공지가 없습니다" />
+        ) : (
+          recent.map((n) => (
+            <HomeRow
               key={n.id}
-              role="button"
-              tabIndex={0}
-              aria-label={`공지: ${n.title}`}
               onClick={() => setSel(n)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  setSel(n)
-                }
-              }}
-              sx={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 1,
-                p: 2,
-                bgcolor: 'background.paper',
-                border: 1,
-                borderColor: 'divider',
-                borderRadius: `${radius.card}px`,
-                cursor: 'pointer',
-                transition: 'border-color .15s, background-color .15s, transform .15s',
-                '&:hover': { borderColor: 'background.elevated', bgcolor: 'background.elevated', transform: 'translateY(-1px)' },
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                {n.isNew ? <StatusChip status="error" label="NEW" /> : <StatusChip status={noticeCatStatus(n.cat)} label={n.cat} />}
-                <Typography variant="caption" sx={{ flexShrink: 0, fontFamily: 'monospace' }}>
-                  {fmtMD(n.date)}
-                </Typography>
-              </Box>
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  lineHeight: 1.4,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}
-              >
-                {n.title}
-              </Typography>
-              {meta && (
-                <Typography variant="small" sx={{ color: 'text.secondary' }}>
-                  {meta}
-                </Typography>
-              )}
-            </Box>
-          )
-        })}
-      </CardGrid>
+              lead={n.isNew ? <StatusChip status="error" label="NEW" /> : <StatusChip status={noticeCatStatus(n.cat)} label={n.cat} />}
+              title={n.title}
+              trail={<HomeMeta mono>{fmtMD(n.date)}</HomeMeta>}
+            />
+          ))
+        )}
+      </HomeCard>
 
       <AppDrawer
         open={!!sel}

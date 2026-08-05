@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -8,7 +7,6 @@ import Popover from '@mui/material/Popover'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import Divider from '@mui/material/Divider'
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import SpaceDashboardIcon from '@mui/icons-material/SpaceDashboard'
 import TuneIcon from '@mui/icons-material/Tune'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
@@ -22,7 +20,7 @@ import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import RoadmapCard from './RoadmapCard'
-import ScheduleSection, { UpcomingSection } from './dash/ScheduleSection'
+import ScheduleSection, { UnseenSection, UpcomingSection } from './dash/ScheduleSection'
 import WorkStatusSection from './dash/WorkStatusSection'
 import StatusSummary from './dash/StatusSummary'
 import NoticeSection from './dash/NoticeSection'
@@ -42,21 +40,31 @@ import PinnedWorksSection, { usePinnedWorks } from './dash/PinnedWorksSection'
  * 나머지는 2027년까지 안 바뀌는 값), `equipment`(현황 줄로 흡수).
  * 저장된 순서에 옛 id가 남아 있어도 isSectionId 가 걸러내므로 마이그레이션은 필요 없다.
  */
-const SECTION_IDS = ['today', 'work', 'upcoming', 'pins', 'notice', 'status'] as const
+const SECTION_IDS = ['unseen', 'today', 'upcoming', 'work', 'notice', 'pins', 'status'] as const
 type SectionId = (typeof SECTION_IDS)[number]
 const SECTION_LABEL: Record<SectionId, string> = {
-  today: '오늘 일정 · 안 본 새 글',
-  work: '진행 중 업무',
+  unseen: '안 본 새 글',
+  today: '오늘 일정',
   upcoming: '다가오는 일정',
-  pins: '관심 업무',
+  work: '진행 중 업무',
   notice: '공지사항',
+  pins: '관심 업무',
   status: '현황 (로드맵 · 장비)',
 }
-const DEFAULT_ORDER: SectionId[] = ['today', 'work', 'upcoming', 'pins', 'notice', 'status']
+/**
+ * 기본 배치 — 3열 그리드에 흘려 넣는다(사용자 확정 2026-08-05).
+ *   1행: 안 본 새 글 · 오늘 일정 · 다가오는 일정   ← 가장 궁금한 것
+ *   2행: 진행 중 업무(2칸) · 공지사항
+ *   그 아래: 관심 업무 · 현황(전폭)
+ */
+const DEFAULT_ORDER: SectionId[] = ['unseen', 'today', 'upcoming', 'work', 'notice', 'pins', 'status']
+/** 넓은 자리가 필요한 카드는 칸을 합친다(제목이 긴 업무 목록·전폭 요약) */
+const SECTION_SPAN: Record<SectionId, number> = {
+  unseen: 1, today: 1, upcoming: 1, work: 2, notice: 1, pins: 3, status: 3,
+}
 const isSectionId = (v: unknown): v is SectionId => typeof v === 'string' && (SECTION_IDS as readonly string[]).includes(v)
 
 export default function Home() {
-  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const { isMember } = useRole()
   // 홈 배치 개인화 — 저장 순서(모르는 id 무시 + 누락 id는 기본 순서로 뒤에 병합)와 숨김 집합.
@@ -96,27 +104,15 @@ export default function Home() {
     dispatch(putSetting({ key: 'home.hidden', value: [] }))
   }
 
-  const moreBtn = (to: string) => (
-    <Button variant="text" size="small" endIcon={<ChevronRightIcon />} onClick={() => navigate(to)} sx={{ color: 'text.secondary' }}>
-      전체보기
-    </Button>
-  )
-
+  // 각 카드가 제목·건수·전체보기를 스스로 그린다(HomeCard 공용 규격) — 바깥에서 제목을 또 붙이지 않는다
   const sectionNode: Record<SectionId, ReactNode> = {
+    unseen: <UnseenSection />,
     today: <ScheduleSection />,
-    work: <WorkStatusSection />,
     upcoming: <UpcomingSection />,
-    pins: <PinnedWorksSection />,
+    work: <WorkStatusSection />,
     notice: <NoticeSection />,
+    pins: <PinnedWorksSection />,
     status: <StatusSummary />,
-  }
-  const sectionMeta: Record<SectionId, { title?: string; to?: string }> = {
-    today: {},
-    work: { title: '진행 중 업무', to: '/work' },
-    upcoming: { title: '다가오는 일정' },
-    pins: { title: '관심 업무', to: '/work' },
-    notice: { title: '공지사항', to: '/notice' },
-    status: {},
   }
 
   return (
@@ -184,17 +180,24 @@ export default function Home() {
         </ContentSection>
       )}
 
-      {/* 팀원(이상) 대시보드 — 계정별 순서·숨김 적용 */}
-      {isMember && visible.map((id, i) => (
-        <ContentSection
-          key={id}
-          title={sectionMeta[id].title}
-          action={sectionMeta[id].to ? moreBtn(sectionMeta[id].to as string) : undefined}
-          last={i === visible.length - 1}
+      {/* 구성원 대시보드 — 3열 그리드에 카드를 흘려 넣는다(계정별 순서·숨김 적용).
+          좁은 화면(md 미만)은 한 줄에 하나 — 칸 합치기(span)는 3열일 때만 의미가 있다. */}
+      {isMember && (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
+            gap: 2,
+            alignItems: 'stretch',
+          }}
         >
-          {sectionNode[id]}
-        </ContentSection>
-      ))}
+          {visible.map((id) => (
+            <Box key={id} sx={{ gridColumn: { xs: 'span 1', md: `span ${SECTION_SPAN[id]}` }, minWidth: 0 }}>
+              {sectionNode[id]}
+            </Box>
+          ))}
+        </Box>
+      )}
     </PageContainer>
   )
 }
