@@ -65,6 +65,27 @@ const POS_KEY = 'memo.pos2'
 type Pos = { x: number; y: number }
 type PosMap = Record<string, Pos>
 
+/** 후광 번짐 반경(px) — 필터 영역을 이만큼 넉넉히 잡아야 가장자리가 잘리지 않는다 */
+const GLOW_BLUR = 6
+/**
+ * 획 전체를 감싸는 사각형 — SVG 필터 영역 계산용.
+ * 필터 영역을 bbox 비율(기본값)로 두면 **가로로 곧은 획은 높이가 0**이라 영역도 0이 되어
+ * 후광이 아예 안 그려진다. 그래서 좌표에서 직접 구해 px(userSpaceOnUse)로 지정한다.
+ */
+function glowBox(strokes: MemoStroke[]) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, w = 0
+  for (const s of strokes) {
+    w = Math.max(w, s.w)
+    for (let i = 0; i + 1 < s.p.length; i += 2) {
+      x0 = Math.min(x0, s.p[i]); x1 = Math.max(x1, s.p[i])
+      y0 = Math.min(y0, s.p[i + 1]); y1 = Math.max(y1, s.p[i + 1])
+    }
+  }
+  if (!Number.isFinite(x0)) return null
+  const pad = w / 2 + GLOW_BLUR * 4
+  return { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 }
+}
+
 /** 상단바 높이 — 레이어 상단 기준(구 index.css body padding-top 53과 같은 값) */
 const TOPBAR_H = 53
 /** PC 사이드바 레일 폭 — 레이어 좌측 기준(SideNav 64px 레일) */
@@ -199,8 +220,21 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
    */
   useEffect(() => {
     onActive(item.num, hover || open || dragging)
+    // 사라질 때는 반드시 끈다 — 올려놓은 채로 페이지를 옮기거나 목록이 갱신되면
+    // 이 쪽지는 없어지는데 하이라이트만 화면에 남는다
+    return () => onActive(item.num, false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hover, open, dragging, item.num])
+
+  /**
+   * 접는 순간 hover 를 끈다(2026-08-05 사용자 신고: "메모 접고 나서도 하이라이트가 살아있어").
+   *
+   * 펼친 판은 크고 접힌 압정은 작아서, 접으면 포인터가 쪽지 밖으로 나간다. 그런데 커서가
+   * 그대로 멈춰 있으면 브라우저는 mouseleave 를 보내지 않는다(hover 대상은 다음 마우스
+   * 움직임에 다시 계산된다) → hover 가 켜진 채 굳어 그림 하이라이트가 계속 남았다.
+   * 정말 압정 위라면 아래 onMouseMove 가 곧바로 다시 켠다.
+   */
+  useEffect(() => { if (!open) setHover(false) }, [open])
 
   /** 커진 만큼(펼침·창 축소) 화면 밖으로 나갔으면 되당긴다 — 여백은 허용, 화면 밖은 불가 */
   const clamp = useCallback((p: Pos): Pos => {
@@ -367,6 +401,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
       /* 호버 = 그 메모의 그림만 남기는 신호. 끌기 중에는 포인터 캡처 때문에 leave 가 안 올 수 있어
          pointer 계열 대신 mouse 계열을 쓴다(PC 전용 기능이라 충분하다). */
       onMouseEnter={() => setHover(true)}
+      onMouseMove={() => { if (!hover) setHover(true) }}
       onMouseLeave={() => setHover(false)}
       sx={(th) => ({
         position: 'absolute',
@@ -817,7 +852,7 @@ export default function StickyMemoLayer() {
         {isAdmin && memos.filter((t) => t.num !== drawFor).map((t) => {
           if (!t.drawing?.length) return null
           // 겹친 그림 분간(2026-08-05).
-          //  · 주목 중인 그림 = 뒤에 굵은 후광을 한 겹 깔아 도드라지게 한다. 원본 획은 그대로 둔다.
+          //  · 주목 중인 그림 = 획 둘레가 앰버로 은은하게 빛난다(숨쉬듯 밝기 변화). 원본 획은 그대로 둔다.
           //  · 나머지 = 흐리게.
           // 후광이 필요한 이유: '나머지를 흐리게'만 하면 화면에 그림이 **한 장뿐일 때 아무 변화가 없다**
           // (흐릴 나머지가 없다). 실제로 한 화면에 한 장인 경우가 대부분이라 하이라이트가 안 먹는 것처럼 보였다.
@@ -825,6 +860,8 @@ export default function StickyMemoLayer() {
           // 반응하면 그게 더 헷갈린다.
           const active = activeHasDrawing && t.num === activeNum
           const dimmed = activeHasDrawing && t.num !== activeNum
+          const box = active ? glowBox(t.drawing) : null
+          const glowId = `memo-glow-${t.num}`
           return (
             <Box
               key={`d-${t.num}`}
@@ -832,24 +869,48 @@ export default function StickyMemoLayer() {
               aria-hidden
               sx={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none',
-                zIndex: t.num === activeNum ? 1 : 0,
+                zIndex: active ? 1 : 0,
                 opacity: dimmed ? 0.18 : 1,
                 transition: `opacity ${motion.base} ${motion.ease}`,
               }}
             >
-              {/* 후광 — 주목 중일 때만. 같은 획을 굵고 옅게 뒤에 한 겹 깐다(형광펜으로 덧칠한 느낌) */}
-              {active && t.drawing.map((s, i) => (
-                <polyline
-                  key={`h-${i}`}
-                  points={pointsOf(s.p)}
-                  fill="none"
-                  stroke={s.c === INK ? theme.palette.text.primary : s.c}
-                  strokeWidth={s.w + 10}
-                  strokeOpacity={0.25}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              ))}
+              {/* 후광 — 획을 흐리게 번지게 한 뒤 앰버로 물들여 뒤에 깐다(원본 획 위에 겹치지 않는다).
+                  세 겹으로 합쳐야 가운데가 충분히 진해져 '빛나는' 느낌이 난다. */}
+              {box && (
+                <defs>
+                  <filter id={glowId} filterUnits="userSpaceOnUse" x={box.x} y={box.y} width={box.w} height={box.h}>
+                    <feGaussianBlur stdDeviation={GLOW_BLUR} result="b" />
+                    <feFlood floodColor={theme.palette.accent.amber} floodOpacity="1" result="c" />
+                    <feComposite in="c" in2="b" operator="in" result="g" />
+                    <feMerge>
+                      <feMergeNode in="g" /><feMergeNode in="g" /><feMergeNode in="g" />
+                    </feMerge>
+                  </filter>
+                </defs>
+              )}
+              {box && (
+                <Box
+                  component="g"
+                  filter={`url(#${glowId})`}
+                  sx={{
+                    animation: 'memoGlowPulse 1.8s ease-in-out infinite',
+                    '@keyframes memoGlowPulse': { '0%, 100%': { opacity: 0.5 }, '50%': { opacity: 1 } },
+                    '@media (prefers-reduced-motion: reduce)': { animation: 'none', opacity: 0.85 },
+                  }}
+                >
+                  {t.drawing.map((s, i) => (
+                    <polyline
+                      key={`h-${i}`}
+                      points={pointsOf(s.p)}
+                      fill="none"
+                      stroke="#000"
+                      strokeWidth={s.w + 3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  ))}
+                </Box>
+              )}
               {/* stroke 는 sx 로 팔레트 경로가 안 풀린다(MemoDraw 주석 참고) — 실제 색으로 넘긴다 */}
               {t.drawing.map((s, i) => (
                 <polyline
