@@ -695,9 +695,11 @@ export default function StickyMemoLayer() {
       if (drawTarget) {
         await updateImprovement({ author: user, key: 'session', num: drawTarget.num, drawing: strokes.length ? strokes : null })
       } else {
-        // 상단바에서 바로 그린 경우 — 그림을 담을 쪽지를 이 화면에 새로 만든다(내용은 나중에 쪽지에서)
+        // 상단바에서 바로 그린 경우 — 그림을 담을 쪽지를 이 화면에 새로 만든다(내용은 나중에 쪽지에서).
+        // 제목을 비우면 createImprovement 가 '제목을 입력해주세요'로 막는다(게시판 목록이 읽혀야 하므로).
+        // 그림만 그린 쪽지는 쓸 제목이 없으니 게시판에서 알아볼 수 있는 기본 제목을 넣는다(2026-08-05).
         const loc = pathToLocation(pathname)
-        const num = await createImprovement({ author: user, key: authKey, loc: loc || '기타', title: '', content: '', mgr: user })
+        const num = await createImprovement({ author: user, key: authKey, loc: loc || '기타', title: `화면 그림 — ${loc || '기타'}`, content: '', mgr: user })
         await updateImprovement({ author: user, key: 'session', num, memo: true, drawing: strokes })
       }
       dispatch(loadImproveData())
@@ -745,13 +747,13 @@ export default function StickyMemoLayer() {
               aria-hidden
               sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
             >
+              {/* stroke 는 sx 로 팔레트 경로가 안 풀린다(MemoDraw 주석 참고) — 실제 색으로 넘긴다 */}
               {t.drawing.map((s, i) => (
-                <Box
-                  component="polyline"
+                <polyline
                   key={i}
                   points={pointsOf(s.p)}
                   fill="none"
-                  sx={{ stroke: s.c === INK ? 'text.primary' : s.c }}
+                  stroke={s.c === INK ? theme.palette.text.primary : s.c}
                   strokeWidth={s.w}
                   strokeLinecap="round"
                   strokeLinejoin="round"

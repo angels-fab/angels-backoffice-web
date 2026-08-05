@@ -1,11 +1,15 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
+import { useTheme } from '@mui/material/styles'
 import UndoIcon from '@mui/icons-material/Undo'
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
-import AutoFixNormalIcon from '@mui/icons-material/AutoFixNormal'
+import RedoIcon from '@mui/icons-material/Redo'
+import LayersClearIcon from '@mui/icons-material/LayersClear'
+// MUI 아이콘 세트에 '지우개' 전용 글리프가 없다(*Eraser* 는 PhonelinkErase 뿐).
+// 칠판 지우개에 가장 가까운 청소용 브러시로 대신한다 — 수제 SVG 금지 규칙(CLAUDE.md) 때문에 직접 그리지 않는다.
+import CleaningServicesIcon from '@mui/icons-material/CleaningServices'
 import { accent, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import type { MemoStroke } from '@/api/improve'
 
@@ -59,11 +63,50 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
   onCancel: () => void
 }) {
   const [strokes, setStrokes] = useState<MemoStroke[]>(initial || [])
+  const [undone, setUndone] = useState<MemoStroke[]>([]) // 실행취소로 뺀 획 — 다시실행용
   const [pen, setPen] = useState(PENS[0])
   const [width, setWidth] = useState(WIDTHS[0])
   const [erasing, setErasing] = useState(false)
   const drawing = useRef(false)
   const svgRef = useRef<SVGSVGElement>(null)
+  const theme = useTheme()
+  /**
+   * 'ink' 는 테마 글자색으로 푼다.
+   * ⚠ sx 로 넘기면 안 된다 — MUI sx 는 color·bgcolor 처럼 정해진 속성에만 팔레트 경로를 풀어주고
+   * stroke 는 그 목록에 없어 'text.primary' 가 그대로 CSS 값이 되어 **선이 안 그려졌다**
+   * (2026-08-05 사용자 신고: 검정색 안 그려진다). 그래서 여기서 실제 색으로 바꿔 속성으로 준다.
+   */
+  const inkColor = theme.palette.text.primary
+  const strokeOf = (c: string) => (c === INK ? inkColor : c)
+
+  const undo = () => setStrokes((s) => {
+    if (s.length === 0) return s
+    setUndone((u) => [...u, s[s.length - 1]])
+    return s.slice(0, -1)
+  })
+  const redo = () => setUndone((u) => {
+    if (u.length === 0) return u
+    setStrokes((s) => [...s, u[u.length - 1]])
+    return u.slice(0, -1)
+  })
+
+  /**
+   * 키보드 — Ctrl/⌘+Z 실행취소 · Ctrl/⌘+Shift+Z(또는 Ctrl+Y) 다시실행 · Esc 그리기 닫기.
+   * 그리는 중에는 입력칸에 포커스가 갈 일이 없어 가로채도 안전하다.
+   */
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onCancel(); return }
+      const mod = e.ctrlKey || e.metaKey
+      if (!mod) return
+      const k = e.key.toLowerCase()
+      if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
+      else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onCancel])
 
   /** 지우개 — 지나간 자리에 걸린 획을 통째로 지운다(획 단위. 선 일부만 지우는 방식은 과함) */
   const eraseAt = (x: number, y: number) =>
@@ -88,6 +131,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     drawing.current = true
     try { svgRef.current?.setPointerCapture(e.pointerId) } catch { /* 캡처 실패해도 그리기는 동작 */ }
     if (erasing) return eraseAt(p[0], p[1])
+    setUndone([]) // 새로 그으면 다시실행 이력은 끊는다(편집기 표준)
     setStrokes((s) => [...s, { c: pen.color, w: width, p }])
   }
   const move = (e: React.PointerEvent) => {
@@ -123,12 +167,11 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         }}
       >
         {strokes.map((s, i) => (
-          <Box
-            component="polyline"
+          <polyline
             key={i}
             points={pointsOf(s.p)}
             fill="none"
-            sx={{ stroke: s.c === INK ? 'text.primary' : s.c }}
+            stroke={strokeOf(s.c)}
             strokeWidth={s.w}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -154,7 +197,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
               onClick={() => { setPen(p); setErasing(false) }}
               sx={{
                 width: 24, height: 24, p: 0, borderRadius: radius.circle, cursor: 'pointer',
-                bgcolor: p.color === INK ? 'text.primary' : p.color,
+                bgcolor: strokeOf(p.color),
                 border: !erasing && pen.key === p.key ? '3px solid' : '1px solid',
                 borderColor: !erasing && pen.key === p.key ? 'primary.main' : 'divider',
               }}
@@ -170,7 +213,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
             onClick={() => setErasing((v) => !v)}
             sx={{ color: erasing ? 'primary.main' : 'text.secondary', bgcolor: erasing ? 'action.selected' : 'transparent' }}
           >
-            <AutoFixNormalIcon sx={{ fontSize: typescale.cardTitle.size }} />
+            <CleaningServicesIcon sx={{ fontSize: typescale.cardTitle.size }} />
           </IconButton>
         </Tooltip>
 
@@ -194,24 +237,31 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
 
         <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', mx: 0.5 }} />
 
-        <Tooltip title="마지막 획 지우기">
+        <Tooltip title="실행취소 (Ctrl+Z)">
           <span>
-            <IconButton size="small" aria-label="실행취소" disabled={strokes.length === 0} onClick={() => setStrokes((s) => s.slice(0, -1))}>
+            <IconButton size="small" aria-label="실행취소" disabled={strokes.length === 0} onClick={undo}>
               <UndoIcon sx={{ fontSize: typescale.cardTitle.size }} />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Tooltip title="다시실행 (Ctrl+Shift+Z)">
+          <span>
+            <IconButton size="small" aria-label="다시실행" disabled={undone.length === 0} onClick={redo}>
+              <RedoIcon sx={{ fontSize: typescale.cardTitle.size }} />
             </IconButton>
           </span>
         </Tooltip>
         <Tooltip title="전부 지우기">
           <span>
-            <IconButton size="small" aria-label="전부 지우기" disabled={strokes.length === 0} onClick={() => setStrokes([])}>
-              <DeleteSweepIcon sx={{ fontSize: typescale.cardTitle.size }} />
+            <IconButton size="small" aria-label="전부 지우기" disabled={strokes.length === 0} onClick={() => { setUndone([]); setStrokes([]) }}>
+              <LayersClearIcon sx={{ fontSize: typescale.cardTitle.size }} />
             </IconButton>
           </span>
         </Tooltip>
 
         <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', mx: 0.5 }} />
 
-        <Button size="small" onClick={onCancel} sx={{ color: 'text.secondary', fontWeight: weight.medium }}>취소</Button>
+        <Button size="small" onClick={onCancel} sx={{ color: 'text.secondary', fontWeight: weight.medium }}>취소 (Esc)</Button>
         <Button size="small" variant="contained" onClick={() => onDone(strokes)}>완료</Button>
       </Box>
     </>
