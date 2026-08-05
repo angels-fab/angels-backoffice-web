@@ -20,7 +20,7 @@ import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import RoadmapCard from './RoadmapCard'
-import ScheduleSection from './dash/ScheduleSection'
+import UpcomingSection from './dash/UpcomingSection'
 import HomeKpi from './dash/HomeKpi'
 import WorkMixCard from './dash/WorkMixCard'
 import WorkStatusSection from './dash/WorkStatusSection'
@@ -46,7 +46,7 @@ const SECTION_IDS = ['kpi', 'today', 'mix', 'work', 'notice', 'pins', 'status'] 
 type SectionId = (typeof SECTION_IDS)[number]
 const SECTION_LABEL: Record<SectionId, string> = {
   kpi: '안 본 새 글',
-  today: '오늘 일정 · 달력',
+  today: '다가오는 일정',
   mix: '업무 구성',
   work: '진행 중 업무',
   notice: '공지사항',
@@ -55,12 +55,13 @@ const SECTION_LABEL: Record<SectionId, string> = {
 }
 /**
  * 기본 배치 — 3열 그리드(2026-08-05 사용자 지시).
- * 들어오자마자 궁금한 순서가 ① 오늘 일정 ② 진행 중 업무 ③ 공지사항이라, 그 순서로 자리를 준다.
- *   1행: 오늘 일정(2칸 — 아래에 간소화 주간 달력) · 진행 중 업무(큰 숫자 + 제목만)
- *   2행: 공지사항 · 안 본 새 글 · 업무 구성
+ *   1행: 다가오는 일정(2칸 — 2주 달력 + 다음 일정까지 남은 시간) · 공지사항(1칸)
+ *   2행: 진행 중 업무 · 안 본 새 글 · 업무 구성
  *   그 아래: 관심 업무 · 현황(전폭, 접힘)
+ * 첫 줄에 공지를 올린 것은 '다가오는 일정'이 좌우로 넓어지면서 옆자리가 한 칸만 남았기 때문이다
+ * (사용자 지시 2026-08-05 — 그 자리에 공지사항).
  */
-const DEFAULT_ORDER: SectionId[] = ['today', 'work', 'notice', 'kpi', 'mix', 'pins', 'status']
+const DEFAULT_ORDER: SectionId[] = ['today', 'notice', 'work', 'kpi', 'mix', 'pins', 'status']
 /** 넓은 자리가 필요한 카드는 칸을 합친다 */
 const SECTION_SPAN: Record<SectionId, number> = {
   today: 2, work: 1, notice: 1, kpi: 1, mix: 1, pins: 3, status: 3,
@@ -121,7 +122,7 @@ export default function Home() {
   // 각 카드가 제목·건수·전체보기를 스스로 그린다(HomeCard 공용 규격) — 바깥에서 제목을 또 붙이지 않는다
   const sectionNode: Record<SectionId, ReactNode> = {
     kpi: <HomeKpi />,
-    today: <ScheduleSection />,
+    today: <UpcomingSection />,
     mix: <WorkMixCard />,
     work: <WorkStatusSection />,
     notice: <NoticeSection />,
