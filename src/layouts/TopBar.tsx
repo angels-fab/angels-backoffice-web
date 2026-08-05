@@ -229,9 +229,10 @@ export default function TopBar() {
           <Box sx={{ display: { xs: 'none', shell: 'flex' }, alignItems: 'center', gap: 1 }}>
             {loggedIn ? (
               <>
+                {/* 이름이 앞 — 칩의 주어는 '누구'이고 등급은 부가정보다(사용자 지시 2026-08-05) */}
                 <StatusChip
                   status={isAdmin ? 'success' : role === 'member' ? 'info' : 'neutral'}
-                  label={user ? `${ROLE_LABEL[role]} · ${user}` : ROLE_LABEL[role]}
+                  label={user ? `${user} · ${ROLE_LABEL[role]}` : ROLE_LABEL[role]}
                 />
                 <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: iconSize.body }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
                   로그아웃

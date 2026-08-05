@@ -141,8 +141,8 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
             계정{user ? ` · ${user}` : ''} · {ROLE_LABEL[role]}
           </Typography>
           <List dense sx={{ pt: 0.5 }}>
-            {/* 설정 = 관리자 전용(가입 승인 등). 일반 사용자에겐 숨김. */}
-            {isAdmin && (
+            {/* 설정 = 로그인 전원(본인 비밀번호 변경). 가입 승인·권한 변경은 페이지 안에서 관리자에게만. */}
+            {loggedIn && (
               <ListItemButton selected={isActive('/settings')} onClick={() => go('/settings')} sx={{ py: 1 }}>
                 <ListItemIcon sx={{ minWidth: 40, color: isActive('/settings') ? 'primary.main' : 'text.secondary' }}>
                   <SettingsIcon />

@@ -3,7 +3,7 @@ import { supabase, makeSignupClient, empEmail, empEmailLegacy, padPassword } fro
 
 /**
  * 권한 컨텍스트 — Supabase Auth 세션 기반.
- * 역할 3단계: guest(비로그인) / member(일반) / admin(관리자) — 역할은 profiles.role에서 읽음.
+ * 역할 3단계: guest(방문자) / member(구성원) / admin(포털 관리자) — 역할은 profiles.role에서 읽음.
  * 로그인 UX는 기존과 동일(사번+비밀번호). 내부적으로 사번→내부 이메일, 비밀번호→패딩 변환.
  *
  * 인증은 전적으로 Supabase 세션(JWT)+RLS로 처리한다. authKey는 과거 Apps Script 대조용 원문
@@ -12,9 +12,16 @@ import { supabase, makeSignupClient, empEmail, empEmailLegacy, padPassword } fro
  * (쓰기 게이트의 truthy 판정용). 기존 브라우저에 남은 평문 비밀번호는 마운트 시 제거한다.
  */
 const SESSION_MARK = 'session' // authKey 표식 — 비밀 아님(값 미사용, 존재 여부만 로그인 판정에 씀)
-// 권한 4단계: guest(비로그인) < associate(유관자·제한열람) < member(팀원·열람+작성) < admin(팀원+관리)
-// admin은 member의 상위 집합 — 관리자도 팀원 기능 전부 + 사용자·포털 관리.
-export type Role = 'guest' | 'associate' | 'member' | 'admin'
+// 권한 3단계: guest(방문자·비로그인) < member(구성원·열람+작성) < admin(구성원 + 포털 관리)
+// admin은 member의 상위 집합 — 관리자도 구성원 기능 전부 + 사용자·포털 관리.
+//
+// 등급명은 조직 직급이 아니라 **포털에서의 역할**을 가리킨다(2026-08-05 사용자 확정).
+// 옛 '팀원'은 팀장·센터장에게 직급 강등처럼 읽혀 '구성원'으로 바꿨고, '관리자'도 조직 관리자와
+// 헷갈리지 않게 '포털 관리자'로 명시했다. 내부 값(member/admin)과 DB는 그대로라 마이그레이션 없음.
+//
+// 옛 associate(유관자)는 제거했다 — DB에 대응물(is_associate)이 아예 없어 RLS 관점에서는
+// 로그인한 게스트와 같았고, 실제 계정도 0건이었다(2026-08-05 감사).
+export type Role = 'guest' | 'member' | 'admin'
 
 /**
  * 포털 유지보수자 이름 — 개선 메모(제목 옆 칩·패널·사이드바 배지)는 이 사람에게만 노출.
@@ -24,25 +31,22 @@ export const MAINTAINER = '조성범'
 
 /** 역할 표시명 — UI 라벨 단일 출처(칩·설정·메뉴 공용) */
 export const ROLE_LABEL: Record<Role, string> = {
-  guest: '게스트',
-  associate: '유관자',
-  member: '팀원',
-  admin: '관리자',
+  guest: '방문자',
+  member: '구성원',
+  admin: '포털 관리자',
 }
 /** 로그인 결과 — ok=성공 / fail=사번·비번 불일치 / pending=가입 승인 대기(로그인 불가) */
 export type LoginResult = 'ok' | 'fail' | 'pending'
 
 interface RoleContextValue {
   role: Role
-  /** 관리자 — 사용자 승인·관리·포털관리 등 관리 기능 전용 게이트 */
+  /** 포털 관리자 — 사용자 승인·관리 등 관리 기능 전용 게이트 */
   isAdmin: boolean
   /** 포털 유지보수자(조성범) — 개선 메모 노출 게이트 */
   isMaintainer: boolean
-  /** 팀원 이상(member 또는 admin) — 팀 콘텐츠 열람·작성 게이트 */
+  /** 구성원 이상(member 또는 admin) — 팀 콘텐츠 열람·작성 게이트 */
   isMember: boolean
-  /** 유관자 — 제한 열람(장비 일부·행사·바로가기) */
-  isAssociate: boolean
-  /** 로그인 여부(유관자·팀원·관리자) — 로그인/로그아웃 표시 게이트 */
+  /** 로그인 여부(구성원·포털 관리자) — 로그인/로그아웃 표시 게이트 */
   loggedIn: boolean
   /** 세션 복원 완료 여부 — 라우트 가드는 이 값이 true일 때만 판정(새로고침 리다이렉트 방지) */
   ready: boolean
@@ -62,7 +66,6 @@ const RoleContext = createContext<RoleContextValue>({
   isAdmin: false,
   isMaintainer: false,
   isMember: false,
-  isAssociate: false,
   loggedIn: false,
   ready: false,
   user: null,
@@ -82,8 +85,8 @@ async function fetchProfile(authUserId: string, metaName: string | undefined) {
   const raw = String(data?.role || '')
   return {
     name: data?.name || metaName || '',
-    // admin/member/associate만 권한 부여 — pending·프로필없음은 접근 없음(guest)
-    role: (raw === 'admin' ? 'admin' : raw === 'member' ? 'member' : raw === 'associate' ? 'associate' : 'guest') as Role,
+    // admin/member만 권한 부여 — pending·프로필없음·옛 associate는 접근 없음(guest)
+    role: (raw === 'admin' ? 'admin' : raw === 'member' ? 'member' : 'guest') as Role,
     pending: raw === 'pending',
   }
 }
@@ -179,7 +182,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', isMaintainer: user === MAINTAINER, isMember: role === 'member' || role === 'admin', isAssociate: role === 'associate', loggedIn: role !== 'guest', ready, user, authKey, login, signUp, logout }}>
+    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', isMaintainer: user === MAINTAINER, isMember: role === 'member' || role === 'admin', loggedIn: role !== 'guest', ready, user, authKey, login, signUp, logout }}>
       {children}
     </RoleContext.Provider>
   )

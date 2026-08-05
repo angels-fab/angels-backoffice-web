@@ -55,7 +55,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { icon: <CoPresentIcon />, label: '학술·교육·전시', path: '/events' },
       { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badgeKey: 'improve', team: true },
       { icon: <LinkIcon />, label: '바로가기', path: '/links' },
-      { icon: <SettingsIcon />, label: '설정', path: '/settings', adminOnly: true },
+      // 설정 = 로그인 전원(비밀번호 변경). 사용자 관리 섹션만 페이지 안에서 관리자에게 열린다.
+      { icon: <SettingsIcon />, label: '설정', path: '/settings', team: true },
     ],
   },
 ]

@@ -11,7 +11,6 @@ import Events from '@/pages/Events'
 import Settings from '@/pages/Settings'
 import Improve from '@/pages/Improve'
 import Milestone from '@/pages/Milestone'
-import RequireAdmin from '@/auth/RequireAdmin'
 import RequireAuth from '@/auth/RequireAuth'
 import RequireMember from '@/auth/RequireMember'
 import DesignSystemShowcase from '@/pages/_DesignSystem'
@@ -42,8 +41,10 @@ export function AppRouter() {
         <Route path="/improve" element={<RequireMember><Improve /></RequireMember>} />
         {/* 구축 로드맵 전용 페이지 제거 — 콘텐츠는 홈으로 이관. /roadmap 접근은 전역 규칙(홈 리다이렉트) */}
         <Route path="/events" element={<RequireAuth><Events /></RequireAuth>} />
-        {/* 설정 — 로그인(관리자) 전용. 게스트는 홈으로 (로그인은 상단바 '관리자 모드' 버튼) */}
-        <Route path="/settings" element={<RequireAdmin><Settings /></RequireAdmin>} />
+        {/* 설정 — 로그인 전원. 페이지를 등급별로 나누지 않는 이유: 내부가 이미 갈려 있다
+            (비밀번호 변경 = loggedIn / 사용자 관리 = isAdmin + RLS profiles_admin_*).
+            예전엔 문 자체가 RequireAdmin이라 구성원이 본인 비밀번호를 못 바꿨다(2026-08-05 수정). */}
+        <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
         {/* 원본 한글 페이지명 별칭 ('회의'는 캘린더로 — goPage alias 대응) */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

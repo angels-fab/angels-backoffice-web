@@ -82,14 +82,14 @@ function PasswordChangeCard() {
 
 interface ProfileRow { id: string; name: string; emp_no: string | null; role: string; created_at: string }
 
-const MANAGEABLE_ROLES: { value: 'associate' | 'member' | 'admin'; label: string }[] = [
-  { value: 'associate', label: '유관자' },
-  { value: 'member', label: '팀원' },
-  { value: 'admin', label: '관리자' },
+// 라벨은 ROLE_LABEL 단일 출처를 따른다 — 상단바 칩·설정 표시와 문구가 갈리지 않게.
+const MANAGEABLE_ROLES: { value: 'member' | 'admin'; label: string }[] = [
+  { value: 'member', label: ROLE_LABEL.member },
+  { value: 'admin', label: ROLE_LABEL.admin },
 ]
 
-/** 사용자 관리 — 관리자만. 가입 승인(유관자/팀원)·권한 변경·강퇴. RLS: profiles_admin_update/delete.
- *  관리자 승격은 팀원에게만(유관자는 팀원 거쳐야) · 본인 계정은 잠금 방지로 변경/강퇴 불가. */
+/** 사용자 관리 — 포털 관리자만. 가입 승인·권한 변경·강퇴. RLS: profiles_admin_update/delete.
+ *  본인 계정은 잠금 방지로 변경/강퇴 불가. */
 function UserManagement() {
   const { user: me } = useRole()
   const [rows, setRows] = useState<ProfileRow[] | null>(null)
@@ -147,8 +147,7 @@ function UserManagement() {
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>사번 {r.emp_no || '-'} · 신청 {r.created_at?.slice(0, 10)}</Typography>
                   </Box>
                   <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-                    <Button size="small" variant="outlined" disabled={busyId === r.id} onClick={() => changeRole(r.id, 'associate')}>유관자 승인</Button>
-                    <Button size="small" variant="contained" disabled={busyId === r.id} onClick={() => changeRole(r.id, 'member')}>팀원 승인</Button>
+                    <Button size="small" variant="contained" disabled={busyId === r.id} onClick={() => changeRole(r.id, 'member')}>구성원 승인</Button>
                     <Button size="small" color="error" disabled={busyId === r.id} onClick={() => setDelUser({ id: r.id, name: r.name, pending: true })}>거절</Button>
                   </Box>
                 </Box>
@@ -164,7 +163,7 @@ function UserManagement() {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 0.5 }}>
           {active.map((r) => {
             const self = !!me && r.name === me
-            const roleVal = ['associate', 'member', 'admin'].includes(r.role) ? r.role : 'member'
+            const roleVal = ['member', 'admin'].includes(r.role) ? r.role : 'member'
             return (
               <AppCard key={r.id} padding={16}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
@@ -181,9 +180,8 @@ function UserManagement() {
                       disabled={self || busyId === r.id}
                       onChange={(v) => changeRole(r.id, v)}
                       ariaLabel={`${r.name || '구성원'} 역할`}
-                      minWidth={104}
-                      // 관리자 승격은 팀원(또는 이미 관리자)에게만 — 유관자는 바로 관리자로 못 올림(팀원 거쳐야)
-                      options={MANAGEABLE_ROLES.map((o) => ({ ...o, disabled: o.value === 'admin' && roleVal === 'associate' }))}
+                      minWidth={116}
+                      options={MANAGEABLE_ROLES}
                     />
                     <Button size="small" color="error" variant="text" disabled={self || busyId === r.id} onClick={() => setDelUser({ id: r.id, name: r.name, pending: false })}>강퇴</Button>
                   </Box>
@@ -222,7 +220,7 @@ export default function Settings() {
         <AppCard padding={16}>
           <Row
             label="현재 권한"
-            value={<StatusChip status={isAdmin ? 'success' : role === 'member' ? 'info' : 'neutral'} label={`${ROLE_LABEL[role]}${user ? ' · ' + user : ''}`} />}
+            value={<StatusChip status={isAdmin ? 'success' : role === 'member' ? 'info' : 'neutral'} label={user ? `${user} · ${ROLE_LABEL[role]}` : ROLE_LABEL[role]} />}
             action={
               loggedIn ? (
                 <Button variant="text" startIcon={<LogoutIcon sx={{ fontSize: iconSize.action }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
@@ -236,7 +234,7 @@ export default function Settings() {
             }
           />
           <Typography variant="body2" sx={{ mt: 1.5 }}>
-            {isAdmin ? '작성·관리 및 사용자 관리 기능을 사용할 수 있습니다.' : role === 'member' ? '팀 콘텐츠 열람 및 작성이 가능합니다.' : loggedIn ? '장비(제한)·행사·바로가기 열람이 가능합니다.' : '조회 전용입니다. 작성·관리 기능은 로그인 후 가능합니다.'}
+            {isAdmin ? '작성·관리 및 사용자 관리 기능을 사용할 수 있습니다.' : role === 'member' ? '팀 콘텐츠 열람 및 작성이 가능합니다.' : '조회 전용입니다. 작성·관리 기능은 로그인 후 가능합니다.'}
           </Typography>
         </AppCard>
       </ContentSection>
@@ -248,7 +246,7 @@ export default function Settings() {
       )}
 
       {isAdmin && (
-        <ContentSection title="사용자 관리" description="가입 승인(유관자/팀원) · 권한 변경 · 강퇴">
+        <ContentSection title="사용자 관리" description="가입 승인 · 권한 변경 · 강퇴">
           <UserManagement />
         </ContentSection>
       )}
