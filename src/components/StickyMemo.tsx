@@ -24,8 +24,9 @@ import { useRole } from '@/auth/role'
 import { memosForPath, visibleMemos } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import { RichBodyView } from '@/utils/richBody'
+import ButtonBase from '@mui/material/ButtonBase'
+import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
-import Select from '@mui/material/Select'
 import { StatusChip, useSnack, ConfirmDialog } from '@/components/ds'
 import { IMP_STATUSES, impKind, isSettled, needsReason, normStatus } from '@/pages/Improve/improveMeta'
 import { iconSize, layout, radius, typescale, weight, z } from '@/theme/tokens'
@@ -160,6 +161,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
   const [editing, setEditing] = useState(false)
   const [eTitle, setETitle] = useState('')
   const [eContent, setEContent] = useState('')
+  const [stAnchor, setStAnchor] = useState<HTMLElement | null>(null)                 // 상태 메뉴 기준점
   const [delAsk, setDelAsk] = useState(false)                                        // 요청 삭제 확인
   const [statusAsk, setStatusAsk] = useState<{ status: string; reason: string } | null>(null) // 종결 확인(+사유)
   const [live, setLive] = useState<Pos>(pos)
@@ -368,20 +370,32 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
             <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
               요청 #{item.num}
             </Box>
-            {/* 상태 — 게시판과 같은 값·색. 종결로 바꾸면 쪽지는 내려가고 요청은 게시판에 남는다. */}
+            {/* 상태 — 게시판과 같은 값·색. 종결로 바꾸면 쪽지는 내려가고 요청은 게시판에 남는다.
+                MUI Select 를 쓰면 드롭다운 화살표가 칩 글자를 덮어(2026-08-05 사용자 신고) 칩 자체를
+                버튼으로 삼고 Menu 를 띄운다. 버튼이라 끌기 판정(isInteractive)에서도 자동으로 빠진다. */}
             {canEdit ? (
-              <Select
-                value={st || '접수'}
-                onChange={(e) => onStatusPick(String(e.target.value))}
-                disabled={busy}
-                variant="standard"
-                disableUnderline
-                aria-label="상태 변경"
-                renderValue={(v) => <StatusChip status={impKind(String(v))} label={String(v)} />}
-                sx={{ '& .MuiSelect-select': { p: 0, pr: '0 !important' } }}
-              >
-                {IMP_STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: typescale.body.size }}>{s}</MenuItem>)}
-              </Select>
+              <>
+                <ButtonBase
+                  onClick={(e) => setStAnchor(e.currentTarget)}
+                  disabled={busy}
+                  aria-label={`상태 변경 (현재 ${st || '-'})`}
+                  sx={{ borderRadius: `${radius.pill}px` }}
+                >
+                  <StatusChip status={impKind(st)} label={st || '-'} />
+                </ButtonBase>
+                <Menu anchorEl={stAnchor} open={!!stAnchor} onClose={() => setStAnchor(null)}>
+                  {IMP_STATUSES.map((s) => (
+                    <MenuItem
+                      key={s}
+                      selected={s === st}
+                      onClick={() => { setStAnchor(null); onStatusPick(s) }}
+                      sx={{ fontSize: typescale.body.size }}
+                    >
+                      {s}
+                    </MenuItem>
+                  ))}
+                </Menu>
+              </>
             ) : (
               <StatusChip status={impKind(st)} label={st || '-'} />
             )}
@@ -399,8 +413,9 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
                 </IconButton>
               </Tooltip>
               {canDelete && (
-                <Tooltip title="요청 삭제 (게시판에서도 사라집니다)">
-                  <IconButton size="small" aria-label="요청 삭제" onClick={() => setDelAsk(true)} disabled={busy} sx={{ color: 'text.secondary', p: 0.5 }}>
+                <Tooltip title="요청 삭제">
+                  {/* 되돌릴 수 없는 동작이라 빨강 — 수정·접기(중립 회색)와 무게를 구분한다 */}
+                  <IconButton size="small" aria-label="요청 삭제" onClick={() => setDelAsk(true)} disabled={busy} sx={(th) => ({ color: th.palette.accentText.red, p: 0.5 })}>
                     <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
                   </IconButton>
                 </Tooltip>
