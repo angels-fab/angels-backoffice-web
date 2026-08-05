@@ -110,6 +110,26 @@ export function HomeRow({ lead, title, trail, onClick }: {
   )
 }
 
+/**
+ * 카드 대표 숫자 — **모든 카드에서 같은 규격**(2026-08-06 사용자 지시: "크기도 색도 위치도 다르다").
+ * 크기 display(28) · 색 primary · 자리 본문 우상단. 카드마다 제각각 그리지 말고 반드시 이걸 쓴다.
+ * 본문을 `<Box sx={{ display:'flex' }}>` 로 감싸고 왼쪽 내용 뒤에 이 컴포넌트를 두면 우상단에 붙는다.
+ */
+export function HomeStat({ value, sub }: { value: ReactNode; sub?: string }) {
+  return (
+    <Box sx={{ flexShrink: 0, textAlign: 'right', ml: 2 }}>
+      <Typography sx={{ fontSize: typescale.display.size, fontWeight: typescale.display.weight, lineHeight: 1.1, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </Typography>
+      {sub && (
+        <Typography sx={{ mt: 0.25, fontSize: typescale.small.size, color: 'text.disabled', fontWeight: weight.medium }}>
+          {sub}
+        </Typography>
+      )}
+    </Box>
+  )
+}
+
 /** 행 왼쪽·오른쪽의 보조 글자 — 시간·날짜·부서 등 모두 같은 크기로 */
 export function HomeMeta({ children, mono, color }: { children: ReactNode; mono?: boolean; color?: string }) {
   return (

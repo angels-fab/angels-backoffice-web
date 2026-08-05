@@ -2,14 +2,13 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
-import Typography from '@mui/material/Typography'
 import { EmptyState, LoadingState, focusRingSx } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { taskTitle } from '@/pages/Work/workMeta'
 import { fmtDate, isRecentNew } from '@/utils/date'
 import AssessmentIcon from '@mui/icons-material/Assessment'
-import { iconSize, radius, typescale, weight } from '@/theme/tokens'
-import { HomeCard, HomeRow } from './HomeCard'
+import { iconSize, radius, typescale } from '@/theme/tokens'
+import { HomeCard, HomeRow, HomeStat } from './HomeCard'
 
 /** 처음에 보여줄 줄 수 — 나머지는 '더 보기'로 편다 */
 const HEAD = 4
@@ -46,20 +45,9 @@ export default function WorkStatusSection() {
       ) : rows.length === 0 ? (
         <EmptyState size="sm" title="진행 중인 업무가 없습니다" />
       ) : (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'auto 1fr' }, gap: { xs: 1.5, sm: 2 }, alignItems: 'start' }}>
-          {/* 왼쪽 — 건수 하나만 크게 */}
-          <Box sx={{ minWidth: 68 }}>
-            <Typography sx={{ fontSize: typescale.displayLg.size, fontWeight: typescale.displayLg.weight, lineHeight: 1.1 }}>
-              {rows.length}
-            </Typography>
-            <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', fontWeight: weight.medium }}>
-              {fresh > 0 ? `이번 주 +${fresh}` : '이번 주 신규 없음'}
-            </Typography>
-          </Box>
-
-          {/* 오른쪽 — 무엇인지 */}
-          <Box sx={{ minWidth: 0 }}>
-            {/* 구분 칩·부서·날짜는 뺐다(사용자 지시 2026-08-05) — 홈에서는 무엇이 돌아가는지 제목만 본다 */}
+        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+          {/* 왼쪽 — 무엇인지(제목만). 구분 칩·부서·날짜는 뺐다(사용자 지시 2026-08-05) */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
             {shown.map((t) => (
               <HomeRow key={t.num} onClick={() => navigate(`/work?focus=${t.id}`)} title={taskTitle(t)} />
             ))}
@@ -74,6 +62,9 @@ export default function WorkStatusSection() {
               </Box>
             )}
           </Box>
+
+          {/* 우측 — 건수(사용자 지시 2026-08-06). 규격은 HomeStat 공용 */}
+          <HomeStat value={rows.length} sub={fresh > 0 ? `이번 주 +${fresh}` : undefined} />
         </Box>
       )}
     </HomeCard>

@@ -5,10 +5,11 @@ import Typography from '@mui/material/Typography'
 import { EmptyState, LoadingState } from '@/components/ds'
 import { useRole } from '@/auth/role'
 import { fetchAttendees, type AttendeeRow } from '@/api/events'
-import SchoolIcon from '@mui/icons-material/School'
+// 학술·교육·전시 메뉴가 사이드바·페이지 헤더에서 쓰는 그 아이콘(nav.tsx 단일 출처) — 다른 것 고르지 말 것
+import CoPresentIcon from '@mui/icons-material/CoPresent'
 import { FAB_EVENTS, eventStatus, fmtEventDate } from '@/constants/events'
 import { iconSize, typescale, weight } from '@/theme/tokens'
-import { HomeCard } from './HomeCard'
+import { HomeCard, HomeStat } from './HomeCard'
 
 /**
  * 행사명은 **첫 '-' 앞까지만**(사용자 지시 2026-08-06).
@@ -56,7 +57,7 @@ export default function EventsSection({ attendees: givenAtt, user: givenUser }: 
 
   return (
     <HomeCard
-      icon={<SchoolIcon sx={{ fontSize: iconSize.header, color: 'accentText.purple' }} />}
+      icon={<CoPresentIcon sx={{ fontSize: iconSize.header, color: 'accentText.purple' }} />}
       title="참석 예정 행사"
       count={att ? `${mine.length}건` : undefined}
       actionLabel="행사"
@@ -67,39 +68,36 @@ export default function EventsSection({ attendees: givenAtt, user: givenUser }: 
       ) : !head ? (
         <EmptyState size="sm" title="신청한 행사가 없습니다" />
       ) : (
-        <Box>
-          {/* 가장 가까운 것 하나만 크게 — 남은 일수가 이 카드의 답이다 */}
-          <Typography
-            sx={{
-              fontSize: typescale.display.size, fontWeight: typescale.display.weight, lineHeight: 1.15,
-              color: st?.tone === 'green' ? 'success.main' : 'primary.main',
-            }}
-          >
-            {st?.label}
-          </Typography>
-          <Typography
-            sx={{
-              mt: 0.75, fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight, lineHeight: 1.35,
-              display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden',
-            }}
-          >
-            {shortName(head.title)}
-          </Typography>
-          <Typography sx={{ mt: 0.25, fontSize: typescale.small.size, color: 'text.secondary' }}>
-            {fmtEventDate(head.start, head.end)} · {head.venue}
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+          {/* 왼쪽 — 행사 목록. 글자 규격은 다른 카드의 행과 동일(제목 emphasis 14 · 보조 body 13) */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              sx={{
+                fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight, lineHeight: 1.35,
+                display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden',
+              }}
+            >
+              {shortName(head.title)}
+            </Typography>
+            <Typography sx={{ mt: 0.25, fontSize: typescale.body.size, color: 'text.secondary' }}>
+              {fmtEventDate(head.start, head.end)} · {head.venue}
+            </Typography>
 
-          {/* 나머지는 이름만 — 날짜까지 다 적으면 다시 읽을 것이 많아진다 */}
-          {mine.slice(1).map((e) => (
-            <Box key={e.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1, pt: 1, borderTop: 1, borderColor: 'divider', minWidth: 0 }}>
-              <Typography sx={{ flexShrink: 0, fontSize: typescale.small.size, fontWeight: weight.bold, color: 'text.disabled' }}>
-                {eventStatus(e.start, e.end).label}
-              </Typography>
-              <Typography sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: typescale.small.size, color: 'text.secondary' }}>
-                {shortName(e.title)}
-              </Typography>
-            </Box>
-          ))}
+            {/* 나머지는 이름만 — 날짜까지 다 적으면 다시 읽을 것이 많아진다 */}
+            {mine.slice(1).map((e) => (
+              <Box key={e.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mt: 1.25, pt: 1.25, borderTop: 1, borderColor: 'divider', minWidth: 0 }}>
+                <Typography sx={{ flexShrink: 0, fontSize: typescale.small.size, fontWeight: weight.medium, color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
+                  {eventStatus(e.start, e.end).label}
+                </Typography>
+                <Typography sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>
+                  {shortName(e.title)}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+
+          {/* 우측 — 가장 가까운 행사의 남은 일수(HomeStat 공용 규격) */}
+          <HomeStat value={st?.label} />
         </Box>
       )}
     </HomeCard>
