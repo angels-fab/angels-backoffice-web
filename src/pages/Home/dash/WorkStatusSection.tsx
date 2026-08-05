@@ -9,8 +9,8 @@ import { fmtDate } from '@/utils/date'
 import { radius, typescale } from '@/theme/tokens'
 import { HomeCard, HomeRow, HomeMeta } from './HomeCard'
 
-/** 처음에 보여줄 줄 수 — 나머지는 '더 보기'로 편다(홈이 길어지지 않게) */
-const HEAD = 6
+/** 처음에 보여줄 줄 수 — 나머지는 '더 보기'로 편다. 3줄로 줄인 이유는 HomeKpi 주석 참고(2026-08-05 간소화) */
+const HEAD = 3
 
 /**
  * 홈 '진행 중 업무' — 숫자가 아니라 **목록**.

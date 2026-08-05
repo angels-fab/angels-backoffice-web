@@ -28,7 +28,7 @@ export default function NoticeSection() {
   const ready = useAppSelector((s) => s.notice.ready)
   const [sel, setSel] = useState<Notice | null>(null)
 
-  const recent = items.slice(0, 5) // store에서 상단고정→연번 최신순 정렬됨
+  const recent = items.slice(0, 3) // store에서 상단고정→연번 최신순 정렬됨. 3줄 = 홈 간소화 기준(2026-08-05)
 
   return (
     <>

@@ -20,7 +20,9 @@ import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import RoadmapCard from './RoadmapCard'
-import ScheduleSection, { UnseenSection, UpcomingSection } from './dash/ScheduleSection'
+import ScheduleSection from './dash/ScheduleSection'
+import HomeKpi from './dash/HomeKpi'
+import WorkMixCard from './dash/WorkMixCard'
 import WorkStatusSection from './dash/WorkStatusSection'
 import StatusSummary from './dash/StatusSummary'
 import NoticeSection from './dash/NoticeSection'
@@ -40,27 +42,29 @@ import PinnedWorksSection, { usePinnedWorks } from './dash/PinnedWorksSection'
  * 나머지는 2027년까지 안 바뀌는 값), `equipment`(현황 줄로 흡수).
  * 저장된 순서에 옛 id가 남아 있어도 isSectionId 가 걸러내므로 마이그레이션은 필요 없다.
  */
-const SECTION_IDS = ['unseen', 'today', 'upcoming', 'work', 'notice', 'pins', 'status'] as const
+const SECTION_IDS = ['kpi', 'today', 'mix', 'work', 'notice', 'pins', 'status'] as const
 type SectionId = (typeof SECTION_IDS)[number]
 const SECTION_LABEL: Record<SectionId, string> = {
-  unseen: '안 본 새 글',
-  today: '오늘 일정',
-  upcoming: '다가오는 일정',
+  kpi: '요약 숫자',
+  today: '오늘·이번 주',
+  mix: '업무 구성',
   work: '진행 중 업무',
   notice: '공지사항',
   pins: '관심 업무',
   status: '현황 (로드맵 · 장비)',
 }
 /**
- * 기본 배치 — 3열 그리드에 흘려 넣는다(사용자 확정 2026-08-05).
- *   1행: 안 본 새 글 · 오늘 일정 · 다가오는 일정   ← 가장 궁금한 것
- *   2행: 진행 중 업무(2칸) · 공지사항
- *   그 아래: 관심 업무 · 현황(전폭)
+ * 기본 배치 — 3열 그리드에 흘려 넣는다(2026-08-05, Minimal 대시보드 참고).
+ *   1행: 요약 숫자 3개(전폭)            ← 읽지 않고 보는 자리
+ *   2행: 오늘·이번 주(2칸) · 업무 구성
+ *   3행: 진행 중 업무(2칸) · 공지사항
+ *   그 아래: 관심 업무 · 현황(전폭, 접힘)
+ * 목록 카드는 모두 3줄까지만 — 나머지는 각자 '전체보기'로 간다.
  */
-const DEFAULT_ORDER: SectionId[] = ['unseen', 'today', 'upcoming', 'work', 'notice', 'pins', 'status']
-/** 넓은 자리가 필요한 카드는 칸을 합친다(제목이 긴 업무 목록·전폭 요약) */
+const DEFAULT_ORDER: SectionId[] = ['kpi', 'today', 'mix', 'work', 'notice', 'pins', 'status']
+/** 넓은 자리가 필요한 카드는 칸을 합친다(제목이 긴 목록·전폭 요약) */
 const SECTION_SPAN: Record<SectionId, number> = {
-  unseen: 1, today: 1, upcoming: 1, work: 2, notice: 1, pins: 3, status: 3,
+  kpi: 3, today: 2, mix: 1, work: 2, notice: 1, pins: 3, status: 3,
 }
 const isSectionId = (v: unknown): v is SectionId => typeof v === 'string' && (SECTION_IDS as readonly string[]).includes(v)
 
@@ -106,9 +110,9 @@ export default function Home() {
 
   // 각 카드가 제목·건수·전체보기를 스스로 그린다(HomeCard 공용 규격) — 바깥에서 제목을 또 붙이지 않는다
   const sectionNode: Record<SectionId, ReactNode> = {
-    unseen: <UnseenSection />,
+    kpi: <HomeKpi />,
     today: <ScheduleSection />,
-    upcoming: <UpcomingSection />,
+    mix: <WorkMixCard />,
     work: <WorkStatusSection />,
     notice: <NoticeSection />,
     pins: <PinnedWorksSection />,
