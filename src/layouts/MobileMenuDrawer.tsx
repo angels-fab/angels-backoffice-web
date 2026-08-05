@@ -24,7 +24,7 @@ import { radius, typescale } from '@/theme/tokens'
 
 /**
  * 모바일 「메뉴」 바텀시트 — 하단 탭(홈·업무현황·업무일정·공지)에 없는 나머지 목적지 + 계정.
- * 하단 탭의 다섯 번째 '메뉴' 버튼에서 열린다(로그인 관리자 전용). PC는 SideNav가 담당.
+ * 하단 탭의 다섯 번째 '메뉴' 버튼에서 열린다(로그인 사용자). PC는 SideNav가 담당.
  */
 interface Props {
   open: boolean

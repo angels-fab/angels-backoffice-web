@@ -71,7 +71,7 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
     ev.preventDefault()
     if (saving) return
     setError(null)
-    if (!user || !authKey) return setError('관리자 로그인이 필요합니다')
+    if (!user || !authKey) return setError('로그인이 필요합니다')
     if (!task.trim()) return setError('업무 내용을 입력해주세요')
     setSaving(true)
     const payload = {

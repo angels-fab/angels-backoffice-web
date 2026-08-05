@@ -141,7 +141,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
 
   const applySave = async () => {
     if (!group || saving || !confirm) return
-    if (!user || !authKey) { showSnack?.('관리자 로그인이 필요합니다.', 'error'); return }
+    if (!user || !authKey) { showSnack?.('로그인이 필요합니다.', 'error'); return }
     setSaving(true)
     try {
       await updateEquipment({
@@ -172,7 +172,7 @@ export default function EqDetailDrawer({ group, onClose, isAdmin, user, authKey,
   const applyStateChange = async () => {
     if (!group || !pendingState || savingState) return
     if (!repCode) { showSnack?.('관리번호가 없어 변경할 수 없습니다.', 'error'); return }
-    if (!user || !authKey) { showSnack?.('관리자 로그인이 필요합니다.', 'error'); return }
+    if (!user || !authKey) { showSnack?.('로그인이 필요합니다.', 'error'); return }
     const next = pendingState
     setSavingState(true)
     try {

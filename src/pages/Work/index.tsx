@@ -624,7 +624,7 @@ export default function Work() {
   // 인라인 새 업무 저장 — 제목+내용 → task(첫 줄=제목), 상태=진행중. 성공 시 인라인 카드 닫고 새로고침.
   const handleSaveNew = async (form: NewTaskForm) => {
     if (savingNew) return
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
     const titleLine = form.title.trim()
     if (!titleLine) return showSnack('업무 제목을 입력해주세요.', 'error')
     // 화면의 글머리 '• '는 시트엔 dash '- '로 저장(관례 유지)
@@ -691,7 +691,7 @@ export default function Work() {
   // 수정 확인 팝업의 '수정' → 실제 저장(폼 외 항목은 기존 값 유지, task=제목+본문(• → -))
   const confirmEdit = async () => {
     if (!pendingEdit || savingEdit) return
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
     const { item, form } = pendingEdit
     const titleLine = form.title.trim()
     const bodyText = bulletToDash(form.body.replace(/\s+$/, ''))
@@ -728,7 +728,7 @@ export default function Work() {
   // 소프트 삭제 실행(공용) — 시트 행을 지우지 않고 '삭제일시' 기록. token이 있으면(드웰 휴지통 드롭)
   // 고정 카드가 휴지통으로 지니 흡입된 뒤 낙관 제거 → API 기록. 실패 시 롤백, 성공 시 10초 '실행 취소'.
   const executeDelete = async (targets: WorkItem[], token?: DeleteReq['token']) => {
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
     if (deleting) return
     setDeleting(true)
     const nums = targets.map((t) => t.num)
@@ -777,7 +777,7 @@ export default function Work() {
   // 삭제 실행 취소(10초 스낵바) — 삭제일시를 비우고 원래 상태로 복원. 실패 시 휴지통에 유지.
   const undoDelete = async (nums: string[]) => {
     setUndoSnack(null)
-    if (!user || !authKey) return showSnack('관리자 로그인이 필요합니다.', 'error')
+    if (!user || !authKey) return showSnack('로그인이 필요합니다.', 'error')
     try {
       const { orders } = await restoreWorks({ nums, author: user, key: authKey })
       dispatch(restoreWorkItems({ nums, orders }))
@@ -942,7 +942,7 @@ export default function Work() {
     if (e.kind === 'order') { changeListSort(null); commitOrder(e.after) } else applyStatusEntry(e, 'forward')
     bumpHist()
   }
-  // 키보드 단축키(Ctrl/Cmd+Z=실행취소, +Shift=다시실행). 입력란 포커스 중엔 가로채지 않음. 관리자만.
+  // 키보드 단축키(Ctrl/Cmd+Z=실행취소, +Shift=다시실행). 입력란 포커스 중엔 가로채지 않음. 구성원 이상.
   const undoRef = useRef(doUndo); undoRef.current = doUndo
   const redoRef = useRef(doRedo); redoRef.current = doRedo
   useEffect(() => {
@@ -1235,7 +1235,7 @@ export default function Work() {
 
       {/* ② 업무 목록 — 4개 상태 뷰 공통 인터페이스(제목행 + 2열 필터·조작부) */}
       <ContentSection last={!SHOW_MANAGER_STATUS}>
-        {/* 제목행: [상태 아이콘] 상태별 제목 N건 [+](진행중·관리자만) — 그 외 요소 없음 */}
+        {/* 제목행: [상태 아이콘] 상태별 제목 N건 [+](진행중·구성원 이상) — 그 외 요소 없음 */}
         {(() => {
           // 보드 보기 — 상태별 제목 대신 보드 제목(새 업무 '+'는 목록 보기 전용)
           if (boardMode) {

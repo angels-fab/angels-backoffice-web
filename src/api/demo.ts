@@ -3,7 +3,7 @@ import { ensureSession, withTimeout } from './session'
 
 /**
  * 데모결과(장비사 데모센터 테스트 결과) API.
- * - demo_metric_defs: 장비종류별 표준 지표 정의(비교 기준). 변경=관리자만 + 이력 기록.
+ * - demo_metric_defs: 장비종류별 표준 지표 정의(비교 기준). 변경=구성원 이상(RLS is_member) + 이력 기록.
  * - demo_results: 회차 1건 = 1행. metrics = { metric_key: 값(텍스트) }.
  * - demo_chat: 장비종류별 비교 채팅(메시지마다 대상 제조사 태그, 팀원 작성).
  * 사진/파일은 비공개 버킷 demo-files(서명 URL로 열람).
@@ -328,7 +328,7 @@ export async function deleteDemoChat(id: number): Promise<void> {
   if (error) throw new Error(error.message || '메모 삭제에 실패했습니다')
 }
 
-// ── 지표 정의(관리자만) + 이력 ──
+// ── 지표 정의(구성원 이상) + 이력 ──
 const defSnapshot = (d: { label: string; unit: string; direction: string; sort: number; active: boolean }) =>
   ({ label: d.label, unit: d.unit, direction: d.direction, sort: d.sort, active: d.active })
 

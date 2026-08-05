@@ -66,7 +66,7 @@ export default function ScheduleWrite({ open, onClose, editing, batchCodes, onSa
     ev.preventDefault()
     if (saving) return
     setError(null)
-    if (!user || !authKey) return setError('관리자 로그인이 필요합니다')
+    if (!user || !authKey) return setError('로그인이 필요합니다')
     if (!code.trim() && !name.trim()) return setError('관리번호 또는 장비명을 입력해주세요')
     setSaving(true)
     const payload = {

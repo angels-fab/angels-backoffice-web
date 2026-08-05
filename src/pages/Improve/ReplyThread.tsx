@@ -30,7 +30,7 @@ interface Props {
 
 /**
  * 포털개선요청 답글 — 시간순 단일 대화(중첩 없음). 작성일시 오름차순.
- * 본인 답글만 인라인 수정/삭제. 등록은 관리자만.
+ * 본인 답글만 인라인 수정/삭제. 등록은 구성원 이상.
  */
 export default function ReplyThread({ replies, isAdmin, user, busy, onCreate, onEdit, onRequestDelete }: Props) {
   const [text, setText] = useState('')

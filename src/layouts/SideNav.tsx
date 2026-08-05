@@ -24,7 +24,7 @@ export default function SideNav() {
   const isActive = (path: string) =>
     path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(path + '/')
 
-  // 팀 콘텐츠(team)는 팀원 이상, 관리자 전용(adminOnly)은 관리자만, 나머지는 전체 공개.
+  // 팀 콘텐츠(team)는 구성원 이상, 관리자 전용(adminOnly)은 포털 관리자만, 나머지는 전체 공개.
   // 홈은 레일에서 제외(2026-07-23 확정: 로고 클릭=홈) — NAV_GROUPS 자체는 유지(개선위치·모바일 탭바 파생용).
   const canSee = (it: NavItem) => (it.adminOnly ? isAdmin : it.team ? isMember : true)
   const visibleGroups = NAV_GROUPS

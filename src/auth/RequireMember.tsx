@@ -4,7 +4,7 @@ import { useRole } from './role'
 
 /**
  * 팀원(이상) 전용 라우트 가드.
- * 팀 콘텐츠(공지·업무일정·업무현황·개선요청·장비)는 팀원/관리자만 접근.
+ * 팀 콘텐츠(공지·업무일정·업무현황·개선요청·장비)는 구성원 이상만 접근.
  * 게스트·유관자가 진입하면 홈으로 돌려보낸다. (유관자는 장비 제한열람을 별도 경로로 — 추후)
  */
 export default function RequireMember({ children }: { children: ReactElement }) {

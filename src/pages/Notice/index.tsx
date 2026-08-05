@@ -151,7 +151,7 @@ export default function Notice() {
 
   const handleSaveNew = async (v: NoticeFormValues) => {
     if (saving) return
-    if (!user || !authKey) return snack('관리자 로그인이 필요합니다.', 'error')
+    if (!user || !authKey) return snack('로그인이 필요합니다.', 'error')
     if (!v.title) return snack('제목을 입력해주세요.', 'error')
     if (!v.body) return snack('내용을 입력해주세요.', 'error')
     setSaving(true)
@@ -170,7 +170,7 @@ export default function Notice() {
 
   const handleSaveEdit = async (n: NoticeItem, v: NoticeFormValues) => {
     if (saving) return
-    if (!user || !authKey) return snack('관리자 로그인이 필요합니다.', 'error')
+    if (!user || !authKey) return snack('로그인이 필요합니다.', 'error')
     if (!v.title) return snack('제목을 입력해주세요.', 'error')
     if (!v.body) return snack('내용을 입력해주세요.', 'error')
     setSaving(true)
@@ -196,7 +196,7 @@ export default function Notice() {
 
   const confirmDelete = async () => {
     if (!deleteTarget || deleting) return
-    if (!user || !authKey) { snack('관리자 로그인이 필요합니다.', 'error'); return }
+    if (!user || !authKey) { snack('로그인이 필요합니다.', 'error'); return }
     setDeleting(true)
     try {
       await deleteNotice({ num: deleteTarget.num, author: user, key: authKey })

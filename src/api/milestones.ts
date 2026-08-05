@@ -64,7 +64,7 @@ export async function fetchMilestones(): Promise<MilestoneRow[]> {
 
 const todayKst = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 
-/** 상태·담당자·기간 부분갱신(관리자 전용 — RLS). 완료 전환 시 completed_at 자동 스탬프. */
+/** 상태·담당자·기간 부분갱신(구성원 이상 — RLS milestones_*_member). 완료 전환 시 completed_at 자동 스탬프. */
 export async function updateMilestone(p: {
   id: number
   status?: MilestoneStatus

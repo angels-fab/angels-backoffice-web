@@ -98,7 +98,8 @@ export function MilestonePanelBody({ row, curIdx, canEdit, onChangeStatus, onSav
         {derived === '지연' && <StatusChip status="error" label="지연" selected />}
         {imminent && <StatusChip status="warning" label="이번 분기 마감" />}
         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-          임박·지연은 완료목표 분기로 자동 표시{canEdit ? '' : ' · 편집은 관리자만'}
+          {/* canEdit=false 는 이제 '비로그인'을 뜻한다 — 구성원부터 편집 가능해졌다(2026-08-05) */}
+          임박·지연은 완료목표 분기로 자동 표시{canEdit ? '' : ' · 편집은 로그인 후'}
         </Typography>
       </Box>
 

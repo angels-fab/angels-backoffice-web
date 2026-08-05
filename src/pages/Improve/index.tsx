@@ -252,7 +252,7 @@ export default function Improve() {
   const onTab = (s: ImpStatus, shift: boolean) => setSelected((prev) => nextFilterSelection(prev, s, shift))
 
   // 수정(상태·위치·유형·내용·사유·메모) = 로그인 관리자 전체 / 삭제 = 해당 글 담당자(작성자)만.
-  // 담당자 미지정(mgr='')은 관리자 누구나 삭제 — RLS improvements_delete(mgr='' or mgr=my_name())와 같은 기준.
+  // 담당자 미지정(mgr='')은 구성원 누구나 삭제 — RLS improvements_delete(mgr='' or mgr=my_name())와 같은 기준.
   // 이 조건이 빠져 있어 담당자 없는 글이 화면에서 영영 못 지워졌다(DB는 허용하는데 버튼만 안 나옴).
   const canEdit = isMember && !!user && !!authKey // 구성원 쓰기 개방(2026-08-05)
   const canDelete = (t: ImprovementItem) => {

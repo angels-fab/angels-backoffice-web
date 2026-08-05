@@ -301,7 +301,7 @@ export default function Equipment() {
 
   const confirmDelete = async () => {
     if (!deleteTarget || deleting) return
-    if (!user || !authKey) return snack('관리자 로그인이 필요합니다.', 'error')
+    if (!user || !authKey) return snack('로그인이 필요합니다.', 'error')
     const codes = deleteTarget.codes.filter(Boolean)
     if (!codes.length) return snack('관리번호가 없어 삭제할 수 없습니다.', 'error')
     setDeleting(true)
@@ -665,7 +665,7 @@ export default function Equipment() {
   // 저장 — 이번 편집의 변경분만 Google Sheets에 한 번에 일괄 저장(현재 로컬 상태 기준)
   const finishEditSave = async () => {
     if (savingEdit) return
-    if (!user || !authKey) { snack('관리자 로그인이 필요합니다.', 'error'); return }
+    if (!user || !authKey) { snack('로그인이 필요합니다.', 'error'); return }
     const codes = changedCodes()
     if (!codes.length) { closeEditSession(); return }
     setSavingEdit(true)
