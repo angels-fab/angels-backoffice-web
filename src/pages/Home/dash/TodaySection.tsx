@@ -142,7 +142,7 @@ export default function TodaySection({ events: givenEvents, now: nowProp }: { ev
     <HomeCard
       icon={<CalendarMonthIcon sx={{ fontSize: iconSize.header, color: 'accentText.blue' }} />}
       title="오늘 일정"
-      count={`${list.length}건`}
+      stat={{ value: list.length, unit: '건' }}
       actionLabel="캘린더"
       onAction={() => navigate('/calendar')}
     >

@@ -24,7 +24,7 @@ import TodaySection from './dash/TodaySection'
 import EventsSection from './dash/EventsSection'
 import { EqIntroSection, EqOpsSection } from './dash/EqSections'
 import WorkStatusSection from './dash/WorkStatusSection'
-import StatusSummary from './dash/StatusSummary'
+import RoadmapStrip from './RoadmapStrip'
 import NoticeSection from './dash/NoticeSection'
 import PinnedWorksSection, { usePinnedWorks } from './dash/PinnedWorksSection'
 
@@ -42,30 +42,30 @@ import PinnedWorksSection, { usePinnedWorks } from './dash/PinnedWorksSection'
  * 나머지는 2027년까지 안 바뀌는 값), `equipment`(현황 줄로 흡수).
  * 저장된 순서에 옛 id가 남아 있어도 isSectionId 가 걸러내므로 마이그레이션은 필요 없다.
  */
-const SECTION_IDS = ['today', 'work', 'notice', 'events', 'eqIntro', 'eqOps', 'pins', 'status'] as const
+const SECTION_IDS = ['today', 'work', 'notice', 'events', 'eqIntro', 'eqOps', 'pins'] as const
 type SectionId = (typeof SECTION_IDS)[number]
 const SECTION_LABEL: Record<SectionId, string> = {
   today: '오늘 일정',
   work: '진행 중 업무',
-  notice: '공지사항',
-  events: '참석 예정 행사',
+  notice: '새 공지',
+  events: '예정 행사',
   eqIntro: '장비 도입',
   eqOps: '장비 운영',
   pins: '관심 업무',
-  status: '현황 (구축 로드맵)',
 }
 /**
  * 기본 배치 — 3열 그리드(2026-08-06 사용자 지시).
- *   1행: 오늘 일정 · 공지사항 · 진행 중 업무
- *   2행: 참석 예정 행사 · 장비 도입 · 장비 운영
- *   그 아래: 관심 업무 · 현황(전폭, 접힘)
- * 없앤 것: '안 본 새 글'(kpi) · '업무 구성'(mix) — 사용자 지시.
- * 저장된 순서에 옛 id 가 남아 있어도 isSectionId 가 걸러내므로 마이그레이션은 필요 없다.
+ *   최상단: FAB 구축 로드맵 한 줄 판(RoadmapStrip — 항상 표시, 개인화 대상 아님)
+ *   1행: 오늘 일정 · 새 공지 · 진행 중 업무
+ *   2행: 예정 행사 · 장비 도입 · 장비 운영
+ *   그 아래: 관심 업무(전폭)
+ * 없앤 것: '안 본 새 글'(kpi) · '업무 구성'(mix) · '현황' 접힘 줄(status — 로드맵을 항상 띄우는
+ * 것으로 대체). 저장된 순서에 옛 id 가 남아 있어도 isSectionId 가 걸러내므로 마이그레이션은 필요 없다.
  */
-const DEFAULT_ORDER: SectionId[] = ['today', 'notice', 'work', 'events', 'eqIntro', 'eqOps', 'pins', 'status']
+const DEFAULT_ORDER: SectionId[] = ['today', 'notice', 'work', 'events', 'eqIntro', 'eqOps', 'pins']
 /** 넓은 자리가 필요한 카드는 칸을 합친다 */
 const SECTION_SPAN: Record<SectionId, number> = {
-  today: 1, work: 1, notice: 1, events: 1, eqIntro: 1, eqOps: 1, pins: 3, status: 3,
+  today: 1, work: 1, notice: 1, events: 1, eqIntro: 1, eqOps: 1, pins: 3,
 }
 const isSectionId = (v: unknown): v is SectionId => typeof v === 'string' && (SECTION_IDS as readonly string[]).includes(v)
 
@@ -129,7 +129,6 @@ export default function Home() {
     eqIntro: <EqIntroSection />,
     eqOps: <EqOpsSection />,
     pins: <PinnedWorksSection />,
-    status: <StatusSummary />,
   }
 
   return (
@@ -190,11 +189,18 @@ export default function Home() {
 
       {/* FAB 구축 로드맵 — **방문자에게만 크게**(2026-08-05 사용자 확정).
           홈은 비로그인도 들어오는 유일한 화면이고 게스트에게는 로드맵·행사·바로가기뿐이라 여기서는 얼굴 역할을 한다.
-          로그인한 구성원에게는 다음 변화가 2026.12라 매일 볼 것이 아니므로 '현황' 줄(StatusSummary)에 접어 둔다. */}
+          로그인한 구성원에게는 아래 한 줄 요약판(RoadmapStrip)이 항상 뜬다. */}
       {!isMember && (
         <ContentSection last>
           <RoadmapCard showLegend={false} showBadges={false} />
         </ContentSection>
+      )}
+
+      {/* 구축 로드맵 한 줄 판 — 항상 표시, 최상단 고정(개인화 대상 아님. 2026-08-06 사용자 확정) */}
+      {isMember && (
+        <Box sx={{ mb: 2 }}>
+          <RoadmapStrip />
+        </Box>
       )}
 
       {/* 구성원 대시보드 — 3열 그리드에 카드를 흘려 넣는다(계정별 순서·숨김 적용).

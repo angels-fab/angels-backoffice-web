@@ -9,6 +9,7 @@ import { FAB_EVENTS, eventStatus } from '@/constants/events'
 import TodaySection from '@/pages/Home/dash/TodaySection'
 import EventsSection from '@/pages/Home/dash/EventsSection'
 import { EqIntroSection, EqOpsSection } from '@/pages/Home/dash/EqSections'
+import RoadmapStrip from '@/pages/Home/RoadmapStrip'
 
 /**
  * 홈 카드 시안 화면 (2026-08-06, 검토용).
@@ -83,6 +84,10 @@ export default function UpcomingPreview() {
           예시 데이터로 그린 검토용 화면입니다. 기준 시각 2026-08-06 10:36.
           장비 두 카드는 스토어 집계를 쓰므로 로그인한 실제 화면에서만 숫자가 채워집니다.
         </Typography>
+
+        <Frame label="최상단 — 구축 로드맵 한 줄 판(항상 표시)" cols={1}>
+          <RoadmapStrip />
+        </Frame>
 
         <Frame label="홈 3열 그리드 — 1행">
           <TodaySection events={SAMPLE} now={NOW} />

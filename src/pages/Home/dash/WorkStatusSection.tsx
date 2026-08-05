@@ -8,7 +8,7 @@ import { taskTitle } from '@/pages/Work/workMeta'
 import { fmtDate, isRecentNew } from '@/utils/date'
 import AssessmentIcon from '@mui/icons-material/Assessment'
 import { iconSize, radius, typescale } from '@/theme/tokens'
-import { HomeCard, HomeRow, HomeStat } from './HomeCard'
+import { HomeCard, HomeRow } from './HomeCard'
 
 /** 처음에 보여줄 줄 수 — 나머지는 '더 보기'로 편다 */
 const HEAD = 4
@@ -37,6 +37,7 @@ export default function WorkStatusSection() {
     <HomeCard
       icon={<AssessmentIcon sx={{ fontSize: iconSize.header, color: 'accentText.teal' }} />}
       title="진행 중 업무"
+      stat={{ value: rows.length, unit: '건', sub: fresh > 0 ? `이번 주 +${fresh}` : undefined }}
       actionLabel="업무현황"
       onAction={() => navigate('/work')}
     >
@@ -45,26 +46,21 @@ export default function WorkStatusSection() {
       ) : rows.length === 0 ? (
         <EmptyState size="sm" title="진행 중인 업무가 없습니다" />
       ) : (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-          {/* 왼쪽 — 무엇인지(제목만). 구분 칩·부서·날짜는 뺐다(사용자 지시 2026-08-05) */}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            {shown.map((t) => (
-              <HomeRow key={t.num} onClick={() => navigate(`/work?focus=${t.id}`)} title={taskTitle(t)} />
-            ))}
-            {rows.length > HEAD && (
-              <Box sx={{ pt: 1 }}>
-                <ButtonBase
-                  onClick={() => setAll((v) => !v)}
-                  sx={{ fontSize: typescale.body.size, color: 'primary.main', px: 0.5, py: 0.25, borderRadius: `${radius.chip}px`, ...(focusRingSx as object) }}
-                >
-                  {all ? '접기' : `${rows.length - HEAD}건 더 보기`}
-                </ButtonBase>
-              </Box>
-            )}
-          </Box>
-
-          {/* 우측 — 건수(사용자 지시 2026-08-06). 규격은 HomeStat 공용 */}
-          <HomeStat value={rows.length} sub={fresh > 0 ? `이번 주 +${fresh}` : undefined} />
+        <Box>
+          {/* 제목만 — 구분 칩·부서·날짜는 뺐다(사용자 지시 2026-08-05) */}
+          {shown.map((t) => (
+            <HomeRow key={t.num} onClick={() => navigate(`/work?focus=${t.id}`)} title={taskTitle(t)} />
+          ))}
+          {rows.length > HEAD && (
+            <Box sx={{ pt: 1 }}>
+              <ButtonBase
+                onClick={() => setAll((v) => !v)}
+                sx={{ fontSize: typescale.body.size, color: 'primary.main', px: 0.5, py: 0.25, borderRadius: `${radius.chip}px`, ...(focusRingSx as object) }}
+              >
+                {all ? '접기' : `${rows.length - HEAD}건 더 보기`}
+              </ButtonBase>
+            </Box>
+          )}
         </Box>
       )}
     </HomeCard>

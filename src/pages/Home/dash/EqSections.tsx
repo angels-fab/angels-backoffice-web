@@ -9,7 +9,7 @@ import { selectEqCounts } from '@/store/selectors'
 import LocalShippingIcon from '@mui/icons-material/LocalShipping'
 import MonitorIcon from '@mui/icons-material/Monitor'
 import { iconSize, typescale, weight } from '@/theme/tokens'
-import { HomeCard, HomeStat } from './HomeCard'
+import { HomeCard } from './HomeCard'
 
 /**
  * 홈 '장비 도입' · '장비 운영' 두 카드 (2026-08-06 신설, 사용자 지시).
@@ -42,18 +42,16 @@ export function EqIntroSection() {
     <HomeCard
       icon={<LocalShippingIcon sx={{ fontSize: iconSize.header, color: 'accentText.rose' }} />}
       title="장비 도입"
+      stat={ready ? { value: u['도입예정'] + u['도입중'], unit: '대', sub: `${eq.typesBy['도입예정'] + eq.typesBy['도입중']}종` } : undefined}
       actionLabel="도입일정"
       onAction={() => navigate('/equipment')}
     >
       {!ready ? (
         <LoadingState size="md" />
       ) : (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Line first label="도입중" units={u['도입중']} types={eq.typesBy['도입중']} />
-            <Line label="도입예정" units={u['도입예정']} types={eq.typesBy['도입예정']} />
-          </Box>
-          <HomeStat value={u['도입예정'] + u['도입중']} sub={`${eq.typesBy['도입예정'] + eq.typesBy['도입중']}종`} />
+        <Box>
+          <Line first label="도입중" units={u['도입중']} types={eq.typesBy['도입중']} />
+          <Line label="도입예정" units={u['도입예정']} types={eq.typesBy['도입예정']} />
         </Box>
       )}
     </HomeCard>
@@ -70,18 +68,16 @@ export function EqOpsSection() {
     <HomeCard
       icon={<MonitorIcon sx={{ fontSize: iconSize.header, color: 'accentText.green' }} />}
       title="장비 운영"
+      stat={ready ? { value: u['운영중'], unit: '대', sub: `${eq.typesBy['운영중']}종 운영중` } : undefined}
       actionLabel="장비대장"
       onAction={() => navigate('/equipment-ops')}
     >
       {!ready ? (
         <LoadingState size="md" />
       ) : (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Line first label="비가동" units={u['비가동']} types={eq.typesBy['비가동']} />
-            <Line label="전체" units={eq.total} types={eq.types} />
-          </Box>
-          <HomeStat value={u['운영중']} sub={`${eq.typesBy['운영중']}종 운영중`} />
+        <Box>
+          <Line first label="비가동" units={u['비가동']} types={eq.typesBy['비가동']} />
+          <Line label="전체" units={eq.total} types={eq.types} />
         </Box>
       )}
     </HomeCard>

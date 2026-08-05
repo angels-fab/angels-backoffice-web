@@ -24,11 +24,24 @@ import { iconSize, radius, typescale, weight } from '@/theme/tokens'
  * 쓸 자리가 아니다 — 행 제목의 정본은 emphasis(14/600)다.
  */
 
-export function HomeCard({ icon, title, count, actionLabel, onAction, children }: {
-  /** 제목 앞 아이콘 — 색은 넘기는 쪽에서 정한다(카드마다 다른 종류색) */
+/** 카드 대표 숫자 — 제목 옆에 크게. 모든 카드가 같은 규격을 쓴다(아래 HomeCard 주석) */
+export interface CardStat {
+  value: ReactNode
+  /** 단위(건·대) — 숫자 뒤 작은 글자 */
+  unit?: string
+  /** 보조(20종·이번 주 +2) — 단위 뒤 흐린 글자 */
+  sub?: string
+}
+
+export function HomeCard({ icon, title, stat, actionLabel, onAction, children }: {
+  /** 제목 앞 아이콘 — 그 메뉴가 실제로 쓰는 아이콘만(임의 선택 금지). 색은 넘기는 쪽에서 정한다 */
   icon?: ReactNode
   title: string
-  count?: string
+  /**
+   * 대표 숫자 — **모든 카드에서 같은 규격·같은 자리**(2026-08-06 사용자 확정: "제목 옆에 크게").
+   * 크기 display(28) · 색 primary · 자리 제목 바로 옆. 카드마다 본문에 제각각 그리지 말 것.
+   */
+  stat?: CardStat
   actionLabel?: string
   onAction?: () => void
   children: ReactNode
@@ -49,8 +62,18 @@ export function HomeCard({ icon, title, count, actionLabel, onAction, children }
         <Typography sx={{ fontSize: typescale.sectionTitle.size, fontWeight: typescale.sectionTitle.weight }}>
           {title}
         </Typography>
-        {count && (
-          <Typography sx={{ fontSize: typescale.body.size, color: 'text.disabled' }}>{count}</Typography>
+        {stat && (
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, minWidth: 0 }}>
+            <Typography sx={{ fontSize: typescale.display.size, fontWeight: typescale.display.weight, lineHeight: 1, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
+              {stat.value}
+            </Typography>
+            {stat.unit && (
+              <Typography sx={{ fontSize: typescale.body.size, color: 'text.secondary' }}>{stat.unit}</Typography>
+            )}
+            {stat.sub && (
+              <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', whiteSpace: 'nowrap' }}>{stat.sub}</Typography>
+            )}
+          </Box>
         )}
         {actionLabel && onAction && (
           <ButtonBase
@@ -106,26 +129,6 @@ export function HomeRow({ lead, title, trail, onClick }: {
         {title}
       </Typography>
       {trail}
-    </Box>
-  )
-}
-
-/**
- * 카드 대표 숫자 — **모든 카드에서 같은 규격**(2026-08-06 사용자 지시: "크기도 색도 위치도 다르다").
- * 크기 display(28) · 색 primary · 자리 본문 우상단. 카드마다 제각각 그리지 말고 반드시 이걸 쓴다.
- * 본문을 `<Box sx={{ display:'flex' }}>` 로 감싸고 왼쪽 내용 뒤에 이 컴포넌트를 두면 우상단에 붙는다.
- */
-export function HomeStat({ value, sub }: { value: ReactNode; sub?: string }) {
-  return (
-    <Box sx={{ flexShrink: 0, textAlign: 'right', ml: 2 }}>
-      <Typography sx={{ fontSize: typescale.display.size, fontWeight: typescale.display.weight, lineHeight: 1.1, color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
-        {value}
-      </Typography>
-      {sub && (
-        <Typography sx={{ mt: 0.25, fontSize: typescale.small.size, color: 'text.disabled', fontWeight: weight.medium }}>
-          {sub}
-        </Typography>
-      )}
     </Box>
   )
 }

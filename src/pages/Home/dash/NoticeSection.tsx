@@ -30,13 +30,16 @@ export default function NoticeSection() {
   const [sel, setSel] = useState<Notice | null>(null)
 
   const recent = items.slice(0, 3) // store에서 상단고정→연번 최신순 정렬됨. 3줄 = 홈 간소화 기준(2026-08-05)
+  // 카드 이름이 '새 공지'이므로 건수도 **새 글**만 센다 — 전체 공지 수(17)를 쓰면 이름과 숫자가 서로 다른
+  // 말을 한다(2026-08-06 사용자 지적: "17건은 총공지수인데?")
+  const fresh = items.filter((n) => n.isNew).length
 
   return (
     <>
       <HomeCard
         icon={<CampaignIcon sx={{ fontSize: iconSize.header, color: 'accentText.amber' }} />}
         title="새 공지"
-        count={`${items.length}건`}
+        stat={{ value: fresh, unit: '건' }}
         actionLabel="공지사항"
         onAction={() => navigate('/notice')}
       >
