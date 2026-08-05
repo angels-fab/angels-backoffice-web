@@ -32,7 +32,7 @@ import PinnedWorksSection, { usePinnedWorks } from './dash/PinnedWorksSection'
  * 홈 = 연구센터 운영 대시보드(STEP4) + 섹션 개인화(개인화 D-1/D-2).
  *
  * 기본 위계: ① KPI → ② 일정 → (관심 업무) → ③ 업무 현황 → ④ 장비 현황 → ⑤ 공지.
- * 팀원 대시보드 섹션은 계정별로 순서 변경·숨김 가능(user_settings `home.order`/`home.hidden`).
+ * 구성원 대시보드 섹션은 계정별로 순서 변경·숨김 가능(user_settings — 아래 ORDER_KEY/HIDDEN_KEY).
  * FAB 로드맵은 게스트 공개 + 디자인 규칙(로드맵 최우선·크게)상 개인화 대상에서 제외 — 항상 최상단 고정.
  */
 
@@ -68,14 +68,25 @@ const SECTION_SPAN: Record<SectionId, number> = {
 }
 const isSectionId = (v: unknown): v is SectionId => typeof v === 'string' && (SECTION_IDS as readonly string[]).includes(v)
 
+/**
+ * 개인 배치 저장 키 — **v2**(2026-08-05).
+ *
+ * v1(`home.order`/`home.hidden`)을 이어 쓸 수 없다: 개편에서 `kpi`·`work`·`notice` 는 id 이름만 같고
+ * 담는 내용과 차지하는 칸 수(span)가 완전히 달라졌다. 옛 순서가 그대로 적용되면서
+ * '업무 → KPI → 공지' 로 재배열됐고, 칸 합치기와 어긋나 빈자리가 생겼다(사용자 신고 화면).
+ * 키를 새로 두면 모두 기본 배치에서 다시 시작한다. 옛 값은 남겨 두되 읽지 않는다.
+ */
+const ORDER_KEY = 'home.order2'
+const HIDDEN_KEY = 'home.hidden2'
+
 export default function Home() {
   const dispatch = useAppDispatch()
   const { isMember } = useRole()
   // 홈 배치 개인화 — 저장 순서(모르는 id 무시 + 누락 id는 기본 순서로 뒤에 병합)와 숨김 집합.
   // 저장/편집 UI는 설정 로드 '성공'(loadedOk) 세션에서만(서버 상태 모르고 덮어쓰기 방지 — 필터와 동일 기준).
   const usLoadedOk = useAppSelector((s) => s.userSettings.loadedOk)
-  const svOrder = useAppSelector((s) => s.userSettings.settings['home.order'])
-  const svHidden = useAppSelector((s) => s.userSettings.settings['home.hidden'])
+  const svOrder = useAppSelector((s) => s.userSettings.settings[ORDER_KEY])
+  const svHidden = useAppSelector((s) => s.userSettings.settings[HIDDEN_KEY])
   const pinnedWorks = usePinnedWorks()
   const order = useMemo<SectionId[]>(() => {
     const saved = Array.isArray(svOrder) ? svOrder.filter(isSectionId) : []
@@ -97,15 +108,15 @@ export default function Home() {
     const next = [...order]
     next[i] = next[j]
     next[j] = id
-    dispatch(putSetting({ key: 'home.order', value: next }))
+    dispatch(putSetting({ key: ORDER_KEY, value: next }))
   }
   const toggleHide = (id: SectionId) => {
     const next = hidden.has(id) ? [...hidden].filter((x) => x !== id) : [...hidden, id]
-    dispatch(putSetting({ key: 'home.hidden', value: next }))
+    dispatch(putSetting({ key: HIDDEN_KEY, value: next }))
   }
   const resetLayout = () => {
-    dispatch(putSetting({ key: 'home.order', value: DEFAULT_ORDER }))
-    dispatch(putSetting({ key: 'home.hidden', value: [] }))
+    dispatch(putSetting({ key: ORDER_KEY, value: DEFAULT_ORDER }))
+    dispatch(putSetting({ key: HIDDEN_KEY, value: [] }))
   }
 
   // 각 카드가 제목·건수·전체보기를 스스로 그린다(HomeCard 공용 규격) — 바깥에서 제목을 또 붙이지 않는다
