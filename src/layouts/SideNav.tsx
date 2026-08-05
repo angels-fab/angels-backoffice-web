@@ -6,7 +6,7 @@ import { NavBadge } from '@/components/ds'
 import { iconSize, motion, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
-import { memoCountByPath } from '@/utils/improveMemo'
+import { memoCountByPath, visibleMemos } from '@/utils/improveMemo'
 import { NAV_GROUPS, type NavItem } from '@/constants/nav'
 import { useNavBadges } from './useNavBadges'
 
@@ -15,10 +15,11 @@ export default function SideNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const badges = useNavBadges()
-  const { isMember, isAdmin, isMaintainer } = useRole()
-  // 경로별 활성 개선 메모 건수(장비도입/장비운영은 /equipment로 합산) — 유지보수자(조성범) 전용 앰버 배지
+  const { isMember, isAdmin, user } = useRole()
+  // 경로별 활성 개선 메모 건수(장비도입/장비운영은 /equipment로 합산) — 앰버 배지.
+  // 보이는 범위는 칩·패널과 같은 기준: 작성자 본인 + 포털 관리자(2026-08-05).
   const improveItems = useAppSelector((s) => s.improve.items)
-  const memoCounts = memoCountByPath(improveItems)
+  const memoCounts = memoCountByPath(visibleMemos(improveItems, user, isAdmin))
 
   const isActive = (path: string) =>
     path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(path + '/')
@@ -138,7 +139,7 @@ export default function SideNav() {
             )}
             {g.items.map((item) => {
               const newCnt = item.badgeKey ? badges[item.badgeKey] || 0 : 0
-              const memoCnt = isMaintainer ? memoCounts[item.path] || 0 : 0
+              const memoCnt = memoCounts[item.path] || 0 // 이미 볼 수 있는 것만 세어 둔 값
               const active = isActive(item.path)
               return (
               <Box

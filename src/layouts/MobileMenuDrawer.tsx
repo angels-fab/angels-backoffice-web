@@ -18,7 +18,7 @@ import { useRole, ROLE_LABEL } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
 import { NavBadge } from '@/components/ds'
 import { useNavBadges } from './useNavBadges'
-import { memoCountByPath } from '@/utils/improveMemo'
+import { memoCountByPath, visibleMemos } from '@/utils/improveMemo'
 import { alpha } from '@mui/material/styles'
 import { radius, typescale } from '@/theme/tokens'
 
@@ -47,7 +47,8 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
   const { role, loggedIn, isMember, isAdmin, user, logout } = useRole()
   const badges = useNavBadges()
   const improveItems = useAppSelector((s) => s.improve.items)
-  const memoCounts = memoCountByPath(improveItems)
+  // 사이드바 배지와 같은 기준 — 작성자 본인 + 포털 관리자(2026-08-05)
+  const memoCounts = memoCountByPath(visibleMemos(improveItems, user, isAdmin))
 
   const go = (path: string) => {
     onClose()
@@ -89,7 +90,7 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
       <List dense sx={{ pt: 0.5 }}>
         {rows.map((r) => {
           const active = isActive(r.path)
-          const memo = isAdmin ? memoCounts[r.path] || 0 : 0
+          const memo = memoCounts[r.path] || 0 // 이미 볼 수 있는 것만 세어 둔 값
           return (
             <ListItemButton key={r.path} selected={active} onClick={() => go(r.path)} sx={{ py: 1 }}>
               <ListItemIcon sx={{ minWidth: 40, color: active ? 'primary.main' : 'text.secondary' }}>

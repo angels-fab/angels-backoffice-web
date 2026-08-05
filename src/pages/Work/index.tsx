@@ -48,8 +48,8 @@ import {
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { isWorkNew } from '@/utils/newPost'
 import { useMarkSeen } from '@/layouts/useNavBadges'
-import { loadWorkData, patchWorkItems, softDeleteWorkItems, restoreWorkItems } from '@/store/slices/workSlice'
-import { createWork, deleteWork, restoreWorks, updateWork, fetchAuthors, updateWorkStatuses, removeWorkFiles } from '@/api/works'
+import { loadWorkData, patchWorkItems, softDeleteWorkItems, restoreWorkItems, purgeWorkItems } from '@/store/slices/workSlice'
+import { createWork, deleteWork, restoreWorks, purgeWorks, updateWork, fetchAuthors, updateWorkStatuses, removeWorkFiles } from '@/api/works'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import type { WorkStatusChange } from '@/api/sheets'
 import { useRole } from '@/auth/role'
@@ -804,6 +804,26 @@ export default function Work() {
     }
   }
 
+  // 휴지통 비우기 — 영구 삭제(복원 불가). 선택이 있으면 선택분만, 없으면 전체.
+  // DB 정책(works_delete_trashed)이 '휴지통에 든 행'만 지우도록 막고 있어 살아있는 업무는 대상이 될 수 없다.
+  const [purging, setPurging] = useState(false)
+  const [purgeAsk, setPurgeAsk] = useState<string[] | null>(null)
+  const purgeTrash = async (nums: string[]) => {
+    if (!user || !authKey || purging || nums.length === 0) return
+    setPurging(true)
+    try {
+      await purgeWorks({ nums })
+      dispatch(purgeWorkItems({ nums }))
+      setTrashSel(new Set())
+      setPurgeAsk(null)
+      showSnack(`업무 ${nums.length}건을 영구 삭제했습니다.`, 'success')
+    } catch (err) {
+      showSnack(err instanceof Error ? err.message : '영구 삭제에 실패했습니다.', 'error')
+    } finally {
+      setPurging(false)
+    }
+  }
+
   // 수정 폼의 구분 옵션 — 기존 값이 표준 6개에 없으면 그 값도 선택 가능하게 포함(데이터 손실 방지)
   const editOptionsFor = (t: WorkItem) =>
     t.cat && !fieldOptions.cats.includes(t.cat) ? { ...fieldOptions, cats: [t.cat, ...fieldOptions.cats] } : fieldOptions
@@ -1528,6 +1548,18 @@ export default function Work() {
         onClose={() => setLeaveConfirm(null)}
       />
 
+      {/* 휴지통 비우기 확인 — 유일하게 되돌릴 수 없는 삭제라 건수를 문구에 박아 둔다 */}
+      <ConfirmDialog
+        open={!!purgeAsk}
+        destructive
+        title={`업무 ${purgeAsk?.length || 0}건을 영구 삭제할까요?`}
+        description="휴지통에서 완전히 지워집니다. 복원할 수 없습니다."
+        confirmLabel="영구 삭제"
+        busy={purging}
+        onConfirm={() => purgeAsk && void purgeTrash(purgeAsk)}
+        onClose={() => setPurgeAsk(null)}
+      />
+
       {/* 결과 Snackbar — 상태 저장 실패 시에는 '다시 시도' 제공 */}
       <Snackbar
         open={snack.open}
@@ -1583,7 +1615,8 @@ export default function Work() {
           }}
         >
           <DeleteOutlineIcon sx={{ fontSize: iconSize.feature }} />
-          놓으면 삭제
+          {/* '삭제'가 아니라 '보관' — 실제 동작이 소프트 삭제고 휴지통에서 되살릴 수 있다(사용자 지시 2026-08-05) */}
+          휴지통에 보관
         </Box>
       )}
 
@@ -1660,19 +1693,30 @@ export default function Work() {
             <DeleteOutlineIcon sx={(th) => ({ fontSize: iconSize.header, color: th.palette.accentText.red })} />
             <Typography variant="h3" component="h3" sx={{ fontWeight: typescale.pageTitle.weight }}>휴지통</Typography>
             <Typography variant="body2" sx={{ color: 'text.disabled' }}>{trashed.length}건</Typography>
-            <Box sx={{ ml: 'auto' }}>
+            <Box sx={{ ml: 'auto', display: 'flex', gap: 0.75 }}>
               <Button
                 size="small"
                 variant="outlined"
-                disabled={trashSel.size === 0 || restoring}
+                disabled={trashSel.size === 0 || restoring || purging}
                 onClick={() => void restoreFromTrash([...trashSel])}
               >
                 {restoring ? '복원 중…' : `선택 복원${trashSel.size ? ` (${trashSel.size})` : ''}`}
+              </Button>
+              {/* 비우기 — 선택이 있으면 그것만, 없으면 전체. 되돌릴 수 없어 확인창을 반드시 거친다. */}
+              <Button
+                size="small"
+                variant="text"
+                color="error"
+                disabled={trashed.length === 0 || restoring || purging}
+                onClick={() => setPurgeAsk(trashSel.size ? [...trashSel] : trashed.map((t) => t.num))}
+              >
+                {purging ? '삭제 중…' : trashSel.size ? `선택 삭제 (${trashSel.size})` : '비우기'}
               </Button>
             </Box>
           </Box>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             복원하면 삭제 전 상태 그대로 목록에 돌아갑니다. 진행중 업무는 목록 맨 아래에 배치됩니다.
+            비우기는 영구 삭제라 되돌릴 수 없습니다.
           </Typography>
           <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
             {trashed.length === 0 && (

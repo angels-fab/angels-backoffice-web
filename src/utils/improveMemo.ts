@@ -35,6 +35,19 @@ export function hasMemoTarget(loc: string): boolean {
   return locationToPath(loc) !== null
 }
 
+/**
+ * 내가 볼 메모만 추린다 — **작성자 본인 또는 포털 관리자**(사용자 확정 2026-08-05).
+ *
+ * 메모는 '내가 남긴 개선 요청을 그 화면에서 다시 마주치는' 장치다. 남의 메모까지 뜨면
+ * 화면이 남의 할 일로 덮이고, 정작 내가 남긴 것이 묻힌다. 관리자는 전체를 봐야 처리할 수 있으므로 예외.
+ * 칩·패널(PageImprovementMemo)과 사이드바·모바일 배지가 모두 이 함수를 거쳐 기준이 갈리지 않게 한다.
+ */
+export function visibleMemos(items: ImprovementItem[], user: string | null, isAdmin: boolean): ImprovementItem[] {
+  if (isAdmin) return items
+  if (!user) return []
+  return items.filter((t) => (t.author || '').trim() === user)
+}
+
 /** 활성 메모 = 메모표시 체크 + 연결 페이지가 있는 항목 */
 export function isMemoActive(t: ImprovementItem): boolean {
   return t.memo === true && hasMemoTarget(t.loc)

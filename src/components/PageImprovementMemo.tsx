@@ -22,7 +22,7 @@ import { updateImprovement, createReply, updateReply, deleteReply } from '@/api/
 import type { ReplyRow } from '@/api/sheets'
 import { RichBodyView } from '@/utils/richBody'
 import { useRole } from '@/auth/role'
-import { memosForPath } from '@/utils/improveMemo'
+import { memosForPath, visibleMemos } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import ReplyThread from '@/pages/Improve/ReplyThread'
@@ -210,7 +210,7 @@ function MemoRow({
  */
 export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; snackbar: ReactNode } {
   const { pathname } = useLocation()
-  const { isAdmin, isMaintainer, user, authKey } = useRole()
+  const { isAdmin, isMember, user, authKey } = useRole()
   const dispatch = useAppDispatch()
   const snack = useSnack()
   const items = useAppSelector((s) => s.improve.items)
@@ -224,7 +224,8 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const [savingStatusNum, setSavingStatusNum] = useState<string | null>(null)
   const [statusDlg, setStatusDlg] = useState<{ row: ImprovementItem; status: string; value: string } | null>(null)
 
-  const memos = useMemo(() => memosForPath(items, pathname), [items, pathname])
+  // 작성자 본인 + 포털 관리자에게만(2026-08-05) — 남의 메모로 내 화면이 덮이지 않게
+  const memos = useMemo(() => memosForPath(visibleMemos(items, user, isAdmin), pathname), [items, pathname, user, isAdmin])
   // 삭제 안 된 답글을 요청번호별로 그룹화(작성일시 오름차순) — 게시판과 동일 데이터
   const repliesByReq = useMemo(() => {
     const m: Record<string, ReplyRow[]> = {}
@@ -304,8 +305,9 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
     void saveStatus(statusDlg.row, statusDlg.status, needsReason(statusDlg.status) ? statusDlg.value.trim() : '')
   }
 
-  // 개선 메모(칩·패널·답글/상태 관리)는 포털 유지보수자(조성범)에게만 — 다른 관리자에겐 미노출
-  const admin = isAdmin && isMaintainer && !!authKey
+  // 개선 메모를 볼 수 있는 사람 = 로그인한 구성원. 무엇이 보이는지는 memos(작성자 본인 + 관리자)가 가른다.
+  // 종전에는 유지보수자(조성범) 1인 전용이었는데, 자기 메모는 본인이 봐야 한다는 지시로 기준을 옮겼다(2026-08-05).
+  const admin = isMember && !!authKey
   // 답글 삭제 + 상태변경 확인 Dialog — 유지보수자에게 항상 렌더(패널 상태와 무관). 스낵바는 전역 useSnack.
   const snackbar = admin ? (
     <>

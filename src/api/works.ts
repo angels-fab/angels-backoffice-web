@@ -119,6 +119,20 @@ export async function deleteWork(p: { nums: (string | number)[]; author: string;
   return { deletedAt: stamp }
 }
 
+/**
+ * 휴지통 비우기 — **영구 삭제**(복원 불가). 휴지통에 있는 행만 지운다.
+ * `.neq('deleted_at','')` 는 클라이언트 쪽 안전장치이고, DB에도 같은 조건이 정책으로 걸려 있어
+ * (works_delete_trashed) 살아있는 업무는 어느 경로로도 하드 삭제되지 않는다.
+ */
+export async function purgeWorks(p: { nums: (string | number)[] }): Promise<void> {
+  await ensureSession()
+  const { error } = await withTimeout(
+    supabase.from('works').delete().in('num', p.nums.map(Number)).neq('deleted_at', ''),
+    DB_TIMEOUT, '휴지통 비우기',
+  )
+  if (error) fail(error, '영구 삭제에 실패했습니다')
+}
+
 /** 휴지통 복원 — 진행중은 수동정렬 맨 아래(RPC가 새 정렬값 맵 반환) */
 export async function restoreWorks(p: { nums: (string | number)[]; author: string; key: string }): Promise<{ orders: Record<string, number> }> {
   await ensureSession()

@@ -83,6 +83,11 @@ const workSlice = createSlice({
       }
       state.items = [...state.items, ...moving]
     },
+    // 휴지통 비우기 — 영구 삭제분을 trashed에서 제거(items는 애초에 대상이 아니므로 건드리지 않는다)
+    purgeWorkItems(state, action: PayloadAction<{ nums: string[] }>) {
+      const numSet = new Set(action.payload.nums)
+      state.trashed = state.trashed.filter((t) => !numSet.has(t.num))
+    },
   },
   extraReducers: builder => {
     builder
@@ -110,5 +115,5 @@ const workSlice = createSlice({
   },
 })
 
-export const { patchWorkItems, softDeleteWorkItems, restoreWorkItems } = workSlice.actions
+export const { patchWorkItems, softDeleteWorkItems, restoreWorkItems, purgeWorkItems } = workSlice.actions
 export default workSlice.reducer

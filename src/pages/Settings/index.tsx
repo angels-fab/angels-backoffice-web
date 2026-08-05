@@ -251,15 +251,18 @@ export default function Settings() {
         </ContentSection>
       )}
 
-      <ContentSection title="포털 정보">
+      <ContentSection title="포털 정보" last={!isAdmin}>
         <AppCard padding={16}>
           <Row label="포털 버전" value={<Typography variant="subtitle1">v{APP_VERSION}</Typography>} />
         </AppCard>
       </ContentSection>
 
-      <ContentSection title="데이터 소스" description="현재 포털의 모든 데이터는 아래 백엔드에서 읽고 씁니다" last>
-        <SourceCard icon={<StorageIcon />} name="Supabase (PostgreSQL)" detail="업무·공지·장비·일정·개선요청 — 세션 인증 + RLS" />
-      </ContentSection>
+      {/* 데이터 소스 = 관리자만. 구성원에게는 어떤 백엔드를 쓰는지가 필요한 정보가 아니다(사용자 지시 2026-08-05). */}
+      {isAdmin && (
+        <ContentSection title="데이터 소스" description="현재 포털의 모든 데이터는 아래 백엔드에서 읽고 씁니다" last>
+          <SourceCard icon={<StorageIcon />} name="Supabase (PostgreSQL)" detail="업무·공지·장비·일정·개선요청 — 세션 인증 + RLS" />
+        </ContentSection>
+      )}
 
       <AdminLoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} />
     </PageContainer>
