@@ -17,6 +17,8 @@ import { useRole, ROLE_LABEL } from '@/auth/role'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
 import MemoComposeButton from '@/components/MemoComposeButton'
+import { MEMO_DRAW_EVENT } from '@/components/MemoDraw'
+import GestureIcon from '@mui/icons-material/Gesture'
 import NotificationBell from './NotificationBell'
 import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
 import { useThemeMode } from '@/theme/mode'
@@ -215,6 +217,20 @@ export default function TopBar() {
           </Tooltip>
           {/* 이 화면에 메모 붙이기 — 게시판 폼을 거치지 않는 개선요청 입력 창구(쓰기 권한자만 렌더) */}
           <MemoComposeButton />
+          {/* 화면에 그리기 — 포털 관리자 전용 편의 도구. 메모를 켜지 않고도 바로 그릴 수 있게
+              메모 버튼 옆에 따로 뒀다(사용자 지시 2026-08-05). 판은 쪽지 레이어가 띄운다. */}
+          {isAdmin && (
+            <Tooltip title="화면에 그리기">
+              <IconButton
+                aria-label="화면에 그리기"
+                onClick={() => window.dispatchEvent(new Event(MEMO_DRAW_EVENT))}
+                size="small"
+                sx={{ color: 'text.secondary' }}
+              >
+                <GestureIcon sx={{ fontSize: iconSize.header }} />
+              </IconButton>
+            </Tooltip>
+          )}
           {/* 알림 센터 — 로그인 사용자만(읽음 상태가 계정에 저장되므로 게스트에겐 제 역할을 못 한다) */}
           {loggedIn && <NotificationBell />}
           <Tooltip title={mode === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}>

@@ -36,6 +36,26 @@ export function hasMemoTarget(loc: string): boolean {
 }
 
 /**
+ * 리치텍스트 본문 → 게시판 제목으로 쓸 첫 줄(2026-08-05).
+ *
+ * 메모 입력에서 '한 줄 요약'(제목) 칸을 없앴다 — 쪽지에 칸이 둘이라 번거롭다는 지적.
+ * 게시판은 제목 열이 있어야 목록이 읽히므로, 여기서 내용 첫 줄을 잘라 제목으로 삼는다.
+ * 태그를 벗기고 첫 비어 있지 않은 줄만 취한 뒤 60자로 자른다(제목 칸 maxLength 와 같은 값).
+ */
+export function firstLine(html: string): string {
+  const text = String(html || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li|h[1-6])>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+  const line = text.split('\n').map((s) => s.trim()).find(Boolean) || ''
+  return line.slice(0, 60) || '(제목 없음)'
+}
+
+/**
  * 내가 볼 메모만 추린다 — **작성자 본인 또는 포털 관리자**(사용자 확정 2026-08-05).
  *
  * 메모는 '내가 남긴 개선 요청을 그 화면에서 다시 마주치는' 장치다. 남의 메모까지 뜨면

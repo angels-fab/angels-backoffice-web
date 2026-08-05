@@ -5,16 +5,33 @@ import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import UndoIcon from '@mui/icons-material/Undo'
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
+import AutoFixNormalIcon from '@mui/icons-material/AutoFixNormal'
 import { accent, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import type { MemoStroke } from '@/api/improve'
 
-/** 펜 색 — 화면 위에 겹쳐 그리므로 배경과 싸우지 않는 강조색 셋만 */
+/**
+ * 펜 색. 'ink' 는 고정색이 아니라 **테마 글자색**으로 풀린다(라이트=검정 / 다크=흰색).
+ * 검정을 그대로 저장하면 다크 테마에서 배경에 묻혀 안 보인다 — 같은 그림을 두 테마에서
+ * 다 봐야 하므로 색이 아니라 '먹'이라는 뜻으로 저장한다.
+ */
+export const INK = 'ink'
 const PENS: { key: string; color: string; label: string }[] = [
+  { key: 'ink', color: INK, label: '검정' },
   { key: 'red', color: accent.red, label: '빨강' },
   { key: 'amber', color: accent.amber, label: '노랑' },
   { key: 'blue', color: accent.blue, label: '파랑' },
 ]
 const WIDTHS = [3, 6]
+/** 지우개 판정 반경(px) — 이 안에 획의 점이 하나라도 있으면 그 획을 통째로 지운다 */
+const ERASE_R = 14
+
+/**
+ * 상단바 '그리기' 버튼 → 쪽지 레이어에 그리기 시작을 알리는 신호.
+ *
+ * 버튼은 TopBar 에, 그리기 판은 MainLayout 의 쪽지 레이어에 있어 부모-자식이 아니다.
+ * 이 하나를 위해 전역 상태를 새로 만들 이유가 없어 창 이벤트로 잇는다(수신은 StickyMemoLayer).
+ */
+export const MEMO_DRAW_EVENT = 'memo-draw:start'
 
 /** [x,y,x,y,...] → SVG polyline 의 "x,y x,y" 문자열. 저장 형식이 평면 배열이라 여기서 편다. */
 export function pointsOf(p: number[]): string {
@@ -44,8 +61,18 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
   const [strokes, setStrokes] = useState<MemoStroke[]>(initial || [])
   const [pen, setPen] = useState(PENS[0])
   const [width, setWidth] = useState(WIDTHS[0])
+  const [erasing, setErasing] = useState(false)
   const drawing = useRef(false)
   const svgRef = useRef<SVGSVGElement>(null)
+
+  /** 지우개 — 지나간 자리에 걸린 획을 통째로 지운다(획 단위. 선 일부만 지우는 방식은 과함) */
+  const eraseAt = (x: number, y: number) =>
+    setStrokes((s) => s.filter((st) => {
+      for (let i = 0; i + 1 < st.p.length; i += 2) {
+        if (Math.abs(st.p[i] - x) <= ERASE_R && Math.abs(st.p[i + 1] - y) <= ERASE_R) return false
+      }
+      return true
+    }))
 
   /** 포인터 위치 → 본문 칸 기준 px */
   const at = (e: React.PointerEvent): [number, number] | null => {
@@ -60,12 +87,14 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     if (!p) return
     drawing.current = true
     try { svgRef.current?.setPointerCapture(e.pointerId) } catch { /* 캡처 실패해도 그리기는 동작 */ }
+    if (erasing) return eraseAt(p[0], p[1])
     setStrokes((s) => [...s, { c: pen.color, w: width, p }])
   }
   const move = (e: React.PointerEvent) => {
     if (!drawing.current) return
     const p = at(e)
     if (!p) return
+    if (erasing) return eraseAt(p[0], p[1])
     setStrokes((s) => {
       const last = s[s.length - 1]
       if (!last) return s
@@ -89,16 +118,17 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         onPointerCancel={up}
         sx={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
-          pointerEvents: 'auto', cursor: 'crosshair', touchAction: 'none',
+          pointerEvents: 'auto', cursor: erasing ? 'cell' : 'crosshair', touchAction: 'none',
           zIndex: 5,
         }}
       >
         {strokes.map((s, i) => (
-          <polyline
+          <Box
+            component="polyline"
             key={i}
             points={pointsOf(s.p)}
             fill="none"
-            stroke={s.c}
+            sx={{ stroke: s.c === INK ? 'text.primary' : s.c }}
             strokeWidth={s.w}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -121,16 +151,28 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
             <Box
               component="button"
               aria-label={`${p.label} 펜`}
-              onClick={() => setPen(p)}
+              onClick={() => { setPen(p); setErasing(false) }}
               sx={{
                 width: 24, height: 24, p: 0, borderRadius: radius.circle, cursor: 'pointer',
-                bgcolor: p.color,
-                border: pen.key === p.key ? '3px solid' : '1px solid',
-                borderColor: pen.key === p.key ? 'text.primary' : 'divider',
+                bgcolor: p.color === INK ? 'text.primary' : p.color,
+                border: !erasing && pen.key === p.key ? '3px solid' : '1px solid',
+                borderColor: !erasing && pen.key === p.key ? 'primary.main' : 'divider',
               }}
             />
           </Tooltip>
         ))}
+
+        <Tooltip title="지우개 — 지나간 획을 지웁니다">
+          <IconButton
+            size="small"
+            aria-label="지우개"
+            aria-pressed={erasing}
+            onClick={() => setErasing((v) => !v)}
+            sx={{ color: erasing ? 'primary.main' : 'text.secondary', bgcolor: erasing ? 'action.selected' : 'transparent' }}
+          >
+            <AutoFixNormalIcon sx={{ fontSize: typescale.cardTitle.size }} />
+          </IconButton>
+        </Tooltip>
 
         <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', mx: 0.5 }} />
 

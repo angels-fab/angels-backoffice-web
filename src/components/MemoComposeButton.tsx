@@ -13,7 +13,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { createImprovement, updateImprovement } from '@/api/improve'
 import { useRole } from '@/auth/role'
-import { memoCountByPath, pathToLocation, memosForPath, visibleMemos } from '@/utils/improveMemo'
+import { memoCountByPath, pathToLocation, memosForPath, visibleMemos, firstLine } from '@/utils/improveMemo'
 import { useSnack, focusRingSx } from '@/components/ds'
 import { control, iconSize, radius, typescale, weight } from '@/theme/tokens'
 
@@ -34,7 +34,6 @@ export default function MemoComposeButton() {
   const snack = useSnack()
   const anchorRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(false)
-  const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -51,19 +50,19 @@ export default function MemoComposeButton() {
   const close = () => { if (!busy) setOpen(false) }
 
   const save = async () => {
-    const t = title.trim()
-    if (!t) return snack('한 줄 요약을 입력해주세요.', 'error')
+    const body = content.trim()
+    if (!body) return snack('내용을 입력해주세요.', 'error')
     setBusy(true)
     try {
       const num = await createImprovement({
         author: user, key: authKey, loc: loc || '기타',
         // 담당자 = 작성자. 게시판의 일괄등록(improve_create_batch)도 mgr=my_name()으로 넣는다.
         // 비워두면 삭제 권한자가 없어져 게시판에서 지울 수 없는 글이 된다.
-        title: t, content: content.trim(), mgr: user,
+        // 제목 칸은 없앴다(사용자 지시 2026-08-05) — 게시판 제목은 내용 첫 줄에서 만든다.
+        title: firstLine(body), content: body, mgr: user,
       })
       // 연결되는 화면이 있을 때만 쪽지로 띄운다('기타'는 띄울 화면이 없다)
       if (loc) await updateImprovement({ author: user, key: authKey, num, memo: true })
-      setTitle('')
       setContent('')
       setOpen(false)
       snack(loc ? `이 화면에 메모를 붙였습니다. (요청 #${num})` : `게시판에 접수했습니다. (요청 #${num})`, 'success')
@@ -144,27 +143,19 @@ export default function MemoComposeButton() {
             <>이 화면은 연결된 개선위치가 없어 <b>게시판 접수만</b> 됩니다</>
           )}
         </Box>
+        {/* 칸은 하나 — '한 줄 요약'을 없앴다(사용자 지시 2026-08-05).
+            게시판 제목은 내용 첫 줄에서 자동으로 만든다(improveMemo.firstLine). */}
         <TextField
-          autoFocus fullWidth size="small"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void save() } }}
-          placeholder="한 줄 요약 (예: 담당 필터가 초기화됨)"
-          slotProps={{ htmlInput: { maxLength: 60, 'aria-label': '한 줄 요약' } }}
-          disabled={busy}
-        />
-        <TextField
-          fullWidth size="small" multiline minRows={3}
+          autoFocus fullWidth size="small" multiline minRows={3}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="무엇이 어떻게 불편한지 (선택)"
+          placeholder="무엇이 어떻게 불편한지"
           slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
           disabled={busy}
-          sx={{ mt: 1 }}
         />
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.5 }}>
           <Button size="small" onClick={close} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button size="small" variant="contained" onClick={save} disabled={busy || !title.trim()}>
+          <Button size="small" variant="contained" onClick={save} disabled={busy || !content.trim()}>
             {busy ? '붙이는 중…' : '붙이기'}
           </Button>
         </Box>

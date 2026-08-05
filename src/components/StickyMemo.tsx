@@ -19,12 +19,12 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { addReply } from '@/store/slices/replySlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
-import { updateImprovement, createReply, deleteImprovement } from '@/api/improve'
+import { updateImprovement, createReply, deleteImprovement, createImprovement } from '@/api/improve'
 import type { MemoStroke } from '@/api/improve'
-import MemoDraw, { pointsOf } from '@/components/MemoDraw'
+import MemoDraw, { pointsOf, INK, MEMO_DRAW_EVENT } from '@/components/MemoDraw'
 import GestureIcon from '@mui/icons-material/Gesture'
 import { useRole } from '@/auth/role'
-import { memosForPath, visibleMemos } from '@/utils/improveMemo'
+import { memosForPath, visibleMemos, pathToLocation, firstLine } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import { RichBodyView } from '@/utils/richBody'
 import ButtonBase from '@mui/material/ButtonBase'
@@ -170,7 +170,6 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
   const [reply, setReply] = useState('')
   // 쪽지에서 바로 제목·내용 수정 — 게시판까지 가지 않아도 고칠 수 있게(수정 권한은 게시판과 동일)
   const [editing, setEditing] = useState(false)
-  const [eTitle, setETitle] = useState('')
   const [eContent, setEContent] = useState('')
   const [stOpen, setStOpen] = useState(false)                                        // 상태 메뉴 열림
   const [delAsk, setDelAsk] = useState(false)                                        // 요청 삭제 확인
@@ -291,17 +290,17 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
   }
 
   const startEdit = () => {
-    setETitle(item.title || '')
-    setEContent(item.content || '')
+    setEContent(item.content || item.title || '')
     setEditing(true)
   }
 
   const saveEdit = async () => {
-    const t = eTitle.trim()
-    if (!t) return snack('제목을 입력해주세요.', 'error')
+    const body = eContent.trim()
+    if (!body) return snack('내용을 입력해주세요.', 'error')
     setBusy(true)
     try {
-      await updateImprovement({ author: user || '', key: 'session', num: item.num, title: t, content: eContent })
+      // 게시판 제목은 내용 첫 줄에서 다시 만든다 — 내용을 고치면 목록 제목도 따라 바뀐다
+      await updateImprovement({ author: user || '', key: 'session', num: item.num, title: firstLine(body), content: body })
       setEditing(false)
       snack('수정했습니다.', 'success')
       dispatch(loadImproveData())
@@ -440,17 +439,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
               /* 수정 — 게시판까지 가지 않고 여기서 바로. 본문은 게시판과 같은 리치 에디터라
                  서식이 있는 글을 열어도 깨지지 않는다(평문 textarea 로 받으면 태그가 드러난다). */
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <TextField
-                  size="small"
-                  fullWidth
-                  autoFocus
-                  value={eTitle}
-                  onChange={(e) => setETitle(e.target.value)}
-                  placeholder="제목"
-                  disabled={busy}
-                  slotProps={{ htmlInput: { maxLength: 60, 'aria-label': '메모 제목' } }}
-                  sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size, py: 0.75 } }}
-                />
+                {/* 제목 칸 없음 — 게시판 제목은 내용 첫 줄에서 만든다(사용자 지시 2026-08-05) */}
                 <RichBodyEditor
                   value={eContent}
                   onChange={setEContent}
@@ -463,20 +452,17 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
                 />
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
                   <Button size="small" onClick={() => setEditing(false)} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
-                  <Button size="small" variant="contained" onClick={saveEdit} disabled={busy || !eTitle.trim()}>
+                  <Button size="small" variant="contained" onClick={saveEdit} disabled={busy || !eContent.trim()}>
                     {busy ? '저장 중…' : '저장'}
                   </Button>
                 </Box>
               </Box>
             ) : (
-              <>
-                <Box sx={{ fontSize: typescale.body.size, fontWeight: weight.heavy, color: 'text.primary', lineHeight: 1.45, mb: 0.5 }}>
-                  {item.title}
-                </Box>
-                {item.content && (
-                  <RichBodyView html={item.content} sx={{ fontSize: typescale.small.size, lineHeight: 1.65, color: 'text.secondary', maxHeight: 168, overflowY: 'auto' }} />
-                )}
-              </>
+              /* 제목 줄 없이 내용만 — 제목은 내용 첫 줄에서 파생되므로 같이 보이면 같은 문장이 두 번 나온다 */
+              <RichBodyView
+                html={item.content || item.title}
+                sx={{ fontSize: typescale.body.size, lineHeight: 1.65, color: 'text.primary', maxHeight: 200, overflowY: 'auto' }}
+              />
             )}
             <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mt: 1.25 }}>
               <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: typescale.caption.size, color: 'text.secondary' }}>
@@ -702,17 +688,35 @@ export default function StickyMemoLayer() {
    */
   const drawTarget = memos.find((t) => t.num === drawFor) || null
   const saveDrawing = async (strokes: MemoStroke[]) => {
-    if (!drawTarget || !user) return
+    if (!user || !authKey) return
     setDrawFor(null)
+    if (strokes.length === 0 && !drawTarget) return // 새로 그리다 아무것도 안 남기면 쪽지도 만들지 않는다
     try {
-      await updateImprovement({ author: user, key: 'session', num: drawTarget.num, drawing: strokes.length ? strokes : null })
+      if (drawTarget) {
+        await updateImprovement({ author: user, key: 'session', num: drawTarget.num, drawing: strokes.length ? strokes : null })
+      } else {
+        // 상단바에서 바로 그린 경우 — 그림을 담을 쪽지를 이 화면에 새로 만든다(내용은 나중에 쪽지에서)
+        const loc = pathToLocation(pathname)
+        const num = await createImprovement({ author: user, key: authKey, loc: loc || '기타', title: '', content: '', mgr: user })
+        await updateImprovement({ author: user, key: 'session', num, memo: true, drawing: strokes })
+      }
       dispatch(loadImproveData())
     } catch (err) {
       snack(err instanceof Error ? err.message : '그림 저장에 실패했습니다', 'error')
     }
   }
 
-  if (!isMember || !isDesktop || memos.length === 0) return null
+  // 상단바 '그리기' 버튼 신호 — 쪽지가 없어도 바로 그릴 수 있게(관리자 전용)
+  useEffect(() => {
+    if (!isAdmin) return
+    const start = () => setDrawFor('new')
+    window.addEventListener(MEMO_DRAW_EVENT, start)
+    return () => window.removeEventListener(MEMO_DRAW_EVENT, start)
+  }, [isAdmin])
+
+  // 쪽지가 없어도 관리자면 레이어를 띄운다 — 상단바 '그리기'가 언제나 열려야 하므로.
+  // (레이어는 클릭을 통과시키므로 비어 있어도 화면을 가리지 않는다.)
+  if (!isMember || !isDesktop || (memos.length === 0 && !isAdmin)) return null
 
   return (
     <Box
@@ -742,17 +746,26 @@ export default function StickyMemoLayer() {
               sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
             >
               {t.drawing.map((s, i) => (
-                <polyline key={i} points={pointsOf(s.p)} fill="none" stroke={s.c} strokeWidth={s.w} strokeLinecap="round" strokeLinejoin="round" />
+                <Box
+                  component="polyline"
+                  key={i}
+                  points={pointsOf(s.p)}
+                  fill="none"
+                  sx={{ stroke: s.c === INK ? 'text.primary' : s.c }}
+                  strokeWidth={s.w}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               ))}
             </Box>
           ) : null
         ))}
 
         {/* 그리기 판 — 진입하면 쪽지는 접히고 화면 전체가 그리기 대상이 된다 */}
-        {isAdmin && drawTarget && (
+        {isAdmin && drawFor && (
           <MemoDraw
             layerRef={layerRef}
-            initial={drawTarget.drawing}
+            initial={drawTarget?.drawing}
             onDone={(strokes) => void saveDrawing(strokes)}
             onCancel={() => setDrawFor(null)}
           />
