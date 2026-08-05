@@ -14,9 +14,14 @@ import { iconSize, radius, typescale, weight } from '@/theme/tokens'
  * 이 두 컴포넌트만 쓰게 해서 규격을 한곳에 묶는다 — 여기 값을 바꾸면 홈 전체가 같이 움직인다.
  *
  * 규격
- *  - 카드 제목 18 / 행 제목 16 / 메타 13  (종전 16 / 14 / 11 에서 한 단씩 올림)
- *  - 행 높이 = py 1.25(10px) + 16px 줄높이 ≒ 44px, 구분선은 행 사이에만
+ *  - 카드 제목 18(sectionTitle) / 행 제목 14(emphasis) / 메타 13(body)
+ *  - 행 높이 = py 1.25(10px) + 14px 줄높이 ≒ 39px, 구분선은 행 사이에만
  *  - 카드 안쪽 여백 20px 고정, 제목줄과 목록 사이 12px
+ *
+ * 행 제목이 14 인 이유(2026-08-05 실측 후 조정): 처음엔 16(cardTitle)이었는데, 카드 제목 18 과
+ * 2px 차이라 목록이 제목만큼 커 보였다(사용자: "너무 큰 것도 있다"). 무엇보다 **공지사항·업무현황
+ * 페이지의 같은 목록이 전부 14** 라 홈만 혼자 컸다. cardTitle 은 '카드 제목' 단이라 목록 행이
+ * 쓸 자리가 아니다 — 행 제목의 정본은 emphasis(14/600)다.
  */
 
 export function HomeCard({ title, count, actionLabel, onAction, children }: {
@@ -91,7 +96,7 @@ export function HomeRow({ lead, title, trail, onClick }: {
       <Typography
         sx={{
           flex: 1, minWidth: 0,
-          fontSize: typescale.cardTitle.size, fontWeight: weight.semibold, lineHeight: 1.35,
+          fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight, lineHeight: 1.35,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}
       >
