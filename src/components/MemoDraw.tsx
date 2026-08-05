@@ -30,6 +30,19 @@ const WIDTHS = [3, 6]
 const ERASE_R = 14
 
 /**
+ * 지우개 커서 — 도구 아이콘과 같은 그림으로(사용자 지시 2026-08-05).
+ * 기본 커서 중에는 지우개가 없어 'cell'(십자)을 썼더니 더하기처럼 보였다.
+ * path 는 @mui/icons-material/CleaningServices 의 것을 그대로 옮긴 값이라 아이콘과 정확히 같다
+ * (수제 그림이 아니라 같은 아이콘의 재사용 — CLAUDE.md 아이콘 규칙과 어긋나지 않는다).
+ * 커서는 CSS url() 이라 currentColor 를 못 쓴다 → 흰 테두리를 덧대 밝은/어두운 배경 양쪽에서 보이게 한다.
+ */
+const ERASER_PATH = 'M16 11h-1V3c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2v8H8c-2.76 0-5 2.24-5 5v7h18v-7c0-2.76-2.24-5-5-5m3 10h-2v-3c0-.55-.45-1-1-1s-1 .45-1 1v3h-2v-3c0-.55-.45-1-1-1s-1 .45-1 1v3H9v-3c0-.55-.45-1-1-1s-1 .45-1 1v3H5v-5c0-1.65 1.35-3 3-3h8c1.65 0 3 1.35 3 3z'
+const ERASER_CURSOR =
+  `url("data:image/svg+xml;utf8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"><path d="${ERASER_PATH}" fill="#111" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+  )}") 13 22, cell`
+
+/**
  * 상단바 '그리기' 버튼 → 쪽지 레이어에 그리기 시작을 알리는 신호.
  *
  * 버튼은 TopBar 에, 그리기 판은 MainLayout 의 쪽지 레이어에 있어 부모-자식이 아니다.
@@ -162,7 +175,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         onPointerCancel={up}
         sx={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
-          pointerEvents: 'auto', cursor: erasing ? 'cell' : 'crosshair', touchAction: 'none',
+          pointerEvents: 'auto', cursor: erasing ? ERASER_CURSOR : 'crosshair', touchAction: 'none',
           zIndex: 5,
         }}
       >

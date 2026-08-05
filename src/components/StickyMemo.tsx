@@ -71,6 +71,8 @@ const TOPBAR_H = 53
 const RAIL_W = 64
 /** 펼친 쪽지 폭 */
 const OPEN_W = 300
+/** 그리기 직후 뜨는 입력창 폭 — 그림 옆에 붙으므로 쪽지보다 조금 좁게 */
+const NOTE_W = 260
 /** 끌었다고 볼 최소 이동량(px) — 이보다 작으면 '제자리 클릭'으로 본다 */
 const DRAG_SLOP = 3
 
@@ -621,6 +623,10 @@ export default function StickyMemoLayer() {
   const layerRef = useRef<HTMLDivElement | null>(null)
   const [layerEl, setLayerEl] = useState<HTMLDivElement | null>(null)
   const [drawFor, setDrawFor] = useState<string | null>(null) // 그리기 중인 쪽지 번호(관리자 전용)
+  // 그리기 완료 직후 — 그림 옆에서 내용을 받는 중(아직 쪽지는 안 만들어졌다)
+  const [pending, setPending] = useState<{ strokes: MemoStroke[]; x: number; y: number } | null>(null)
+  const [pendingText, setPendingText] = useState('')
+  const [busyPending, setBusyPending] = useState(false)
   const snack = useSnack()
   const attachLayer = useCallback((el: HTMLDivElement | null) => {
     layerRef.current = el
@@ -687,24 +693,56 @@ export default function StickyMemoLayer() {
    * 도구도 그림도 노출하지 않는다. 저장은 쪽지(개선요청)에 딸린다 — 그림만 따로 떠다니지 않는다.
    */
   const drawTarget = memos.find((t) => t.num === drawFor) || null
-  const saveDrawing = async (strokes: MemoStroke[]) => {
-    if (!user || !authKey) return
+
+  /**
+   * 그리기 완료 —
+   *  · 기존 쪽지의 그림을 고친 것이면 바로 저장한다.
+   *  · 새로 그린 것이면 **그림 옆에 입력창을 띄워** 무슨 뜻인지 바로 적게 한다(사용자 지시 2026-08-05).
+   *    그림만 있고 설명이 없으면 나중에 본인도 왜 그렸는지 모른다.
+   */
+  const finishDrawing = async (strokes: MemoStroke[]) => {
     setDrawFor(null)
-    if (strokes.length === 0 && !drawTarget) return // 새로 그리다 아무것도 안 남기면 쪽지도 만들지 않는다
-    try {
-      if (drawTarget) {
+    if (!user || !authKey) return
+    if (drawTarget) {
+      try {
         await updateImprovement({ author: user, key: 'session', num: drawTarget.num, drawing: strokes.length ? strokes : null })
-      } else {
-        // 상단바에서 바로 그린 경우 — 그림을 담을 쪽지를 이 화면에 새로 만든다(내용은 나중에 쪽지에서).
-        // 제목을 비우면 createImprovement 가 '제목을 입력해주세요'로 막는다(게시판 목록이 읽혀야 하므로).
-        // 그림만 그린 쪽지는 쓸 제목이 없으니 게시판에서 알아볼 수 있는 기본 제목을 넣는다(2026-08-05).
-        const loc = pathToLocation(pathname)
-        const num = await createImprovement({ author: user, key: authKey, loc: loc || '기타', title: `화면 그림 — ${loc || '기타'}`, content: '', mgr: user })
-        await updateImprovement({ author: user, key: 'session', num, memo: true, drawing: strokes })
+        dispatch(loadImproveData())
+      } catch (err) {
+        snack(err instanceof Error ? err.message : '그림 저장에 실패했습니다', 'error')
       }
+      return
+    }
+    if (strokes.length === 0) return // 아무것도 안 그렸으면 쪽지도 만들지 않는다
+    // 입력창 자리 = 그림 오른쪽 위(획들의 경계상자 기준). 레이어 밖으로 나가지 않게 당긴다.
+    const xs = strokes.flatMap((s) => s.p.filter((_, i) => i % 2 === 0))
+    const ys = strokes.flatMap((s) => s.p.filter((_, i) => i % 2 === 1))
+    const W = layerRef.current?.clientWidth ?? 0
+    const H = layerRef.current?.clientHeight ?? 0
+    setPending({
+      strokes,
+      x: Math.min(Math.max(Math.max(...xs) + 12, 0), Math.max(W - NOTE_W, 0)),
+      y: Math.min(Math.max(Math.min(...ys), 0), Math.max(H - 150, 0)),
+    })
+  }
+
+  /** 입력창에서 '붙이기' — 그림 + 내용을 담은 쪽지를 이 화면에 만든다 */
+  const savePending = async () => {
+    if (!pending || !user || !authKey) return
+    const body = pendingText.trim()
+    setBusyPending(true)
+    try {
+      const loc = pathToLocation(pathname)
+      // 게시판 목록이 읽히려면 제목이 있어야 한다 — 내용이 있으면 첫 줄, 없으면 기본 제목
+      const title = body ? firstLine(body) : `화면 그림 — ${loc || '기타'}`
+      const num = await createImprovement({ author: user, key: authKey, loc: loc || '기타', title, content: body, mgr: user })
+      await updateImprovement({ author: user, key: 'session', num, memo: true, drawing: pending.strokes })
+      setPending(null)
+      setPendingText('')
       dispatch(loadImproveData())
     } catch (err) {
-      snack(err instanceof Error ? err.message : '그림 저장에 실패했습니다', 'error')
+      snack(err instanceof Error ? err.message : '저장에 실패했습니다', 'error')
+    } finally {
+      setBusyPending(false)
     }
   }
 
@@ -768,9 +806,62 @@ export default function StickyMemoLayer() {
           <MemoDraw
             layerRef={layerRef}
             initial={drawTarget?.drawing}
-            onDone={(strokes) => void saveDrawing(strokes)}
+            onDone={(strokes) => void finishDrawing(strokes)}
             onCancel={() => setDrawFor(null)}
           />
+        )}
+
+        {/* 방금 그린 그림(아직 저장 전) + 그 옆 입력창 */}
+        {isAdmin && pending && (
+          <>
+            <Box component="svg" aria-hidden sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+              {pending.strokes.map((s, i) => (
+                <polyline
+                  key={i}
+                  points={pointsOf(s.p)}
+                  fill="none"
+                  stroke={s.c === INK ? theme.palette.text.primary : s.c}
+                  strokeWidth={s.w}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
+            </Box>
+            <Box
+              sx={(th) => ({
+                position: 'absolute', left: pending.x, top: pending.y, width: NOTE_W, zIndex: 6,
+                pointerEvents: 'auto', p: 1.25,
+                bgcolor: 'background.paper',
+                border: `1px solid ${alpha(th.palette.accent.amber, 0.5)}`,
+                borderRadius: `${radius.card}px`,
+                boxShadow: shadow.lg,
+              })}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
+                <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+                <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: 'text.secondary' }}>
+                  이 그림은 무엇인가요?
+                </Box>
+              </Box>
+              <TextField
+                autoFocus fullWidth size="small" multiline minRows={2}
+                value={pendingText}
+                onChange={(e) => setPendingText(e.target.value)}
+                placeholder="무엇이 어떻게 불편한지 (비워도 됩니다)"
+                disabled={busyPending}
+                slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
+                sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size } }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 1 }}>
+                <Button size="small" disabled={busyPending} onClick={() => { setPending(null); setPendingText('') }} sx={{ color: 'text.secondary' }}>
+                  버리기
+                </Button>
+                <Button size="small" variant="contained" disabled={busyPending} onClick={savePending}>
+                  {busyPending ? '붙이는 중…' : '붙이기'}
+                </Button>
+              </Box>
+            </Box>
+          </>
         )}
 
         {memos.map((t) => {
