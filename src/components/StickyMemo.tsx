@@ -32,7 +32,7 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import { StatusChip, useSnack, ConfirmDialog } from '@/components/ds'
 import { IMP_STATUSES, impKind, isSettled, needsReason, normStatus } from '@/pages/Improve/improveMeta'
-import { iconSize, layout, radius, shadow, typescale, weight, z } from '@/theme/tokens'
+import { iconSize, layout, motion, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import type { ImprovementItem } from '@/types'
 import type { ReplyRow } from '@/api/sheets'
 
@@ -158,9 +158,11 @@ interface NoteProps {
   onDraw: (num: string) => void
   /** 처음부터 펼친 채로 — 그리기 직후 방금 만든 쪽지에만 쓴다 */
   defaultOpen?: boolean
+  /** 이 쪽지가 지금 '주목 대상'인지 알린다(펼침·끌기) — 레이어가 해당 그림을 도드라지게 한다 */
+  onActive: (num: string, active: boolean) => void
 }
 
-function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw, user, onMoveEnd, onDraw, defaultOpen }: NoteProps) {
+function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw, user, onMoveEnd, onDraw, defaultOpen, onActive }: NoteProps) {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const snack = useSnack()
@@ -170,6 +172,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
   // 상단바 메모 버튼(MemoComposeButton)도 같은 이유로 ref 방식을 쓴다.
   const stBtnRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(!!defaultOpen)
+  const [dragging, setDragging] = useState(false)
   const [busy, setBusy] = useState(false)
   const [reply, setReply] = useState('')
   // 쪽지에서 바로 제목·내용 수정 — 게시판까지 가지 않아도 고칠 수 있게(수정 권한은 게시판과 동일)
@@ -186,6 +189,15 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
 
   // 외부(다른 기기에서 옮긴 위치 등)에서 좌표가 바뀌면 따라간다 — 끄는 중에는 무시
   useEffect(() => { if (!drag.current.on) { latest.current = pos; setLive(pos) } }, [pos])
+
+  /**
+   * 주목 대상 알림 — 펼쳤거나 끌고 있는 동안. 그림이 여러 장 겹치면 어느 게 이 쪽지 것인지
+   * 분간이 안 되므로, 레이어가 이 신호로 해당 그림만 진하게 하고 나머지를 흐리게 한다(2026-08-05).
+   */
+  useEffect(() => {
+    onActive(item.num, open || dragging)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, dragging, item.num])
 
   /** 커진 만큼(펼침·창 축소) 화면 밖으로 나갔으면 되당긴다 — 여백은 허용, 화면 밖은 불가 */
   const clamp = useCallback((p: Pos): Pos => {
@@ -229,7 +241,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
     const layer = layerRef.current, el = elRef.current
     if (!layer || !el) return
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy
-    if (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP) d.moved = true
+    if (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP) { d.moved = true; setDragging(true) }
     const b = dragBounds(layer, el)
     place({
       x: Math.min(Math.max(d.ox + dx, b.minX), b.maxX),
@@ -241,6 +253,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
     const d = drag.current
     if (!d.on) return
     d.on = false
+    setDragging(false)
     if (d.moved) { onMoveEnd(item.num, latest.current); return }   // 끌었으면 위치만 저장하고 토글하지 않는다
     if (isInteractive(e.target as HTMLElement)) return
     setOpen((o) => !o)                                    // 제자리 클릭 = 펼침/접힘 토글
@@ -347,7 +360,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={() => { drag.current.on = false }}
+      onPointerCancel={() => { drag.current.on = false; setDragging(false) }}
       sx={(th) => ({
         position: 'absolute',
         left: `${live.x}px`,
@@ -630,6 +643,12 @@ export default function StickyMemoLayer() {
   const [pendingText, setPendingText] = useState('')
   const [busyPending, setBusyPending] = useState(false)
   const [openNum, setOpenNum] = useState<string | null>(null) // 방금 만든 쪽지 — 처음부터 펼쳐 보인다
+  // 지금 주목 중인 쪽지(펼침·끌기) — 그 그림만 진하게, 나머지는 흐리게
+  const [activeNum, setActiveNum] = useState<string | null>(null)
+  const markActive = useCallback((num: string, active: boolean) => {
+    // 끌 때는 자기 것만 켜고, 끌 때는 '내가 켰던 것'일 때만 끈다(다른 쪽지의 활성을 뺏지 않게)
+    setActiveNum((cur) => (active ? num : cur === num ? null : cur))
+  }, [])
   const snack = useSnack()
   const attachLayer = useCallback((el: HTMLDivElement | null) => {
     layerRef.current = el
@@ -786,13 +805,22 @@ export default function StickyMemoLayer() {
         {/* 저장된 화면 그림 — 관리자에게만. 클릭은 통과시켜 아래 화면을 그대로 쓸 수 있게 한다.
             **지금 고치는 중인 그림만** 숨긴다(그 획은 판이 그린다). 종전에는 그리기에 들어가면
             다른 쪽지의 그림까지 통째로 사라져 화면이 깜빡였다(2026-08-05 사용자 신고). */}
-        {isAdmin && memos.filter((t) => t.num !== drawFor).map((t) => (
-          t.drawing?.length ? (
+        {isAdmin && memos.filter((t) => t.num !== drawFor).map((t) => {
+          if (!t.drawing?.length) return null
+          // 겹친 그림 분간 — 주목 중인 쪽지의 그림은 그대로 두고 나머지를 흐리게 한다.
+          // 활성 것을 더 진하게 만드는 대신 나머지를 낮추는 쪽이 원래 색을 안 건드려 정확하다.
+          const dimmed = activeNum !== null && t.num !== activeNum
+          return (
             <Box
               key={`d-${t.num}`}
               component="svg"
               aria-hidden
-              sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
+              sx={{
+                position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none',
+                zIndex: t.num === activeNum ? 1 : 0,
+                opacity: dimmed ? 0.18 : 1,
+                transition: `opacity ${motion.base} ${motion.ease}`,
+              }}
             >
               {/* stroke 는 sx 로 팔레트 경로가 안 풀린다(MemoDraw 주석 참고) — 실제 색으로 넘긴다 */}
               {t.drawing.map((s, i) => (
@@ -807,8 +835,8 @@ export default function StickyMemoLayer() {
                 />
               ))}
             </Box>
-          ) : null
-        ))}
+          )
+        })}
 
         {/* 그리기 판 — 진입하면 쪽지는 접히고 화면 전체가 그리기 대상이 된다 */}
         {isAdmin && drawFor && (
@@ -895,6 +923,7 @@ export default function StickyMemoLayer() {
               onMoveEnd={onMoveEnd}
               onDraw={setDrawFor}
               defaultOpen={t.num === openNum}
+              onActive={markActive}
             />
           )
         })}
