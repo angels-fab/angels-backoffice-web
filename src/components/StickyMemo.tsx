@@ -21,7 +21,7 @@ import { addReply } from '@/store/slices/replySlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import { updateImprovement, createReply } from '@/api/improve'
 import { useRole } from '@/auth/role'
-import { memosForPath } from '@/utils/improveMemo'
+import { memosForPath, visibleMemos } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import { RichBodyView } from '@/utils/richBody'
 import { StatusChip, useSnack } from '@/components/ds'
@@ -84,17 +84,41 @@ const MAX_SLOT = 200
  * 넓은 화면에서는 버튼(상단바 오른쪽 끝)이 본문 칸보다 바깥이라 오른쪽 끝으로 붙는다.
  */
 function slotPx(layer: HTMLElement, n: number): { x: number; y: number } {
-  const W = layer.clientWidth, H = layer.clientHeight
+  const H = layer.clientHeight
+  const outerW = layer.parentElement?.clientWidth ?? layer.clientWidth
+  const side = Math.max(0, (outerW - layer.clientWidth) / 2)
+  const minX = -side                                  // 왼쪽 여백 끝
+  const maxX = layer.clientWidth + side - PIN         // 오른쪽 여백 끝
   const anchor = document.querySelector('[data-memo-anchor]')
   const l = layer.getBoundingClientRect()
   const baseX = anchor
     ? anchor.getBoundingClientRect().left + anchor.getBoundingClientRect().width / 2 - l.left - PIN / 2
-    : W - PIN - 16
-  const perRow = Math.max(1, Math.floor((W - baseX - PIN) / SLOT) + 1)
+    : maxX - 16
+  const perRow = Math.max(1, Math.floor((maxX - baseX) / SLOT) + 1)
   const row = Math.floor(n / perRow), col = n % perRow
   return {
-    x: Math.min(Math.max(baseX + col * SLOT, 0), Math.max(W - PIN, 0)),
+    x: Math.min(Math.max(baseX + col * SLOT, minX), Math.max(maxX, minX)),
     y: Math.min(ANCHOR_GAP + row * SLOT, Math.max(H - PIN, 0)),
+  }
+}
+
+/**
+ * 끌 수 있는 범위 — **좌표 기준은 본문 칸이지만 이동은 화면 전체**(사용자 요청 2026-08-05).
+ *
+ * 기준을 본문 칸으로 옮기면서 이동까지 본문 폭으로 가둬 버려서, 넓은 화면의 좌우 여백에 쪽지를
+ * 둘 수 없었다. 기준(원점)과 범위는 별개 문제다 — 원점은 본문 좌상단으로 유지해야 해상도가 바뀌어도
+ * 표의 같은 지점 옆에 남고, 범위만 넓히면 여백에도 놓을 수 있다. 여백으로 나간 쪽지는 x가 음수이거나
+ * 본문 폭을 넘는 값으로 저장된다.
+ * 위쪽 한계(minY=0)는 상단바 바로 아래다 — 그보다 위는 상단바가 덮으므로 올릴 이유가 없다.
+ */
+function dragBounds(layer: HTMLElement, el: HTMLElement) {
+  const outerW = layer.parentElement?.clientWidth ?? layer.clientWidth
+  const side = Math.max(0, (outerW - layer.clientWidth) / 2) // 본문 칸 한쪽 여백 폭
+  return {
+    minX: -side,
+    maxX: Math.max(-side, layer.clientWidth + side - el.offsetWidth),
+    minY: 0,
+    maxY: Math.max(0, layer.clientHeight - el.offsetHeight),
   }
 }
 
@@ -139,15 +163,15 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
   // 외부(다른 기기에서 옮긴 위치 등)에서 좌표가 바뀌면 따라간다 — 끄는 중에는 무시
   useEffect(() => { if (!drag.current.on) { latest.current = pos; setLive(pos) } }, [pos])
 
-  /** 커진 만큼(펼침·창 축소) 밖으로 나갔으면 본문 칸 안으로 되당긴다 */
+  /** 커진 만큼(펼침·창 축소) 화면 밖으로 나갔으면 되당긴다 — 여백은 허용, 화면 밖은 불가 */
   const clamp = useCallback((p: Pos): Pos => {
     const layer = layerRef.current, el = elRef.current
     if (!layer || !el) return p
-    const W = layer.clientWidth, H = layer.clientHeight
-    if (W <= 0 || H <= 0) return p
+    if (layer.clientWidth <= 0 || layer.clientHeight <= 0) return p
+    const b = dragBounds(layer, el)
     return {
-      x: Math.min(Math.max(p.x, 0), Math.max(W - el.offsetWidth, 0)),
-      y: Math.min(Math.max(p.y, 0), Math.max(H - el.offsetHeight, 0)),
+      x: Math.min(Math.max(p.x, b.minX), b.maxX),
+      y: Math.min(Math.max(p.y, b.minY), b.maxY),
     }
   }, [layerRef])
 
@@ -175,10 +199,10 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
     if (!layer || !el) return
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy
     if (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP) d.moved = true
-    const W = layer.clientWidth, H = layer.clientHeight
+    const b = dragBounds(layer, el)
     place({
-      x: Math.min(Math.max(d.ox + dx, 0), Math.max(W - el.offsetWidth, 0)),
-      y: Math.min(Math.max(d.oy + dy, 0), Math.max(H - el.offsetHeight, 0)),
+      x: Math.min(Math.max(d.ox + dx, b.minX), b.maxX),
+      y: Math.min(Math.max(d.oy + dy, b.minY), b.maxY),
     })
   }
 
@@ -439,7 +463,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
  */
 export default function StickyMemoLayer() {
   const { pathname } = useLocation()
-  const { isMember, user, authKey } = useRole()
+  const { isMember, isAdmin, user, authKey } = useRole()
   const theme = useTheme()
   const isDesktop = useMediaQuery(theme.breakpoints.up('shell'))
   const dispatch = useAppDispatch()
@@ -460,7 +484,9 @@ export default function StickyMemoLayer() {
   const replyItems = useAppSelector((s) => s.reply.items)
   const saved = useAppSelector((s) => s.userSettings.settings[POS_KEY]) as PosMap | undefined
 
-  const memos = useMemo(() => memosForPath(items, pathname), [items, pathname])
+  // 칩·패널·배지와 같은 기준 — 작성자 본인 + 포털 관리자만(2026-08-05).
+  // 쪽지는 화면 위에 떠 있어서 남의 것이 보이면 그 사람 할 일이 내 화면을 덮는다.
+  const memos = useMemo(() => memosForPath(visibleMemos(items, user, isAdmin), pathname), [items, pathname, user, isAdmin])
   const repliesByReq = useMemo(() => {
     const m: Record<string, ReplyRow[]> = {}
     for (const r of replyItems) (m[r.reqNum] ||= []).push(r)

@@ -13,7 +13,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { createImprovement, updateImprovement } from '@/api/improve'
 import { useRole } from '@/auth/role'
-import { memoCountByPath, pathToLocation, memosForPath } from '@/utils/improveMemo'
+import { memoCountByPath, pathToLocation, memosForPath, visibleMemos } from '@/utils/improveMemo'
 import { useSnack, focusRingSx } from '@/components/ds'
 import { control, iconSize, radius, typescale, weight } from '@/theme/tokens'
 
@@ -29,7 +29,7 @@ import { control, iconSize, radius, typescale, weight } from '@/theme/tokens'
  */
 export default function MemoComposeButton() {
   const { pathname } = useLocation()
-  const { isMember, user, authKey } = useRole()
+  const { isMember, isAdmin, user, authKey } = useRole()
   const dispatch = useAppDispatch()
   const snack = useSnack()
   const anchorRef = useRef<HTMLButtonElement>(null)
@@ -39,9 +39,10 @@ export default function MemoComposeButton() {
   const [busy, setBusy] = useState(false)
 
   const items = useAppSelector((s) => s.improve.items)
-  // 버튼 옆 건수 = 지금 이 화면에 떠 있는 쪽지 수(사이드바 배지와 같은 기준)
-  const here = memosForPath(items, pathname).length
-  const total = Object.values(memoCountByPath(items)).reduce((a, b) => a + b, 0)
+  // 버튼 옆 건수 = 지금 이 화면에 떠 있는 쪽지 수(사이드바 배지·쪽지와 같은 기준 — 내 것 + 관리자는 전체)
+  const mine = visibleMemos(items, user, isAdmin)
+  const here = memosForPath(mine, pathname).length
+  const total = Object.values(memoCountByPath(mine)).reduce((a, b) => a + b, 0)
   const loc = pathToLocation(pathname)
 
   // 쓰기 권한은 게시판(canEdit)과 동일 — 게스트·유관자에게는 버튼 자체를 노출하지 않는다
