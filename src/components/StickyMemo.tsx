@@ -20,6 +20,9 @@ import { loadImproveData } from '@/store/slices/improveSlice'
 import { addReply } from '@/store/slices/replySlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import { updateImprovement, createReply, deleteImprovement } from '@/api/improve'
+import type { MemoStroke } from '@/api/improve'
+import MemoDraw, { pointsOf } from '@/components/MemoDraw'
+import GestureIcon from '@mui/icons-material/Gesture'
 import { useRole } from '@/auth/role'
 import { memosForPath, visibleMemos } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
@@ -145,11 +148,15 @@ interface NoteProps {
   canEdit: boolean
   /** 요청 자체를 지울 수 있는가 — 게시판과 같은 규칙(담당자 본인 또는 포털 관리자) */
   canDelete: boolean
+  /** 화면에 그림을 그릴 수 있는가 — 포털 관리자 전용 편의 도구(2026-08-05) */
+  canDraw: boolean
   user: string | null
   onMoveEnd: (num: string, pos: Pos) => void
+  /** 이 쪽지에 그림 그리기 시작 — 판은 레이어가 띄운다 */
+  onDraw: (num: string) => void
 }
 
-function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, onMoveEnd }: NoteProps) {
+function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw, user, onMoveEnd, onDraw }: NoteProps) {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const snack = useSnack()
@@ -405,6 +412,18 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
                   </IconButton>
                 </Tooltip>
               )}
+              {canDraw && (
+                <Tooltip title={item.drawing?.length ? '화면 그림 고치기' : '화면에 그리기'}>
+                  <IconButton
+                    size="small"
+                    aria-label="화면에 그리기"
+                    onClick={() => { setOpen(false); onDraw(item.num) }}
+                    sx={{ color: item.drawing?.length ? 'primary.main' : 'text.secondary', p: 0.5 }}
+                  >
+                    <GestureIcon sx={{ fontSize: iconSize.body }} />
+                  </IconButton>
+                </Tooltip>
+              )}
               {canDelete && (
                 <Tooltip title="요청 삭제">
                   {/* 되돌릴 수 없는 동작이라 빨강 — 수정·접기(중립 회색)와 무게를 구분한다 */}
@@ -615,6 +634,8 @@ export default function StickyMemoLayer() {
   // 마운트·언마운트마다 값이 바뀌므로 매번 정확히 한 번 다시 계산된다.
   const layerRef = useRef<HTMLDivElement | null>(null)
   const [layerEl, setLayerEl] = useState<HTMLDivElement | null>(null)
+  const [drawFor, setDrawFor] = useState<string | null>(null) // 그리기 중인 쪽지 번호(관리자 전용)
+  const snack = useSnack()
   const attachLayer = useCallback((el: HTMLDivElement | null) => {
     layerRef.current = el
     setLayerEl(el)
@@ -674,6 +695,23 @@ export default function StickyMemoLayer() {
     dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [num]: pos } }))
   }, [dispatch, saved])
 
+  /**
+   * 화면 그림 — **포털 관리자 전용**(2026-08-05 사용자 지시).
+   * 고칠 곳을 말로 설명하는 대신 화면에 직접 표시해 두는 편의 도구라, 구성원에게는
+   * 도구도 그림도 노출하지 않는다. 저장은 쪽지(개선요청)에 딸린다 — 그림만 따로 떠다니지 않는다.
+   */
+  const drawTarget = memos.find((t) => t.num === drawFor) || null
+  const saveDrawing = async (strokes: MemoStroke[]) => {
+    if (!drawTarget || !user) return
+    setDrawFor(null)
+    try {
+      await updateImprovement({ author: user, key: 'session', num: drawTarget.num, drawing: strokes.length ? strokes : null })
+      dispatch(loadImproveData())
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '그림 저장에 실패했습니다', 'error')
+    }
+  }
+
   if (!isMember || !isDesktop || memos.length === 0) return null
 
   return (
@@ -693,6 +731,33 @@ export default function StickyMemoLayer() {
           그 좌상단을 (0,0)으로 삼는다. 그래야 해상도가 달라져도 쪽지가 표의 같은 지점 옆에 남는다
           — 화면 전체를 기준으로 삼으면 본문은 안 넓어지는데 좌표만 벌어져 여백으로 밀려난다. */}
       <Box ref={attachLayer} sx={{ position: 'relative', height: '100%', width: '100%', maxWidth: `${layout.maxWidthWide}px`, mx: 'auto' }}>
+        {/* 저장된 화면 그림 — 관리자에게만. 클릭은 통과시켜 아래 화면을 그대로 쓸 수 있게 한다.
+            그리는 중에는 판(MemoDraw)이 같은 획을 그리므로 여기서는 숨긴다(이중 렌더 방지). */}
+        {isAdmin && !drawFor && memos.map((t) => (
+          t.drawing?.length ? (
+            <Box
+              key={`d-${t.num}`}
+              component="svg"
+              aria-hidden
+              sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
+            >
+              {t.drawing.map((s, i) => (
+                <polyline key={i} points={pointsOf(s.p)} fill="none" stroke={s.c} strokeWidth={s.w} strokeLinecap="round" strokeLinejoin="round" />
+              ))}
+            </Box>
+          ) : null
+        ))}
+
+        {/* 그리기 판 — 진입하면 쪽지는 접히고 화면 전체가 그리기 대상이 된다 */}
+        {isAdmin && drawTarget && (
+          <MemoDraw
+            layerRef={layerRef}
+            initial={drawTarget.drawing}
+            onDone={(strokes) => void saveDrawing(strokes)}
+            onCancel={() => setDrawFor(null)}
+          />
+        )}
+
         {memos.map((t) => {
           // 자리가 아직 없으면 이번 프레임만 건너뛴다 — 위 useEffect가 곧바로 배정한다.
           // 임시 자리에 그렸다가 옮기면 쪽지가 튀어 보인다.
@@ -709,8 +774,11 @@ export default function StickyMemoLayer() {
               canEdit={isMember && !!user && !!authKey}
               // 삭제는 게시판과 같은 규칙 — DB improvements_delete 의 술어와 맞춘다
               canDelete={!!user && !!authKey && (isAdmin || (t.mgr || '').trim() === '' || t.mgr === user)}
+              // 그리기는 포털 관리자 전용 — 구성원에게는 버튼 자체가 없다
+              canDraw={isAdmin && !!user && !!authKey}
               user={user}
               onMoveEnd={onMoveEnd}
+              onDraw={setDrawFor}
             />
           )
         })}

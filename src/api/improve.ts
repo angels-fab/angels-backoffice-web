@@ -16,6 +16,21 @@ interface ImproveTableRow {
   urgent: boolean; type: string; loc: string; title: string; content: string
   author: string; mgr: string; proposed_date: string; link: string
   status: string; end_date: string; reason: string; memo: boolean
+  drawing: MemoStroke[] | null
+}
+
+/**
+ * 붙임쪽지 그림의 획 하나 — 화면에 그린 선을 **본문 칸 좌상단 기준 px**로 담는다.
+ * 압정 좌표와 같은 기준이라 해상도가 달라져도 같은 지점에 남는다.
+ * p 는 [x,y,x,y,...] 평면 배열 — 점마다 객체를 만들면 저장 용량이 몇 배가 된다.
+ */
+export interface MemoStroke {
+  /** 선 색(CSS 색 문자열) */
+  c: string
+  /** 선 굵기(px) */
+  w: number
+  /** 점 좌표 [x,y,x,y,...] */
+  p: number[]
 }
 
 const rpcFail = (error: { message: string } | null, fallback: string): never => {
@@ -36,6 +51,7 @@ export async function fetchImprovements(): Promise<ImprovementsData> {
     urgent: r.urgent, type: r.type, loc: r.loc, title: r.title, content: r.content,
     author: r.author, mgr: r.mgr, date: r.proposed_date, link: r.link,
     status: r.status, end: r.end_date, reason: r.reason, memo: r.memo,
+    drawing: Array.isArray(r.drawing) ? r.drawing : undefined,
   }))
   return {
     items,
@@ -72,9 +88,11 @@ export async function updateImprovement(p: {
   status?: string; reason?: string; end?: string
   urgent?: boolean; type?: string; loc?: string; title?: string; content?: string; link?: string
   memo?: boolean
+  /** 쪽지 그림 — 배열이면 교체, null 이면 삭제, 안 보내면 유지(관리자 전용 기능) */
+  drawing?: MemoStroke[] | null
 }): Promise<void> {
   const payload: Record<string, unknown> = { num: Number(p.num) }
-  for (const k of ['status', 'reason', 'end', 'urgent', 'type', 'loc', 'title', 'content', 'link', 'memo'] as const) {
+  for (const k of ['status', 'reason', 'end', 'urgent', 'type', 'loc', 'title', 'content', 'link', 'memo', 'drawing'] as const) {
     if (p[k] !== undefined) payload[k] = p[k]
   }
   await ensureSession()

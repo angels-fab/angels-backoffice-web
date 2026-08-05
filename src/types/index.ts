@@ -63,6 +63,11 @@ export interface ImprovementItem {
   reason: string
   /** 메모표시 — 체크 시 해당 개선위치 페이지에 공유 작업 메모로 노출 */
   memo: boolean
+  /**
+   * 쪽지 그림 — 그 화면에 그려 둔 획(본문 칸 기준 px). **포털 관리자 전용**(2026-08-05).
+   * 포털을 고치려고 쓰는 편의 도구라 구성원에게는 도구도 그림도 노출하지 않는다.
+   */
+  drawing?: { c: string; w: number; p: number[] }[]
 }
 
 // ── 장비현황 ──
