@@ -45,8 +45,8 @@ import PinnedWorksSection, { usePinnedWorks } from './dash/PinnedWorksSection'
 const SECTION_IDS = ['kpi', 'today', 'mix', 'work', 'notice', 'pins', 'status'] as const
 type SectionId = (typeof SECTION_IDS)[number]
 const SECTION_LABEL: Record<SectionId, string> = {
-  kpi: '요약 숫자',
-  today: '오늘·이번 주',
+  kpi: '안 본 새 글',
+  today: '오늘 일정 · 달력',
   mix: '업무 구성',
   work: '진행 중 업무',
   notice: '공지사항',
@@ -54,17 +54,16 @@ const SECTION_LABEL: Record<SectionId, string> = {
   status: '현황 (로드맵 · 장비)',
 }
 /**
- * 기본 배치 — 3열 그리드에 흘려 넣는다(2026-08-05, Minimal 대시보드 참고).
- *   1행: 요약 숫자 3개(전폭)            ← 읽지 않고 보는 자리
- *   2행: 오늘·이번 주(2칸) · 업무 구성
- *   3행: 진행 중 업무(2칸) · 공지사항
+ * 기본 배치 — 3열 그리드(2026-08-05 사용자 지시).
+ * 들어오자마자 궁금한 순서가 ① 오늘 일정 ② 진행 중 업무 ③ 공지사항이라, 그 순서로 자리를 준다.
+ *   1행: 오늘 일정(좌측 첫 칸, 아래에 간소화 달력) · 진행 중 업무(2칸 — 큰 숫자 + 제목)
+ *   2행: 공지사항 · 안 본 새 글 · 업무 구성
  *   그 아래: 관심 업무 · 현황(전폭, 접힘)
- * 목록 카드는 모두 3줄까지만 — 나머지는 각자 '전체보기'로 간다.
  */
-const DEFAULT_ORDER: SectionId[] = ['kpi', 'today', 'mix', 'work', 'notice', 'pins', 'status']
-/** 넓은 자리가 필요한 카드는 칸을 합친다(제목이 긴 목록·전폭 요약) */
+const DEFAULT_ORDER: SectionId[] = ['today', 'work', 'notice', 'kpi', 'mix', 'pins', 'status']
+/** 넓은 자리가 필요한 카드는 칸을 합친다 */
 const SECTION_SPAN: Record<SectionId, number> = {
-  kpi: 3, today: 2, mix: 1, work: 2, notice: 1, pins: 3, status: 3,
+  today: 1, work: 2, notice: 1, kpi: 1, mix: 1, pins: 3, status: 3,
 }
 const isSectionId = (v: unknown): v is SectionId => typeof v === 'string' && (SECTION_IDS as readonly string[]).includes(v)
 

@@ -2,23 +2,23 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
+import Typography from '@mui/material/Typography'
 import { EmptyState, LoadingState, StatusChip, focusRingSx } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { taskTitle } from '@/pages/Work/workMeta'
-import { fmtDate } from '@/utils/date'
-import { radius, typescale } from '@/theme/tokens'
+import { fmtDate, isRecentNew } from '@/utils/date'
+import { radius, typescale, weight } from '@/theme/tokens'
 import { HomeCard, HomeRow, HomeMeta } from './HomeCard'
 
-/** 처음에 보여줄 줄 수 — 나머지는 '더 보기'로 편다. 3줄로 줄인 이유는 HomeKpi 주석 참고(2026-08-05 간소화) */
-const HEAD = 3
+/** 처음에 보여줄 줄 수 — 나머지는 '더 보기'로 편다 */
+const HEAD = 4
 
 /**
- * 홈 '진행 중 업무' — 숫자가 아니라 **목록**.
+ * 홈 '진행 중 업무' — **큰 숫자 + 제목 목록을 한 카드**로(사용자 지시 2026-08-05).
  *
- * 종전에는 상태별 집계 타일 4개(진행중·완료·보류·취소)와 비율 막대였는데,
- * 완료는 누적이라 매일 같고 취소는 데이터에 상태 자체가 없어 늘 0이었다. 남는 정보는 '진행중 N건'
- * 하나인데 그마저 위쪽 KPI 타일과 겹쳤다(2026-08-05 사용자: "많은데 필요한 정보는 별로 없다").
- * 그래서 지금 무엇이 돌아가는지를 제목으로 보여주는 쪽으로 바꿨다 — 누르면 그 업무로 간다.
+ * 요약 숫자 타일과 제목 목록이 따로 있어 같은 것을 두 번 보게 했다. 왼쪽에 숫자 하나,
+ * 오른쪽 남는 자리에 제목을 두어 "몇 건인지"와 "무엇인지"를 한 번에 읽는다.
+ * 완료 누계·취소는 쓰지 않는다 — 완료는 매일 같고 취소는 데이터에 상태 자체가 없다.
  */
 export default function WorkStatusSection() {
   const navigate = useNavigate()
@@ -31,35 +31,49 @@ export default function WorkStatusSection() {
     .filter((t) => (t.status || '').trim() === '진행중' && !t.remind)
     .sort((a, b) => fmtDate(b.start).localeCompare(fmtDate(a.start)))
   const shown = all ? rows : rows.slice(0, HEAD)
+  const fresh = rows.filter((t) => isRecentNew(fmtDate(t.start))).length
 
   return (
-    <HomeCard title="진행 중 업무" count={`${rows.length}건`} actionLabel="업무현황" onAction={() => navigate('/work')}>
+    <HomeCard title="진행 중 업무" actionLabel="업무현황" onAction={() => navigate('/work')}>
       {!ready ? (
         <LoadingState size="md" />
       ) : rows.length === 0 ? (
         <EmptyState size="sm" title="진행 중인 업무가 없습니다" />
       ) : (
-        <>
-          {shown.map((t) => (
-            <HomeRow
-              key={t.num}
-              onClick={() => navigate(`/work?focus=${t.id}`)}
-              lead={t.cat ? <StatusChip status="neutral" label={t.cat} /> : undefined}
-              title={taskTitle(t)}
-              trail={<HomeMeta>{[t.dept, fmtDate(t.start)].filter(Boolean).join(' · ')}</HomeMeta>}
-            />
-          ))}
-          {rows.length > HEAD && (
-            <Box sx={{ pt: 1.25 }}>
-              <ButtonBase
-                onClick={() => setAll((v) => !v)}
-                sx={{ fontSize: typescale.body.size, color: 'primary.main', px: 0.5, py: 0.25, borderRadius: `${radius.chip}px`, ...(focusRingSx as object) }}
-              >
-                {all ? '접기' : `${rows.length - HEAD}건 더 보기`}
-              </ButtonBase>
-            </Box>
-          )}
-        </>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'auto 1fr' }, gap: { xs: 1.5, sm: 3 }, alignItems: 'start' }}>
+          {/* 왼쪽 — 건수 하나만 크게 */}
+          <Box sx={{ minWidth: 96 }}>
+            <Typography sx={{ fontSize: typescale.displayLg.size, fontWeight: typescale.displayLg.weight, lineHeight: 1.1 }}>
+              {rows.length}
+            </Typography>
+            <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', fontWeight: weight.medium }}>
+              {fresh > 0 ? `이번 주 +${fresh}` : '이번 주 신규 없음'}
+            </Typography>
+          </Box>
+
+          {/* 오른쪽 — 무엇인지 */}
+          <Box sx={{ minWidth: 0 }}>
+            {shown.map((t) => (
+              <HomeRow
+                key={t.num}
+                onClick={() => navigate(`/work?focus=${t.id}`)}
+                lead={t.cat ? <StatusChip status="neutral" label={t.cat} /> : undefined}
+                title={taskTitle(t)}
+                trail={<HomeMeta>{[t.dept, fmtDate(t.start)].filter(Boolean).join(' · ')}</HomeMeta>}
+              />
+            ))}
+            {rows.length > HEAD && (
+              <Box sx={{ pt: 1 }}>
+                <ButtonBase
+                  onClick={() => setAll((v) => !v)}
+                  sx={{ fontSize: typescale.body.size, color: 'primary.main', px: 0.5, py: 0.25, borderRadius: `${radius.chip}px`, ...(focusRingSx as object) }}
+                >
+                  {all ? '접기' : `${rows.length - HEAD}건 더 보기`}
+                </ButtonBase>
+              </Box>
+            )}
+          </Box>
+        </Box>
       )}
     </HomeCard>
   )
