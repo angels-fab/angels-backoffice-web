@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
 import Typography from '@mui/material/Typography'
-import { EmptyState, LoadingState, StatusChip, focusRingSx } from '@/components/ds'
+import { EmptyState, LoadingState, focusRingSx } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { taskTitle } from '@/pages/Work/workMeta'
 import { fmtDate, isRecentNew } from '@/utils/date'
 import { radius, typescale, weight } from '@/theme/tokens'
-import { HomeCard, HomeRow, HomeMeta } from './HomeCard'
+import { HomeCard, HomeRow } from './HomeCard'
 
 /** 처음에 보여줄 줄 수 — 나머지는 '더 보기'로 편다 */
 const HEAD = 4
@@ -40,9 +40,9 @@ export default function WorkStatusSection() {
       ) : rows.length === 0 ? (
         <EmptyState size="sm" title="진행 중인 업무가 없습니다" />
       ) : (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'auto 1fr' }, gap: { xs: 1.5, sm: 3 }, alignItems: 'start' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'auto 1fr' }, gap: { xs: 1.5, sm: 2 }, alignItems: 'start' }}>
           {/* 왼쪽 — 건수 하나만 크게 */}
-          <Box sx={{ minWidth: 96 }}>
+          <Box sx={{ minWidth: 68 }}>
             <Typography sx={{ fontSize: typescale.displayLg.size, fontWeight: typescale.displayLg.weight, lineHeight: 1.1 }}>
               {rows.length}
             </Typography>
@@ -53,14 +53,9 @@ export default function WorkStatusSection() {
 
           {/* 오른쪽 — 무엇인지 */}
           <Box sx={{ minWidth: 0 }}>
+            {/* 구분 칩·부서·날짜는 뺐다(사용자 지시 2026-08-05) — 홈에서는 무엇이 돌아가는지 제목만 본다 */}
             {shown.map((t) => (
-              <HomeRow
-                key={t.num}
-                onClick={() => navigate(`/work?focus=${t.id}`)}
-                lead={t.cat ? <StatusChip status="neutral" label={t.cat} /> : undefined}
-                title={taskTitle(t)}
-                trail={<HomeMeta>{[t.dept, fmtDate(t.start)].filter(Boolean).join(' · ')}</HomeMeta>}
-              />
+              <HomeRow key={t.num} onClick={() => navigate(`/work?focus=${t.id}`)} title={taskTitle(t)} />
             ))}
             {rows.length > HEAD && (
               <Box sx={{ pt: 1 }}>

@@ -9,7 +9,7 @@ import { accent, radius, typescale, weight } from '@/theme/tokens'
 import { catTextColor, toneOfColor } from '@/pages/Calendar/catMeta'
 import type { CalEvent } from '@/types'
 import { HomeCard, HomeRow, HomeMeta } from './HomeCard'
-import MiniMonth from './MiniMonth'
+import MiniWeek from './MiniWeek'
 
 
 /** 유형 배지 — 캘린더 카테고리 색 또는 행사 자체 색을 그대로 쓴다 */
@@ -84,9 +84,9 @@ export default function ScheduleSection() {
         ))
       )}
 
-      {/* 구분선 아래 = 이번 달 한눈에. 점·선만으로 그린다(제목 없음) */}
+      {/* 구분선 아래 = 이번 주 한눈에. 점·선만으로 그린다(제목 없음) */}
       <Box sx={{ mt: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-        <MiniMonth />
+        <MiniWeek />
       </Box>
     </HomeCard>
   )

@@ -56,14 +56,14 @@ const SECTION_LABEL: Record<SectionId, string> = {
 /**
  * 기본 배치 — 3열 그리드(2026-08-05 사용자 지시).
  * 들어오자마자 궁금한 순서가 ① 오늘 일정 ② 진행 중 업무 ③ 공지사항이라, 그 순서로 자리를 준다.
- *   1행: 오늘 일정(좌측 첫 칸, 아래에 간소화 달력) · 진행 중 업무(2칸 — 큰 숫자 + 제목)
+ *   1행: 오늘 일정(2칸 — 아래에 간소화 주간 달력) · 진행 중 업무(큰 숫자 + 제목만)
  *   2행: 공지사항 · 안 본 새 글 · 업무 구성
  *   그 아래: 관심 업무 · 현황(전폭, 접힘)
  */
 const DEFAULT_ORDER: SectionId[] = ['today', 'work', 'notice', 'kpi', 'mix', 'pins', 'status']
 /** 넓은 자리가 필요한 카드는 칸을 합친다 */
 const SECTION_SPAN: Record<SectionId, number> = {
-  today: 1, work: 2, notice: 1, kpi: 1, mix: 1, pins: 3, status: 3,
+  today: 2, work: 1, notice: 1, kpi: 1, mix: 1, pins: 3, status: 3,
 }
 const isSectionId = (v: unknown): v is SectionId => typeof v === 'string' && (SECTION_IDS as readonly string[]).includes(v)
 
