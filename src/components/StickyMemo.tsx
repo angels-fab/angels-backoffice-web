@@ -19,13 +19,15 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { addReply } from '@/store/slices/replySlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
-import { updateImprovement, createReply } from '@/api/improve'
+import { updateImprovement, createReply, deleteImprovement } from '@/api/improve'
 import { useRole } from '@/auth/role'
 import { memosForPath, visibleMemos } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import { RichBodyView } from '@/utils/richBody'
-import { StatusChip, useSnack } from '@/components/ds'
-import { impKind, normStatus } from '@/pages/Improve/improveMeta'
+import MenuItem from '@mui/material/MenuItem'
+import Select from '@mui/material/Select'
+import { StatusChip, useSnack, ConfirmDialog } from '@/components/ds'
+import { IMP_STATUSES, impKind, isSettled, needsReason, normStatus } from '@/pages/Improve/improveMeta'
 import { iconSize, layout, radius, typescale, weight, z } from '@/theme/tokens'
 import type { ImprovementItem } from '@/types'
 import type { ReplyRow } from '@/api/sheets'
@@ -109,7 +111,8 @@ function slotPx(layer: HTMLElement, n: number): { x: number; y: number } {
  * 둘 수 없었다. 기준(원점)과 범위는 별개 문제다 — 원점은 본문 좌상단으로 유지해야 해상도가 바뀌어도
  * 표의 같은 지점 옆에 남고, 범위만 넓히면 여백에도 놓을 수 있다. 여백으로 나간 쪽지는 x가 음수이거나
  * 본문 폭을 넘는 값으로 저장된다.
- * 위쪽 한계(minY=0)는 상단바 바로 아래다 — 그보다 위는 상단바가 덮으므로 올릴 이유가 없다.
+ * 위로도 상단바(로고 줄)까지 올릴 수 있다(minY = -TOPBAR_H, 사용자 요청 2026-08-05).
+ * 쪽지 층(z 90)이 상단바(z 50)보다 위라 가려지지 않고, 레이어에 overflow 를 걸지 않아 밖으로 나가도 잘리지 않는다.
  */
 function dragBounds(layer: HTMLElement, el: HTMLElement) {
   const outerW = layer.parentElement?.clientWidth ?? layer.clientWidth
@@ -117,8 +120,8 @@ function dragBounds(layer: HTMLElement, el: HTMLElement) {
   return {
     minX: -side,
     maxX: Math.max(-side, layer.clientWidth + side - el.offsetWidth),
-    minY: 0,
-    maxY: Math.max(0, layer.clientHeight - el.offsetHeight),
+    minY: -TOPBAR_H,
+    maxY: Math.max(-TOPBAR_H, layer.clientHeight - el.offsetHeight),
   }
 }
 
@@ -126,7 +129,8 @@ function dragBounds(layer: HTMLElement, el: HTMLElement) {
  * 끌기·접기 대상에서 빼야 하는 지점 — 버튼·입력칸, 그리고 리치 에디터(contenteditable).
  * 에디터는 input/textarea 가 아니라서 빠뜨리면 글을 쓰려고 누르는 순간 쪽지가 접히거나 끌린다.
  */
-const isInteractive = (el: HTMLElement) => !!el.closest('button, input, textarea, a, [contenteditable]')
+// role="combobox" = MUI Select 의 표시부. div 라서 빠뜨리면 상태를 고르려고 누르는 순간 쪽지가 끌린다.
+const isInteractive = (el: HTMLElement) => !!el.closest('button, input, textarea, a, [contenteditable], [role="combobox"]')
 
 /** 이미 다른 쪽지가 차지한 자리인지(핀 한 변 안이면 겹친 것으로 본다) */
 const overlaps = (p: { x: number; y: number }, taken: { x: number; y: number }[]) =>
@@ -138,11 +142,13 @@ interface NoteProps {
   pos: Pos
   layerRef: React.RefObject<HTMLDivElement | null>
   canEdit: boolean
+  /** 요청 자체를 지울 수 있는가 — 게시판과 같은 규칙(담당자 본인 또는 포털 관리자) */
+  canDelete: boolean
   user: string | null
   onMoveEnd: (num: string, pos: Pos) => void
 }
 
-function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: NoteProps) {
+function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, onMoveEnd }: NoteProps) {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const snack = useSnack()
@@ -154,6 +160,8 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
   const [editing, setEditing] = useState(false)
   const [eTitle, setETitle] = useState('')
   const [eContent, setEContent] = useState('')
+  const [delAsk, setDelAsk] = useState(false)                                        // 요청 삭제 확인
+  const [statusAsk, setStatusAsk] = useState<{ status: string; reason: string } | null>(null) // 종결 확인(+사유)
   const [live, setLive] = useState<Pos>(pos)
   const drag = useRef({ on: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0 })
   // 놓는 순간 저장할 좌표는 ref로 따로 들고 간다 — state(live)는 마지막 move가 아직 반영 안 됐을 수 있다
@@ -175,14 +183,21 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
     }
   }, [layerRef])
 
-  // 펼치거나 답글이 늘면 높이가 바뀌므로 그 직후 되당김. 창 크기 변경도 같은 처리.
+  /**
+   * 펼치거나 답글이 늘면 높이가 바뀌므로 그 직후 되당김. 창 크기 변경도 같은 처리.
+   *
+   * 되당길 때 기준은 **항상 저장된 좌표(pos)** 다. 화면에 보이는 값(latest)을 기준으로 삼으면
+   * 창을 좁혔다 넓힐 때 좁은 화면에서 당겨진 자리가 그대로 굳어 가운데에 남는다
+   * (2026-08-05 사용자 신고). 저장값은 그대로 두고 화면 표시만 접었다 펴는 방식이라
+   * 창을 다시 넓히면 원래 자리로 정확히 돌아온다.
+   */
   useEffect(() => {
-    const pull = () => place(clamp(latest.current))
+    const pull = () => { if (!drag.current.on) place(clamp(pos)) }
     pull()
     window.addEventListener('resize', pull)
     return () => window.removeEventListener('resize', pull)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clamp, open, replies.length])
+  }, [clamp, open, replies.length, pos])
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isInteractive(e.target as HTMLElement)) return
@@ -215,18 +230,51 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
     setOpen((o) => !o)                                    // 제자리 클릭 = 펼침/접힘 토글
   }
 
-  const unpin = async () => {
-    if (!canEdit) return
+  /**
+   * 요청 삭제 — 쪽지만이 아니라 **게시판에서도 지운다**(사용자 확정 2026-08-05).
+   *
+   * 예전의 '쪽지 떼기'(memo=false)는 없앴다. 쪽지만 치우고 싶으면 상태를 보류·완료·불가로 바꾸면 되는데,
+   * 그때 DB(improve_update)가 memo 를 자동으로 끄기 때문이다 — 두 갈래가 한 곳으로 정리된다.
+   */
+  const removeRequest = async () => {
+    if (!canDelete || !user) return
     setBusy(true)
     try {
-      await updateImprovement({ author: user || '', key: 'session', num: item.num, memo: false })
-      snack('쪽지를 뗐습니다. 요청은 게시판에 그대로 있습니다.', 'success')
+      await deleteImprovement({ author: user, key: 'session', num: item.num })
+      setDelAsk(false)
+      snack(`요청 #${item.num}을 삭제했습니다.`, 'success')
       dispatch(loadImproveData())
     } catch (err) {
-      snack(err instanceof Error ? err.message : '쪽지 떼기에 실패했습니다', 'error')
+      snack(err instanceof Error ? err.message : '삭제에 실패했습니다', 'error')
     } finally {
       setBusy(false)
     }
+  }
+
+  /**
+   * 상태 변경 — 게시판과 같은 값·확인 규칙.
+   * 보류·완료·불가로 바꾸면 DB가 memo 를 자동으로 꺼서 **쪽지만 사라지고 요청은 게시판에 남는다**.
+   * memo 를 같이 보내면 그 자동 규칙을 덮어쓰므로, 여기서는 status·reason 만 보낸다.
+   */
+  const saveStatus = async (status: string, reason: string) => {
+    if (!canEdit || !user) return
+    setBusy(true)
+    try {
+      await updateImprovement({ author: user, key: 'session', num: item.num, status, reason })
+      setStatusAsk(null)
+      snack(isSettled(status) ? `상태를 '${status}'로 바꿨습니다. 쪽지는 내려가고 요청은 게시판에 남습니다.` : '상태를 변경했습니다.', 'success')
+      dispatch(loadImproveData())
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '상태 변경에 실패했습니다', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+  // 종결(보류·완료·불가)은 확인 한 단계 — 보류·불가는 사유까지 받는다(게시판과 동일)
+  const onStatusPick = (next: string) => {
+    if (next === st) return
+    if (isSettled(next)) setStatusAsk({ status: next, reason: item.reason || '' })
+    else void saveStatus(next, '')
   }
 
   const startEdit = () => {
@@ -320,7 +368,23 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
             <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
               요청 #{item.num}
             </Box>
-            <StatusChip status={impKind(st)} label={st || '-'} />
+            {/* 상태 — 게시판과 같은 값·색. 종결로 바꾸면 쪽지는 내려가고 요청은 게시판에 남는다. */}
+            {canEdit ? (
+              <Select
+                value={st || '접수'}
+                onChange={(e) => onStatusPick(String(e.target.value))}
+                disabled={busy}
+                variant="standard"
+                disableUnderline
+                aria-label="상태 변경"
+                renderValue={(v) => <StatusChip status={impKind(String(v))} label={String(v)} />}
+                sx={{ '& .MuiSelect-select': { p: 0, pr: '0 !important' } }}
+              >
+                {IMP_STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: typescale.body.size }}>{s}</MenuItem>)}
+              </Select>
+            ) : (
+              <StatusChip status={impKind(st)} label={st || '-'} />
+            )}
             <Box sx={{ ml: 'auto', display: 'flex', gap: 0.25 }}>
               {canEdit && !editing && (
                 <Tooltip title="제목·내용 수정">
@@ -334,9 +398,9 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
                   <UnfoldLessIcon sx={{ fontSize: iconSize.body }} />
                 </IconButton>
               </Tooltip>
-              {canEdit && (
-                <Tooltip title="쪽지 떼기 (요청은 게시판에 남습니다)">
-                  <IconButton size="small" aria-label="쪽지 떼기" onClick={unpin} disabled={busy} sx={{ color: 'text.secondary', p: 0.5 }}>
+              {canDelete && (
+                <Tooltip title="요청 삭제 (게시판에서도 사라집니다)">
+                  <IconButton size="small" aria-label="요청 삭제" onClick={() => setDelAsk(true)} disabled={busy} sx={{ color: 'text.secondary', p: 0.5 }}>
                     <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
                   </IconButton>
                 </Tooltip>
@@ -453,8 +517,62 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
     </Box>
   )
 
+  // 확인창은 MUI가 body로 포털하므로 쪽지의 끌기·토글 핸들러와 섞이지 않는다
+  const dialogs = (
+    <>
+      <ConfirmDialog
+        open={delAsk}
+        destructive
+        title={`요청 #${item.num}을 삭제할까요?`}
+        description="쪽지뿐 아니라 개선요청 게시판에서도 사라집니다. 되돌릴 수 없습니다."
+        confirmLabel="삭제"
+        busy={busy}
+        onConfirm={removeRequest}
+        onClose={() => setDelAsk(false)}
+      />
+      <ConfirmDialog
+        open={!!statusAsk}
+        title={`상태를 '${statusAsk?.status || ''}'로 바꿀까요?`}
+        /* 보류·불가는 사유가 필수 — 게시판과 같은 규칙. ConfirmDialog 는 본문을 description 으로 받는다. */
+        description={
+          <>
+            <Box component="span" sx={{ fontSize: typescale.body.size, color: 'text.primary' }}>
+              이 화면의 쪽지는 내려가고 요청은 게시판에 그대로 남습니다.
+            </Box>
+            {statusAsk && needsReason(statusAsk.status) && (
+              <TextField
+                size="small"
+                fullWidth
+                autoFocus
+                value={statusAsk.reason}
+                onChange={(e) => setStatusAsk({ ...statusAsk, reason: e.target.value })}
+                placeholder={`${statusAsk.status} 사유`}
+                disabled={busy}
+                slotProps={{ htmlInput: { 'aria-label': `${statusAsk.status} 사유` } }}
+                sx={{ mt: 1.5 }}
+              />
+            )}
+          </>
+        }
+        confirmLabel="변경"
+        busy={busy}
+        onConfirm={() => {
+          if (!statusAsk) return
+          if (needsReason(statusAsk.status) && !statusAsk.reason.trim()) return snack('사유를 입력해주세요.', 'error')
+          void saveStatus(statusAsk.status, needsReason(statusAsk.status) ? statusAsk.reason.trim() : '')
+        }}
+        onClose={() => setStatusAsk(null)}
+      />
+    </>
+  )
+
   // 접힘 상태는 핀만 보이므로 무슨 요청인지 알 수 없다 — 마우스를 올리면 제목이 뜬다
-  return open ? note : <Tooltip title={`#${item.num} ${item.title}`} placement="left">{note}</Tooltip>
+  return (
+    <>
+      {open ? note : <Tooltip title={`#${item.num} ${item.title}`} placement="left">{note}</Tooltip>}
+      {dialogs}
+    </>
+  )
 }
 
 /**
@@ -559,6 +677,8 @@ export default function StickyMemoLayer() {
               layerRef={layerRef}
               // 구성원 쓰기 개방(2026-08-05)
               canEdit={isMember && !!user && !!authKey}
+              // 삭제는 게시판과 같은 규칙 — DB improvements_delete 의 술어와 맞춘다
+              canDelete={!!user && !!authKey && (isAdmin || (t.mgr || '').trim() === '' || t.mgr === user)}
               user={user}
               onMoveEnd={onMoveEnd}
             />
