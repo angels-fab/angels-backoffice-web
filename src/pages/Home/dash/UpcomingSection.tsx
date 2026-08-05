@@ -6,10 +6,12 @@ import ButtonBase from '@mui/material/ButtonBase'
 import { EmptyState, LoadingState, focusRingSx } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { CAL_CAT_MAP } from '@/constants/calendar'
-import { hexA } from '@/utils/color'
 import { todaySeoul } from '@/utils/date'
-import { accent, radius, typescale, weight } from '@/theme/tokens'
-import { catTextColor, toneOfColor } from '@/pages/Calendar/catMeta'
+import { accent, iconSize, radius, typescale, weight } from '@/theme/tokens'
+import { CAT_META } from '@/pages/Calendar/catMeta'
+import type { RealCat } from '@/pages/Calendar/catMeta'
+import { CAT_ICON } from '@/pages/Calendar/ChipContent'
+import { eventContent, eventMembers, given, memberById } from '@/pages/Calendar/members'
 import type { CalEvent } from '@/types'
 import { HomeCard } from './HomeCard'
 
@@ -88,25 +90,57 @@ function whenText(e: CalEvent, dateKey: string, todayKey: string): string {
   return `${day} ${e.time.slice(0, 5)}`
 }
 
-/** 종류 배지 — 캘린더와 같은 색·라벨. 틴트 면 위 글자는 반드시 catTextColor 로 뽑는다 */
-function CatBadge({ cat }: { cat: string }) {
-  const color = colorOf(cat)
+/** 종류 아이콘 — 업무일정 화면의 일정 칩과 같은 아이콘·같은 글자용 색(원색은 틴트 위에서 사라진다) */
+function CatIcon({ cat, size = iconSize.header }: { cat: string; size?: number }) {
+  const key = (CAT_META[cat as RealCat] ? cat : 'etc') as RealCat
+  const Icon = CAT_ICON[key]
+  const tone = CAT_META[key].tone
   return (
-    <Box
-      component="span"
+    // 종류 글자를 따로 두지 않으므로(업무일정 칩과 같은 방식) 이름은 아이콘에 붙여 읽히게 한다
+    <Icon
+      titleAccess={labelOf(key)}
       sx={{
-        flexShrink: 0,
-        fontSize: typescale.small.size, fontWeight: weight.semibold,
-        px: 0.75, py: '2px', borderRadius: `${radius.chip}px`,
-        color: (th) => catTextColor(th, toneOfColor(color)),
-        bgcolor: hexA(color, 0.14),
-        border: `1px solid ${hexA(color, 0.32)}`,
+        fontSize: size, flexShrink: 0,
+        color: tone === 'neutral' ? 'text.secondary' : `accentText.${tone}`,
+        ...(key === 'trip_intl' ? { transform: 'rotate(45deg)' } : {}),
       }}
-    >
-      {labelOf(cat)}
+    />
+  )
+}
+
+/**
+ * 해당자 칩 — 업무일정 화면의 이름 칩과 같은 모양·같은 색(사람마다 고정색 managerColor).
+ * 이름은 3자 이상이면 성을 뗀다(신현진 → 현진) — 칩과 같은 규칙.
+ */
+function MemberChips({ title, max = 2 }: { title: string; max?: number }) {
+  const ids = eventMembers(title)
+  const shown = ids.slice(0, max)
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+      {shown.map((id) => {
+        const m = memberById(id)
+        return (
+          <Box
+            key={id}
+            component="span"
+            sx={{
+              height: 20, display: 'inline-flex', alignItems: 'center', px: '6px',
+              borderRadius: `${radius.chip}px`, bgcolor: m.color, color: 'common.white',
+              fontSize: typescale.small.size, fontWeight: weight.semibold, lineHeight: 1,
+              whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,.28)',
+            }}
+          >
+            {given(m.name)}
+          </Box>
+        )
+      })}
+      {ids.length > max && (
+        <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.disabled' }}>+{ids.length - max}</Box>
+      )}
     </Box>
   )
 }
+
 
 export default function UpcomingSection({ events: given, now: nowProp, variant = 'split' }: {
   events?: CalEvent[]
@@ -164,19 +198,47 @@ export default function UpcomingSection({ events: given, now: nowProp, variant =
    */
   const timed = dayList.filter((e) => !(e.allDay || e.time === '종일'))
   const allDay = dayList.filter((e) => e.allDay || e.time === '종일')
-  const next =
-    selected === todayKey
-      ? timed.find((e) => endOf(e, selected) > now) ?? timed[0] ?? allDay[0] ?? null
-      : timed[0] ?? allDay[0] ?? null
 
-  // 보조 줄 — 가려진 종일 일정과 남은 건수. 다음 일정 자신은 빼고 센다.
+  /**
+   * ⚠ 오늘 것이 다 끝났으면 **이미 지난 일정으로 되돌아가지 않는다**.
+   * 종전에는 `timed.find(아직 안 끝난 것) ?? timed[0]` 이라, 오늘 남은 게 없을 때 오전에 끝난
+   * 첫 회의를 다시 집었다. 그래서 머리말은 '다음 일정'인데 큰 글씨는 '지난 일정'이 되어
+   * 서로 반대말을 하고 있었다(2026-08-05 사용자 신고).
+   * 오늘 남은 게 없으면 → 종일 일정 → 그래도 없으면 **앞으로 가장 가까운 날**로 넘어간다.
+   * 카드 이름이 '다가오는 일정'이므로 다음 날 것을 보여주는 편이 빈칸보다 낫다.
+   */
+  const shown = useMemo(() => {
+    if (selected < todayKey) return dayList[0] ? { e: dayList[0], date: selected } : null
+    if (selected > todayKey) {
+      const e = timed[0] ?? allDay[0]
+      return e ? { e, date: selected } : null
+    }
+    const live = timed.find((e) => endOf(e, selected) > now)
+    if (live) return { e: live, date: selected }
+    if (allDay.length) return { e: allDay[0], date: selected }
+    const ahead = events
+      .filter((e) => e.date > todayKey)
+      .sort((a, b) => a.date.localeCompare(b.date) || startOf(a, a.date).getTime() - startOf(b, b.date).getTime())[0]
+    return ahead ? { e: ahead, date: ahead.date } : null
+  }, [selected, todayKey, dayList, timed, allDay, now, events])
+
+  const next = shown?.e ?? null
+  // 실제로 보여 주는 일정의 날짜 — 오늘이 다 끝나 다음 날로 넘어갔으면 고른 날짜와 다르다
+  const shownDate = shown?.date ?? selected
+  const isPast = shownDate < todayKey
+
+  // 보조 줄 — 가려진 종일 일정과 남은 건수. 보여 주는 일정 자신은 빼고, 그 일정이 있는 날 기준으로 센다.
+  const shownList = shownDate === selected ? dayList : events.filter((e) => e.date === shownDate)
   const nextIsAllDay = !!next && (next.allDay || next.time === '종일')
-  const hiddenAllDay = nextIsAllDay ? [] : allDay
-  const restCount = next ? dayList.length - 1 - hiddenAllDay.length : 0
+  const hiddenAllDay = nextIsAllDay ? [] : shownList.filter((e) => e.allDay || e.time === '종일')
+  const restCount = next ? shownList.length - 1 - hiddenAllDay.length : 0
   const subParts: string[] = []
-  if (hiddenAllDay.length) subParts.push(`종일 ${hiddenAllDay[0].title}${hiddenAllDay.length > 1 ? ` 외 ${hiddenAllDay.length - 1}건` : ''}`)
-  if (restCount > 0) subParts.push(`${selected === todayKey ? '오늘' : '이 날'} 일정 ${restCount}건 더`)
+  // 제목은 알맹이만 — '[연차] 박세리 @박세리' 를 그대로 쓰면 종류·사람이 세 번 반복된다
+  if (hiddenAllDay.length) subParts.push(`종일 ${eventContent(hiddenAllDay[0].title, hiddenAllDay[0].cat)}${hiddenAllDay.length > 1 ? ` 외 ${hiddenAllDay.length - 1}건` : ''}`)
+  if (restCount > 0) subParts.push(`${shownDate === todayKey ? '오늘' : '이 날'} 일정 ${restCount}건 더`)
 
+  const when = next ? whenText(next, shownDate, todayKey) : ''
+  const remain = next ? remainText(next, shownDate, now, todayKey) : ''
   const rangeLabel = `${days[0].getMonth() + 1}.${days[0].getDate()} – ${days[13].getMonth() + 1}.${days[13].getDate()}`
 
   return (
@@ -272,40 +334,67 @@ export default function UpcomingSection({ events: given, now: nowProp, variant =
               <EmptyState size="sm" title="예정된 일정이 없습니다" />
             ) : (
               <>
-                <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mb: 0.5 }}>
-                  {selected === todayKey ? '다음 일정' : `${whenText(next, selected, todayKey).split(' ')[0]} 일정`}
+                {/*
+                 * 위계 정리(2026-08-05 사용자 지적: "중복되는 말이 있고 한눈에 안 읽힌다").
+                 *  · 날짜를 두 번 말하지 않는다 — 머리말에서 날짜를 빼고 시각 줄에만 남긴다.
+                 *  · 제목은 [구분]·@참석자를 뗀 알맹이만(eventContent) — 종류는 아이콘, 사람은 칩이 이미 말한다.
+                 *  · 크게 = 무슨 일정인가(제목) + 얼마나 남았나. 언제·누구·종류는 한 줄로 눕혀 뒤로 뺀다.
+                 */}
+                {/* 종일 일정은 '다음'이 아니라 '진행 중'이라 머리말을 달리 쓴다 */}
+                <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mb: 0.75 }}>
+                  {isPast ? '지난 일정' : shownDate === todayKey && nextIsAllDay ? '오늘 일정' : '다음 일정'}
                 </Typography>
-                <Typography
-                  sx={{
-                    fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1.35,
-                    // 두 줄까지 보여주고 넘치면 줄임 — 좁은 화면에서 제목이 잘려 겹치지 않게
-                    display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden',
-                  }}
-                >
-                  {next.title}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, mt: 0.75 }}>
-                  <Typography sx={{ fontSize: typescale.body.size, color: 'text.secondary' }}>
-                    {whenText(next, selected, todayKey)}
+
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
+                  <Box sx={{ pt: '2px' }}><CatIcon cat={next.cat} /></Box>
+                  <Typography
+                    sx={{
+                      minWidth: 0,
+                      fontSize: typescale.sectionTitle.size, fontWeight: typescale.sectionTitle.weight, lineHeight: 1.3,
+                      // 두 줄까지 보여주고 넘치면 줄임 — 좁은 화면에서 제목이 잘려 겹치지 않게
+                      display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden',
+                    }}
+                  >
+                    {eventContent(next.title, next.cat)}
                   </Typography>
-                  <CatBadge cat={next.cat} />
                 </Box>
 
-                {/* 이 카드에서 가장 크게 — 목록을 훑지 않아도 '얼마나 남았나'가 바로 읽히게 */}
-                <Typography
-                  sx={{
-                    mt: 1.25,
-                    fontSize: typescale.display.size, fontWeight: typescale.display.weight,
-                    lineHeight: 1.15, color: 'primary.main',
-                  }}
-                >
-                  {remainText(next, selected, now, todayKey)}
-                </Typography>
+                {/* 언제 · 누구 — 한 줄. 종류 이름은 아이콘과 겹치므로 좁을 때만 배지로 보완한다 */}
+                <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, mt: 1 }}>
+                  <Typography sx={{ fontSize: typescale.body.size, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+                    {when}
+                  </Typography>
+                  <MemberChips title={next.title} />
+                </Box>
+
+                {/*
+                 * 크기를 급한 정도에 맞춘다 — 오늘 것만 가장 크게.
+                 * '42분 후'와 '8일 후'가 같은 28px 이면, 큰 글씨가 급하다는 뜻이 아니게 되어
+                 * 크기가 정보의 중요도와 어긋난다(2026-08-05 사용자 지적).
+                 * 지난 날짜에는 아예 띄우지 않는다 — 머리말이 이미 '지난 일정'이라 같은 말이 두 번이다.
+                 * 윗줄과 같은 말이 될 때도 띄우지 않는다(오늘 종일 = '오늘 종일'이 두 번).
+                 */}
+                {!isPast && remain !== when && (
+                  <Typography
+                    sx={{
+                      mt: 1.5,
+                      fontSize: shownDate === todayKey ? typescale.display.size : typescale.pageTitle.size,
+                      fontWeight: typescale.display.weight,
+                      lineHeight: 1.15, color: 'primary.main',
+                    }}
+                  >
+                    {remain}
+                  </Typography>
+                )}
 
                 {subParts.length > 0 && (
-                  <Typography sx={{ mt: 1, fontSize: typescale.small.size, color: 'text.disabled' }}>
-                    {subParts.join(' · ')}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.25, pt: 1.25, borderTop: 1, borderColor: 'divider', minWidth: 0 }}>
+                    {hiddenAllDay.length > 0 && <CatIcon cat={hiddenAllDay[0].cat} size={iconSize.body} />}
+                    <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {subParts.join(' · ')}
+                    </Typography>
+                    {hiddenAllDay.length > 0 && <MemberChips title={hiddenAllDay[0].title} max={1} />}
+                  </Box>
                 )}
               </>
             )}

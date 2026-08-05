@@ -24,7 +24,7 @@ import type { RealCat } from './catMeta'
  *   - 단일/주 짧은 일정: 한 칸 오른쪽 끝.
  *   - 멀티데이: 첫 칸 오른쪽 끝(첫 칸을 넘칠 만큼 제목이 길면 제목 바로 뒤).
  */
-const CAT_ICON: Record<RealCat, SvgIconComponent> = {
+export const CAT_ICON: Record<RealCat, SvgIconComponent> = {
   meeting: GroupsIcon,
   work: WorkIcon,
   edu: SchoolIcon,

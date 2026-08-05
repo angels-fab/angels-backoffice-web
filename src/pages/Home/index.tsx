@@ -54,17 +54,17 @@ const SECTION_LABEL: Record<SectionId, string> = {
   status: '현황 (로드맵 · 장비)',
 }
 /**
- * 기본 배치 — 3열 그리드(2026-08-05 사용자 지시).
- *   1행: 다가오는 일정(2칸 — 2주 달력 + 다음 일정까지 남은 시간) · 공지사항(1칸)
- *   2행: 진행 중 업무 · 안 본 새 글 · 업무 구성
+ * 기본 배치 — 3열 그리드(2026-08-05 사용자 지시, B안 확정).
+ *   1행: 다가오는 일정(달력 위·다음 일정 아래) · 공지사항 · 진행 중 업무
+ *   2행: 안 본 새 글 · 업무 구성(2칸)
  *   그 아래: 관심 업무 · 현황(전폭, 접힘)
- * 첫 줄에 공지를 올린 것은 '다가오는 일정'이 좌우로 넓어지면서 옆자리가 한 칸만 남았기 때문이다
- * (사용자 지시 2026-08-05 — 그 자리에 공지사항).
+ * '다가오는 일정'을 한 칸으로 좁히고 세로로 쌓기로 해(사용자 확정) 첫 줄에 카드 셋이 나란히 선다.
+ * 업무 구성이 2칸인 것은 그래야 둘째 줄에 빈칸이 안 남기 때문이다.
  */
 const DEFAULT_ORDER: SectionId[] = ['today', 'notice', 'work', 'kpi', 'mix', 'pins', 'status']
 /** 넓은 자리가 필요한 카드는 칸을 합친다 */
 const SECTION_SPAN: Record<SectionId, number> = {
-  today: 2, work: 1, notice: 1, kpi: 1, mix: 1, pins: 3, status: 3,
+  today: 1, work: 1, notice: 1, kpi: 1, mix: 2, pins: 3, status: 3,
 }
 const isSectionId = (v: unknown): v is SectionId => typeof v === 'string' && (SECTION_IDS as readonly string[]).includes(v)
 
@@ -122,7 +122,7 @@ export default function Home() {
   // 각 카드가 제목·건수·전체보기를 스스로 그린다(HomeCard 공용 규격) — 바깥에서 제목을 또 붙이지 않는다
   const sectionNode: Record<SectionId, ReactNode> = {
     kpi: <HomeKpi />,
-    today: <UpcomingSection />,
+    today: <UpcomingSection variant="stack" />,
     mix: <WorkMixCard />,
     work: <WorkStatusSection />,
     notice: <NoticeSection />,

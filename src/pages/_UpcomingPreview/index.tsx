@@ -16,6 +16,8 @@ import UpcomingSection from '@/pages/Home/dash/UpcomingSection'
 
 /** 시안 기준 시각 — 실제 시계 대신 고정값을 써서 화면이 매번 같게 나오게 한다 */
 const NOW = new Date('2026-08-05T10:36:00')
+/** 오늘 시간 일정이 다 끝난 뒤 — '지난 일정으로 되돌아가지 않는지' 확인용 두 번째 기준 시각 */
+const LATE = new Date('2026-08-05T18:00:00')
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const day = (n: number) => iso(new Date(NOW.getFullYear(), NOW.getMonth(), NOW.getDate() + n))
@@ -69,24 +71,24 @@ export default function UpcomingPreview() {
           기준 시각 2026-08-05 10:36 · 날짜를 누르면 오른쪽이 그 날짜로 바뀝니다.
         </Typography>
 
-        <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mb: 1 }}>A안 — 2칸, 좌우 배치</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
-          <Box sx={{ gridColumn: { xs: 'span 1', md: 'span 2' }, minWidth: 0 }}>
-            <UpcomingSection events={SAMPLE} now={NOW} />
-          </Box>
-        </Box>
-
-        {/* 옆에 다른 카드가 함께 서는 모습까지 봐야 1칸이 맞는지 판단이 된다 — 자리채움 카드를 같이 세운다 */}
-        <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mt: 4, mb: 1 }}>B안 — 1칸, 위아래 배치(모바일과 같은 구성)</Typography>
+        {/* 옆에 다른 카드가 함께 서는 모습까지 봐야 한 칸 폭이 맞는지 판단이 된다 — 자리채움 카드를 같이 세운다 */}
+        <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mb: 1 }}>홈 3열 그리드 첫 줄 (10:36 — 다음 일정이 남아 있음)</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
           <Box sx={{ minWidth: 0 }}>
             <UpcomingSection events={SAMPLE} now={NOW} variant="stack" />
           </Box>
-          <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, display: 'grid', placeItems: 'center', color: 'text.disabled', fontSize: typescale.small.size, minHeight: 180 }}>
-            (다른 카드 자리)
-          </Box>
-          <Box sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, display: 'grid', placeItems: 'center', color: 'text.disabled', fontSize: typescale.small.size, minHeight: 180 }}>
-            (다른 카드 자리)
+          {['공지사항', '진행 중 업무'].map((t) => (
+            <Box key={t} sx={{ minWidth: 0, border: 1, borderColor: 'divider', borderRadius: `${radius.card}px`, display: 'grid', placeItems: 'center', color: 'text.disabled', fontSize: typescale.small.size, minHeight: 180 }}>
+              ({t} 자리)
+            </Box>
+          ))}
+        </Box>
+
+        {/* 오늘 시간 일정이 다 끝난 뒤 — 지난 일정으로 되돌아가지 않는지 확인용 */}
+        <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mt: 4, mb: 1 }}>같은 날 18:00 — 오늘 시간 일정이 다 끝난 뒤</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
+          <Box sx={{ minWidth: 0 }}>
+            <UpcomingSection events={SAMPLE} now={LATE} variant="stack" />
           </Box>
         </Box>
 
