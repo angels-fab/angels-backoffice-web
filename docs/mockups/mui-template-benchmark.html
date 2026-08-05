@@ -149,6 +149,36 @@ svg{display:block}
   <span class="chip info">숫자·문구는 우리 포털 기준 예시</span>
 </div>
 
+<div class="sect">2026-08-05 판정<small>6건 반영 · 나머지는 "형태"가 아니라 "데이터 규모"가 부족해 대기</small></div>
+
+<div class="card">
+  <div class="head"><span class="ttl">반영 완료 (6건 + 기존 1건)</span></div>
+  <div class="row"><span class="pill g">완료</span><span class="grow"><b>4 칸반 보드</b> — 업무현황 (2026-07-25)</span></div>
+  <div class="row"><span class="pill g">완료</span><span class="grow"><b>6 알림 센터</b> — 상단바 벨 + 안 본 새 글 목록 (2026-08-04)</span></div>
+  <div class="row"><span class="pill g">완료</span><span class="grow"><b>7 Ctrl+K 통합검색</b> — 기능은 있었고 상단바에 진입점 노출 (2026-08-04)</span></div>
+  <div class="row"><span class="pill g">완료</span><span class="grow"><b>9 다가오는 일정</b> — 홈, 행사 통합 + 시간 표기 (2026-08-04)</span></div>
+  <div class="row"><span class="pill g">완료</span><span class="grow"><b>10 상태 탭 필터</b> — 건수 표기까지 (2026-08-05)</span></div>
+  <div class="row"><span class="pill g">완료</span><span class="grow"><b>13 행별 더보기 메뉴</b> — 개선요청·공지 (2026-08-05). 같은 항목의 Dense 토글은 아래 대기</span></div>
+  <div class="row"><span class="pill n">기존</span><span class="grow"><b>12 캘린더 목록(아젠다) 뷰</b> — 2026-07-06부터 이미 있음(모바일 기본)</span></div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="ttl">대기 — 실측 근거와 재개 조건</span><span class="tag opt">2026-08-05 사용자 판단</span></div>
+  <p class="desc">전부 "지금 데이터로 그리면 그림이 안 나온다"로 수렴했다. 원본 템플릿들은 수백~수천 행을 전제로 만든 화면이고, 이 포털은 업무 153 · 장비 29 · 공지 17 · 개선요청 12건이다.</p>
+  <div class="row"><span class="pill a">대기</span><span class="grow"><b>11 요약 스트립</b> — 개선요청 12건(완료 11·접수 1), 평균 처리 4.8일·처리율 92%. 표를 훑으면 다 보이는 규모.<br><span style="color:var(--mut)">재개: 개선요청 50건 이상</span></span></div>
+  <div class="row"><span class="pill a">대기</span><span class="grow"><b>8 물류형 장비 대시보드</b> — 도입 29건(24종·140.9억)이 <b>전부 착수 전</b>(최초 착수 2027-05-01), 운영상태도 28건이 '도입예정' 한 값 → 구성 스택바가 한 색 100%, 등급 카드는 대응 데이터 없음.<br><span style="color:var(--mut)">재개: 2027-05 첫 착수 이후 (그때는 저절로 살아남)</span></span></div>
+  <div class="row"><span class="pill a">대기</span><span class="grow"><b>13 좁게 보기(Dense) 토글</b> — 표를 쓰는 화면은 5곳뿐이고 최대 29행(장비운영 29·장비목록 29·공지 17·개선 12·행사종료 1). <b>업무현황 153건은 표가 아니라 카드</b>라 대상 아님 → 한 화면에 이미 다 들어옴.<br><span style="color:var(--mut)">재개: 표 한 곳이 50행 이상</span></span></div>
+  <div class="row"><span class="pill a">대기</span><span class="grow"><b>2 KPI 증감 칩 + 스파크라인</b> — 주별 신규 0~7건·완료 0~7건이라 12점 중 절반이 0~2 구간(추세가 아니라 장식). 창을 30일로 넓히면 의미는 있음(유입 21→7 · 완료 9→18). 재고형 지표(진행중·보류)는 <b>상태 변경 이력이 없어 증감 산출 자체가 불가</b>.<br><span style="color:var(--mut)">재개: 주당 10건 안팎으로 올라오면. 그때도 "지난주 대비"가 아니라 "최근 30일 대비"로</span></span></div>
+  <div class="row"><span class="pill r">낮음</span><span class="grow"><b>3 최근 활동 타임라인</b> — 등록 시각만 있고 상태 변경 이력이 없다(장비 이력 6건뿐) → 원안의 절반만 구현 가능. 데이터가 쌓여도 이력 테이블을 새로 만들어야 함</span></div>
+  <div class="row"><span class="pill r">낮음</span><span class="grow"><b>5 도넛 차트 구성비</b> — 마일스톤 62건 중 '예정'이 54건(87%)이라 한 색 쏠림 + JourneyTimeline 스택바·간트 요약막대가 이미 같은 일을 함(중복)</span></div>
+</div>
+
+<div class="card">
+  <div class="head"><span class="ttl">조사 중 함께 확인된 것</span><span class="tag where">화면과 무관</span></div>
+  <div class="row"><span class="pill b">참고</span><span class="grow"><b>업무 완료일 기재율</b> — 2025년 발의 31% · 2026년 1~5월 37% · <b>2026년 6월 이후 100%</b>. 최근 기록 습관이 잡혀 있어서, 향후 완료 추이 지표는 12주 창까지 신뢰 가능</span></div>
+  <div class="row"><span class="pill r">오류</span><span class="grow"><b>데이터 오류 2건</b> — 도입일정 `DP-002 PECVD`의 상태가 `#REF!`(구글시트 오류 잔재) · 장비대장 `PR-002 E-Beam Lithography`의 운영상태 빈칸(나머지 28건은 '도입예정')</span></div>
+</div>
+
 <div class="sect">1차 — 스토어 전체 둘러보기<small>공통 패턴 7가지</small></div>
 
 <div class="card">
