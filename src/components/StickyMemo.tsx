@@ -390,7 +390,13 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
             ) : (
               <StatusChip status={impKind(st)} label={st || '-'} />
             )}
+            {/* 순서: 접기 · 수정 · 삭제 (사용자 지시 2026-08-05) */}
             <Box sx={{ ml: 'auto', display: 'flex', gap: 0.25 }}>
+              <Tooltip title="접기">
+                <IconButton size="small" aria-label="쪽지 접기" onClick={() => setOpen(false)} sx={{ color: 'text.secondary', p: 0.5 }}>
+                  <UnfoldLessIcon sx={{ fontSize: iconSize.body }} />
+                </IconButton>
+              </Tooltip>
               {canEdit && !editing && (
                 <Tooltip title="제목·내용 수정">
                   <IconButton size="small" aria-label="메모 수정" onClick={startEdit} sx={{ color: 'text.secondary', p: 0.5 }}>
@@ -398,11 +404,6 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
                   </IconButton>
                 </Tooltip>
               )}
-              <Tooltip title="접기">
-                <IconButton size="small" aria-label="쪽지 접기" onClick={() => setOpen(false)} sx={{ color: 'text.secondary', p: 0.5 }}>
-                  <UnfoldLessIcon sx={{ fontSize: iconSize.body }} />
-                </IconButton>
-              </Tooltip>
               {canDelete && (
                 <Tooltip title="요청 삭제">
                   {/* 되돌릴 수 없는 동작이라 빨강 — 수정·접기(중립 회색)와 무게를 구분한다 */}
@@ -621,6 +622,8 @@ export default function StickyMemoLayer() {
   const items = useAppSelector((s) => s.improve.items)
   const replyItems = useAppSelector((s) => s.reply.items)
   const saved = useAppSelector((s) => s.userSettings.settings[POS_KEY]) as PosMap | undefined
+  // 개인 설정 로드 성공 여부 — 자리 배정·저장의 게이트(아래 effect 주석 참조)
+  const usLoadedOk = useAppSelector((s) => s.userSettings.loadedOk)
 
   // 칩·패널·배지와 같은 기준 — 작성자 본인 + 포털 관리자만(2026-08-05).
   // 쪽지는 화면 위에 떠 있어서 남의 것이 보이면 그 사람 할 일이 내 화면을 덮는다.
@@ -642,9 +645,15 @@ export default function StickyMemoLayer() {
    *
    * 빈 슬롯 = 이미 다른 쪽지가 있는 자리를 건너뛴 첫 자리. 그래서 떼어낸 자리는
    * 다음에 만드는 쪽지가 자연스럽게 다시 쓴다.
+   *
+   * ⚠ **개인 설정 로드가 성공하기 전에는 절대 배정하지 않는다**(usLoadedOk 게이트).
+   * 로드 전에는 saved 가 비어 있어 모든 쪽지가 '자리 없음'으로 보이고, 그대로 기본 자리를
+   * 배정·저장하면 **서버에 있던 내 좌표를 덮어쓴다** — 새로고침할 때마다 압정이 가끔
+   * 처음 자리로 돌아가던 원인이다(2026-08-05 사용자 신고). 같은 이유로 useMarkSeen·
+   * work.order 도 loadedOk 를 게이트로 쓴다.
    */
   useEffect(() => {
-    if (!layerEl || memos.length === 0) return
+    if (!layerEl || memos.length === 0 || !usLoadedOk) return
     const need = memos.filter((t) => !saved?.[t.num])
     if (need.length === 0) return
     const taken = memos.filter((t) => saved?.[t.num]).map((t) => saved![t.num])
@@ -657,7 +666,7 @@ export default function StickyMemoLayer() {
       patch[t.num] = px
     }
     dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), ...patch } }))
-  }, [layerEl, memos, saved, dispatch])
+  }, [layerEl, memos, saved, usLoadedOk, dispatch])
 
   // 옮긴 위치는 개인 설정에 저장(디바운스 병합) — 다른 사람 화면은 움직이지 않는다
   const onMoveEnd = useCallback((num: string, pos: Pos) => {
