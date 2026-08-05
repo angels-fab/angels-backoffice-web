@@ -5,7 +5,8 @@ import Typography from '@mui/material/Typography'
 import { EmptyState, LoadingState } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { todaySeoul } from '@/utils/date'
-import { radius, typescale, weight } from '@/theme/tokens'
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth'
+import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 import { CAT_META } from '@/pages/Calendar/catMeta'
 import type { RealCat } from '@/pages/Calendar/catMeta'
 import { CAT_ICON } from '@/pages/Calendar/ChipContent'
@@ -138,7 +139,13 @@ export default function TodaySection({ events: givenEvents, now: nowProp }: { ev
   const nextId = list.find((e) => !isAllDay(e) && endOf(e, today) > now)?.id ?? null
 
   return (
-    <HomeCard title="오늘 일정" count={`${list.length}건`} actionLabel="캘린더" onAction={() => navigate('/calendar')}>
+    <HomeCard
+      icon={<CalendarMonthIcon sx={{ fontSize: iconSize.header, color: 'accentText.blue' }} />}
+      title="오늘 일정"
+      count={`${list.length}건`}
+      actionLabel="캘린더"
+      onAction={() => navigate('/calendar')}
+    >
       {!ready ? (
         <LoadingState size="md" />
       ) : list.length === 0 ? (

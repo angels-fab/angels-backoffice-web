@@ -52,7 +52,7 @@ const SECTION_LABEL: Record<SectionId, string> = {
   eqIntro: '장비 도입',
   eqOps: '장비 운영',
   pins: '관심 업무',
-  status: '현황 (로드맵 · 장비)',
+  status: '현황 (구축 로드맵)',
 }
 /**
  * 기본 배치 — 3열 그리드(2026-08-06 사용자 지시).

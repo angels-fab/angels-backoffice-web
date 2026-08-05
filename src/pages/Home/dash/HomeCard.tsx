@@ -24,7 +24,9 @@ import { iconSize, radius, typescale, weight } from '@/theme/tokens'
  * 쓸 자리가 아니다 — 행 제목의 정본은 emphasis(14/600)다.
  */
 
-export function HomeCard({ title, count, actionLabel, onAction, children }: {
+export function HomeCard({ icon, title, count, actionLabel, onAction, children }: {
+  /** 제목 앞 아이콘 — 색은 넘기는 쪽에서 정한다(카드마다 다른 종류색) */
+  icon?: ReactNode
   title: string
   count?: string
   actionLabel?: string
@@ -43,6 +45,7 @@ export function HomeCard({ title, count, actionLabel, onAction, children }: {
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+        {icon}
         <Typography sx={{ fontSize: typescale.sectionTitle.size, fontWeight: typescale.sectionTitle.weight }}>
           {title}
         </Typography>

@@ -10,7 +10,6 @@ import { selectEqCounts } from '@/store/selectors'
 import { ROADMAP_STEPS } from '@/constants/roadmap'
 import { iconSize, motion, radius, typescale, weight } from '@/theme/tokens'
 import RoadmapCard from '../RoadmapCard'
-import EquipmentSection from './EquipmentSection'
 
 /**
  * 홈 '현황' — 로드맵·장비처럼 **분기 단위로 바뀌는 것**을 한 줄로 접어 둔다.
@@ -69,11 +68,11 @@ export default function StatusSummary() {
         />
       </ButtonBase>
 
-      {/* 펼침 = 종전 홈의 로드맵·장비 섹션 그대로 */}
+      {/* 펼침 = 구축 로드맵. 장비 상태 비율 막대·타일은 여기서 뺐다(2026-08-06 사용자 지시) —
+          같은 숫자를 홈 '장비 도입'·'장비 운영' 카드가 이미 보여 주고 있어 두 번 읽을 것이 됐다. */}
       <Collapse in={open} unmountOnExit>
-        <Box sx={{ px: 2, pb: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ px: 2, pb: 2 }}>
           <RoadmapCard showLegend={false} showBadges={false} />
-          <EquipmentSection />
         </Box>
       </Collapse>
     </AppCard>

@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import { AppDrawer, StatusChip, EmptyState, LoadingState } from '@/components/ds'
-import { radius, typescale } from '@/theme/tokens'
+import CampaignIcon from '@mui/icons-material/Campaign'
+import { iconSize, radius, typescale } from '@/theme/tokens'
 import { useAppSelector } from '@/store/hooks'
 import type { Notice } from '@/types'
 import { noticeBodyHTML, noticeCatStatus } from '@/pages/Notice/noticeMeta'
@@ -32,7 +33,13 @@ export default function NoticeSection() {
 
   return (
     <>
-      <HomeCard title="공지사항" count={`${items.length}건`} actionLabel="전체보기" onAction={() => navigate('/notice')}>
+      <HomeCard
+        icon={<CampaignIcon sx={{ fontSize: iconSize.header, color: 'accentText.amber' }} />}
+        title="새 공지"
+        count={`${items.length}건`}
+        actionLabel="공지사항"
+        onAction={() => navigate('/notice')}
+      >
         {!ready ? (
           <LoadingState size="md" />
         ) : recent.length === 0 ? (

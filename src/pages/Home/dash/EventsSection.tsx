@@ -5,9 +5,17 @@ import Typography from '@mui/material/Typography'
 import { EmptyState, LoadingState } from '@/components/ds'
 import { useRole } from '@/auth/role'
 import { fetchAttendees, type AttendeeRow } from '@/api/events'
+import SchoolIcon from '@mui/icons-material/School'
 import { FAB_EVENTS, eventStatus, fmtEventDate } from '@/constants/events'
-import { typescale, weight } from '@/theme/tokens'
+import { iconSize, typescale, weight } from '@/theme/tokens'
 import { HomeCard } from './HomeCard'
+
+/**
+ * 행사명은 **첫 '-' 앞까지만**(사용자 지시 2026-08-06).
+ * 정식 명칭이 'Smart Semiconductor Academy 2026 - 제7회 스마트 반도체 아카데미'처럼
+ * 영문명 + 국문 부제로 되어 있어, 카드에서는 앞 이름만으로 충분하고 두 줄로 넘치지도 않는다.
+ */
+const shortName = (title: string) => title.split(/\s[-–—]\s/)[0].trim() || title
 
 /**
  * 홈 '참석 예정 행사' (2026-08-06 신설, 사용자 지시).
@@ -47,7 +55,13 @@ export default function EventsSection({ attendees: givenAtt, user: givenUser }: 
   const st = head ? eventStatus(head.start, head.end) : null
 
   return (
-    <HomeCard title="참석 예정 행사" count={att ? `${mine.length}건` : undefined} actionLabel="행사" onAction={() => navigate('/events')}>
+    <HomeCard
+      icon={<SchoolIcon sx={{ fontSize: iconSize.header, color: 'accentText.purple' }} />}
+      title="참석 예정 행사"
+      count={att ? `${mine.length}건` : undefined}
+      actionLabel="행사"
+      onAction={() => navigate('/events')}
+    >
       {!att ? (
         <LoadingState size="md" />
       ) : !head ? (
@@ -69,7 +83,7 @@ export default function EventsSection({ attendees: givenAtt, user: givenUser }: 
               display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden',
             }}
           >
-            {head.title}
+            {shortName(head.title)}
           </Typography>
           <Typography sx={{ mt: 0.25, fontSize: typescale.small.size, color: 'text.secondary' }}>
             {fmtEventDate(head.start, head.end)} · {head.venue}
@@ -82,7 +96,7 @@ export default function EventsSection({ attendees: givenAtt, user: givenUser }: 
                 {eventStatus(e.start, e.end).label}
               </Typography>
               <Typography sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: typescale.small.size, color: 'text.secondary' }}>
-                {e.title}
+                {shortName(e.title)}
               </Typography>
             </Box>
           ))}

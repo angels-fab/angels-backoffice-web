@@ -7,7 +7,8 @@ import { EmptyState, LoadingState, focusRingSx } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { taskTitle } from '@/pages/Work/workMeta'
 import { fmtDate, isRecentNew } from '@/utils/date'
-import { radius, typescale, weight } from '@/theme/tokens'
+import AssessmentIcon from '@mui/icons-material/Assessment'
+import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 import { HomeCard, HomeRow } from './HomeCard'
 
 /** 처음에 보여줄 줄 수 — 나머지는 '더 보기'로 편다 */
@@ -34,7 +35,12 @@ export default function WorkStatusSection() {
   const fresh = rows.filter((t) => isRecentNew(fmtDate(t.start))).length
 
   return (
-    <HomeCard title="진행 중 업무" actionLabel="업무현황" onAction={() => navigate('/work')}>
+    <HomeCard
+      icon={<AssessmentIcon sx={{ fontSize: iconSize.header, color: 'accentText.teal' }} />}
+      title="진행 중 업무"
+      actionLabel="업무현황"
+      onAction={() => navigate('/work')}
+    >
       {!ready ? (
         <LoadingState size="md" />
       ) : rows.length === 0 ? (

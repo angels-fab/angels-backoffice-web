@@ -4,7 +4,9 @@ import Typography from '@mui/material/Typography'
 import { LoadingState } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { selectEqCounts } from '@/store/selectors'
-import { typescale, weight } from '@/theme/tokens'
+import LocalShippingIcon from '@mui/icons-material/LocalShipping'
+import MonitorIcon from '@mui/icons-material/Monitor'
+import { iconSize, typescale, weight } from '@/theme/tokens'
 import { HomeCard } from './HomeCard'
 
 /**
@@ -53,7 +55,12 @@ export function EqIntroSection() {
   const u = eq.units
 
   return (
-    <HomeCard title="장비 도입" actionLabel="도입일정" onAction={() => navigate('/equipment')}>
+    <HomeCard
+      icon={<LocalShippingIcon sx={{ fontSize: iconSize.header, color: 'accentText.rose' }} />}
+      title="장비 도입"
+      actionLabel="도입일정"
+      onAction={() => navigate('/equipment')}
+    >
       {!ready ? (
         <LoadingState size="md" />
       ) : (
@@ -74,7 +81,12 @@ export function EqOpsSection() {
   const u = eq.units
 
   return (
-    <HomeCard title="장비 운영" actionLabel="장비대장" onAction={() => navigate('/equipment-ops')}>
+    <HomeCard
+      icon={<MonitorIcon sx={{ fontSize: iconSize.header, color: 'accentText.green' }} />}
+      title="장비 운영"
+      actionLabel="장비대장"
+      onAction={() => navigate('/equipment-ops')}
+    >
       {!ready ? (
         <LoadingState size="md" />
       ) : (
