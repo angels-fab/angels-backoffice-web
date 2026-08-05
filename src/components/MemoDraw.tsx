@@ -75,8 +75,16 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
   onDone: (strokes: MemoStroke[]) => void
   onCancel: () => void
 }) {
-  const [strokes, setStrokes] = useState<MemoStroke[]>(initial || [])
-  const [undone, setUndone] = useState<MemoStroke[]>([]) // 실행취소로 뺀 획 — 다시실행용
+  /**
+   * 획 이력은 **한 덩어리 상태**로 둔다 — done(그린 것) + undone(실행취소로 뺀 것).
+   *
+   * 종전에는 둘을 따로 두고 setStrokes 의 갱신 함수 *안에서* setUndone 을 불렀다.
+   * 갱신 함수는 순수해야 하는데(개발 모드에서 일부러 두 번 실행한다) 그 안에서 다른 상태를 바꾸니
+   * 실행취소 한 번에 이력이 두 번 쌓여 다시실행이 엉켰다(2026-08-05 사용자 신고: undo 가 이상하다).
+   * 한 상태로 합치면 모든 조작이 순수한 갱신 하나로 끝나 이 문제가 생길 수 없다.
+   */
+  const [hist, setHist] = useState<{ done: MemoStroke[]; undone: MemoStroke[] }>({ done: initial || [], undone: [] })
+  const strokes = hist.done
   const [pen, setPen] = useState(PENS[0])
   const [width, setWidth] = useState(WIDTHS[0])
   const [erasing, setErasing] = useState(false)
@@ -92,24 +100,21 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
   const inkColor = theme.palette.text.primary
   const strokeOf = (c: string) => (c === INK ? inkColor : c)
 
-  const undo = () => setStrokes((s) => {
-    if (s.length === 0) return s
-    setUndone((u) => [...u, s[s.length - 1]])
-    return s.slice(0, -1)
-  })
-  const redo = () => setUndone((u) => {
-    if (u.length === 0) return u
-    setStrokes((s) => [...s, u[u.length - 1]])
-    return u.slice(0, -1)
-  })
+  // 모두 순수 갱신 하나로 끝난다 — 갱신 함수 안에서 다른 상태를 건드리지 않는다
+  const undo = () => setHist((h) => (h.done.length === 0 ? h : { done: h.done.slice(0, -1), undone: [...h.undone, h.done[h.done.length - 1]] }))
+  const redo = () => setHist((h) => (h.undone.length === 0 ? h : { done: [...h.done, h.undone[h.undone.length - 1]], undone: h.undone.slice(0, -1) }))
+  const clearAll = () => setHist({ done: [], undone: [] })
 
   /**
    * 키보드 — Ctrl/⌘+Z 실행취소 · Ctrl/⌘+Shift+Z(또는 Ctrl+Y) 다시실행 · Esc 그리기 닫기.
    * 그리는 중에는 입력칸에 포커스가 갈 일이 없어 가로채도 안전하다.
+   * onCancel 은 ref 로 잡아 리스너를 한 번만 건다(부모가 매 렌더 새 함수를 넘겨도 재등록되지 않게).
    */
+  const cancelRef = useRef(onCancel)
+  cancelRef.current = onCancel
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onCancel(); return }
+      if (e.key === 'Escape') { e.preventDefault(); cancelRef.current(); return }
       const mod = e.ctrlKey || e.metaKey
       if (!mod) return
       const k = e.key.toLowerCase()
@@ -119,15 +124,18 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onCancel])
+  }, [])
 
   /** 지우개 — 지나간 자리에 걸린 획을 통째로 지운다(획 단위. 선 일부만 지우는 방식은 과함) */
   const eraseAt = (x: number, y: number) =>
-    setStrokes((s) => s.filter((st) => {
-      for (let i = 0; i + 1 < st.p.length; i += 2) {
-        if (Math.abs(st.p[i] - x) <= ERASE_R && Math.abs(st.p[i + 1] - y) <= ERASE_R) return false
-      }
-      return true
+    setHist((h) => ({
+      ...h,
+      done: h.done.filter((st) => {
+        for (let i = 0; i + 1 < st.p.length; i += 2) {
+          if (Math.abs(st.p[i] - x) <= ERASE_R && Math.abs(st.p[i + 1] - y) <= ERASE_R) return false
+        }
+        return true
+      }),
     }))
 
   /** 포인터 위치 → 본문 칸 기준 px */
@@ -144,21 +152,21 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     drawing.current = true
     try { svgRef.current?.setPointerCapture(e.pointerId) } catch { /* 캡처 실패해도 그리기는 동작 */ }
     if (erasing) return eraseAt(p[0], p[1])
-    setUndone([]) // 새로 그으면 다시실행 이력은 끊는다(편집기 표준)
-    setStrokes((s) => [...s, { c: pen.color, w: width, p }])
+    // 새로 그으면 다시실행 이력은 끊는다(편집기 표준)
+    setHist((h) => ({ done: [...h.done, { c: pen.color, w: width, p }], undone: [] }))
   }
   const move = (e: React.PointerEvent) => {
     if (!drawing.current) return
     const p = at(e)
     if (!p) return
     if (erasing) return eraseAt(p[0], p[1])
-    setStrokes((s) => {
-      const last = s[s.length - 1]
-      if (!last) return s
+    setHist((h) => {
+      const last = h.done[h.done.length - 1]
+      if (!last) return h
       // 같은 자리 반복 점은 버린다 — 저장 용량과 렌더 비용이 그냥 늘어난다
       const n = last.p.length
-      if (last.p[n - 2] === p[0] && last.p[n - 1] === p[1]) return s
-      return [...s.slice(0, -1), { ...last, p: [...last.p, ...p] }]
+      if (last.p[n - 2] === p[0] && last.p[n - 1] === p[1]) return h
+      return { ...h, done: [...h.done.slice(0, -1), { ...last, p: [...last.p, ...p] }] }
     })
   }
   const up = () => { drawing.current = false }
@@ -259,14 +267,14 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         </Tooltip>
         <Tooltip title="다시실행 (Ctrl+Shift+Z)">
           <span>
-            <IconButton size="small" aria-label="다시실행" disabled={undone.length === 0} onClick={redo}>
+            <IconButton size="small" aria-label="다시실행" disabled={hist.undone.length === 0} onClick={redo}>
               <RedoIcon sx={{ fontSize: typescale.cardTitle.size }} />
             </IconButton>
           </span>
         </Tooltip>
         <Tooltip title="전부 지우기">
           <span>
-            <IconButton size="small" aria-label="전부 지우기" disabled={strokes.length === 0} onClick={() => { setUndone([]); setStrokes([]) }}>
+            <IconButton size="small" aria-label="전부 지우기" disabled={strokes.length === 0} onClick={clearAll}>
               <LayersClearIcon sx={{ fontSize: typescale.cardTitle.size }} />
             </IconButton>
           </span>

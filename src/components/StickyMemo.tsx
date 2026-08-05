@@ -816,12 +816,14 @@ export default function StickyMemoLayer() {
             다른 쪽지의 그림까지 통째로 사라져 화면이 깜빡였다(2026-08-05 사용자 신고). */}
         {isAdmin && memos.filter((t) => t.num !== drawFor).map((t) => {
           if (!t.drawing?.length) return null
-          // 겹친 그림 분간 — 주목 중인 메모의 그림은 그대로 두고 나머지를 흐리게 한다.
-          // 활성 것을 더 진하게 만드는 대신 나머지를 낮추는 쪽이 원래 색을 안 건드려 정확하다.
-          //
-          // ⚠ 그림이 **있는** 메모가 주목될 때만 흐리게 한다. 종전에는 그림 없는 메모를 열어도
-          // 활성으로 잡혀 화면의 그림이 죄다 흐려졌고, 강조될 대상이 없으니 관계없는 그림이
-          // 반응하는 것처럼 보였다(2026-08-05 사용자 신고).
+          // 겹친 그림 분간(2026-08-05).
+          //  · 주목 중인 그림 = 뒤에 굵은 후광을 한 겹 깔아 도드라지게 한다. 원본 획은 그대로 둔다.
+          //  · 나머지 = 흐리게.
+          // 후광이 필요한 이유: '나머지를 흐리게'만 하면 화면에 그림이 **한 장뿐일 때 아무 변화가 없다**
+          // (흐릴 나머지가 없다). 실제로 한 화면에 한 장인 경우가 대부분이라 하이라이트가 안 먹는 것처럼 보였다.
+          // 그림이 **있는** 메모가 주목될 때만 적용한다 — 그림 없는 메모를 열었는데 남의 그림이
+          // 반응하면 그게 더 헷갈린다.
+          const active = activeHasDrawing && t.num === activeNum
           const dimmed = activeHasDrawing && t.num !== activeNum
           return (
             <Box
@@ -835,6 +837,19 @@ export default function StickyMemoLayer() {
                 transition: `opacity ${motion.base} ${motion.ease}`,
               }}
             >
+              {/* 후광 — 주목 중일 때만. 같은 획을 굵고 옅게 뒤에 한 겹 깐다(형광펜으로 덧칠한 느낌) */}
+              {active && t.drawing.map((s, i) => (
+                <polyline
+                  key={`h-${i}`}
+                  points={pointsOf(s.p)}
+                  fill="none"
+                  stroke={s.c === INK ? theme.palette.text.primary : s.c}
+                  strokeWidth={s.w + 10}
+                  strokeOpacity={0.25}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
               {/* stroke 는 sx 로 팔레트 경로가 안 풀린다(MemoDraw 주석 참고) — 실제 색으로 넘긴다 */}
               {t.drawing.map((s, i) => (
                 <polyline
