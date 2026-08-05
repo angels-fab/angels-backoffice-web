@@ -22,10 +22,9 @@ import { useRole } from '@/auth/role'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import RoadmapCard from './RoadmapCard'
-import KpiOverview from './dash/KpiOverview'
-import ScheduleSection from './dash/ScheduleSection'
+import ScheduleSection, { UpcomingSection } from './dash/ScheduleSection'
 import WorkStatusSection from './dash/WorkStatusSection'
-import EquipmentSection from './dash/EquipmentSection'
+import StatusSummary from './dash/StatusSummary'
 import NoticeSection from './dash/NoticeSection'
 import PinnedWorksSection, { usePinnedWorks } from './dash/PinnedWorksSection'
 
@@ -37,17 +36,23 @@ import PinnedWorksSection, { usePinnedWorks } from './dash/PinnedWorksSection'
  * FAB 로드맵은 게스트 공개 + 디자인 규칙(로드맵 최우선·크게)상 개인화 대상에서 제외 — 항상 최상단 고정.
  */
 
-const SECTION_IDS = ['kpi', 'schedule', 'pins', 'work', 'equipment', 'notice'] as const
+/**
+ * 섹션 목록 (2026-08-05 개편).
+ * 없앤 것: `kpi`(6타일 — 진행중 업무·오늘 일정·신규 공지가 아래 섹션과 그대로 중복이었고
+ * 나머지는 2027년까지 안 바뀌는 값), `equipment`(현황 줄로 흡수).
+ * 저장된 순서에 옛 id가 남아 있어도 isSectionId 가 걸러내므로 마이그레이션은 필요 없다.
+ */
+const SECTION_IDS = ['today', 'work', 'upcoming', 'pins', 'notice', 'status'] as const
 type SectionId = (typeof SECTION_IDS)[number]
 const SECTION_LABEL: Record<SectionId, string> = {
-  kpi: '운영 KPI',
-  schedule: '오늘·다가오는 일정',
+  today: '오늘 일정 · 안 본 새 글',
+  work: '진행 중 업무',
+  upcoming: '다가오는 일정',
   pins: '관심 업무',
-  work: '업무 현황',
-  equipment: '장비 현황',
   notice: '공지사항',
+  status: '현황 (로드맵 · 장비)',
 }
-const DEFAULT_ORDER: SectionId[] = ['kpi', 'schedule', 'pins', 'work', 'equipment', 'notice']
+const DEFAULT_ORDER: SectionId[] = ['today', 'work', 'upcoming', 'pins', 'notice', 'status']
 const isSectionId = (v: unknown): v is SectionId => typeof v === 'string' && (SECTION_IDS as readonly string[]).includes(v)
 
 export default function Home() {
@@ -98,20 +103,20 @@ export default function Home() {
   )
 
   const sectionNode: Record<SectionId, ReactNode> = {
-    kpi: <KpiOverview />,
-    schedule: <ScheduleSection />,
-    pins: <PinnedWorksSection />,
+    today: <ScheduleSection />,
     work: <WorkStatusSection />,
-    equipment: <EquipmentSection />,
+    upcoming: <UpcomingSection />,
+    pins: <PinnedWorksSection />,
     notice: <NoticeSection />,
+    status: <StatusSummary />,
   }
   const sectionMeta: Record<SectionId, { title?: string; to?: string }> = {
-    kpi: {},
-    schedule: {},
+    today: {},
+    work: { title: '진행 중 업무', to: '/work' },
+    upcoming: { title: '다가오는 일정' },
     pins: { title: '관심 업무', to: '/work' },
-    work: { title: '업무 현황', to: '/work' },
-    equipment: { title: '장비 현황', to: '/equipment' },
     notice: { title: '공지사항', to: '/notice' },
+    status: {},
   }
 
   return (
@@ -170,11 +175,14 @@ export default function Home() {
         </Button>
       </Popover>
 
-      {/* FAB 구축 로드맵 — 전체 공개 · 항상 최상단(개인화 제외). 소제목은 카드 자체 제목과 중복이라 생략,
-          범례·단계 상태칩은 노드 색으로 충분해 제거(사용자 요청) */}
-      <ContentSection last={!isMember || visible.length === 0}>
-        <RoadmapCard showLegend={false} showBadges={false} />
-      </ContentSection>
+      {/* FAB 구축 로드맵 — **방문자에게만 크게**(2026-08-05 사용자 확정).
+          홈은 비로그인도 들어오는 유일한 화면이고 게스트에게는 로드맵·행사·바로가기뿐이라 여기서는 얼굴 역할을 한다.
+          로그인한 구성원에게는 다음 변화가 2026.12라 매일 볼 것이 아니므로 '현황' 줄(StatusSummary)에 접어 둔다. */}
+      {!isMember && (
+        <ContentSection last>
+          <RoadmapCard showLegend={false} showBadges={false} />
+        </ContentSection>
+      )}
 
       {/* 팀원(이상) 대시보드 — 계정별 순서·숨김 적용 */}
       {isMember && visible.map((id, i) => (
