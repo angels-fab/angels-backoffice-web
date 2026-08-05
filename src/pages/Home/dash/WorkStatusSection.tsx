@@ -6,7 +6,9 @@ import { EmptyState, LoadingState, focusRingSx } from '@/components/ds'
 import { useAppSelector } from '@/store/hooks'
 import { taskTitle } from '@/pages/Work/workMeta'
 import { fmtDate } from '@/utils/date'
-import AssessmentIcon from '@mui/icons-material/Assessment'
+// 업무현황 화면이 '진행중 업무'에 쓰는 그 아이콘(Work/index.tsx:88 · 칸반 '진행중' 열과 동일).
+// 사이드바의 메뉴 아이콘(Assessment)이 아니라 **상태 아이콘**이어야 한다(사용자 지시 2026-08-06).
+import TimelapseIcon from '@mui/icons-material/Timelapse'
 import { iconSize, radius, typescale } from '@/theme/tokens'
 import { HomeCard, HomeRow } from './HomeCard'
 
@@ -34,7 +36,7 @@ export default function WorkStatusSection() {
 
   return (
     <HomeCard
-      icon={<AssessmentIcon sx={{ fontSize: iconSize.header, color: 'accentText.teal' }} />}
+      icon={<TimelapseIcon sx={{ fontSize: iconSize.header, color: 'accentText.green' }} />}
       title="진행 중 업무"
       stat={{ value: rows.length, unit: '건' }}
       actionLabel="업무현황"

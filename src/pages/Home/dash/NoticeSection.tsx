@@ -34,25 +34,30 @@ export default function NoticeSection() {
   const [sel, setSel] = useState<Notice | null>(null)
 
   const [all, setAll] = useState(false)
-  // store에서 상단고정→연번 최신순 정렬됨. 3줄 = 진행 중 업무 카드와 같은 기준(옆에 나란히 서므로)
-  const recent = all ? items : items.slice(0, HEAD)
-  // 카드 이름이 '새 공지'이므로 건수도 **새 글**만 센다 — 전체 공지 수(17)를 쓰면 이름과 숫자가 서로 다른
-  // 말을 한다(2026-08-06 사용자 지적: "17건은 총공지수인데?")
-  const fresh = items.filter((n) => n.isNew).length
+  /**
+   * 카드 이름이 '새 공지'이므로 **목록도 건수도 새 글 기준**이다(2026-08-06 사용자 지적 두 번).
+   * 종전에는 건수만 새 글(3)이고 목록·더보기는 전체(17)라 '새 공지 3건'인데 '14건 더 보기'가
+   * 붙는 앞뒤가 안 맞는 카드가 됐다.
+   * 새 글이 하나도 없을 때만 최신 공지를 대신 보여 준다 — 빈 카드보다는 낫고, 그때는
+   * 더 볼 것도 없으므로 '더 보기'를 띄우지 않는다(전체는 헤더의 '공지사항'으로 간다).
+   */
+  const fresh = items.filter((n) => n.isNew)
+  const source = fresh.length > 0 ? fresh : items.slice(0, HEAD)
+  const recent = all ? source : source.slice(0, HEAD)
 
   return (
     <>
       <HomeCard
         icon={<CampaignIcon sx={{ fontSize: iconSize.header, color: 'accentText.amber' }} />}
         title="새 공지"
-        stat={{ value: fresh, unit: '건' }}
+        stat={{ value: fresh.length, unit: '건' }}
         actionLabel="공지사항"
         onAction={() => navigate('/notice')}
       >
         {!ready ? (
           <LoadingState size="md" />
         ) : recent.length === 0 ? (
-          <EmptyState size="sm" title="등록된 공지가 없습니다" />
+          <EmptyState size="sm" title="새로 올라온 공지가 없습니다" />
         ) : (
           <Box>
             {recent.map((n) => (
@@ -64,14 +69,15 @@ export default function NoticeSection() {
                 trail={<HomeMeta mono>{fmtMD(n.date)}</HomeMeta>}
               />
             ))}
-            {/* '더 보기'는 진행 중 업무 카드와 같은 방식 — 나란히 서는 두 카드가 다르게 동작하면 안 된다 */}
-            {items.length > HEAD && (
+            {/* '더 보기'는 진행 중 업무 카드와 같은 방식 — 나란히 서는 두 카드가 다르게 동작하면 안 된다.
+                단, 세는 대상은 카드가 다루는 것(=새 공지)이지 전체 공지가 아니다. */}
+            {source.length > HEAD && (
               <Box sx={{ pt: 1 }}>
                 <ButtonBase
                   onClick={() => setAll((v) => !v)}
                   sx={{ fontSize: typescale.body.size, color: 'primary.main', px: 0.5, py: 0.25, borderRadius: `${radius.chip}px`, ...(focusRingSx as object) }}
                 >
-                  {all ? '접기' : `${items.length - HEAD}건 더 보기`}
+                  {all ? '접기' : `${source.length - HEAD}건 더 보기`}
                 </ButtonBase>
               </Box>
             )}
