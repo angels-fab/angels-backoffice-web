@@ -29,7 +29,7 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import { StatusChip, useSnack, ConfirmDialog } from '@/components/ds'
 import { IMP_STATUSES, impKind, isSettled, needsReason, normStatus } from '@/pages/Improve/improveMeta'
-import { iconSize, layout, radius, typescale, weight, z } from '@/theme/tokens'
+import { iconSize, layout, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import type { ImprovementItem } from '@/types'
 import type { ReplyRow } from '@/api/sheets'
 
@@ -353,7 +353,8 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
         bgcolor: 'background.paper',
         border: `1px solid ${alpha(th.palette.accent.amber, 0.5)}`,
         borderRadius: `${radius.card}px`,
-        boxShadow: th.shadows[8],
+        // 화면 위에 떠 있는 쪽지(드래그 이동) — 카드가 아니라 부유 표면이라 lg
+        boxShadow: shadow.lg,
         transition: 'border-color .15s, box-shadow .15s',
         '&:hover': { borderColor: th.palette.accent.amber, zIndex: 2 },
         '&:active': { cursor: 'grabbing', zIndex: 4 },

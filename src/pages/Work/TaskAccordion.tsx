@@ -127,7 +127,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
         const sel = {
           borderColor: toneBorderSelCss,
           bgcolor: toneBody.selected,
-          boxShadow: `0 0 0 2px ${toneRingCss}, ${shadow.md}`, /* design-lint-ok(shadow): 앞 레이어는 선택 링 */
+          boxShadow: `0 0 0 2px ${toneRingCss}`, /* design-lint-ok(shadow): 0 0 0 = 선택 링(테두리 대용) */
         }
         return {
           '--card-tone': toneVar(tone),
@@ -148,14 +148,14 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             ? {
                 ...sel,
                 '& .task-head': { bgcolor: c(0.21) },
-                '&:hover': { ...sel, boxShadow: `0 0 0 2px ${toneRingCss}, ${shadow.lg}` /* design-lint-ok(shadow): 앞 레이어는 선택 링 */ },
+                '&:hover': { ...sel },
                 '&:hover .task-head': { bgcolor: c(0.21) },
               }
             : {
                 borderColor: toneBorderCss,
                 bgcolor: toneBody.base,
                 '& .task-head': { bgcolor: c(0.09) },
-                '&:hover': { borderColor: toneBorderHoverCss, bgcolor: toneBody.hover, boxShadow: `0 0 0 1px ${toneRingHoverCss}, ${shadow.md}` /* design-lint-ok(shadow): 앞 레이어는 호버 링 */ },
+                '&:hover': { borderColor: toneBorderHoverCss, bgcolor: toneBody.hover, boxShadow: `0 0 0 1px ${toneRingHoverCss}` /* design-lint-ok(shadow): 0 0 0 = 호버 링(테두리 대용) */ },
                 '&:hover .task-head': { bgcolor: c(0.14) },
               }),
           // 키보드 포커스 — 공통 focusRingSx(B#4)로 수렴(상태색과 무관한 표준 링)

@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import { EmptyState } from '@/components/ds'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import { type FabEvent } from '@/constants/events'
-import { radius, shadow, typescale } from '@/theme/tokens'
+import { radius, typescale } from '@/theme/tokens'
 import { EventCardInner, type AttendControl } from './eventCard'
 
 /** 카드 한 장 — 스와이프(드래그)와 짧은 탭을 구분해 토글. 사이트 링크·참석 버튼 클릭은 토글로 전파 안 됨. */
@@ -34,10 +34,7 @@ function MobileCard({ e, open, onToggle, attend }: { e: FabEvent; open: boolean;
         border: 1,
         borderColor: 'divider',
         cursor: 'pointer',
-        boxShadow: open ? shadow.lg : shadow.md,
-        transition: 'box-shadow .2s ease',
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
-        '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}
     >
       <EventCardInner e={e} open={open} attend={attend} />

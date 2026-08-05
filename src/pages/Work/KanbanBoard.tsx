@@ -141,9 +141,9 @@ const BoardCard = memo(function BoardCard({ t, zone, tone, selected, draggable, 
         touchAction: draggable ? 'pan-y' : 'auto',
         transition: 'border-color .14s, background-color .14s, box-shadow .14s',
         // 떠오름 없음 — 그리드 카드와 동일 규칙(호버로 카드가 움직이면 조준이 어긋난다)
-        '&:hover': { borderColor: c(0.78), bgcolor: c(0.09), boxShadow: shadow.md },
+        '&:hover': { borderColor: c(0.78), bgcolor: c(0.09) },
         // 선택 > 호버 — 선택 시 호버에도 선택 모습 유지(TaskAccordion과 동일 규칙)
-        ...(sel ? { ...sel, '&:hover': { ...sel, boxShadow: `0 0 0 2px ${c(0.22)}, ${shadow.lg}` /* design-lint-ok(shadow): 앞 레이어는 선택 링 — 테두리 대용이라 그림자 토큰 대상 아님 */ } } : {}),
+        ...(sel ? { ...sel, '&:hover': { ...sel } } : {}),
         ...(focusRingSx as object),
       }}
     >

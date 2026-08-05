@@ -7,7 +7,7 @@ import CoPresentIcon from '@mui/icons-material/CoPresent'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, SegTabs, ConfirmDialog, useSnack } from '@/components/ds'
-import { radius, shadow, z } from '@/theme/tokens'
+import { radius, z } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
 import { fetchAttendees, addAttendee, removeAttendee, fetchSubmissions, type AttendeeRow, type EventSubmissionRow } from '@/api/events'
@@ -29,10 +29,9 @@ function EventCard({ e, open, onToggle, attend }: { e: FabEvent; open: boolean; 
       onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onToggle() } }}
       sx={{
         position: 'relative', borderRadius: `${radius.modal}px`, overflow: 'hidden', border: 1, borderColor: 'divider', cursor: 'pointer',
-        transition: 'box-shadow .18s ease, transform .18s ease',
-        ...(open
-          ? { boxShadow: shadow.lg }
-          : { '&:hover': { transform: 'translateY(-3px) scale(1.012)', boxShadow: shadow.sm } }),
+        transition: 'border-color .18s ease',
+        // 클릭 카드 hover 표준(AppCard): 보더 강조만 — 떠오름·그림자 없음
+        '&:hover': { borderColor: 'primary.main' },
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
         '@media (prefers-reduced-motion: reduce)': { transition: 'none' },
       }}

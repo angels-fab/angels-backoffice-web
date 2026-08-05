@@ -5,7 +5,7 @@ import Typography from '@mui/material/Typography'
 import Tooltip from '@mui/material/Tooltip'
 import CheckIcon from '@mui/icons-material/Check'
 import { ContentSection, focusRingSx } from '@/components/ds'
-import { iconSize, radius, shadow, typescale, z } from '@/theme/tokens'
+import { iconSize, radius, typescale, z } from '@/theme/tokens'
 import { chiefPurple } from './chiefCheck'
 import type { DropZone, WorkView } from './dropZones'
 
@@ -103,7 +103,6 @@ export default function KpiSection({
           borderRadius: `${radius.card}px`,
           border: '1px solid',
           borderColor: highlighted ? 'transparent' : 'divider',
-          boxShadow: highlighted ? 'none' : shadow.sm,
           overflow: 'hidden',
           // 평소=중립 카드, 드래그 후보·선택 시에만 상태색이 켜진다(드롭존 역할 유지)
           background: highlighted ? STRONG[zone] : 'var(--ink2)',
@@ -111,7 +110,7 @@ export default function KpiSection({
           // 드래그 중에는 :hover를 끈다. 들린 카드는 pointerEvents:'none'이고 포인터 캡처도 안 쓰므로
           // 커서가 지나가는 타일이 계속 hover를 받는데, 드롭 판정(activeZone)은 커서가 아니라
           // '카드 실영역의 최대 교차면적 + 1.15배 히스테리시스'라 둘이 어긋난다 → 타일 2개가 동시에 켜짐.
-          ...(dragging ? {} : { '&:hover': { background: STRONG[zone], transform: 'translateY(-2px)', boxShadow: shadow.md } }),
+          ...(dragging ? {} : { '&:hover': { background: STRONG[zone], transform: 'translateY(-2px)' } }),
           ...(focusRingSx as object),
           // 하단 3px 인디케이터는 제거(사용자 요청). 분리형 카드가 되면서 강조 배경만으로 상태가 충분히 읽히고,
           // 선(線)까지 있으면 타일마다 색 요소가 둘이라 시끄러웠다.
@@ -148,7 +147,7 @@ export default function KpiSection({
                 color: chiefPurple.text(t),
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: typescale.emphasis.size, fontWeight: typescale.display.weight, lineHeight: 1,
-                boxShadow: shadow.sm, pointerEvents: 'none',
+                pointerEvents: 'none',
               })}
             >
               {checkCount}
@@ -228,7 +227,6 @@ export default function KpiSection({
                   // KPI 상태명(진행중·보류)과 같은 크기 — 그 사이에 걸친 칩이라 둘보다 작으면 눌려 보인다
                   // 상태명(16px)보다 **한 단 아래**. 같게 하면 KPI의 주인공과 경쟁하고, 11px은 안 읽혔다.
                   fontSize: typescale.body.size, fontWeight: typescale.display.weight, whiteSpace: 'nowrap', cursor: 'pointer',
-                  boxShadow: shadow.sm,
                   transition: 'background-color .14s ease, border-color .14s ease, transform .14s ease',
                   '&:hover': { backgroundImage: `linear-gradient(${chiefPurple.fillStrong(t)}, ${chiefPurple.fillStrong(t)})`, transform: 'translateX(-50%) translateY(-1px)' },
                   ...(focusRingSx as object),

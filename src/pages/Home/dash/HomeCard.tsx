@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
 import Typography from '@mui/material/Typography'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { focusRingSx } from '@/components/ds'
+import { AppCard, focusRingSx } from '@/components/ds'
 import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 
 /**
@@ -27,16 +27,12 @@ export function HomeCard({ title, count, actionLabel, onAction, children }: {
   children: ReactNode
 }) {
   return (
-    <Box
+    <AppCard
+      padding={20}
       sx={{
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: 'background.paper',
-        border: 1,
-        borderColor: 'divider',
-        borderRadius: `${radius.card}px`,
-        p: '20px',
         // 제목이 카드 밖으로 나가지 않게 — 목록 항목도 이 상자 안에서만 줄임표 처리된다
         overflow: 'hidden',
       }}
@@ -65,7 +61,7 @@ export function HomeCard({ title, count, actionLabel, onAction, children }: {
         )}
       </Box>
       <Box sx={{ flex: 1, minWidth: 0 }}>{children}</Box>
-    </Box>
+    </AppCard>
   )
 }
 

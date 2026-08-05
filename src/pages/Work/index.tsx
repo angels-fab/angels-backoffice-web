@@ -1604,9 +1604,8 @@ export default function Work() {
               fontSize: typescale.caption.size, fontWeight: typescale.pageTitle.weight, textAlign: 'center', lineHeight: 1.25,
               transform: contact ? 'scale(1.02)' : 'none',
               transformOrigin: 'right center',
-              boxShadow: contact
-                ? '0 0 0 7px rgba(230,103,97,.16), 0 14px 38px rgba(0,0,0,.5)'
-                : '0 12px 32px rgba(0,0,0,.45)',
+              // 화면 위에 떠 있는 드롭 패널 — 깊이는 토큰(lg), 접촉 강조는 앞 레이어의 0 0 0 링
+              boxShadow: contact ? `0 0 0 7px rgba(230,103,97,.16), ${shadow.lg}` : shadow.lg,
               transition: 'box-shadow .14s, transform .14s',
               animation: 'workTrashFade .18s ease',
               '@keyframes workTrashFade': { from: { opacity: 0 }, to: { opacity: 1 } },

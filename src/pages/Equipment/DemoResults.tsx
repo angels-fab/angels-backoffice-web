@@ -138,7 +138,7 @@ function EditText({ text, canEdit, onCommit, align = 'left', multiline = false, 
         {!multiline && <Box component="span" aria-hidden sx={{ visibility: 'hidden', whiteSpace: 'pre', display: 'inline-block', minWidth: '2ch' }}>{v || placeholder}</Box>}
         <InputBase autoFocus multiline={multiline} value={v} onChange={(e) => setV(e.target.value)} placeholder={placeholder} onKeyDown={onKey}
           sx={(th) => ({ ...editInputSx(th), ...(multiline ? { width: '100%' } : { position: 'absolute', inset: 0, width: '100%' }), '& textarea, & input': { textAlign: align, p: 0, font: 'inherit', minWidth: 0 } })} />
-        <Box sx={(th) => ({ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', ml: '3px', zIndex: 6, display: 'flex', bgcolor: 'background.paper', border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`, px: 0.25, boxShadow: shadow.sm })}>
+        <Box sx={(th) => ({ position: 'absolute', left: '100%', top: '50%', transform: 'translateY(-50%)', ml: '3px', zIndex: 6, display: 'flex', bgcolor: 'background.paper', border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`, px: 0.25, boxShadow: shadow.md /* 인라인 편집칸 위에 떠 있는 도구모음 = 팝오버 층 */ })}>
           <SaveCancel onSave={commit} onCancel={() => setEditing(false)} />
         </Box>
       </Box>
@@ -882,7 +882,7 @@ function EquipGroup({ equipment, defs, defsAll, makers, messages, canEdit, canMo
 
   return (
     // 그룹 셸 — 제목띠(장비명+도구)가 레인들+메모를 통째로 감쌈
-    <Box sx={{ mb: 3, border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, bgcolor: 'background.paper', boxShadow: shadow.sm, overflow: 'hidden' }}>
+    <Box sx={{ mb: 3, border: 1, borderColor: 'divider', borderRadius: `${radius.modal}px`, bgcolor: 'background.paper', overflow: 'hidden' }}>
       {/* 제목띠 — 장비명 + 지표편집·변경이력 */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.75, py: '8px', bgcolor: 'background.elevated', color: 'text.primary' }}>
         {/* 이 띠는 그룹 카드의 제목이라 사다리상 cardTitle(16/700). 구 14/800 은 크기가 모자란 걸

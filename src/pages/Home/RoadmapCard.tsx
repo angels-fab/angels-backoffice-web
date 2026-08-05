@@ -104,7 +104,6 @@ export default function RoadmapCard({ pulse = true, showLegend = true, showBadge
         p: '26px 30px 24px',
         color: 'var(--text)',
         boxSizing: 'border-box',
-        boxShadow: t.palette.mode === 'dark' ? '0 18px 44px -22px rgba(0,0,0,.55)' : '0 12px 30px -18px rgba(30,50,90,.22)',
       })}
     >
       {/* 헤더 */}
