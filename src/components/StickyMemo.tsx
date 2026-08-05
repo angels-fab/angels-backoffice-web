@@ -173,6 +173,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
   const stBtnRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(!!defaultOpen)
   const [dragging, setDragging] = useState(false)
+  const [hover, setHover] = useState(false)
   const [busy, setBusy] = useState(false)
   const [reply, setReply] = useState('')
   // 쪽지에서 바로 제목·내용 수정 — 게시판까지 가지 않아도 고칠 수 있게(수정 권한은 게시판과 동일)
@@ -191,13 +192,15 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
   useEffect(() => { if (!drag.current.on) { latest.current = pos; setLive(pos) } }, [pos])
 
   /**
-   * 주목 대상 알림 — 펼쳤거나 끌고 있는 동안. 그림이 여러 장 겹치면 어느 게 이 쪽지 것인지
-   * 분간이 안 되므로, 레이어가 이 신호로 해당 그림만 진하게 하고 나머지를 흐리게 한다(2026-08-05).
+   * 주목 대상 알림 — **올려놨거나(hover) 펼쳤거나 끌고 있는 동안**.
+   * 그림이 여러 장 겹치면 어느 게 이 메모 것인지 분간이 안 되므로, 레이어가 이 신호로
+   * 해당 그림만 남기고 나머지를 흐리게 한다. 호버까지 넣은 건 압정에 마우스만 스쳐도
+   * 짝이 보이게 하려는 것(사용자 요청 2026-08-05) — 펼치지 않고도 확인된다.
    */
   useEffect(() => {
-    onActive(item.num, open || dragging)
+    onActive(item.num, hover || open || dragging)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, dragging, item.num])
+  }, [hover, open, dragging, item.num])
 
   /** 커진 만큼(펼침·창 축소) 화면 밖으로 나갔으면 되당긴다 — 여백은 허용, 화면 밖은 불가 */
   const clamp = useCallback((p: Pos): Pos => {
@@ -361,6 +364,10 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={() => { drag.current.on = false; setDragging(false) }}
+      /* 호버 = 그 메모의 그림만 남기는 신호. 끌기 중에는 포인터 캡처 때문에 leave 가 안 올 수 있어
+         pointer 계열 대신 mouse 계열을 쓴다(PC 전용 기능이라 충분하다). */
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
       sx={(th) => ({
         position: 'absolute',
         left: `${live.x}px`,
@@ -646,7 +653,7 @@ export default function StickyMemoLayer() {
   // 지금 주목 중인 쪽지(펼침·끌기) — 그 그림만 진하게, 나머지는 흐리게
   const [activeNum, setActiveNum] = useState<string | null>(null)
   const markActive = useCallback((num: string, active: boolean) => {
-    // 끌 때는 자기 것만 켜고, 끌 때는 '내가 켰던 것'일 때만 끈다(다른 쪽지의 활성을 뺏지 않게)
+    // 켤 때는 자기 것만 켜고, 끌 때는 '내가 켰던 것'일 때만 끈다(다른 메모의 활성을 뺏지 않게)
     setActiveNum((cur) => (active ? num : cur === num ? null : cur))
   }, [])
   const snack = useSnack()
@@ -715,6 +722,8 @@ export default function StickyMemoLayer() {
    * 도구도 그림도 노출하지 않는다. 저장은 쪽지(개선요청)에 딸린다 — 그림만 따로 떠다니지 않는다.
    */
   const drawTarget = memos.find((t) => t.num === drawFor) || null
+  // 주목 중인 메모가 실제로 그림을 갖고 있을 때만 '나머지 흐리게'가 의미가 있다
+  const activeHasDrawing = !!memos.find((t) => t.num === activeNum)?.drawing?.length
 
   /**
    * 그리기 완료 —
@@ -807,9 +816,13 @@ export default function StickyMemoLayer() {
             다른 쪽지의 그림까지 통째로 사라져 화면이 깜빡였다(2026-08-05 사용자 신고). */}
         {isAdmin && memos.filter((t) => t.num !== drawFor).map((t) => {
           if (!t.drawing?.length) return null
-          // 겹친 그림 분간 — 주목 중인 쪽지의 그림은 그대로 두고 나머지를 흐리게 한다.
+          // 겹친 그림 분간 — 주목 중인 메모의 그림은 그대로 두고 나머지를 흐리게 한다.
           // 활성 것을 더 진하게 만드는 대신 나머지를 낮추는 쪽이 원래 색을 안 건드려 정확하다.
-          const dimmed = activeNum !== null && t.num !== activeNum
+          //
+          // ⚠ 그림이 **있는** 메모가 주목될 때만 흐리게 한다. 종전에는 그림 없는 메모를 열어도
+          // 활성으로 잡혀 화면의 그림이 죄다 흐려졌고, 강조될 대상이 없으니 관계없는 그림이
+          // 반응하는 것처럼 보였다(2026-08-05 사용자 신고).
+          const dimmed = activeHasDrawing && t.num !== activeNum
           return (
             <Box
               key={`d-${t.num}`}
