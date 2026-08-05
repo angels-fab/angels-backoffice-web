@@ -220,7 +220,8 @@ export default function Work() {
   const dispatch = useAppDispatch()
   const { items, trashed, error, errorMsg, loading: workLoading, updatedAt } = useAppSelector((s) => s.work)
   const workReady = useAppSelector((s) => s.work.ready)
-  const { isAdmin, user, authKey } = useRole()
+  // 쓰기 게이트 = 구성원 이상(2026-08-05 개방). 관리자는 isMember 에 포함되므로 종전과 동일하게 전부 가능.
+  const { isMember, user, authKey } = useRole()
   // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 업무를 읽음 처리.
   // error 게이트 필수: 로드 실패도 ready=true라, 없으면 실패(빈 목록)를 '새 글 0'으로 오인해 seen을 지움
   useMarkSeen('work', useMemo(() => items.filter(isWorkNew).map((t) => String(t.num)), [items]), workReady && !error)
@@ -925,7 +926,7 @@ export default function Work() {
   const undoRef = useRef(doUndo); undoRef.current = doUndo
   const redoRef = useRef(doRedo); redoRef.current = doRedo
   useEffect(() => {
-    if (!isAdmin) return
+    if (!isMember) return
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey) || e.altKey) return
       if ((e.key || '').toLowerCase() !== 'z') return
@@ -936,7 +937,7 @@ export default function Work() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isAdmin])
+  }, [isMember])
 
   // ── 복수선택 ──
   const clearSelection = useCallback(() => { setSelected(new Set()); selAnchor.current = null }, [])
@@ -1057,7 +1058,7 @@ export default function Work() {
   // 드롭 처리 — null=변경 없음(원위치·호출/이력 없음). finalize는 흡입 애니메이션 후 그리드가 호출.
   const handleStatusDrop = (nums: string[], zone: DropZone): StatusDropResult => {
     const { user: u, authKey: k } = authRef.current
-    if (!isAdmin || !u || !k) return null
+    if (!isMember || !u || !k) return null
     const targets = nums
       .map((n) => items.find((t) => t.num === n))
       .filter((t): t is WorkItem => !!t && editingId !== t.id && ['inProgress', 'hold', 'done'].includes(classify(t)))
@@ -1096,7 +1097,7 @@ export default function Work() {
 
   // 카드 더블클릭 → in-place 수정모드(관리자)
   const handleCardDoubleClick = (num: string) => {
-    if (!isAdmin || !user || !authKey) return
+    if (!isMember || !user || !authKey) return
     const t = items.find((x) => x.num === num)
     if (t && editingId !== t.id) startEdit(t)
   }
@@ -1104,7 +1105,7 @@ export default function Work() {
   // 취소 시 원상 복원. 진행 중 삭제 라이프사이클 동안 새 요청은 무시 — deleteReq 덮어쓰기 방지.
   // 수정모드(in-place 편집) 카드는 대상에서 제외(존 드롭과 동일 가드).
   const handleDeleteDrop = (nums: string[], at: { cx: number; cy: number; w: number; h: number; scale: number }) => {
-    if (!isAdmin || !user || !authKey) return
+    if (!isMember || !user || !authKey) return
     if (deleting || deleteReq) return
     const targets = nums
       .map((n) => items.find((x) => x.num === n))
@@ -1140,7 +1141,7 @@ export default function Work() {
   // 모바일에서만 스와이프 래핑(PC는 undefined → 그리드가 카드 직접 렌더, 무회귀)
   const swipeConfig: WorkSwipeConfig | undefined = isMobile
     ? {
-        enabled: isAdmin,
+        enabled: isMember,
         buildActions: (num: string) => {
           const t = items.find((x) => x.num === num)
           const statusOptions = t
@@ -1235,7 +1236,7 @@ export default function Work() {
               <Typography variant="body2" sx={{ color: 'text.disabled' }}>
                 {view === 'inProgress' ? inProgressListed.length : listed.length}건
               </Typography>
-              {view === 'inProgress' && isAdmin && <NewTaskPlusButton onClick={startCompose} />}
+              {view === 'inProgress' && isMember && <NewTaskPlusButton onClick={startCompose} />}
             </Box>
           )
         })()}
@@ -1297,20 +1298,20 @@ export default function Work() {
           </Box>
           {/* 1행 우: 선택 도구 + Undo/Redo + 정렬 */}
           <Box sx={{ gridArea: 'controls', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
-            {isAdmin && selected.size > 0 && (
+            {isMember && selected.size > 0 && (
               <>
                 <StatusChip status="info" label={`${selected.size}건 선택`} />
                 <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
               </>
             )}
-            {isAdmin && (
+            {isMember && (
               <BtnGroup>
                 <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: iconSize.body }} />} disabled={!canUndo} onClick={doUndo} />
                 <GroupBtn title="다시실행 (Ctrl/Cmd+Shift+Z)" icon={<RedoIcon sx={{ fontSize: iconSize.body }} />} disabled={!canRedo} onClick={doRedo} />
               </BtnGroup>
             )}
             {/* 순서 편집 토글 — 모바일 진행중 뷰 전용. 켜면 카드를 끌어 순서변경(그동안 스와이프 비활성) */}
-            {isAdmin && isMobile && view === 'inProgress' && !boardMode && (
+            {isMember && isMobile && view === 'inProgress' && !boardMode && (
               <BtnGroup>
                 <GroupBtn title="순서 편집 (카드를 끌어 순서변경)" label="순서" icon={<SwapVertIcon sx={{ fontSize: iconSize.body }} />} selected={reorderMode} onClick={() => { clearSelection(); setReorderMode((v) => !v) }} />
               </BtnGroup>
@@ -1326,7 +1327,7 @@ export default function Work() {
               <GroupBtn title="업무구분 정렬 (재클릭 방향 전환 · 한 번 더 기본 순서)" label="구분" icon={sortArrow('cat')} selected={listSort?.key === 'cat'} onClick={() => toggleListSort('cat')} />
             </BtnGroup>
             {/* 휴지통 드로어 열기 — 복원용(삭제 건이 있을 때만). 삭제 드롭은 우측 드웰 휴지통이 담당 */}
-            {isAdmin && trashed.length > 0 && (
+            {isMember && trashed.length > 0 && (
               <ButtonBase
                 aria-label={`휴지통 열기 (삭제 업무 ${trashed.length}건)`}
                 onClick={() => setTrashOpen(true)}
@@ -1359,13 +1360,13 @@ export default function Work() {
           // 카드 클릭 = 상세 열기/같은 카드 재클릭 닫기(토글), 열린 카드는 보드에서 선택 강조.
           <KanbanBoard
             items={boardItems}
-            canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
+            canDrag={(t) => isMember && !!user && !!authKey && editingId !== t.id}
             onStatusDrop={handleStatusDrop}
             onCardClick={(t) => setPicked((p) => (p?.num === t.num ? null : t))}
             selectedNum={picked?.num ?? null}
             sort={listSort ? applyListSort : null}
             inProgressOrder={inProgressNums}
-            canReorder={isAdmin && !!user && !!authKey}
+            canReorder={isMember && !!user && !!authKey}
             onReorder={handleReorder}
             onZoneChange={onZoneChange}
           />
@@ -1375,7 +1376,7 @@ export default function Work() {
           ) : (
             <ReorderableTaskGrid
               items={inProgressListed}
-              canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
+              canDrag={(t) => isMember && !!user && !!authKey && editingId !== t.id}
               reorderMode={reorderMode}
               swipe={swipeConfig}
               onReorder={handleReorder}
@@ -1391,7 +1392,7 @@ export default function Work() {
               onRightEdge={onRightEdge}
               awaitingNums={awaitingNums}
               awaitingHidden={awaitingHidden}
-              leading={isAdmin && composing ? (
+              leading={isMember && composing ? (
                 <Box sx={{ minWidth: 0 }}>
                   <NewTaskCard saving={savingNew} options={fieldOptions} onCancel={() => setComposing(false)} onSave={handleSaveNew} onDirtyChange={setComposeDirty} />
                 </Box>
@@ -1405,7 +1406,7 @@ export default function Work() {
             key={view}
             items={listed}
             renderCard={(t) => renderTask(t, view === 'remind' ? 'purple' : classify(t) === 'done' ? 'blue' : classify(t) === 'hold' ? 'amber' : 'green')}
-            canDrag={(t) => isAdmin && !!user && !!authKey && editingId !== t.id}
+            canDrag={(t) => isMember && !!user && !!authKey && editingId !== t.id}
             selectedNums={selected}
             onSelectToggle={toggleSelect}
             swipe={swipeConfig}
@@ -1449,16 +1450,17 @@ export default function Work() {
         </ContentSection>
       )}
 
+      {/* isAdmin prop 은 이름을 그대로 두고 값만 구성원 기준으로 — 수정·삭제 버튼 노출 조건 */}
       <TaskDetailDrawer
         task={picked}
         nonModal
         onClose={() => setPicked(null)}
-        isAdmin={isAdmin}
+        isAdmin={isMember}
         onEdit={(t) => setEditTarget(t)}
         onDelete={requestDelete}
       />
 
-      {isAdmin && (
+      {isMember && (
         <WorkWrite
           open={writeOpen || !!editTarget}
           editing={editTarget}
@@ -1551,7 +1553,7 @@ export default function Work() {
       {/* 우측 드웰 휴지통 — 드래그 중 포인터가 화면 오른쪽 공간에 500ms 머물면 '선택된(무장)' 모습으로 등장.
           카드 실영역 접촉 시 접촉 강조 + 카드 축소(trashShrinkByCard), 놓으면 확인창 없이 소프트삭제
           (10초 실행 취소·드로어 복원이 안전망). 삭제 흡입(suck) 동안 지니 목적지로 유지. */}
-      {isAdmin && (trashArmed || (!!deleteReq?.token && deleteReq.phase !== 'clearing')) && (
+      {isMember && (trashArmed || (!!deleteReq?.token && deleteReq.phase !== 'clearing')) && (
         <Box
           data-trashzone
           ref={trashElRef}

@@ -34,6 +34,8 @@ export interface CalRawEvent {
   recurring: boolean
   /** 반복 시리즈 그룹 id(빈 문자열=단독). materialize 모델: 같은 series_id = 한 반복의 발생일별 개별 행 */
   seriesId: string
+  /** 등록한 사람(profiles.name). 삭제 게이트용 — DB 정책 cal_delete_own 과 같은 기준을 화면에서도 쓴다 */
+  createdBy: string
 }
 
 interface CalTableRow {
@@ -46,6 +48,7 @@ interface CalTableRow {
   repeat: 'none' | 'daily' | 'weekly' | 'monthly'
   repeat_until: string
   series_id: string
+  created_by: string | null
 }
 
 // 비반복 일정은 과거·미래 전부 로드(DB에서 이미 전체 행을 받음 — 과거 일정 소실 방지).
@@ -79,6 +82,7 @@ const toRaw = (r: CalTableRow, startDate: string, idSuffix = ''): CalRawEvent =>
     end: r.all_day ? addDays(endDate, 1) : `${endDate}${(r.end_at || r.start_at).slice(10)}`,
     recurring: r.repeat !== 'none' || !!r.series_id,
     seriesId: r.series_id || '',
+    createdBy: r.created_by || '',
   }
 }
 

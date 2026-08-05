@@ -439,7 +439,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, user, onMoveEnd }: 
  */
 export default function StickyMemoLayer() {
   const { pathname } = useLocation()
-  const { isMember, isAdmin, user, authKey } = useRole()
+  const { isMember, user, authKey } = useRole()
   const theme = useTheme()
   const isDesktop = useMediaQuery(theme.breakpoints.up('shell'))
   const dispatch = useAppDispatch()
@@ -531,7 +531,8 @@ export default function StickyMemoLayer() {
               replies={repliesByReq[t.num] || []}
               pos={pos}
               layerRef={layerRef}
-              canEdit={isAdmin && !!user && !!authKey}
+              // 구성원 쓰기 개방(2026-08-05)
+              canEdit={isMember && !!user && !!authKey}
               user={user}
               onMoveEnd={onMoveEnd}
             />

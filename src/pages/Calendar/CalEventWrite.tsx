@@ -317,7 +317,8 @@ function TimeColumn({ label, value, onPick }: { label: string; value: string; on
  * 시간=칩+펼침 피커(잘림 없음). 반복 일정의 수정·삭제는 범위 선택(이 일정만/이후/전체)을 먼저 묻는다.
  */
 export default function CalEventWrite({ open, mode, event, initialDate, initialEndDate, onClose, onSaved, onDraftChange }: Props) {
-  const { user, isAdmin } = useRole()
+  // isAdmin은 삭제 게이트에만 잔존(작성·수정은 구성원 개방) — 구성원 쓰기 개방(2026-08-05)
+  const { user, isAdmin, isMember } = useRole()
   const [title, setTitle] = useState('') // 내용 제목 — [구분] 태그·@참석자 제외(둘 다 별도 피커가 관리)
   const [attendees, setAttendees] = useState<string[]>([]) // 참석자 이름들(제목 @뒤로 합쳐 저장)
   const [cat, setCat] = useState<RealCat | null>(null) // 일정 종류 — 선택 시 제목 앞 [태그]로 저장
@@ -342,6 +343,8 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
   const [calYm, setCalYm] = useState('') // 미니달력 표시 달 'yyyy-MM'
 
   const isSeries = !!(event && event.seriesId) // 반복 시리즈의 한 발생일(materialize) — 수정/삭제 시 범위 선택
+  // 삭제만 좁은 게이트 — 작성자 본인 또는 관리자. 작성자 미상(created_by 없이 만들어진 옛 일정)은 관리자만.
+  const canDelete = isAdmin || (isMember && !!user && !!event?.createdBy && event.createdBy === user)
   const draftSkip = useRef(false) // 재열림 직후 초안 effect의 stale 1회 실행 스킵(리셋 effect가 신선한 초안을 직접 보냄)
 
   // 열릴 때마다 폼 초기화 (add: 선택일 / edit: 대상 일정 값 — 반복 일정은 시리즈 원본을 불러 프리필)
@@ -480,7 +483,7 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
     setTimeAnchor(null)
     setRepeatAnchor(null)
     setPicking(false)
-    if (!isAdmin || !user) return setError('관리자 로그인이 필요합니다')
+    if (!isMember || !user) return setError('로그인이 필요합니다') // 구성원 쓰기 개방(2026-08-05)
     if (!title.trim()) return setError('제목을 입력해주세요')
     if (!date) return setError('날짜를 선택해주세요')
     if (!allDay && repeat === 'none' && (endDate || date) === date && endTime <= startTime)
@@ -510,7 +513,9 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
 
   const remove = () => {
     if (busy || !event) return
-    if (!isAdmin || !user) return setError('관리자 로그인이 필요합니다')
+    // 삭제만 '작성자 본인 또는 관리자' — DB 정책 cal_delete_own 과 같은 기준(2026-08-05).
+    // 삭제가 구글 캘린더에도 전파되므로 남의 일정은 못 지우게 한다. 작성자 미상(옛 일정)은 관리자만.
+    if (!canDelete || !user) return setError('내가 등록한 일정만 삭제할 수 있습니다')
     if (isSeries) { setScopeAsk('delete'); return }
     setDelAsk(true) // 표준 ConfirmDialog로 확인(window.confirm 대체)
   }
@@ -825,7 +830,8 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
         {error && <Typography role="alert" color="error" variant="body2" sx={{ mt: 1 }}>{error}</Typography>}
 
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.5 }}>
-          {mode === 'edit' && (
+          {/* 지울 수 없는 사람에게는 버튼을 숨긴다 — 보이는데 누르면 에러만 나는 '죽은 버튼'을 만들지 않는다 */}
+          {mode === 'edit' && canDelete && (
             <Button color="error" onClick={remove} disabled={busy} sx={{ mr: 'auto' }}>삭제</Button>
           )}
           <Button onClick={onClose} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>

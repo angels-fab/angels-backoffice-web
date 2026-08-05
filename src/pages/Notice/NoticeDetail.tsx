@@ -30,14 +30,16 @@ function MetaItem({ label, value }: { label: string; value: string }) {
 
 export interface NoticeDetailProps {
   notice: Notice
-  /** 팀원+ 모드 — 수정/삭제 액션 노출 */
+  /** 팀원+ 모드 — 수정 액션 노출 */
   canEdit?: boolean
+  /** 삭제 액션 노출 — 작성자 본인 또는 포털 관리자(2026-08-05) */
+  canDelete?: boolean
   onEdit?: (notice: Notice) => void
   onDelete?: (notice: Notice) => void
 }
 
 /** 공지 상세 — 목록 행 아래 아코디언으로 펼쳐지는 내용(구 NoticeDrawer 대체). */
-export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: NoticeDetailProps) {
+export default function NoticeDetail({ notice, canEdit, canDelete, onEdit, onDelete }: NoticeDetailProps) {
   const url = refUrl(notice)
   const dept = (notice.dept || '').trim()
   const target = (notice.target || '').trim()
@@ -117,7 +119,8 @@ export default function NoticeDetail({ notice, canEdit, onEdit, onDelete }: Noti
           {canEdit && (
             <Box sx={{ display: 'flex', gap: 0.25, flexShrink: 0 }}>
               <Tooltip title="수정"><IconButton size="small" aria-label="수정" onClick={() => onEdit?.(notice)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: iconSize.action }} /></IconButton></Tooltip>
-              <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="삭제" onClick={() => onDelete?.(notice)}><DeleteOutlineIcon sx={{ fontSize: iconSize.action }} /></IconButton></Tooltip>
+              {/* 삭제는 작성자 본인 또는 포털 관리자만(2026-08-05) */}
+              {canDelete && <Tooltip title="삭제"><IconButton size="small" color="error" aria-label="삭제" onClick={() => onDelete?.(notice)}><DeleteOutlineIcon sx={{ fontSize: iconSize.action }} /></IconButton></Tooltip>}
             </Box>
           )}
         </Box>

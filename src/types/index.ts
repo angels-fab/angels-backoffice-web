@@ -204,6 +204,8 @@ export interface CalEvent {
   recurring: boolean
   /** 반복 시리즈 그룹 id(빈 문자열=단독). 있으면 수정/삭제 시 범위 선택 */
   seriesId: string
+  /** 등록한 사람 — 삭제 게이트('작성자 본인 또는 관리자')용. 옛 일정은 빈 문자열 */
+  createdBy: string
 }
 
 // ── 공지사항 ('공지사항' 시트 1행 = Notice) ──

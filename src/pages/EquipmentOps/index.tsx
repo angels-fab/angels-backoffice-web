@@ -110,7 +110,7 @@ export default function EquipmentOps() {
   const [query, setQuery] = useState('')
   const [missingOnly, setMissingOnly] = useState(false)
   const [picked, setPicked] = useState<EqGroup | null>(null)
-  const { isAdmin, user, authKey } = useRole()
+  const { isMember, user, authKey } = useRole() // 구성원 쓰기 개방(2026-08-05)
   const [snack, setSnack] = useState<{ open: boolean; msg: string; severity: 'success' | 'error' }>({ open: false, msg: '', severity: 'success' })
   const showSnack = (msg: string, severity: 'success' | 'error' = 'success') => setSnack({ open: true, msg, severity })
 
@@ -394,10 +394,11 @@ export default function EquipmentOps() {
         )}
       </Box>
 
+      {/* isAdmin 프롭 = 수정·상태변경 노출 게이트 — 구성원 쓰기 개방(2026-08-05) */}
       <EqDetailDrawer
         group={picked}
         onClose={() => setPicked(null)}
-        isAdmin={isAdmin}
+        isAdmin={isMember}
         user={user}
         authKey={authKey}
         onSaved={handleSaved}

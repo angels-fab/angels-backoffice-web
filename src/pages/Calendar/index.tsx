@@ -128,8 +128,8 @@ export default function Calendar() {
 
   // 호버·클릭 상세 — 마우스 위치 기준. 호버(locked=false)는 포인터를 따라다니고, 클릭(locked=true)은 그 자리 고정.
   const [pop, setPop] = useState<{ detail: EventDetail; x: number; y: number; locked: boolean; evId?: string } | null>(null)
-  // 일정 작성/수정 모달(관리자) + 저장 안내 스낵바 — 5단계: 캘린더 쓰기 UI 연결(Supabase·세션 인증)
-  const { isAdmin } = useRole()
+  // 일정 작성/수정 모달(구성원) + 저장 안내 스낵바 — 5단계: 캘린더 쓰기 UI 연결(Supabase·세션 인증)
+  const { isMember } = useRole() // 구성원 쓰기 개방(2026-08-05)
   const snack = useSnack()
   const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string; initialEndDate?: string } | null>(null)
   // 새 일정 초안 — 누르는 순간부터 '(새 일정)' 막대로 미리보기(임시 일정이라 기존 일정을 안 덮음).
@@ -227,10 +227,10 @@ export default function Calendar() {
     return null
   }
 
-  // 일정 열기(마우스 클릭·키보드 Enter 공용) — 관리자=수정 모달 바로, 열람=그 자리 고정 상세(재실행=닫기)
+  // 일정 열기(마우스 클릭·키보드 Enter 공용) — 구성원=수정 모달 바로, 열람=그 자리 고정 상세(재실행=닫기)
   const openEventAt = (el: HTMLElement, x: number, y: number) => {
     const evId = idMap.current.get(el)
-    if (isAdmin && evId) {
+    if (isMember && evId) { // 구성원 쓰기 개방(2026-08-05)
       const ev = allEvents.find((e2) => e2.id === evId)
       closePop()
       if (ev) setWrite({ mode: 'edit', event: ev, initialDate: ev.start.slice(0, 10) })
@@ -493,7 +493,8 @@ export default function Calendar() {
         title="업무일정"
         actions={
           <>
-            {isAdmin && (
+            {/* 구성원 쓰기 개방(2026-08-05) */}
+            {isMember && (
               <Button
                 size="small"
                 variant="contained"
@@ -615,10 +616,10 @@ export default function Calendar() {
       <Box sx={{ minWidth: 0, position: 'relative' }}>
         <Box
           className="fc-theme-angels fc-team"
-          // 새 일정 제스처(월간·관리자): 빈 날짜 칸을 누르는 순간 '(새 일정)' 막대 생성 → 드래그로 기간 확장 → 놓으면 모달.
+          // 새 일정 제스처(월간·구성원): 빈 날짜 칸을 누르는 순간 '(새 일정)' 막대 생성 → 드래그로 기간 확장 → 놓으면 모달.
           // 사용자 확정: "누를 때부터 막대" — 셀 틴트(FC selectable) 대신 임시 일정 막대가 처음부터 보인다.
           onPointerDown={(e) => {
-            if (!isAdmin || view !== 'month' || e.button !== 0) return
+            if (!isMember || view !== 'month' || e.button !== 0) return // 구성원 쓰기 개방(2026-08-05)
             if (lockedEl.current) return // 상세 팝오버 열림 중엔 기존처럼 '닫기'만(생성 시작 안 함)
             const t = e.target as HTMLElement
             if (findEvAt(e.clientX, e.clientY)) return // 일정 위 — 열기/이동 제스처에 양보
@@ -693,7 +694,7 @@ export default function Calendar() {
               // 빈 날짜 칸 클릭 = 작성 모달. 월간은 pointer 제스처(누를 때부터 막대)가 담당하므로 그 외 뷰만 여기서 처리
               if (
                 view !== 'month' &&
-                isAdmin &&
+                isMember && // 구성원 쓰기 개방(2026-08-05)
                 !lockedEl.current &&
                 Date.now() >= dragClickSuppress.current &&
                 !(e.target as HTMLElement).closest('a, button, .fc-more-link, .fc-popover')
@@ -739,10 +740,11 @@ export default function Calendar() {
             slotEventOverlap={false}
             allDaySlot
             events={fcEvents}
-            // ── 구글캘린더식 상호작용(관리자만): 날짜 클릭=작성, 일정 드래그=이동, 끝단 드래그=기간 변경 ──
-            editable={isAdmin}
-            eventStartEditable={isAdmin}
-            eventDurationEditable={isAdmin}
+            // ── 구글캘린더식 상호작용(구성원): 날짜 클릭=작성, 일정 드래그=이동, 끝단 드래그=기간 변경 ──
+            // 구성원 쓰기 개방(2026-08-05)
+            editable={isMember}
+            eventStartEditable={isMember}
+            eventDurationEditable={isMember}
             eventDragStop={() => { dragClickSuppress.current = Date.now() + 400 }}
             eventDrop={(info: EventDropArg) => {
               dragClickSuppress.current = Date.now() + 400
@@ -757,7 +759,7 @@ export default function Calendar() {
               void commitEventChange(ev, info.event.start, info.event.end, () => info.revert())
             }}
             // 범위 드래그 선택 — 월간은 자체 제스처('(새 일정)' 막대)가 대체하므로 주(시간표) 뷰에서만 FC selectable.
-            selectable={isAdmin && view === 'timeweek'}
+            selectable={isMember && view === 'timeweek'} // 구성원 쓰기 개방(2026-08-05)
             select={(info) => {
               const spanDays = Math.round((info.end.getTime() - info.start.getTime()) / 86400000)
               if (!info.allDay || spanDays <= 1) return
@@ -821,7 +823,8 @@ export default function Calendar() {
           y={pop.y}
           locked={pop.locked}
           onEdit={
-            isAdmin && pop.evId
+            // 구성원 쓰기 개방(2026-08-05)
+            isMember && pop.evId
               ? () => {
                   const ev = allEvents.find((e2) => e2.id === pop.evId) || null
                   closePop()

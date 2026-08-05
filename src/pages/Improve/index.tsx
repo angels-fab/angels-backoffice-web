@@ -172,7 +172,7 @@ export default function Improve() {
   const dispatch = useAppDispatch()
   const { items, ready, loading, error } = useAppSelector((s) => s.improve)
   const replies = useAppSelector((s) => s.reply.items)
-  const { isAdmin, user, authKey } = useRole()
+  const { isMember, isAdmin, user, authKey } = useRole()
   // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 글을 읽음 처리.
   // error 게이트 필수: rejected가 items=[]·ready=true라, 없으면 재로딩 실패 한 번에 seen이 []로 지워짐
   useMarkSeen('improve', useMemo(() => items.filter(isImproveNew).map((i) => String(i.num)), [items]), ready && !error)
@@ -254,10 +254,11 @@ export default function Improve() {
   // 수정(상태·위치·유형·내용·사유·메모) = 로그인 관리자 전체 / 삭제 = 해당 글 담당자(작성자)만.
   // 담당자 미지정(mgr='')은 관리자 누구나 삭제 — RLS improvements_delete(mgr='' or mgr=my_name())와 같은 기준.
   // 이 조건이 빠져 있어 담당자 없는 글이 화면에서 영영 못 지워졌다(DB는 허용하는데 버튼만 안 나옴).
-  const canEdit = isAdmin && !!user && !!authKey
+  const canEdit = isMember && !!user && !!authKey // 구성원 쓰기 개방(2026-08-05)
   const canDelete = (t: ImprovementItem) => {
     const mgr = (t.mgr || '').trim()
-    return isAdmin && !!user && (mgr === '' || user === mgr)
+    // 구성원 쓰기 개방(2026-08-05) — 담당자 본인이면 구성원도 삭제, 관리자는 무조건 가능
+    return (isMember && !!user && (mgr === '' || user === mgr)) || isAdmin
   }
   // 여러 건 선택(요청번호 집합) — 한 건씩 지우던 걸 모아서 지우기 위한 것.
   // 이름이 picked 인 이유: 이 파일의 selected 는 상태 필터 선택이라 이미 쓰이고 있다.
@@ -717,7 +718,7 @@ export default function Improve() {
         <FilterToolbar
           label="상태"
           search={<SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·위치 검색" width={200} />}
-          actions={isAdmin ? (
+          actions={isMember ? ( // 구성원 쓰기 개방(2026-08-05)
             <Button
               onClick={() => (composing ? requestClose() : void openCompose())}
               startIcon={<AddIcon />}
@@ -820,13 +821,14 @@ export default function Improve() {
             </TableHead>
             <TableBody>
               {/* 새 요청 인라인 작성 — 표 최상단. 요청 추가/임시저장/등록/취소는 하단 컨트롤 행. */}
-              {isAdmin && composing && draftsLoading && (
+              {/* 구성원 쓰기 개방(2026-08-05) */}
+              {isMember && composing && draftsLoading && (
                 <TableRow>
                   <TableCell colSpan={fullSpan} sx={{ textAlign: 'center', py: 2 }}><LoadingState /></TableCell>
                 </TableRow>
               )}
-              {isAdmin && composing && !draftsLoading && cards.map((c, idx) => renderComposeCard(c, idx))}
-              {isAdmin && composing && !draftsLoading && (
+              {isMember && composing && !draftsLoading && cards.map((c, idx) => renderComposeCard(c, idx))}
+              {isMember && composing && !draftsLoading && (
                 <TableRow key="compose-controls" sx={{ '& td': { bgcolor: composeGreen, py: 1, borderBottom: '2px solid', borderColor: 'divider' } }}>
                   <TableCell colSpan={fullSpan}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -1023,7 +1025,8 @@ export default function Improve() {
                         <ReplyThread
                           key={t.id}
                           replies={rowReplies}
-                          isAdmin={isAdmin}
+                          // 구성원 쓰기 개방(2026-08-05) — 답글 등록·본인 답글 수정/삭제
+                          isAdmin={isMember}
                           user={user}
                           busy={replyBusy}
                           onCreate={(content) => createReplyH(t.num, content)}

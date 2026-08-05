@@ -63,7 +63,7 @@ const statusDot = (s: DerivedStatus) =>
 export default function Milestone() {
   const dispatch = useAppDispatch()
   const { items, ready, loading, error } = useAppSelector((s) => s.milestone)
-  const { isAdmin, user } = useRole()
+  const { isMember, user } = useRole() // 구성원 쓰기 개방(2026-08-05)
   const snack = useSnack()
   const isMobile = useMediaQuery(shellMq, { noSsr: true })
 
@@ -197,7 +197,7 @@ export default function Milestone() {
 
   // ── 상태·담당자·기간 갱신(낙관적 + 실패 롤백) ──
   const changeStatus = async (row: MilestoneRow, status: MilestoneStatus) => {
-    if (!isAdmin) return
+    if (!isMember) return // 구성원 쓰기 개방(2026-08-05)
     const by = user || ''
     const prev = { status: row.status, completedAt: row.completedAt, updatedBy: row.updatedBy, updatedAt: row.updatedAt }
     dispatch(patchMilestone({ id: row.id, status, updatedBy: by, updatedAt: new Date().toISOString() }))
@@ -212,7 +212,7 @@ export default function Milestone() {
   }
 
   const saveOwner = async (row: MilestoneRow, owner: string) => {
-    if (!isAdmin) return
+    if (!isMember) return // 구성원 쓰기 개방(2026-08-05)
     const by = user || ''
     const prev = { owner: row.owner, updatedBy: row.updatedBy, updatedAt: row.updatedAt }
     dispatch(patchMilestone({ id: row.id, owner, updatedBy: by, updatedAt: new Date().toISOString() }))
@@ -226,7 +226,7 @@ export default function Milestone() {
   }
 
   const saveQuarters = async (row: MilestoneRow, startQ: string, endQ: string) => {
-    if (!isAdmin) return
+    if (!isMember) return // 구성원 쓰기 개방(2026-08-05)
     const by = user || ''
     const prev = { startQ: row.startQ, endQ: row.endQ, fuzzy: row.fuzzy, updatedBy: row.updatedBy, updatedAt: row.updatedAt }
     dispatch(patchMilestone({ id: row.id, startQ, endQ, fuzzy: false, updatedBy: by, updatedAt: new Date().toISOString() }))
@@ -251,7 +251,7 @@ export default function Milestone() {
   const panelProps = selectedRow && {
     row: selectedRow,
     curIdx,
-    canEdit: isAdmin,
+    canEdit: isMember, // 구성원 쓰기 개방(2026-08-05)
     onChangeStatus: (r: MilestoneRow, s: MilestoneStatus) => void changeStatus(r, s),
     onSaveOwner: (r: MilestoneRow, o: string) => void saveOwner(r, o),
     onSaveQuarters: (r: MilestoneRow, sq: string, eq: string) => void saveQuarters(r, sq, eq),
@@ -276,7 +276,7 @@ export default function Milestone() {
       title={r.title}
       subtitle={categoryShort(r.category)}
       trailing={
-        isAdmin ? (
+        isMember ? ( // 구성원 쓰기 개방(2026-08-05)
           <Button
             size="small"
             variant="outlined"

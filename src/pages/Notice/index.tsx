@@ -78,8 +78,10 @@ export default function Notice() {
   const navigate = useNavigate()
   const { num } = useParams()
   const { items, ready, loading, error } = useAppSelector((s) => s.notice)
-  // 공지 작성/수정/삭제 = 팀원(member)+관리자. (게스트·유관자는 열람만)
-  const { isMember, user, authKey } = useRole()
+  // 공지 작성/수정 = 팀원(member)+관리자. (게스트·유관자는 열람만)
+  // 삭제만 예외 — 작성자 본인 또는 포털 관리자(2026-08-05)
+  const { isMember, isAdmin, user, authKey } = useRole()
+  const canDelete = (n: NoticeItem) => isMember && (n.author === user || isAdmin)
   // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 글을 읽음 처리.
   // error 게이트 필수: 로드 실패도 ready=true라, 없으면 실패(빈 목록)를 '새 글 0'으로 오인해 seen을 지움
   useMarkSeen('notice', useMemo(() => items.filter((n) => n.isNew).map((n) => String(n.num)), [items]), ready && !error)
@@ -324,7 +326,7 @@ export default function Notice() {
         <TableRow>
           <TableCell colSpan={isMember ? 7 : 6} sx={{ p: 0, border: 0 }}>
             <Collapse in={open} timeout="auto" unmountOnExit>
-              <NoticeDetail notice={n} canEdit={isMember} onEdit={startEdit} onDelete={setDeleteTarget} />
+              <NoticeDetail notice={n} canEdit={isMember} canDelete={canDelete(n)} onEdit={startEdit} onDelete={setDeleteTarget} />
             </Collapse>
           </TableCell>
         </TableRow>
@@ -457,10 +459,13 @@ export default function Notice() {
             <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
             <ListItemText>수정</ListItemText>
           </MenuItem>
-          <MenuItem onClick={act(setDeleteTarget)} sx={{ color: 'error.main' }}>
-            <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
-            <ListItemText>삭제</ListItemText>
-          </MenuItem>
+          {/* 삭제는 작성자 본인 또는 포털 관리자만(2026-08-05) */}
+          {menuFor && canDelete(menuFor.n) && (
+            <MenuItem onClick={act(setDeleteTarget)} sx={{ color: 'error.main' }}>
+              <ListItemIcon><DeleteOutlineIcon fontSize="small" sx={{ color: 'error.main' }} /></ListItemIcon>
+              <ListItemText>삭제</ListItemText>
+            </MenuItem>
+          )}
         </Menu>
       )}
 

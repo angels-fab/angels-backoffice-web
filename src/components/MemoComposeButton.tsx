@@ -29,7 +29,7 @@ import { control, iconSize, radius, typescale, weight } from '@/theme/tokens'
  */
 export default function MemoComposeButton() {
   const { pathname } = useLocation()
-  const { isAdmin, user, authKey } = useRole()
+  const { isMember, user, authKey } = useRole()
   const dispatch = useAppDispatch()
   const snack = useSnack()
   const anchorRef = useRef<HTMLButtonElement>(null)
@@ -45,7 +45,7 @@ export default function MemoComposeButton() {
   const loc = pathToLocation(pathname)
 
   // 쓰기 권한은 게시판(canEdit)과 동일 — 게스트·유관자에게는 버튼 자체를 노출하지 않는다
-  if (!isAdmin || !user || !authKey) return null
+  if (!isMember || !user || !authKey) return null // 구성원 쓰기 개방(2026-08-05)
 
   const close = () => { if (!busy) setOpen(false) }
 

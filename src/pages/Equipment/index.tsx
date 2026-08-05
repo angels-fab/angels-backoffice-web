@@ -157,7 +157,7 @@ export default function Equipment() {
   const dispatch = useAppDispatch()
   const { groups, schedule, months, loading, error } = useAppSelector((s) => s.eq)
   const counts = useAppSelector(selectEqCounts)
-  const { isAdmin, user, authKey } = useRole()
+  const { isMember, user, authKey } = useRole() // 구성원 쓰기 개방(2026-08-05)
   const [searchParams, setSearchParams] = useSearchParams()
   const [view, setView] = useState<IntroView>('stage') // 기본 보기 = 단계별
   // 데모결과 '추가' 버튼 슬롯 — 뷰탭과 같은 행 우측(DemoResults가 포탈로 버튼을 꽂음)
@@ -182,7 +182,7 @@ export default function Equipment() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const canEdit = isAdmin && editMode
+  const canEdit = isMember && editMode // 구성원 쓰기 개방(2026-08-05)
   const todayHalf = useMemo(() => todayHalfIndex(months), [months])
 
   // 도입배치 + 단계 정보
@@ -710,7 +710,7 @@ export default function Equipment() {
   redoRef.current = redo
   blockKeyRef.current = !!(pending || writeOpen || editTarget || deleteTarget || dragging || resizing)
   useEffect(() => {
-    if (!isAdmin) return
+    if (!isMember) return // 구성원 쓰기 개방(2026-08-05)
     const onKey = (e: KeyboardEvent) => {
       if (e.repeat) return
       if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return
@@ -723,7 +723,7 @@ export default function Equipment() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isAdmin])
+  }, [isMember])
 
   // 단계별 보드 데이터
   const stageBoard = useMemo(() => {
@@ -752,7 +752,8 @@ export default function Equipment() {
         updatedAt={error ? '연결 실패' : undefined}
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {isAdmin && (
+            {/* 구성원 쓰기 개방(2026-08-05) */}
+            {isMember && (
               <>
                 <IconButton aria-label="실행취소" title="실행취소 (Ctrl+Z)" onClick={undo} disabled={!undoStack.length} size="small" sx={{ color: 'text.secondary' }}>
                   <UndoIcon sx={{ fontSize: iconSize.header }} />
@@ -843,7 +844,8 @@ export default function Equipment() {
             <Select value={fltType} onChange={setFltType} ariaLabel="내자/외자"
               options={typeOpts.map((o) => ({ value: o, label: o === '전체' ? optLabel('전체 구분', optCounts.typeAll) : optLabel(o, optCounts.type[o] || 0) }))} />
             <SearchBar value={query} onChange={setQuery} placeholder="장비명·관리번호 검색" width={200} />
-            {isAdmin && (
+            {/* 구성원 쓰기 개방(2026-08-05) */}
+            {isMember && (
               <Button
                 size="small" variant={editMode ? 'contained' : 'outlined'} startIcon={<EditCalendarIcon sx={{ fontSize: iconSize.body }} />}
                 onClick={() => (editMode ? requestExitEdit() : startEditMode())}
@@ -990,16 +992,18 @@ export default function Equipment() {
         )}
       </Box>
 
+      {/* isAdmin 프롭 = 수정·삭제 노출 게이트 — 구성원 쓰기 개방(2026-08-05) */}
       <EqProjectDrawer
         group={picked?.g ?? null}
         info={picked?.info ?? null}
         onClose={() => setPicked(null)}
-        isAdmin={isAdmin}
+        isAdmin={isMember}
         onEdit={openEdit}
         onDelete={(g) => setDeleteTarget(g)}
       />
 
-      {isAdmin && (
+      {/* 구성원 쓰기 개방(2026-08-05) */}
+      {isMember && (
         <ScheduleWrite
           open={writeOpen || !!editTarget}
           editing={editTarget}
