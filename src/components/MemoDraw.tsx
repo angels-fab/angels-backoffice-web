@@ -76,15 +76,23 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
   onCancel: () => void
 }) {
   /**
-   * 획 이력은 **한 덩어리 상태**로 둔다 — done(그린 것) + undone(실행취소로 뺀 것).
+   * 획 이력은 **한 덩어리 상태 + 스냅샷 스택**으로 둔다.
    *
-   * 종전에는 둘을 따로 두고 setStrokes 의 갱신 함수 *안에서* setUndone 을 불렀다.
-   * 갱신 함수는 순수해야 하는데(개발 모드에서 일부러 두 번 실행한다) 그 안에서 다른 상태를 바꾸니
-   * 실행취소 한 번에 이력이 두 번 쌓여 다시실행이 엉켰다(2026-08-05 사용자 신고: undo 가 이상하다).
-   * 한 상태로 합치면 모든 조작이 순수한 갱신 하나로 끝나 이 문제가 생길 수 없다.
+   * ① 한 덩어리인 이유 — 종전에는 done/undone 을 따로 두고 setStrokes 의 갱신 함수 *안에서*
+   *    setUndone 을 불렀다. 갱신 함수는 순수해야 하는데(개발 모드에서 일부러 두 번 실행한다)
+   *    그 안에서 다른 상태를 바꾸니 실행취소 한 번에 이력이 두 번 쌓여 다시실행이 엉켰다
+   *    (2026-08-05 사용자 신고: undo 가 이상하다).
+   * ② 스냅샷인 이유 — '되돌릴 획'을 하나씩 빼는 방식이면 **지우개로 지운 획이 이력에 안 남는다.**
+   *    A·B·C 를 그리고 지우개로 A 를 지운 뒤 Ctrl+Z 를 누르면, 이력에는 지운 기록이 없으니
+   *    멀쩡한 C 가 대신 사라지고 A 는 영영 못 돌아왔다(2026-08-05 전수검사에서 확인).
+   *    그리기·지우개·전부 지우기를 모두 '되돌림 지점 하나 + 새 상태'로 통일하면 다 같이 복구된다.
+   *
+   * erased = 이번 지우개 제스처에서 이미 되돌림 지점을 만들었는지. 지우개는 포인터가 움직일 때마다
+   * 호출되므로 이게 없으면 한 번 문지르는 동안 이력이 수십 개 쌓인다.
    */
-  const [hist, setHist] = useState<{ done: MemoStroke[]; undone: MemoStroke[] }>({ done: initial || [], undone: [] })
-  const strokes = hist.done
+  type Hist = { past: MemoStroke[][]; cur: MemoStroke[]; future: MemoStroke[][]; erased: boolean }
+  const [hist, setHist] = useState<Hist>({ past: [], cur: initial || [], future: [], erased: false })
+  const strokes = hist.cur
   const [pen, setPen] = useState(PENS[0])
   const [width, setWidth] = useState(WIDTHS[0])
   const [erasing, setErasing] = useState(false)
@@ -100,15 +108,23 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
   const inkColor = theme.palette.text.primary
   const strokeOf = (c: string) => (c === INK ? inkColor : c)
 
-  // 모두 순수 갱신 하나로 끝난다 — 갱신 함수 안에서 다른 상태를 건드리지 않는다
-  const undo = () => setHist((h) => (h.done.length === 0 ? h : { done: h.done.slice(0, -1), undone: [...h.undone, h.done[h.done.length - 1]] }))
-  const redo = () => setHist((h) => (h.undone.length === 0 ? h : { done: [...h.done, h.undone[h.undone.length - 1]], undone: h.undone.slice(0, -1) }))
-  const clearAll = () => setHist({ done: [], undone: [] })
+  // 모두 순수 갱신 하나로 끝난다 — 갱신 함수 안에서 다른 상태·ref 를 건드리지 않는다
+  const canUndo = hist.past.length > 0
+  const canRedo = hist.future.length > 0
+  const undo = () => setHist((h) => (h.past.length === 0 ? h
+    : { past: h.past.slice(0, -1), cur: h.past[h.past.length - 1], future: [h.cur, ...h.future], erased: false }))
+  const redo = () => setHist((h) => (h.future.length === 0 ? h
+    : { past: [...h.past, h.cur], cur: h.future[0], future: h.future.slice(1), erased: false }))
+  const clearAll = () => setHist((h) => (h.cur.length === 0 ? h
+    : { past: [...h.past, h.cur], cur: [], future: [], erased: false }))
 
   /**
    * 키보드 — Ctrl/⌘+Z 실행취소 · Ctrl/⌘+Shift+Z(또는 Ctrl+Y) 다시실행 · Esc 그리기 닫기.
-   * 그리는 중에는 입력칸에 포커스가 갈 일이 없어 가로채도 안전하다.
    * onCancel 은 ref 로 잡아 리스너를 한 번만 건다(부모가 매 렌더 새 함수를 넘겨도 재등록되지 않게).
+   *
+   * ⚠ 입력칸 안에서는 Ctrl+Z 를 가로채지 않는다 — 그리는 중에도 쪽지 답글칸·검색창은 살아 있어서
+   * 거기서 글자를 되돌리려던 Ctrl+Z 가 그림을 되돌려 버렸다(2026-08-05 전수검사에서 확인).
+   * Esc 는 어디서 눌러도 그리기를 닫는 게 맞으므로 이 검사 위에 둔다.
    */
   const cancelRef = useRef(onCancel)
   cancelRef.current = onCancel
@@ -117,6 +133,8 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
       if (e.key === 'Escape') { e.preventDefault(); cancelRef.current(); return }
       const mod = e.ctrlKey || e.metaKey
       if (!mod) return
+      const t = e.target as HTMLElement | null
+      if (t?.closest?.('input, textarea, [contenteditable="true"]')) return
       const k = e.key.toLowerCase()
       if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
       else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo() }
@@ -126,17 +144,35 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /** 지우개 — 지나간 자리에 걸린 획을 통째로 지운다(획 단위. 선 일부만 지우는 방식은 과함) */
-  const eraseAt = (x: number, y: number) =>
-    setHist((h) => ({
-      ...h,
-      done: h.done.filter((st) => {
-        for (let i = 0; i + 1 < st.p.length; i += 2) {
-          if (Math.abs(st.p[i] - x) <= ERASE_R && Math.abs(st.p[i + 1] - y) <= ERASE_R) return false
-        }
-        return true
-      }),
-    }))
+  /**
+   * 커서와 획 사이 거리 — **꼭짓점이 아니라 선분까지의 거리**로 잰다.
+   * 점만 보면 빠르게 그은 직선은 점이 양 끝에만 있어서 한가운데를 아무리 문질러도 안 지워졌다
+   * (2026-08-05 전수검사에서 확인). 굵은 획일수록 더 관대하게 잡는다.
+   */
+  const hits = (st: MemoStroke, x: number, y: number) => {
+    const r = ERASE_R + st.w / 2
+    const p = st.p
+    if (p.length <= 2) return Math.hypot((p[0] ?? 0) - x, (p[1] ?? 0) - y) <= r
+    for (let i = 0; i + 3 < p.length; i += 2) {
+      const ax = p[i], ay = p[i + 1], dx = p[i + 2] - ax, dy = p[i + 3] - ay
+      const len2 = dx * dx + dy * dy
+      const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2))
+      if (Math.hypot(ax + t * dx - x, ay + t * dy - y) <= r) return true
+    }
+    return false
+  }
+
+  /**
+   * 지우개 — 지나간 자리에 걸린 획을 통째로 지운다(선 일부만 지우는 방식은 과함).
+   * start = 제스처 시작(포인터 누름). 되돌림 지점은 **제스처당 한 번만** 쌓는다.
+   */
+  const eraseAt = (x: number, y: number, start = false) =>
+    setHist((h) => {
+      const cur = h.cur.filter((st) => !hits(st, x, y))
+      if (cur.length === h.cur.length) return start && h.erased ? { ...h, erased: false } : h
+      const fresh = start || !h.erased
+      return { past: fresh ? [...h.past, h.cur] : h.past, cur, future: [], erased: true }
+    })
 
   /** 포인터 위치 → 본문 칸 기준 px */
   const at = (e: React.PointerEvent): [number, number] | null => {
@@ -151,9 +187,9 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     if (!p) return
     drawing.current = true
     try { svgRef.current?.setPointerCapture(e.pointerId) } catch { /* 캡처 실패해도 그리기는 동작 */ }
-    if (erasing) return eraseAt(p[0], p[1])
+    if (erasing) return eraseAt(p[0], p[1], true)
     // 새로 그으면 다시실행 이력은 끊는다(편집기 표준)
-    setHist((h) => ({ done: [...h.done, { c: pen.color, w: width, p }], undone: [] }))
+    setHist((h) => ({ past: [...h.past, h.cur], cur: [...h.cur, { c: pen.color, w: width, p }], future: [], erased: false }))
   }
   const move = (e: React.PointerEvent) => {
     if (!drawing.current) return
@@ -161,12 +197,12 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     if (!p) return
     if (erasing) return eraseAt(p[0], p[1])
     setHist((h) => {
-      const last = h.done[h.done.length - 1]
+      const last = h.cur[h.cur.length - 1]
       if (!last) return h
       // 같은 자리 반복 점은 버린다 — 저장 용량과 렌더 비용이 그냥 늘어난다
       const n = last.p.length
       if (last.p[n - 2] === p[0] && last.p[n - 1] === p[1]) return h
-      return { ...h, done: [...h.done.slice(0, -1), { ...last, p: [...last.p, ...p] }] }
+      return { ...h, cur: [...h.cur.slice(0, -1), { ...last, p: [...last.p, ...p] }] }
     })
   }
   const up = () => { drawing.current = false }
@@ -184,6 +220,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         sx={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
           pointerEvents: 'auto', cursor: erasing ? ERASER_CURSOR : 'crosshair', touchAction: 'none',
+          overflow: 'visible', // 판 밖(여백)까지 끌고 나간 획도 그려야 저장 결과와 화면이 같다
           zIndex: 5,
         }}
       >
@@ -260,14 +297,14 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
 
         <Tooltip title="실행취소 (Ctrl+Z)">
           <span>
-            <IconButton size="small" aria-label="실행취소" disabled={strokes.length === 0} onClick={undo}>
+            <IconButton size="small" aria-label="실행취소" disabled={!canUndo} onClick={undo}>
               <UndoIcon sx={{ fontSize: typescale.cardTitle.size }} />
             </IconButton>
           </span>
         </Tooltip>
         <Tooltip title="다시실행 (Ctrl+Shift+Z)">
           <span>
-            <IconButton size="small" aria-label="다시실행" disabled={hist.undone.length === 0} onClick={redo}>
+            <IconButton size="small" aria-label="다시실행" disabled={!canRedo} onClick={redo}>
               <RedoIcon sx={{ fontSize: typescale.cardTitle.size }} />
             </IconButton>
           </span>
@@ -283,7 +320,9 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', mx: 0.5 }} />
 
         <Button size="small" onClick={onCancel} sx={{ color: 'text.secondary', fontWeight: weight.medium }}>취소 (Esc)</Button>
-        <Button size="small" variant="contained" onClick={() => onDone(strokes)}>완료</Button>
+        {/* 점 하나짜리 획(제자리 클릭)은 버린다 — polyline 은 점 하나를 안 그리므로
+            화면에는 아무것도 없는데 저장만 되는 '보이지 않는 그림'이 생긴다 */}
+        <Button size="small" variant="contained" onClick={() => onDone(strokes.filter((s) => s.p.length >= 4))}>완료</Button>
       </Box>
     </>
   )

@@ -4,8 +4,8 @@ import type { ImprovementItem } from '@/types'
 
 /**
  * 개선위치(시트 값) → 앱 라우트 경로.
- * 장비도입관리·장비운영관리·장비관리는 모두 통합 '장비관리' 페이지(/equipment)로 합산한다
- * (메모 항목에는 실제 개선위치를 그대로 표시).
+ * 장비는 탭이 둘이라 경로도 둘이다(도입=/equipment · 운영=/equipment-ops). 쪽지는 쓴 탭에 뜨고,
+ * 사이드바 배지는 메뉴가 '장비관리' 하나뿐이라 memoCountByPath 에서 합산한다.
  * '기타' 또는 알 수 없는 값은 연결 페이지가 없으므로 제외한다.
  */
 export const MEMO_LOCATION_PATH: Record<string, string> = {
@@ -14,7 +14,7 @@ export const MEMO_LOCATION_PATH: Record<string, string> = {
   '업무일정': '/calendar',
   '업무현황': '/work',
   '장비도입관리': '/equipment',
-  '장비운영관리': '/equipment',
+  '장비운영관리': '/equipment-ops',
   '장비관리': '/equipment',
   '마일스톤': '/milestone',
   '학술·교육·전시': '/events',
@@ -96,7 +96,10 @@ const PATH_LOCATION: { path: string; loc: string }[] = [
   { path: '/notice', loc: '공지사항' },
   { path: '/calendar', loc: '업무일정' },
   { path: '/work', loc: '업무현황' },
-  { path: '/equipment', loc: '장비운영관리' },
+  // 장비운영 탭은 별도 라우트다. 이 줄이 없어서 그 탭에서 남긴 쪽지·그림이 '기타'로 저장돼
+  // 어느 화면에도 뜨지 않고 사라졌다(2026-08-05 전수검사에서 확인).
+  { path: '/equipment-ops', loc: '장비운영관리' },
+  { path: '/equipment', loc: '장비도입관리' },
   { path: '/milestone', loc: '마일스톤' },
   { path: '/events', loc: '학술·교육·전시' },
   { path: '/improve', loc: '포털개선요청' },
@@ -111,13 +114,14 @@ export function pathToLocation(pathname: string): string | null {
   return null
 }
 
-/** 경로별 활성 메모 건수 — 장비도입/장비운영은 /equipment로 합산 (SideNav 배지용) */
+/** 경로별 활성 메모 건수 — 장비 운영 탭은 /equipment로 합산 (SideNav 메뉴가 '장비관리' 하나라서) */
 export function memoCountByPath(items: ImprovementItem[]): Record<string, number> {
   const m: Record<string, number> = {}
   for (const t of items) {
     if (t.memo !== true) continue
-    const p = locationToPath(t.loc)
+    let p = locationToPath(t.loc)
     if (!p) continue
+    if (p === '/equipment-ops') p = '/equipment'
     m[p] = (m[p] || 0) + 1
   }
   return m

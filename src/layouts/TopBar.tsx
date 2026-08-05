@@ -218,14 +218,15 @@ export default function TopBar() {
           {/* 이 화면에 메모 붙이기 — 게시판 폼을 거치지 않는 개선요청 입력 창구(쓰기 권한자만 렌더) */}
           <MemoComposeButton />
           {/* 화면에 그리기 — 포털 관리자 전용 편의 도구. 메모를 켜지 않고도 바로 그릴 수 있게
-              메모 버튼 옆에 따로 뒀다(사용자 지시 2026-08-05). 판은 쪽지 레이어가 띄운다. */}
+              메모 버튼 옆에 따로 뒀다(사용자 지시 2026-08-05). 판은 쪽지 레이어가 띄운다.
+              PC 에서만 보인다 — 쪽지 레이어 자체가 PC 전용이라 모바일에서는 눌러도 아무 일도 안 났다. */}
           {isAdmin && (
             <Tooltip title="화면에 그리기">
               <IconButton
                 aria-label="화면에 그리기"
                 onClick={() => window.dispatchEvent(new Event(MEMO_DRAW_EVENT))}
                 size="small"
-                sx={{ color: 'text.secondary' }}
+                sx={{ display: { xs: 'none', shell: 'inline-flex' }, color: 'text.secondary' }}
               >
                 <GestureIcon sx={{ fontSize: iconSize.header }} />
               </IconButton>

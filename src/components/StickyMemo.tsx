@@ -421,7 +421,9 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
         // 화면 위에 떠 있는 쪽지(드래그 이동) — 카드가 아니라 부유 표면이라 lg
         boxShadow: shadow.lg,
         transition: 'border-color .15s, box-shadow .15s',
-        '&:hover': { borderColor: th.palette.accent.amber, zIndex: 2 },
+        // 호버 z 는 펼침 값(3)보다 낮으면 안 된다 — 종전의 고정 2 는 겹친 쪽지 둘 중
+        // 마우스를 올린 쪽을 오히려 뒤로 밀어 위아래로 깜빡였다
+        '&:hover': { borderColor: th.palette.accent.amber, zIndex: open ? 3 : 2 },
         '&:active': { cursor: 'grabbing', zIndex: 4 },
         '& input': { cursor: 'text', userSelect: 'text' },
       })}
@@ -566,7 +568,8 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
                   fullWidth
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void sendReply() } }}
+                  // isComposing 검사가 없으면 한글 조합을 Enter 로 확정하는 순간 답글이 전송된다
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); void sendReply() } }}
                   placeholder="답글 달기"
                   disabled={busy}
                   slotProps={{ htmlInput: { 'aria-label': '답글 입력' } }}
@@ -685,11 +688,22 @@ export default function StickyMemoLayer() {
   const [pendingText, setPendingText] = useState('')
   const [busyPending, setBusyPending] = useState(false)
   const [openNum, setOpenNum] = useState<string | null>(null) // 방금 만든 쪽지 — 처음부터 펼쳐 보인다
-  // 지금 주목 중인 쪽지(펼침·끌기) — 그 그림만 진하게, 나머지는 흐리게
-  const [activeNum, setActiveNum] = useState<string | null>(null)
+  /**
+   * 지금 주목 중인 쪽지들(펼침·끌기·마우스 올림) — 그 그림만 빛나고 나머지는 흐려진다.
+   *
+   * 값 하나로 두면 안 된다. 쪽지 A·B 를 둘 다 펼친 뒤 B 만 접으면, B 가 '내가 켰던 것'이라며
+   * 표시를 지워 **아직 펼쳐져 있는 A 의 하이라이트까지 같이 꺼졌다**(2026-08-05 전수검사에서 확인).
+   * A 는 자기 상태가 그대로라 다시 알려 줄 일이 없으니 되살아나지도 않았다.
+   * 켜진 것을 전부 들고 있다가 마지막 것을 고르면 이런 승계가 저절로 된다.
+   */
+  const [activeSet, setActiveSet] = useState<string[]>([])
+  const activeNum = activeSet.length ? activeSet[activeSet.length - 1] : null
   const markActive = useCallback((num: string, active: boolean) => {
-    // 켤 때는 자기 것만 켜고, 끌 때는 '내가 켰던 것'일 때만 끈다(다른 메모의 활성을 뺏지 않게)
-    setActiveNum((cur) => (active ? num : cur === num ? null : cur))
+    setActiveSet((cur) => {
+      const has = cur.includes(num)
+      if (active) return has ? cur : [...cur, num]
+      return has ? cur.filter((n) => n !== num) : cur
+    })
   }, [])
   const snack = useSnack()
   const attachLayer = useCallback((el: HTMLDivElement | null) => {
@@ -756,7 +770,10 @@ export default function StickyMemoLayer() {
    * 고칠 곳을 말로 설명하는 대신 화면에 직접 표시해 두는 편의 도구라, 구성원에게는
    * 도구도 그림도 노출하지 않는다. 저장은 쪽지(개선요청)에 딸린다 — 그림만 따로 떠다니지 않는다.
    */
-  const drawTarget = memos.find((t) => t.num === drawFor) || null
+  // 'new' = 상단바에서 시작한 새 그림. 그 외에는 고치는 중인 쪽지 번호다.
+  // 대상은 경로로 걸러진 memos 가 아니라 **전체 목록**에서 찾는다 — 걸러진 쪽에서 찾으면
+  // 화면이 바뀌는 순간 대상이 사라져, 원본 그림을 고치는 대신 새 요청이 하나 더 생겼다.
+  const drawTarget = drawFor && drawFor !== 'new' ? items.find((t) => t.num === drawFor) || null : null
   // 주목 중인 메모가 실제로 그림을 갖고 있을 때만 '나머지 흐리게'가 의미가 있다
   const activeHasDrawing = !!memos.find((t) => t.num === activeNum)?.drawing?.length
 
@@ -801,11 +818,16 @@ export default function StickyMemoLayer() {
       // 게시판 목록이 읽히려면 제목이 있어야 한다 — 내용이 있으면 첫 줄, 없으면 기본 제목
       const title = body ? firstLine(body) : `화면 그림 — ${loc || '기타'}`
       const num = await createImprovement({ author: user, key: authKey, loc: loc || '기타', title, content: body, mgr: user })
-      await updateImprovement({ author: user, key: 'session', num, memo: true, drawing: pending.strokes })
+      // 연결되는 화면이 있을 때만 쪽지·그림으로 띄운다(MemoComposeButton 과 같은 규칙).
+      // '기타'로 올린 그림은 어느 화면에도 안 뜨는데 화면에서는 사라지므로, 그리 되면 분명히 알린다.
+      if (loc) await updateImprovement({ author: user, key: 'session', num, memo: true, drawing: pending.strokes })
+      else snack(`이 화면은 연결된 개선위치가 없어 게시판 접수만 됩니다. (요청 #${num})`, 'warning')
       // 쪽지를 **입력창이 있던 그 자리에 펼친 채로** 남긴다(2026-08-05 사용자 지시).
       // 자리를 먼저 저장해야 한다 — 안 그러면 아래 '빈 슬롯 배정' effect 가 기본 자리(메모 버튼 밑)를
       // 잡아버려 압정이 상단바 근처로 튀었다. putSetting 은 낙관 반영이라 목록이 갱신될 때 이미 들어가 있다.
-      dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [String(num)]: { x: pending.x, y: pending.y } } }))
+      // ⚠ 자리 배정 effect 와 같은 게이트 — 개인 설정 로드가 실패한 상태에서 저장하면
+      // saved 가 비어 있어 **서버에 있던 다른 압정 좌표를 통째로 날린다**(이 키는 맵 통째로 치환).
+      if (usLoadedOk) dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [String(num)]: { x: pending.x, y: pending.y } } }))
       setOpenNum(String(num))
       setPending(null)
       setPendingText('')
@@ -817,13 +839,36 @@ export default function StickyMemoLayer() {
     }
   }
 
-  // 상단바 '그리기' 버튼 신호 — 쪽지가 없어도 바로 그릴 수 있게(관리자 전용)
+  // 상단바 '그리기' 버튼 신호 — 쪽지가 없어도 바로 그릴 수 있게(관리자 전용).
+  // 이미 그리는 중이면 무시한다 — 종전에는 다시 누르면 대상이 'new' 로 덮이면서 key 가 바뀌어
+  // MemoDraw 가 통째로 새로 마운트됐고, 그리던 획이 아무 말 없이 전부 사라졌다.
   useEffect(() => {
     if (!isAdmin) return
-    const start = () => setDrawFor('new')
+    const start = () => setDrawFor((cur) => cur ?? 'new')
     window.addEventListener(MEMO_DRAW_EVENT, start)
     return () => window.removeEventListener(MEMO_DRAW_EVENT, start)
   }, [isAdmin])
+
+  /**
+   * 화면을 옮기면 그리던 것을 정리한다.
+   *
+   * 레이어는 MainLayout 에 있어 경로가 바뀌어도 살아남는다. 그래서 그리기 판이나 입력창을
+   * 열어 둔 채 다른 메뉴로 넘어간 뒤 '붙이기'를 누르면, 그림은 아까 화면의 것인데
+   * 개선위치는 **지금 보고 있는 화면**으로 저장됐다(2026-08-05 전수검사에서 확인).
+   * 그림은 그 화면을 가리키는 것이라 화면을 떠나면 의미가 없다 — 정리하고 알린다.
+   * openNum(방금 만든 쪽지 자동 펼침)도 여기서 비운다. 안 그러면 그 화면에 들어올 때마다 계속 펼쳐진다.
+   */
+  const busyDrawRef = useRef(false)
+  busyDrawRef.current = !!drawFor || !!pending
+  useEffect(() => {
+    setOpenNum(null)
+    if (!busyDrawRef.current) return
+    setDrawFor(null)
+    setPending(null)
+    setPendingText('')
+    snack('화면을 옮겨 그리던 그림을 닫았습니다.', 'info')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
   // 쪽지가 없어도 관리자면 레이어를 띄운다 — 상단바 '그리기'가 언제나 열려야 하므로.
   // (레이어는 클릭을 통과시키므로 비어 있어도 화면을 가리지 않는다.)
@@ -869,6 +914,9 @@ export default function StickyMemoLayer() {
               aria-hidden
               sx={{
                 position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none',
+                // svg 는 기본이 overflow:hidden — 본문 칸(최대 1400) 밖 여백이나 상단바 위로 그은 획이
+                // 저장은 되는데 화면에서는 잘려 사라졌다. 그리기 판은 그 밖에서도 좌표를 받는다.
+                overflow: 'visible',
                 zIndex: active ? 1 : 0,
                 opacity: dimmed ? 0.18 : 1,
                 transition: `opacity ${motion.base} ${motion.ease}`,
@@ -943,7 +991,7 @@ export default function StickyMemoLayer() {
         {/* 방금 그린 그림(아직 저장 전) + 그 옆 입력창 */}
         {isAdmin && pending && (
           <>
-            <Box component="svg" aria-hidden sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+            <Box component="svg" aria-hidden sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', zIndex: 0 }}>
               {pending.strokes.map((s, i) => (
                 <polyline
                   key={i}
