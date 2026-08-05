@@ -156,9 +156,11 @@ interface NoteProps {
   onMoveEnd: (num: string, pos: Pos) => void
   /** 이 쪽지에 그림 그리기 시작 — 판은 레이어가 띄운다 */
   onDraw: (num: string) => void
+  /** 처음부터 펼친 채로 — 그리기 직후 방금 만든 쪽지에만 쓴다 */
+  defaultOpen?: boolean
 }
 
-function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw, user, onMoveEnd, onDraw }: NoteProps) {
+function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw, user, onMoveEnd, onDraw, defaultOpen }: NoteProps) {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const snack = useSnack()
@@ -167,7 +169,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
   // 쪽지가 다시 그려질 때 그 노드가 떨어져 나가 메뉴가 화면 좌상단(0,0)에 뜬다(2026-08-05 사용자 신고).
   // 상단바 메모 버튼(MemoComposeButton)도 같은 이유로 ref 방식을 쓴다.
   const stBtnRef = useRef<HTMLButtonElement>(null)
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(!!defaultOpen)
   const [busy, setBusy] = useState(false)
   const [reply, setReply] = useState('')
   // 쪽지에서 바로 제목·내용 수정 — 게시판까지 가지 않아도 고칠 수 있게(수정 권한은 게시판과 동일)
@@ -627,6 +629,7 @@ export default function StickyMemoLayer() {
   const [pending, setPending] = useState<{ strokes: MemoStroke[]; x: number; y: number } | null>(null)
   const [pendingText, setPendingText] = useState('')
   const [busyPending, setBusyPending] = useState(false)
+  const [openNum, setOpenNum] = useState<string | null>(null) // 방금 만든 쪽지 — 처음부터 펼쳐 보인다
   const snack = useSnack()
   const attachLayer = useCallback((el: HTMLDivElement | null) => {
     layerRef.current = el
@@ -736,6 +739,11 @@ export default function StickyMemoLayer() {
       const title = body ? firstLine(body) : `화면 그림 — ${loc || '기타'}`
       const num = await createImprovement({ author: user, key: authKey, loc: loc || '기타', title, content: body, mgr: user })
       await updateImprovement({ author: user, key: 'session', num, memo: true, drawing: pending.strokes })
+      // 쪽지를 **입력창이 있던 그 자리에 펼친 채로** 남긴다(2026-08-05 사용자 지시).
+      // 자리를 먼저 저장해야 한다 — 안 그러면 아래 '빈 슬롯 배정' effect 가 기본 자리(메모 버튼 밑)를
+      // 잡아버려 압정이 상단바 근처로 튀었다. putSetting 은 낙관 반영이라 목록이 갱신될 때 이미 들어가 있다.
+      dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [String(num)]: { x: pending.x, y: pending.y } } }))
+      setOpenNum(String(num))
       setPending(null)
       setPendingText('')
       dispatch(loadImproveData())
@@ -776,8 +784,9 @@ export default function StickyMemoLayer() {
           — 화면 전체를 기준으로 삼으면 본문은 안 넓어지는데 좌표만 벌어져 여백으로 밀려난다. */}
       <Box ref={attachLayer} sx={{ position: 'relative', height: '100%', width: '100%', maxWidth: `${layout.maxWidthWide}px`, mx: 'auto' }}>
         {/* 저장된 화면 그림 — 관리자에게만. 클릭은 통과시켜 아래 화면을 그대로 쓸 수 있게 한다.
-            그리는 중에는 판(MemoDraw)이 같은 획을 그리므로 여기서는 숨긴다(이중 렌더 방지). */}
-        {isAdmin && !drawFor && memos.map((t) => (
+            **지금 고치는 중인 그림만** 숨긴다(그 획은 판이 그린다). 종전에는 그리기에 들어가면
+            다른 쪽지의 그림까지 통째로 사라져 화면이 깜빡였다(2026-08-05 사용자 신고). */}
+        {isAdmin && memos.filter((t) => t.num !== drawFor).map((t) => (
           t.drawing?.length ? (
             <Box
               key={`d-${t.num}`}
@@ -885,6 +894,7 @@ export default function StickyMemoLayer() {
               user={user}
               onMoveEnd={onMoveEnd}
               onDraw={setDrawFor}
+              defaultOpen={t.num === openNum}
             />
           )
         })}
