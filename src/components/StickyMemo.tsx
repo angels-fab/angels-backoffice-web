@@ -8,6 +8,7 @@ import Tooltip from '@mui/material/Tooltip'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha, useTheme } from '@mui/material/styles'
 import PushPinIcon from '@mui/icons-material/PushPin'
+import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined'
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLessOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import SendIcon from '@mui/icons-material/SendRounded'
@@ -644,8 +645,15 @@ export default function StickyMemoLayer() {
   // 그리기 완료 직후 — 그림 옆에서 선택/내용을 받는 중.
   // ask=true 면 '메모를 붙일지' 묻는 단계, false 면 메모 입력 단계(2026-08-06 사용자 지시 — 그림만 남기고
   // 싶을 때도 있으니 입력창을 바로 띄우지 말고 먼저 물을 것).
-  // id = 이미 저장된 그림 행 번호(쪽지 저장이 실패해 재시도하는 중일 때만 채워진다 — savePending 주석)
-  const [pending, setPending] = useState<{ strokes: MemoStroke[]; x: number; y: number; ask?: boolean; id?: number } | null>(null)
+  /**
+   * 그리기 직후(또는 '메모 붙이기') 뜨는 입력창.
+   *  · drawId   … 이 메모가 딸릴 그림 행 번호. 아직 그림을 안 만들었으면 없다.
+   *  · existing … 그 그림이 **입력창을 열기 전부터 있던 것**인가. 참이면 '취소'해도 그림은 그대로 둔다
+   *               (거짓이면 이 입력창이 만든 것이라 취소 시 함께 지운다).
+   */
+  const [pending, setPending] = useState<
+    { strokes: MemoStroke[]; x: number; y: number; ask?: boolean; drawId?: number; existing?: boolean } | null
+  >(null)
   const [pendingText, setPendingText] = useState('')
   const [busyPending, setBusyPending] = useState(false)
   const [openNum, setOpenNum] = useState<string | null>(null) // 방금 만든 쪽지 — 처음부터 펼쳐 보인다
@@ -681,6 +689,18 @@ export default function StickyMemoLayer() {
     return m
   }, [replyItems])
 
+  /** 입력창 자리 = 그림 오른쪽 위(획들의 경계상자 기준). 레이어 밖으로 나가지 않게 당긴다 */
+  const panelPos = (strokes: MemoStroke[]) => {
+    const xs = strokes.flatMap((s) => s.p.filter((_, i) => i % 2 === 0))
+    const ys = strokes.flatMap((s) => s.p.filter((_, i) => i % 2 === 1))
+    const W = layerRef.current?.clientWidth ?? 0
+    const H = layerRef.current?.clientHeight ?? 0
+    return {
+      x: Math.min(Math.max(Math.max(...xs) + 12, 0), Math.max(W - NOTE_W, 0)),
+      y: Math.min(Math.max(Math.min(...ys), 0), Math.max(H - 150, 0)),
+    }
+  }
+
   /** 그림 목록 다시 읽기 — 저장·수정·삭제 뒤에 한 번씩. 소비자가 여기뿐이라 전역 상태로 올리지 않았다 */
   const reloadDrawings = useCallback(async () => {
     try {
@@ -705,8 +725,9 @@ export default function StickyMemoLayer() {
   )
   const editingDraw = typeof drawFor === 'number' ? drawings.find((d) => d.id === drawFor) || null : null
   // 고치는 중에는 도구막대를 내린다 — 판이 그 위를 덮어 눌리지도 않는 유령 버튼이 되고,
-  // 판 밖(위쪽)으로 삐져나온 조각은 눌려서 편집 중인 그림을 지워 버린다(적대적 리뷰 확인)
-  const selectedDraw = drawFor === null ? hereDraw.find((d) => d.id === selectedId) || null : null
+  // 판 밖(위쪽)으로 삐져나온 조각은 눌려서 편집 중인 그림을 지워 버린다(적대적 리뷰 확인).
+  // 입력창이 떠 있을 때도 내린다 — 같은 자리에 겹쳐 뜬다(후광은 남아 대상이 어느 그림인지 보인다).
+  const selectedDraw = drawFor === null && !pending ? hereDraw.find((d) => d.id === selectedId) || null : null
 
   /**
    * 자리가 없는 쪽지에 **빈 슬롯을 배정하고 즉시 저장**한다.
@@ -781,17 +802,18 @@ export default function StickyMemoLayer() {
     }
     setDrawFor(null)
     if (strokes.length === 0) return // 아무것도 안 그렸으면 아무것도 만들지 않는다
-    // 입력창 자리 = 그림 오른쪽 위(획들의 경계상자 기준). 레이어 밖으로 나가지 않게 당긴다.
-    const xs = strokes.flatMap((s) => s.p.filter((_, i) => i % 2 === 0))
-    const ys = strokes.flatMap((s) => s.p.filter((_, i) => i % 2 === 1))
-    const W = layerRef.current?.clientWidth ?? 0
-    const H = layerRef.current?.clientHeight ?? 0
-    setPending({
-      strokes,
-      x: Math.min(Math.max(Math.max(...xs) + 12, 0), Math.max(W - NOTE_W, 0)),
-      y: Math.min(Math.max(Math.min(...ys), 0), Math.max(H - 150, 0)),
-      ask: true,
-    })
+    setPending({ strokes, ...panelPos(strokes), ask: true })
+  }
+
+  /**
+   * 이미 저장된 그림에 **나중에** 메모를 붙인다(사용자 지시 2026-08-06).
+   *
+   * '그림만'으로 남겨 뒀다가 뒤늦게 설명을 달고 싶을 때 쓴다. 그림은 이미 있으므로
+   * 만들지 않고(existing) 쪽지만 새로 만든다 — 둘은 여전히 서로 독립이다.
+   */
+  const attachMemo = (d: PageDrawing) => {
+    setPending({ strokes: d.strokes, ...panelPos(d.strokes), ask: false, drawId: d.id, existing: true })
+    setPendingText('')
   }
 
   /**
@@ -813,10 +835,9 @@ export default function StickyMemoLayer() {
       // ⚠ 만들어진 id 를 pending 에 적어 둔다. 뒤의 쪽지 저장이 실패하면 입력창이 그대로 남아
       // 사용자가 다시 '붙이기'를 누르는데, id 를 안 들고 있으면 누를 때마다 **같은 그림이 한 장씩
       // 더 쌓인다**(적대적 리뷰 확인). 두 번째부터는 새로 만들지 않고 그 행을 고친다.
-      let drawId = pending.id
-      if (drawId === undefined) {
-        drawId = await createPageDrawing({ path: pathname, strokes: pending.strokes })
-        setPending((p) => (p ? { ...p, id: drawId } : p))
+      if (pending.drawId === undefined) {
+        const id = await createPageDrawing({ path: pathname, strokes: pending.strokes })
+        setPending((p) => (p ? { ...p, drawId: id } : p))
       }
       if (withMemo) {
         const loc = pathToLocation(pathname)
@@ -841,6 +862,8 @@ export default function StickyMemoLayer() {
       }
       setPending(null)
       setPendingText('')
+      // 선택도 푼다 — 안 그러면 방금 펼친 쪽지 위로 그림 도구막대가 다시 올라와 겹친다
+      setSelectedId(null)
       await reloadDrawings()
     } catch (err) {
       snack(err instanceof Error ? err.message : '저장에 실패했습니다', 'error')
@@ -855,9 +878,11 @@ export default function StickyMemoLayer() {
    * 새로고침 뒤에 나타난다(적대적 리뷰 확인).
    */
   const discardPending = async () => {
-    const id = pending?.id
+    // 원래 있던 그림에 메모만 달려던 것이면 그림은 건드리지 않는다
+    const id = pending?.existing ? undefined : pending?.drawId
     setPending(null)
     setPendingText('')
+    setSelectedId(null)
     if (id === undefined) return
     try {
       await deletePageDrawing(id)
@@ -1056,7 +1081,9 @@ export default function StickyMemoLayer() {
             <Box
               data-drawing-ui=""
               sx={{
-                position: 'absolute', left: b.x + b.w, top: Math.max(b.y, 0),
+                // translate(-100%) 라 left 는 막대의 **오른쪽 끝**이다. 버튼 3개 = 86px 이므로
+                // 왼쪽 가장자리에 그린 그림에서 막대가 레일 뒤로 숨지 않게 바닥을 둔다
+                position: 'absolute', left: Math.max(b.x + b.w, 92), top: Math.max(b.y, 0),
                 transform: 'translate(-100%, -100%)', pointerEvents: 'auto', zIndex: 4,
                 display: 'flex', gap: 0.25, px: 0.5,
                 bgcolor: 'background.paper', border: 1, borderColor: 'divider',
@@ -1066,6 +1093,13 @@ export default function StickyMemoLayer() {
               <Tooltip title="그림 고치기">
                 <IconButton size="small" aria-label="그림 고치기" onClick={() => { setSelectedId(null); setDrawFor(selectedDraw.id) }} sx={{ color: 'text.secondary', p: 0.5 }}>
                   <BorderColorIcon sx={{ fontSize: iconSize.body }} />
+                </IconButton>
+              </Tooltip>
+              {/* 나중에 설명을 붙이는 길(사용자 지시 2026-08-06) — '그림만'으로 남겨 뒀다가
+                  뒤늦게 메모를 달고 싶을 때. 그림은 그대로 두고 쪽지만 새로 만든다 */}
+              <Tooltip title="메모 붙이기">
+                <IconButton size="small" aria-label="메모 붙이기" onClick={() => attachMemo(selectedDraw)} sx={{ color: 'text.secondary', p: 0.5 }}>
+                  <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.body }} />
                 </IconButton>
               </Tooltip>
               <Tooltip title="그림 지우기">
@@ -1105,11 +1139,15 @@ export default function StickyMemoLayer() {
         {/* 방금 그린 그림(아직 저장 전) + 그 옆 입력창 */}
         {isMember && pending && (
           <>
-            <Box component="svg" aria-hidden sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', zIndex: 0 }}>
-              {pending.strokes.map((s, i) => (
-                <StrokeShape key={i} keyId={String(i)} s={s} ink={theme.palette.text.primary} />
-              ))}
-            </Box>
+            {/* 아직 저장 전인 획만 여기서 그린다 — 이미 있는 그림에 메모를 다는 중이면
+                위 hereDraw 가 벌써 그리고 있어, 또 그리면 같은 자리에 두 번 겹쳐 진해진다 */}
+            {!pending.existing && (
+              <Box component="svg" aria-hidden sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', zIndex: 0 }}>
+                {pending.strokes.map((s, i) => (
+                  <StrokeShape key={i} keyId={String(i)} s={s} ink={theme.palette.text.primary} />
+                ))}
+              </Box>
+            )}
             <Box
               sx={(th) => ({
                 position: 'absolute', left: pending.x, top: pending.y, width: NOTE_W, zIndex: 6,
@@ -1126,7 +1164,7 @@ export default function StickyMemoLayer() {
                   ? <BorderColorIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
                   : <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />}
                 <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: 'text.secondary' }}>
-                  {pending.ask ? '메모도 함께 붙일까요?' : '이 그림은 무엇인가요?'}
+                  {pending.ask ? '메모도 함께 붙일까요?' : pending.existing ? '이 그림에 붙일 메모' : '이 그림은 무엇인가요?'}
                 </Box>
               </Box>
 
@@ -1155,8 +1193,9 @@ export default function StickyMemoLayer() {
                     sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size } }}
                   />
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 1 }}>
+                    {/* 원래 있던 그림에 메모만 다는 중이면 '버리기'가 아니다 — 버릴 게 없다 */}
                     <Button size="small" disabled={busyPending} onClick={() => void discardPending()} sx={{ color: 'text.secondary' }}>
-                      버리기
+                      {pending.existing ? '취소' : '버리기'}
                     </Button>
                     <Button size="small" variant="contained" disabled={busyPending} onClick={() => void savePending(true)}>
                       {busyPending ? '붙이는 중…' : '붙이기'}
