@@ -8,7 +8,7 @@ import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
-import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined'
+import StickyNote2Icon from '@mui/icons-material/StickyNote2'
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import { alpha } from '@mui/material/styles'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -165,7 +165,7 @@ export default function MemoComposeButton() {
         >
           {/* 글자 '메모' 대신 아이콘 — 옆의 '화면에 그리기'와 같은 모양의 한 쌍이 된다
               (사용자 지시 2026-08-06). 건수 배지는 그대로 — 이 화면에 몇 건인지가 이 버튼의 핵심 정보다 */}
-          <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.header }} />
+          <StickyNote2Icon sx={{ fontSize: iconSize.header }} />
           {here > 0 && (
             <Box
               component="span"
@@ -195,7 +195,7 @@ export default function MemoComposeButton() {
         slotProps={{ paper: { sx: { mt: 1, width: 340, p: 2, bgcolor: 'background.paper', borderRadius: `${radius.modal}px` } } }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: typescale.cardTitle.size, fontWeight: weight.heavy, mb: 0.5 }}>
-          <StickyNote2OutlinedIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
+          <StickyNote2Icon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
           메모 남기기
         </Box>
         {/* 갈래 고르기 — 기본은 일반메모(2026-08-06 사용자 지시로 메모가 둘로 갈렸다).

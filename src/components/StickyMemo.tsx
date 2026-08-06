@@ -8,7 +8,7 @@ import Tooltip from '@mui/material/Tooltip'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha, useTheme } from '@mui/material/styles'
 import PushPinIcon from '@mui/icons-material/PushPin'
-import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined'
+import StickyNote2Icon from '@mui/icons-material/StickyNote2'
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLessOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import SendIcon from '@mui/icons-material/SendRounded'
@@ -667,7 +667,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
  *
  * 요청메모(StickyNote)와 **몸놀림은 같고**(useNoteDrag 공용) 다른 것만 다르다:
  *  · 상태(접수·완료…) 없음 · 요청번호 없음 · 연동 게시판 없음 → 그 자리가 통째로 비었다
- *  · 접힌 모양이 압정이 아니라 메모지(StickyNote2Outlined)
+ *  · 접힌 모양이 압정이 아니라 메모지(StickyNote2 채움)
  *  · 열람은 작성자 + 공유받은 사람. 고치기·지우기·공유 변경은 **작성자만**
  *
  * 답글은 없다 — 요청메모의 답글은 improvement_replies(요청번호 기준)라 그대로 쓸 수 없고,
@@ -769,7 +769,7 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
   const folded = (
     // 접힌 모양이 요청메모(압정)와 달라야 한 눈에 갈래가 구분된다(사용자 지시 2026-08-06)
     <Box sx={(th) => ({ display: 'grid', placeItems: 'center', width: 34, height: 34, color: th.palette.accent.amber })}>
-      <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.header }} />
+      <StickyNote2Icon sx={{ fontSize: iconSize.header }} />
     </Box>
   )
 
@@ -807,7 +807,7 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
               background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.13)}, transparent 70%)`,
             })}
           >
-            <StickyNote2OutlinedIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+            <StickyNote2Icon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
             {/* 상태 칩도 요청번호도 없다 — 일반메모에는 그런 게 없다(사용자 지시) */}
             <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber })}>
               메모
@@ -1527,7 +1527,7 @@ export default function StickyMemoLayer() {
               {canAttachMemo && (
                 <Tooltip title="메모 붙이기">
                   <IconButton size="small" aria-label="메모 붙이기" onClick={() => attachMemo(selectedDraw)} sx={{ color: 'text.secondary', p: 0.5 }}>
-                    <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.body }} />
+                    <StickyNote2Icon sx={{ fontSize: iconSize.body }} />
                   </IconButton>
                 </Tooltip>
               )}
