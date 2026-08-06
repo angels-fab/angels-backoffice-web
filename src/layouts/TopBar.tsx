@@ -19,7 +19,7 @@ import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
 import MemoComposeButton from '@/components/MemoComposeButton'
 import { MEMO_DRAW_EVENT } from '@/components/MemoDraw'
-import GestureIcon from '@mui/icons-material/Gesture'
+import BorderColorIcon from '@mui/icons-material/BorderColor'
 import NotificationBell from './NotificationBell'
 import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
 import { useThemeMode } from '@/theme/mode'
@@ -260,7 +260,7 @@ export default function TopBar() {
                 size="small"
                 sx={{ width: control.topbar, height: control.topbar, display: { xs: 'none', shell: 'inline-flex' }, color: 'text.secondary' }}
               >
-                <GestureIcon sx={{ fontSize: iconSize.header }} />
+                <BorderColorIcon sx={{ fontSize: iconSize.header }} />
               </IconButton>
             </Tooltip>
           )}

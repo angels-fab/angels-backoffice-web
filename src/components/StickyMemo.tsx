@@ -22,7 +22,7 @@ import { putSetting } from '@/store/slices/userSettingsSlice'
 import { updateImprovement, createReply, deleteImprovement, createImprovement } from '@/api/improve'
 import type { MemoStroke } from '@/api/improve'
 import MemoDraw, { StrokeShape, MEMO_DRAW_EVENT } from '@/components/MemoDraw'
-import GestureIcon from '@mui/icons-material/Gesture'
+import BorderColorIcon from '@mui/icons-material/BorderColor'
 import { useRole } from '@/auth/role'
 import { memosForPath, visibleMemos, pathToLocation, firstLine } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
@@ -480,7 +480,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
                     onClick={() => { setOpen(false); onDraw(item.num) }}
                     sx={{ color: item.drawing?.length ? 'primary.main' : 'text.secondary', p: 0.5 }}
                   >
-                    <GestureIcon sx={{ fontSize: iconSize.body }} />
+                    <BorderColorIcon sx={{ fontSize: iconSize.body }} />
                   </IconButton>
                 </Tooltip>
               )}

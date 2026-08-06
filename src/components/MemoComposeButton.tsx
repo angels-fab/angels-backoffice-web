@@ -102,7 +102,9 @@ export default function MemoComposeButton() {
             ...(focusRingSx as object),
           })}
         >
-          메모
+          {/* 글자 '메모' 대신 아이콘 — 옆의 '화면에 그리기'와 같은 모양의 한 쌍이 된다
+              (사용자 지시 2026-08-06). 건수 배지는 그대로 — 이 화면에 몇 건인지가 이 버튼의 핵심 정보다 */}
+          <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.header }} />
           {here > 0 && (
             <Box
               component="span"

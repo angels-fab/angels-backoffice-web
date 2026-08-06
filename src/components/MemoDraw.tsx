@@ -422,21 +422,23 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
                 aria-pressed={on}
                 onClick={(e) => pickTool(key, e.currentTarget)}
                 sx={{
+                  flexDirection: 'column',
                   color: on ? 'text.primary' : 'text.secondary',
                   bgcolor: on ? 'action.selected' : 'transparent',
                   borderRadius: `${radius.chip}px`,
-                  pr: '2px',
+                  py: '2px',
                 }}
               >
+                {/* 쐐기 화살표 — 아이콘 **위**에(사용자 지시 2026-08-06). 팝오버가 위로 열리므로
+                    화살표도 그 방향을 가리킨다. 모든 도구에 붙는다 — 클릭 한 번으로 창이 열리는
+                    조작이라(위 pickTool 주석) '누르면 뭐가 뜬다'가 모든 버튼에서 사실이다 */}
+                <ArrowDropUpIcon sx={{ fontSize: typescale.emphasis.size, mt: '-6px', mb: '-6px', opacity: 0.7 }} />
                 {/* 선택한 색은 **펜·형광펜의 채움 레이어에만** 들어간다(사용자 지정 2026-08-06).
                     지우개·도형은 늘 윤곽 그대로 — snipIcons 주석 참조 */}
                 <Icon
                   sx={{ fontSize: TOOL_ICON }}
                   ink={key === 'pen' || key === 'hl' ? swatch(cfg[key].c) : undefined}
                 />
-                {/* 쐐기 화살표 — 모든 도구에. 클릭 한 번으로 창이 열리는 조작이라(위 pickTool 주석)
-                    '누르면 뭐가 뜬다'는 표시가 모든 버튼에서 사실이다 */}
-                <ArrowDropUpIcon sx={{ fontSize: typescale.emphasis.size, ml: '-2px', mr: '-4px', opacity: 0.7 }} />
               </IconButton>
             </Tooltip>
           )
@@ -453,7 +455,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
             onClick={() => setSnap((v) => !v)}
             sx={{ color: snap ? 'primary.main' : 'text.disabled', bgcolor: snap ? 'action.selected' : 'transparent', borderRadius: `${radius.chip}px` }}
           >
-            <AutoAwesomeIcon sx={{ fontSize: typescale.cardTitle.size }} />
+            <AutoAwesomeIcon sx={{ fontSize: TOOL_ICON }} />
           </IconButton>
         </Tooltip>
 
@@ -462,14 +464,14 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         <Tooltip title="실행취소 (Ctrl+Z)">
           <span>
             <IconButton size="small" aria-label="실행취소" disabled={!canUndo} onClick={undo}>
-              <UndoIcon sx={{ fontSize: typescale.cardTitle.size }} />
+              <UndoIcon sx={{ fontSize: TOOL_ICON }} />
             </IconButton>
           </span>
         </Tooltip>
         <Tooltip title="다시실행 (Ctrl+Shift+Z)">
           <span>
             <IconButton size="small" aria-label="다시실행" disabled={!canRedo} onClick={redo}>
-              <RedoIcon sx={{ fontSize: typescale.cardTitle.size }} />
+              <RedoIcon sx={{ fontSize: TOOL_ICON }} />
             </IconButton>
           </span>
         </Tooltip>
