@@ -8,9 +8,9 @@ import { useRole } from '@/auth/role'
 import { fetchAttendees, type AttendeeRow } from '@/api/events'
 // 학술·교육·전시 메뉴가 사이드바·페이지 헤더에서 쓰는 그 아이콘(nav.tsx 단일 출처) — 다른 것 고르지 말 것
 import CoPresentIcon from '@mui/icons-material/CoPresent'
-import { FAB_EVENTS, eventStatus, fmtEventDate } from '@/constants/events'
-import { iconSize, typescale, weight } from '@/theme/tokens'
-import { HomeCard } from './HomeCard'
+import { FAB_EVENTS, eventStatus } from '@/constants/events'
+import { iconSize, typescale } from '@/theme/tokens'
+import { HomeCard, ROW_H } from './HomeCard'
 
 /**
  * 행사명은 **첫 '-' 앞까지만**(사용자 지시 2026-08-06).
@@ -79,47 +79,42 @@ export default function EventsSection() {
       ) : !head ? (
         <EmptyState size="sm" title="신청한 행사가 없습니다" />
       ) : (
-        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            {/* 행 앞에는 종류 칩 — 교육·학회·전시가 한눈에 갈리게(사용자 지시 2026-08-06) */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-              <StatusChip status={kindStatus(head.kind)} label={head.kind} />
+        <Box>
+          {/*
+           * 행 규격 하나로 통일(2026-08-06 사용자 지적 — 첫 행사만 크고 새 행사는 작게 나왔다).
+           * 한 행 = 종류 칩 · 행사명 한 줄 · **남은 일수 오른쪽에 크게**(모든 행사 동일).
+           * 날짜·장소 줄은 뺐다 — 남은 일수가 이미 '언제'를 말하고, 상세는 행사 페이지에서 본다.
+           * 제목은 전 행 같은 색·같은 굵기(첫 행만 다르게 두면 색이 다르다는 지적이 나온 그 문제).
+           */}
+          {mine.map((e, i) => (
+            <Box
+              key={e.id}
+              sx={{
+                display: 'flex', alignItems: 'center', gap: 1, py: 1,
+                minHeight: ROW_H, boxSizing: 'border-box',
+                borderTop: i === 0 ? 0 : 1, borderColor: 'divider', minWidth: 0,
+              }}
+            >
+              <StatusChip status={kindStatus(e.kind)} label={e.kind} />
               <Typography
                 sx={{
                   flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                   fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight,
                 }}
               >
-                {shortName(head.title)}
+                {shortName(e.title)}
+              </Typography>
+              {/* 카드 대표 숫자와 같은 규격(display 28 · primary) — D-day 가 이 카드의 답이다 */}
+              <Typography
+                sx={{
+                  flexShrink: 0, fontSize: typescale.display.size, fontWeight: typescale.display.weight,
+                  lineHeight: 1, color: 'primary.main', fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {eventStatus(e.start, e.end).label}
               </Typography>
             </Box>
-            <Typography sx={{ mt: 0.5, fontSize: typescale.body.size, color: 'text.secondary' }}>
-              {fmtEventDate(head.start, head.end)} · {head.venue}
-            </Typography>
-
-            {/* 나머지는 종류 칩 + 이름 + D-n 만 */}
-            {mine.slice(1).map((e) => (
-              <Box key={e.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.25, pt: 1.25, borderTop: 1, borderColor: 'divider', minWidth: 0 }}>
-                <StatusChip status={kindStatus(e.kind)} label={e.kind} />
-                <Typography sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight, color: 'text.secondary' }}>
-                  {shortName(e.title)}
-                </Typography>
-                <Typography sx={{ flexShrink: 0, fontSize: typescale.small.size, fontWeight: weight.medium, color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
-                  {eventStatus(e.start, e.end).label}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-
-          {/* 가장 가까운 행사의 남은 일수 — 자리·크기는 종전대로 본문 우측에 크게(사용자 지시) */}
-          <Typography
-            sx={{
-              flexShrink: 0, fontSize: typescale.display.size, fontWeight: typescale.display.weight,
-              lineHeight: 1.1, color: 'primary.main', fontVariantNumeric: 'tabular-nums',
-            }}
-          >
-            {eventStatus(head.start, head.end).label}
-          </Typography>
+          ))}
         </Box>
       )}
     </HomeCard>
