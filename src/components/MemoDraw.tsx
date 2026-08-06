@@ -417,12 +417,17 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
                   pr: '2px',
                 }}
               >
-                {/* 아이콘 자체를 지금 색으로 칠한다(사용자 확정 2026-08-06 — 아래 색 줄보다 단순).
-                    캡처 도구도 빨간 볼펜·노란 형광펜처럼 도구 그림이 곧 잉크 색이다. 지우개만 중립.
+                {/* 잉크색은 아이콘의 촉 부분 채움으로만(ink 프롭 — snipIcons 주석 참고). 윤곽 전체를
+                    칠하면 노랑처럼 옅은 색이 안 보인다(사용자 지적). 지우개·도형 모음은 중립.
                     크기는 한 단 크게(header 20) — 쐐기가 옆에 붙어 16 이면 그림이 좁아 보인다 */}
-                <Icon sx={{ fontSize: iconSize.header, ...(key !== 'eraser' ? { color: swatch(cfg[key as Exclude<Tool, 'eraser'>].c) } : {}) }} />
-                {/* 쐐기 화살표 — '한 번 더 누르면 설정이 열린다'는 표시(캡처 도구의 도구 옆 ∨와 같은 뜻) */}
-                <ArrowDropUpIcon sx={{ fontSize: typescale.emphasis.size, ml: '-3px', mr: '-3px', opacity: 0.7 }} />
+                <Icon
+                  sx={{ fontSize: iconSize.header }}
+                  ink={key === 'eraser' || key === 'shape' ? undefined : swatch(cfg[key as Exclude<Tool, 'eraser'>].c)}
+                />
+                {/* 쐐기 화살표 = '한 번 더 누르면 설정이 열린다'는 표시 — 그래서 **선택된 도구에만** 띄운다.
+                    안 고른 도구에도 늘 붙어 있으면 '누르면 뭐가 뜨나 보다'가 되는데 실제로는 선택만 된다
+                    (사용자 지적 2026-08-06. 캡처 도구도 선택된 도구에만 ∨가 붙는다). */}
+                {on && <ArrowDropUpIcon sx={{ fontSize: typescale.emphasis.size, ml: '-2px', mr: '-4px', opacity: 0.7 }} />}
               </IconButton>
             </Tooltip>
           )
