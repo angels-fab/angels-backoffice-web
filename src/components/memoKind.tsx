@@ -45,7 +45,7 @@ export function MemoKindPicker({ value, onChange, disabled }: {
       // null = 눌린 것을 다시 누른 경우. 갈래는 반드시 하나여야 하므로 무시한다
       onChange={(_, v: MemoKind | null) => { if (v) onChange(v) }}
       aria-label="메모 갈래"
-      sx={{ '& .MuiToggleButton-root': { px: 1, py: 0.25, fontSize: typescale.emphasis.size, fontWeight: weight.bold, textTransform: 'none', gap: 0.5 } }}
+      sx={{ '& .MuiToggleButton-root': { px: 1, py: 0.25, fontSize: typescale.body.size, fontWeight: weight.bold, textTransform: 'none', gap: 0.5 } }}
     >
       <ToggleButton value="plain" aria-label="일반메모">
         <ChatIcon sx={{ fontSize: iconSize.caption }} />

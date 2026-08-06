@@ -153,7 +153,10 @@ export default function MemoComposeButton() {
             display: 'inline-flex', alignItems: 'center', gap: 0.75,
             height: control.topbar, px: 1.25, flexShrink: 0,
             border: 'none', borderRadius: `${radius.input}px`,
-            bgcolor: alpha(th.palette.text.primary, 0.08),
+            // 평소엔 면 없이 아이콘만 — 상단바의 다른 버튼(검색·알림)과 같은 규칙이다.
+            // 상시 채움은 '지금 눌린 것'처럼 읽혀 이 버튼만 튀었다(2026-08-06 사용자 지적).
+            // 채움은 호버·열림 때만. 옆 계정 표시(이름·등급)가 상시 채움인 것은 그건 버튼이 아니라 라벨이라서다.
+            bgcolor: open ? alpha(th.palette.text.primary, 0.14) : 'transparent',
             color: 'text.secondary',
             fontSize: typescale.body.size, fontWeight: weight.bold,
             whiteSpace: 'nowrap',

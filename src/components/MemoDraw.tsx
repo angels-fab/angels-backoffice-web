@@ -113,8 +113,10 @@ const ERASER_SHAPE =
 const ERASER_CURSOR =
   `url("data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24">`
-    + `<g fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">${ERASER_SHAPE}</g>`
-    + `<g fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ERASER_SHAPE}</g>`
+    // 커서 그림은 data:URI 문자열이라 테마 토큰이 닿지 않는다. 흰 테두리+검은 속의 2겹은
+    // 밝은 종이든 어두운 종이든 커서가 보이게 하는 장치라 토큰화하면 오히려 안 보인다.
+    + `<g fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">${ERASER_SHAPE}</g>` // design-lint-ok(hex): 커서 data:URI — 아래 검은 속과 짝을 이루는 흰 테두리
+    + `<g fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ERASER_SHAPE}</g>` // design-lint-ok(hex): 커서 data:URI — 위 흰 테두리와 짝을 이루는 검은 속
     + `</svg>`,
   )}") 12 14, cell`
 

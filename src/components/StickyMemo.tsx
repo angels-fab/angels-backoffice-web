@@ -76,6 +76,8 @@ type PosMap = Record<string, Pos>
 
 /** 후광 번짐 반경(px) — 필터 영역을 이만큼 넉넉히 잡아야 가장자리가 잘리지 않는다 */
 const GLOW_BLUR = 6
+/** 후광 획을 그릴 때 쓰는 자리표시 색 — 보이는 색이 아니라 CSS 필터가 덧입힐 바탕이다 */
+const GLOW_INK = '#000' // design-lint-ok(hex): 필터가 색을 정하는 자리표시(테마 토큰을 쓰면 필터 결과가 달라진다)
 /**
  * 획 전체를 감싸는 사각형 — SVG 필터 영역 계산용.
  * 필터 영역을 bbox 비율(기본값)로 두면 **가로로 곧은 획은 높이가 0**이라 영역도 0이 되어
@@ -425,7 +427,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
   const st = normStatus(item.status)
   const folded = (
     // 압정은 글자가 아니라 그림이므로 채움 토큰(accent.amber)을 쓴다.
-    // 글자용 accentText.amber 는 라이트에서 #7F5B00(갈색)이라 압정이 갈색으로 보였다.
+    // 글자용 accentText.amber 는 라이트에서 #7F5B00(갈색)이라 압정이 갈색으로 보였다. design-lint-ok(hex): 설명 문장 속 색값(코드 아님)
     // 게시판 '작업 메모' 열의 켜진 핀과 같은 값 — 두 화면의 같은 표시는 같은 색이어야 한다.
     <Box sx={(th) => ({ display: 'grid', placeItems: 'center', width: 34, height: 34, color: th.palette.accent.amber })}>
       <LightbulbIcon sx={{ fontSize: iconSize.header }} />
@@ -1508,7 +1510,7 @@ export default function StickyMemoLayer() {
                 >
                   {/* 후광은 색을 필터가 정하므로 검정으로 그린다. 모양은 본체와 같아야 하므로 같은 함수 */}
                   {d.strokes.map((s, i) => (
-                    <StrokeShape key={`h-${i}`} keyId={`h-${i}`} ink="#000" s={{ ...s, c: '#000', w: s.w + 3 }} />
+                    <StrokeShape key={`h-${i}`} keyId={`h-${i}`} ink={GLOW_INK} s={{ ...s, c: GLOW_INK, w: s.w + 3 }} />
                   ))}
                 </Box>
               )}

@@ -157,16 +157,17 @@ export default function SideNav() {
                   borderRadius: `${radius.chip}px`,
                   background: 'none',
                   color: active ? 'accentText.blue' : 'text.secondary',
-                  fontSize: typescale.body.size,
+                  fontSize: typescale.cardTitle.size,
                   fontWeight: active ? weight.bold : weight.medium,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
                   textAlign: 'left',
                   transition: `background ${motion.base},color ${motion.base}`,
                   WebkitTapHighlightColor: 'transparent',
-                  // 아이콘 가시성(2026-07-23): 20px + 본문보다 밝은 색
+                  // 아이콘 가시성: 24px + 본문보다 밝은 색 (2026-07-23 20px → 2026-08-06 사용자 지시로 한 단 확대,
+                  // 메뉴명도 함께 body 13 → emphasis 14 로 올려 둘의 비율을 유지)
                   '& svg': {
-                    fontSize: iconSize.header,
+                    fontSize: iconSize.feature,
                     flexShrink: 0,
                     color: active ? 'accentText.blue' : 'var(--nav-icon)',
                     transition: `color ${motion.base}`,
