@@ -24,6 +24,12 @@ import { updateImprovement, createReply, deleteImprovement, createImprovement } 
 import type { MemoStroke } from '@/api/improve'
 import { fetchPageDrawings, createPageDrawing, updatePageDrawing, deletePageDrawing } from '@/api/pageDrawings'
 import type { PageDrawing } from '@/api/pageDrawings'
+import { fetchPageNotes, createPageNote, updatePageNote, deletePageNote } from '@/api/pageNotes'
+import type { PageNote } from '@/api/pageNotes'
+import { fetchAuthors } from '@/api/works'
+import { MemoKindPicker, MemoKindHint, SharePicker, plainText, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
+import type { MemoKind } from '@/components/memoKind'
+import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined'
 import MemoDraw, { StrokeShape, MEMO_DRAW_EVENT } from '@/components/MemoDraw'
 import BorderColorIcon from '@mui/icons-material/BorderColor'
 import { useRole } from '@/auth/role'
@@ -166,38 +172,26 @@ const isInteractive = (el: HTMLElement) => !!el.closest('button, input, textarea
 const overlaps = (p: { x: number; y: number }, taken: { x: number; y: number }[]) =>
   taken.some((q) => Math.abs(q.x - p.x) < PIN && Math.abs(q.y - p.y) < PIN)
 
-interface NoteProps {
-  item: ImprovementItem
-  replies: ReplyRow[]
+/**
+ * 쪽지 끌기·되당김 공용 훅 — 요청메모(StickyNote)와 일반메모(PlainNote)가 같은 몸놀림을 갖도록.
+ *
+ * 두 쪽지는 겉모습만 다르고 "잡아 끌면 옮겨지고, 제자리 클릭이면 펼쳐지고, 커지면 화면 안으로
+ * 되당겨진다"는 동작이 완전히 같다(사용자: "사용성은 다 똑같다"). 복사해 두면 한쪽만 고치는
+ * 사고가 나므로 여기 한 곳에 둔다.
+ *
+ * @param key   저장 키 — 요청은 요청번호, 일반메모는 'n{id}'
+ * @param deps  높이를 바꾸는 값들(펼침·답글 수 등) — 바뀌면 되당김을 다시 계산한다
+ */
+function useNoteDrag(opts: {
+  key: string
   pos: Pos
   layerRef: React.RefObject<HTMLDivElement | null>
-  canEdit: boolean
-  /** 요청 자체를 지울 수 있는가 — 게시판과 같은 규칙(담당자 본인 또는 포털 관리자) */
-  canDelete: boolean
-  user: string | null
-  onMoveEnd: (num: string, pos: Pos) => void
-  /** 처음부터 펼친 채로 — 그리기 직후 방금 만든 쪽지에만 쓴다 */
-  defaultOpen?: boolean
-}
-
-function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, onMoveEnd, defaultOpen }: NoteProps) {
-  const navigate = useNavigate()
-  const dispatch = useAppDispatch()
-  const snack = useSnack()
+  onMoveEnd: (key: string, pos: Pos) => void
+  onTapToggle: () => void
+  deps: unknown[]
+}) {
+  const { key, pos, layerRef, onMoveEnd, onTapToggle, deps } = opts
   const elRef = useRef<HTMLDivElement>(null)
-  // 상태 메뉴 기준점은 ref 로 잡는다 — 클릭 시점의 currentTarget 을 state 에 담아 두면
-  // 쪽지가 다시 그려질 때 그 노드가 떨어져 나가 메뉴가 화면 좌상단(0,0)에 뜬다(2026-08-05 사용자 신고).
-  // 상단바 메모 버튼(MemoComposeButton)도 같은 이유로 ref 방식을 쓴다.
-  const stBtnRef = useRef<HTMLButtonElement>(null)
-  const [open, setOpen] = useState(!!defaultOpen)
-  const [busy, setBusy] = useState(false)
-  const [reply, setReply] = useState('')
-  // 쪽지에서 바로 제목·내용 수정 — 게시판까지 가지 않아도 고칠 수 있게(수정 권한은 게시판과 동일)
-  const [editing, setEditing] = useState(false)
-  const [eContent, setEContent] = useState('')
-  const [stOpen, setStOpen] = useState(false)                                        // 상태 메뉴 열림
-  const [delAsk, setDelAsk] = useState(false)                                        // 요청 삭제 확인
-  const [statusAsk, setStatusAsk] = useState<{ status: string; reason: string } | null>(null) // 종결 확인(+사유)
   const [live, setLive] = useState<Pos>(pos)
   const drag = useRef({ on: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0 })
   // 놓는 순간 저장할 좌표는 ref로 따로 들고 간다 — state(live)는 마지막 move가 아직 반영 안 됐을 수 있다
@@ -206,9 +200,6 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
 
   // 외부(다른 기기에서 옮긴 위치 등)에서 좌표가 바뀌면 따라간다 — 끄는 중에는 무시
   useEffect(() => { if (!drag.current.on) { latest.current = pos; setLive(pos) } }, [pos])
-
-  // 쪽지↔그림 짝짓기(hover/onActive)는 2026-08-06 그림 분리로 사라졌다 —
-  // 이제 그림이 자기 위에서 직접 빛나므로 압정이 신호를 보낼 이유가 없다.
 
   /** 커진 만큼(펼침·창 축소) 화면 밖으로 나갔으면 되당긴다 — 여백은 허용, 화면 밖은 불가 */
   const clamp = useCallback((p: Pos): Pos => {
@@ -236,7 +227,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
     window.addEventListener('resize', pull)
     return () => window.removeEventListener('resize', pull)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clamp, open, replies.length, pos])
+  }, [clamp, pos, ...deps])
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isInteractive(e.target as HTMLElement)) return
@@ -264,10 +255,62 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
     const d = drag.current
     if (!d.on) return
     d.on = false
-    if (d.moved) { onMoveEnd(item.num, latest.current); return }   // 끌었으면 위치만 저장하고 토글하지 않는다
+    if (d.moved) { onMoveEnd(key, latest.current); return }   // 끌었으면 위치만 저장하고 토글하지 않는다
     if (isInteractive(e.target as HTMLElement)) return
-    setOpen((o) => !o)                                    // 제자리 클릭 = 펼침/접힘 토글
+    onTapToggle()                                            // 제자리 클릭 = 펼침/접힘 토글
   }
+
+  return {
+    elRef,
+    live,
+    handlers: {
+      onPointerDown,
+      onPointerMove,
+      onPointerUp,
+      onPointerCancel: () => { drag.current.on = false },
+    },
+  }
+}
+
+interface NoteProps {
+  item: ImprovementItem
+  replies: ReplyRow[]
+  pos: Pos
+  layerRef: React.RefObject<HTMLDivElement | null>
+  canEdit: boolean
+  /** 요청 자체를 지울 수 있는가 — 게시판과 같은 규칙(담당자 본인 또는 포털 관리자) */
+  canDelete: boolean
+  user: string | null
+  onMoveEnd: (num: string, pos: Pos) => void
+  /** 처음부터 펼친 채로 — 그리기 직후 방금 만든 쪽지에만 쓴다 */
+  defaultOpen?: boolean
+}
+
+function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, onMoveEnd, defaultOpen }: NoteProps) {
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const snack = useSnack()
+  // 상태 메뉴 기준점은 ref 로 잡는다 — 클릭 시점의 currentTarget 을 state 에 담아 두면
+  // 쪽지가 다시 그려질 때 그 노드가 떨어져 나가 메뉴가 화면 좌상단(0,0)에 뜬다(2026-08-05 사용자 신고).
+  // 상단바 메모 버튼(MemoComposeButton)도 같은 이유로 ref 방식을 쓴다.
+  const stBtnRef = useRef<HTMLButtonElement>(null)
+  const [open, setOpen] = useState(!!defaultOpen)
+  const [busy, setBusy] = useState(false)
+  const [reply, setReply] = useState('')
+  // 쪽지에서 바로 제목·내용 수정 — 게시판까지 가지 않아도 고칠 수 있게(수정 권한은 게시판과 동일)
+  const [editing, setEditing] = useState(false)
+  const [eContent, setEContent] = useState('')
+  const [stOpen, setStOpen] = useState(false)                                        // 상태 메뉴 열림
+  const [delAsk, setDelAsk] = useState(false)                                        // 요청 삭제 확인
+  const [statusAsk, setStatusAsk] = useState<{ status: string; reason: string } | null>(null) // 종결 확인(+사유)
+
+  // 쪽지↔그림 짝짓기(hover/onActive)는 2026-08-06 그림 분리로 사라졌다 —
+  // 이제 그림이 자기 위에서 직접 빛나므로 압정이 신호를 보낼 이유가 없다.
+  const { elRef, live, handlers } = useNoteDrag({
+    key: item.num, pos, layerRef, onMoveEnd,
+    onTapToggle: () => setOpen((o) => !o),
+    deps: [open, replies.length],
+  })
 
   /**
    * 요청 삭제 — 쪽지만이 아니라 **게시판에서도 지운다**(사용자 확정 2026-08-05).
@@ -367,10 +410,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
   const note = (
     <Box
       ref={elRef}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={() => { drag.current.on = false }}
+      {...handlers}
       sx={(th) => ({
         position: 'absolute',
         left: `${live.x}px`,
@@ -623,6 +663,224 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
 }
 
 /**
+ * 일반메모 쪽지 — 개선요청이 아닌 개인 메모(2026-08-06 신설).
+ *
+ * 요청메모(StickyNote)와 **몸놀림은 같고**(useNoteDrag 공용) 다른 것만 다르다:
+ *  · 상태(접수·완료…) 없음 · 요청번호 없음 · 연동 게시판 없음 → 그 자리가 통째로 비었다
+ *  · 접힌 모양이 압정이 아니라 메모지(StickyNote2Outlined)
+ *  · 열람은 작성자 + 공유받은 사람. 고치기·지우기·공유 변경은 **작성자만**
+ *
+ * 답글은 없다 — 요청메모의 답글은 improvement_replies(요청번호 기준)라 그대로 쓸 수 없고,
+ * 개인 메모에 스레드가 필요한지가 아직 정해지지 않았다.
+ */
+function PlainNote({ note, pos, layerRef, mine, people, onMoveEnd, onChanged, defaultOpen }: {
+  note: PageNote
+  pos: Pos
+  layerRef: React.RefObject<HTMLDivElement | null>
+  /** 내가 쓴 메모인가 — 아니면(공유받은 것) 읽기 전용 */
+  mine: boolean
+  /** 공유 대상 후보(profiles 이름) */
+  people: string[]
+  onMoveEnd: (key: string, pos: Pos) => void
+  onChanged: () => void
+  defaultOpen?: boolean
+}) {
+  const snack = useSnack()
+  const [open, setOpen] = useState(!!defaultOpen)
+  const [busy, setBusy] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [eContent, setEContent] = useState('')
+  const [eShared, setEShared] = useState<string[]>([])
+  const [delAsk, setDelAsk] = useState(false)
+
+  const { elRef, live, handlers } = useNoteDrag({
+    key: `n${note.id}`, pos, layerRef, onMoveEnd,
+    onTapToggle: () => setOpen((o) => !o),
+    deps: [open, editing, note.shared.length],
+  })
+
+  const startEdit = () => {
+    setEContent(note.content || '')
+    setEShared(note.shared)
+    setEditing(true)
+  }
+
+  const save = async () => {
+    const body = eContent.trim()
+    if (!body) return snack('내용을 입력해주세요.', 'error')
+    setBusy(true)
+    try {
+      await updatePageNote({ id: note.id, content: body, shared: eShared })
+      setEditing(false)
+      snack('수정했습니다.', 'success')
+      onChanged()
+      notifyPageNotesChanged()
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '수정에 실패했습니다', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async () => {
+    setBusy(true)
+    try {
+      await deletePageNote(note.id)
+      setDelAsk(false)
+      snack('메모를 지웠습니다.', 'success')
+      onChanged()
+      notifyPageNotesChanged()
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '삭제에 실패했습니다', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const folded = (
+    // 접힌 모양이 요청메모(압정)와 달라야 한 눈에 갈래가 구분된다(사용자 지시 2026-08-06)
+    <Box sx={(th) => ({ display: 'grid', placeItems: 'center', width: 34, height: 34, color: th.palette.accent.amber })}>
+      <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.header }} />
+    </Box>
+  )
+
+  const body = (
+    <Box
+      ref={elRef}
+      {...handlers}
+      sx={(th) => ({
+        position: 'absolute',
+        left: `${live.x}px`,
+        top: `${live.y}px`,
+        width: open ? OPEN_W : 'auto',
+        zIndex: open ? 3 : 1,
+        pointerEvents: 'auto',
+        cursor: 'grab',
+        touchAction: 'none',
+        userSelect: 'none',
+        bgcolor: 'background.paper',
+        border: `1px solid ${alpha(th.palette.accent.amber, 0.5)}`,
+        borderRadius: `${radius.card}px`,
+        boxShadow: shadow.lg,
+        transition: 'border-color .15s, box-shadow .15s',
+        '&:hover': { borderColor: th.palette.accent.amber, zIndex: open ? 3 : 2 },
+        '&:active': { cursor: 'grabbing', zIndex: 4 },
+        '& input': { cursor: 'text', userSelect: 'text' },
+      })}
+    >
+      {!open ? folded : (
+        <>
+          <Box
+            sx={(th) => ({
+              display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 1,
+              borderBottom: '1px solid', borderColor: 'divider',
+              borderRadius: `${radius.card}px ${radius.card}px 0 0`,
+              background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.13)}, transparent 70%)`,
+            })}
+          >
+            <StickyNote2OutlinedIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+            {/* 상태 칩도 요청번호도 없다 — 일반메모에는 그런 게 없다(사용자 지시) */}
+            <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber })}>
+              메모
+            </Box>
+            <Box sx={{ ml: 'auto', display: 'flex', gap: 0.25 }}>
+              <Tooltip title="접기">
+                <IconButton size="small" aria-label="메모 접기" onClick={() => setOpen(false)} sx={{ color: 'text.secondary', p: 0.5 }}>
+                  <UnfoldLessIcon sx={{ fontSize: iconSize.body }} />
+                </IconButton>
+              </Tooltip>
+              {mine && !editing && (
+                <Tooltip title="내용·공유 수정">
+                  <IconButton size="small" aria-label="메모 수정" onClick={startEdit} sx={{ color: 'text.secondary', p: 0.5 }}>
+                    <EditIcon sx={{ fontSize: iconSize.body }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {mine && (
+                <Tooltip title="메모 삭제">
+                  <IconButton size="small" aria-label="메모 삭제" onClick={() => setDelAsk(true)} disabled={busy} sx={(th) => ({ color: th.palette.accentText.red, p: 0.5 })}>
+                    <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
+          </Box>
+
+          <Box sx={{ px: 1.5, pt: 1.25, pb: 1.5 }}>
+            {editing ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <RichBodyEditor
+                  value={eContent}
+                  onChange={setEContent}
+                  placeholder="내용"
+                  ariaLabel="메모 내용"
+                  fontSize={typescale.small.size}
+                  minHeight={64}
+                  framed
+                  onCtrlEnter={() => void save()}
+                />
+                <SharePicker people={people} value={eShared} onChange={setEShared} disabled={busy} />
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                  <Button size="small" onClick={() => setEditing(false)} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
+                  <Button size="small" variant="contained" onClick={save} disabled={busy || !eContent.trim()}>
+                    {busy ? '저장 중…' : '저장'}
+                  </Button>
+                </Box>
+              </Box>
+            ) : (
+              <RichBodyView
+                html={note.content}
+                sx={{ fontSize: typescale.body.size, lineHeight: 1.65, color: 'text.primary', maxHeight: 200, overflowY: 'auto' }}
+              />
+            )}
+            {/* 게시판 버튼 없음 — 일반메모는 연동되는 게시판이 없다(사용자 지시 2026-08-06) */}
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mt: 1.25 }}>
+              <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: typescale.caption.size, color: 'text.secondary' }}>
+                <PersonOutlineIcon sx={{ fontSize: iconSize.caption }} />{note.author || '-'}
+              </Box>
+              {!editing && note.shared.length > 0 && (
+                <Tooltip title={`공유 중: ${note.shared.join(', ')}`}>
+                  <Box
+                    component="span"
+                    sx={(th) => ({
+                      display: 'inline-flex', alignItems: 'center', gap: '3px',
+                      fontSize: typescale.caption.size, color: 'accentText.blue',
+                      bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: `${radius.pill}px`,
+                    })}
+                  >
+                    <GroupOutlinedIcon sx={{ fontSize: iconSize.caption }} />
+                    {note.shared.length}명 공유
+                  </Box>
+                </Tooltip>
+              )}
+              {!mine && (
+                <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>공유받음 (읽기 전용)</Box>
+              )}
+            </Box>
+          </Box>
+        </>
+      )}
+    </Box>
+  )
+
+  return (
+    <>
+      {open ? body : <Tooltip title={plainText(note.content) || '메모'} placement="left">{body}</Tooltip>}
+      <ConfirmDialog
+        open={delAsk}
+        destructive
+        title="이 메모를 지울까요?"
+        description="되돌릴 수 없습니다. 딸린 그림은 그대로 남습니다."
+        confirmLabel="삭제"
+        busy={busy}
+        onConfirm={remove}
+        onClose={() => setDelAsk(false)}
+      />
+    </>
+  )
+}
+
+/**
  * 현재 경로의 붙임쪽지 레이어. 상단바·사이드바를 뺀 콘텐츠 영역 위에 고정으로 떠 있다.
  * 쪽지가 없거나 게스트·모바일이면 아무것도 렌더하지 않는다.
  */
@@ -655,6 +913,9 @@ export default function StickyMemoLayer() {
     { strokes: MemoStroke[]; x: number; y: number; ask?: boolean; drawId?: number; existing?: boolean } | null
   >(null)
   const [pendingText, setPendingText] = useState('')
+  // 그림 옆 입력창에서 고른 갈래·공유 대상(상단바 메모 버튼과 같은 규칙 — 기본은 일반메모)
+  const [pendingKind, setPendingKind] = useState<MemoKind>(DEFAULT_MEMO_KIND)
+  const [pendingShared, setPendingShared] = useState<string[]>([])
   const [busyPending, setBusyPending] = useState(false)
   const [openNum, setOpenNum] = useState<string | null>(null) // 방금 만든 쪽지 — 처음부터 펼쳐 보인다
   /**
@@ -664,6 +925,12 @@ export default function StickyMemoLayer() {
    * 압정이 사라진 자리를 그림 자신이 대신한다 — hoverId 는 후광, selectedId 는 고치기·지우기 막대.
    */
   const [drawings, setDrawings] = useState<PageDrawing[]>([])
+  /** 일반메모(page_notes) — RLS 가 '내 것 + 공유받은 것'만 준다 */
+  const [notes, setNotes] = useState<PageNote[]>([])
+  /** 방금 만든 일반메모 — 처음부터 펼쳐 보인다(요청메모의 openNum 과 같은 역할) */
+  const [openNoteId, setOpenNoteId] = useState<number | null>(null)
+  /** 공유 대상 후보 이름 — 작성 폼 오토컴플리트와 같은 출처(profiles) */
+  const [people, setPeople] = useState<string[]>([])
   const [hoverId, setHoverId] = useState<number | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [delDraw, setDelDraw] = useState<number | null>(null)
@@ -689,6 +956,13 @@ export default function StickyMemoLayer() {
     return m
   }, [replyItems])
 
+  /** 입력창을 닫을 때 폼을 비운다 — 갈래·공유 대상이 남으면 다음 메모가 남의 설정을 물려받는다 */
+  const resetPendingForm = () => {
+    setPendingText('')
+    setPendingKind(DEFAULT_MEMO_KIND)
+    setPendingShared([])
+  }
+
   /** 입력창 자리 = 그림 오른쪽 위(획들의 경계상자 기준). 레이어 밖으로 나가지 않게 당긴다 */
   const panelPos = (strokes: MemoStroke[]) => {
     const xs = strokes.flatMap((s) => s.p.filter((_, i) => i % 2 === 0))
@@ -711,23 +985,72 @@ export default function StickyMemoLayer() {
   }, [snack])
   useEffect(() => { if (isMember) void reloadDrawings() }, [isMember, reloadDrawings])
 
+  /** 일반메모 목록 다시 읽기 */
+  const reloadNotes = useCallback(async () => {
+    try {
+      setNotes(await fetchPageNotes())
+    } catch {
+      snack('메모를 불러오지 못했습니다.', 'error')
+    }
+  }, [snack])
+  // 상단바 메모 버튼에서 만든 것도 바로 뜨게 — 두 곳이 부모 상태를 공유하지 않아 이벤트로 잇는다
+  useEffect(() => {
+    if (!isMember) return
+    void reloadNotes()
+    const onChanged = () => void reloadNotes()
+    window.addEventListener(PAGE_NOTES_CHANGED, onChanged)
+    return () => window.removeEventListener(PAGE_NOTES_CHANGED, onChanged)
+  }, [isMember, reloadNotes])
+
+  // 공유 대상 후보는 한 번만 — 사람 목록은 자주 바뀌지 않는다
+  useEffect(() => {
+    if (!isMember) return
+    let alive = true
+    void fetchAuthors().then((n) => { if (alive) setPeople(n) }).catch(() => {})
+    return () => { alive = false }
+  }, [isMember])
+
   /**
-   * 이 화면의 그림 — 가시성은 쪽지와 같은 기준(본인 + 포털 관리자).
+   * 이 화면의 그림.
    *
-   * 경로 매칭도 **쪽지와 같은 규칙**(matchesPath — 하위 경로 포함)을 쓴다.
+   * 가시성은 **서버(RLS)가 정한다** — 내 것 + 포털 관리자 + 딸린 일반메모를 공유받은 사람.
+   * 종전에는 읽기 정책이 using(true) 라 화면에서 걸렀는데, 일반메모에 '작성자만'이라는
+   * 약속이 생긴 이상 화면 필터로는 부족하다(docs/db/page-notes.sql).
+   *
+   * 경로 매칭은 **쪽지와 같은 규칙**(matchesPath — 하위 경로 포함)을 쓴다.
    * 완전 일치로 좁혔더니 `/notice` 에서 그린 그림이 `/notice/12` 로 딥링크할 때 사라졌다.
    * 두 경로는 같은 목록 화면이고 레이어는 스크롤도 안 따라가므로 픽셀 단위로 같은 자리다 —
    * 한 번의 조작으로 만든 그림과 쪽지가 서로 다른 규칙으로 나타나면 그게 더 이상하다.
    */
   const hereDraw = useMemo(
-    () => drawings.filter((d) => matchesPath(pathname, d.path) && (isAdmin || d.author === user)),
-    [drawings, pathname, isAdmin, user],
+    () => drawings.filter((d) => matchesPath(pathname, d.path)),
+    [drawings, pathname],
   )
+
+  /**
+   * 이 화면의 일반메모 — 서버가 이미 '내 것 + 공유받은 것'만 준다(RLS).
+   * 그림과 달리 포털 관리자도 예외가 아니다 — 그게 요청메모와 갈리는 지점이다.
+   */
+  const hereNotes = useMemo(() => notes.filter((n) => matchesPath(pathname, n.path)), [notes, pathname])
   const editingDraw = typeof drawFor === 'number' ? drawings.find((d) => d.id === drawFor) || null : null
   // 고치는 중에는 도구막대를 내린다 — 판이 그 위를 덮어 눌리지도 않는 유령 버튼이 되고,
   // 판 밖(위쪽)으로 삐져나온 조각은 눌려서 편집 중인 그림을 지워 버린다(적대적 리뷰 확인).
   // 입력창이 떠 있을 때도 내린다 — 같은 자리에 겹쳐 뜬다(후광은 남아 대상이 어느 그림인지 보인다).
   const selectedDraw = drawFor === null && !pending ? hereDraw.find((d) => d.id === selectedId) || null : null
+  /**
+   * 고르긴 했는데 **손댈 수 있는 그림인가** — 쓰기 정책(is_admin() or 본인)과 같은 기준.
+   *
+   * 공유받은 남의 그림도 화면에는 뜬다. 거기에 고치기·지우기 막대를 그대로 띄우면
+   * 눌러도 RLS 가 행을 걸러 아무 일이 안 일어나는데 '지웠습니다'만 뜬다(적대적 리뷰 확인).
+   * 아예 안 띄우는 것이 맞다 — 못 하는 일은 보이지 않아야 한다.
+   */
+  const canEditDraw = !!selectedDraw && (isAdmin || selectedDraw.author === user)
+  /**
+   * 메모 붙이기는 **내 그림에만**. 관리자는 남의 그림을 고칠 수는 있어도 거기에 자기 메모를 달아
+   * 제3자에게 공유할 수는 없다 — 그림 주인 모르게 그림이 퍼진다. DB도 같은 기준으로 막는다
+   * (page_notes_insert 의 drawing_id 소유권 검사).
+   */
+  const canAttachMemo = !!selectedDraw && selectedDraw.author === user
 
   /**
    * 자리가 없는 쪽지에 **빈 슬롯을 배정하고 즉시 저장**한다.
@@ -747,25 +1070,36 @@ export default function StickyMemoLayer() {
    * work.order 도 loadedOk 를 게이트로 쓴다.
    */
   useEffect(() => {
-    if (!layerEl || memos.length === 0 || !usLoadedOk) return
-    const need = memos.filter((t) => !saved?.[t.num])
+    // 요청메모(번호)와 일반메모('n{id}')가 같은 좌표 맵을 나눠 쓴다 — 접두사로 갈라 키가 안 겹친다
+    const keys = [...memos.map((t) => t.num), ...hereNotes.map((n) => `n${n.id}`)]
+    if (!layerEl || keys.length === 0 || !usLoadedOk) return
+    const need = keys.filter((k) => !saved?.[k])
     if (need.length === 0) return
-    const taken = memos.filter((t) => saved?.[t.num]).map((t) => saved![t.num])
+    const taken = keys.filter((k) => saved?.[k]).map((k) => saved![k])
     const patch: PosMap = {}
     for (const t of need) {
       let n = 0
       while (n < MAX_SLOT && overlaps(slotPx(layerEl, n), taken)) n++
       const px = slotPx(layerEl, n)
       taken.push(px)
-      patch[t.num] = px
+      patch[t] = px
     }
     dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), ...patch } }))
-  }, [layerEl, memos, saved, usLoadedOk, dispatch])
+  }, [layerEl, memos, hereNotes, saved, usLoadedOk, dispatch])
+
+  /**
+   * 좌표 한 건 저장 — 요청메모는 요청번호, 일반메모는 'n{id}' 를 키로 쓴다.
+   *
+   * ⚠ 자리 배정 effect 와 같은 게이트(usLoadedOk). 개인 설정 로드가 실패한 상태에서 저장하면
+   * saved 가 비어 있어 **서버에 있던 다른 쪽지 좌표를 통째로 날린다**(이 키는 맵 통째로 치환).
+   */
+  const savePos = useCallback((key: string, pos: Pos) => {
+    if (!usLoadedOk) return
+    dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [key]: pos } }))
+  }, [dispatch, saved, usLoadedOk])
 
   // 옮긴 위치는 개인 설정에 저장(디바운스 병합) — 다른 사람 화면은 움직이지 않는다
-  const onMoveEnd = useCallback((num: string, pos: Pos) => {
-    dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [num]: pos } }))
-  }, [dispatch, saved])
+  const onMoveEnd = useCallback((key: string, pos: Pos) => savePos(key, pos), [savePos])
 
   /**
    * 화면 그림 — 구성원 이상(2026-08-06 개방).
@@ -835,11 +1169,20 @@ export default function StickyMemoLayer() {
       // ⚠ 만들어진 id 를 pending 에 적어 둔다. 뒤의 쪽지 저장이 실패하면 입력창이 그대로 남아
       // 사용자가 다시 '붙이기'를 누르는데, id 를 안 들고 있으면 누를 때마다 **같은 그림이 한 장씩
       // 더 쌓인다**(적대적 리뷰 확인). 두 번째부터는 새로 만들지 않고 그 행을 고친다.
-      if (pending.drawId === undefined) {
-        const id = await createPageDrawing({ path: pathname, strokes: pending.strokes })
-        setPending((p) => (p ? { ...p, drawId: id } : p))
+      let drawId = pending.drawId
+      if (drawId === undefined) {
+        drawId = await createPageDrawing({ path: pathname, strokes: pending.strokes })
+        const madeId = drawId
+        setPending((p) => (p ? { ...p, drawId: madeId } : p))
       }
-      if (withMemo) {
+      if (withMemo && pendingKind === 'plain') {
+        // 일반메모 — 게시판도 상태도 요청번호도 없다. 그림에 이어 두면 공유가 그림까지 따라간다
+        const id = await createPageNote({ path: pathname, content: body, shared: pendingShared, drawingId: drawId })
+        savePos(`n${id}`, { x: pending.x, y: pending.y })
+        setOpenNoteId(id)
+        notifyPageNotesChanged()
+        await reloadNotes()
+      } else if (withMemo) {
         const loc = pathToLocation(pathname)
         // 게시판 목록이 읽히려면 제목이 있어야 한다 — 내용이 있으면 첫 줄, 없으면 기본 제목
         const title = body ? firstLine(body) : `화면 메모 — ${loc || '기타'}`
@@ -849,11 +1192,7 @@ export default function StickyMemoLayer() {
         if (loc) await updateImprovement({ author: user, key: 'session', num, memo: true })
         else snack(`이 화면은 연결된 개선위치가 없어 게시판 접수만 됩니다. (요청 #${num})`, 'warning')
         // 쪽지를 **입력창이 있던 그 자리에 펼친 채로** 남긴다(2026-08-05 사용자 지시).
-        // 자리를 먼저 저장해야 한다 — 안 그러면 아래 '빈 슬롯 배정' effect 가 기본 자리(메모 버튼 밑)를
-        // 잡아버려 압정이 상단바 근처로 튀었다. putSetting 은 낙관 반영이라 목록이 갱신될 때 이미 들어가 있다.
-        // ⚠ 자리 배정 effect 와 같은 게이트 — 개인 설정 로드가 실패한 상태에서 저장하면
-        // saved 가 비어 있어 **서버에 있던 다른 압정 좌표를 통째로 날린다**(이 키는 맵 통째로 치환).
-        if (usLoadedOk) dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [String(num)]: { x: pending.x, y: pending.y } } }))
+        savePos(String(num), { x: pending.x, y: pending.y })
         setOpenNum(String(num))
         dispatch(loadImproveData())
       } else {
@@ -861,7 +1200,7 @@ export default function StickyMemoLayer() {
         snack('그림을 남겼습니다. 그림 위에 마우스를 올리면 고치거나 지울 수 있습니다.', 'success')
       }
       setPending(null)
-      setPendingText('')
+      resetPendingForm()
       // 선택도 푼다 — 안 그러면 방금 펼친 쪽지 위로 그림 도구막대가 다시 올라와 겹친다
       setSelectedId(null)
       await reloadDrawings()
@@ -881,7 +1220,7 @@ export default function StickyMemoLayer() {
     // 원래 있던 그림에 메모만 달려던 것이면 그림은 건드리지 않는다
     const id = pending?.existing ? undefined : pending?.drawId
     setPending(null)
-    setPendingText('')
+    resetPendingForm()
     setSelectedId(null)
     if (id === undefined) return
     try {
@@ -952,12 +1291,15 @@ export default function StickyMemoLayer() {
   busyDrawRef.current = !!drawFor || !!pending
   useEffect(() => {
     setOpenNum(null)
+    setOpenNoteId(null)
     setSelectedId(null)
     setHoverId(null)
     if (!busyDrawRef.current) return
     setDrawFor(null)
     setPending(null)
     setPendingText('')
+    setPendingKind(DEFAULT_MEMO_KIND)
+    setPendingShared([])
     snack('화면을 옮겨 그리던 그림을 닫았습니다.', 'info')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
@@ -1074,7 +1416,7 @@ export default function StickyMemoLayer() {
 
         {/* 선택한 그림의 도구막대 — 압정이 없어진 자리를 대신한다.
             svg 밖(레이어 직계 자식)에 둔다 — 그림 svg 안에 버튼을 넣으면 잡히지 않는다. */}
-        {isMember && selectedDraw && (() => {
+        {isMember && selectedDraw && canEditDraw && (() => {
           const b = glowBox(selectedDraw.strokes)
           if (!b) return null
           return (
@@ -1097,11 +1439,13 @@ export default function StickyMemoLayer() {
               </Tooltip>
               {/* 나중에 설명을 붙이는 길(사용자 지시 2026-08-06) — '그림만'으로 남겨 뒀다가
                   뒤늦게 메모를 달고 싶을 때. 그림은 그대로 두고 쪽지만 새로 만든다 */}
-              <Tooltip title="메모 붙이기">
-                <IconButton size="small" aria-label="메모 붙이기" onClick={() => attachMemo(selectedDraw)} sx={{ color: 'text.secondary', p: 0.5 }}>
-                  <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.body }} />
-                </IconButton>
-              </Tooltip>
+              {canAttachMemo && (
+                <Tooltip title="메모 붙이기">
+                  <IconButton size="small" aria-label="메모 붙이기" onClick={() => attachMemo(selectedDraw)} sx={{ color: 'text.secondary', p: 0.5 }}>
+                    <StickyNote2OutlinedIcon sx={{ fontSize: iconSize.body }} />
+                  </IconButton>
+                </Tooltip>
+              )}
               <Tooltip title="그림 지우기">
                 <IconButton size="small" aria-label="그림 지우기" onClick={() => setDelDraw(selectedDraw.id)} sx={(th) => ({ color: th.palette.accentText.red, p: 0.5 })}>
                   <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
@@ -1183,15 +1527,27 @@ export default function StickyMemoLayer() {
                 </Box>
               ) : (
                 <>
+                  {/* 갈래 고르기 — 기본은 일반메모. 상단바 메모 버튼과 같은 UI·같은 규칙(2026-08-06) */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1 }}>
+                    <MemoKindPicker value={pendingKind} onChange={setPendingKind} disabled={busyPending} />
+                    <MemoKindHint kind={pendingKind} loc={pathToLocation(pathname)} />
+                  </Box>
                   <TextField
                     autoFocus fullWidth size="small" multiline minRows={2}
                     value={pendingText}
                     onChange={(e) => setPendingText(e.target.value)}
-                    placeholder="무엇이 어떻게 불편한지 (비워도 됩니다)"
+                    placeholder={pendingKind === 'plain' ? '메모 내용' : '무엇이 어떻게 불편한지 (비워도 됩니다)'}
                     disabled={busyPending}
                     slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
                     sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size } }}
                   />
+                  {/* 공유는 일반메모만 — 요청메모는 작성자+포털 관리자로 규칙이 정해져 있다.
+                      그림에 붙는 메모라 여기서 고른 사람에게는 그림도 함께 보인다(사용자 지시) */}
+                  {pendingKind === 'plain' && (
+                    <Box sx={{ mt: 1 }}>
+                      <SharePicker people={people.filter((p) => p !== user)} value={pendingShared} onChange={setPendingShared} disabled={busyPending} />
+                    </Box>
+                  )}
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 1 }}>
                     {/* 원래 있던 그림에 메모만 다는 중이면 '버리기'가 아니다 — 버릴 게 없다 */}
                     <Button size="small" disabled={busyPending} onClick={() => void discardPending()} sx={{ color: 'text.secondary' }}>
@@ -1226,6 +1582,25 @@ export default function StickyMemoLayer() {
               user={user}
               onMoveEnd={onMoveEnd}
               defaultOpen={t.num === openNum}
+            />
+          )
+        })}
+
+        {/* 일반메모 — 요청메모와 같은 자리·같은 몸놀림, 다른 껍데기(2026-08-06) */}
+        {hereNotes.map((n) => {
+          const pos = saved?.[`n${n.id}`]
+          if (!pos) return null
+          return (
+            <PlainNote
+              key={`n${n.id}`}
+              note={n}
+              pos={pos}
+              layerRef={layerRef}
+              mine={!!user && n.author === user}
+              people={people.filter((p) => p !== user)}
+              onMoveEnd={onMoveEnd}
+              onChanged={() => void reloadNotes()}
+              defaultOpen={n.id === openNoteId}
             />
           )
         })}

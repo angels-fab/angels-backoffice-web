@@ -50,20 +50,29 @@ export async function createPageDrawing(p: { path: string; strokes: MemoStroke[]
   return Number(data!.id)
 }
 
+/**
+ * ⚠ 쓰기 결과를 **행 수로 확인한다**(.select()).
+ *
+ * RLS 의 USING 이 행을 걸러 0건이 되는 경우 PostgREST 는 오류가 아니라 성공(204)을 준다.
+ * error 만 보면 남의 그림을 고치거나 지우려 했을 때 아무 일도 안 일어났는데 '지웠습니다'가 뜬다
+ * (적대적 리뷰 확인). 0건이면 권한 없음으로 보고 분명히 알린다.
+ */
 export async function updatePageDrawing(p: { id: number; strokes: MemoStroke[] }): Promise<void> {
   await ensureSession()
-  const { error } = await withTimeout(
-    supabase.from('page_drawings').update({ strokes: p.strokes, updated_at: new Date().toISOString() }).eq('id', p.id),
+  const { data, error } = await withTimeout(
+    supabase.from('page_drawings').update({ strokes: p.strokes, updated_at: new Date().toISOString() }).eq('id', p.id).select('id'),
     DB_TIMEOUT, '화면 그림 수정',
   )
   if (error) throw new Error(error.message || '그림 수정에 실패했습니다')
+  if (!data || data.length === 0) throw new Error('내가 그린 그림만 고칠 수 있습니다.')
 }
 
 export async function deletePageDrawing(id: number): Promise<void> {
   await ensureSession()
-  const { error } = await withTimeout(
-    supabase.from('page_drawings').delete().eq('id', id),
+  const { data, error } = await withTimeout(
+    supabase.from('page_drawings').delete().eq('id', id).select('id'),
     DB_TIMEOUT, '화면 그림 삭제',
   )
   if (error) throw new Error(error.message || '그림 삭제에 실패했습니다')
+  if (!data || data.length === 0) throw new Error('내가 그린 그림만 지울 수 있습니다.')
 }
