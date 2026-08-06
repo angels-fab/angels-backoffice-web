@@ -2,16 +2,35 @@ import { useEffect, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
+import Popover from '@mui/material/Popover'
+import Slider from '@mui/material/Slider'
 import Tooltip from '@mui/material/Tooltip'
+import Typography from '@mui/material/Typography'
 import { useTheme } from '@mui/material/styles'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
 import LayersClearIcon from '@mui/icons-material/LayersClear'
+import BrushIcon from '@mui/icons-material/Brush'
+import HighlightIcon from '@mui/icons-material/Highlight'
+import NorthEastIcon from '@mui/icons-material/NorthEast'
+import CropSquareIcon from '@mui/icons-material/CropSquare'
+import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined'
 // MUI 아이콘 세트에 '지우개' 전용 글리프가 없다(*Eraser* 는 PhonelinkErase 뿐).
 // 칠판 지우개에 가장 가까운 청소용 브러시로 대신한다 — 수제 SVG 금지 규칙(CLAUDE.md) 때문에 직접 그리지 않는다.
 import CleaningServicesIcon from '@mui/icons-material/CleaningServices'
 import { accent, radius, shadow, typescale, weight, z } from '@/theme/tokens'
-import type { MemoStroke } from '@/api/improve'
+import type { MemoStroke, MemoStrokeKind } from '@/api/improve'
+
+/**
+ * 화면 위 그리기 도구 (2026-08-06 개편 — 윈도우 캡처 도구 구성을 따름).
+ *
+ * 도구 = **버튼 + 전용 설정**. 버튼을 누르면 그 도구가 선택되고, 선택된 도구를 한 번 더 누르면
+ * 색·굵기 팝오버가 열린다(캡처 도구와 같은 조작). 설정은 **도구마다 따로 기억**한다 —
+ * 형광펜을 노랑 굵게 쓰다 펜으로 돌아와도 펜은 쓰던 색·굵기 그대로다.
+ *
+ * 저장 형식은 MemoStroke 하나로 통일한다. 자유곡선은 지나온 점 전부, 도형은 시작·끝 두 점.
+ * 종류(k)가 없으면 자유곡선으로 읽으므로 개편 전에 그린 그림도 그대로 열린다.
+ */
 
 /**
  * 펜 색. 'ink' 는 고정색이 아니라 **테마 글자색**으로 풀린다(라이트=검정 / 다크=흰색).
@@ -19,15 +38,51 @@ import type { MemoStroke } from '@/api/improve'
  * 다 봐야 하므로 색이 아니라 '먹'이라는 뜻으로 저장한다.
  */
 export const INK = 'ink'
-const PENS: { key: string; color: string; label: string }[] = [
-  { key: 'ink', color: INK, label: '검정' },
-  { key: 'red', color: accent.red, label: '빨강' },
-  { key: 'amber', color: accent.amber, label: '노랑' },
-  { key: 'blue', color: accent.blue, label: '파랑' },
+
+/** 선용 색 — 먹 + 디자인 시스템 강조색. 임의 hex 를 새로 만들지 않는다 */
+const LINE_COLORS: { c: string; label: string }[] = [
+  { c: INK, label: '검정' },
+  { c: accent.red, label: '빨강' },
+  { c: accent.amber, label: '노랑' },
+  { c: accent.green, label: '초록' },
+  { c: accent.blue, label: '파랑' },
+  { c: accent.purple, label: '보라' },
+  { c: accent.teal, label: '청록' },
+  { c: accent.rose, label: '분홍' },
 ]
-const WIDTHS = [3, 6]
-/** 지우개 판정 반경(px) — 이 안에 획의 점이 하나라도 있으면 그 획을 통째로 지운다 */
+/** 형광펜 색 — 밝은 것만. 먹·어두운 색은 형광으로 칠하면 글자를 덮어 버린다 */
+const HL_COLORS: { c: string; label: string }[] = [
+  { c: accent.amber, label: '노랑' },
+  { c: accent.green, label: '초록' },
+  { c: accent.teal, label: '청록' },
+  { c: accent.rose, label: '분홍' },
+]
+
+/** 형광펜 불투명도 — 아래 글자가 비쳐야 '덧칠'로 읽힌다 */
+const HL_ALPHA = 0.35
+/** 지우개 판정 반경(px) — 획까지 거리가 이 안이면 그 획을 통째로 지운다 */
 const ERASE_R = 14
+/** 화살촉 길이 비율(선 굵기 대비)과 벌어진 각 */
+const HEAD_LEN = 4.5
+const HEAD_ANGLE = Math.PI / 7
+
+type Tool = 'pen' | 'hl' | 'arrow' | 'rect' | 'ellipse' | 'eraser'
+/** 도형 도구 — 누르는 동안 끝점만 갱신한다(자유곡선처럼 점을 쌓지 않는다) */
+const SHAPE_TOOLS: Tool[] = ['arrow', 'rect', 'ellipse']
+
+const TOOLS: { key: Tool; label: string; Icon: typeof BrushIcon }[] = [
+  { key: 'pen', label: '펜', Icon: BrushIcon },
+  { key: 'hl', label: '형광펜', Icon: HighlightIcon },
+  { key: 'arrow', label: '화살표', Icon: NorthEastIcon },
+  { key: 'rect', label: '사각형', Icon: CropSquareIcon },
+  { key: 'ellipse', label: '타원', Icon: CircleOutlinedIcon },
+  { key: 'eraser', label: '지우개', Icon: CleaningServicesIcon },
+]
+
+/** 도구별 굵기 범위 — 형광펜은 덧칠이라 훨씬 두껍다 */
+const WIDTH_RANGE: Record<Exclude<Tool, 'eraser'>, [number, number]> = {
+  pen: [1, 12], hl: [8, 32], arrow: [2, 12], rect: [1, 10], ellipse: [1, 10],
+}
 
 /**
  * 지우개 커서 — 도구 아이콘과 같은 그림으로(사용자 지시 2026-08-05).
@@ -57,18 +112,69 @@ export function pointsOf(p: number[]): string {
   return out.join(' ')
 }
 
+const kindOf = (s: MemoStroke): MemoStrokeKind => s.k ?? 'pen'
+
 /**
- * 화면 위 그리기 — **포털 관리자 전용 편의 도구**(2026-08-05 사용자 지시).
- *
- * 만든 이유: 고칠 곳을 말로 설명하는 대신 화면에 직접 동그라미·화살표를 쳐 두면
- * 무엇을 말하는지 훨씬 빨리 통한다. 구성원에게는 도구도 그림도 보이지 않는다.
- *
- * 좌표는 **본문 칸 좌상단 기준 px** — 붙임쪽지 압정과 같은 기준이라 해상도가 달라져도
- * 같은 지점에 남는다(StickyMemo 의 POS_KEY 주석 참고). 그래서 이 컴포넌트는 그리기 판을
- * 직접 만들지 않고, 쪽지 레이어가 넘겨준 상자(layerRef) 안에서 좌표를 잰다.
- *
- * 저장은 하지 않는다 — 완료를 누르면 획 배열을 부모에게 돌려주고, 어디에 붙일지는 부모가 정한다.
+ * 획 하나를 SVG 로 그린다 — **그리는 중(MemoDraw)과 저장된 그림(StickyMemo)이 같은 함수를 쓴다.**
+ * 두 곳에서 따로 그리면 새 종류를 넣을 때마다 한쪽을 빠뜨린다.
+ * ink 는 테마 글자색으로 풀어 넘겨야 한다(sx 로는 stroke 에 팔레트 경로가 안 풀린다 — 아래 inkColor 주석).
  */
+export function StrokeShape({ s, ink, keyId }: { s: MemoStroke; ink: string; keyId: string }) {
+  const stroke = s.c === INK ? ink : s.c
+  const k = kindOf(s)
+  const common = { fill: 'none', stroke, strokeWidth: s.w, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  const [x1, y1, x2, y2] = s.p
+
+  if (k === 'hl') {
+    // 형광펜 — 굵고 반투명. 끝을 각지게 두어 형광펜 자국처럼 보이게 한다
+    return <polyline key={keyId} {...common} points={pointsOf(s.p)} strokeOpacity={HL_ALPHA} strokeLinecap="butt" />
+  }
+  if (k === 'rect') {
+    return <rect key={keyId} {...common} x={Math.min(x1, x2)} y={Math.min(y1, y2)} width={Math.abs(x2 - x1)} height={Math.abs(y2 - y1)} rx={4} />
+  }
+  if (k === 'ellipse') {
+    return <ellipse key={keyId} {...common} cx={(x1 + x2) / 2} cy={(y1 + y2) / 2} rx={Math.abs(x2 - x1) / 2} ry={Math.abs(y2 - y1) / 2} />
+  }
+  if (k === 'arrow') {
+    // 화살촉 — 끝점에서 몸통 반대 방향으로 두 갈래. 길이는 선 굵기에 비례해 굵은 선에도 균형이 맞는다
+    const a = Math.atan2(y2 - y1, x2 - x1)
+    const L = s.w * HEAD_LEN
+    const p1 = `${x2 - L * Math.cos(a - HEAD_ANGLE)},${y2 - L * Math.sin(a - HEAD_ANGLE)}`
+    const p2 = `${x2 - L * Math.cos(a + HEAD_ANGLE)},${y2 - L * Math.sin(a + HEAD_ANGLE)}`
+    return (
+      <g key={keyId}>
+        <line {...common} x1={x1} y1={y1} x2={x2} y2={y2} />
+        <polyline {...common} points={`${p1} ${x2},${y2} ${p2}`} />
+      </g>
+    )
+  }
+  return <polyline key={keyId} {...common} points={pointsOf(s.p)} />
+}
+
+/** 커서와 획 사이 거리 — 꼭짓점이 아니라 **선분까지의 거리**. 도형은 두 점 사이 선분으로 본다 */
+function hits(st: MemoStroke, x: number, y: number) {
+  const r = ERASE_R + st.w / 2
+  const p = st.p
+  const k = kindOf(st)
+  if (k === 'rect' || k === 'ellipse') {
+    // 테두리 근처만 — 안쪽 빈 곳을 문질러 지워지면 아래 화면을 못 쓴다
+    const [x1, y1, x2, y2] = p
+    const L = Math.min(x1, x2) - r, R = Math.max(x1, x2) + r, T = Math.min(y1, y2) - r, B = Math.max(y1, y2) + r
+    const l = Math.min(x1, x2) + r, rr = Math.max(x1, x2) - r, t = Math.min(y1, y2) + r, b = Math.max(y1, y2) - r
+    const inOuter = x >= L && x <= R && y >= T && y <= B
+    const inInner = x >= l && x <= rr && y >= t && y <= b
+    return inOuter && !inInner
+  }
+  if (p.length <= 2) return Math.hypot((p[0] ?? 0) - x, (p[1] ?? 0) - y) <= r
+  for (let i = 0; i + 3 < p.length; i += 2) {
+    const ax = p[i], ay = p[i + 1], dx = p[i + 2] - ax, dy = p[i + 3] - ay
+    const len2 = dx * dx + dy * dy
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2))
+    if (Math.hypot(ax + t * dx - x, ay + t * dy - y) <= r) return true
+  }
+  return false
+}
+
 export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
   layerRef: React.RefObject<HTMLDivElement | null>
   initial?: MemoStroke[]
@@ -80,11 +186,8 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
    *
    * ① 한 덩어리인 이유 — 종전에는 done/undone 을 따로 두고 setStrokes 의 갱신 함수 *안에서*
    *    setUndone 을 불렀다. 갱신 함수는 순수해야 하는데(개발 모드에서 일부러 두 번 실행한다)
-   *    그 안에서 다른 상태를 바꾸니 실행취소 한 번에 이력이 두 번 쌓여 다시실행이 엉켰다
-   *    (2026-08-05 사용자 신고: undo 가 이상하다).
+   *    그 안에서 다른 상태를 바꾸니 실행취소 한 번에 이력이 두 번 쌓여 다시실행이 엉켰다.
    * ② 스냅샷인 이유 — '되돌릴 획'을 하나씩 빼는 방식이면 **지우개로 지운 획이 이력에 안 남는다.**
-   *    A·B·C 를 그리고 지우개로 A 를 지운 뒤 Ctrl+Z 를 누르면, 이력에는 지운 기록이 없으니
-   *    멀쩡한 C 가 대신 사라지고 A 는 영영 못 돌아왔다(2026-08-05 전수검사에서 확인).
    *    그리기·지우개·전부 지우기를 모두 '되돌림 지점 하나 + 새 상태'로 통일하면 다 같이 복구된다.
    *
    * erased = 이번 지우개 제스처에서 이미 되돌림 지점을 만들었는지. 지우개는 포인터가 움직일 때마다
@@ -93,9 +196,19 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
   type Hist = { past: MemoStroke[][]; cur: MemoStroke[]; future: MemoStroke[][]; erased: boolean }
   const [hist, setHist] = useState<Hist>({ past: [], cur: initial || [], future: [], erased: false })
   const strokes = hist.cur
-  const [pen, setPen] = useState(PENS[0])
-  const [width, setWidth] = useState(WIDTHS[0])
-  const [erasing, setErasing] = useState(false)
+
+  const [tool, setTool] = useState<Tool>('pen')
+  /** 도구별 색·굵기 — 캡처 도구처럼 도구마다 따로 기억한다 */
+  const [cfg, setCfg] = useState<Record<Exclude<Tool, 'eraser'>, { c: string; w: number }>>({
+    pen: { c: INK, w: 3 },
+    hl: { c: accent.amber, w: 16 },
+    arrow: { c: accent.red, w: 3 },
+    rect: { c: accent.red, w: 3 },
+    ellipse: { c: accent.red, w: 3 },
+  })
+  const [cfgAnchor, setCfgAnchor] = useState<HTMLElement | null>(null)
+  const [cfgTool, setCfgTool] = useState<Exclude<Tool, 'eraser'>>('pen')
+
   const drawing = useRef(false)
   const svgRef = useRef<SVGSVGElement>(null)
   const theme = useTheme()
@@ -106,7 +219,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
    * (2026-08-05 사용자 신고: 검정색 안 그려진다). 그래서 여기서 실제 색으로 바꿔 속성으로 준다.
    */
   const inkColor = theme.palette.text.primary
-  const strokeOf = (c: string) => (c === INK ? inkColor : c)
+  const swatch = (c: string) => (c === INK ? inkColor : c)
 
   // 모두 순수 갱신 하나로 끝난다 — 갱신 함수 안에서 다른 상태·ref 를 건드리지 않는다
   const canUndo = hist.past.length > 0
@@ -123,8 +236,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
    * onCancel 은 ref 로 잡아 리스너를 한 번만 건다(부모가 매 렌더 새 함수를 넘겨도 재등록되지 않게).
    *
    * ⚠ 입력칸 안에서는 Ctrl+Z 를 가로채지 않는다 — 그리는 중에도 쪽지 답글칸·검색창은 살아 있어서
-   * 거기서 글자를 되돌리려던 Ctrl+Z 가 그림을 되돌려 버렸다(2026-08-05 전수검사에서 확인).
-   * Esc 는 어디서 눌러도 그리기를 닫는 게 맞으므로 이 검사 위에 둔다.
+   * 거기서 글자를 되돌리려던 Ctrl+Z 가 그림을 되돌려 버렸다.
    */
   const cancelRef = useRef(onCancel)
   cancelRef.current = onCancel
@@ -144,28 +256,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /**
-   * 커서와 획 사이 거리 — **꼭짓점이 아니라 선분까지의 거리**로 잰다.
-   * 점만 보면 빠르게 그은 직선은 점이 양 끝에만 있어서 한가운데를 아무리 문질러도 안 지워졌다
-   * (2026-08-05 전수검사에서 확인). 굵은 획일수록 더 관대하게 잡는다.
-   */
-  const hits = (st: MemoStroke, x: number, y: number) => {
-    const r = ERASE_R + st.w / 2
-    const p = st.p
-    if (p.length <= 2) return Math.hypot((p[0] ?? 0) - x, (p[1] ?? 0) - y) <= r
-    for (let i = 0; i + 3 < p.length; i += 2) {
-      const ax = p[i], ay = p[i + 1], dx = p[i + 2] - ax, dy = p[i + 3] - ay
-      const len2 = dx * dx + dy * dy
-      const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2))
-      if (Math.hypot(ax + t * dx - x, ay + t * dy - y) <= r) return true
-    }
-    return false
-  }
-
-  /**
-   * 지우개 — 지나간 자리에 걸린 획을 통째로 지운다(선 일부만 지우는 방식은 과함).
-   * start = 제스처 시작(포인터 누름). 되돌림 지점은 **제스처당 한 번만** 쌓는다.
-   */
+  /** 지우개 — 지나간 자리에 걸린 획을 통째로 지운다. 되돌림 지점은 제스처당 한 번만 쌓는다 */
   const eraseAt = (x: number, y: number, start = false) =>
     setHist((h) => {
       const cur = h.cur.filter((st) => !hits(st, x, y))
@@ -187,18 +278,28 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     if (!p) return
     drawing.current = true
     try { svgRef.current?.setPointerCapture(e.pointerId) } catch { /* 캡처 실패해도 그리기는 동작 */ }
-    if (erasing) return eraseAt(p[0], p[1], true)
-    // 새로 그으면 다시실행 이력은 끊는다(편집기 표준)
-    setHist((h) => ({ past: [...h.past, h.cur], cur: [...h.cur, { c: pen.color, w: width, p }], future: [], erased: false }))
+    if (tool === 'eraser') return eraseAt(p[0], p[1], true)
+    const { c, w } = cfg[tool]
+    // 도형은 시작·끝 두 점으로 시작한다(끝점은 move 가 갱신). 새로 그으면 다시실행 이력은 끊는다
+    const seed: MemoStroke = SHAPE_TOOLS.includes(tool)
+      ? { c, w, p: [p[0], p[1], p[0], p[1]], k: tool as MemoStrokeKind }
+      : { c, w, p, ...(tool === 'hl' ? { k: 'hl' as const } : {}) }
+    setHist((h) => ({ past: [...h.past, h.cur], cur: [...h.cur, seed], future: [], erased: false }))
   }
+
   const move = (e: React.PointerEvent) => {
     if (!drawing.current) return
     const p = at(e)
     if (!p) return
-    if (erasing) return eraseAt(p[0], p[1])
+    if (tool === 'eraser') return eraseAt(p[0], p[1])
     setHist((h) => {
       const last = h.cur[h.cur.length - 1]
       if (!last) return h
+      if (SHAPE_TOOLS.includes(tool)) {
+        // 도형 — 끝점만 갈아 끼운다
+        if (last.p[2] === p[0] && last.p[3] === p[1]) return h
+        return { ...h, cur: [...h.cur.slice(0, -1), { ...last, p: [last.p[0], last.p[1], p[0], p[1]] }] }
+      }
       // 같은 자리 반복 점은 버린다 — 저장 용량과 렌더 비용이 그냥 늘어난다
       const n = last.p.length
       if (last.p[n - 2] === p[0] && last.p[n - 1] === p[1]) return h
@@ -206,6 +307,18 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     })
   }
   const up = () => { drawing.current = false }
+
+  /** 도구 버튼 — 안 고른 것이면 고르고, 이미 고른 것이면 설정을 연다(캡처 도구와 같은 조작) */
+  const pickTool = (t: Tool, el: HTMLElement) => {
+    if (t === 'eraser') { setTool('eraser'); setCfgAnchor(null); return }
+    if (tool === t) { setCfgTool(t); setCfgAnchor(el); return }
+    setTool(t)
+    setCfgAnchor(null)
+  }
+
+  const cur = cfg[cfgTool]
+  const palette = cfgTool === 'hl' ? HL_COLORS : LINE_COLORS
+  const [wMin, wMax] = WIDTH_RANGE[cfgTool]
 
   return (
     <>
@@ -219,79 +332,46 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         onPointerCancel={up}
         sx={{
           position: 'absolute', inset: 0, width: '100%', height: '100%',
-          pointerEvents: 'auto', cursor: erasing ? ERASER_CURSOR : 'crosshair', touchAction: 'none',
+          pointerEvents: 'auto', cursor: tool === 'eraser' ? ERASER_CURSOR : 'crosshair', touchAction: 'none',
           overflow: 'visible', // 판 밖(여백)까지 끌고 나간 획도 그려야 저장 결과와 화면이 같다
           zIndex: 5,
         }}
       >
-        {strokes.map((s, i) => (
-          <polyline
-            key={i}
-            points={pointsOf(s.p)}
-            fill="none"
-            stroke={strokeOf(s.c)}
-            strokeWidth={s.w}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        ))}
+        {strokes.map((s, i) => <StrokeShape key={i} keyId={String(i)} s={s} ink={inkColor} />)}
       </Box>
 
       {/* 도구 — 화면 아래 가운데 고정. 그림을 가리지 않게 낮게 둔다 */}
       <Box
         sx={{
           position: 'fixed', left: '50%', bottom: 24, transform: 'translateX(-50%)',
-          display: 'flex', alignItems: 'center', gap: 1,
+          display: 'flex', alignItems: 'center', gap: 0.5,
           px: 1.5, py: 1, borderRadius: `${radius.pill}px`,
           bgcolor: 'background.paper', border: 1, borderColor: 'divider',
           boxShadow: shadow.lg, zIndex: z.stickyMemo + 1, pointerEvents: 'auto',
         }}
       >
-        {PENS.map((p) => (
-          <Tooltip key={p.key} title={p.label}>
-            <Box
-              component="button"
-              aria-label={`${p.label} 펜`}
-              onClick={() => { setPen(p); setErasing(false) }}
-              sx={{
-                width: 24, height: 24, p: 0, borderRadius: radius.circle, cursor: 'pointer',
-                bgcolor: strokeOf(p.color),
-                border: !erasing && pen.key === p.key ? '3px solid' : '1px solid',
-                borderColor: !erasing && pen.key === p.key ? 'primary.main' : 'divider',
-              }}
-            />
-          </Tooltip>
-        ))}
-
-        <Tooltip title="지우개 — 지나간 획을 지웁니다">
-          <IconButton
-            size="small"
-            aria-label="지우개"
-            aria-pressed={erasing}
-            onClick={() => setErasing((v) => !v)}
-            sx={{ color: erasing ? 'primary.main' : 'text.secondary', bgcolor: erasing ? 'action.selected' : 'transparent' }}
-          >
-            <CleaningServicesIcon sx={{ fontSize: typescale.cardTitle.size }} />
-          </IconButton>
-        </Tooltip>
-
-        <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', mx: 0.5 }} />
-
-        {WIDTHS.map((w) => (
-          <Box
-            key={w}
-            component="button"
-            aria-label={`굵기 ${w}`}
-            onClick={() => setWidth(w)}
-            sx={{
-              display: 'grid', placeItems: 'center', width: 28, height: 24, p: 0, cursor: 'pointer',
-              bgcolor: width === w ? 'action.selected' : 'transparent',
-              border: 0, borderRadius: `${radius.chip}px`,
-            }}
-          >
-            <Box sx={{ width: 16, height: `${w}px`, borderRadius: `${radius.pill}px`, bgcolor: 'text.primary' }} />
-          </Box>
-        ))}
+        {TOOLS.map(({ key, label, Icon }) => {
+          const on = tool === key
+          return (
+            <Tooltip key={key} title={key === 'eraser' ? '지우개 — 지나간 획을 지웁니다' : `${label} (한 번 더 누르면 색·굵기)`}>
+              <IconButton
+                size="small"
+                aria-label={label}
+                aria-pressed={on}
+                onClick={(e) => pickTool(key, e.currentTarget)}
+                sx={{
+                  color: on ? 'primary.main' : 'text.secondary',
+                  bgcolor: on ? 'action.selected' : 'transparent',
+                  // 고른 도구는 지금 색이 아래 줄로 보인다 — 팝오버를 열지 않아도 무슨 색인지 알 수 있게
+                  borderBottom: on && key !== 'eraser' ? `3px solid ${swatch(cfg[key as Exclude<Tool, 'eraser'>].c)}` : '3px solid transparent',
+                  borderRadius: `${radius.chip}px`,
+                }}
+              >
+                <Icon sx={{ fontSize: typescale.cardTitle.size }} />
+              </IconButton>
+            </Tooltip>
+          )
+        })}
 
         <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', mx: 0.5 }} />
 
@@ -322,8 +402,62 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         <Button size="small" onClick={onCancel} sx={{ color: 'text.secondary', fontWeight: weight.medium }}>취소 (Esc)</Button>
         {/* 점 하나짜리 획(제자리 클릭)은 버린다 — polyline 은 점 하나를 안 그리므로
             화면에는 아무것도 없는데 저장만 되는 '보이지 않는 그림'이 생긴다 */}
-        <Button size="small" variant="contained" onClick={() => onDone(strokes.filter((s) => s.p.length >= 4))}>완료</Button>
+        <Button size="small" variant="contained" onClick={() => onDone(strokes.filter((s) => s.k || s.p.length >= 4))}>완료</Button>
       </Box>
+
+      {/* 도구 설정 — 색 + 굵기 + 미리보기(캡처 도구와 같은 구성) */}
+      <Popover
+        open={!!cfgAnchor}
+        anchorEl={cfgAnchor}
+        onClose={() => setCfgAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        slotProps={{ paper: { sx: { p: 1.5, width: 250, borderRadius: `${radius.modal}px` } } }}
+      >
+        <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mb: 0.75 }}>색</Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
+          {palette.map((p) => (
+            <Tooltip key={p.c} title={p.label}>
+              <Box
+                component="button"
+                aria-label={p.label}
+                aria-pressed={cur.c === p.c}
+                onClick={() => setCfg((m) => ({ ...m, [cfgTool]: { ...m[cfgTool], c: p.c } }))}
+                sx={{
+                  width: 26, height: 26, p: 0, cursor: 'pointer', borderRadius: radius.circle,
+                  bgcolor: swatch(p.c),
+                  border: cur.c === p.c ? '3px solid' : '1px solid',
+                  borderColor: cur.c === p.c ? 'primary.main' : 'divider',
+                }}
+              />
+            </Tooltip>
+          ))}
+        </Box>
+
+        <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled' }}>굵기</Typography>
+        {/* 미리보기 — 고른 색·굵기 그대로 그은 곡선. 슬라이더를 움직이면 즉시 바뀐다 */}
+        <Box component="svg" viewBox="0 0 210 40" sx={{ width: '100%', height: 40, display: 'block', my: 0.5 }}>
+          <StrokeShape
+            keyId="preview"
+            ink={inkColor}
+            s={{
+              c: cur.c, w: cur.w, k: cfgTool === 'pen' ? undefined : (cfgTool as MemoStrokeKind),
+              p: cfgTool === 'arrow' ? [14, 30, 196, 12]
+                : cfgTool === 'rect' ? [16, 8, 194, 32]
+                : cfgTool === 'ellipse' ? [16, 6, 194, 34]
+                : [14, 28, 55, 12, 105, 30, 155, 12, 196, 24],
+            }}
+          />
+        </Box>
+        <Slider
+          size="small"
+          min={wMin}
+          max={wMax}
+          value={cur.w}
+          onChange={(_, v) => setCfg((m) => ({ ...m, [cfgTool]: { ...m[cfgTool], w: v as number } }))}
+          aria-label="굵기"
+        />
+      </Popover>
     </>
   )
 }

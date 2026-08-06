@@ -21,7 +21,7 @@ import { addReply } from '@/store/slices/replySlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import { updateImprovement, createReply, deleteImprovement, createImprovement } from '@/api/improve'
 import type { MemoStroke } from '@/api/improve'
-import MemoDraw, { pointsOf, INK, MEMO_DRAW_EVENT } from '@/components/MemoDraw'
+import MemoDraw, { StrokeShape, MEMO_DRAW_EVENT } from '@/components/MemoDraw'
 import GestureIcon from '@mui/icons-material/Gesture'
 import { useRole } from '@/auth/role'
 import { memosForPath, visibleMemos, pathToLocation, firstLine } from '@/utils/improveMemo'
@@ -947,30 +947,15 @@ export default function StickyMemoLayer() {
                     '@media (prefers-reduced-motion: reduce)': { animation: 'none', opacity: 0.85 },
                   }}
                 >
+                  {/* 후광은 색을 필터가 정하므로 검정으로 그린다. 모양은 본체와 같아야 하므로 같은 함수 */}
                   {t.drawing.map((s, i) => (
-                    <polyline
-                      key={`h-${i}`}
-                      points={pointsOf(s.p)}
-                      fill="none"
-                      stroke="#000"
-                      strokeWidth={s.w + 3}
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
+                    <StrokeShape key={`h-${i}`} keyId={`h-${i}`} ink="#000" s={{ ...s, c: '#000', w: s.w + 3 }} />
                   ))}
                 </Box>
               )}
               {/* stroke 는 sx 로 팔레트 경로가 안 풀린다(MemoDraw 주석 참고) — 실제 색으로 넘긴다 */}
               {t.drawing.map((s, i) => (
-                <polyline
-                  key={i}
-                  points={pointsOf(s.p)}
-                  fill="none"
-                  stroke={s.c === INK ? theme.palette.text.primary : s.c}
-                  strokeWidth={s.w}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                <StrokeShape key={i} keyId={String(i)} s={s} ink={theme.palette.text.primary} />
               ))}
             </Box>
           )
@@ -994,15 +979,7 @@ export default function StickyMemoLayer() {
           <>
             <Box component="svg" aria-hidden sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', zIndex: 0 }}>
               {pending.strokes.map((s, i) => (
-                <polyline
-                  key={i}
-                  points={pointsOf(s.p)}
-                  fill="none"
-                  stroke={s.c === INK ? theme.palette.text.primary : s.c}
-                  strokeWidth={s.w}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                <StrokeShape key={i} keyId={String(i)} s={s} ink={theme.palette.text.primary} />
               ))}
             </Box>
             <Box

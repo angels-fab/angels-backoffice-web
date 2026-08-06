@@ -29,9 +29,20 @@ export interface MemoStroke {
   c: string
   /** 선 굵기(px) */
   w: number
-  /** 점 좌표 [x,y,x,y,...] */
+  /**
+   * 점 좌표 [x,y,x,y,...].
+   * 자유곡선(pen·hl)은 지나온 점 전부, 도형(arrow·rect·ellipse)은 시작·끝 두 점만 담는다.
+   */
   p: number[]
+  /**
+   * 획 종류 (2026-08-06 신설). **없으면 'pen'** — 그 전에 저장된 그림은 전부 자유곡선이라
+   * 값을 안 넣어야 옛 데이터가 그대로 열린다(마이그레이션 불필요).
+   */
+  k?: MemoStrokeKind
 }
+
+/** 자유곡선 · 형광펜 · 화살표 · 사각형 · 타원 */
+export type MemoStrokeKind = 'pen' | 'hl' | 'arrow' | 'rect' | 'ellipse'
 
 const rpcFail = (error: { message: string } | null, fallback: string): never => {
   throw new Error(error?.message || fallback)
