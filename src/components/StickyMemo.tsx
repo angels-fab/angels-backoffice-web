@@ -683,8 +683,10 @@ export default function StickyMemoLayer() {
   const layerRef = useRef<HTMLDivElement | null>(null)
   const [layerEl, setLayerEl] = useState<HTMLDivElement | null>(null)
   const [drawFor, setDrawFor] = useState<string | null>(null) // 그리기 중인 쪽지 번호(관리자 전용)
-  // 그리기 완료 직후 — 그림 옆에서 내용을 받는 중(아직 쪽지는 안 만들어졌다)
-  const [pending, setPending] = useState<{ strokes: MemoStroke[]; x: number; y: number } | null>(null)
+  // 그리기 완료 직후 — 그림 옆에서 선택/내용을 받는 중(아직 쪽지는 안 만들어졌다).
+  // ask=true 면 '메모를 붙일지' 묻는 단계, false 면 메모 입력 단계(2026-08-06 사용자 지시 — 그림만 남기고
+  // 싶을 때도 있으니 입력창을 바로 띄우지 말고 먼저 물을 것).
+  const [pending, setPending] = useState<{ strokes: MemoStroke[]; x: number; y: number; ask?: boolean } | null>(null)
   const [pendingText, setPendingText] = useState('')
   const [busyPending, setBusyPending] = useState(false)
   const [openNum, setOpenNum] = useState<string | null>(null) // 방금 만든 쪽지 — 처음부터 펼쳐 보인다
@@ -805,13 +807,18 @@ export default function StickyMemoLayer() {
       strokes,
       x: Math.min(Math.max(Math.max(...xs) + 12, 0), Math.max(W - NOTE_W, 0)),
       y: Math.min(Math.max(Math.min(...ys), 0), Math.max(H - 150, 0)),
+      ask: true,
     })
   }
 
-  /** 입력창에서 '붙이기' — 그림 + 내용을 담은 쪽지를 이 화면에 만든다 */
-  const savePending = async () => {
+  /**
+   * 그림 저장 — withMemo=true 면 입력창의 내용을 담아, false 면 **그림만**(내용 없이) 쪽지를 만든다.
+   * 그림만이어도 쪽지(압정)는 생긴다 — 압정이 그림의 손잡이라서(옮기기·고치기·지우기가 전부 거기 있다).
+   * 없애면 그림을 다시 열 방법이 없는 고아가 된다. 대신 접힌 압정 하나라 화면을 어지럽히진 않는다.
+   */
+  const savePending = async (withMemo: boolean) => {
     if (!pending || !user || !authKey) return
-    const body = pendingText.trim()
+    const body = withMemo ? pendingText.trim() : ''
     setBusyPending(true)
     try {
       const loc = pathToLocation(pathname)
@@ -828,7 +835,9 @@ export default function StickyMemoLayer() {
       // ⚠ 자리 배정 effect 와 같은 게이트 — 개인 설정 로드가 실패한 상태에서 저장하면
       // saved 가 비어 있어 **서버에 있던 다른 압정 좌표를 통째로 날린다**(이 키는 맵 통째로 치환).
       if (usLoadedOk) dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [String(num)]: { x: pending.x, y: pending.y } } }))
-      setOpenNum(String(num))
+      // 그림만 남길 때는 쪽지를 펼치지 않는다 — 쓸 내용이 없는데 빈 쪽지가 열리면 헛손질만 시킨다
+      if (withMemo) setOpenNum(String(num))
+      else if (loc) snack(`그림을 붙였습니다. 압정을 누르면 메모·수정할 수 있습니다. (요청 #${num})`, 'success')
       setPending(null)
       setPendingText('')
       dispatch(loadImproveData())
@@ -995,26 +1004,44 @@ export default function StickyMemoLayer() {
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
                 <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
                 <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: 'text.secondary' }}>
-                  이 그림은 무엇인가요?
+                  {pending.ask ? '메모를 붙일까요?' : '이 그림은 무엇인가요?'}
                 </Box>
               </Box>
-              <TextField
-                autoFocus fullWidth size="small" multiline minRows={2}
-                value={pendingText}
-                onChange={(e) => setPendingText(e.target.value)}
-                placeholder="무엇이 어떻게 불편한지 (비워도 됩니다)"
-                disabled={busyPending}
-                slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
-                sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size } }}
-              />
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 1 }}>
-                <Button size="small" disabled={busyPending} onClick={() => { setPending(null); setPendingText('') }} sx={{ color: 'text.secondary' }}>
-                  버리기
-                </Button>
-                <Button size="small" variant="contained" disabled={busyPending} onClick={savePending}>
-                  {busyPending ? '붙이는 중…' : '붙이기'}
-                </Button>
-              </Box>
+
+              {pending.ask ? (
+                // 선택 단계(2026-08-06 사용자 지시) — 그림만 남기고 싶을 때도 있으니 입력창을 바로 띄우지 않는다
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                  <Button size="small" disabled={busyPending} onClick={() => { setPending(null); setPendingText('') }} sx={{ color: 'text.secondary' }}>
+                    버리기
+                  </Button>
+                  <Button size="small" disabled={busyPending} onClick={() => void savePending(false)}>
+                    {busyPending ? '붙이는 중…' : '그림만'}
+                  </Button>
+                  <Button size="small" variant="contained" disabled={busyPending} onClick={() => setPending({ ...pending, ask: false })}>
+                    메모 쓰기
+                  </Button>
+                </Box>
+              ) : (
+                <>
+                  <TextField
+                    autoFocus fullWidth size="small" multiline minRows={2}
+                    value={pendingText}
+                    onChange={(e) => setPendingText(e.target.value)}
+                    placeholder="무엇이 어떻게 불편한지 (비워도 됩니다)"
+                    disabled={busyPending}
+                    slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
+                    sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size } }}
+                  />
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 1 }}>
+                    <Button size="small" disabled={busyPending} onClick={() => { setPending(null); setPendingText('') }} sx={{ color: 'text.secondary' }}>
+                      버리기
+                    </Button>
+                    <Button size="small" variant="contained" disabled={busyPending} onClick={() => void savePending(true)}>
+                      {busyPending ? '붙이는 중…' : '붙이기'}
+                    </Button>
+                  </Box>
+                </>
+              )}
             </Box>
           </>
         )}
