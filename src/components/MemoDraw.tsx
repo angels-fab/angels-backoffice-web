@@ -15,15 +15,15 @@ import HighlightIcon from '@mui/icons-material/Highlight'
 import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward'
 import RectangleOutlinedIcon from '@mui/icons-material/RectangleOutlined'
 import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined'
-// 지우개 — MUI 세트에 지우개 전용 글리프가 없어(*Eraser* 는 PhonelinkErase 뿐) 캡처 도구의 지우개에
-// 가장 가까운 AutoFixNormal 을 쓴다. 수제 SVG 금지 규칙(CLAUDE.md) 때문에 직접 그리지 않는다.
-import AutoFixNormalIcon from '@mui/icons-material/AutoFixNormal'
-import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+// 지우개 아이콘 — 위 TOOLS 주석 참고(요술봉 계열은 도형 인식 버튼과 겹쳐 보여 이 그림을 쓴다)
+import CleaningServicesIcon from '@mui/icons-material/CleaningServices'
+import InterestsIcon from '@mui/icons-material/Interests'
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 import { HL_TOKENS, HL_LABEL, HL_SOLID } from '@/pages/Work/richContent'
 import { accent, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import type { MemoStroke, MemoStrokeKind } from '@/api/improve'
-import { snapStroke } from '@/utils/shapeRecognize'
+import { snapStroke, mergeArrowHead } from '@/utils/shapeRecognize'
 
 /**
  * 화면 위 그리기 도구 (2026-08-06 개편 — 윈도우 캡처 도구 구성을 따름).
@@ -68,27 +68,36 @@ const ERASE_R = 14
 const HEAD_LEN = 4.5
 const HEAD_ANGLE = Math.PI / 7
 
-type Tool = 'pen' | 'hl' | 'arrow' | 'rect' | 'ellipse' | 'eraser'
-/** 도형 도구 — 누르는 동안 끝점만 갱신한다(자유곡선처럼 점을 쌓지 않는다) */
-const SHAPE_TOOLS: Tool[] = ['arrow', 'rect', 'ellipse']
+/**
+ * 도구는 넷 — 도형 셋(사각형·타원·화살표)을 버튼 하나로 합쳤다(사용자 지시 2026-08-06:
+ * "도형 버튼이 세 개나 있을 이유가 없음"). 어떤 도형인지는 그 도구의 팝오버에서 고른다.
+ */
+type Tool = 'pen' | 'hl' | 'shape' | 'eraser'
+/** 도형 종류 — 'shape' 도구가 지금 무엇을 그리는지 */
+type ShapeKind = Extract<MemoStrokeKind, 'rect' | 'ellipse' | 'arrow'>
+
+const SHAPE_KINDS: { k: ShapeKind; label: string; Icon: typeof CreateIcon }[] = [
+  { k: 'rect', label: '사각형', Icon: RectangleOutlinedIcon },
+  { k: 'ellipse', label: '타원', Icon: CircleOutlinedIcon },
+  { k: 'arrow', label: '화살표', Icon: ArrowOutwardIcon },
+]
 
 /**
- * 도구 아이콘 — 윈도우 캡처 도구의 그림에 맞춘다(사용자 지시 2026-08-06).
- * 볼펜=펜촉(Create) · 형광펜=마커(Highlight) · 지우개=지우개(AutoFixNormal — MUI 세트에 지우개
- * 전용 글리프가 없어 그중 가장 가까운 것) · 도형은 그 도형 자체(Rectangle·Circle·ArrowOutward).
+ * 도구 아이콘 — 윈도우 캡처 도구의 그림에 맞춘다.
+ * 볼펜=펜촉(Create) · 형광펜=마커(Highlight) · 도형=도형 모음(Interests) ·
+ * 지우개=CleaningServices(MUI 에 지우개 전용 글리프가 없다. 요술봉 계열은 옆의 '도형 인식' 버튼과
+ * 거의 같은 그림이라 둘이 구분되지 않아 되돌렸다 — 이 아이콘은 지우개 커서와도 같은 그림이다).
  */
 const TOOLS: { key: Tool; label: string; Icon: typeof CreateIcon }[] = [
   { key: 'pen', label: '펜', Icon: CreateIcon },
   { key: 'hl', label: '형광펜', Icon: HighlightIcon },
-  { key: 'arrow', label: '화살표', Icon: ArrowOutwardIcon },
-  { key: 'rect', label: '사각형', Icon: RectangleOutlinedIcon },
-  { key: 'ellipse', label: '타원', Icon: CircleOutlinedIcon },
-  { key: 'eraser', label: '지우개', Icon: AutoFixNormalIcon },
+  { key: 'shape', label: '도형', Icon: InterestsIcon },
+  { key: 'eraser', label: '지우개', Icon: CleaningServicesIcon },
 ]
 
 /** 도구별 굵기 범위 — 형광펜은 덧칠이라 훨씬 두껍다 */
 const WIDTH_RANGE: Record<Exclude<Tool, 'eraser'>, [number, number]> = {
-  pen: [1, 12], hl: [8, 32], arrow: [2, 12], rect: [1, 10], ellipse: [1, 10],
+  pen: [1, 12], hl: [8, 32], shape: [1, 12],
 }
 
 /**
@@ -216,13 +225,13 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
   const strokes = hist.cur
 
   const [tool, setTool] = useState<Tool>('pen')
+  /** 도형 도구가 지금 그리는 종류 */
+  const [shapeKind, setShapeKind] = useState<ShapeKind>('rect')
   /** 도구별 색·굵기 — 캡처 도구처럼 도구마다 따로 기억한다 */
   const [cfg, setCfg] = useState<Record<Exclude<Tool, 'eraser'>, { c: string; w: number }>>({
     pen: { c: INK, w: 3 },
-    hl: { c: accent.amber, w: 16 },
-    arrow: { c: accent.red, w: 3 },
-    rect: { c: accent.red, w: 3 },
-    ellipse: { c: accent.red, w: 3 },
+    hl: { c: HL_SOLID.yellow, w: 16 },
+    shape: { c: accent.red, w: 3 },
   })
   const [cfgAnchor, setCfgAnchor] = useState<HTMLElement | null>(null)
   const [cfgTool, setCfgTool] = useState<Tool>('pen')
@@ -301,8 +310,8 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     if (tool === 'eraser') return eraseAt(p[0], p[1], true)
     const { c, w } = cfg[tool]
     // 도형은 시작·끝 두 점으로 시작한다(끝점은 move 가 갱신). 새로 그으면 다시실행 이력은 끊는다
-    const seed: MemoStroke = SHAPE_TOOLS.includes(tool)
-      ? { c, w, p: [p[0], p[1], p[0], p[1]], k: tool as MemoStrokeKind }
+    const seed: MemoStroke = tool === 'shape'
+      ? { c, w, p: [p[0], p[1], p[0], p[1]], k: shapeKind }
       : { c, w, p, ...(tool === 'hl' ? { k: 'hl' as const } : {}) }
     setHist((h) => ({ past: [...h.past, h.cur], cur: [...h.cur, seed], future: [], erased: false }))
   }
@@ -315,7 +324,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     setHist((h) => {
       const last = h.cur[h.cur.length - 1]
       if (!last) return h
-      if (SHAPE_TOOLS.includes(tool)) {
+      if (tool === 'shape') {
         // 도형 — 끝점만 갈아 끼운다
         if (last.p[2] === p[0] && last.p[3] === p[1]) return h
         return { ...h, cur: [...h.cur.slice(0, -1), { ...last, p: [last.p[0], last.p[1], p[0], p[1]] }] }
@@ -337,7 +346,15 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     if (!snap || tool !== 'pen') return
     setHist((h) => {
       const last = h.cur[h.cur.length - 1]
-      if (!last || last.k) return h
+      if (!last) return h
+      // ① 직선 끝에 덧그린 짧은 획이면 화살촉으로 보고 앞 획과 합친다(획을 떼어 그린 화살표)
+      const prev = h.cur[h.cur.length - 2]
+      if (!last.k && prev) {
+        const merged = mergeArrowHead(prev, last)
+        if (merged) return { past: [...h.past, h.cur], cur: [...h.cur.slice(0, -2), merged], future: [], erased: false }
+      }
+      // ② 한 획으로 그린 도형이면 그 도형으로
+      if (last.k) return h
       const s = snapStroke(last)
       if (!s) return h
       return { past: [...h.past, h.cur], cur: [...h.cur.slice(0, -1), s], future: [], erased: false }
@@ -406,7 +423,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
               >
                 <Icon sx={{ fontSize: typescale.cardTitle.size }} />
                 {/* 쐐기 화살표 — '한 번 더 누르면 설정이 열린다'는 표시(캡처 도구의 도구 옆 ∨와 같은 뜻) */}
-                <ArrowDropDownIcon sx={{ fontSize: typescale.emphasis.size, ml: '-3px', mr: '-3px', opacity: 0.7 }} />
+                <ArrowDropUpIcon sx={{ fontSize: typescale.emphasis.size, ml: '-3px', mr: '-3px', opacity: 0.7 }} />
               </IconButton>
             </Tooltip>
           )
@@ -423,7 +440,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
             onClick={() => setSnap((v) => !v)}
             sx={{ color: snap ? 'primary.main' : 'text.disabled', bgcolor: snap ? 'action.selected' : 'transparent', borderRadius: `${radius.chip}px` }}
           >
-            <AutoFixHighIcon sx={{ fontSize: typescale.cardTitle.size }} />
+            <AutoAwesomeIcon sx={{ fontSize: typescale.cardTitle.size }} />
           </IconButton>
         </Tooltip>
 
@@ -475,6 +492,32 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
           </Button>
         ) : (
         <>
+        {/* 도형 종류 — 버튼 셋을 도구 줄에 늘어놓는 대신 여기서 고른다(사용자 지시 2026-08-06) */}
+        {cfgTool === 'shape' && (
+          <>
+            <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mb: 0.75 }}>도형</Typography>
+            <Box sx={{ display: 'flex', gap: 0.75, mb: 1.5 }}>
+              {SHAPE_KINDS.map(({ k, label, Icon }) => (
+                <Tooltip key={k} title={label}>
+                  <IconButton
+                    size="small"
+                    aria-label={label}
+                    aria-pressed={shapeKind === k}
+                    onClick={() => setShapeKind(k)}
+                    sx={{
+                      borderRadius: `${radius.chip}px`,
+                      color: shapeKind === k ? 'primary.main' : 'text.secondary',
+                      bgcolor: shapeKind === k ? 'action.selected' : 'transparent',
+                      border: 1, borderColor: shapeKind === k ? 'primary.main' : 'divider',
+                    }}
+                  >
+                    <Icon sx={{ fontSize: typescale.cardTitle.size }} />
+                  </IconButton>
+                </Tooltip>
+              ))}
+            </Box>
+          </>
+        )}
         <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mb: 0.75 }}>색</Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
           {palette.map((p) => (

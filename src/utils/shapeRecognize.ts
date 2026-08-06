@@ -63,6 +63,33 @@ function smooth(q: Pt[], passes = 2): Pt[] {
   return cur
 }
 
+/**
+ * 가장 작은 외접 사각형의 넓이 — **기울여 가며** 찾는다(5°씩 0~90°).
+ *
+ * 축에 나란한 외접 사각형으로만 재면 **비뚤게 그린 네모가 사각형으로 안 읽힌다** — 45° 기운
+ * 정사각형은 축 기준 상자의 절반(0.5)밖에 안 채우기 때문이다(사용자 신고: "네모 인식 안 되는 게
+ * 너무 많음"). 기울여 재면 어느 각도로 그렸든 채움률이 그대로 나온다.
+ * 원·타원은 어느 각도로 재도 π/4 근처라 사각형과의 구분은 그대로 유지된다.
+ */
+function minBoxArea(q: Pt[]): number {
+  let best = Infinity
+  for (let deg = 0; deg < 90; deg += 5) {
+    const a = (deg * Math.PI) / 180
+    const cos = Math.cos(a), sin = Math.sin(a)
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+    for (const p of q) {
+      const x = p[0] * cos + p[1] * sin
+      const y = -p[0] * sin + p[1] * cos
+      if (x < x0) x0 = x
+      if (x > x1) x1 = x
+      if (y < y0) y0 = y
+      if (y > y1) y1 = y
+    }
+    best = Math.min(best, (x1 - x0) * (y1 - y0))
+  }
+  return best
+}
+
 /** 다각형 넓이(신발끈) — 닫힌 도형이 자기 외접 사각형을 얼마나 채우는지 재는 데 쓴다 */
 function area(q: Pt[]): number {
   let s = 0
@@ -127,11 +154,11 @@ export function recognizeShape(p: number[]): { k: MemoStrokeKind; p: number[] } 
   const q = smooth(resample(raw, 48), 1)
   const gap = dist(q[0], q[q.length - 1])
   // 닫힘 = 시작·끝이 서로 붙어 있다. 전체 길이 대비로도 보고 크기 대비로도 본다
-  const closed = gap < L * 0.22 && gap < Math.max(w, h) * 0.45
+  const closed = gap < L * 0.28 && gap < Math.max(w, h) * 0.6
 
   if (closed) {
     if (w < 12 || h < 12) return null
-    const fill = area(q) / (w * h)
+    const fill = area(q) / Math.max(minBoxArea(q), 1)
     const c = corners(q, 50)
     /**
      * 채움률(외접 사각형을 얼마나 채우는가)이 가장 잘 가른다 — 사각형 ≈0.93 · 타원 =π/4(0.785) ·
@@ -183,4 +210,30 @@ export function recognizeShape(p: number[]): { k: MemoStrokeKind; p: number[] } 
 export function snapStroke(s: MemoStroke): MemoStroke | null {
   const r = recognizeShape(s.p)
   return r ? { ...s, ...r } : null
+}
+
+/**
+ * 직선 + 그 끝에 덧그린 화살촉 → 화살표 하나 (2026-08-06).
+ *
+ * 사람은 화살표를 보통 **획을 떼어 가며** 그린다 — 몸통 한 번, 촉 한두 번. 한 획짜리 규칙만으로는
+ * 그게 안 잡혀 "화살표가 인식이 잘 안 된다"는 말이 나온다(사용자 신고).
+ * 그래서 직선이 그려진 뒤 그 **끝점 근처에 짧은 획**이 오면 촉으로 보고 둘을 합친다.
+ * 잘못 합쳐도 Ctrl+Z 한 번이면 되돌아간다.
+ */
+export function mergeArrowHead(prev: MemoStroke, head: MemoStroke): MemoStroke | null {
+  if (prev.k !== 'line') return null
+  const [ax, ay, bx, by] = prev.p
+  const body = Math.hypot(bx - ax, by - ay)
+  const h = toPts(head.p)
+  if (h.length < 2) return null
+  const hl = pathLen(h)
+  // 촉은 몸통보다 훨씬 짧아야 한다(길면 그냥 다른 선을 그은 것)
+  if (hl < 6 || hl > Math.max(24, body * 0.6)) return null
+  const near = Math.max(20, prev.w * 6)
+  const dEnd = Math.min(...h.map((q) => Math.hypot(q[0] - bx, q[1] - by)))
+  if (dEnd > near) return null
+  // 시작점 쪽에 그린 것이면 촉이 아니다(꼬리 표시 등)
+  const dStart = Math.min(...h.map((q) => Math.hypot(q[0] - ax, q[1] - ay)))
+  if (dStart < dEnd) return null
+  return { ...prev, k: 'arrow' }
 }
