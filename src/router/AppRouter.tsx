@@ -15,7 +15,6 @@ import RequireAuth from '@/auth/RequireAuth'
 import RequireMember from '@/auth/RequireMember'
 import DesignSystemShowcase from '@/pages/_DesignSystem'
 import LayoutSystemShowcase from '@/pages/_LayoutSystem'
-import UpcomingPreview from '@/pages/_UpcomingPreview'
 
 export function AppRouter() {
   return (
@@ -23,8 +22,6 @@ export function AppRouter() {
       {/* 디자인/레이아웃 시스템 쇼케이스 — 내비 미노출, 앱 셸(MainLayout) 바깥 독립 라우트 */}
       <Route path="/design-system" element={<DesignSystemShowcase />} />
       <Route path="/layout-system" element={<LayoutSystemShowcase />} />
-      {/* '다가오는 일정' 카드 시안 — 검토용 임시 화면(2026-08-05). 확정되면 이 줄과 페이지를 지운다 */}
-      <Route path="/upcoming-preview" element={<UpcomingPreview />} />
       <Route element={<MainLayout />}>
         {/* 홈 = 공개 랜딩(로드맵 + 로그인 진입). 그 외 사내 데이터 페이지는 전부 로그인 필수 */}
         <Route path="/" element={<Home />} />

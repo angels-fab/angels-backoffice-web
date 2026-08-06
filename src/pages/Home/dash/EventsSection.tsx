@@ -42,20 +42,18 @@ function kindStatus(kind: string): StatusKind {
  * 참석자는 행사 화면에서만 쓰던 값이라 전역 상태가 없다. 카드 하나를 위해 슬라이스를 새로 만들지 않고
  * 여기서 한 번 불러온다(행사 참석은 자주 바뀌지 않는다).
  */
-export default function EventsSection({ attendees: givenAtt, user: givenUser }: { attendees?: AttendeeRow[]; user?: string } = {}) {
+export default function EventsSection() {
   const navigate = useNavigate()
-  const { user: sessionUser } = useRole()
-  const user = givenUser ?? sessionUser
-  const [att, setAtt] = useState<AttendeeRow[] | null>(givenAtt ?? null)
+  const { user } = useRole()
+  const [att, setAtt] = useState<AttendeeRow[] | null>(null)
 
   useEffect(() => {
-    if (givenAtt) return
     let alive = true
     void fetchAttendees()
       .then((rows) => { if (alive) setAtt(rows) })
       .catch(() => { if (alive) setAtt([]) })
     return () => { alive = false }
-  }, [givenAtt])
+  }, [])
 
   /** 내가 신청한 · 아직 안 끝난 행사 — 가까운 순 */
   const mine = useMemo(() => {

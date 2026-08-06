@@ -105,23 +105,18 @@ function MemberChips({ title, max = 2 }: { title: string; max?: number }) {
   )
 }
 
-export default function TodaySection({ events: givenEvents, now: nowProp }: { events?: CalEvent[]; now?: Date } = {}) {
+export default function TodaySection() {
   const navigate = useNavigate()
-  const storeReady = useAppSelector((s) => s.cal.ready)
-  const storeEvents = useAppSelector((s) => s.cal.events)
-  const events = givenEvents ?? storeEvents
-  const ready = givenEvents ? true : storeReady
+  const ready = useAppSelector((s) => s.cal.ready)
+  const events = useAppSelector((s) => s.cal.events)
 
   const [tick, setTick] = useState(0)
   useEffect(() => {
-    if (nowProp) return
     const id = window.setInterval(() => setTick((n) => n + 1), TICK_MS)
     return () => window.clearInterval(id)
-  }, [nowProp])
-  const now = useMemo(() => nowProp ?? new Date(), [nowProp, tick])
-  const today = nowProp
-    ? `${nowProp.getFullYear()}-${String(nowProp.getMonth() + 1).padStart(2, '0')}-${String(nowProp.getDate()).padStart(2, '0')}`
-    : todaySeoul()
+  }, [])
+  const now = useMemo(() => new Date(), [tick])
+  const today = todaySeoul()
 
   // 종일 먼저, 그다음 시간순 — 종일은 하루 전체라 맨 위가 자연스럽다
   const list = useMemo(
