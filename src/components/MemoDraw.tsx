@@ -17,7 +17,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import { SnipPenIcon, SnipHighlightIcon, SnipShapesIcon, SnipEraserIcon } from '@/components/snipIcons'
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 import { HL_TOKENS, HL_LABEL, HL_SOLID } from '@/pages/Work/richContent'
-import { accent, radius, shadow, typescale, weight, z } from '@/theme/tokens'
+import { accent, iconSize, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import type { MemoStroke, MemoStrokeKind } from '@/api/improve'
 import { snapStroke, mergeArrowHead } from '@/utils/shapeRecognize'
 
@@ -102,7 +102,7 @@ const WIDTH_RANGE: Record<Exclude<Tool, 'eraser'>, [number, number]> = {
  * 밝은/어두운 배경 양쪽에서 보이게 한다.
  */
 const ERASER_SHAPE =
-  `<g transform='rotate(-45 11.5 9.3)'><rect x='5.8' y='6.1' width='11.4' height='6.4' rx='1.9'/><path d='M10.1 6.1v6.4'/></g><path d='M5.5 18.8h13'/>`
+  `<g transform='rotate(-45 12 10)'><rect x='4.8' y='6.2' width='14.4' height='7.6' rx='2.2'/><path d='M10 6.2v7.6'/></g><path d='M4.2 20.4h15.6'/>`
 const ERASER_CURSOR =
   `url("data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24">`
@@ -419,7 +419,8 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
                   pr: '2px',
                 }}
               >
-                <Icon sx={{ fontSize: typescale.cardTitle.size }} />
+                {/* 도구 아이콘은 한 단 크게(header 20) — 쐐기가 옆에 붙어 16 이면 그림이 좁아 보인다 */}
+                <Icon sx={{ fontSize: iconSize.header }} />
                 {/* 쐐기 화살표 — '한 번 더 누르면 설정이 열린다'는 표시(캡처 도구의 도구 옆 ∨와 같은 뜻) */}
                 <ArrowDropUpIcon sx={{ fontSize: typescale.emphasis.size, ml: '-3px', mr: '-3px', opacity: 0.7 }} />
               </IconButton>
