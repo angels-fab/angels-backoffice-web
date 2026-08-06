@@ -106,7 +106,3 @@ export function SharePicker({ people, value, onChange, disabled }: {
   )
 }
 
-/** 리치 본문에서 글자만 — 접힌 쪽지의 툴팁처럼 한 줄 미리보기가 필요한 자리에 */
-export function plainText(html: string): string {
-  return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
-}

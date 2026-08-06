@@ -27,7 +27,7 @@ import type { PageDrawing } from '@/api/pageDrawings'
 import { fetchPageNotes, createPageNote, updatePageNote, deletePageNote, fetchPageNoteReplies, createPageNoteReply, deletePageNoteReply } from '@/api/pageNotes'
 import type { PageNote, PageNoteReply } from '@/api/pageNotes'
 import { fetchAuthors } from '@/api/works'
-import { MemoKindPicker, MemoKindHint, SharePicker, plainText, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
+import { MemoKindPicker, MemoKindHint, SharePicker, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
 import type { MemoKind } from '@/components/memoKind'
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined'
 import MemoDraw, { StrokeShape, MEMO_DRAW_EVENT } from '@/components/MemoDraw'
@@ -188,9 +188,11 @@ function useNoteDrag(opts: {
   layerRef: React.RefObject<HTMLDivElement | null>
   onMoveEnd: (key: string, pos: Pos) => void
   onTapToggle: () => void
+  /** Delete 키 — 지울 수 있을 때만 넘긴다(권한 없는 쪽지는 키를 눌러도 아무 일 없어야 한다) */
+  onDeleteKey?: () => void
   deps: unknown[]
 }) {
-  const { key, pos, layerRef, onMoveEnd, onTapToggle, deps } = opts
+  const { key, pos, layerRef, onMoveEnd, onTapToggle, onDeleteKey, deps } = opts
   const elRef = useRef<HTMLDivElement>(null)
   const [live, setLive] = useState<Pos>(pos)
   const drag = useRef({ on: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0 })
@@ -233,6 +235,8 @@ function useNoteDrag(opts: {
     if (isInteractive(e.target as HTMLElement)) return
     const el = elRef.current
     if (!el) return
+    // 누른 쪽지에 포커스를 준다 — Delete 키가 '지금 누른 그 쪽지'에 가게 하는 기준점이다
+    try { el.focus({ preventScroll: true }) } catch { /* 포커스 실패해도 끌기는 동작 */ }
     drag.current = { on: true, moved: false, sx: e.clientX, sy: e.clientY, ox: el.offsetLeft, oy: el.offsetTop }
     try { el.setPointerCapture(e.pointerId) } catch { /* 캡처 실패해도 이동은 동작 */ }
   }
@@ -260,10 +264,29 @@ function useNoteDrag(opts: {
     onTapToggle()                                            // 제자리 클릭 = 펼침/접힘 토글
   }
 
+  /**
+   * Delete 키로 지우기(사용자 지시 2026-08-06).
+   *
+   * 쪽지 자신에 달아 **포커스가 있는 쪽지**만 반응하게 한다 — window 에 달면 화면에 쪽지가
+   * 여럿일 때 어느 것이 지워질지 알 수 없다. 글을 쓰는 중(입력칸·에디터)에는 무시한다 —
+   * 안 그러면 답글을 고치다 Delete 를 누른 순간 쪽지가 통째로 날아간다.
+   */
+  const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Delete' || !onDeleteKey) return
+    if (isInteractive(e.target as HTMLElement)) return
+    e.preventDefault()
+    // 그림 선택 해제/삭제를 듣는 window 리스너까지 올라가지 않게 — 한 번의 Delete 로 둘이 지워지면 안 된다
+    e.stopPropagation()
+    onDeleteKey()
+  }
+
   return {
     elRef,
     live,
     handlers: {
+      // 쪽지를 포커스 대상으로 — Delete 키의 기준이자, 키보드만으로도 쪽지에 닿는 길이 된다
+      tabIndex: 0,
+      onKeyDown,
       onPointerDown,
       onPointerMove,
       onPointerUp,
@@ -309,6 +332,8 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
   const { elRef, live, handlers } = useNoteDrag({
     key: item.num, pos, layerRef, onMoveEnd,
     onTapToggle: () => setOpen((o) => !o),
+    // 지울 권한이 없으면 키를 아예 안 넘긴다 — 눌러도 조용히 아무 일 없는 게 맞다
+    onDeleteKey: canDelete ? () => setDelAsk(true) : undefined,
     deps: [open, replies.length],
   })
 
@@ -433,6 +458,9 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
         // 마우스를 올린 쪽을 오히려 뒤로 밀어 위아래로 깜빡였다
         '&:hover': { borderColor: th.palette.accent.amber, zIndex: open ? 3 : 2 },
         '&:active': { cursor: 'grabbing', zIndex: 4 },
+        // tabIndex 를 줬으므로 지금 어느 쪽지가 Delete 대상인지 보여야 한다
+        '&:focus': { outline: 'none' },
+        '&:focus-visible': { outline: `2px solid ${th.palette.accent.amber}`, outlineOffset: 2 },
         '& input': { cursor: 'text', userSelect: 'text' },
       })}
     >
@@ -483,7 +511,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
               {/* 그리기 버튼은 여기 없다 — 그림은 쪽지 소유물이 아니라 따로 사는 물건이 됐다(2026-08-06).
                   그리기는 상단바 버튼으로 시작하고, 있는 그림은 그림을 눌러 고친다. */}
               {canDelete && (
-                <Tooltip title="요청 삭제">
+                <Tooltip title="요청 삭제 (Delete)">
                   {/* 되돌릴 수 없는 동작이라 빨강 — 수정·접기(중립 회색)와 무게를 구분한다 */}
                   <IconButton size="small" aria-label="요청 삭제" onClick={() => setDelAsk(true)} disabled={busy} sx={(th) => ({ color: th.palette.accentText.red, p: 0.5 })}>
                     <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
@@ -653,10 +681,10 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
     </>
   )
 
-  // 접힘 상태는 핀만 보이므로 무슨 요청인지 알 수 없다 — 마우스를 올리면 제목이 뜬다
+  // 접힌 쪽지에 마우스를 올려도 이름을 띄우지 않는다(사용자 지시 2026-08-06)
   return (
     <>
-      {open ? note : <Tooltip title={`#${item.num} ${item.title}`} placement="left">{note}</Tooltip>}
+      {note}
       {dialogs}
     </>
   )
@@ -701,6 +729,8 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
   const { elRef, live, handlers } = useNoteDrag({
     key: `n${note.id}`, pos, layerRef, onMoveEnd,
     onTapToggle: () => setOpen((o) => !o),
+    // 공유받은 쪽지는 지울 수 없다 — 키도 안 넘긴다
+    onDeleteKey: mine ? () => setDelAsk(true) : undefined,
     deps: [open, editing, note.shared.length, replies.length],
   })
 
@@ -794,6 +824,9 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
         transition: 'border-color .15s, box-shadow .15s',
         '&:hover': { borderColor: th.palette.accent.amber, zIndex: open ? 3 : 2 },
         '&:active': { cursor: 'grabbing', zIndex: 4 },
+        // tabIndex 를 줬으므로 지금 어느 쪽지가 Delete 대상인지 보여야 한다
+        '&:focus': { outline: 'none' },
+        '&:focus-visible': { outline: `2px solid ${th.palette.accent.amber}`, outlineOffset: 2 },
         '& input': { cursor: 'text', userSelect: 'text' },
       })}
     >
@@ -826,7 +859,7 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
                 </Tooltip>
               )}
               {mine && (
-                <Tooltip title="메모 삭제">
+                <Tooltip title="메모 삭제 (Delete)">
                   <IconButton size="small" aria-label="메모 삭제" onClick={() => setDelAsk(true)} disabled={busy} sx={(th) => ({ color: th.palette.accentText.red, p: 0.5 })}>
                     <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
                   </IconButton>
@@ -943,7 +976,7 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
 
   return (
     <>
-      {open ? body : <Tooltip title={plainText(note.content) || '메모'} placement="left">{body}</Tooltip>}
+      {body}
       <ConfirmDialog
         open={delAsk}
         destructive
@@ -1133,6 +1166,9 @@ export default function StickyMemoLayer() {
    * (page_notes_insert 의 drawing_id 소유권 검사).
    */
   const canAttachMemo = !!selectedDraw && selectedDraw.author === user
+  // Delete 키 리스너는 selectedId 에만 다시 붙으므로 권한은 ref 로 최신값을 본다
+  const canEditDrawRef = useRef(canEditDraw)
+  canEditDrawRef.current = canEditDraw
 
   /**
    * 자리가 없는 쪽지에 **빈 슬롯을 배정하고 즉시 저장**한다.
@@ -1354,7 +1390,17 @@ export default function StickyMemoLayer() {
       if (t && typeof t.closest === 'function' && t.closest('[data-drawing-ui]')) return
       setSelectedId(null)
     }
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedId(null) }
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setSelectedId(null); return }
+      // Delete = 고른 그림 지우기(사용자 지시 2026-08-06). 글 쓰는 중에는 무시하고,
+      // 지울 수 없는 그림(남의 것)이면 아무 일도 하지 않는다.
+      if (e.key !== 'Delete') return
+      const t = e.target as HTMLElement | null
+      if (t && typeof t.closest === 'function' && isInteractive(t)) return
+      if (!canEditDrawRef.current) return
+      e.preventDefault()
+      setDelDraw(selectedId)
+    }
     window.addEventListener('pointerdown', off, true)
     window.addEventListener('keydown', esc)
     return () => {
@@ -1531,7 +1577,7 @@ export default function StickyMemoLayer() {
                   </IconButton>
                 </Tooltip>
               )}
-              <Tooltip title="그림 지우기">
+              <Tooltip title="그림 지우기 (Delete)">
                 <IconButton size="small" aria-label="그림 지우기" onClick={() => setDelDraw(selectedDraw.id)} sx={(th) => ({ color: th.palette.accentText.red, p: 0.5 })}>
                   <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
                 </IconButton>
