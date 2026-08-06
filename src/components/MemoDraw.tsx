@@ -411,16 +411,16 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
                 aria-pressed={on}
                 onClick={(e) => pickTool(key, e.currentTarget)}
                 sx={{
-                  color: on ? 'primary.main' : 'text.secondary',
+                  color: on ? 'text.primary' : 'text.secondary',
                   bgcolor: on ? 'action.selected' : 'transparent',
-                  // 고른 도구는 지금 색이 아래 줄로 보인다 — 팝오버를 열지 않아도 무슨 색인지 알 수 있게
-                  borderBottom: on && key !== 'eraser' ? `3px solid ${swatch(cfg[key as Exclude<Tool, 'eraser'>].c)}` : '3px solid transparent',
                   borderRadius: `${radius.chip}px`,
                   pr: '2px',
                 }}
               >
-                {/* 도구 아이콘은 한 단 크게(header 20) — 쐐기가 옆에 붙어 16 이면 그림이 좁아 보인다 */}
-                <Icon sx={{ fontSize: iconSize.header }} />
+                {/* 아이콘 자체를 지금 색으로 칠한다(사용자 확정 2026-08-06 — 아래 색 줄보다 단순).
+                    캡처 도구도 빨간 볼펜·노란 형광펜처럼 도구 그림이 곧 잉크 색이다. 지우개만 중립.
+                    크기는 한 단 크게(header 20) — 쐐기가 옆에 붙어 16 이면 그림이 좁아 보인다 */}
+                <Icon sx={{ fontSize: iconSize.header, ...(key !== 'eraser' ? { color: swatch(cfg[key as Exclude<Tool, 'eraser'>].c) } : {}) }} />
                 {/* 쐐기 화살표 — '한 번 더 누르면 설정이 열린다'는 표시(캡처 도구의 도구 옆 ∨와 같은 뜻) */}
                 <ArrowDropUpIcon sx={{ fontSize: typescale.emphasis.size, ml: '-3px', mr: '-3px', opacity: 0.7 }} />
               </IconButton>
@@ -474,7 +474,8 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         onClose={() => setCfgAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        slotProps={{ paper: { sx: { p: 1.5, width: isEraserCfg ? 200 : 250, borderRadius: `${radius.modal}px` } } }}
+        // 폭 = 색 견본 한 줄(5개×26 + 간격 4×6 + 안쪽 여백 24 ≈ 178)이 꼭 들어가는 만큼만(사용자 지시)
+        slotProps={{ paper: { sx: { p: 1.5, width: isEraserCfg ? 170 : 186, borderRadius: `${radius.modal}px` } } }}
       >
         {isEraserCfg ? (
           // 지우개 설정 — '전부 지우기'를 여기로 옮겼다(사용자 지시 2026-08-06).
