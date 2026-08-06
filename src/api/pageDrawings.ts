@@ -21,14 +21,19 @@ export interface PageDrawing {
   path: string
   author: string
   strokes: MemoStroke[]
+  /**
+   * 이 그림에 붙은 요청메모 번호(improvements.num). 있으면 그림도 개선요청의 일부라
+   * **포털 관리자도 본다** — 일반메모만 붙은 그림은 작성자와 공유받은 사람만 본다(사용자 지시 2026-08-06).
+   */
+  reqNum: number | null
 }
 
-interface Row { id: number; path: string; author: string; strokes: unknown }
+interface Row { id: number; path: string; author: string; strokes: unknown; req_num: number | null }
 
 export async function fetchPageDrawings(): Promise<PageDrawing[]> {
   const { data, error } = await supabase
     .from('page_drawings')
-    .select('id, path, author, strokes')
+    .select('id, path, author, strokes, req_num')
     .order('id', { ascending: true })
   if (error) throw new Error(error.message || '화면 그림을 불러오지 못했습니다')
   return ((data || []) as Row[]).map((r) => ({
@@ -36,7 +41,23 @@ export async function fetchPageDrawings(): Promise<PageDrawing[]> {
     path: r.path,
     author: r.author,
     strokes: Array.isArray(r.strokes) ? (r.strokes as MemoStroke[]) : [],
+    reqNum: r.req_num === null ? null : Number(r.req_num),
   }))
+}
+
+/**
+ * 그림에 요청메모를 이어 붙인다 — 그림이 개선요청의 일부가 되어 포털 관리자에게도 보인다.
+ * 그림의 수정 권한자(주인 또는 관리자)만 걸 수 있다(RLS) — 남의 그림을 임의로 개선요청에
+ * 엮어 노출시키는 길을 막기 위해 링크를 그림 쪽에 뒀다.
+ */
+export async function linkDrawingToRequest(p: { id: number; reqNum: number }): Promise<void> {
+  await ensureSession()
+  const { data, error } = await withTimeout(
+    supabase.from('page_drawings').update({ req_num: p.reqNum, updated_at: new Date().toISOString() }).eq('id', p.id).select('id'),
+    DB_TIMEOUT, '그림-요청 연결',
+  )
+  if (error) throw new Error(error.message || '그림을 요청에 연결하지 못했습니다')
+  if (!data || data.length === 0) throw new Error('내가 그린 그림만 요청에 연결할 수 있습니다.')
 }
 
 /** 새 그림 — author·author_uid 는 DB 기본값(my_name()·auth.uid())이 채운다 */

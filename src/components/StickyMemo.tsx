@@ -22,10 +22,10 @@ import { addReply } from '@/store/slices/replySlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import { updateImprovement, createReply, deleteImprovement, createImprovement } from '@/api/improve'
 import type { MemoStroke } from '@/api/improve'
-import { fetchPageDrawings, createPageDrawing, updatePageDrawing, deletePageDrawing } from '@/api/pageDrawings'
+import { fetchPageDrawings, createPageDrawing, updatePageDrawing, deletePageDrawing, linkDrawingToRequest } from '@/api/pageDrawings'
 import type { PageDrawing } from '@/api/pageDrawings'
-import { fetchPageNotes, createPageNote, updatePageNote, deletePageNote } from '@/api/pageNotes'
-import type { PageNote } from '@/api/pageNotes'
+import { fetchPageNotes, createPageNote, updatePageNote, deletePageNote, fetchPageNoteReplies, createPageNoteReply, deletePageNoteReply } from '@/api/pageNotes'
+import type { PageNote, PageNoteReply } from '@/api/pageNotes'
 import { fetchAuthors } from '@/api/works'
 import { MemoKindPicker, MemoKindHint, SharePicker, plainText, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
 import type { MemoKind } from '@/components/memoKind'
@@ -673,16 +673,20 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
  * 답글은 없다 — 요청메모의 답글은 improvement_replies(요청번호 기준)라 그대로 쓸 수 없고,
  * 개인 메모에 스레드가 필요한지가 아직 정해지지 않았다.
  */
-function PlainNote({ note, pos, layerRef, mine, people, onMoveEnd, onChanged, defaultOpen }: {
+function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd, onChanged, onReplied, defaultOpen }: {
   note: PageNote
+  /** 이 메모의 답글 — 작성자와 공유받은 사람이 주고받는다 */
+  replies: PageNoteReply[]
   pos: Pos
   layerRef: React.RefObject<HTMLDivElement | null>
-  /** 내가 쓴 메모인가 — 아니면(공유받은 것) 읽기 전용 */
+  /** 내가 쓴 메모인가 — 아니면(공유받은 것) 내용·공유 수정은 못 한다. 답글은 쓸 수 있다 */
   mine: boolean
+  user: string | null
   /** 공유 대상 후보(profiles 이름) */
   people: string[]
   onMoveEnd: (key: string, pos: Pos) => void
   onChanged: () => void
+  onReplied: () => void
   defaultOpen?: boolean
 }) {
   const snack = useSnack()
@@ -692,12 +696,37 @@ function PlainNote({ note, pos, layerRef, mine, people, onMoveEnd, onChanged, de
   const [eContent, setEContent] = useState('')
   const [eShared, setEShared] = useState<string[]>([])
   const [delAsk, setDelAsk] = useState(false)
+  const [reply, setReply] = useState('')
 
   const { elRef, live, handlers } = useNoteDrag({
     key: `n${note.id}`, pos, layerRef, onMoveEnd,
     onTapToggle: () => setOpen((o) => !o),
-    deps: [open, editing, note.shared.length],
+    deps: [open, editing, note.shared.length, replies.length],
   })
+
+  const sendReply = async () => {
+    const v = reply.trim()
+    if (!v || busy) return
+    setBusy(true)
+    try {
+      await createPageNoteReply({ noteId: note.id, content: v })
+      setReply('')
+      onReplied()
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '답글 등록에 실패했습니다', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const removeReply = async (id: number) => {
+    try {
+      await deletePageNoteReply(id)
+      onReplied()
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '답글 삭제에 실패했습니다', 'error')
+    }
+  }
 
   const startEdit = () => {
     setEContent(note.content || '')
@@ -854,8 +883,57 @@ function PlainNote({ note, pos, layerRef, mine, people, onMoveEnd, onChanged, de
                 </Tooltip>
               )}
               {!mine && (
-                <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>공유받음 (읽기 전용)</Box>
+                <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>공유받음</Box>
               )}
+            </Box>
+
+            {/* 답글 — 작성자와 공유받은 사람이 주고받는다(사용자 지시 2026-08-06).
+                요청메모의 답글과 저장소가 다르다(page_note_replies) — 요청번호가 없기 때문 */}
+            {replies.length > 0 && (
+              <Box sx={{ mt: 1.25, display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 132, overflowY: 'auto' }}>
+                {replies.map((r) => (
+                  <Box key={r.id} sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.5, bgcolor: 'background.elevated', borderRadius: `${radius.chip}px`, px: 1, py: 0.75 }}>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.bold, color: 'text.primary', mr: 0.75 }}>
+                        {r.author || '-'}
+                      </Box>
+                      <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.secondary', overflowWrap: 'anywhere' }}>{r.content}</Box>
+                    </Box>
+                    {!!user && r.author === user && (
+                      <Tooltip title="답글 삭제">
+                        <IconButton size="small" aria-label="답글 삭제" onClick={() => void removeReply(r.id)} sx={{ p: 0.25, color: 'text.disabled', flexShrink: 0 }}>
+                          <DeleteOutlineIcon sx={{ fontSize: iconSize.caption }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+            )}
+
+            {/* 공유받은 사람도 답글은 쓸 수 있어야 '주고받는다'가 성립한다 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.25 }}>
+              <TextField
+                size="small"
+                fullWidth
+                value={reply}
+                onChange={(e) => setReply(e.target.value)}
+                // isComposing 검사가 없으면 한글 조합을 Enter 로 확정하는 순간 답글이 전송된다
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); void sendReply() } }}
+                placeholder="답글 달기"
+                disabled={busy}
+                slotProps={{ htmlInput: { 'aria-label': '답글 입력' } }}
+                sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size, py: 0.75 } }}
+              />
+              <IconButton
+                size="small"
+                aria-label="답글 등록"
+                onClick={sendReply}
+                disabled={busy || !reply.trim()}
+                sx={{ flexShrink: 0, bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.dark' } }}
+              >
+                <SendIcon sx={{ fontSize: iconSize.body }} />
+              </IconButton>
             </Box>
           </Box>
         </>
@@ -927,6 +1005,8 @@ export default function StickyMemoLayer() {
   const [drawings, setDrawings] = useState<PageDrawing[]>([])
   /** 일반메모(page_notes) — RLS 가 '내 것 + 공유받은 것'만 준다 */
   const [notes, setNotes] = useState<PageNote[]>([])
+  /** 일반메모 답글 — 볼 수 있는 메모의 것만 온다(RLS) */
+  const [noteReplies, setNoteReplies] = useState<PageNoteReply[]>([])
   /** 방금 만든 일반메모 — 처음부터 펼쳐 보인다(요청메모의 openNum 과 같은 역할) */
   const [openNoteId, setOpenNoteId] = useState<number | null>(null)
   /** 공유 대상 후보 이름 — 작성 폼 오토컴플리트와 같은 출처(profiles) */
@@ -988,7 +1068,9 @@ export default function StickyMemoLayer() {
   /** 일반메모 목록 다시 읽기 */
   const reloadNotes = useCallback(async () => {
     try {
-      setNotes(await fetchPageNotes())
+      const [ns, rs] = await Promise.all([fetchPageNotes(), fetchPageNoteReplies()])
+      setNotes(ns)
+      setNoteReplies(rs)
     } catch {
       snack('메모를 불러오지 못했습니다.', 'error')
     }
@@ -1194,6 +1276,9 @@ export default function StickyMemoLayer() {
         // 쪽지를 **입력창이 있던 그 자리에 펼친 채로** 남긴다(2026-08-05 사용자 지시).
         savePos(String(num), { x: pending.x, y: pending.y })
         setOpenNum(String(num))
+        // 그림을 요청에 이어 둔다 — 그러면 그림도 개선요청의 일부라 포털 관리자에게 보인다
+        // (일반메모만 붙은 그림은 작성자와 공유받은 사람만 본다. 사용자 지시 2026-08-06)
+        if (drawId !== undefined) await linkDrawingToRequest({ id: drawId, reqNum: num })
         dispatch(loadImproveData())
       } else {
         // 압정이 안 생기므로 "저장됐다"는 신호가 그림뿐이다 — 다루는 법을 한 번 알려 준다
@@ -1594,12 +1679,15 @@ export default function StickyMemoLayer() {
             <PlainNote
               key={`n${n.id}`}
               note={n}
+              replies={noteReplies.filter((r) => r.noteId === n.id)}
               pos={pos}
               layerRef={layerRef}
               mine={!!user && n.author === user}
+              user={user}
               people={people.filter((p) => p !== user)}
               onMoveEnd={onMoveEnd}
               onChanged={() => void reloadNotes()}
+              onReplied={() => void reloadNotes()}
               defaultOpen={n.id === openNoteId}
             />
           )
