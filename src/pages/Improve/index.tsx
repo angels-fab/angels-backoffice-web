@@ -796,7 +796,7 @@ export default function Improve() {
               <TableRow>
                 {/* 선택 열 — 지울 수 있는 행만 대상. 머리 체크박스는 '보이는 목록 중 지울 수 있는 것' 전체 토글 */}
                 {memoCol && (
-                  <TableCell padding="checkbox" sx={{ width: '1%' }}>
+                  <TableCell padding="checkbox" align="center" sx={{ width: '1%' }}>
                     <Checkbox
                       size="small"
                       slotProps={{ input: { 'aria-label': '보이는 요청 전체 선택' } }}
@@ -888,9 +888,10 @@ export default function Improve() {
                       },
                     })}
                   >
-                    {/* 선택 — 셀 onClick stop 으로 아코디언 토글 방지. 담당자가 아니면 비활성 + 이유 안내 */}
+                    {/* 선택 — 셀 onClick stop 으로 아코디언 토글 방지. 담당자가 아니면 비활성 + 이유 안내.
+                        align="center" 는 머리 체크박스와 세로로 안 맞아 열이 삐뚤어 보이던 것(개선요청 #39) */}
                     {memoCol && (
-                      <TableCell padding="checkbox" onClick={stop}>
+                      <TableCell padding="checkbox" align="center" onClick={stop}>
                         <Tooltip title={removable ? '' : '담당자만 삭제할 수 있습니다'} disableHoverListener={removable}>
                           <span>
                             <Checkbox

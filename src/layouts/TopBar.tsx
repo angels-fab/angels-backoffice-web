@@ -5,6 +5,7 @@ import Button from '@mui/material/Button'
 import ButtonBase from '@mui/material/ButtonBase'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
+import Typography from '@mui/material/Typography'
 import SearchIcon from '@mui/icons-material/Search'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -22,7 +23,7 @@ import GestureIcon from '@mui/icons-material/Gesture'
 import NotificationBell from './NotificationBell'
 import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
 import { useThemeMode } from '@/theme/mode'
-import { control, iconSize, radius, typescale, z } from '@/theme/tokens'
+import { control, iconSize, radius, typescale, weight, z } from '@/theme/tokens'
 import topbarLogo from '@/assets/topbar-logo.jpg'
 
 /**
@@ -139,22 +140,43 @@ export default function TopBar() {
           title="메인화면으로"
           sx={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flexShrink: 0 }}
         >
-          {/* 로고는 원본이 흰 배경 PNG라 테마별로 다르게 눌러 없앤다:
-              다크 = lighten 으로 배경을 배경색에 묻고, 라이트 = 반전 후 multiply. */}
-          <Box
-            component="img"
-            src={topbarLogo}
-            alt="ANGELS FAB 구축 현황"
-            sx={(th) => ({
-              height: { xs: 30, shell: 34 },
-              maxWidth: { xs: '52vw', shell: 'none' },
-              width: 'auto',
-              objectFit: 'contain',
-              ...(th.palette.mode === 'light'
-                ? { mixBlendMode: 'multiply', filter: 'invert(1)', background: 'transparent' }
-                : { mixBlendMode: 'lighten', background: th.palette.background.default }),
-            })}
-          />
+          {/*
+            로고 이미지에는 'ANGELS 첨단AI반도체팹센터 | FAB 구축 포털 시스템'이 통째로 박혀 있어
+            포털 이름을 코드에서 바꿀 수 없었다(개선요청 #43 '통합업무포털'로 변경).
+            그래서 **이미지는 ANGELS 마크까지만 잘라 쓰고 포털 이름은 글자로 그린다** —
+            앞으로 이름이 바뀌어도 이미지 새로 만들 필요 없이 아래 한 줄만 고치면 된다.
+            자르는 비율 0.41 = 원본(4315×463)에서 '첨단AI반도체팹센터'가 끝나고 구분선 앞까지.
+
+            로고는 원본이 흰 글자·검은 배경이라 테마별로 다르게 눌러 없앤다:
+            다크 = lighten 으로 배경을 배경색에 묻고, 라이트 = 반전 후 multiply.
+          */}
+          <Box sx={{ height: { xs: 30, shell: 34 }, width: { xs: 115, shell: 130 }, flexShrink: 0, overflow: 'hidden' }}>
+            <Box
+              component="img"
+              src={topbarLogo}
+              alt="ANGELS 첨단AI반도체팹센터"
+              sx={(th) => ({
+                height: '100%',
+                width: 'auto',
+                maxWidth: 'none',
+                display: 'block',
+                ...(th.palette.mode === 'light'
+                  ? { mixBlendMode: 'multiply', filter: 'invert(1)', background: 'transparent' }
+                  : { mixBlendMode: 'lighten', background: th.palette.background.default }),
+              })}
+            />
+          </Box>
+          <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', flexShrink: 0 }} />
+          <Typography
+            sx={{
+              fontSize: { xs: typescale.emphasis.size, shell: typescale.cardTitle.size },
+              fontWeight: weight.bold,
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            통합업무포털
+          </Typography>
         </Box>
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
