@@ -168,11 +168,14 @@ export default function TopBar() {
               })}
             />
           </Box>
-          <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', flexShrink: 0 }} />
+          {/* 구분선 — 종전 로고 이미지 안의 밝은 세로줄을 대신한다. divider 토큰은 그보다 훨씬 옅어
+              선이 사라진 것처럼 보였다(사용자 지적) → 글자와 같은 잉크를 옅게 쓴다. */}
+          <Box sx={(th) => ({ width: '1px', height: 26, bgcolor: alpha(th.palette.text.primary, 0.35), flexShrink: 0 })} />
           <Typography
             sx={{
-              fontSize: { xs: typescale.cardTitle.size, shell: typescale.sectionTitle.size },
+              fontSize: { xs: typescale.cardTitle.size, shell: typescale.pageTitle.size },
               fontWeight: weight.bold,
+              lineHeight: 1,
               whiteSpace: 'nowrap',
               flexShrink: 0,
             }}
