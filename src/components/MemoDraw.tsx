@@ -24,9 +24,9 @@ import { snapStroke, mergeArrowHead } from '@/utils/shapeRecognize'
 /**
  * 화면 위 그리기 도구 (2026-08-06 개편 — 윈도우 캡처 도구 구성을 따름).
  *
- * 도구 = **버튼 + 전용 설정**. 버튼을 누르면 그 도구가 선택되고, 선택된 도구를 한 번 더 누르면
- * 색·굵기 팝오버가 열린다(캡처 도구와 같은 조작). 설정은 **도구마다 따로 기억**한다 —
- * 형광펜을 노랑 굵게 쓰다 펜으로 돌아와도 펜은 쓰던 색·굵기 그대로다.
+ * 도구 = **버튼 + 전용 설정**. 버튼을 누르면 도구가 선택되면서 색·굵기 팝오버가 함께 열린다
+ * (사용자 확정 2026-08-06 — '선택된 것을 한 번 더 누르면 설정'의 두 단계 조작을 되돌림).
+ * 설정은 **도구마다 따로 기억**한다 — 형광펜을 노랑 굵게 쓰다 펜으로 돌아와도 펜은 쓰던 색·굵기 그대로다.
  *
  * 저장 형식은 MemoStroke 하나로 통일한다. 자유곡선은 지나온 점 전부, 도형은 시작·끝 두 점.
  * 종류(k)가 없으면 자유곡선으로 읽으므로 개편 전에 그린 그림도 그대로 열린다.
@@ -114,7 +114,7 @@ const ERASER_CURSOR =
   `url("data:image/svg+xml;utf8,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24">`
     + `<g fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">${ERASER_SHAPE}</g>`
-    + `<g fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ERASER_SHAPE}</g>`
+    + `<g fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${ERASER_SHAPE}</g>`
     + `</svg>`,
   )}") 12 14, cell`
 
@@ -366,11 +366,15 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     })
   }
 
-  /** 도구 버튼 — 안 고른 것이면 고르고, 이미 고른 것이면 설정을 연다(캡처 도구와 같은 조작) */
+  /**
+   * 도구 버튼 — **한 번 클릭 = 선택 + 색·굵기 창 열림**(사용자 확정 2026-08-06).
+   * 처음엔 캡처 도구처럼 '선택된 것을 한 번 더 누르면 설정'이었는데 두 단계 조작을 되돌렸다.
+   * 그래서 쐐기 화살표도 모든 도구에 붙는다 — 누르면 창이 열린다는 표시가 이제 사실이므로.
+   */
   const pickTool = (t: Tool, el: HTMLElement) => {
-    if (tool === t) { setCfgTool(t); setCfgAnchor(el); return }
     setTool(t)
-    setCfgAnchor(null)
+    setCfgTool(t)
+    setCfgAnchor(el)
   }
 
   const isEraserCfg = cfgTool === 'eraser'
@@ -411,7 +415,7 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         {TOOLS.map(({ key, label, Icon }) => {
           const on = tool === key
           return (
-            <Tooltip key={key} title={key === 'eraser' ? '지우개 — 지나간 획을 지웁니다' : `${label} (한 번 더 누르면 색·굵기)`}>
+            <Tooltip key={key} title={key === 'eraser' ? '지우개 — 지나간 획을 지웁니다' : `${label} — 색·굵기 선택`}>
               <IconButton
                 size="small"
                 aria-label={label}
@@ -431,10 +435,9 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
                   sx={{ fontSize: TOOL_ICON }}
                   ink={key === 'eraser' ? undefined : swatch(cfg[key as Exclude<Tool, 'eraser'>].c)}
                 />
-                {/* 쐐기 화살표 = '한 번 더 누르면 설정이 열린다'는 표시 — 그래서 **선택된 도구에만** 띄운다.
-                    안 고른 도구에도 늘 붙어 있으면 '누르면 뭐가 뜨나 보다'가 되는데 실제로는 선택만 된다
-                    (사용자 지적 2026-08-06. 캡처 도구도 선택된 도구에만 ∨가 붙는다). */}
-                {on && <ArrowDropUpIcon sx={{ fontSize: typescale.emphasis.size, ml: '-2px', mr: '-4px', opacity: 0.7 }} />}
+                {/* 쐐기 화살표 — 모든 도구에. 클릭 한 번으로 창이 열리는 조작이라(위 pickTool 주석)
+                    '누르면 뭐가 뜬다'는 표시가 모든 버튼에서 사실이다 */}
+                <ArrowDropUpIcon sx={{ fontSize: typescale.emphasis.size, ml: '-2px', mr: '-4px', opacity: 0.7 }} />
               </IconButton>
             </Tooltip>
           )

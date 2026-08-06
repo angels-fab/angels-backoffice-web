@@ -23,7 +23,7 @@ export type SnipIconProps = SvgIconProps & {
 const line = {
   fill: 'none',
   stroke: 'currentColor',
-  strokeWidth: 1.7,
+  strokeWidth: 1.5,
   strokeLinecap: 'round',
   strokeLinejoin: 'round',
 } as const
