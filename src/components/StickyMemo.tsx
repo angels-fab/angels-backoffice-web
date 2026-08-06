@@ -27,7 +27,7 @@ import type { PageDrawing } from '@/api/pageDrawings'
 import { fetchPageNotes, createPageNote, updatePageNote, deletePageNote, fetchPageNoteReplies, createPageNoteReply, deletePageNoteReply } from '@/api/pageNotes'
 import type { PageNote, PageNoteReply } from '@/api/pageNotes'
 import { fetchAuthors } from '@/api/works'
-import { MemoKindPicker, MemoKindHint, SharePicker, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
+import { MemoKindPicker, SharePicker, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
 import type { MemoKind } from '@/components/memoKind'
 import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined'
 import MemoDraw, { StrokeShape, MEMO_DRAW_EVENT } from '@/components/MemoDraw'
@@ -1554,9 +1554,9 @@ export default function StickyMemoLayer() {
             <Box
               data-drawing-ui=""
               sx={{
-                // translate(-100%) 라 left 는 막대의 **오른쪽 끝**이다. 버튼 3개 = 86px 이므로
+                // translate(-100%) 라 left 는 막대의 **오른쪽 끝**이다. 버튼 3개 = 98px 이므로
                 // 왼쪽 가장자리에 그린 그림에서 막대가 레일 뒤로 숨지 않게 바닥을 둔다
-                position: 'absolute', left: Math.max(b.x + b.w, 92), top: Math.max(b.y, 0),
+                position: 'absolute', left: Math.max(b.x + b.w, 104), top: Math.max(b.y, 0),
                 transform: 'translate(-100%, -100%)', pointerEvents: 'auto', zIndex: 4,
                 display: 'flex', gap: 0.25, px: 0.5,
                 bgcolor: 'background.paper', border: 1, borderColor: 'divider',
@@ -1565,7 +1565,7 @@ export default function StickyMemoLayer() {
             >
               <Tooltip title="그림 고치기">
                 <IconButton size="small" aria-label="그림 고치기" onClick={() => { setSelectedId(null); setDrawFor(selectedDraw.id) }} sx={{ color: 'text.secondary', p: 0.5 }}>
-                  <BorderColorIcon sx={{ fontSize: iconSize.body }} />
+                  <BorderColorIcon sx={{ fontSize: iconSize.header }} />
                 </IconButton>
               </Tooltip>
               {/* 나중에 설명을 붙이는 길(사용자 지시 2026-08-06) — '그림만'으로 남겨 뒀다가
@@ -1573,13 +1573,13 @@ export default function StickyMemoLayer() {
               {canAttachMemo && (
                 <Tooltip title="메모 붙이기">
                   <IconButton size="small" aria-label="메모 붙이기" onClick={() => attachMemo(selectedDraw)} sx={{ color: 'text.secondary', p: 0.5 }}>
-                    <ChatIcon sx={{ fontSize: iconSize.body }} />
+                    <ChatIcon sx={{ fontSize: iconSize.header }} />
                   </IconButton>
                 </Tooltip>
               )}
               <Tooltip title="그림 지우기 (Delete)">
                 <IconButton size="small" aria-label="그림 지우기" onClick={() => setDelDraw(selectedDraw.id)} sx={(th) => ({ color: th.palette.accentText.red, p: 0.5 })}>
-                  <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
+                  <DeleteOutlineIcon sx={{ fontSize: iconSize.header }} />
                 </IconButton>
               </Tooltip>
             </Box>
@@ -1661,19 +1661,18 @@ export default function StickyMemoLayer() {
                 </Box>
               ) : (
                 <>
-                  {/* 갈래 고르기 — 기본은 일반메모. 상단바 메모 버튼과 같은 UI·같은 규칙(2026-08-06) */}
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1 }}>
+                  {/* 갈래 고르기 — 기본은 일반메모. 상단바 메모 버튼과 같은 UI·같은 규칙(2026-08-06).
+                      갈래 설명 문구는 뺐다(사용자 지시) — 탭 이름만으로 충분하다. */}
+                  <Box sx={{ mb: 1.5 }}>
                     <MemoKindPicker value={pendingKind} onChange={setPendingKind} disabled={busyPending} />
-                    <MemoKindHint kind={pendingKind} loc={pathToLocation(pathname)} />
                   </Box>
                   <TextField
                     autoFocus fullWidth size="small" multiline minRows={2}
                     value={pendingText}
                     onChange={(e) => setPendingText(e.target.value)}
-                    placeholder={pendingKind === 'plain' ? '메모 내용' : '무엇이 어떻게 불편한지 (비워도 됩니다)'}
+                    placeholder={pendingKind === 'plain' ? '메모 내용' : '요청 내용'}
                     disabled={busyPending}
                     slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
-                    sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size } }}
                   />
                   {/* 공유는 일반메모만 — 요청메모는 작성자+포털 관리자로 규칙이 정해져 있다.
                       그림에 붙는 메모라 여기서 고른 사람에게는 그림도 함께 보인다(사용자 지시) */}

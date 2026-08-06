@@ -1,5 +1,4 @@
 import Autocomplete from '@mui/material/Autocomplete'
-import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import TextField from '@mui/material/TextField'
 import ToggleButton from '@mui/material/ToggleButton'
@@ -46,7 +45,7 @@ export function MemoKindPicker({ value, onChange, disabled }: {
       // null = 눌린 것을 다시 누른 경우. 갈래는 반드시 하나여야 하므로 무시한다
       onChange={(_, v: MemoKind | null) => { if (v) onChange(v) }}
       aria-label="메모 갈래"
-      sx={{ '& .MuiToggleButton-root': { px: 1, py: 0.25, fontSize: typescale.caption.size, fontWeight: weight.bold, textTransform: 'none', gap: 0.5 } }}
+      sx={{ '& .MuiToggleButton-root': { px: 1, py: 0.25, fontSize: typescale.emphasis.size, fontWeight: weight.bold, textTransform: 'none', gap: 0.5 } }}
     >
       <ToggleButton value="plain" aria-label="일반메모">
         <ChatIcon sx={{ fontSize: iconSize.caption }} />
@@ -57,19 +56,6 @@ export function MemoKindPicker({ value, onChange, disabled }: {
         요청메모
       </ToggleButton>
     </ToggleButtonGroup>
-  )
-}
-
-/** 고른 갈래가 무엇을 뜻하는지 한 줄 — 이름만으로는 차이를 알 수 없다 */
-export function MemoKindHint({ kind, loc }: { kind: MemoKind; loc: string | null }) {
-  return (
-    <Box sx={{ fontSize: typescale.caption.size, color: 'text.secondary' }}>
-      {kind === 'plain'
-        ? '나만 봅니다. 아래에서 고른 사람에게만 함께 보입니다.'
-        : loc
-          ? <>개선위치 <b style={{ color: 'inherit' }}>{loc}</b> · 상태 <b>접수</b> — 개선요청 게시판에 함께 올라갑니다</>
-          : <>이 화면은 연결된 개선위치가 없어 <b>게시판 접수만</b> 됩니다</>}
-    </Box>
   )
 }
 
@@ -99,7 +85,6 @@ export function SharePicker({ people, value, onChange, disabled }: {
           {...params}
           placeholder={value.length ? '' : '공유할 사람 (비우면 나만 봅니다)'}
           aria-label="공유 대상"
-          sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size } }}
         />
       )}
     />

@@ -9,7 +9,6 @@ import Tooltip from '@mui/material/Tooltip'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import ChatIcon from '@mui/icons-material/Chat'
-import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import { alpha } from '@mui/material/styles'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
@@ -20,7 +19,7 @@ import { useSnack, focusRingSx } from '@/components/ds'
 import { control, iconSize, radius, typescale, weight } from '@/theme/tokens'
 import { createPageNote, fetchPageNotes } from '@/api/pageNotes'
 import { fetchAuthors } from '@/api/works'
-import { MemoKindPicker, MemoKindHint, SharePicker, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
+import { MemoKindPicker, SharePicker, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
 import type { MemoKind } from '@/components/memoKind'
 
 /**
@@ -194,32 +193,31 @@ export default function MemoComposeButton() {
         disableScrollLock
         slotProps={{ paper: { sx: { mt: 1, width: 340, p: 2, bgcolor: 'background.paper', borderRadius: `${radius.modal}px` } } }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontSize: typescale.cardTitle.size, fontWeight: weight.heavy, mb: 0.5 }}>
+        {/* 제목 줄에 갈래 선택을 함께 둔다(사용자 지시 2026-08-06) — 제목 오른쪽 빈자리로.
+            모바일에서는 일반메모를 띄울 자리가 없어 선택을 감추고 요청메모로 간다(위 isDesktop 주석). */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 2 }}>
           <ChatIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
-          메모 남기기
-        </Box>
-        {/* 갈래 고르기 — 기본은 일반메모(2026-08-06 사용자 지시로 메모가 둘로 갈렸다).
-            모바일에서는 일반메모를 띄울 자리가 없어 선택을 감추고 요청메모로 간다(위 isDesktop 주석) */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 1.5 }}>
-          {isDesktop ? (
-            <MemoKindPicker value={kind} onChange={setKind} disabled={busy} />
-          ) : (
-            <Box sx={{ fontSize: typescale.caption.size, color: 'text.secondary' }}>
-              일반메모는 PC에서만 쓸 수 있어 <b style={{ color: 'inherit' }}>요청메모</b>로 올립니다.
+          <Box component="span" sx={{ fontSize: typescale.cardTitle.size, fontWeight: weight.heavy, whiteSpace: 'nowrap' }}>
+            메모 남기기
+          </Box>
+          {isDesktop && (
+            <Box sx={{ ml: 'auto' }}>
+              <MemoKindPicker value={kind} onChange={setKind} disabled={busy} />
             </Box>
           )}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <PlaceOutlinedIcon sx={{ fontSize: iconSize.caption, color: 'text.secondary' }} />
-            <MemoKindHint kind={kind} loc={loc} />
-          </Box>
         </Box>
+        {!isDesktop && (
+          <Box sx={{ fontSize: typescale.caption.size, color: 'text.secondary', mb: 1.5 }}>
+            일반메모는 PC에서만 쓸 수 있어 <b style={{ color: 'inherit' }}>요청메모</b>로 올립니다.
+          </Box>
+        )}
         {/* 칸은 하나 — '한 줄 요약'을 없앴다(사용자 지시 2026-08-05).
             게시판 제목은 내용 첫 줄에서 자동으로 만든다(improveMemo.firstLine). */}
         <TextField
           autoFocus fullWidth size="small" multiline minRows={3}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder={kind === 'plain' ? '메모 내용' : '무엇이 어떻게 불편한지'}
+          placeholder={kind === 'plain' ? '메모 내용' : '요청 내용'}
           slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
           disabled={busy}
         />
