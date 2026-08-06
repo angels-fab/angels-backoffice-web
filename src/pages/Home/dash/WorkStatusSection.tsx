@@ -36,7 +36,7 @@ export default function WorkStatusSection() {
 
   return (
     <HomeCard
-      icon={<TimelapseIcon sx={{ fontSize: iconSize.header, color: 'accentText.green' }} />}
+      icon={<TimelapseIcon sx={{ fontSize: iconSize.header, color: 'text.primary' }} />}
       title="진행 중 업무"
       stat={{ value: rows.length, unit: '건' }}
       actionLabel="업무현황"

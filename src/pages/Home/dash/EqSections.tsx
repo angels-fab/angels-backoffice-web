@@ -57,7 +57,7 @@ export function EqIntroSection() {
 
   return (
     <HomeCard
-      icon={<LocalShippingIcon sx={{ fontSize: iconSize.header, color: 'accentText.rose' }} />}
+      icon={<LocalShippingIcon sx={{ fontSize: iconSize.header, color: 'text.primary' }} />}
       title="장비 도입"
       stat={ready ? { value: u['도입예정'] + u['도입중'], unit: '대', sub: `${eq.typesBy['도입예정'] + eq.typesBy['도입중']}종` } : undefined}
       actionLabel="도입일정"
@@ -83,7 +83,7 @@ export function EqOpsSection() {
 
   return (
     <HomeCard
-      icon={<MonitorIcon sx={{ fontSize: iconSize.header, color: 'accentText.green' }} />}
+      icon={<MonitorIcon sx={{ fontSize: iconSize.header, color: 'text.primary' }} />}
       title="장비 운영"
       stat={ready ? { value: u['운영중'], unit: '대', sub: `${eq.typesBy['운영중']}종 운영중` } : undefined}
       actionLabel="장비대장"

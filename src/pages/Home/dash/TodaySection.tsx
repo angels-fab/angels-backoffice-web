@@ -135,7 +135,7 @@ export default function TodaySection() {
 
   return (
     <HomeCard
-      icon={<CalendarMonthIcon sx={{ fontSize: iconSize.header, color: 'accentText.blue' }} />}
+      icon={<CalendarMonthIcon sx={{ fontSize: iconSize.header, color: 'text.primary' }} />}
       title="오늘 일정"
       stat={{ value: list.length, unit: '건' }}
       actionLabel="캘린더"

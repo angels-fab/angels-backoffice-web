@@ -48,7 +48,7 @@ export default function NoticeSection() {
   return (
     <>
       <HomeCard
-        icon={<CampaignIcon sx={{ fontSize: iconSize.header, color: 'accentText.amber' }} />}
+        icon={<CampaignIcon sx={{ fontSize: iconSize.header, color: 'text.primary' }} />}
         title="새 공지"
         stat={{ value: fresh.length, unit: '건' }}
         actionLabel="공지사항"

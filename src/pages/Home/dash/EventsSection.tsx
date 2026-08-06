@@ -55,7 +55,7 @@ export default function EventsSection() {
 
   return (
     <HomeCard
-      icon={<CoPresentIcon sx={{ fontSize: iconSize.header, color: 'accentText.purple' }} />}
+      icon={<CoPresentIcon sx={{ fontSize: iconSize.header, color: 'text.primary' }} />}
       title="예정 행사"
       stat={att ? { value: mine.length, unit: '건' } : undefined}
       actionLabel="행사"
