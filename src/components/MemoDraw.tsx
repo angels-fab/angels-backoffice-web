@@ -428,12 +428,11 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
                   pr: '2px',
                 }}
               >
-                {/* 잉크색이 들어가는 자리는 도구마다 다르다(snipIcons 주석) — 펜=촉 채움 ·
-                    형광펜=몸통 전체 채움 · 도형=윤곽 색 · 지우개=중립. 윤곽 전체를 잉크색으로
-                    칠하면 노랑처럼 옅은 색이 안 보인다(사용자 지적). */}
+                {/* 선택한 색은 **펜·형광펜의 채움 레이어에만** 들어간다(사용자 지정 2026-08-06).
+                    지우개·도형은 늘 윤곽 그대로 — snipIcons 주석 참조 */}
                 <Icon
                   sx={{ fontSize: TOOL_ICON }}
-                  ink={key === 'eraser' ? undefined : swatch(cfg[key as Exclude<Tool, 'eraser'>].c)}
+                  ink={key === 'pen' || key === 'hl' ? swatch(cfg[key].c) : undefined}
                 />
                 {/* 쐐기 화살표 — 모든 도구에. 클릭 한 번으로 창이 열리는 조작이라(위 pickTool 주석)
                     '누르면 뭐가 뜬다'는 표시가 모든 버튼에서 사실이다 */}
