@@ -91,7 +91,7 @@ export default function MemoComposeButton() {
              라이트에서는 테두리가 보이지도 않았다(2026-08-05 실측). 색은 건수 배지에만 남긴다. */
           sx={(th) => ({
             display: 'inline-flex', alignItems: 'center', gap: 0.75,
-            height: control.height, px: 1.25, flexShrink: 0,
+            height: control.topbar, px: 1.25, flexShrink: 0,
             border: 'none', borderRadius: `${radius.input}px`,
             bgcolor: alpha(th.palette.text.primary, 0.08),
             color: 'text.secondary',

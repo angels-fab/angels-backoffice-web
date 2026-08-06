@@ -13,7 +13,7 @@ import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows'
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone'
 import Switch from '@mui/material/Switch'
 import { alpha, styled } from '@mui/material/styles'
-import { StatusChip, focusRingSx } from '@/components/ds'
+import { focusRingSx } from '@/components/ds'
 import { useRole, ROLE_LABEL } from '@/auth/role'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
 import GlobalSearchDialog from '@/components/GlobalSearchDialog'
@@ -82,7 +82,7 @@ const ThemeSwitch = styled(Switch)({
 
 export default function TopBar() {
   const navigate = useNavigate()
-  const { role, loggedIn, isAdmin, user, logout } = useRole()
+  const { role, loggedIn, isMember, user, logout } = useRole()
   const { mode, toggle: toggleTheme } = useThemeMode()
   const [loginOpen, setLoginOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
@@ -196,7 +196,7 @@ export default function TopBar() {
                 aria-label={desktopView ? '모바일 보기로 전환' : '데스크톱 보기로 전환'}
                 onClick={toggleDesktopView}
                 size="small"
-                sx={{ color: desktopView ? 'primary.main' : 'text.secondary' }}
+                sx={{ width: control.topbar, height: control.topbar, color: desktopView ? 'primary.main' : 'text.secondary' }}
               >
                 {desktopView ? <PhoneIphoneIcon sx={{ fontSize: iconSize.header }} /> : <DesktopWindowsIcon sx={{ fontSize: iconSize.header }} />}
               </IconButton>
@@ -212,7 +212,7 @@ export default function TopBar() {
               sx={(th) => ({
                 display: { xs: 'none', shell: 'flex' },
                 alignItems: 'center', gap: 0.75,
-                height: control.height, flexShrink: 0, px: 1,
+                height: control.topbar, flexShrink: 0, px: 1,
                 // 테두리 없이 '한 톤 들어간 면'으로만 구분 — paper(흰색)는 라이트 상단바와 1.08:1 로 묻힌다.
                 // 글자색 알파라 라이트=옅은 회색·다크=옅은 밝음으로 두 테마가 같은 만큼 떠오른다.
                 border: 'none', borderRadius: `${radius.input}px`,
@@ -243,22 +243,22 @@ export default function TopBar() {
           </Tooltip>
           {/* 모바일 전용 — PC는 위 검색창이 대신한다(중복 노출 방지) */}
           <Tooltip title={`통합검색 (${modKey}+K)`}>
-            <IconButton aria-label="통합검색" onClick={() => setSearchOpen(true)} size="small" sx={{ display: { xs: 'inline-flex', shell: 'none' }, color: 'text.secondary' }}>
+            <IconButton aria-label="통합검색" onClick={() => setSearchOpen(true)} size="small" sx={{ width: control.topbar, height: control.topbar, display: { xs: 'inline-flex', shell: 'none' }, color: 'text.secondary' }}>
               <SearchIcon sx={{ fontSize: iconSize.header }} />
             </IconButton>
           </Tooltip>
           {/* 이 화면에 메모 붙이기 — 게시판 폼을 거치지 않는 개선요청 입력 창구(쓰기 권한자만 렌더) */}
           <MemoComposeButton />
-          {/* 화면에 그리기 — 포털 관리자 전용 편의 도구. 메모를 켜지 않고도 바로 그릴 수 있게
-              메모 버튼 옆에 따로 뒀다(사용자 지시 2026-08-05). 판은 쪽지 레이어가 띄운다.
+          {/* 화면에 그리기 — 메모를 켜지 않고도 바로 그릴 수 있게 메모 버튼 옆에 따로 뒀다.
+              구성원 이상에게 열려 있다(2026-08-06 개방 — 종전 포털 관리자 전용).
               PC 에서만 보인다 — 쪽지 레이어 자체가 PC 전용이라 모바일에서는 눌러도 아무 일도 안 났다. */}
-          {isAdmin && (
+          {isMember && (
             <Tooltip title="화면에 그리기">
               <IconButton
                 aria-label="화면에 그리기"
                 onClick={() => window.dispatchEvent(new Event(MEMO_DRAW_EVENT))}
                 size="small"
-                sx={{ display: { xs: 'none', shell: 'inline-flex' }, color: 'text.secondary' }}
+                sx={{ width: control.topbar, height: control.topbar, display: { xs: 'none', shell: 'inline-flex' }, color: 'text.secondary' }}
               >
                 <GestureIcon sx={{ fontSize: iconSize.header }} />
               </IconButton>
@@ -278,17 +278,42 @@ export default function TopBar() {
           <Box sx={{ display: { xs: 'none', shell: 'flex' }, alignItems: 'center', gap: 1 }}>
             {loggedIn ? (
               <>
-                {/* 이름이 앞 — 칩의 주어는 '누구'이고 등급은 부가정보다(사용자 지시 2026-08-05) */}
-                <StatusChip
-                  status={isAdmin ? 'success' : role === 'member' ? 'info' : 'neutral'}
-                  label={user ? `${user} · ${ROLE_LABEL[role]}` : ROLE_LABEL[role]}
-                />
-                <Button size="small" variant="text" startIcon={<LogoutIcon sx={{ fontSize: iconSize.body }} />} onClick={logout} sx={{ color: 'text.secondary' }}>
+                {/*
+                  신분 표시 — 칩(높이 24)이 아니라 **옆 컨트롤과 같은 32px 면**으로 바꿨다(2026-08-06).
+                  칩은 '상태'를 나타내는 부품이라 색이 의미를 갖는데, 여기 색(초록/파랑)은 등급을 두 번
+                  말할 뿐이고 높이도 혼자 낮아 상단바가 들쭉날쭉했다. 통합검색·메모와 같은 옅은 면을 쓰고
+                  이름은 진하게·등급은 흐리게 두어 무엇이 주어인지는 굵기와 색으로 구분한다.
+                */}
+                <Box
+                  sx={(th) => ({
+                    display: 'inline-flex', alignItems: 'center', gap: 0.5,
+                    height: control.topbar, px: 1.25, flexShrink: 0,
+                    borderRadius: `${radius.input}px`,
+                    bgcolor: alpha(th.palette.text.primary, 0.08),
+                    fontSize: typescale.body.size, whiteSpace: 'nowrap',
+                  })}
+                >
+                  {user && <Box component="span" sx={{ fontWeight: weight.bold }}>{user}</Box>}
+                  <Box component="span" sx={{ color: 'text.secondary' }}>{ROLE_LABEL[role]}</Box>
+                </Box>
+                <Button
+                  size="small"
+                  variant="text"
+                  startIcon={<LogoutIcon sx={{ fontSize: iconSize.body }} />}
+                  onClick={logout}
+                  sx={{ height: control.topbar, flexShrink: 0, color: 'text.secondary' }}
+                >
                   로그아웃
                 </Button>
               </>
             ) : (
-              <Button size="small" variant="outlined" startIcon={<LockOpenIcon sx={{ fontSize: iconSize.body }} />} onClick={() => setLoginOpen(true)}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<LockOpenIcon sx={{ fontSize: iconSize.body }} />}
+                onClick={() => setLoginOpen(true)}
+                sx={{ height: control.topbar, flexShrink: 0 }}
+              >
                 로그인
               </Button>
             )}

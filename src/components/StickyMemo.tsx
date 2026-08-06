@@ -171,7 +171,7 @@ interface NoteProps {
   canEdit: boolean
   /** 요청 자체를 지울 수 있는가 — 게시판과 같은 규칙(담당자 본인 또는 포털 관리자) */
   canDelete: boolean
-  /** 화면에 그림을 그릴 수 있는가 — 포털 관리자 전용 편의 도구(2026-08-05) */
+  /** 화면에 그림을 그릴 수 있는가 — 구성원 이상(2026-08-06 개방. 종전 포털 관리자 전용) */
   canDraw: boolean
   user: string | null
   onMoveEnd: (num: string, pos: Pos) => void
@@ -843,11 +843,11 @@ export default function StickyMemoLayer() {
   // 이미 그리는 중이면 무시한다 — 종전에는 다시 누르면 대상이 'new' 로 덮이면서 key 가 바뀌어
   // MemoDraw 가 통째로 새로 마운트됐고, 그리던 획이 아무 말 없이 전부 사라졌다.
   useEffect(() => {
-    if (!isAdmin) return
+    if (!isMember) return
     const start = () => setDrawFor((cur) => cur ?? 'new')
     window.addEventListener(MEMO_DRAW_EVENT, start)
     return () => window.removeEventListener(MEMO_DRAW_EVENT, start)
-  }, [isAdmin])
+  }, [isMember])
 
   /**
    * 화면을 옮기면 그리던 것을 정리한다.
@@ -872,7 +872,8 @@ export default function StickyMemoLayer() {
 
   // 쪽지가 없어도 관리자면 레이어를 띄운다 — 상단바 '그리기'가 언제나 열려야 하므로.
   // (레이어는 클릭을 통과시키므로 비어 있어도 화면을 가리지 않는다.)
-  if (!isMember || !isDesktop || (memos.length === 0 && !isAdmin)) return null
+  // 쪽지가 없어도 구성원이면 레이어를 띄운다 — 상단바 '그리기'가 언제나 열려야 하므로
+  if (!isMember || !isDesktop) return null
 
   return (
     <Box
@@ -894,7 +895,7 @@ export default function StickyMemoLayer() {
         {/* 저장된 화면 그림 — 관리자에게만. 클릭은 통과시켜 아래 화면을 그대로 쓸 수 있게 한다.
             **지금 고치는 중인 그림만** 숨긴다(그 획은 판이 그린다). 종전에는 그리기에 들어가면
             다른 쪽지의 그림까지 통째로 사라져 화면이 깜빡였다(2026-08-05 사용자 신고). */}
-        {isAdmin && memos.filter((t) => t.num !== drawFor).map((t) => {
+        {isMember && memos.filter((t) => t.num !== drawFor).map((t) => {
           if (!t.drawing?.length) return null
           // 겹친 그림 분간(2026-08-05).
           //  · 주목 중인 그림 = 획 둘레가 앰버로 은은하게 빛난다(숨쉬듯 밝기 변화). 원본 획은 그대로 둔다.
@@ -976,7 +977,7 @@ export default function StickyMemoLayer() {
         })}
 
         {/* 그리기 판 — 진입하면 쪽지는 접히고 화면 전체가 그리기 대상이 된다 */}
-        {isAdmin && drawFor && (
+        {isMember && drawFor && (
           <MemoDraw
             /* key = 대상 번호 — MemoDraw 는 initial 을 처음 마운트 때만 읽는다(useState 초기값).
                key 가 없으면 대상이 바뀌어도 같은 인스턴스가 살아남아 이전 획이 그대로 남는다. */
@@ -989,7 +990,7 @@ export default function StickyMemoLayer() {
         )}
 
         {/* 방금 그린 그림(아직 저장 전) + 그 옆 입력창 */}
-        {isAdmin && pending && (
+        {isMember && pending && (
           <>
             <Box component="svg" aria-hidden sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible', zIndex: 0 }}>
               {pending.strokes.map((s, i) => (
@@ -1058,7 +1059,7 @@ export default function StickyMemoLayer() {
               // 삭제는 게시판과 같은 규칙 — DB improvements_delete 의 술어와 맞춘다
               canDelete={!!user && !!authKey && (isAdmin || (t.mgr || '').trim() === '' || t.mgr === user)}
               // 그리기는 포털 관리자 전용 — 구성원에게는 버튼 자체가 없다
-              canDraw={isAdmin && !!user && !!authKey}
+              canDraw={isMember && !!user && !!authKey}
               user={user}
               onMoveEnd={onMoveEnd}
               onDraw={setDrawFor}

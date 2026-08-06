@@ -14,7 +14,7 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import { isWorkNew, isImproveNew } from '@/utils/newPost'
 import { useUnseenItems, MENU_LABEL } from './useNavBadges'
-import { iconSize, radius, typescale } from '@/theme/tokens'
+import { control, iconSize, radius, typescale } from '@/theme/tokens'
 
 /** 출처별 칩 색 — 사이드바 배지와 같은 의미 계열(공지=파랑·업무=초록·개선=앰버) */
 const MENU_KIND: Record<string, StatusKind> = { notice: 'info', work: 'success', improve: 'warning' }
@@ -69,7 +69,7 @@ export default function NotificationBell() {
           aria-label={count > 0 ? `알림 ${count}건 열기` : '알림 열기'}
           onClick={(e) => setAnchor(e.currentTarget)}
           size="small"
-          sx={{ color: 'text.secondary' }}
+          sx={{ width: control.topbar, height: control.topbar, color: 'text.secondary' }}
         >
           {/* 0건이어도 벨은 남긴다 — 아이콘이 사라지면 옆 요소가 밀려 상단바가 흔들린다(사용자 결정) */}
           <Badge badgeContent={count} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: typescale.micro.size, height: 16, minWidth: 16 } }}>

@@ -443,7 +443,16 @@ export const typescale = {
  * 예전엔 MUI 기본값을 그대로 써서 Button(small) 30px · TextField(small) 37px로 7px 어긋났고,
  * 검색창 옆 '새 공지·장비 추가' 버튼이 낮아 짝이 안 맞아 보였다(사용자 지적 2026-07-26).
  */
-export const control = { height: 36 } as const
+export const control = {
+  height: 36,
+  /**
+   * 상단바 전용 높이 (2026-08-06 신설).
+   * 상단바는 총 53px 로 묶여 있어(StickyMemo 의 TOPBAR_H·모바일 body padding) 폼 높이 36 은 너무 크다.
+   * 종전에는 통합검색·메모 36 / 아이콘 버튼 30 / 신분 표시 24 / 로그아웃 31 로 넷이 다 달랐다
+   * (사용자 지적: "높이가 너무 높고 칩은 낮음"). 상단바에 서는 것은 전부 이 값 하나를 쓴다.
+   */
+  topbar: 32,
+} as const
 
 export const iconSize = {
   caption: 13,
