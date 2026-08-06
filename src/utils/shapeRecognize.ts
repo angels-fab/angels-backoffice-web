@@ -106,6 +106,8 @@ const straightness = (q: Pt[]) => {
 const MIN_POINTS = 8
 const MIN_LEN = 40
 const MIN_DIAG = 24
+/** 이 비율(짧은 변/긴 변) 이상이면 정원으로 맞춘다 — 0.75 = 4:3 까지는 '동그라미를 그린 것'으로 본다 */
+const CIRCLE_RATIO = 0.75
 
 /**
  * 획 하나를 보고 도형을 알아본다. 못 알아보면 null(= 손그림 그대로).
@@ -137,7 +139,20 @@ export function recognizeShape(p: number[]): { k: MemoStrokeKind; p: number[] } 
      * 사각형이 3으로 잡힌다 — 실측). 0.82 를 경계로 두어 타원의 이론값 0.785 와 여유를 둔다.
      */
     if (fill > 0.82 && c >= 2) return { k: 'rect', p: [x1, y1, x2, y2] }
-    if (fill > 0.62 && fill <= 0.82 && c <= 1) return { k: 'ellipse', p: [x1, y1, x2, y2] }
+    // 둥근 것 판정은 넉넉하게(사용자 지시 2026-08-06: "기준이 너무 엄격") — 채움률 폭과 꺾임 허용을 넓혔다
+    if (fill > 0.55 && fill <= 0.82 && c <= 2) {
+      /**
+       * 가로세로가 웬만큼 비슷하면 **정원**으로 맞춘다(사용자 지시). 손으로 그린 동그라미는 늘
+       * 조금씩 찌그러지는데, 그대로 두면 "원을 그렸는데 타원이 됐다"가 된다.
+       * 지름은 두 변의 평균으로 잡고 중심은 그대로 둔다. 비율이 CIRCLE_RATIO 를 넘게 벗어나야 타원.
+       */
+      const ratio = Math.min(w, h) / Math.max(w, h)
+      if (ratio >= CIRCLE_RATIO) {
+        const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2, r = (w + h) / 4
+        return { k: 'ellipse', p: [cx - r, cy - r, cx + r, cy + r] }
+      }
+      return { k: 'ellipse', p: [x1, y1, x2, y2] }
+    }
     return null
   }
 

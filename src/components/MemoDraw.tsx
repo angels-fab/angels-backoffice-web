@@ -10,15 +10,17 @@ import { useTheme } from '@mui/material/styles'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
 import LayersClearIcon from '@mui/icons-material/LayersClear'
-import BrushIcon from '@mui/icons-material/Brush'
+import CreateIcon from '@mui/icons-material/Create'
 import HighlightIcon from '@mui/icons-material/Highlight'
-import NorthEastIcon from '@mui/icons-material/NorthEast'
-import CropSquareIcon from '@mui/icons-material/CropSquare'
+import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward'
+import RectangleOutlinedIcon from '@mui/icons-material/RectangleOutlined'
 import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined'
-// MUI 아이콘 세트에 '지우개' 전용 글리프가 없다(*Eraser* 는 PhonelinkErase 뿐).
-// 칠판 지우개에 가장 가까운 청소용 브러시로 대신한다 — 수제 SVG 금지 규칙(CLAUDE.md) 때문에 직접 그리지 않는다.
-import CleaningServicesIcon from '@mui/icons-material/CleaningServices'
+// 지우개 — MUI 세트에 지우개 전용 글리프가 없어(*Eraser* 는 PhonelinkErase 뿐) 캡처 도구의 지우개에
+// 가장 가까운 AutoFixNormal 을 쓴다. 수제 SVG 금지 규칙(CLAUDE.md) 때문에 직접 그리지 않는다.
+import AutoFixNormalIcon from '@mui/icons-material/AutoFixNormal'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+import { HL_TOKENS, HL_LABEL, HL_SOLID } from '@/pages/Work/richContent'
 import { accent, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import type { MemoStroke, MemoStrokeKind } from '@/api/improve'
 import { snapStroke } from '@/utils/shapeRecognize'
@@ -41,24 +43,22 @@ import { snapStroke } from '@/utils/shapeRecognize'
  */
 export const INK = 'ink'
 
-/** 선용 색 — 먹 + 디자인 시스템 강조색. 임의 hex 를 새로 만들지 않는다 */
+/**
+ * 선용 색 — 다섯 가지만(사용자 확정 2026-08-06). 검정은 'ink' 라 라이트=검정·다크=흰색으로 뒤집히고,
+ * 나머지 넷은 두 테마 모두에서 대비가 확보된 디자인 시스템 강조색이다(임의 hex 금지).
+ */
 const LINE_COLORS: { c: string; label: string }[] = [
   { c: INK, label: '검정' },
   { c: accent.red, label: '빨강' },
-  { c: accent.amber, label: '노랑' },
-  { c: accent.green, label: '초록' },
   { c: accent.blue, label: '파랑' },
-  { c: accent.purple, label: '보라' },
-  { c: accent.teal, label: '청록' },
-  { c: accent.rose, label: '분홍' },
-]
-/** 형광펜 색 — 밝은 것만. 먹·어두운 색은 형광으로 칠하면 글자를 덮어 버린다 */
-const HL_COLORS: { c: string; label: string }[] = [
-  { c: accent.amber, label: '노랑' },
   { c: accent.green, label: '초록' },
-  { c: accent.teal, label: '청록' },
-  { c: accent.rose, label: '분홍' },
+  { c: accent.amber, label: '노랑' },
 ]
+/**
+ * 형광펜 색 — 업무카드 서식 툴바의 형광펜과 같은 넷(HL_SOLID). 두 곳에서 색이 갈리면
+ * 같은 노랑을 칠했는데 화면마다 달라 보인다. PPT·Word 형광펜 표준 원색이라 채도를 낮추지 않는다.
+ */
+const HL_COLORS: { c: string; label: string }[] = HL_TOKENS.map((t) => ({ c: HL_SOLID[t], label: HL_LABEL[t] }))
 
 /** 형광펜 불투명도 — 아래 글자가 비쳐야 '덧칠'로 읽힌다 */
 const HL_ALPHA = 0.35
@@ -72,13 +72,18 @@ type Tool = 'pen' | 'hl' | 'arrow' | 'rect' | 'ellipse' | 'eraser'
 /** 도형 도구 — 누르는 동안 끝점만 갱신한다(자유곡선처럼 점을 쌓지 않는다) */
 const SHAPE_TOOLS: Tool[] = ['arrow', 'rect', 'ellipse']
 
-const TOOLS: { key: Tool; label: string; Icon: typeof BrushIcon }[] = [
-  { key: 'pen', label: '펜', Icon: BrushIcon },
+/**
+ * 도구 아이콘 — 윈도우 캡처 도구의 그림에 맞춘다(사용자 지시 2026-08-06).
+ * 볼펜=펜촉(Create) · 형광펜=마커(Highlight) · 지우개=지우개(AutoFixNormal — MUI 세트에 지우개
+ * 전용 글리프가 없어 그중 가장 가까운 것) · 도형은 그 도형 자체(Rectangle·Circle·ArrowOutward).
+ */
+const TOOLS: { key: Tool; label: string; Icon: typeof CreateIcon }[] = [
+  { key: 'pen', label: '펜', Icon: CreateIcon },
   { key: 'hl', label: '형광펜', Icon: HighlightIcon },
-  { key: 'arrow', label: '화살표', Icon: NorthEastIcon },
-  { key: 'rect', label: '사각형', Icon: CropSquareIcon },
+  { key: 'arrow', label: '화살표', Icon: ArrowOutwardIcon },
+  { key: 'rect', label: '사각형', Icon: RectangleOutlinedIcon },
   { key: 'ellipse', label: '타원', Icon: CircleOutlinedIcon },
-  { key: 'eraser', label: '지우개', Icon: CleaningServicesIcon },
+  { key: 'eraser', label: '지우개', Icon: AutoFixNormalIcon },
 ]
 
 /** 도구별 굵기 범위 — 형광펜은 덧칠이라 훨씬 두껍다 */
@@ -396,9 +401,12 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
                   // 고른 도구는 지금 색이 아래 줄로 보인다 — 팝오버를 열지 않아도 무슨 색인지 알 수 있게
                   borderBottom: on && key !== 'eraser' ? `3px solid ${swatch(cfg[key as Exclude<Tool, 'eraser'>].c)}` : '3px solid transparent',
                   borderRadius: `${radius.chip}px`,
+                  pr: '2px',
                 }}
               >
                 <Icon sx={{ fontSize: typescale.cardTitle.size }} />
+                {/* 쐐기 화살표 — '한 번 더 누르면 설정이 열린다'는 표시(캡처 도구의 도구 옆 ∨와 같은 뜻) */}
+                <ArrowDropDownIcon sx={{ fontSize: typescale.emphasis.size, ml: '-3px', mr: '-3px', opacity: 0.7 }} />
               </IconButton>
             </Tooltip>
           )
@@ -488,24 +496,20 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         </Box>
 
         <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled' }}>굵기</Typography>
-        {/* 미리보기 — 고른 색·굵기 그대로 그은 곡선. 슬라이더를 움직이면 즉시 바뀐다 */}
+        {/* 미리보기 — 고른 색·굵기 그대로 그은 **일자 선**(사용자 지시 2026-08-06).
+            곡선·도형으로 보여주면 굵기보다 모양에 눈이 가서 정작 굵기 차이가 안 읽힌다. */}
         <Box component="svg" viewBox="0 0 210 40" sx={{ width: '100%', height: 40, display: 'block', my: 0.5 }}>
           <StrokeShape
             keyId="preview"
             ink={inkColor}
-            s={{
-              c: cur.c, w: cur.w, k: cfgTool === 'pen' ? undefined : (cfgTool as MemoStrokeKind),
-              p: cfgTool === 'arrow' ? [14, 30, 196, 12]
-                : cfgTool === 'rect' ? [16, 8, 194, 32]
-                : cfgTool === 'ellipse' ? [16, 6, 194, 34]
-                : [14, 28, 55, 12, 105, 30, 155, 12, 196, 24],
-            }}
+            s={{ c: cur.c, w: cur.w, k: cfgTool === 'hl' ? 'hl' : 'line', p: [12, 20, 198, 20] }}
           />
         </Box>
         <Slider
           size="small"
           min={wMin}
           max={wMax}
+          step={0.5}
           value={cur.w}
           onChange={(_, v) => setCfg((m) => ({ ...m, [cfgTool]: { ...m[cfgTool], w: v as number } }))}
           aria-label="굵기"
