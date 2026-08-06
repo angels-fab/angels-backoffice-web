@@ -17,7 +17,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import { SnipPenIcon, SnipHighlightIcon, SnipShapesIcon, SnipEraserIcon } from '@/components/snipIcons'
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 import { HL_TOKENS, HL_LABEL, HL_SOLID } from '@/pages/Work/richContent'
-import { accent, iconSize, radius, shadow, typescale, weight, z } from '@/theme/tokens'
+import { accent, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import type { MemoStroke, MemoStrokeKind } from '@/api/improve'
 import { snapStroke, mergeArrowHead } from '@/utils/shapeRecognize'
 
@@ -93,6 +93,13 @@ const TOOLS: { key: Tool; label: string; Icon: typeof SnipPenIcon }[] = [
 const WIDTH_RANGE: Record<Exclude<Tool, 'eraser'>, [number, number]> = {
   pen: [1, 12], hl: [8, 32], shape: [1, 12],
 }
+
+/**
+ * 도구 아이콘 렌더 크기 — 사다리(iconSize) 밖 값이지만 사용자가 "두 단계는 더"를 지정했다
+ * (20 → 24 → 28). iconSize 주석의 예외 조항 그대로: 크기가 위계가 아니라 **컨테이너**(도구 줄)에서
+ * 나오는 그래픽이라 사다리에 올리지 않는다.
+ */
+const TOOL_ICON = 28
 
 /**
  * 지우개 커서 — 도구 아이콘과 같은 그림으로(사용자 지시 2026-08-05. 아이콘이 캡처 도구 모양으로
@@ -417,12 +424,12 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
                   pr: '2px',
                 }}
               >
-                {/* 잉크색은 아이콘의 촉 부분 채움으로만(ink 프롭 — snipIcons 주석 참고). 윤곽 전체를
-                    칠하면 노랑처럼 옅은 색이 안 보인다(사용자 지적). 지우개·도형 모음은 중립.
-                    크기는 한 단 크게(header 20) — 쐐기가 옆에 붙어 16 이면 그림이 좁아 보인다 */}
+                {/* 잉크색이 들어가는 자리는 도구마다 다르다(snipIcons 주석) — 펜=촉 채움 ·
+                    형광펜=몸통 전체 채움 · 도형=윤곽 색 · 지우개=중립. 윤곽 전체를 잉크색으로
+                    칠하면 노랑처럼 옅은 색이 안 보인다(사용자 지적). */}
                 <Icon
-                  sx={{ fontSize: iconSize.header }}
-                  ink={key === 'eraser' || key === 'shape' ? undefined : swatch(cfg[key as Exclude<Tool, 'eraser'>].c)}
+                  sx={{ fontSize: TOOL_ICON }}
+                  ink={key === 'eraser' ? undefined : swatch(cfg[key as Exclude<Tool, 'eraser'>].c)}
                 />
                 {/* 쐐기 화살표 = '한 번 더 누르면 설정이 열린다'는 표시 — 그래서 **선택된 도구에만** 띄운다.
                     안 고른 도구에도 늘 붙어 있으면 '누르면 뭐가 뜨나 보다'가 되는데 실제로는 선택만 된다

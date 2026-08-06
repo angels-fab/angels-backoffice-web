@@ -8,10 +8,10 @@ import type { SvgIconProps } from '@mui/material/SvgIcon'
  * 비슷한 MUI 아이콘으로 때웠더니 캡처와 전혀 다르게 보였다(사용자 지적 2회). 그래서
  * '아이콘은 MUI 만' 규칙(CLAUDE.md)의 **명시적 예외**로 여기서만 직접 그린다.
  *
- * 색 구조가 핵심이다(사용자 지적 3회차): 캡처 도구처럼 **몸통 윤곽은 중립(currentColor),
- * 잉크가 닿는 촉 부분만 ink 색으로 채운다.** 처음에 윤곽 전체를 잉크색으로 칠했더니
- * 노랑처럼 옅은 색은 가는 선이 배경에 묻혀 보이지 않았다 — 면(채움)은 옅은 색도 읽히고,
- * 둘레의 중립 윤곽이 형태를 지켜 준다. 지우개·도형 모음은 캡처와 같이 중립 그대로.
+ * 색 구조(사용자 확정 2026-08-06): 윤곽(테두리)은 중립(currentColor)을 지키되, 잉크색이 들어가는
+ * 자리는 도구마다 다르다 — **볼펜 = 펜촉 채움만 · 형광펜 = 몸통 전체 채움 · 도형 모음 = 윤곽 색 자체 ·
+ * 지우개 = 항상 중립**. 윤곽 전체를 잉크색으로 칠했더니 노랑처럼 옅은 색은 가는 선이 배경에 묻혀
+ * 보이지 않았다 — 면(채움)은 옅은 색도 읽히고, 둘레의 중립 윤곽이 형태를 지켜 준다.
  *
  * MUI SvgIcon 으로 감싸므로 크기(fontSize)·색 처리와 정렬은 다른 MUI 아이콘과 완전히 같다.
  */
@@ -44,13 +44,11 @@ export function SnipPenIcon({ ink, ...props }: SnipIconProps) {
   )
 }
 
-/** 형광펜 — 마커 몸통(중립 윤곽), 치즐 촉만 잉크색 */
+/** 형광펜 — 몸통 **전체**를 잉크색으로 채움(사용자 확정), 윤곽은 중립 */
 export function SnipHighlightIcon({ ink, ...props }: SnipIconProps) {
   return (
     <SvgIcon {...props}>
-      <g {...line}>
-        <path d="M7.6 2.9h8.8v6.3l-1.6 2.4H9.2L7.6 9.2Z" />
-      </g>
+      <path {...line} d="M7.6 2.9h8.8v6.3l-1.6 2.4H9.2L7.6 9.2Z" fill={ink ?? 'none'} />
       <path d="M9.2 11.6h5.6l-1 4.2H10.2Z" fill={ink ?? 'currentColor'} {...tip} />
     </SvgIcon>
   )
@@ -71,11 +69,11 @@ export function SnipEraserIcon({ ink: _ink, ...props }: SnipIconProps) {
   )
 }
 
-/** 도형 모음 — 원과 둥근 사각형이 겹친 그림. 캡처와 같이 중립색 */
-export function SnipShapesIcon({ ink: _ink, ...props }: SnipIconProps) {
+/** 도형 모음 — 원과 둥근 사각형이 겹친 그림. **윤곽 색 자체**가 잉크색(사용자 확정 — 채울 면이 없다) */
+export function SnipShapesIcon({ ink, ...props }: SnipIconProps) {
   return (
     <SvgIcon {...props}>
-      <g {...line}>
+      <g {...line} stroke={ink ?? 'currentColor'}>
         <circle cx="8.8" cy="8.1" r="6.1" />
         <rect x="10.6" y="9.9" width="9.9" height="9.9" rx="2.3" />
       </g>
