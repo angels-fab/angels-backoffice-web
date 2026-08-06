@@ -21,10 +21,12 @@ import { addReply } from '@/store/slices/replySlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import { updateImprovement, createReply, deleteImprovement, createImprovement } from '@/api/improve'
 import type { MemoStroke } from '@/api/improve'
+import { fetchPageDrawings, createPageDrawing, updatePageDrawing, deletePageDrawing } from '@/api/pageDrawings'
+import type { PageDrawing } from '@/api/pageDrawings'
 import MemoDraw, { StrokeShape, MEMO_DRAW_EVENT } from '@/components/MemoDraw'
 import BorderColorIcon from '@mui/icons-material/BorderColor'
 import { useRole } from '@/auth/role'
-import { memosForPath, visibleMemos, pathToLocation, firstLine } from '@/utils/improveMemo'
+import { memosForPath, visibleMemos, pathToLocation, firstLine, matchesPath } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import { RichBodyView } from '@/utils/richBody'
 import ButtonBase from '@mui/material/ButtonBase'
@@ -171,19 +173,13 @@ interface NoteProps {
   canEdit: boolean
   /** 요청 자체를 지울 수 있는가 — 게시판과 같은 규칙(담당자 본인 또는 포털 관리자) */
   canDelete: boolean
-  /** 화면에 그림을 그릴 수 있는가 — 구성원 이상(2026-08-06 개방. 종전 포털 관리자 전용) */
-  canDraw: boolean
   user: string | null
   onMoveEnd: (num: string, pos: Pos) => void
-  /** 이 쪽지에 그림 그리기 시작 — 판은 레이어가 띄운다 */
-  onDraw: (num: string) => void
   /** 처음부터 펼친 채로 — 그리기 직후 방금 만든 쪽지에만 쓴다 */
   defaultOpen?: boolean
-  /** 이 쪽지가 지금 '주목 대상'인지 알린다(펼침·끌기) — 레이어가 해당 그림을 도드라지게 한다 */
-  onActive: (num: string, active: boolean) => void
 }
 
-function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw, user, onMoveEnd, onDraw, defaultOpen, onActive }: NoteProps) {
+function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, onMoveEnd, defaultOpen }: NoteProps) {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const snack = useSnack()
@@ -193,8 +189,6 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
   // 상단바 메모 버튼(MemoComposeButton)도 같은 이유로 ref 방식을 쓴다.
   const stBtnRef = useRef<HTMLButtonElement>(null)
   const [open, setOpen] = useState(!!defaultOpen)
-  const [dragging, setDragging] = useState(false)
-  const [hover, setHover] = useState(false)
   const [busy, setBusy] = useState(false)
   const [reply, setReply] = useState('')
   // 쪽지에서 바로 제목·내용 수정 — 게시판까지 가지 않아도 고칠 수 있게(수정 권한은 게시판과 동일)
@@ -212,29 +206,8 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
   // 외부(다른 기기에서 옮긴 위치 등)에서 좌표가 바뀌면 따라간다 — 끄는 중에는 무시
   useEffect(() => { if (!drag.current.on) { latest.current = pos; setLive(pos) } }, [pos])
 
-  /**
-   * 주목 대상 알림 — **올려놨거나(hover) 펼쳤거나 끌고 있는 동안**.
-   * 그림이 여러 장 겹치면 어느 게 이 메모 것인지 분간이 안 되므로, 레이어가 이 신호로
-   * 해당 그림만 남기고 나머지를 흐리게 한다. 호버까지 넣은 건 압정에 마우스만 스쳐도
-   * 짝이 보이게 하려는 것(사용자 요청 2026-08-05) — 펼치지 않고도 확인된다.
-   */
-  useEffect(() => {
-    onActive(item.num, hover || open || dragging)
-    // 사라질 때는 반드시 끈다 — 올려놓은 채로 페이지를 옮기거나 목록이 갱신되면
-    // 이 쪽지는 없어지는데 하이라이트만 화면에 남는다
-    return () => onActive(item.num, false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hover, open, dragging, item.num])
-
-  /**
-   * 접는 순간 hover 를 끈다(2026-08-05 사용자 신고: "메모 접고 나서도 하이라이트가 살아있어").
-   *
-   * 펼친 판은 크고 접힌 압정은 작아서, 접으면 포인터가 쪽지 밖으로 나간다. 그런데 커서가
-   * 그대로 멈춰 있으면 브라우저는 mouseleave 를 보내지 않는다(hover 대상은 다음 마우스
-   * 움직임에 다시 계산된다) → hover 가 켜진 채 굳어 그림 하이라이트가 계속 남았다.
-   * 정말 압정 위라면 아래 onMouseMove 가 곧바로 다시 켠다.
-   */
-  useEffect(() => { if (!open) setHover(false) }, [open])
+  // 쪽지↔그림 짝짓기(hover/onActive)는 2026-08-06 그림 분리로 사라졌다 —
+  // 이제 그림이 자기 위에서 직접 빛나므로 압정이 신호를 보낼 이유가 없다.
 
   /** 커진 만큼(펼침·창 축소) 화면 밖으로 나갔으면 되당긴다 — 여백은 허용, 화면 밖은 불가 */
   const clamp = useCallback((p: Pos): Pos => {
@@ -278,7 +251,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
     const layer = layerRef.current, el = elRef.current
     if (!layer || !el) return
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy
-    if (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP) { d.moved = true; setDragging(true) }
+    if (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP) { d.moved = true }
     const b = dragBounds(layer, el)
     place({
       x: Math.min(Math.max(d.ox + dx, b.minX), b.maxX),
@@ -290,7 +263,6 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
     const d = drag.current
     if (!d.on) return
     d.on = false
-    setDragging(false)
     if (d.moved) { onMoveEnd(item.num, latest.current); return }   // 끌었으면 위치만 저장하고 토글하지 않는다
     if (isInteractive(e.target as HTMLElement)) return
     setOpen((o) => !o)                                    // 제자리 클릭 = 펼침/접힘 토글
@@ -397,12 +369,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={() => { drag.current.on = false; setDragging(false) }}
-      /* 호버 = 그 메모의 그림만 남기는 신호. 끌기 중에는 포인터 캡처 때문에 leave 가 안 올 수 있어
-         pointer 계열 대신 mouse 계열을 쓴다(PC 전용 기능이라 충분하다). */
-      onMouseEnter={() => setHover(true)}
-      onMouseMove={() => { if (!hover) setHover(true) }}
-      onMouseLeave={() => setHover(false)}
+      onPointerCancel={() => { drag.current.on = false }}
       sx={(th) => ({
         position: 'absolute',
         left: `${live.x}px`,
@@ -472,18 +439,8 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, canDraw,
                   </IconButton>
                 </Tooltip>
               )}
-              {canDraw && (
-                <Tooltip title={item.drawing?.length ? '화면 그림 고치기' : '화면에 그리기'}>
-                  <IconButton
-                    size="small"
-                    aria-label="화면에 그리기"
-                    onClick={() => { setOpen(false); onDraw(item.num) }}
-                    sx={{ color: item.drawing?.length ? 'primary.main' : 'text.secondary', p: 0.5 }}
-                  >
-                    <BorderColorIcon sx={{ fontSize: iconSize.body }} />
-                  </IconButton>
-                </Tooltip>
-              )}
+              {/* 그리기 버튼은 여기 없다 — 그림은 쪽지 소유물이 아니라 따로 사는 물건이 됐다(2026-08-06).
+                  그리기는 상단바 버튼으로 시작하고, 있는 그림은 그림을 눌러 고친다. */}
               {canDelete && (
                 <Tooltip title="요청 삭제">
                   {/* 되돌릴 수 없는 동작이라 빨강 — 수정·접기(중립 회색)와 무게를 구분한다 */}
@@ -682,31 +639,26 @@ export default function StickyMemoLayer() {
   // 마운트·언마운트마다 값이 바뀌므로 매번 정확히 한 번 다시 계산된다.
   const layerRef = useRef<HTMLDivElement | null>(null)
   const [layerEl, setLayerEl] = useState<HTMLDivElement | null>(null)
-  const [drawFor, setDrawFor] = useState<string | null>(null) // 그리기 중인 쪽지 번호(관리자 전용)
-  // 그리기 완료 직후 — 그림 옆에서 선택/내용을 받는 중(아직 쪽지는 안 만들어졌다).
+  // 'new' = 새로 그리는 중, 숫자 = 그 그림(page_drawings.id)을 고치는 중
+  const [drawFor, setDrawFor] = useState<'new' | number | null>(null)
+  // 그리기 완료 직후 — 그림 옆에서 선택/내용을 받는 중.
   // ask=true 면 '메모를 붙일지' 묻는 단계, false 면 메모 입력 단계(2026-08-06 사용자 지시 — 그림만 남기고
   // 싶을 때도 있으니 입력창을 바로 띄우지 말고 먼저 물을 것).
-  const [pending, setPending] = useState<{ strokes: MemoStroke[]; x: number; y: number; ask?: boolean } | null>(null)
+  // id = 이미 저장된 그림 행 번호(쪽지 저장이 실패해 재시도하는 중일 때만 채워진다 — savePending 주석)
+  const [pending, setPending] = useState<{ strokes: MemoStroke[]; x: number; y: number; ask?: boolean; id?: number } | null>(null)
   const [pendingText, setPendingText] = useState('')
   const [busyPending, setBusyPending] = useState(false)
   const [openNum, setOpenNum] = useState<string | null>(null) // 방금 만든 쪽지 — 처음부터 펼쳐 보인다
   /**
-   * 지금 주목 중인 쪽지들(펼침·끌기·마우스 올림) — 그 그림만 빛나고 나머지는 흐려진다.
+   * 저장된 화면 그림 — **개선요청과 별개 데이터**(page_drawings, 2026-08-06 분리).
    *
-   * 값 하나로 두면 안 된다. 쪽지 A·B 를 둘 다 펼친 뒤 B 만 접으면, B 가 '내가 켰던 것'이라며
-   * 표시를 지워 **아직 펼쳐져 있는 A 의 하이라이트까지 같이 꺼졌다**(2026-08-05 전수검사에서 확인).
-   * A 는 자기 상태가 그대로라 다시 알려 줄 일이 없으니 되살아나지도 않았다.
-   * 켜진 것을 전부 들고 있다가 마지막 것을 고르면 이런 승계가 저절로 된다.
+   * 소비자가 이 레이어 하나뿐이라 Redux 슬라이스를 따로 만들지 않았다.
+   * 압정이 사라진 자리를 그림 자신이 대신한다 — hoverId 는 후광, selectedId 는 고치기·지우기 막대.
    */
-  const [activeSet, setActiveSet] = useState<string[]>([])
-  const activeNum = activeSet.length ? activeSet[activeSet.length - 1] : null
-  const markActive = useCallback((num: string, active: boolean) => {
-    setActiveSet((cur) => {
-      const has = cur.includes(num)
-      if (active) return has ? cur : [...cur, num]
-      return has ? cur.filter((n) => n !== num) : cur
-    })
-  }, [])
+  const [drawings, setDrawings] = useState<PageDrawing[]>([])
+  const [hoverId, setHoverId] = useState<number | null>(null)
+  const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [delDraw, setDelDraw] = useState<number | null>(null)
   const snack = useSnack()
   const attachLayer = useCallback((el: HTMLDivElement | null) => {
     layerRef.current = el
@@ -728,6 +680,33 @@ export default function StickyMemoLayer() {
     for (const k in m) m[k].sort((a, b) => a.created.localeCompare(b.created))
     return m
   }, [replyItems])
+
+  /** 그림 목록 다시 읽기 — 저장·수정·삭제 뒤에 한 번씩. 소비자가 여기뿐이라 전역 상태로 올리지 않았다 */
+  const reloadDrawings = useCallback(async () => {
+    try {
+      setDrawings(await fetchPageDrawings())
+    } catch {
+      snack('화면 그림을 불러오지 못했습니다.', 'error')
+    }
+  }, [snack])
+  useEffect(() => { if (isMember) void reloadDrawings() }, [isMember, reloadDrawings])
+
+  /**
+   * 이 화면의 그림 — 가시성은 쪽지와 같은 기준(본인 + 포털 관리자).
+   *
+   * 경로 매칭도 **쪽지와 같은 규칙**(matchesPath — 하위 경로 포함)을 쓴다.
+   * 완전 일치로 좁혔더니 `/notice` 에서 그린 그림이 `/notice/12` 로 딥링크할 때 사라졌다.
+   * 두 경로는 같은 목록 화면이고 레이어는 스크롤도 안 따라가므로 픽셀 단위로 같은 자리다 —
+   * 한 번의 조작으로 만든 그림과 쪽지가 서로 다른 규칙으로 나타나면 그게 더 이상하다.
+   */
+  const hereDraw = useMemo(
+    () => drawings.filter((d) => matchesPath(pathname, d.path) && (isAdmin || d.author === user)),
+    [drawings, pathname, isAdmin, user],
+  )
+  const editingDraw = typeof drawFor === 'number' ? drawings.find((d) => d.id === drawFor) || null : null
+  // 고치는 중에는 도구막대를 내린다 — 판이 그 위를 덮어 눌리지도 않는 유령 버튼이 되고,
+  // 판 밖(위쪽)으로 삐져나온 조각은 눌려서 편집 중인 그림을 지워 버린다(적대적 리뷰 확인)
+  const selectedDraw = drawFor === null ? hereDraw.find((d) => d.id === selectedId) || null : null
 
   /**
    * 자리가 없는 쪽지에 **빈 슬롯을 배정하고 즉시 저장**한다.
@@ -768,36 +747,40 @@ export default function StickyMemoLayer() {
   }, [dispatch, saved])
 
   /**
-   * 화면 그림 — **포털 관리자 전용**(2026-08-05 사용자 지시).
-   * 고칠 곳을 말로 설명하는 대신 화면에 직접 표시해 두는 편의 도구라, 구성원에게는
-   * 도구도 그림도 노출하지 않는다. 저장은 쪽지(개선요청)에 딸린다 — 그림만 따로 떠다니지 않는다.
+   * 화면 그림 — 구성원 이상(2026-08-06 개방).
+   * 고칠 곳을 말로 설명하는 대신 화면에 직접 표시해 두는 도구.
+   * **저장은 쪽지와 무관한 자기 테이블(page_drawings)** 이다 — 그림만 남길 수도, 메모를 함께 붙일 수도 있다.
    */
-  // 'new' = 상단바에서 시작한 새 그림. 그 외에는 고치는 중인 쪽지 번호다.
-  // 대상은 경로로 걸러진 memos 가 아니라 **전체 목록**에서 찾는다 — 걸러진 쪽에서 찾으면
-  // 화면이 바뀌는 순간 대상이 사라져, 원본 그림을 고치는 대신 새 요청이 하나 더 생겼다.
-  const drawTarget = drawFor && drawFor !== 'new' ? items.find((t) => t.num === drawFor) || null : null
-  // 주목 중인 메모가 실제로 그림을 갖고 있을 때만 '나머지 흐리게'가 의미가 있다
-  const activeHasDrawing = !!memos.find((t) => t.num === activeNum)?.drawing?.length
 
   /**
    * 그리기 완료 —
-   *  · 기존 쪽지의 그림을 고친 것이면 바로 저장한다.
-   *  · 새로 그린 것이면 **그림 옆에 입력창을 띄워** 무슨 뜻인지 바로 적게 한다(사용자 지시 2026-08-05).
-   *    그림만 있고 설명이 없으면 나중에 본인도 왜 그렸는지 모른다.
+   *  · 있던 그림을 고친 것이면 바로 저장한다(전부 지우고 완료하면 그 그림을 삭제).
+   *  · 새로 그린 것이면 **메모를 붙일지 먼저 묻는다**(2026-08-06 사용자 지시).
    */
   const finishDrawing = async (strokes: MemoStroke[]) => {
-    setDrawFor(null)
-    if (!user || !authKey) return
-    if (drawTarget) {
+    if (!user || !authKey) { setDrawFor(null); return }
+    if (editingDraw) {
+      // ⚠ 판은 **저장에 성공한 뒤에** 닫는다. 먼저 닫으면 판이 사라지면서 고친 획이 로컬 state 와
+      // 함께 증발해, 실패했을 때 되돌아갈 곳이 없다(사무실망 write 스톨 — 메모리 참고).
+      // 판이 그대로 있으면 '완료'를 다시 누르는 것으로 재시도된다.
       try {
-        await updateImprovement({ author: user, key: 'session', num: drawTarget.num, drawing: strokes.length ? strokes : null })
-        dispatch(loadImproveData())
+        if (strokes.length) {
+          await updatePageDrawing({ id: editingDraw.id, strokes })
+        } else {
+          // 판에서 획을 전부 지우고 완료 = 그림을 없애겠다는 뜻
+          await deletePageDrawing(editingDraw.id)
+          setSelectedId(null)
+          snack('그림을 지웠습니다.', 'success')
+        }
+        setDrawFor(null)
+        await reloadDrawings()
       } catch (err) {
-        snack(err instanceof Error ? err.message : '그림 저장에 실패했습니다', 'error')
+        snack(err instanceof Error ? err.message : '그림 저장에 실패했습니다. 완료를 다시 눌러 주세요.', 'error')
       }
       return
     }
-    if (strokes.length === 0) return // 아무것도 안 그렸으면 쪽지도 만들지 않는다
+    setDrawFor(null)
+    if (strokes.length === 0) return // 아무것도 안 그렸으면 아무것도 만들지 않는다
     // 입력창 자리 = 그림 오른쪽 위(획들의 경계상자 기준). 레이어 밖으로 나가지 않게 당긴다.
     const xs = strokes.flatMap((s) => s.p.filter((_, i) => i % 2 === 0))
     const ys = strokes.flatMap((s) => s.p.filter((_, i) => i % 2 === 1))
@@ -812,39 +795,88 @@ export default function StickyMemoLayer() {
   }
 
   /**
-   * 그림 저장 — withMemo=true 면 입력창의 내용을 담아, false 면 **그림만**(내용 없이) 쪽지를 만든다.
-   * 그림만이어도 쪽지(압정)는 생긴다 — 압정이 그림의 손잡이라서(옮기기·고치기·지우기가 전부 거기 있다).
-   * 없애면 그림을 다시 열 방법이 없는 고아가 된다. 대신 접힌 압정 하나라 화면을 어지럽히진 않는다.
+   * 그림 저장 — **그림과 메모는 서로 다른 물건**(2026-08-06 분리).
+   *
+   *  · withMemo=false … page_drawings 에 그림만 남긴다. 압정도 게시판 행도 생기지 않는다.
+   *  · withMemo=true  … 위에 더해 개선요청(쪽지)을 하나 만든다. 둘은 각자 독립이라
+   *    쪽지를 지워도 그림은 남고, 그림을 지워도 쪽지는 남는다.
+   *
+   * 그림의 손잡이는 압정이 아니라 **그림 자신**이다 — 획 위에 마우스를 올리면 빛나고,
+   * 누르면 고치기·지우기 막대가 뜬다.
    */
   const savePending = async (withMemo: boolean) => {
     if (!pending || !user || !authKey) return
     const body = withMemo ? pendingText.trim() : ''
     setBusyPending(true)
     try {
-      const loc = pathToLocation(pathname)
-      // 게시판 목록이 읽히려면 제목이 있어야 한다 — 내용이 있으면 첫 줄, 없으면 기본 제목
-      const title = body ? firstLine(body) : `화면 그림 — ${loc || '기타'}`
-      const num = await createImprovement({ author: user, key: authKey, loc: loc || '기타', title, content: body, mgr: user })
-      // 연결되는 화면이 있을 때만 쪽지·그림으로 띄운다(MemoComposeButton 과 같은 규칙).
-      // '기타'로 올린 그림은 어느 화면에도 안 뜨는데 화면에서는 사라지므로, 그리 되면 분명히 알린다.
-      if (loc) await updateImprovement({ author: user, key: 'session', num, memo: true, drawing: pending.strokes })
-      else snack(`이 화면은 연결된 개선위치가 없어 게시판 접수만 됩니다. (요청 #${num})`, 'warning')
-      // 쪽지를 **입력창이 있던 그 자리에 펼친 채로** 남긴다(2026-08-05 사용자 지시).
-      // 자리를 먼저 저장해야 한다 — 안 그러면 아래 '빈 슬롯 배정' effect 가 기본 자리(메모 버튼 밑)를
-      // 잡아버려 압정이 상단바 근처로 튀었다. putSetting 은 낙관 반영이라 목록이 갱신될 때 이미 들어가 있다.
-      // ⚠ 자리 배정 effect 와 같은 게이트 — 개인 설정 로드가 실패한 상태에서 저장하면
-      // saved 가 비어 있어 **서버에 있던 다른 압정 좌표를 통째로 날린다**(이 키는 맵 통째로 치환).
-      if (usLoadedOk) dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [String(num)]: { x: pending.x, y: pending.y } } }))
-      // 그림만 남길 때는 쪽지를 펼치지 않는다 — 쓸 내용이 없는데 빈 쪽지가 열리면 헛손질만 시킨다
-      if (withMemo) setOpenNum(String(num))
-      else if (loc) snack(`그림을 붙였습니다. 압정을 누르면 메모·수정할 수 있습니다. (요청 #${num})`, 'success')
+      // 그림이 먼저 — 이게 이 화면에 남는 본체다.
+      // ⚠ 만들어진 id 를 pending 에 적어 둔다. 뒤의 쪽지 저장이 실패하면 입력창이 그대로 남아
+      // 사용자가 다시 '붙이기'를 누르는데, id 를 안 들고 있으면 누를 때마다 **같은 그림이 한 장씩
+      // 더 쌓인다**(적대적 리뷰 확인). 두 번째부터는 새로 만들지 않고 그 행을 고친다.
+      let drawId = pending.id
+      if (drawId === undefined) {
+        drawId = await createPageDrawing({ path: pathname, strokes: pending.strokes })
+        setPending((p) => (p ? { ...p, id: drawId } : p))
+      }
+      if (withMemo) {
+        const loc = pathToLocation(pathname)
+        // 게시판 목록이 읽히려면 제목이 있어야 한다 — 내용이 있으면 첫 줄, 없으면 기본 제목
+        const title = body ? firstLine(body) : `화면 메모 — ${loc || '기타'}`
+        const num = await createImprovement({ author: user, key: authKey, loc: loc || '기타', title, content: body, mgr: user })
+        // 연결되는 화면이 있을 때만 쪽지로 띄운다(MemoComposeButton 과 같은 규칙).
+        // '기타'로 올린 것은 어느 화면에도 안 뜨므로 그리 되면 분명히 알린다.
+        if (loc) await updateImprovement({ author: user, key: 'session', num, memo: true })
+        else snack(`이 화면은 연결된 개선위치가 없어 게시판 접수만 됩니다. (요청 #${num})`, 'warning')
+        // 쪽지를 **입력창이 있던 그 자리에 펼친 채로** 남긴다(2026-08-05 사용자 지시).
+        // 자리를 먼저 저장해야 한다 — 안 그러면 아래 '빈 슬롯 배정' effect 가 기본 자리(메모 버튼 밑)를
+        // 잡아버려 압정이 상단바 근처로 튀었다. putSetting 은 낙관 반영이라 목록이 갱신될 때 이미 들어가 있다.
+        // ⚠ 자리 배정 effect 와 같은 게이트 — 개인 설정 로드가 실패한 상태에서 저장하면
+        // saved 가 비어 있어 **서버에 있던 다른 압정 좌표를 통째로 날린다**(이 키는 맵 통째로 치환).
+        if (usLoadedOk) dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [String(num)]: { x: pending.x, y: pending.y } } }))
+        setOpenNum(String(num))
+        dispatch(loadImproveData())
+      } else {
+        // 압정이 안 생기므로 "저장됐다"는 신호가 그림뿐이다 — 다루는 법을 한 번 알려 준다
+        snack('그림을 남겼습니다. 그림 위에 마우스를 올리면 고치거나 지울 수 있습니다.', 'success')
+      }
       setPending(null)
       setPendingText('')
-      dispatch(loadImproveData())
+      await reloadDrawings()
     } catch (err) {
       snack(err instanceof Error ? err.message : '저장에 실패했습니다', 'error')
     } finally {
       setBusyPending(false)
+    }
+  }
+
+  /**
+   * 입력창 '버리기' — 아직 아무것도 저장 안 됐으면 그냥 닫는다.
+   * 앞선 시도에서 그림만 저장된 상태라면 **그 행도 지운다** — 안 그러면 버린 줄 알았던 그림이
+   * 새로고침 뒤에 나타난다(적대적 리뷰 확인).
+   */
+  const discardPending = async () => {
+    const id = pending?.id
+    setPending(null)
+    setPendingText('')
+    if (id === undefined) return
+    try {
+      await deletePageDrawing(id)
+      await reloadDrawings()
+    } catch {
+      snack('그림을 되돌리지 못했습니다. 화면을 새로고침한 뒤 그림을 눌러 지워 주세요.', 'warning')
+    }
+  }
+
+  /** 선택한 그림 지우기 — 확인 뒤 실행. 되돌릴 수 없다 */
+  const removeDrawing = async (id: number) => {
+    try {
+      await deletePageDrawing(id)
+      setSelectedId(null)
+      setHoverId(null)
+      await reloadDrawings()
+      snack('그림을 지웠습니다.', 'success')
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '그림 삭제에 실패했습니다', 'error')
     }
   }
 
@@ -859,6 +891,30 @@ export default function StickyMemoLayer() {
   }, [isMember])
 
   /**
+   * 그림 선택 해제 — 아무 데나 누르거나 Esc.
+   *
+   * capture 로 받는다 — 아래 화면의 버튼이 이벤트를 삼켜도 선택은 풀려야 하기 때문이다.
+   * ⚠ 그래서 **stopPropagation 으로는 막을 수 없다**(capture 는 window 가 제일 먼저 받는다).
+   * 그림 자신과 도구막대를 그대로 두려면 출처를 봐야 한다 — 안 그러면 '고치기'를 누르는 순간
+   * 선택이 풀려 막대가 사라지고, 버튼이 떨어져 나가 click 이 끝내 발생하지 않는다.
+   */
+  useEffect(() => {
+    if (selectedId === null) return
+    const off = (e: PointerEvent) => {
+      const t = e.target as Element | null
+      if (t && typeof t.closest === 'function' && t.closest('[data-drawing-ui]')) return
+      setSelectedId(null)
+    }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedId(null) }
+    window.addEventListener('pointerdown', off, true)
+    window.addEventListener('keydown', esc)
+    return () => {
+      window.removeEventListener('pointerdown', off, true)
+      window.removeEventListener('keydown', esc)
+    }
+  }, [selectedId])
+
+  /**
    * 화면을 옮기면 그리던 것을 정리한다.
    *
    * 레이어는 MainLayout 에 있어 경로가 바뀌어도 살아남는다. 그래서 그리기 판이나 입력창을
@@ -871,6 +927,8 @@ export default function StickyMemoLayer() {
   busyDrawRef.current = !!drawFor || !!pending
   useEffect(() => {
     setOpenNum(null)
+    setSelectedId(null)
+    setHoverId(null)
     if (!busyDrawRef.current) return
     setDrawFor(null)
     setPending(null)
@@ -901,34 +959,27 @@ export default function StickyMemoLayer() {
           그 좌상단을 (0,0)으로 삼는다. 그래야 해상도가 달라져도 쪽지가 표의 같은 지점 옆에 남는다
           — 화면 전체를 기준으로 삼으면 본문은 안 넓어지는데 좌표만 벌어져 여백으로 밀려난다. */}
       <Box ref={attachLayer} sx={{ position: 'relative', height: '100%', width: '100%', maxWidth: `${layout.maxWidthWide}px`, mx: 'auto' }}>
-        {/* 저장된 화면 그림 — 관리자에게만. 클릭은 통과시켜 아래 화면을 그대로 쓸 수 있게 한다.
-            **지금 고치는 중인 그림만** 숨긴다(그 획은 판이 그린다). 종전에는 그리기에 들어가면
-            다른 쪽지의 그림까지 통째로 사라져 화면이 깜빡였다(2026-08-05 사용자 신고). */}
-        {isMember && memos.filter((t) => t.num !== drawFor).map((t) => {
-          if (!t.drawing?.length) return null
-          // 겹친 그림 분간(2026-08-05).
-          //  · 주목 중인 그림 = 획 둘레가 앰버로 은은하게 빛난다(숨쉬듯 밝기 변화). 원본 획은 그대로 둔다.
-          //  · 나머지 = 흐리게.
-          // 후광이 필요한 이유: '나머지를 흐리게'만 하면 화면에 그림이 **한 장뿐일 때 아무 변화가 없다**
-          // (흐릴 나머지가 없다). 실제로 한 화면에 한 장인 경우가 대부분이라 하이라이트가 안 먹는 것처럼 보였다.
-          // 그림이 **있는** 메모가 주목될 때만 적용한다 — 그림 없는 메모를 열었는데 남의 그림이
-          // 반응하면 그게 더 헷갈린다.
-          const active = activeHasDrawing && t.num === activeNum
-          const dimmed = activeHasDrawing && t.num !== activeNum
-          const box = active ? glowBox(t.drawing) : null
-          const glowId = `memo-glow-${t.num}`
+        {/* 저장된 화면 그림. 획이 없는 자리는 클릭을 통과시켜 아래 화면을 그대로 쓸 수 있게 한다.
+            **지금 고치는 중인 그림만** 숨긴다(그 획은 판이 그린다). */}
+        {isMember && hereDraw.filter((d) => d.id !== drawFor).map((d) => {
+          // 그림이 자기 손잡이다(2026-08-06) — 압정이 없어졌으므로 획 위 호버·클릭이 유일한 진입점이다.
+          //  · 호버·선택 = 획 둘레가 앰버로 은은하게 빛난다(숨쉬듯). 원본 획은 그대로 둔다.
+          // 후광이 필요한 이유: '나머지를 흐리게'만 하면 화면에 그림이 **한 장뿐일 때 아무 변화가 없다**.
+          const active = hoverId === d.id || selectedId === d.id
+          const box = active ? glowBox(d.strokes) : null
+          const glowId = `pd-glow-${d.id}`
           return (
             <Box
-              key={`d-${t.num}`}
+              key={`d-${d.id}`}
               component="svg"
-              aria-hidden
               sx={{
+                // svg 자체는 클릭을 통과시킨다 — 켜면 본문 칸 1400px 전체가 아래 화면의 클릭을 삼킨다.
+                // 실제로 마우스를 받는 건 아래 '히트 전용' 그룹뿐이다.
                 position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none',
                 // svg 는 기본이 overflow:hidden — 본문 칸(최대 1400) 밖 여백이나 상단바 위로 그은 획이
                 // 저장은 되는데 화면에서는 잘려 사라졌다. 그리기 판은 그 밖에서도 좌표를 받는다.
                 overflow: 'visible',
                 zIndex: active ? 1 : 0,
-                opacity: dimmed ? 0.18 : 1,
                 transition: `opacity ${motion.base} ${motion.ease}`,
               }}
             >
@@ -951,33 +1002,101 @@ export default function StickyMemoLayer() {
                   component="g"
                   filter={`url(#${glowId})`}
                   sx={{
+                    pointerEvents: 'none',
                     animation: 'memoGlowPulse 1.8s ease-in-out infinite',
                     '@keyframes memoGlowPulse': { '0%, 100%': { opacity: 0.5 }, '50%': { opacity: 1 } },
                     '@media (prefers-reduced-motion: reduce)': { animation: 'none', opacity: 0.85 },
                   }}
                 >
                   {/* 후광은 색을 필터가 정하므로 검정으로 그린다. 모양은 본체와 같아야 하므로 같은 함수 */}
-                  {t.drawing.map((s, i) => (
+                  {d.strokes.map((s, i) => (
                     <StrokeShape key={`h-${i}`} keyId={`h-${i}`} ink="#000" s={{ ...s, c: '#000', w: s.w + 3 }} />
                   ))}
                 </Box>
               )}
               {/* stroke 는 sx 로 팔레트 경로가 안 풀린다(MemoDraw 주석 참고) — 실제 색으로 넘긴다 */}
-              {t.drawing.map((s, i) => (
+              {d.strokes.map((s, i) => (
                 <StrokeShape key={i} keyId={String(i)} s={s} ink={theme.palette.text.primary} />
               ))}
+              {/*
+               * 히트 전용 그룹 — 보이지 않는 굵은 복제본. 마우스를 받는 건 여기뿐이다.
+               * 획은 전부 fill:none 이라 기본 히트 폭이 선 굵기(펜 1~12px)뿐이라 잡기 어렵다.
+               * pointer-events:'stroke' 는 색이 투명해도 선 자리를 잡아 준다.
+               * fill:none 덕에 **네모·타원은 테두리만** 잡힌다 — 지우개가 이미 택한 규칙과 같다
+               * (안쪽 빈 곳까지 잡으면 그 아래 화면을 못 쓴다).
+               * 화살표는 촉 길이가 굵기에 비례해서, 부풀리면 촉이 화면을 덮는다 → 몸통(line)만 쓴다.
+               */}
+              <Box
+                component="g"
+                data-drawing-ui=""
+                sx={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                onMouseEnter={() => setHoverId(d.id)}
+                onMouseLeave={() => setHoverId((v) => (v === d.id ? null : v))}
+                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setSelectedId(d.id) }}
+              >
+                {d.strokes.map((s, i) => (
+                  <StrokeShape
+                    key={`hit-${i}`}
+                    keyId={`hit-${i}`}
+                    ink="transparent"
+                    s={{ ...s, c: 'transparent', w: Math.max(s.w + 12, 18), k: s.k === 'arrow' ? 'line' : s.k }}
+                  />
+                ))}
+              </Box>
             </Box>
           )
         })}
+
+        {/* 선택한 그림의 도구막대 — 압정이 없어진 자리를 대신한다.
+            svg 밖(레이어 직계 자식)에 둔다 — 그림 svg 안에 버튼을 넣으면 잡히지 않는다. */}
+        {isMember && selectedDraw && (() => {
+          const b = glowBox(selectedDraw.strokes)
+          if (!b) return null
+          return (
+            <Box
+              data-drawing-ui=""
+              sx={{
+                position: 'absolute', left: b.x + b.w, top: Math.max(b.y, 0),
+                transform: 'translate(-100%, -100%)', pointerEvents: 'auto', zIndex: 4,
+                display: 'flex', gap: 0.25, px: 0.5,
+                bgcolor: 'background.paper', border: 1, borderColor: 'divider',
+                borderRadius: `${radius.pill}px`, boxShadow: shadow.lg,
+              }}
+            >
+              <Tooltip title="그림 고치기">
+                <IconButton size="small" aria-label="그림 고치기" onClick={() => { setSelectedId(null); setDrawFor(selectedDraw.id) }} sx={{ color: 'text.secondary', p: 0.5 }}>
+                  <BorderColorIcon sx={{ fontSize: iconSize.body }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="그림 지우기">
+                <IconButton size="small" aria-label="그림 지우기" onClick={() => setDelDraw(selectedDraw.id)} sx={(th) => ({ color: th.palette.accentText.red, p: 0.5 })}>
+                  <DeleteOutlineIcon sx={{ fontSize: iconSize.body }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )
+        })()}
+
+        {/* 삭제 확인은 선택 상태와 무관하게 렌더한다 — 다이얼로그 클릭이 선택을 풀어
+            다이얼로그가 같이 사라지는 사고를 막는다 */}
+        <ConfirmDialog
+          open={delDraw !== null}
+          title="이 그림을 지울까요?"
+          description="화면에서 지워지고 되돌릴 수 없습니다."
+          confirmLabel="지우기"
+          destructive
+          onClose={() => setDelDraw(null)}
+          onConfirm={() => { const id = delDraw; setDelDraw(null); if (id !== null) void removeDrawing(id) }}
+        />
 
         {/* 그리기 판 — 진입하면 쪽지는 접히고 화면 전체가 그리기 대상이 된다 */}
         {isMember && drawFor && (
           <MemoDraw
             /* key = 대상 번호 — MemoDraw 는 initial 을 처음 마운트 때만 읽는다(useState 초기값).
                key 가 없으면 대상이 바뀌어도 같은 인스턴스가 살아남아 이전 획이 그대로 남는다. */
-            key={drawFor}
+            key={String(drawFor)}
             layerRef={layerRef}
-            initial={drawTarget?.drawing}
+            initial={editingDraw?.strokes}
             onDone={(strokes) => void finishDrawing(strokes)}
             onCancel={() => setDrawFor(null)}
           />
@@ -1002,16 +1121,19 @@ export default function StickyMemoLayer() {
               })}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
-                <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+                {/* 묻는 단계에서는 아직 쪽지 얘기가 아니다 — 아이콘도 그리기 쪽으로 */}
+                {pending.ask
+                  ? <BorderColorIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+                  : <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />}
                 <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: 'text.secondary' }}>
-                  {pending.ask ? '메모를 붙일까요?' : '이 그림은 무엇인가요?'}
+                  {pending.ask ? '메모도 함께 붙일까요?' : '이 그림은 무엇인가요?'}
                 </Box>
               </Box>
 
               {pending.ask ? (
                 // 선택 단계(2026-08-06 사용자 지시) — 그림만 남기고 싶을 때도 있으니 입력창을 바로 띄우지 않는다
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                  <Button size="small" disabled={busyPending} onClick={() => { setPending(null); setPendingText('') }} sx={{ color: 'text.secondary' }}>
+                  <Button size="small" disabled={busyPending} onClick={() => void discardPending()} sx={{ color: 'text.secondary' }}>
                     버리기
                   </Button>
                   <Button size="small" disabled={busyPending} onClick={() => void savePending(false)}>
@@ -1033,7 +1155,7 @@ export default function StickyMemoLayer() {
                     sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size } }}
                   />
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5, mt: 1 }}>
-                    <Button size="small" disabled={busyPending} onClick={() => { setPending(null); setPendingText('') }} sx={{ color: 'text.secondary' }}>
+                    <Button size="small" disabled={busyPending} onClick={() => void discardPending()} sx={{ color: 'text.secondary' }}>
                       버리기
                     </Button>
                     <Button size="small" variant="contained" disabled={busyPending} onClick={() => void savePending(true)}>
@@ -1062,13 +1184,9 @@ export default function StickyMemoLayer() {
               canEdit={isMember && !!user && !!authKey}
               // 삭제는 게시판과 같은 규칙 — DB improvements_delete 의 술어와 맞춘다
               canDelete={!!user && !!authKey && (isAdmin || (t.mgr || '').trim() === '' || t.mgr === user)}
-              // 그리기는 포털 관리자 전용 — 구성원에게는 버튼 자체가 없다
-              canDraw={isMember && !!user && !!authKey}
               user={user}
               onMoveEnd={onMoveEnd}
-              onDraw={setDrawFor}
               defaultOpen={t.num === openNum}
-              onActive={markActive}
             />
           )
         })}

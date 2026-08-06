@@ -16,13 +16,20 @@ interface ImproveTableRow {
   urgent: boolean; type: string; loc: string; title: string; content: string
   author: string; mgr: string; proposed_date: string; link: string
   status: string; end_date: string; reason: string; memo: boolean
-  drawing: MemoStroke[] | null
 }
 
 /**
- * 붙임쪽지 그림의 획 하나 — 화면에 그린 선을 **본문 칸 좌상단 기준 px**로 담는다.
- * 압정 좌표와 같은 기준이라 해상도가 달라져도 같은 지점에 남는다.
+ * 화면 그림의 획 하나.
+ *
+ * 좌표는 **상단바(53) · 좌측 레일(64) 아래, 폭 1400 중앙정렬 레이어의 좌상단 기준 px**이다.
+ * 압정 좌표와 같은 기준이라 해상도가 달라져도 같은 지점에 남는다. 단 레이어가 position:fixed 라
+ * **스크롤은 따라가지 않는다**(뷰포트에 붙는다). 폭이 1400이 아닌 화면(/settings 1200,
+ * /equipment 데모 1680)에서는 본문 칸과 좌우가 어긋난다 — 알려진 한계.
+ *
  * p 는 [x,y,x,y,...] 평면 배열 — 점마다 객체를 만들면 저장 용량이 몇 배가 된다.
+ *
+ * 이 형식의 정본은 여기 남기지만, **저장 위치는 개선요청이 아니라 page_drawings**다
+ * (2026-08-06 분리 — src/api/pageDrawings.ts).
  */
 export interface MemoStroke {
   /** 선 색(CSS 색 문자열) */
@@ -62,7 +69,6 @@ export async function fetchImprovements(): Promise<ImprovementsData> {
     urgent: r.urgent, type: r.type, loc: r.loc, title: r.title, content: r.content,
     author: r.author, mgr: r.mgr, date: r.proposed_date, link: r.link,
     status: r.status, end: r.end_date, reason: r.reason, memo: r.memo,
-    drawing: Array.isArray(r.drawing) ? r.drawing : undefined,
   }))
   return {
     items,
@@ -99,11 +105,9 @@ export async function updateImprovement(p: {
   status?: string; reason?: string; end?: string
   urgent?: boolean; type?: string; loc?: string; title?: string; content?: string; link?: string
   memo?: boolean
-  /** 쪽지 그림 — 배열이면 교체, null 이면 삭제, 안 보내면 유지(관리자 전용 기능) */
-  drawing?: MemoStroke[] | null
 }): Promise<void> {
   const payload: Record<string, unknown> = { num: Number(p.num) }
-  for (const k of ['status', 'reason', 'end', 'urgent', 'type', 'loc', 'title', 'content', 'link', 'memo', 'drawing'] as const) {
+  for (const k of ['status', 'reason', 'end', 'urgent', 'type', 'loc', 'title', 'content', 'link', 'memo'] as const) {
     if (p[k] !== undefined) payload[k] = p[k]
   }
   await ensureSession()

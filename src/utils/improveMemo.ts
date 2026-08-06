@@ -74,7 +74,7 @@ export function isMemoActive(t: ImprovementItem): boolean {
 }
 
 /** 현재 경로(pathname)가 대상 경로에 해당하는지 — '/notice/12' 같은 하위 경로도 매칭 */
-function matchesPath(pathname: string, target: string): boolean {
+export function matchesPath(pathname: string, target: string): boolean {
   if (target === '/') return pathname === '/'
   return pathname === target || pathname.startsWith(target + '/')
 }
