@@ -41,8 +41,8 @@ export interface MemoStroke {
   k?: MemoStrokeKind
 }
 
-/** 자유곡선 · 형광펜 · 화살표 · 사각형 · 타원 */
-export type MemoStrokeKind = 'pen' | 'hl' | 'arrow' | 'rect' | 'ellipse'
+/** 자유곡선 · 형광펜 · 직선 · 화살표 · 사각형 · 타원 */
+export type MemoStrokeKind = 'pen' | 'hl' | 'line' | 'arrow' | 'rect' | 'ellipse'
 
 const rpcFail = (error: { message: string } | null, fallback: string): never => {
   throw new Error(error?.message || fallback)

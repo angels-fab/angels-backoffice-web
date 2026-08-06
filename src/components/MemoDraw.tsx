@@ -18,8 +18,10 @@ import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined'
 // MUI 아이콘 세트에 '지우개' 전용 글리프가 없다(*Eraser* 는 PhonelinkErase 뿐).
 // 칠판 지우개에 가장 가까운 청소용 브러시로 대신한다 — 수제 SVG 금지 규칙(CLAUDE.md) 때문에 직접 그리지 않는다.
 import CleaningServicesIcon from '@mui/icons-material/CleaningServices'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import { accent, radius, shadow, typescale, weight, z } from '@/theme/tokens'
 import type { MemoStroke, MemoStrokeKind } from '@/api/improve'
+import { snapStroke } from '@/utils/shapeRecognize'
 
 /**
  * 화면 위 그리기 도구 (2026-08-06 개편 — 윈도우 캡처 도구 구성을 따름).
@@ -135,6 +137,9 @@ export function StrokeShape({ s, ink, keyId }: { s: MemoStroke; ink: string; key
   if (k === 'ellipse') {
     return <ellipse key={keyId} {...common} cx={(x1 + x2) / 2} cy={(y1 + y2) / 2} rx={Math.abs(x2 - x1) / 2} ry={Math.abs(y2 - y1) / 2} />
   }
+  if (k === 'line') {
+    return <line key={keyId} {...common} x1={x1} y1={y1} x2={x2} y2={y2} />
+  }
   if (k === 'arrow') {
     // 화살촉 — 끝점에서 몸통 반대 방향으로 두 갈래. 길이는 선 굵기에 비례해 굵은 선에도 균형이 맞는다
     const a = Math.atan2(y2 - y1, x2 - x1)
@@ -156,6 +161,14 @@ function hits(st: MemoStroke, x: number, y: number) {
   const r = ERASE_R + st.w / 2
   const p = st.p
   const k = kindOf(st)
+  if (k === 'arrow' || k === 'line') {
+    // 두 점 사이 선분까지의 거리
+    const [ax, ay, bx, by] = p
+    const dx = bx - ax, dy = by - ay
+    const len2 = dx * dx + dy * dy
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len2))
+    return Math.hypot(ax + t * dx - x, ay + t * dy - y) <= r
+  }
   if (k === 'rect' || k === 'ellipse') {
     // 테두리 근처만 — 안쪽 빈 곳을 문질러 지워지면 아래 화면을 못 쓴다
     const [x1, y1, x2, y2] = p
@@ -207,7 +220,9 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
     ellipse: { c: accent.red, w: 3 },
   })
   const [cfgAnchor, setCfgAnchor] = useState<HTMLElement | null>(null)
-  const [cfgTool, setCfgTool] = useState<Exclude<Tool, 'eraser'>>('pen')
+  const [cfgTool, setCfgTool] = useState<Tool>('pen')
+  /** 손그림 도형 인식 — 켜고 끌 수 있어야 한다. 오인식이 거슬리면 바로 꺼야 하니까 */
+  const [snap, setSnap] = useState(true)
 
   const drawing = useRef(false)
   const svgRef = useRef<SVGSVGElement>(null)
@@ -306,19 +321,35 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
       return { ...h, cur: [...h.cur.slice(0, -1), { ...last, p: [...last.p, ...p] }] }
     })
   }
-  const up = () => { drawing.current = false }
+  /**
+   * 손을 떼는 순간 — 펜으로 그린 마지막 획을 도형으로 알아본다(켜져 있을 때만).
+   *
+   * 바꿀 때 되돌림 지점을 **하나 더** 쌓는다. 잘못 알아봤을 때 Ctrl+Z 한 번으로 손그림이
+   * 그대로 돌아오게 하려는 것 — 오인식이 이 기능의 유일한 위험이라 되돌리는 길이 반드시 있어야 한다.
+   */
+  const up = () => {
+    drawing.current = false
+    if (!snap || tool !== 'pen') return
+    setHist((h) => {
+      const last = h.cur[h.cur.length - 1]
+      if (!last || last.k) return h
+      const s = snapStroke(last)
+      if (!s) return h
+      return { past: [...h.past, h.cur], cur: [...h.cur.slice(0, -1), s], future: [], erased: false }
+    })
+  }
 
   /** 도구 버튼 — 안 고른 것이면 고르고, 이미 고른 것이면 설정을 연다(캡처 도구와 같은 조작) */
   const pickTool = (t: Tool, el: HTMLElement) => {
-    if (t === 'eraser') { setTool('eraser'); setCfgAnchor(null); return }
     if (tool === t) { setCfgTool(t); setCfgAnchor(el); return }
     setTool(t)
     setCfgAnchor(null)
   }
 
-  const cur = cfg[cfgTool]
+  const isEraserCfg = cfgTool === 'eraser'
+  const cur = isEraserCfg ? { c: INK, w: 0 } : cfg[cfgTool]
   const palette = cfgTool === 'hl' ? HL_COLORS : LINE_COLORS
-  const [wMin, wMax] = WIDTH_RANGE[cfgTool]
+  const [wMin, wMax] = isEraserCfg ? [0, 1] : WIDTH_RANGE[cfgTool]
 
   return (
     <>
@@ -375,6 +406,21 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
 
         <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', mx: 0.5 }} />
 
+        {/* 손그림 도형 인식 켜기/끄기 — 오인식이 이 기능의 유일한 위험이라 끄는 길을 눈에 보이게 둔다 */}
+        <Tooltip title={snap ? '도형 인식 끄기 — 지금은 대충 그린 네모·원·화살표를 반듯하게 바꿉니다' : '도형 인식 켜기'}>
+          <IconButton
+            size="small"
+            aria-label="도형 인식"
+            aria-pressed={snap}
+            onClick={() => setSnap((v) => !v)}
+            sx={{ color: snap ? 'primary.main' : 'text.disabled', bgcolor: snap ? 'action.selected' : 'transparent', borderRadius: `${radius.chip}px` }}
+          >
+            <AutoFixHighIcon sx={{ fontSize: typescale.cardTitle.size }} />
+          </IconButton>
+        </Tooltip>
+
+        <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', mx: 0.5 }} />
+
         <Tooltip title="실행취소 (Ctrl+Z)">
           <span>
             <IconButton size="small" aria-label="실행취소" disabled={!canUndo} onClick={undo}>
@@ -389,14 +435,6 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
             </IconButton>
           </span>
         </Tooltip>
-        <Tooltip title="전부 지우기">
-          <span>
-            <IconButton size="small" aria-label="전부 지우기" disabled={strokes.length === 0} onClick={clearAll}>
-              <LayersClearIcon sx={{ fontSize: typescale.cardTitle.size }} />
-            </IconButton>
-          </span>
-        </Tooltip>
-
         <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', mx: 0.5 }} />
 
         <Button size="small" onClick={onCancel} sx={{ color: 'text.secondary', fontWeight: weight.medium }}>취소 (Esc)</Button>
@@ -412,8 +450,23 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
         onClose={() => setCfgAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        slotProps={{ paper: { sx: { p: 1.5, width: 250, borderRadius: `${radius.modal}px` } } }}
+        slotProps={{ paper: { sx: { p: 1.5, width: isEraserCfg ? 200 : 250, borderRadius: `${radius.modal}px` } } }}
       >
+        {isEraserCfg ? (
+          // 지우개 설정 — '전부 지우기'를 여기로 옮겼다(사용자 지시 2026-08-06).
+          // 도구 줄에 늘 떠 있으면 실수로 누르기 쉬운 버튼이라, 한 단계 안으로 넣는 편이 안전하다.
+          <Button
+            fullWidth
+            size="small"
+            startIcon={<LayersClearIcon sx={{ fontSize: typescale.cardTitle.size }} />}
+            disabled={strokes.length === 0}
+            onClick={() => { clearAll(); setCfgAnchor(null) }}
+            sx={{ color: 'text.secondary', justifyContent: 'flex-start' }}
+          >
+            전부 지우기
+          </Button>
+        ) : (
+        <>
         <Typography sx={{ fontSize: typescale.small.size, color: 'text.disabled', mb: 0.75 }}>색</Typography>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1.5 }}>
           {palette.map((p) => (
@@ -457,6 +510,8 @@ export default function MemoDraw({ layerRef, initial, onDone, onCancel }: {
           onChange={(_, v) => setCfg((m) => ({ ...m, [cfgTool]: { ...m[cfgTool], w: v as number } }))}
           aria-label="굵기"
         />
+        </>
+        )}
       </Popover>
     </>
   )
