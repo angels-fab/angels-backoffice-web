@@ -7,8 +7,8 @@ import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha, useTheme } from '@mui/material/styles'
-import PushPinIcon from '@mui/icons-material/PushPin'
-import StickyNote2Icon from '@mui/icons-material/StickyNote2'
+import LightbulbIcon from '@mui/icons-material/Lightbulb'
+import ChatIcon from '@mui/icons-material/Chat'
 import UnfoldLessIcon from '@mui/icons-material/UnfoldLessOutlined'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import SendIcon from '@mui/icons-material/SendRounded'
@@ -403,7 +403,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
     // 글자용 accentText.amber 는 라이트에서 #7F5B00(갈색)이라 압정이 갈색으로 보였다.
     // 게시판 '작업 메모' 열의 켜진 핀과 같은 값 — 두 화면의 같은 표시는 같은 색이어야 한다.
     <Box sx={(th) => ({ display: 'grid', placeItems: 'center', width: 34, height: 34, color: th.palette.accent.amber })}>
-      <PushPinIcon sx={{ fontSize: iconSize.header }} />
+      <LightbulbIcon sx={{ fontSize: iconSize.header }} />
     </Box>
   )
 
@@ -446,7 +446,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
               background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.13)}, transparent 70%)`,
             })}
           >
-            <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+            <LightbulbIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
             <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
               요청 #{item.num}
             </Box>
@@ -769,7 +769,7 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
   const folded = (
     // 접힌 모양이 요청메모(압정)와 달라야 한 눈에 갈래가 구분된다(사용자 지시 2026-08-06)
     <Box sx={(th) => ({ display: 'grid', placeItems: 'center', width: 34, height: 34, color: th.palette.accent.amber })}>
-      <StickyNote2Icon sx={{ fontSize: iconSize.header }} />
+      <ChatIcon sx={{ fontSize: iconSize.header }} />
     </Box>
   )
 
@@ -807,7 +807,7 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
               background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.13)}, transparent 70%)`,
             })}
           >
-            <StickyNote2Icon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+            <ChatIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
             {/* 상태 칩도 요청번호도 없다 — 일반메모에는 그런 게 없다(사용자 지시) */}
             <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber })}>
               메모
@@ -1527,7 +1527,7 @@ export default function StickyMemoLayer() {
               {canAttachMemo && (
                 <Tooltip title="메모 붙이기">
                   <IconButton size="small" aria-label="메모 붙이기" onClick={() => attachMemo(selectedDraw)} sx={{ color: 'text.secondary', p: 0.5 }}>
-                    <StickyNote2Icon sx={{ fontSize: iconSize.body }} />
+                    <ChatIcon sx={{ fontSize: iconSize.body }} />
                   </IconButton>
                 </Tooltip>
               )}
@@ -1588,10 +1588,13 @@ export default function StickyMemoLayer() {
               })}
             >
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}>
-                {/* 묻는 단계에서는 아직 쪽지 얘기가 아니다 — 아이콘도 그리기 쪽으로 */}
+                {/* 묻는 단계에서는 아직 쪽지 얘기가 아니다 — 아이콘도 그리기 쪽으로.
+                    입력 단계에서는 고른 갈래를 따라간다(일반=Chat · 요청=Lightbulb) */}
                 {pending.ask
                   ? <BorderColorIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
-                  : <PushPinIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />}
+                  : pendingKind === 'plain'
+                    ? <ChatIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+                    : <LightbulbIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />}
                 <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: 'text.secondary' }}>
                   {pending.ask ? '메모도 함께 붙일까요?' : pending.existing ? '이 그림에 붙일 메모' : '이 그림은 무엇인가요?'}
                 </Box>

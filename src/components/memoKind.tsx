@@ -4,8 +4,8 @@ import Chip from '@mui/material/Chip'
 import TextField from '@mui/material/TextField'
 import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
-import StickyNote2Icon from '@mui/icons-material/StickyNote2'
-import PushPinIcon from '@mui/icons-material/PushPin'
+import ChatIcon from '@mui/icons-material/Chat'
+import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import { iconSize, typescale, weight } from '@/theme/tokens'
 
 /**
@@ -49,11 +49,11 @@ export function MemoKindPicker({ value, onChange, disabled }: {
       sx={{ '& .MuiToggleButton-root': { px: 1, py: 0.25, fontSize: typescale.caption.size, fontWeight: weight.bold, textTransform: 'none', gap: 0.5 } }}
     >
       <ToggleButton value="plain" aria-label="일반메모">
-        <StickyNote2Icon sx={{ fontSize: iconSize.caption }} />
+        <ChatIcon sx={{ fontSize: iconSize.caption }} />
         일반메모
       </ToggleButton>
       <ToggleButton value="req" aria-label="요청메모">
-        <PushPinIcon sx={{ fontSize: iconSize.caption }} />
+        <LightbulbIcon sx={{ fontSize: iconSize.caption }} />
         요청메모
       </ToggleButton>
     </ToggleButtonGroup>

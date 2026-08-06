@@ -9,7 +9,7 @@ import DialogActions from '@mui/material/DialogActions'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
-import PushPinIcon from '@mui/icons-material/PushPin'
+import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined'
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
@@ -59,7 +59,7 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
       })}
     >
-      <PushPinIcon sx={{ fontSize: iconSize.body }} />
+      <LightbulbIcon sx={{ fontSize: iconSize.body }} />
       개선 메모
       <Box
         component="span"
