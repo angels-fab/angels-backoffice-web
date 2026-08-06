@@ -569,8 +569,12 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-team .fc-day-today .fc-daygrid-day-number{color:#fff;background:var(--blue-solid);min-width:22px;height:22px;padding:0 5px;margin:4px 4px 0 0;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;line-height:1}
 /* 당일일정 간격은 원래값(margin-top:3) 복구. 멀티데이↔당일 간격은 아래 abs transform이 담당. */
 .fc-team .fc-daygrid-event-harness{margin-top:3px}
-/* 멀티데이(abs) 바: FullCalendar가 reserve를 render보다 2px 짧게 잡아 아래 당일일정과 겹침 → transform으로 시각적 위로 올려 간격 확보(측정엔 영향 없음) */
-.fc-team .fc-daygrid-event-harness-abs{transform:translateY(-4px)}
+/* 멀티데이(abs) 바를 위로 올리던 transform:translateY(-4px) 제거(2026-08-06, 개선요청 #42).
+   그 보정이 abs 바에만 걸려 같은 줄의 당일 일정과 세로로 1px 어긋났고, 당일 바 바로 아래에
+   멀티데이 바가 오는 칸(8/28 '랩 워크샵' 위 · '경주-XRM 워크숍' 아래)에서는 간격이 0이 되어
+   두 바가 한 덩어리로 보였다. 빼고 나면 두 종류가 같은 줄에서 픽셀 단위로 맞는다
+   (배포판 실측: 제거 전 679/680 → 제거 후 둘 다 685, 아래 줄 711로 다른 칸과 같은 간격).
+   원래 이 보정을 넣게 만든 'reserve가 2px 짧아 아래 당일일정과 겹침'은 현재 재현되지 않는다. */
 .fc-team .fc-daygrid-event{font-size:11.5px;color:var(--text);font-weight:500;padding:2px 4px 2px 8px;border-radius:6px;line-height:1.4;white-space:normal;border-width:0 0 0 3px;border-style:solid}
 .fc-team .fc-daygrid-event .fc-event-main{color:var(--text);padding:0}
 .fc-team .fc-daygrid-event:hover{filter:brightness(1.12)}

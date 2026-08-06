@@ -128,7 +128,7 @@ export default function TopBar() {
         sx={{
           mx: 'auto', width: '100%', boxSizing: 'border-box',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5,
-          py: '9px',
+          py: '7px',
           pl: { xs: '14px', shell: '20px' },
           pr: { xs: '10px', shell: '20px' },
         }}
@@ -150,7 +150,9 @@ export default function TopBar() {
             로고는 원본이 흰 글자·검은 배경이라 테마별로 다르게 눌러 없앤다:
             다크 = lighten 으로 배경을 배경색에 묻고, 라이트 = 반전 후 multiply.
           */}
-          <Box sx={{ height: { xs: 30, shell: 34 }, width: { xs: 115, shell: 130 }, flexShrink: 0, overflow: 'hidden' }}>
+          {/* 크기는 상단바 높이(53px, StickyMemo 의 TOPBAR_H·모바일 body padding 과 같은 값)에 묶여 있다.
+              로고를 키운 만큼 위아래 여백(py)을 줄여 총 높이를 지킨다 — 38+7*2 = 52. */}
+          <Box sx={{ height: { xs: 34, shell: 38 }, width: { xs: 130, shell: 146 }, flexShrink: 0, overflow: 'hidden' }}>
             <Box
               component="img"
               src={topbarLogo}
@@ -169,7 +171,7 @@ export default function TopBar() {
           <Box sx={{ width: '1px', height: 20, bgcolor: 'divider', flexShrink: 0 }} />
           <Typography
             sx={{
-              fontSize: { xs: typescale.emphasis.size, shell: typescale.cardTitle.size },
+              fontSize: { xs: typescale.cardTitle.size, shell: typescale.sectionTitle.size },
               fontWeight: weight.bold,
               whiteSpace: 'nowrap',
               flexShrink: 0,
