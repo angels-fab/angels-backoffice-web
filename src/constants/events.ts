@@ -244,6 +244,27 @@ export const FAB_EVENTS: FabEvent[] = [
     ],
   },
   {
+    // 포털 신청 #2(조성범, 2026-08-06) → 공식 사이트(microscopy.or.kr)·신청 포스터 PDF 로 검증 후 게시.
+    // 신청서에 비어 있던 장소·주관은 공식 정보로 채움. 포스터는 신청 PDF 1쪽을 웹용 JPG 로 변환.
+    id: 'xrm2026',
+    title: 'X-ray Microscopy Workshop - 제2회 엑스선 현미경 워크숍',
+    kind: '워크숍',
+    start: '2026-08-26',
+    end: '2026-08-28',
+    venue: '포항가속기연구소(PAL)·힐튼호텔(경주)',
+    organizer: '포항가속기연구소·(사)한국현미경학회',
+    link: 'https://microscopy.or.kr/07web03.php',
+    poster: 'events/xrm2026.jpg',
+    posterFocus: { x: 50, y: 14 }, // 상단 타이틀·일시 영역(세로로 긴 포스터라 위쪽을 잡는다)
+    posterBg: 'rgb(6,10,18)', // 포스터 하단 다크 네이비
+    darkInfo: true, // 하단이 문의처·후원 텍스트로 빼곡한 어두운 포스터
+    summary: [
+      { label: '등록', value: '사전등록 마감(7.31) · 현장등록 일반 40만원·학생 30만원' },
+      { label: '정원', value: '선착순 50명 · PAL 시설투어 20명(사전등록자 한정)' },
+      { label: '구성', value: 'PAL 시설투어 · XRM 기초/응용 강연 · CDI·3D CT 분석' },
+    ],
+  },
+  {
     id: 'kpca2026',
     title: 'KPCA Show 2026 - 제23회 국제 반도체 기판 및 첨단 패키징 산업전',
     kind: '전시회',
