@@ -151,14 +151,19 @@ export default function TopBar() {
             다크 = lighten 으로 배경을 배경색에 묻고, 라이트 = 반전 후 multiply.
           */}
           {/* 크기는 상단바 높이(53px, StickyMemo 의 TOPBAR_H·모바일 body padding 과 같은 값)에 묶여 있다.
-              로고를 키운 만큼 위아래 여백(py)을 줄여 총 높이를 지킨다 — 38+7*2 = 52. */}
-          <Box sx={{ height: { xs: 34, shell: 38 }, width: { xs: 130, shell: 146 }, flexShrink: 0, overflow: 'hidden' }}>
+              로고를 키운 만큼 위아래 여백(py)을 줄여 총 높이를 지킨다 — 38+7*2 = 52.
+
+              ⚠ 이미지 높이를 상자 높이(38)에 맞추면 로고가 위로 치우쳐 보인다 — 원본(4315×463)
+              안에서 마크가 y 41~349 에 있어 위 여백 41 · 아래 여백 113 으로 위쪽에 붙어 있기 때문이다
+              (캔버스로 실측). 그래서 **상자보다 큰 45px 로 그려 넣어** 마크 자체가 상자 세로 가운데에
+              오게 한다(45 기준 마크는 4.0~33.9 → 위아래 여백 4.0/4.1). 남는 아래쪽은 잘린다. */}
+          <Box sx={{ height: { xs: 34, shell: 38 }, width: { xs: 153, shell: 172 }, flexShrink: 0, overflow: 'hidden' }}>
             <Box
               component="img"
               src={topbarLogo}
               alt="ANGELS 첨단AI반도체팹센터"
               sx={(th) => ({
-                height: '100%',
+                height: { xs: 40, shell: 45 },
                 width: 'auto',
                 maxWidth: 'none',
                 display: 'block',
