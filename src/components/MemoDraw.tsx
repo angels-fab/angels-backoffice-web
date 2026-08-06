@@ -10,15 +10,11 @@ import { useTheme } from '@mui/material/styles'
 import UndoIcon from '@mui/icons-material/Undo'
 import RedoIcon from '@mui/icons-material/Redo'
 import LayersClearIcon from '@mui/icons-material/LayersClear'
-import CreateIcon from '@mui/icons-material/Create'
-import HighlightIcon from '@mui/icons-material/Highlight'
 import ArrowOutwardIcon from '@mui/icons-material/ArrowOutward'
 import RectangleOutlinedIcon from '@mui/icons-material/RectangleOutlined'
 import CircleOutlinedIcon from '@mui/icons-material/CircleOutlined'
-// 지우개 아이콘 — 위 TOOLS 주석 참고(요술봉 계열은 도형 인식 버튼과 겹쳐 보여 이 그림을 쓴다)
-import CleaningServicesIcon from '@mui/icons-material/CleaningServices'
-import InterestsIcon from '@mui/icons-material/Interests'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
+import { SnipPenIcon, SnipHighlightIcon, SnipShapesIcon, SnipEraserIcon } from '@/components/snipIcons'
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp'
 import { HL_TOKENS, HL_LABEL, HL_SOLID } from '@/pages/Work/richContent'
 import { accent, radius, shadow, typescale, weight, z } from '@/theme/tokens'
@@ -76,23 +72,21 @@ type Tool = 'pen' | 'hl' | 'shape' | 'eraser'
 /** 도형 종류 — 'shape' 도구가 지금 무엇을 그리는지 */
 type ShapeKind = Extract<MemoStrokeKind, 'rect' | 'ellipse' | 'arrow'>
 
-const SHAPE_KINDS: { k: ShapeKind; label: string; Icon: typeof CreateIcon }[] = [
+const SHAPE_KINDS: { k: ShapeKind; label: string; Icon: typeof RectangleOutlinedIcon }[] = [
   { k: 'rect', label: '사각형', Icon: RectangleOutlinedIcon },
   { k: 'ellipse', label: '타원', Icon: CircleOutlinedIcon },
   { k: 'arrow', label: '화살표', Icon: ArrowOutwardIcon },
 ]
 
 /**
- * 도구 아이콘 — 윈도우 캡처 도구의 그림에 맞춘다.
- * 볼펜=펜촉(Create) · 형광펜=마커(Highlight) · 도형=도형 모음(Interests) ·
- * 지우개=CleaningServices(MUI 에 지우개 전용 글리프가 없다. 요술봉 계열은 옆의 '도형 인식' 버튼과
- * 거의 같은 그림이라 둘이 구분되지 않아 되돌렸다 — 이 아이콘은 지우개 커서와도 같은 그림이다).
+ * 도구 아이콘 — 윈도우 캡처 도구의 그림 그대로(snipIcons, 사용자가 캡처로 지정 2026-08-06).
+ * MUI 세트에는 이 그림들이 없어 비슷한 것으로 때웠더니 캡처와 전혀 달랐다 — snipIcons 주석 참고.
  */
-const TOOLS: { key: Tool; label: string; Icon: typeof CreateIcon }[] = [
-  { key: 'pen', label: '펜', Icon: CreateIcon },
-  { key: 'hl', label: '형광펜', Icon: HighlightIcon },
-  { key: 'shape', label: '도형', Icon: InterestsIcon },
-  { key: 'eraser', label: '지우개', Icon: CleaningServicesIcon },
+const TOOLS: { key: Tool; label: string; Icon: typeof SnipPenIcon }[] = [
+  { key: 'pen', label: '펜', Icon: SnipPenIcon },
+  { key: 'hl', label: '형광펜', Icon: SnipHighlightIcon },
+  { key: 'shape', label: '도형', Icon: SnipShapesIcon },
+  { key: 'eraser', label: '지우개', Icon: SnipEraserIcon },
 ]
 
 /** 도구별 굵기 범위 — 형광펜은 덧칠이라 훨씬 두껍다 */
@@ -101,17 +95,21 @@ const WIDTH_RANGE: Record<Exclude<Tool, 'eraser'>, [number, number]> = {
 }
 
 /**
- * 지우개 커서 — 도구 아이콘과 같은 그림으로(사용자 지시 2026-08-05).
+ * 지우개 커서 — 도구 아이콘과 같은 그림으로(사용자 지시 2026-08-05. 아이콘이 캡처 도구 모양으로
+ * 바뀌면서 커서도 함께 교체 — SnipEraserIcon 과 같은 기하).
  * 기본 커서 중에는 지우개가 없어 'cell'(십자)을 썼더니 더하기처럼 보였다.
- * path 는 @mui/icons-material/CleaningServices 의 것을 그대로 옮긴 값이라 아이콘과 정확히 같다
- * (수제 그림이 아니라 같은 아이콘의 재사용 — CLAUDE.md 아이콘 규칙과 어긋나지 않는다).
- * 커서는 CSS url() 이라 currentColor 를 못 쓴다 → 흰 테두리를 덧대 밝은/어두운 배경 양쪽에서 보이게 한다.
+ * 커서는 CSS url() 이라 currentColor 를 못 쓴다 → 흰 굵은 선을 밑에 깔고 어두운 선을 얹어
+ * 밝은/어두운 배경 양쪽에서 보이게 한다.
  */
-const ERASER_PATH = 'M16 11h-1V3c0-1.1-.9-2-2-2h-2c-1.1 0-2 .9-2 2v8H8c-2.76 0-5 2.24-5 5v7h18v-7c0-2.76-2.24-5-5-5m3 10h-2v-3c0-.55-.45-1-1-1s-1 .45-1 1v3h-2v-3c0-.55-.45-1-1-1s-1 .45-1 1v3H9v-3c0-.55-.45-1-1-1s-1 .45-1 1v3H5v-5c0-1.65 1.35-3 3-3h8c1.65 0 3 1.35 3 3z'
+const ERASER_SHAPE =
+  `<g transform='rotate(-45 11.5 9.3)'><rect x='5.8' y='6.1' width='11.4' height='6.4' rx='1.9'/><path d='M10.1 6.1v6.4'/></g><path d='M5.5 18.8h13'/>`
 const ERASER_CURSOR =
   `url("data:image/svg+xml;utf8,${encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"><path d="${ERASER_PATH}" fill="#111" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
-  )}") 13 22, cell`
+    `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24">`
+    + `<g fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">${ERASER_SHAPE}</g>`
+    + `<g fill="none" stroke="#111" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ERASER_SHAPE}</g>`
+    + `</svg>`,
+  )}") 12 14, cell`
 
 /**
  * 상단바 '그리기' 버튼 → 쪽지 레이어에 그리기 시작을 알리는 신호.
