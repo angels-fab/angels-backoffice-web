@@ -59,6 +59,36 @@ export const CAT_COLOR: Record<EventCat, string> = {
   전시: domain.events.exhibition,
 }
 
+/**
+ * 분류 칩(학술·교육·전시) + 상태 칩(D-n·진행중·종료) — **카드와 홈 대시보드가 같은 부품**을 쓴다
+ * (2026-08-06 사용자 지시: "행사 카드 칩을 그대로"). 홈이 따로 그리면 색·모양이 곧 어긋난다.
+ * 상태 칩의 어두운 반투명 바탕은 포스터 위 가독용인데, 밝은 카드 위에서도 진회색 알약으로 무난히 읽힌다.
+ */
+export function EventCatChip({ kind }: { kind?: string }) {
+  const cat = eventCategory(kind)
+  return (
+    <Box
+      component="span"
+      sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: typescale.small.size, sm: typescale.body.size }, fontWeight: weight.bold, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white', flexShrink: 0 }}
+    >
+      {cat}
+    </Box>
+  )
+}
+
+export function EventStatusChip({ start, end }: { start: string; end?: string }) {
+  const st = eventStatus(start, end)
+  return (
+    <Box
+      component="span"
+      sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: typescale.small.size, sm: typescale.body.size }, fontWeight: weight.bold, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white', flexShrink: 0 }}
+    >
+      <Box component="span" sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone), ...(st.tone === 'green' ? LIVE_DOT_BLINK : null) })} />
+      {st.label}
+    </Box>
+  )
+}
+
 // 포스터 초점 기본값 (object-position 기준). 동일비율 포스터는 잘릴 여백이 없어 위치 효과는 미미.
 const FOCUS_DEFAULT = { x: 50, y: 40, scale: 1, fit: 'cover' as const }
 
@@ -247,7 +277,6 @@ export interface AttendControl {
  */
 export function EventCardInner({ e, open, attend }: { e: FabEvent; open: boolean; attend?: AttendControl }) {
   const st = eventStatus(e.start, e.end)
-  const cat = eventCategory(e.kind)
   // 참석 버튼 라벨 — 진행중이면 '참석 중', 예정이면 '참석 예정'(종료는 목록형이라 여기 안 옴)
   const attendLabel = st.tone === 'green' ? '참석 중' : '참석 예정'
   return (
@@ -282,11 +311,8 @@ export function EventCardInner({ e, open, attend }: { e: FabEvent; open: boolean
       {/* 좌상단 칩(분류·상태) + 우상단 참석 버튼 — 항상 선명(스크림 위) */}
       <Box sx={{ position: 'absolute', top: 11, left: 11, right: 11, zIndex: 3, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '6px' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', fontSize: { xs: typescale.small.size, sm: typescale.body.size }, fontWeight: weight.bold, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: CAT_COLOR[cat], color: 'common.white' }}>{cat}</Box>
-          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: { xs: typescale.small.size, sm: typescale.body.size }, fontWeight: weight.bold, letterSpacing: '.02em', px: '11px', height: 24, boxSizing: 'border-box', lineHeight: 1, borderRadius: `${radius.pill}px`, bgcolor: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)', color: 'common.white' }}>
-            <Box component="span" sx={(th) => ({ width: 9, height: 9, borderRadius: radius.circle, flexShrink: 0, bgcolor: toneColor(th, st.tone), ...(st.tone === 'green' ? LIVE_DOT_BLINK : null) })} />
-            {st.label}
-          </Box>
+          <EventCatChip kind={e.kind} />
+          <EventStatusChip start={e.start} end={e.end} />
         </Box>
         {/* 참석 버튼(개인) — 참석 시 초록 배지(상시), 미참석은 hover 노출. 게스트는 attend 미전달 → 없음 */}
         {attend && (

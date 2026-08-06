@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import { EmptyState, LoadingState, StatusChip } from '@/components/ds'
-import type { StatusKind } from '@/components/ds/StatusChip'
+import { EmptyState, LoadingState } from '@/components/ds'
+import { EventCatChip, EventStatusChip } from '@/pages/Events/eventCard'
 import { useRole } from '@/auth/role'
 import { fetchAttendees, type AttendeeRow } from '@/api/events'
 // 학술·교육·전시 메뉴가 사이드바·페이지 헤더에서 쓰는 그 아이콘(nav.tsx 단일 출처) — 다른 것 고르지 말 것
@@ -18,19 +18,6 @@ import { HomeCard, ROW_H } from './HomeCard'
  * 영문명 + 국문 부제로 되어 있어, 카드에서는 앞 이름만으로 충분하고 두 줄로 넘치지도 않는다.
  */
 const shortName = (title: string) => title.split(/\s[-–—]\s/)[0].trim() || title
-
-/**
- * 행사 종류 → 칩 색. kind 는 자유 문자열(국제학회·국내학회·컨퍼런스·교육·교육세미나·워크숍·전시회…)이라
- * 정확히 일치가 아니라 낱말이 들어 있는지로 가른다. 새 종류가 생겨도 중립 회색으로 무난히 떨어진다.
- */
-function kindStatus(kind: string): StatusKind {
-  const k = kind || ''
-  if (k.includes('학회') || k.includes('컨퍼런스') || k.includes('심포지엄')) return 'info'
-  if (k.includes('교육') || k.includes('세미나') || k.includes('워크숍') || k.includes('아카데미')) return 'success'
-  if (k.includes('전시') || k.includes('산업전')) return 'warning'
-  if (k.includes('채용')) return 'purple'
-  return 'neutral'
-}
 
 /**
  * 홈 '참석 예정 행사' (2026-08-06 신설, 사용자 지시).
@@ -81,10 +68,10 @@ export default function EventsSection() {
       ) : (
         <Box>
           {/*
-           * 행 규격 하나로 통일(2026-08-06 사용자 지적 — 첫 행사만 크고 새 행사는 작게 나왔다).
-           * 한 행 = 종류 칩 · 행사명 한 줄 · **남은 일수 오른쪽에 크게**(모든 행사 동일).
-           * 날짜·장소 줄은 뺐다 — 남은 일수가 이미 '언제'를 말하고, 상세는 행사 페이지에서 본다.
-           * 제목은 전 행 같은 색·같은 굵기(첫 행만 다르게 두면 색이 다르다는 지적이 나온 그 문제).
+           * 한 행 = 분류 칩(학술·교육·전시) · 상태 칩(D-n·진행중) · 행사명 한 줄.
+           * 칩은 **행사 카드의 그 부품을 그대로** 쓴다(2026-08-06 사용자 확정 — 홈이 따로 그리면
+           * 색·분류가 어긋난다. 종전에 kind 원문(교육세미나·워크숍)으로 칩을 만들었다 지적받은 그 문제).
+           * 날짜·장소 줄 없음 — 상태 칩이 '언제'를 말하고, 상세는 행사 페이지에서 본다.
            */}
           {mine.map((e, i) => (
             <Box
@@ -95,7 +82,8 @@ export default function EventsSection() {
                 borderTop: i === 0 ? 0 : 1, borderColor: 'divider', minWidth: 0,
               }}
             >
-              <StatusChip status={kindStatus(e.kind)} label={e.kind} />
+              <EventCatChip kind={e.kind} />
+              <EventStatusChip start={e.start} end={e.end} />
               <Typography
                 sx={{
                   flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -103,15 +91,6 @@ export default function EventsSection() {
                 }}
               >
                 {shortName(e.title)}
-              </Typography>
-              {/* 카드 대표 숫자와 같은 규격(display 28 · primary) — D-day 가 이 카드의 답이다 */}
-              <Typography
-                sx={{
-                  flexShrink: 0, fontSize: typescale.display.size, fontWeight: typescale.display.weight,
-                  lineHeight: 1, color: 'primary.main', fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                {eventStatus(e.start, e.end).label}
               </Typography>
             </Box>
           ))}
