@@ -120,3 +120,17 @@ create policy page_note_replies_update on public.page_note_replies
 create policy page_note_replies_delete on public.page_note_replies
   for delete to authenticated
   using (author_uid = auth.uid());
+
+-- ── 확장 (마이그레이션 page_notes_target_and_shared_pos, 2026-08-07) ──
+-- ① target — 메모를 **업무카드 안에 박아 넣기** 위한 대상. 'work:{num}' 형태.
+--    카드의 자식으로 그려지므로 좌표가 아예 없다. 카드 순서가 바뀌고 걸러지고 접혀도 저절로 따라간다.
+--    (좌표를 유지하며 따라다니게 하려면 스크롤·리사이즈·순서변경 감시 장치가 필요했다 — 그 비용을 통째로 없앤 설계)
+-- ② x·y — **작성자가 놓은 자리**. 종전에는 위치가 개인 설정에만 있어, 공유받은 사람 화면에서는
+--    그 메모가 상단바 메모 버튼 아래 빈 슬롯으로 밀려났다(그림은 제자리인데 설명만 딴 데).
+--    읽는 순서: 내가 옮긴 자리 > 작성자 자리 > 딸린 그림 옆 > 기본 슬롯.
+alter table public.page_notes
+  add column if not exists target text,
+  add column if not exists x integer,
+  add column if not exists y integer;
+
+create index if not exists page_notes_target_idx on public.page_notes (target);

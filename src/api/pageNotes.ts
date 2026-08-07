@@ -24,9 +24,25 @@ export interface PageNote {
   shared: string[]
   /** 딸린 그림 id — 없으면 null */
   drawingId: number | null
+  /**
+   * 박아 넣을 대상 — 지금은 업무카드만(`work:{num}`). 있으면 **화면에 떠 있지 않고 그 카드 안에** 그려진다.
+   * 카드의 자식이라 순서가 바뀌든 걸러지든 저절로 따라간다 — 좌표도 감시 장치도 필요 없다.
+   */
+  target: string | null
+  /**
+   * 작성자가 놓은 자리 — 떠 있는 쪽지만 쓴다.
+   * 공유받은 사람은 자기 좌표가 없으므로 이 값을 첫 자리로 삼는다(없으면 그림 옆 → 기본 슬롯).
+   */
+  x: number | null
+  y: number | null
 }
 
-interface Row { id: number; path: string; author: string; content: string; shared: unknown; drawing_id: number | null }
+interface Row {
+  id: number; path: string; author: string; content: string; shared: unknown
+  drawing_id: number | null; target: string | null; x: number | null; y: number | null
+}
+
+const SELECT = 'id, path, author, content, shared, drawing_id, target, x, y'
 
 const toNote = (r: Row): PageNote => ({
   id: Number(r.id),
@@ -35,13 +51,19 @@ const toNote = (r: Row): PageNote => ({
   content: r.content || '',
   shared: Array.isArray(r.shared) ? (r.shared as string[]) : [],
   drawingId: r.drawing_id === null ? null : Number(r.drawing_id),
+  target: r.target,
+  x: r.x === null ? null : Number(r.x),
+  y: r.y === null ? null : Number(r.y),
 })
+
+/** 업무카드 대상 키 — 대상 종류를 늘릴 때 여기만 늘린다 */
+export const workTarget = (num: string | number) => `work:${num}`
 
 /** RLS 가 이미 '내 것 + 공유받은 것'으로 걸러 주므로 조건 없이 받는다 */
 export async function fetchPageNotes(): Promise<PageNote[]> {
   const { data, error } = await supabase
     .from('page_notes')
-    .select('id, path, author, content, shared, drawing_id')
+    .select(SELECT)
     .order('id', { ascending: true })
   if (error) throw new Error(error.message || '메모를 불러오지 못했습니다')
   return ((data || []) as Row[]).map(toNote)
@@ -53,26 +75,40 @@ export async function createPageNote(p: {
   content: string
   shared?: string[]
   drawingId?: number | null
-}): Promise<number> {
+  /** 업무카드 안에 박아 넣을 때 — workTarget(num). 주면 좌표는 안 쓴다 */
+  target?: string | null
+  /** 떠 있는 쪽지의 작성자 자리 — 공유받은 사람의 첫 자리가 된다 */
+  x?: number | null
+  y?: number | null
+}): Promise<PageNote> {
   await ensureSession()
   const { data, error } = await withTimeout(
     supabase
       .from('page_notes')
-      .insert({ path: p.path, content: p.content, shared: p.shared || [], drawing_id: p.drawingId ?? null })
-      .select('id')
+      .insert({
+        path: p.path, content: p.content, shared: p.shared || [], drawing_id: p.drawingId ?? null,
+        target: p.target ?? null, x: p.x ?? null, y: p.y ?? null,
+      })
+      .select(SELECT)
       .single(),
     DB_TIMEOUT, '메모 저장',
   )
   if (error) throw new Error(error.message || '메모 저장에 실패했습니다')
-  return Number(data!.id)
+  return toNote(data as Row)
 }
 
 /** 부분 수정 — 안 보낸 항목은 그대로 둔다 */
 /** 쓰기 결과를 행 수로 확인 — RLS 가 행을 거르면 오류가 아니라 '0건 성공'이 온다(pageDrawings 주석 참조) */
-export async function updatePageNote(p: { id: number; content?: string; shared?: string[] }): Promise<void> {
+export async function updatePageNote(p: {
+  id: number; content?: string; shared?: string[]
+  /** 작성자가 자리를 옮겼을 때만 — 공유받은 사람이 옮긴 것은 자기 개인 설정에만 남는다 */
+  x?: number; y?: number
+}): Promise<void> {
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (p.content !== undefined) patch.content = p.content
   if (p.shared !== undefined) patch.shared = p.shared
+  if (p.x !== undefined) patch.x = Math.round(p.x)
+  if (p.y !== undefined) patch.y = Math.round(p.y)
   await ensureSession()
   const { data, error } = await withTimeout(
     supabase.from('page_notes').update(patch).eq('id', p.id).select('id'),

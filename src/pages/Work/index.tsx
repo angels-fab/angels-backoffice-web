@@ -1192,7 +1192,7 @@ export default function Work() {
         onSave={(form) => handleSaveEdit(t, form)}
       />
     ) : (
-      <TaskAccordion key={t.id} t={t} tone={tone} selected={selected.has(t.num)} onRequestSelect={() => selectOnly(t.num)} />
+      <TaskAccordion key={t.id} t={t} tone={tone} selected={selected.has(t.num)} onRequestSelect={() => selectOnly(t.num)} people={authors || []} />
     )
 
   return (

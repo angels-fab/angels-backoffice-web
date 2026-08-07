@@ -18,13 +18,14 @@ import EditIcon from '@mui/icons-material/Edit'
 import { RichBodyEditor } from '@/components/richText'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
+import { loadPageNotes } from '@/store/slices/pageNotesSlice'
 import { addReply } from '@/store/slices/replySlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import { updateImprovement, createReply, deleteImprovement, createImprovement } from '@/api/improve'
 import type { MemoStroke } from '@/api/improve'
 import { fetchPageDrawings, createPageDrawing, updatePageDrawing, deletePageDrawing, linkDrawingToRequest } from '@/api/pageDrawings'
 import type { PageDrawing } from '@/api/pageDrawings'
-import { fetchPageNotes, createPageNote, updatePageNote, deletePageNote, fetchPageNoteReplies, createPageNoteReply, deletePageNoteReply } from '@/api/pageNotes'
+import { createPageNote, updatePageNote, deletePageNote, createPageNoteReply, deletePageNoteReply } from '@/api/pageNotes'
 import type { PageNote, PageNoteReply } from '@/api/pageNotes'
 import { fetchAuthors } from '@/api/works'
 import { MemoKindPicker, SharePicker, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
@@ -1038,10 +1039,9 @@ export default function StickyMemoLayer() {
    * 압정이 사라진 자리를 그림 자신이 대신한다 — hoverId 는 후광, selectedId 는 고치기·지우기 막대.
    */
   const [drawings, setDrawings] = useState<PageDrawing[]>([])
-  /** 일반메모(page_notes) — RLS 가 '내 것 + 공유받은 것'만 준다 */
-  const [notes, setNotes] = useState<PageNote[]>([])
-  /** 일반메모 답글 — 볼 수 있는 메모의 것만 온다(RLS) */
-  const [noteReplies, setNoteReplies] = useState<PageNoteReply[]>([])
+  /** 일반메모·답글 — 업무카드에서도 읽어야 해서 전역 슬라이스로 올렸다(pageNotesSlice 주석) */
+  const notes = useAppSelector((s) => s.pageNotes.items)
+  const noteReplies = useAppSelector((s) => s.pageNotes.replies)
   /** 방금 만든 일반메모 — 처음부터 펼쳐 보인다(요청메모의 openNum 과 같은 역할) */
   const [openNoteId, setOpenNoteId] = useState<number | null>(null)
   /** 공유 대상 후보 이름 — 작성 폼 오토컴플리트와 같은 출처(profiles) */
@@ -1100,21 +1100,12 @@ export default function StickyMemoLayer() {
   }, [snack])
   useEffect(() => { if (isMember) void reloadDrawings() }, [isMember, reloadDrawings])
 
-  /** 일반메모 목록 다시 읽기 */
-  const reloadNotes = useCallback(async () => {
-    try {
-      const [ns, rs] = await Promise.all([fetchPageNotes(), fetchPageNoteReplies()])
-      setNotes(ns)
-      setNoteReplies(rs)
-    } catch {
-      snack('메모를 불러오지 못했습니다.', 'error')
-    }
-  }, [snack])
-  // 상단바 메모 버튼에서 만든 것도 바로 뜨게 — 두 곳이 부모 상태를 공유하지 않아 이벤트로 잇는다
+  /** 일반메모 목록 다시 읽기 — 이제 전역 슬라이스가 들고 있으므로 다시 불러오라고 시키기만 한다 */
+  const reloadNotes = useCallback(() => { void dispatch(loadPageNotes()) }, [dispatch])
+  // 다른 곳(상단바 메모 버튼·업무카드)에서 만들거나 지운 것도 바로 반영되게
   useEffect(() => {
     if (!isMember) return
-    void reloadNotes()
-    const onChanged = () => void reloadNotes()
+    const onChanged = () => reloadNotes()
     window.addEventListener(PAGE_NOTES_CHANGED, onChanged)
     return () => window.removeEventListener(PAGE_NOTES_CHANGED, onChanged)
   }, [isMember, reloadNotes])
@@ -1148,7 +1139,11 @@ export default function StickyMemoLayer() {
    * 이 화면의 일반메모 — 서버가 이미 '내 것 + 공유받은 것'만 준다(RLS).
    * 그림과 달리 포털 관리자도 예외가 아니다 — 그게 요청메모와 갈리는 지점이다.
    */
-  const hereNotes = useMemo(() => notes.filter((n) => matchesPath(pathname, n.path)), [notes, pathname])
+  // target 이 있는 메모는 업무카드 안에 박혀 있으므로 이 레이어가 그리지 않는다(WorkCardNotes 담당)
+  const hereNotes = useMemo(
+    () => notes.filter((n) => !n.target && matchesPath(pathname, n.path)),
+    [notes, pathname],
+  )
   const editingDraw = typeof drawFor === 'number' ? drawings.find((d) => d.id === drawFor) || null : null
   // 고치는 중에는 도구막대를 내린다 — 판이 그 위를 덮어 눌리지도 않는 유령 버튼이 되고,
   // 판 밖(위쪽)으로 삐져나온 조각은 눌려서 편집 중인 그림을 지워 버린다(적대적 리뷰 확인).
@@ -1189,6 +1184,24 @@ export default function StickyMemoLayer() {
    * 처음 자리로 돌아가던 원인이다(2026-08-05 사용자 신고). 같은 이유로 useMarkSeen·
    * work.order 도 loadedOk 를 게이트로 쓴다.
    */
+  /**
+   * 자리가 없는 일반메모에 **물려받을 자리**가 있는지 — 공유받은 쪽지가 구석으로 밀리지 않게(2026-08-07).
+   *
+   * ① 작성자가 놓은 자리(page_notes.x/y) → ② 딸린 그림 옆 → ③ 없으면 null(기본 슬롯으로)
+   * 종전에는 셋 다 안 보고 곧장 기본 슬롯이라, 그림은 제자리인데 설명 쪽지만 상단바 밑에 붙었다.
+   */
+  const inheritedPos = useCallback((n: PageNote): Pos | null => {
+    if (n.x !== null && n.y !== null) return { x: n.x, y: n.y }
+    if (n.drawingId !== null) {
+      const d = drawings.find((v) => v.id === n.drawingId)
+      if (d) {
+        const b = glowBox(d.strokes)
+        if (b) return { x: b.x + b.w + 12, y: Math.max(b.y, 0) }
+      }
+    }
+    return null
+  }, [drawings])
+
   useEffect(() => {
     // 요청메모(번호)와 일반메모('n{id}')가 같은 좌표 맵을 나눠 쓴다 — 접두사로 갈라 키가 안 겹친다
     const keys = [...memos.map((t) => t.num), ...hereNotes.map((n) => `n${n.id}`)]
@@ -1198,6 +1211,10 @@ export default function StickyMemoLayer() {
     const taken = keys.filter((k) => saved?.[k]).map((k) => saved![k])
     const patch: PosMap = {}
     for (const t of need) {
+      // 물려받을 자리가 있으면 빈 슬롯을 찾지 않는다 — 겹치더라도 '가리키는 곳'이 더 중요하다
+      const note = t.startsWith('n') ? hereNotes.find((n) => `n${n.id}` === t) : undefined
+      const inherit = note ? inheritedPos(note) : null
+      if (inherit) { taken.push(inherit); patch[t] = inherit; continue }
       let n = 0
       while (n < MAX_SLOT && overlaps(slotPx(layerEl, n), taken)) n++
       const px = slotPx(layerEl, n)
@@ -1205,7 +1222,7 @@ export default function StickyMemoLayer() {
       patch[t] = px
     }
     dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), ...patch } }))
-  }, [layerEl, memos, hereNotes, saved, usLoadedOk, dispatch])
+  }, [layerEl, memos, hereNotes, saved, usLoadedOk, dispatch, inheritedPos])
 
   /**
    * 좌표 한 건 저장 — 요청메모는 요청번호, 일반메모는 'n{id}' 를 키로 쓴다.
@@ -1218,8 +1235,23 @@ export default function StickyMemoLayer() {
     dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [key]: pos } }))
   }, [dispatch, saved, usLoadedOk])
 
-  // 옮긴 위치는 개인 설정에 저장(디바운스 병합) — 다른 사람 화면은 움직이지 않는다
-  const onMoveEnd = useCallback((key: string, pos: Pos) => savePos(key, pos), [savePos])
+  /**
+   * 옮긴 위치는 **언제나 내 개인 설정**에 저장한다 — 남이 옮겨도 내 화면은 안 움직인다(종전 규칙).
+   *
+   * 다만 **작성자가 옮긴 경우엔 메모 행에도 함께 적는다**(2026-08-07). 그 값은 아직 자기 좌표가
+   * 없는 사람(= 이제 막 공유받은 사람)의 첫 자리로만 쓰인다. 이미 자기 자리를 잡은 사람은
+   * 개인 값이 이기므로 남의 화면이 뒤늦게 움직이는 일은 없다.
+   */
+  const onMoveEnd = useCallback((key: string, pos: Pos) => {
+    savePos(key, pos)
+    if (!key.startsWith('n')) return
+    const id = Number(key.slice(1))
+    const note = notes.find((n) => n.id === id)
+    if (!note || note.author !== user) return
+    void updatePageNote({ id, x: pos.x, y: pos.y })
+      .then(() => reloadNotes())
+      .catch(() => { /* 개인 좌표는 이미 저장됐다 — 공유 자리 갱신 실패로 사용자를 방해하지 않는다 */ })
+  }, [savePos, notes, user, reloadNotes])
 
   /**
    * 화면 그림 — 구성원 이상(2026-08-06 개방).
@@ -1296,8 +1328,13 @@ export default function StickyMemoLayer() {
         setPending((p) => (p ? { ...p, drawId: madeId } : p))
       }
       if (withMemo && pendingKind === 'plain') {
-        // 일반메모 — 게시판도 상태도 요청번호도 없다. 그림에 이어 두면 공유가 그림까지 따라간다
-        const id = await createPageNote({ path: pathname, content: body, shared: pendingShared, drawingId: drawId })
+        // 일반메모 — 게시판도 상태도 요청번호도 없다. 그림에 이어 두면 공유가 그림까지 따라간다.
+        // 자리(x·y)를 행에 함께 적는다 — 공유받은 사람이 이 자리에서 시작한다(2026-08-07)
+        const made = await createPageNote({
+          path: pathname, content: body, shared: pendingShared, drawingId: drawId,
+          x: pending.x, y: pending.y,
+        })
+        const id = made.id
         savePos(`n${id}`, { x: pending.x, y: pending.y })
         setOpenNoteId(id)
         notifyPageNotesChanged()

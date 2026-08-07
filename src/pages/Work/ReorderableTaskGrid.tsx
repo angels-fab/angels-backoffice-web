@@ -6,6 +6,7 @@ import { iconSize, layout, radius, shadow, typescale } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
 import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 import SwipeableCard, { type WorkSwipeConfig } from './SwipeableCard'
+import { skipCardGesture } from './cardInteractive'
 
 // 시안(docs/mockups/work-card-motion-only.html · work-drag-trash.html) 물리값
 const ACTIVATION_DISTANCE = 3 // px 이상 움직이면 드래그 시작(거의 즉시 — 보드와 동일. 순수 클릭 <2px는 선택 유지)
@@ -439,7 +440,7 @@ export default function ReorderableTaskGrid({
     if (e.pointerType === 'touch' && swipeRef.current && !reorderModeRef.current) return
     // 순서모드 터치 드래그는 손잡이(≡)에서만 시작 — 카드 본문 터치는 페이지 세로 스크롤에 양보(카드 많아도 훑기 가능)
     if (e.pointerType === 'touch' && reorderModeRef.current && !(e.target as HTMLElement).closest('[data-reorder-handle]')) return
-    if ((e.target as HTMLElement).closest('button, a')) return // 버튼·링크는 드래그 제외
+    if (skipCardGesture(e.target)) return // 버튼·링크는 드래그 제외
     if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
     if (!item || !canDragRef.current(item)) return
@@ -464,7 +465,7 @@ export default function ReorderableTaskGrid({
     if (suppressNextClick.current) { suppressNextClick.current = false; e.preventDefault(); e.stopPropagation(); return }
     if (Date.now() < suppressClickUntil.current) { e.preventDefault(); e.stopPropagation(); return }
     if (!onSelectToggleRef.current) return
-    if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
+    if (skipCardGesture(e.target)) return
     const item = itemsRef.current.find((i) => i.num === num)
     if (!item || !canDragRef.current(item)) return
     e.preventDefault(); e.stopPropagation()
@@ -525,7 +526,7 @@ export default function ReorderableTaskGrid({
             onClickCapture={(e) => onClickCapture(e, num)}
             onDoubleClick={(e) => {
               if (Date.now() < suppressClickUntil.current) return
-              if ((e.target as HTMLElement).closest('button, a')) return
+              if (skipCardGesture(e.target)) return
               onCardDoubleClickRef.current?.(num)
             }}
             // 카드가 늘어난 셀 높이를 채우도록(높이 통일 시 하단 여백이 카드 내부로) — 자식(카드) height:100%

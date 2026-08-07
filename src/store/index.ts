@@ -7,6 +7,7 @@ import improveReducer from './slices/improveSlice'
 import milestoneReducer from './slices/milestoneSlice'
 import replyReducer from './slices/replySlice'
 import userSettingsReducer from './slices/userSettingsSlice'
+import pageNotesReducer from './slices/pageNotesSlice'
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     milestone: milestoneReducer,
     reply: replyReducer,
     userSettings: userSettingsReducer,
+    pageNotes: pageNotesReducer,
   },
 })
 

@@ -5,6 +5,7 @@ import { layout, radius, shadow, typescale, weight } from '@/theme/tokens'
 import type { WorkItem } from '@/types'
 import { genieOverlayInto, kpiShrinkByCard, trashContains, trashHitByCard, trashShrinkByCard, zoneByCardRect, type CardRect, type DropZone, type StatusDropResult } from './dropZones'
 import SwipeableCard, { type WorkSwipeConfig } from './SwipeableCard'
+import { skipCardGesture } from './cardInteractive'
 
 const ACTIVATION_DISTANCE = 3 // px 이상 이동하면 드래그 시작(거의 즉시 — 보드와 동일. 순수 클릭 <2px는 선택 유지)
 const CLICK_SUPPRESS_MS = 350
@@ -261,7 +262,7 @@ export default function StatusDragGrid({
     lastPointerType.current = e.pointerType || 'mouse'
     // 터치는 SwipeableCard(왼쪽 스와이프 액션)가 담당 — 그리드는 마우스 경로만. (상태보드는 터치 드래그 없음)
     if (e.pointerType === 'touch' && swipeRef.current) return
-    if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
+    if (skipCardGesture(e.target)) return
     if (e.shiftKey || e.metaKey || e.ctrlKey || e.detail >= 2) e.preventDefault() // 수정키 선택·더블클릭 시 텍스트 선택 방지
     const item = itemsRef.current.find((i) => i.num === num)
     if (!item || !canDragRef.current(item)) return
@@ -285,7 +286,7 @@ export default function StatusDragGrid({
     if (lastPointerType.current === 'touch') return // 터치: 탭 선택 안 함(선택은 PC 전용, 모바일은 스와이프 액션)
     if (suppressNextClick.current) { suppressNextClick.current = false; e.preventDefault(); e.stopPropagation(); return }
     if (Date.now() < suppressClickUntil.current) { e.preventDefault(); e.stopPropagation(); return }
-    if ((e.target as HTMLElement).closest('button, a, input, textarea')) return // 메뉴·링크는 통과
+    if (skipCardGesture(e.target)) return // 메뉴·링크는 통과
     const item = itemsRef.current.find((i) => i.num === num)
     if (!item || !canDragRef.current(item)) return
     e.preventDefault(); e.stopPropagation()
@@ -326,7 +327,7 @@ export default function StatusDragGrid({
             onClickCapture={(e) => onClickCapture(e, t.num)}
             onDoubleClick={(e) => {
               if (Date.now() < suppressClickUntil.current) return
-              if ((e.target as HTMLElement).closest('button, a')) return
+              if (skipCardGesture(e.target)) return
               onCardDoubleClickRef.current?.(t.num)
             }}
             // 선택 표시는 카드(TaskAccordion)가 상태 대표색으로 직접 그림 — 셀 래퍼의 공통 파란 outline 제거

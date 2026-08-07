@@ -14,6 +14,7 @@ import { loadNoticeData } from '@/store/slices/noticeSlice'
 import { loadCalEvents } from '@/store/slices/calSlice'
 import { loadImproveData } from '@/store/slices/improveSlice'
 import { loadReplies } from '@/store/slices/replySlice'
+import { loadPageNotes, resetPageNotes } from '@/store/slices/pageNotesSlice'
 import { loadUserSettings, setUserName, resetUserSettings } from '@/store/slices/userSettingsSlice'
 
 export default function MainLayout() {
@@ -26,6 +27,7 @@ export default function MainLayout() {
   const calReady = useAppSelector(s => s.cal.ready)
   const improveReady = useAppSelector(s => s.improve.ready)
   const replyReady = useAppSelector(s => s.reply.ready)
+  const notesReady = useAppSelector(s => s.pageNotes.ready)
 
   // 앱 진입 시 팀 데이터 미리 로드. 팀 콘텐츠·장비는 팀원 이상만 열람하므로 팀원일 때만 요청.
   // (게스트·유관자는 미로드 — 홈 로드맵·행사·바로가기만.) isMember 의존 → 로그인 시 effect 재실행.
@@ -37,6 +39,7 @@ export default function MainLayout() {
     if (!calReady) dispatch(loadCalEvents())
     if (!improveReady) dispatch(loadImproveData())
     if (!replyReady) dispatch(loadReplies())
+    if (!notesReady) dispatch(loadPageNotes())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMember])
 
@@ -47,6 +50,9 @@ export default function MainLayout() {
       dispatch(loadUserSettings())
     } else {
       dispatch(resetUserSettings())
+      // 일반메모도 함께 비운다 — **사람마다 다른 개인 메모**라 남으면 다음 로그인 사용자에게 보인다.
+      // (로그아웃은 새로고침을 안 하고 store 는 탭 수명 내내 살아 있다 — 적대적 리뷰 확인)
+      dispatch(resetPageNotes())
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loggedIn, user])
