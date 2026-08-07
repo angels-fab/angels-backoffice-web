@@ -21,7 +21,7 @@ import { workBodyLines } from './richContent'
 import SubLine from './SubLine'
 import WorkPinButton from './WorkPinButton'
 import WorkAttachments from './WorkAttachments'
-import WorkCardNotes from './WorkCardNotes'
+import WorkCardNotes, { WORK_CARD_NOTES_ENABLED } from './WorkCardNotes'
 
 export type { CardTone } from './workMeta'
 
@@ -267,9 +267,10 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
         )}
       </Box>
 
-      {/* 이 업무에 박아 넣은 일반메모 — 카드의 자식이라 순서·필터·뷰가 바뀌어도 함께 움직인다
+      {/* 이 업무에 박아 넣은 일반메모 — **지금은 꺼져 있다**(WorkCardNotes 의 WORK_CARD_NOTES_ENABLED).
+          카드의 자식이라 순서·필터·뷰가 바뀌어도 함께 움직인다
           (좌표를 쓰지 않는 이유는 WorkCardNotes 주석 참고, 2026-08-07 사용자 지시) */}
-      <WorkCardNotes num={t.num} people={people} />
+      {WORK_CARD_NOTES_ENABLED && <WorkCardNotes num={t.num} people={people} />}
 
       {/* 첨부 목록 — 메타 줄의 클립 버튼에서 펼침. 내용은 기존 파일칩 그리드 그대로(다운로드 동작 동일).
           Portal이라 DOM은 카드 밖이지만 React 트리로는 안쪽이라, 카드 선택이 안 걸리게 클릭을 막는다. */}

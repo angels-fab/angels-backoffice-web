@@ -19,6 +19,18 @@ import { RichBodyView } from '@/utils/richBody'
 import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 
 /**
+ * ⛔ **지금은 꺼져 있다** (사용자 지시 2026-08-07: "일단 코드만 남겨두고 기능은 숨겨놔").
+ *
+ * 코드·DB·권한은 전부 완성된 상태로 남겨 두고 **화면에만 안 나오게** 한 것이다.
+ * 켜려면 이 값을 true 로 바꾸면 끝 — 다른 곳은 손댈 필요 없다(렌더 지점이 TaskAccordion 한 곳뿐).
+ *
+ * 꺼도 안전한 이유: page_notes.target 이 있는 메모는 떠 있는 쪽지 레이어가 애초에 그리지 않으므로
+ * (StickyMemo 의 hereNotes 필터) 이미 만들어 둔 카드 메모가 엉뚱한 자리에 튀어나오지 않는다.
+ * 다만 **꺼 두는 동안에는 그 메모를 볼 수도 지울 수도 없다** — 지금 DB에 카드 메모는 없다.
+ */
+export const WORK_CARD_NOTES_ENABLED = false
+
+/**
  * 업무카드 안에 박아 넣는 일반메모 (2026-08-07 사용자 지시).
  *
  * 화면에 떠 있는 쪽지는 좌표를 갖는다 — 그래서 카드 순서가 사람마다 다르면 엉뚱한 카드 옆을

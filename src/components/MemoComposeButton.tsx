@@ -64,9 +64,17 @@ export default function MemoComposeButton() {
   const total = Object.values(memoCountByPath(mine)).reduce((a, b) => a + b, 0) + (isDesktop ? notePaths.length : 0)
   const loc = pathToLocation(pathname)
 
-  /** 일반메모 건수 — RLS 가 '내 것 + 공유받은 것'만 준다. 만들거나 지울 때마다 다시 센다 */
+  /**
+   * 일반메모 건수 — RLS 가 '내 것 + 공유받은 것'만 준다. 만들거나 지울 때마다 다시 센다.
+   *
+   * **업무카드에 박은 메모(target)는 세지 않는다** — 이 버튼과 배지는 '화면에 떠 있는 쪽지'를 가리키는데
+   * 카드 메모는 카드 안에 있어서 이 배지가 가리킬 대상이 아니다. 지금은 그 기능이 꺼져 있기도 하다
+   * (WorkCardNotes 의 WORK_CARD_NOTES_ENABLED) — 세면 화면에 없는 것을 세는 셈이 된다.
+   */
   const countNotes = useCallback(() => {
-    void fetchPageNotes().then((rows) => setNotePaths(rows.map((r) => r.path))).catch(() => {})
+    void fetchPageNotes()
+      .then((rows) => setNotePaths(rows.filter((r) => !r.target).map((r) => r.path)))
+      .catch(() => {})
   }, [])
   useEffect(() => {
     if (!isMember) return
