@@ -1202,6 +1202,12 @@ export default function StickyMemoLayer() {
     return null
   }, [drawings])
 
+  /**
+   * 자리를 행에 한 번 심어 준 메모 id — 같은 메모에 두 번 쓰지 않기 위한 표시.
+   * 다시 읽어 오기 전에 effect 가 한 번 더 돌 수 있어 상태로는 늦다(ref 로 즉시 막는다).
+   */
+  const seededPos = useRef<Set<number>>(new Set())
+
   useEffect(() => {
     // 요청메모(번호)와 일반메모('n{id}')가 같은 좌표 맵을 나눠 쓴다 — 접두사로 갈라 키가 안 겹친다
     const keys = [...memos.map((t) => t.num), ...hereNotes.map((n) => `n${n.id}`)]
@@ -1210,6 +1216,8 @@ export default function StickyMemoLayer() {
     if (need.length === 0) return
     const taken = keys.filter((k) => saved?.[k]).map((k) => saved![k])
     const patch: PosMap = {}
+    /** 기본 자리를 새로 잡은 **내 메모** — 그 자리를 행에도 심어 공유받는 사람이 같은 곳에서 시작하게 */
+    const seed: { id: number; pos: Pos }[] = []
     for (const t of need) {
       // 물려받을 자리가 있으면 빈 슬롯을 찾지 않는다 — 겹치더라도 '가리키는 곳'이 더 중요하다
       const note = t.startsWith('n') ? hereNotes.find((n) => `n${n.id}` === t) : undefined
@@ -1220,9 +1228,21 @@ export default function StickyMemoLayer() {
       const px = slotPx(layerEl, n)
       taken.push(px)
       patch[t] = px
+      // 상단바 메모 버튼으로 만든 메모는 자리 없이 저장된다(그 화면은 좌표를 모른다).
+      // 그래서 자리가 처음 정해지는 여기서 행에 심는다 — 안 하면 공유받은 사람은 자기 화면의
+      // 빈 슬롯으로 가서 작성자와 다른 곳에 뜬다.
+      if (note && note.x === null && note.author === user && !seededPos.current.has(note.id)) {
+        seededPos.current.add(note.id)
+        seed.push({ id: note.id, pos: px })
+      }
     }
     dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), ...patch } }))
-  }, [layerEl, memos, hereNotes, saved, usLoadedOk, dispatch, inheritedPos])
+    for (const s of seed) {
+      void updatePageNote({ id: s.id, x: s.pos.x, y: s.pos.y })
+        .then(() => reloadNotes())
+        .catch(() => { /* 내 화면의 자리는 이미 잡혔다 — 공유용 자리 심기 실패로 방해하지 않는다 */ })
+    }
+  }, [layerEl, memos, hereNotes, saved, usLoadedOk, dispatch, inheritedPos, user, reloadNotes])
 
   /**
    * 좌표 한 건 저장 — 요청메모는 요청번호, 일반메모는 'n{id}' 를 키로 쓴다.
