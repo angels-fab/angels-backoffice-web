@@ -42,12 +42,15 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
       sx={(th) => ({
         display: 'inline-flex',
         alignItems: 'center',
-        gap: '6px',
+        justifyContent: 'center',
         flexShrink: 0,
+        // 전구 아이콘만 — '개선 메모' 글자와 건수 배지는 뺐다(사용자 지시 2026-08-09).
+        // 건수는 aria-label 로만 남긴다(화면낭독기 사용자에겐 여전히 필요).
+        width: 28,
+        height: 28,
         border: `1px solid ${alpha(th.palette.accent.amber, 0.46)}`,
         borderRadius: `${radius.pill}px`,
-        px: '10px',
-        py: '5px',
+        p: 0,
         cursor: 'pointer',
         font: 'inherit',
         fontSize: typescale.small.size,
@@ -59,25 +62,7 @@ function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onT
         '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
       })}
     >
-      <LightbulbIcon sx={{ fontSize: iconSize.body }} />
-      개선 메모
-      <Box
-        component="span"
-        sx={(th) => ({
-          display: 'inline-grid',
-          placeItems: 'center',
-          minWidth: 18,
-          height: 18,
-          px: '4px',
-          borderRadius: `${radius.pill}px`,
-          fontSize: typescale.caption.size,
-          fontWeight: weight.heavy,
-          bgcolor: th.palette.accent.amber,
-          color: th.palette.getContrastText(th.palette.accent.amber),
-        })}
-      >
-        {count}
-      </Box>
+      <LightbulbIcon sx={{ fontSize: iconSize.action }} />
     </Box>
   )
 }

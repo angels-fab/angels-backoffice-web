@@ -552,7 +552,14 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
 .fc-theme-angels .fc-list-day-text,.fc-theme-angels .fc-list-day-side-text{font-size:13px;font-weight:600;letter-spacing:-.01em}
 .fc-theme-angels .fc-list-event:hover td{background:var(--ink3)}
 .fc-theme-angels .fc-list-event-title{color:var(--text)}
-.fc-theme-angels .fc-list-event-time{color:var(--text2);font-variant-numeric:tabular-nums}
+/* 시간/종일 셀 — font-size 가 어디에도 없어 브라우저 기본 16px로 렌더되고 있었다(실측).
+   칩 글자와 같은 12px/500/자간 -0.05em 으로 맞추면 이 셀이 좁아진 만큼 제목칸이 왼쪽으로 넓어진다. */
+.fc-theme-angels .fc-list-event-time{color:var(--text2);font-variant-numeric:tabular-nums;font-size:12px;font-weight:500;letter-spacing:-.05em}
+/* 일정 앞 색 점(.fc-list-event-dot) 제거 — 종류칩이 색과 이름을 다 말해 주므로 중복(사용자 지시 2026-08-08) */
+.fc-theme-angels .fc-list-event-graphic{display:none}
+/* 제목 셀이 남는 폭을 먹고 넘치는 글자는 말줄임 — table-layout:auto 표의 정석.
+   이게 없으면 제목의 최대폭이 표를 밀어 375px 화면에서 표가 465px가 되고 오른쪽(해당자 칩)이 잘려 나간다(실측 2026-08-09). */
+.fc-theme-angels .fc-list-event-title{max-width:0;width:100%}
 .fc-theme-angels .fc-timegrid-slot{height:2.2em}
 .fc-theme-angels .fc-timegrid-slot-minor{border-top-style:dotted}
 .fc-theme-angels .fc-timegrid-slot-label-cushion,.fc-theme-angels .fc-timegrid-axis-cushion{color:var(--text2);font-size:11px}
@@ -1011,6 +1018,13 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   body{padding-top:53px}
   .page{overflow-x:auto}
   main{padding-bottom:84px}
+  /* 모바일 월간(개선요청 #59) — 칸이 ≈66px(주말 숨김 5열)뿐이라 칩 여백을 좁혀 제목 몫을 52px로 확보한다.
+     칩 안 배치(당일 2줄 / 구간 1줄)는 ChipContent 의 compact 가 담당. 주 시간표·목록 뷰는 건드리지 않으려고
+     dayGridMonth 뷰로 한정한다. 날짜 숫자는 구글캘린더 모바일 실측(12px)에 맞추고 자간은 제목과 같은 -0.05em. */
+  .fc-team .fc-dayGridMonth-view .fc-daygrid-event{padding:2px 3px 2px 5px;border-width:0 0 0 2px}
+  .fc-team .fc-dayGridMonth-view .fc-daygrid-day-number{font-size:12px;letter-spacing:-0.05em}
+  /* 목록 뷰 — 기본 td 여백 8/14px은 375px 화면에서 제목칸을 크게 깎는다 */
+  .fc-team .fc-list-table td{padding:7px 8px}
 }
 
 /* === 업무일정 필터바 (CalFilterBar) — 팀원/종류 2줄 고정 ===

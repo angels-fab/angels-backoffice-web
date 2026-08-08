@@ -16,6 +16,16 @@ export interface PageHeaderProps {
   updatedAt?: string
   /** 우측 액션 영역(버튼·검색 등) */
   actions?: ReactNode
+  /**
+   * 모바일에서 아이콘·제목만 감춘다(액션·개선메모 칩은 유지).
+   * 하단 탭바가 이미 페이지명을 보여 주는 화면에서 세로 공간을 되찾으려는 용도 — 업무일정이 첫 적용.
+   */
+  hideTitleOnMobile?: boolean
+  /**
+   * 개선 메모 칩·패널·스낵바를 여기서 그리지 않는다 — 페이지가 자기 자리(예: 툴바)에 직접 그릴 때.
+   * 두 군데서 그리면 훅 인스턴스가 갈라져 칩을 눌러도 패널이 안 열린다.
+   */
+  suppressImprovementMemo?: boolean
 }
 
 /**
@@ -29,12 +39,15 @@ export interface PageHeaderProps {
  *   updatedAt="2026-06-13 18:00 업데이트"
  *   actions={<Button variant="contained">추가</Button>} />
  */
-export default function PageHeader({ title, icon, subtitle, updatedAt, actions }: PageHeaderProps) {
+export default function PageHeader({ title, icon, subtitle, updatedAt, actions, hideTitleOnMobile, suppressImprovementMemo }: PageHeaderProps) {
+  const hideOnMobile = hideTitleOnMobile ? { xs: 'none', shell: 'flex' } : undefined
   // 현재 경로에 활성 개선 메모가 있으면 제목 옆 칩 + 아래 패널을 렌더(없으면 모두 null → 변화 없음).
   // PC에서는 화면 붙임쪽지(StickyMemo)가 같은 메모를 띄우므로 칩·패널은 모바일에서만 — 중복 표시 방지.
-  const { chip, panel, snackbar } = usePageImprovementMemo()
+  const memo = usePageImprovementMemo()
+  const { chip, panel, snackbar } = suppressImprovementMemo ? { chip: null, panel: null, snackbar: null } : memo
   return (
-    <Box sx={{ mb: `${layout.pageHeaderGap}px` }}>
+    // 제목을 감춘 모바일에서는 아래 여백도 없앤다 — 안 그러면 빈 헤더가 24px을 그대로 차지한다
+    <Box sx={{ mb: hideTitleOnMobile ? { xs: 0, shell: `${layout.pageHeaderGap}px` } : `${layout.pageHeaderGap}px` }}>
       <Box
         sx={{
           display: 'flex',
@@ -49,7 +62,7 @@ export default function PageHeader({ title, icon, subtitle, updatedAt, actions }
           {icon && (
             <Box
               sx={{
-                display: 'flex',
+                display: hideOnMobile || 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
@@ -71,8 +84,8 @@ export default function PageHeader({ title, icon, subtitle, updatedAt, actions }
                 minHeight를 아이콘 배지와 같은 40으로 두고 가운데 정렬: 제목 줄(28.6px)을 그냥
                 flex-start로 두면 40px 배지·36px 액션 버튼보다 중심이 5~6px 위로 떠서 '제목이
                 위로 치우쳐' 보인다. 세 요소의 중심을 같은 20px 선에 맞춘다. */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minHeight: layout.headerRowHeight }}>
-              <Typography variant="h2" component="h1">
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', minHeight: hideTitleOnMobile ? { xs: 0, shell: layout.headerRowHeight } : layout.headerRowHeight }}>
+              <Typography variant="h2" component="h1" sx={{ display: hideTitleOnMobile ? { xs: 'none', shell: 'block' } : undefined }}>
                 {title}
               </Typography>
               {chip && <Box sx={{ display: { xs: 'contents', shell: 'none' } }}>{chip}</Box>}
