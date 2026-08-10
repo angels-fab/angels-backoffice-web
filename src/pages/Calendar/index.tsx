@@ -18,7 +18,7 @@ import EventNoteIcon from '@mui/icons-material/EventNote'
 import RefreshIcon from '@mui/icons-material/Refresh'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
-import { PageContainer, PageHeader, SearchBar, SegTabs, ErrorBanner, LoadingState, useSnack } from '@/components/ds'
+import { PageContainer, PageHeader, SegTabs, ErrorBanner, LoadingState, useSnack } from '@/components/ds'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadCalEvents, moveCalEvent } from '@/store/slices/calSlice'
 import { putSetting } from '@/store/slices/userSettingsSlice'
@@ -32,6 +32,7 @@ import EventPopover, { type EventDetail } from './EventPopover'
 import CalEventWrite, { type CalDraft } from './CalEventWrite'
 import { updateCalEvent } from '@/api/calendar'
 import { iconSize, radius, control, typescale, weight } from '@/theme/tokens'
+import { usePageImprovementMemo } from '@/components/PageImprovementMemo'
 import AddIcon from '@mui/icons-material/Add'
 import { useRole } from '@/auth/role'
 
@@ -57,6 +58,7 @@ function gridRange(view: ViewKey, anchor: Date): { start: Date; end: Date } {
     const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1)
     return { start: first, end: new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1) }
   }
+  if (view === 'day') return { start: anchor, end: addDays(anchor, 1) }
   const start = startOfWeek(anchor)
   return { start, end: addDays(start, 7) }
 }
@@ -69,9 +71,11 @@ function rgba(hex: string, a: number) {
   return `rgba(${r},${g},${b},${a})`
 }
 
-type ViewKey = 'month' | 'timeweek' | 'agenda'
+// 'day' = 하루 시간표. 탭으로 고르는 뷰가 아니라 **월간에서 날짜를 누르면 들어가는 화면**이다
+// (구글캘린더식 — 사용자 지시 2026-08-09). 여기서 시간대를 누르거나 끌어 일정을 만든다.
+type ViewKey = 'month' | 'timeweek' | 'agenda' | 'day'
 
-function renderEventContent(arg: EventContentArg) {
+function renderEventContent(arg: EventContentArg, isMobile: boolean) {
   // 새 일정 초안 막대(모달 열림 중 미리보기) — 단순 흰 글자 바
   if (arg.event.extendedProps.draft) {
     return (
@@ -89,6 +93,9 @@ function renderEventContent(arg: EventContentArg) {
   // 목록(listMonth) 뷰는 FullCalendar가 왼쪽 .fc-list-event-time 셀에 시간을 이미 렌더하므로
   // 칩(제목 셀) 안에서 시간을 또 표시하면 중복 노출됨 → 목록에서는 칩 시간 생략.
   const time = arg.view.type === 'listMonth' ? '' : chip.time
+  // 모바일 월간·주간은 칸이 좁아 2줄 배치(compact). 목록은 행이 가로로 넓으니 종류칩 배치(catChip).
+  const compact = isMobile && (arg.view.type === 'dayGridMonth' || arg.view.type === 'timeGridWeek')
+  const catChip = arg.view.type === 'listMonth'
   return (
     <Box sx={{ display: 'flex', width: '100%', minWidth: 0 }}>
       <ChipContent
@@ -99,6 +106,8 @@ function renderEventContent(arg: EventContentArg) {
         title={chip.title}
         variant={variant}
         multiDay={multiDay}
+        compact={compact}
+        catChip={catChip}
       />
     </Box>
   )
@@ -110,6 +119,9 @@ export default function Calendar() {
 
   // 복수선택 버튼·모바일 기본뷰 판정. 폰(≤768px)은 월 그리드 대신 목록(아젠다) 뷰가 기본.
   const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true })
+  // 개선 메모 — 칩을 툴바(뷰 전환 오른쪽)에 두려고 PageHeader 대신 이 페이지가 직접 그린다.
+  // PageHeader 쪽은 suppressImprovementMemo 로 껐다(두 군데서 그리면 열림 상태가 갈라진다).
+  const memo = usePageImprovementMemo()
   // 마지막으로 보던 뷰 기억(localStorage) — 없으면 기기 기본(모바일=목록, PC=월)
   const [view, setView] = useState<ViewKey>(() => {
     let saved: string | null = null
@@ -117,11 +129,16 @@ export default function Calendar() {
     return saved === 'month' || saved === 'timeweek' || saved === 'agenda' ? saved : isMobile ? 'agenda' : 'month'
   })
   const [anchor, setAnchor] = useState<Date>(() => parseKey(todaySeoul()))
-  const [search, setSearch] = useState('')
+  // 검색창은 삭제(사용자 지시 2026-08-09 — 상단바 전역검색으로 대체). 걸러내는 로직은 손대지 않고
+  // 입력만 없앤 상태라, 되살릴 땐 이 줄을 useState 로 되돌리고 SearchBar 한 줄만 다시 넣으면 된다.
+  // ⚠ 상단바 전역검색(GlobalSearchDialog)은 공지·업무현황·장비 4종만 훑고 **일정은 안 훑는다**.
+  const search = ''
   const [selMembers, setSelMembers] = useState<string[]>([]) // 빈 배열 = 전체 선택
   const [selCats, setSelCats] = useState<RealCat[]>([]) // 빈 배열 = 전체(종류 필터 없음)
-  const [multiSel, setMultiSel] = useState(false) // 모바일 복수선택 모드(Shift 대체)
-  const [showWeekends, setShowWeekends] = useState(false) // 기본: 주말 숨김(평일 넓게)
+  // 복수선택 버튼·주말보기 버튼 삭제(사용자 지시 2026-08-09).
+  //  · 복수선택: PC 는 Shift+클릭이 그대로 남는다. 모바일은 추가선택 수단이 없어진다.
+  //  · 주말: 항상 숨김(평일 5열)으로 고정 — 버튼이 있던 시절의 기본값과 같다.
+  const showWeekends = false
   // 화면에 실제로 보이는 날짜 범위(FC activeStart/activeEnd). 종류별 건수 집계에 사용. datesSet에서 실제값 주입.
   const [visRange, setVisRange] = useState<{ start: Date; end: Date }>(() => gridRange(view, parseKey(todaySeoul())))
   const calRef = useRef<FullCalendar>(null)
@@ -131,7 +148,7 @@ export default function Calendar() {
   // 일정 작성/수정 모달(구성원) + 저장 안내 스낵바 — 5단계: 캘린더 쓰기 UI 연결(Supabase·세션 인증)
   const { isMember } = useRole() // 구성원 쓰기 개방(2026-08-05)
   const snack = useSnack()
-  const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string; initialEndDate?: string } | null>(null)
+  const [write, setWrite] = useState<{ mode: 'add' | 'edit'; event: CalEvent | null; initialDate: string; initialEndDate?: string; initialStartTime?: string; initialEndTime?: string } | null>(null)
   // 새 일정 초안 — 누르는 순간부터 '(새 일정)' 막대로 미리보기(임시 일정이라 기존 일정을 안 덮음).
   // 그리드 제스처(월간): pointerdown=막대 생성 → 드래그로 기간 확장 → pointerup=모달. 모달이 열린 뒤에도 이어서 표시.
   const [draft, setDraft] = useState<CalDraft | null>(null)
@@ -140,6 +157,9 @@ export default function Calendar() {
   const createDrag = useRef<{ startDate: string; pointerId: number; touch: boolean; x0: number; y0: number } | null>(null)
   const idMap = useRef(new WeakMap<HTMLElement, string>()) // segment → 일정 id (수정 진입용)
   const dragClickSuppress = useRef(0) // 드래그 드롭 직후 합성 click이 팝오버를 고정하는 것 방지
+  // 모바일 기간 이동 스와이프 — 이전·다음 버튼을 없앤 대신(사용자 지시 2026-08-08) 달력을 좌우로 민다.
+  // fired: 한 번의 손가락 동작에서 두 달이 넘어가지 않게 하는 잠금.
+  const swipe = useRef<{ id: number; x0: number; y0: number; fired: boolean } | null>(null)
 
   // 일정 문자열('yyyy-MM-dd' 또는 'yyyy-MM-ddTHH:mm')을 delta(년/월/일/ms)만큼 이동 — KST 문자열 산술(타임존 무관)
   const shiftDt = (v: string, d: { years?: number; months?: number; days?: number; milliseconds?: number }) => {
@@ -279,7 +299,7 @@ export default function Calendar() {
   // 뷰/기준일 변경 시 FullCalendar 동기화 (월=dayGridMonth / 주(시간표)=timeGridWeek).
   // changeView는 flushSync를 유발하므로 렌더 단계 밖(setTimeout)에서 호출.
   useEffect(() => {
-    const fcView = view === 'month' ? 'dayGridMonth' : view === 'agenda' ? 'listMonth' : 'timeGridWeek'
+    const fcView = view === 'month' ? 'dayGridMonth' : view === 'agenda' ? 'listMonth' : view === 'day' ? 'timeGridDay' : 'timeGridWeek'
     const id = setTimeout(() => {
       calRef.current?.getApi().changeView(fcView, keyOf(anchor))
     }, 0)
@@ -311,6 +331,9 @@ export default function Calendar() {
   // 뷰 변경 시 로컬 캐시(즉시). 계정 저장은 사용자가 토글로 바꾼 순간만(SegTabs onChange) —
   // 마운트 자동 저장은 로컬 초기값이 서버 복원값을 선점·덮어써 기기 간 동기화를 깨므로 금지(2026-07-25 UX 감사).
   useEffect(() => {
+    // 'day'는 저장하지 않는다 — 탭으로 고르는 뷰가 아니라 월간에서 잠깐 들어가는 화면이다.
+    // 저장하면 다음 방문에 복원 대상이 못 돼(초기값 검사에서 탈락) 사용자가 고른 뷰가 기기 기본값으로 되돌아간다.
+    if (view === 'day') return
     try { localStorage.setItem('cal:view', view) } catch { /* 저장 불가 무시 */ }
   }, [view])
 
@@ -472,12 +495,21 @@ export default function Calendar() {
   // ── 네비게이션 ──
   const shift = (dir: number) => {
     setAnchor((a) =>
-      view === 'timeweek' ? addDays(a, dir * 7) : new Date(a.getFullYear(), a.getMonth() + dir, 1),
+      view === 'day' ? addDays(a, dir)
+        : view === 'timeweek' ? addDays(a, dir * 7)
+          : new Date(a.getFullYear(), a.getMonth() + dir, 1),
     )
   }
   const goToday = () => setAnchor(parseKey(todayKey))
 
+  // 툴바 왼쪽 짧은 라벨 — 뷰 전환 버튼 좌측에 굵게(사용자 지시 2026-08-09).
+  // 일간은 어느 날에 들어와 있는지가 핵심이라 날짜·요일까지 쓴다.
+  const shortLabel = view === 'day'
+    ? `${anchor.getMonth() + 1}월 ${anchor.getDate()}일 (${'일월화수목금토'[anchor.getDay()]})`
+    : `${anchor.getMonth() + 1}월`
+
   const periodLabel = useMemo(() => {
+    if (view === 'day') return `${anchor.getFullYear()}년 ${anchor.getMonth() + 1}월 ${anchor.getDate()}일`
     if (view !== 'timeweek') return `${anchor.getFullYear()}년 ${anchor.getMonth() + 1}월`
     const ws = weekStart
     const we = addDays(ws, 6)
@@ -491,9 +523,15 @@ export default function Calendar() {
       <PageHeader
         icon={<EventNoteIcon />}
         title="업무일정"
-        actions={
+        // 모바일은 하단 탭바가 이미 '일정'을 보여 준다 — 제목 줄을 비워 달력을 위로 끌어올린다(사용자 지시 2026-08-08)
+        hideTitleOnMobile
+        suppressImprovementMemo
+        // 모바일은 액션을 **통째로 넘기지 않는다**. 안에서 조건부로 비우면 빈 액션 박스가 40px(+아래 여백 24px)를
+        // 그대로 차지해 제목을 지운 효과가 사라진다 — 실측으로 확인(2026-08-09).
+        //  · 일정 추가: 모바일 삭제(사용자 지시). 월간에서 날짜를 눌러 들어간 일간 화면에서 시간대로 만든다.
+        //  · 새로고침: 모바일 삭제(사용자 지시). PC는 유지 — 구글캘린더 양방향 연동이라 다시 받아올 길이 필요하다.
+        actions={isMobile ? undefined : (
           <>
-            {/* 구성원 쓰기 개방(2026-08-05) */}
             {isMember && (
               <Button
                 size="small"
@@ -515,7 +553,7 @@ export default function Calendar() {
               <RefreshIcon sx={{ fontSize: iconSize.header }} />
             </IconButton>
           </>
-        }
+        )}
       />
 
       {/* 일정 불러오기 최종 실패 — 표준 ErrorBanner(다른 페이지와 동일 부품). 기존 일정이 있으면 유지 표시 중임을 알림 */}
@@ -538,6 +576,24 @@ export default function Calendar() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px 8px', mb: 2 }}>
         {/* 왼쪽 그룹 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', order: 1 }}>
+          {/* 뷰 전환 좌측의 짧은 기간 라벨 — 이전·다음 버튼을 없앤 모바일에서 '지금 몇 월인지'를 알려 주는
+              유일한 표시다(사용자 지시 2026-08-09). 일간에서는 누르면 월간으로 돌아가는 뒤로가기도 겸한다. */}
+          {isMobile && (
+            <Box
+              component={view === 'day' ? 'button' : 'span'}
+              {...(view === 'day' ? { onClick: () => setView('month'), 'aria-label': `${shortLabel} — 월간으로 돌아가기` } : {})}
+              sx={{
+                display: 'inline-flex', alignItems: 'center', gap: '2px', flex: 'none',
+                fontSize: typescale.cardTitle.size, fontWeight: weight.bold, letterSpacing: '-0.03em', whiteSpace: 'nowrap',
+                color: 'text.primary', fontFamily: 'inherit',
+                ...(view === 'day' ? { border: 'none', bgcolor: 'transparent', p: 0, cursor: 'pointer' } : {}),
+              }}
+            >
+              {view === 'day' && <ChevronLeftIcon sx={{ fontSize: iconSize.header, ml: '-4px' }} />}
+              {shortLabel}
+            </Box>
+          )}
+
           {/* 월/주 토글 */}
           <SegTabs
             ariaLabel="달력 보기 전환"
@@ -546,12 +602,17 @@ export default function Calendar() {
               { value: 'month', label: '월' },
               { value: 'timeweek', label: '주' },
             ] as const}
-            value={view}
+            // 일간은 탭이 없는 화면이라 '월'을 켠 상태로 둔다 — 그대로 누르면 월간으로 빠져나온다
+            value={view === 'day' ? 'month' : view}
             onChange={(v) => { setView(v); dispatch(putSetting({ key: 'cal.view', value: v })) }}
           />
 
-          {/* 이전 · 오늘 · 다음 — 하나의 외곽선 버튼 그룹(바깥 모서리만 둥글게, 사이 얇은 구분선) */}
-          {(() => {
+          {/* 개선 메모(전구) — 제목 줄에 있던 것을 뷰 전환 버튼 바로 오른쪽으로 옮겼다(사용자 지시 2026-08-09) */}
+          {memo.chip}
+
+          {/* 이전 · 오늘 · 다음 — PC 전용. 모바일은 이 줄을 통째로 없애고 달력을 좌우로 밀어 이동한다
+              (사용자 지시 2026-08-08 — 툴바가 6줄이나 차지해 달력이 화면 밖으로 밀리던 문제). */}
+          {!isMobile && (() => {
             const navBtn = {
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '100%',
               border: 'none', bgcolor: 'transparent', color: 'text.secondary', cursor: 'pointer', fontFamily: 'inherit',
@@ -572,43 +633,26 @@ export default function Calendar() {
             )
           })()}
 
-          <Typography component="span" sx={{ ml: '2px', fontSize: typescale.cardTitle.size, fontWeight: weight.bold, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
-            {periodLabel}
-          </Typography>
+          {!isMobile && (
+            <Typography component="span" sx={{ ml: '2px', fontSize: typescale.cardTitle.size, fontWeight: weight.bold, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+              {periodLabel}
+            </Typography>
+          )}
         </Box>
 
-        {/* 검색 — 우측(주말 보기 왼쪽). 좁은 화면에서는 한 줄 전체로 내려감(order 3 + basis 100%) */}
-        <Box sx={{ order: { xs: 3, sm: 2 }, ml: { sm: 'auto' }, flex: { xs: '1 1 100%', sm: '0 1 240px' }, maxWidth: { sm: 260 } }}>
-          <SearchBar value={search} onChange={setSearch} placeholder="검색 (팀원·구분·내용)" width="100%" />
-        </Box>
-
-        {/* 주말 보기 — 검색 오른쪽 */}
-        <Box
-          component="button"
-          onClick={() => setShowWeekends((s) => !s)}
-          sx={{
-            order: { xs: 2, sm: 3 }, flex: '0 0 auto',
-            height: 34, px: '14px', borderRadius: `${radius.button}px`, border: '1px solid',
-            borderColor: showWeekends ? 'primary.main' : 'divider',
-            color: showWeekends ? 'primary.main' : 'text.secondary',
-            bgcolor: showWeekends ? 'background.elevated' : 'background.paper',
-            fontSize: typescale.body.size, fontWeight: weight.semibold, fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .12s',
-          }}
-        >
-          {showWeekends ? '주말 숨기기' : '주말 보기'}
-        </Box>
       </Box>
 
-      {/* 상단 필터 바 — 팀원·일정 종류만(검색은 상단 툴바로 이동) */}
+      {/* 상단 필터 바 — 팀원·일정 종류만 */}
       <CalFilterBar
         members={sidebarMembers}
         onToggleMember={toggleMember}
         cats={sidebarCats}
         onToggleCat={toggleCat}
-        showMulti={isMobile}
-        multiSelect={multiSel}
-        onToggleMulti={() => setMultiSel((m) => !m)}
       />
+
+      {/* 개선 메모 패널·스낵바 — 칩을 툴바로 옮겼으므로 패널도 PageHeader 대신 여기서 그린다 */}
+      {memo.panel}
+      {memo.snackbar}
 
       {/* 달력 (풀폭) — 컨테이너 위임: 포인터 위치의 .fc-event를 elementsFromPoint로 찾아
           모든 멀티데이 segment(시작·중간·마지막, 텍스트 없는 빈 영역 포함)에서 호버·클릭 동작.
@@ -616,10 +660,18 @@ export default function Calendar() {
       <Box sx={{ minWidth: 0, position: 'relative' }}>
         <Box
           className="fc-theme-angels fc-team"
+          // pan-y: 세로 스크롤은 브라우저에 맡기고 가로는 우리가 받는다. 이게 없으면 가로로 미는 순간
+          // 브라우저가 페이지 가로 패닝(.page{overflow-x:auto})을 가져가며 pointercancel 이 떨어져 스와이프가 죽는다.
+          sx={{ touchAction: isMobile ? 'pan-y' : undefined }}
           // 새 일정 제스처(월간·구성원): 빈 날짜 칸을 누르는 순간 '(새 일정)' 막대 생성 → 드래그로 기간 확장 → 놓으면 모달.
           // 사용자 확정: "누를 때부터 막대" — 셀 틴트(FC selectable) 대신 임시 일정 막대가 처음부터 보인다.
           onPointerDown={(e) => {
-            if (!isMember || view !== 'month' || e.button !== 0) return // 구성원 쓰기 개방(2026-08-05)
+            // 기간 이동 스와이프 등록 — 일정 위에서 시작한 손짓은 FullCalendar 의 열기·이동에 양보한다
+            if (isMobile && e.pointerType !== 'mouse' && !findEvAt(e.clientX, e.clientY)) {
+              swipe.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, fired: false }
+            }
+            // 모바일 월간은 이 제스처를 쓰지 않는다 — 날짜를 누르면 그날 시간표로 들어가는 쪽으로 바뀌었다(onClick)
+            if (!isMember || view !== 'month' || e.button !== 0 || isMobile) return // 구성원 쓰기 개방(2026-08-05)
             if (lockedEl.current) return // 상세 팝오버 열림 중엔 기존처럼 '닫기'만(생성 시작 안 함)
             const t = e.target as HTMLElement
             if (findEvAt(e.clientX, e.clientY)) return // 일정 위 — 열기/이동 제스처에 양보
@@ -636,6 +688,7 @@ export default function Calendar() {
             setDraft({ start: d, end: d, title: '' })
           }}
           onPointerUp={(e) => {
+            if (swipe.current?.id === e.pointerId) swipe.current = null
             const cd = createDrag.current
             if (!cd || e.pointerId !== cd.pointerId) return
             createDrag.current = null
@@ -648,6 +701,7 @@ export default function Calendar() {
             setWrite({ mode: 'add', event: null, initialDate: s, initialEndDate: en !== s ? en : undefined })
           }}
           onPointerCancel={() => {
+            swipe.current = null
             if (createDrag.current) {
               createDrag.current = null
               setDraft(null)
@@ -656,6 +710,19 @@ export default function Calendar() {
           onPointerMove={(e) => {
             const x = e.clientX
             const y = e.clientY
+            // 기간 이동 스와이프 — 가로가 세로보다 뚜렷하게 우세할 때만(세로 스크롤과 헷갈리지 않게)
+            const sw = swipe.current
+            if (sw && e.pointerId === sw.id && !sw.fired) {
+              const dx = x - sw.x0
+              if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(y - sw.y0) * 1.6) {
+                sw.fired = true // 한 손짓에 한 칸만
+                createDrag.current = null // 같은 손짓으로 떴던 '(새 일정)' 막대는 취소
+                setDraft(null)
+                dragClickSuppress.current = Date.now() + 400
+                shift(dx < 0 ? 1 : -1) // 왼쪽으로 밀면 다음 기간
+                return
+              }
+            }
             // 새 일정 드래그 중 — 기간 확장(마우스) / 이동 크면 스크롤로 간주해 취소(터치)
             const cd = createDrag.current
             if (cd) {
@@ -691,6 +758,21 @@ export default function Calendar() {
           onClick={(e) => {
             const el = findEvAt(e.clientX, e.clientY)
             if (!el) {
+              // 모바일 월간: 날짜를 누르면 그날 시간표(일간)로 들어간다 — 구글캘린더식(사용자 지시 2026-08-09).
+              // 일정 추가 버튼을 없앤 대신, 추가는 그 화면에서 시간대를 누르거나 끌어서 한다.
+              if (
+                isMobile && view === 'month' &&
+                !lockedEl.current &&
+                Date.now() >= dragClickSuppress.current &&
+                !(e.target as HTMLElement).closest('a, button, .fc-more-link, .fc-popover')
+              ) {
+                const d = (e.target as HTMLElement).closest('[data-date]')?.getAttribute('data-date')
+                if (d) {
+                  setAnchor(parseKey(d.slice(0, 10)))
+                  setView('day')
+                  return
+                }
+              }
               // 빈 날짜 칸 클릭 = 작성 모달. 월간은 pointer 제스처(누를 때부터 막대)가 담당하므로 그 외 뷰만 여기서 처리
               if (
                 view !== 'month' &&
@@ -759,17 +841,29 @@ export default function Calendar() {
               void commitEventChange(ev, info.event.start, info.event.end, () => info.revert())
             }}
             // 범위 드래그 선택 — 월간은 자체 제스처('(새 일정)' 막대)가 대체하므로 주(시간표) 뷰에서만 FC selectable.
-            selectable={isMember && view === 'timeweek'} // 구성원 쓰기 개방(2026-08-05)
+            // 범위 드래그 선택 — 월간은 자체 제스처가 대체하므로 시간표 뷰(주·일)에서만.
+            selectable={isMember && (view === 'timeweek' || view === 'day')} // 구성원 쓰기 개방(2026-08-05)
             select={(info) => {
-              const spanDays = Math.round((info.end.getTime() - info.start.getTime()) / 86400000)
-              if (!info.allDay || spanDays <= 1) return
               dragClickSuppress.current = Date.now() + 400
+              // 시간대 선택(누르기 = 한 칸, 끌기 = 그 구간) → 그 시각이 채워진 작성 모달.
+              // 일정 추가 버튼을 없앤 모바일에서 이게 유일한 추가 경로다(사용자 지시 2026-08-09).
+              if (!info.allDay) {
+                setWrite({
+                  mode: 'add', event: null,
+                  initialDate: fmtFc(info.start, false),
+                  initialStartTime: fmtFc(info.start, true).slice(11, 16),
+                  initialEndTime: fmtFc(info.end, true).slice(11, 16),
+                })
+                return
+              }
+              const spanDays = Math.round((info.end.getTime() - info.start.getTime()) / 86400000)
+              if (spanDays <= 1) return
               const startStr = fmtFc(info.start, false)
               const endStr = shiftDt(fmtFc(info.end, false), { days: -1 })
               setWrite({ mode: 'add', event: null, initialDate: startStr, initialEndDate: endStr })
             }}
             eventDisplay="block"
-            eventContent={renderEventContent}
+            eventContent={(arg) => renderEventContent(arg, isMobile)}
             // 실제 보이는 날짜 범위(activeStart/activeEnd) → 종류별 건수 집계 기준. 이동·뷰전환 시 즉시 갱신.
             datesSet={(arg) => setVisRange({ start: arg.start, end: arg.end })}
             // 각 segment(.fc-event) → 원본 상세 매핑만 등록. 실제 hit 판정은 컨테이너 위임이 담당.
@@ -842,6 +936,8 @@ export default function Calendar() {
         event={write?.event || null}
         initialDate={write?.initialDate || todayKey}
         initialEndDate={write?.initialEndDate}
+        initialStartTime={write?.initialStartTime}
+        initialEndTime={write?.initialEndTime}
         onDraftChange={setDraft}
         onClose={() => setWrite(null)}
         onSaved={(msg) => {

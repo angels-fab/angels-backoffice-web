@@ -94,6 +94,9 @@ interface Props {
   initialDate: string
   /** add 모드 종료일 프리필 — 범위 드래그 선택 시. 없으면 시작일과 동일 */
   initialEndDate?: string
+  /** add 모드 시각 프리필 'HH:mm' — 시간표(주·일)에서 시간대를 누르거나 끌어 들어왔을 때. 없으면 09:00–10:00 */
+  initialStartTime?: string
+  initialEndTime?: string
   onClose: () => void
   /** 추가/수정/삭제 성공 → 부모가 새로고침 (안내 메시지 전달) */
   onSaved: (msg: string) => void
@@ -316,7 +319,7 @@ function TimeColumn({ label, value, onPick }: { label: string; value: string; on
  * 제목이 주인공, 종류=아이콘 원(선택 시 가로 확장 + 이름), 기간=칩+미니달력 클릭-클릭(숙소예약식),
  * 시간=칩+펼침 피커(잘림 없음). 반복 일정의 수정·삭제는 범위 선택(이 일정만/이후/전체)을 먼저 묻는다.
  */
-export default function CalEventWrite({ open, mode, event, initialDate, initialEndDate, onClose, onSaved, onDraftChange }: Props) {
+export default function CalEventWrite({ open, mode, event, initialDate, initialEndDate, initialStartTime, initialEndTime, onClose, onSaved, onDraftChange }: Props) {
   // isAdmin은 삭제 게이트에만 잔존(작성·수정은 구성원 개방) — 구성원 쓰기 개방(2026-08-05)
   const { user, isAdmin, isMember } = useRole()
   const [title, setTitle] = useState('') // 내용 제목 — [구분] 태그·@참석자 제외(둘 다 별도 피커가 관리)
@@ -399,8 +402,9 @@ export default function CalEventWrite({ open, mode, event, initialDate, initialE
       setDate(initialDate || '')
       setEndDate(initialEndDate && initialEndDate !== initialDate ? initialEndDate : '')
       if (initialEndDate && initialEndDate !== initialDate) setAllDay(true) // 범위 드래그 = 종일 구간 일정
-      setStartTime('09:00')
-      setEndTime('10:00')
+      // 시간표에서 시간대를 골라 들어왔으면 그 시각으로(사용자 지시 2026-08-09), 아니면 기본 09–10시
+      setStartTime(initialStartTime || '09:00')
+      setEndTime(initialEndTime || '10:00')
       setLoc('')
       // 날짜는 그리드에서 이미 골라 들어옴 — 달력은 기본 접힘, 수정할 때만 칩을 눌러 팝업(사용자 확정)
       setCalYm((initialDate || todaySeoul()).slice(0, 7))

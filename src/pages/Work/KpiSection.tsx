@@ -96,7 +96,8 @@ export default function KpiSection({
         onKeyDown={keyActivate(() => onOpenView(zone))}
         sx={{
           // 컴팩트 시안(work-kpi-compact-preview) — 가로폭·드롭영역 폭은 유지, 세로만 축소
-          position: 'relative', minWidth: 0, minHeight: { xs: 82, md: 90 },
+          // 모바일은 네 타일이 한 행이라 칸이 ≈78px — 세로도 같이 줄여야 KPI가 화면을 덜 먹는다
+          position: 'relative', minWidth: 0, minHeight: { xs: 66, md: 90 },
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: '4px', textAlign: 'center', cursor: 'pointer', color: LABEL[zone],
           // 분리형 카드(약한 분리) — 대면적 파스텔 대신 중립 표면. 색은 라벨·하단 인디케이터·드래그 강조로만.
@@ -123,7 +124,7 @@ export default function KpiSection({
           <Typography
             key={pulseKey(zone)}
             component="span"
-            sx={{ fontSize: typescale.display.size, fontWeight: typescale.display.weight, lineHeight: 1, letterSpacing: '-0.04em', color: 'text.primary', ...pulseSx(zone) }}
+            sx={{ fontSize: { xs: typescale.pageTitle.size, md: typescale.display.size }, fontWeight: typescale.display.weight, lineHeight: 1, letterSpacing: '-0.04em', color: 'text.primary', ...pulseSx(zone) }}
           >
             {count}
           </Typography>
@@ -136,8 +137,13 @@ export default function KpiSection({
               // 같은 '부서장 확인'인데 카드와 KPI의 보라가 달랐다(사용자 지적).
               // 숫자는 12px이라 원 안에서 안 읽혀 14px로 키우고 원도 함께 키움.
               sx={(t) => ({
-                position: 'absolute', zIndex: 2, left: 'calc(100% + 7px)', top: '50%', transform: 'translateY(-50%)',
-                width: { xs: 23, md: 24 }, height: { xs: 23, md: 24 },
+                // 모바일(한 행 4타일, 칸 ≈78px)에서는 흐름 안에 둔다 — absolute로 칸 밖에 걸치면
+                // 타일의 overflow:hidden 에 잘려 배지가 아예 안 보인다. PC는 종전대로 중앙축 불변.
+                position: { xs: 'static', md: 'absolute' }, zIndex: 2,
+                left: { md: 'calc(100% + 7px)' }, top: { md: '50%' },
+                transform: { xs: 'none', md: 'translateY(-50%)' },
+                alignSelf: { xs: 'center', md: 'auto' }, ml: { xs: '3px', md: 0 },
+                width: { xs: 20, md: 24 }, height: { xs: 20, md: 24 },
                 border: '1px solid', borderColor: chiefPurple.border(t), borderRadius: `${radius.pill}px`,
                 // 타일 위에 **얹혀 있는** 배지라 타일 호버색이 비쳐서는 안 된다(사용자 지적).
                 // 반투명이면 아래 STRONG[zone]이 그대로 올라오므로, 타일 표면색 위에 같은 알파를
@@ -177,22 +183,27 @@ export default function KpiSection({
     <ContentSection
       sx={{
         mb: '10px',
+        // 모바일 좌우 여백 축소(사용자 지시 2026-08-09) — PageContainer 의 16px 안쪽 여백을 8px 되찾아
+        // 타일 폭을 78 → 82px 로. 0까지 빼면 타일이 화면 모서리에 붙어 답답해진다.
+        mx: { xs: '-8px', md: 0 },
         // PC(md+): topbar 아래 sticky. 칩 돌출(-15px)을 배경으로 받치는 하단 패딩 포함.
         position: { xs: 'static', md: 'sticky' },
         top: { md: `${stickyTop}px` },
         zIndex: z.sticky,
         bgcolor: { md: 'background.default' },
         pt: { md: '6px' },
-        pb: { md: '15px' },
+        // 모바일은 '부서장 확인' 칩을 지웠으므로(사용자 지시 2026-08-09) 칩을 받치던 아래 여백도 없앤다
+        pb: { xs: 0, md: '15px' },
       }}
     >
-      {/* 스트립 — PC(md+)에서는 외곽 테두리 1개의 긴 카드, 좁은 폭에서는 두 그룹 카드 상하 배치 */}
+      {/* 스트립 — 네 타일(진행중·보류·완료·Remind)이 **한 행**. 종전에는 좁은 폭에서 두 그룹이
+          상하로 나뉘어 KPI만 두 줄을 먹었다(사용자 지시 2026-08-09로 한 행 통합). */}
       <Box
         sx={{
           position: 'relative',
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
-          gap: { xs: '26px', md: '10px' },
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: '10px',
           overflow: 'visible',
           '& > *': { minWidth: 0 },
         }}
@@ -201,7 +212,9 @@ export default function KpiSection({
         <Box aria-label="진행 업무 그룹" sx={familySx}>
           {tile('inProgress', inProgressCount, checkInProgCount)}
           {tile('hold', holdCount, checkHoldCount)}
-          {/* 부서장 확인 통합 칩 — 진행중·보류 경계 하단에 걸침. 클릭=Check 목록(진행중+보류) */}
+          {/* 부서장 확인 통합 칩 — 진행중·보류 경계 하단에 걸침. 클릭=Check 목록(진행중+보류).
+              **모바일에서는 감춘다**(사용자 지시 2026-08-09). 타일의 보라 숫자 배지가 건수는 계속 알려 주지만,
+              모바일에는 Check 목록으로 들어가는 다른 입구가 없다 — 필요해지면 액션시트에 항목으로 넣을 것. */}
           {checkTotal > 0 && (
             <Tooltip title={`진행중 ${checkInProgCount}건 · 보류 ${checkHoldCount}건`}>
               <Box
@@ -222,7 +235,7 @@ export default function KpiSection({
                   bgcolor: 'var(--ink)',
                   backgroundImage: `linear-gradient(${view === 'check' ? chiefPurple.fillStrong(t) : chiefPurple.fill(t)}, ${view === 'check' ? chiefPurple.fillStrong(t) : chiefPurple.fill(t)})`,
                   color: chiefPurple.text(t),
-                  display: 'flex', alignItems: 'center', gap: '7px',
+                  display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: '7px',
                   // 11px은 작아서 안 읽힘(사용자 지적) — 라벨 12px, 건수는 아래에서 14px
                   // KPI 상태명(진행중·보류)과 같은 크기 — 그 사이에 걸친 칩이라 둘보다 작으면 눌려 보인다
                   // 상태명(16px)보다 **한 단 아래**. 같게 하면 KPI의 주인공과 경쟁하고, 11px은 안 읽혔다.

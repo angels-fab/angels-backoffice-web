@@ -13,6 +13,10 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import Drawer from '@mui/material/Drawer'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import ListItemIcon from '@mui/material/ListItemIcon'
+import ListItemText from '@mui/material/ListItemText'
 import Checkbox from '@mui/material/Checkbox'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import AssessmentIcon from '@mui/icons-material/Assessment'
@@ -29,6 +33,9 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
 import SwapVertIcon from '@mui/icons-material/SwapVert'
 import ViewKanbanIcon from '@mui/icons-material/ViewKanban'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
+import SearchIcon from '@mui/icons-material/Search'
+import CheckIcon from '@mui/icons-material/Check'
 import { alpha, darken, lighten } from '@mui/material/styles'
 import { radius, shadow, iconSize, typescale, z } from '@/theme/tokens'
 import {
@@ -329,6 +336,12 @@ export default function Work() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true }) // 모바일=카드 스와이프 액션 활성
   const [reorderMode, setReorderMode] = useState(false) // 진행중 순서 편집(흔들림) 모드 — 모바일 액션 시트에서 진입
+  // 모바일 필터카드 A안(사용자 확정 2026-08-09) — 칩 2줄만 표면에 두고 나머지는 접는다.
+  //  · more = 액션시트(정렬·되돌리기·순서편집·부서장확인·휴지통)
+  //  · searchOpen = 돋보기를 누르면 그 아래로 입력줄이 펼쳐진다. 검색어가 남아 있으면 계속 열어 둔다
+  //    — 걸러진 상태인데 입력줄이 접혀 있으면 왜 목록이 줄었는지 알 길이 없다.
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const selAnchor = useRef<string | null>(null)
   const [dragUi, setDragUi] = useState<{ dragging: boolean; zone: DropZone | null }>({ dragging: false, zone: null })
   const [pulse, setPulse] = useState<{ zone: DropZone; tick: number } | null>(null)
@@ -1200,6 +1213,8 @@ export default function Work() {
       <PageHeader
         icon={<AssessmentIcon />}
         title="업무현황"
+        // 모바일은 하단 탭바가 이미 '업무현황'을 보여 준다 — 제목 줄을 비워 KPI를 위로 끌어올린다(사용자 지시 2026-08-09)
+        hideTitleOnMobile
         updatedAt={error ? '불러오기 실패' : undefined}
       />
 
@@ -1272,20 +1287,28 @@ export default function Work() {
             p: '10px 14px',
             mb: 2.5,
             display: 'grid',
-            gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) auto' },
+            // 모바일 A안 — 담당자 칩과 조작을 **같은 줄**에 두고 구분은 그 아래 한 줄.
+            // 검색줄은 열었을 때만 자리를 쓴다. 종전 4블록(담당자/구분/조작 2줄/검색)에서 2줄로.
+            gridTemplateColumns: { xs: 'minmax(0, 1fr) auto', md: 'minmax(0, 1fr) auto' },
             gridTemplateAreas: {
-              xs: '"mgrs" "cats" "controls" "search"',
+              xs: '"mgrs controls" "cats cats" "search search"',
               md: presentMgrs.length > 0 ? '"mgrs controls" "cats search"' : '"cats controls" "cats search"',
             },
-            columnGap: { md: 2.5 }, rowGap: 1,
+            columnGap: { xs: 1, md: 2.5 }, rowGap: 1,
             alignItems: 'center',
           })}
         >
           {/* 1행 좌: 담당자 필터 — 업무일정 팀원 알약과 동일(선택=고유색 솔리드, 호버에도 선택 모습 유지, 건수 미표시) */}
           {presentMgrs.length > 0 && (
             <Box sx={{ gridArea: 'mgrs', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-              <Typography sx={{ fontSize: typescale.small.size, fontWeight: typescale.pageTitle.weight, color: 'text.disabled', flexShrink: 0, width: 44 }}>담당자</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
+              {/* 모바일은 라벨 삭제 — 알약(사람)과 틴트칩(구분)의 모양이 이미 갈래를 말한다(A안) */}
+              <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: typescale.small.size, fontWeight: typescale.pageTitle.weight, color: 'text.disabled', flexShrink: 0, width: 44 }}>담당자</Typography>
+              {/* 모바일은 줄바꿈 없이 한 줄 + 가로 스크롤(사용자 지시 2026-08-09). PC는 종전대로 줄바꿈. */}
+            <Box sx={{
+              display: 'flex', alignItems: 'center', gap: 0.75, flex: 1, minWidth: 0,
+              flexWrap: { xs: 'nowrap', md: 'wrap' }, overflowX: { xs: 'auto', md: 'visible' },
+              scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' }, '& > *': { flexShrink: 0 },
+            }}>
                 {presentMgrs.map((m) => (
                   <MgrFilterChip
                     key={m}
@@ -1301,8 +1324,13 @@ export default function Work() {
           )}
           {/* 2행 좌: 구분 필터 — 업무일정 종류 칩과 동일(빈 선택=전체가 선택된 모습, 해제=dim) */}
           <Box sx={{ gridArea: 'cats', display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-            <Typography sx={{ fontSize: typescale.small.size, fontWeight: typescale.pageTitle.weight, color: 'text.disabled', flexShrink: 0, width: 44 }}>구분</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75, minWidth: 0 }}>
+            <Typography sx={{ display: { xs: 'none', md: 'block' }, fontSize: typescale.small.size, fontWeight: typescale.pageTitle.weight, color: 'text.disabled', flexShrink: 0, width: 44 }}>구분</Typography>
+            {/* 모바일은 줄바꿈 없이 한 줄 + 가로 스크롤(사용자 지시 2026-08-09). PC는 종전대로 줄바꿈. */}
+            <Box sx={{
+              display: 'flex', alignItems: 'center', gap: 0.75, flex: 1, minWidth: 0,
+              flexWrap: { xs: 'nowrap', md: 'wrap' }, overflowX: { xs: 'auto', md: 'visible' },
+              scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' }, '& > *': { flexShrink: 0 },
+            }}>
               {presentCats.map((c) => (
                 <CatFilterChip
                   key={c}
@@ -1316,14 +1344,35 @@ export default function Work() {
               ))}
             </Box>
           </Box>
-          {/* 1행 우: 선택 도구 + Undo/Redo + 정렬 */}
-          <Box sx={{ gridArea: 'controls', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-start', md: 'flex-end' } }}>
+          {/* 1행 우: 선택 도구 + Undo/Redo + 정렬.
+              모바일(A안)은 [보드][돋보기][⋯] 셋만 — 나머지는 ⋯ 액션시트로 내렸다. */}
+          <Box sx={{ gridArea: 'controls', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, justifyContent: { xs: 'flex-end', md: 'flex-end' } }}>
             {isMember && selected.size > 0 && (
               <>
                 <StatusChip status="info" label={`${selected.size}건 선택`} />
                 <StatusChip status="neutral" label="선택 해제" onClick={clearSelection} />
               </>
             )}
+            {isMobile ? (
+              <>
+                {/* 보드는 필터·정렬과 성격이 다른 '화면 전환'이라 밖에 남긴다(사용자 확정) */}
+                <BtnGroup>
+                  <GroupBtn title="보드 보기" icon={<ViewKanbanIcon sx={{ fontSize: iconSize.body }} />} selected={boardMode} onClick={toggleBoard} />
+                </BtnGroup>
+                <BtnGroup>
+                  <GroupBtn
+                    title="검색"
+                    icon={<SearchIcon sx={{ fontSize: iconSize.body }} />}
+                    selected={searchOpen || !!query}
+                    onClick={() => setSearchOpen((v) => (v && !query ? false : !v))}
+                  />
+                </BtnGroup>
+                <BtnGroup>
+                  <GroupBtn title="정렬·되돌리기·휴지통" icon={<MoreVertIcon sx={{ fontSize: iconSize.body }} />} selected={moreOpen} onClick={() => setMoreOpen(true)} />
+                </BtnGroup>
+              </>
+            ) : (
+              <>
             {isMember && (
               <BtnGroup>
                 <GroupBtn title="실행취소 (Ctrl/Cmd+Z)" icon={<UndoIcon sx={{ fontSize: iconSize.body }} />} disabled={!canUndo} onClick={doUndo} />
@@ -1364,12 +1413,16 @@ export default function Work() {
                 휴지통 {trashed.length}
               </ButtonBase>
             )}
+              </>
+            )}
           </Box>
-          {/* 2행 우: 검색창 — 위 조작행과 같은 grid 열을 공유해 전체 폭·오른쪽 끝선이 자동 일치
-              (고정 px 강제 없음 — 열 폭은 조작행 내용이 결정, 휴지통 제거만큼 자연 축소) */}
-          <Box sx={{ gridArea: 'search', minWidth: 0 }}>
-            <SearchBar value={query} onChange={setQuery} width="100%" placeholder="업무명·담당자·부서·구분·장소 검색" sx={{ minWidth: { md: 230 } }} />
-          </Box>
+          {/* 2행 우: 검색창 — 위 조작행과 같은 grid 열을 공유해 전체 폭·오른쪽 끝선이 자동 일치.
+              모바일은 돋보기를 눌렀을 때(또는 검색어가 남아 있을 때)만 이 줄이 생긴다. */}
+          {(!isMobile || searchOpen || !!query) && (
+            <Box sx={{ gridArea: 'search', minWidth: 0 }}>
+              <SearchBar value={query} onChange={setQuery} width="100%" placeholder="업무명·담당자·부서·구분·장소 검색" sx={{ minWidth: { md: 230 } }} />
+            </Box>
+          )}
         </Box>
 
         {!workReady ? (
@@ -1754,6 +1807,67 @@ export default function Work() {
               })}
           </Box>
         </Box>
+      </Drawer>
+
+      {/* 모바일 액션시트 — 필터카드에서 내린 것들(사용자 확정 A안 2026-08-09).
+          바닥 시트는 MobileMenuDrawer 와 같은 문법(모서리 둥글게 + 손잡이 + List). */}
+      <Drawer
+        anchor="bottom"
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        slotProps={{ paper: { sx: { bgcolor: 'background.paper', borderTopLeftRadius: radius.modal, borderTopRightRadius: radius.modal, pb: 'calc(10px + env(safe-area-inset-bottom, 0px))' } } }}
+      >
+        <Box sx={{ width: 36, height: 4, borderRadius: `${radius.pill}px`, bgcolor: 'divider', mx: 'auto', mt: 1.25, mb: 0.5 }} />
+        <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>정렬</Typography>
+        <List dense sx={{ pt: 0.5 }}>
+          {([['date', '날짜'], ['mgr', '담당자'], ['cat', '업무구분']] as const).map(([key, label]) => (
+            <ListItemButton
+              key={key}
+              selected={listSort?.key === key}
+              onClick={() => toggleListSort(key)}
+              sx={{ py: 1 }}
+            >
+              <ListItemIcon sx={{ minWidth: 40, color: listSort?.key === key ? 'primary.main' : 'text.secondary' }}>
+                {listSort?.key === key ? sortArrow(key) : <SwapVertIcon />}
+              </ListItemIcon>
+              <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary={`${label}순`} />
+            </ListItemButton>
+          ))}
+        </List>
+        <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>도구</Typography>
+        <List dense sx={{ pt: 0.5 }}>
+          {/* 부서장 확인 — KPI 사이 칩을 지우면서(사용자 지시) 모바일에서 유일한 입구가 됐다 */}
+          {checkInProg.length + checkHold.length > 0 && (
+            <ListItemButton selected={view === 'check'} onClick={() => { openView('check'); setMoreOpen(false) }} sx={{ py: 1 }}>
+              <ListItemIcon sx={{ minWidth: 40, color: view === 'check' ? 'primary.main' : 'text.secondary' }}><CheckIcon /></ListItemIcon>
+              <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary={`부서장 확인 ${checkInProg.length + checkHold.length}건`} />
+            </ListItemButton>
+          )}
+          {isMember && view === 'inProgress' && !boardMode && (
+            <ListItemButton selected={reorderMode} onClick={() => { clearSelection(); setReorderMode((v) => !v); setMoreOpen(false) }} sx={{ py: 1 }}>
+              <ListItemIcon sx={{ minWidth: 40, color: reorderMode ? 'primary.main' : 'text.secondary' }}><SwapVertIcon /></ListItemIcon>
+              <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary={reorderMode ? '순서 편집 끄기' : '순서 편집'} />
+            </ListItemButton>
+          )}
+          {isMember && (
+            <>
+              <ListItemButton disabled={!canUndo} onClick={() => { doUndo(); setMoreOpen(false) }} sx={{ py: 1 }}>
+                <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}><UndoIcon /></ListItemIcon>
+                <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary="되돌리기" />
+              </ListItemButton>
+              <ListItemButton disabled={!canRedo} onClick={() => { doRedo(); setMoreOpen(false) }} sx={{ py: 1 }}>
+                <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}><RedoIcon /></ListItemIcon>
+                <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary="다시실행" />
+              </ListItemButton>
+            </>
+          )}
+          {isMember && trashed.length > 0 && (
+            <ListItemButton onClick={() => { setTrashOpen(true); setMoreOpen(false) }} sx={{ py: 1 }}>
+              <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}><DeleteOutlineIcon /></ListItemIcon>
+              <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary={`휴지통 ${trashed.length}건`} />
+            </ListItemButton>
+          )}
+        </List>
       </Drawer>
     </PageContainer>
   )
