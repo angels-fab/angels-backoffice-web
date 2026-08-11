@@ -193,9 +193,13 @@ function useNoteDrag(opts: {
   onTapToggle: () => void
   /** Delete 키 — 지울 수 있을 때만 넘긴다(권한 없는 쪽지는 키를 눌러도 아무 일 없어야 한다) */
   onDeleteKey?: () => void
+  /** 지금 펼쳐져 있는가 — 바깥 클릭 감시를 펼쳤을 때만 걸기 위해 */
+  open: boolean
+  /** 바깥을 눌렀을 때 접기 */
+  onFold: () => void
   deps: unknown[]
 }) {
-  const { key, pos, layerRef, onMoveEnd, onTapToggle, onDeleteKey, deps } = opts
+  const { key, pos, layerRef, onMoveEnd, onTapToggle, onDeleteKey, open, onFold, deps } = opts
   const elRef = useRef<HTMLDivElement>(null)
   const [live, setLive] = useState<Pos>(pos)
   const drag = useRef({ on: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0 })
@@ -234,6 +238,36 @@ function useNoteDrag(opts: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clamp, pos, ...deps])
 
+  /**
+   * 바깥을 누르면 접힌다(개선요청 #69 — "다른 버튼 선택할 때는 접히게").
+   *
+   * capture 로 받되 **이벤트를 삼키지 않는다** — 그래야 클릭 한 번에 '쪽지 접기'와 '누른 버튼의
+   * 동작'이 함께 일어난다. 백드롭(MUI Popover 방식)을 깔면 첫 클릭이 닫기로만 먹혀 같은 자리를
+   * 두 번 눌러야 한다. 아래 레이어의 '그림 선택 해제'와 같은 방식이다.
+   *
+   * 예외 셋: ① 쪽지 자신 ② 쪽지가 띄운 메뉴·확인창·공유 목록(portal 이라 DOM 상 쪽지 밖이다.
+   * 그냥 두면 상태를 고르는 순간 쪽지가 접힌다) ③ 수정 중(onFold 쪽에서 막는다 — 글 쓰다가
+   * 옆을 잘못 눌렀다고 쓰던 화면이 사라지면 안 된다).
+   */
+  const foldRef = useRef(onFold)
+  foldRef.current = onFold
+  useEffect(() => {
+    if (!open) return
+    const off = (e: PointerEvent) => {
+      const t = e.target as Element | null
+      if (!t || typeof t.closest !== 'function') return
+      if (elRef.current?.contains(t)) return
+      if (t.closest('.MuiModal-root, .MuiPopper-root, .MuiAutocomplete-popper')) return
+      foldRef.current()
+    }
+    window.addEventListener('pointerdown', off, true)
+    return () => window.removeEventListener('pointerdown', off, true)
+  }, [open])
+
+  // 끄는 도중 쪽지가 사라지면(삭제·경로 이동으로 레이어 언마운트) pointerup 이 안 와서
+  // body 커서가 grabbing 으로 굳는다 — 사라질 때 반드시 되돌린다
+  useEffect(() => () => { if (drag.current.on) document.body.style.cursor = '' }, [])
+
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isInteractive(e.target as HTMLElement)) return
     const el = elRef.current
@@ -241,6 +275,9 @@ function useNoteDrag(opts: {
     // 누른 쪽지에 포커스를 준다 — Delete 키가 '지금 누른 그 쪽지'에 가게 하는 기준점이다
     try { el.focus({ preventScroll: true }) } catch { /* 포커스 실패해도 끌기는 동작 */ }
     drag.current = { on: true, moved: false, sx: e.clientX, sy: e.clientY, ox: el.offsetLeft, oy: el.offsetTop }
+    // 끄는 동안은 화면 어디서든 '쥔 손'(개선요청 #70). :active 만으로는 끌기 범위 끝에서 쪽지가
+    // 멈추는 순간 포인터가 쪽지 밖으로 나가 커서가 화살표로 돌아온다(업무 카드 드래그와 같은 처리)
+    document.body.style.cursor = 'grabbing'
     try { el.setPointerCapture(e.pointerId) } catch { /* 캡처 실패해도 이동은 동작 */ }
   }
 
@@ -262,6 +299,7 @@ function useNoteDrag(opts: {
     const d = drag.current
     if (!d.on) return
     d.on = false
+    document.body.style.cursor = ''
     if (d.moved) { onMoveEnd(key, latest.current); return }   // 끌었으면 위치만 저장하고 토글하지 않는다
     if (isInteractive(e.target as HTMLElement)) return
     onTapToggle()                                            // 제자리 클릭 = 펼침/접힘 토글
@@ -293,7 +331,7 @@ function useNoteDrag(opts: {
       onPointerDown,
       onPointerMove,
       onPointerUp,
-      onPointerCancel: () => { drag.current.on = false },
+      onPointerCancel: () => { drag.current.on = false; document.body.style.cursor = '' },
     },
   }
 }
@@ -337,6 +375,9 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
     onTapToggle: () => setOpen((o) => !o),
     // 지울 권한이 없으면 키를 아예 안 넘긴다 — 눌러도 조용히 아무 일 없는 게 맞다
     onDeleteKey: canDelete ? () => setDelAsk(true) : undefined,
+    open,
+    // 수정 중에는 안 접는다 — 쓰던 글이 압정 뒤로 사라지면 놀란다(값은 남지만 화면에서 없어진다)
+    onFold: () => { if (!editing) setOpen(false) },
     deps: [open, replies.length],
   })
 
@@ -464,7 +505,10 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
         // tabIndex 를 줬으므로 지금 어느 쪽지가 Delete 대상인지 보여야 한다
         '&:focus': { outline: 'none' },
         '&:focus-visible': { outline: `2px solid ${th.palette.accent.amber}`, outlineOffset: 2 },
-        '& input': { cursor: 'text', userSelect: 'text' },
+        // 글 쓰는 칸은 손이 아니라 글자 커서(개선요청 #70). input 만 뚫어 두면 수정 화면의
+        // 리치 에디터(contenteditable)가 쪽지의 grab 을 물려받아 '고치는 중인데 끌기 손'이 뜬다.
+        // ※ !important 금지 — 형광펜 모드가 인라인 style 로 마커 커서를 덮는다(richText.tsx)
+        '& input, & textarea, & [contenteditable="true"]': { cursor: 'text', userSelect: 'text' },
       })}
     >
       {!open ? folded : (
@@ -734,6 +778,9 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
     onTapToggle: () => setOpen((o) => !o),
     // 공유받은 쪽지는 지울 수 없다 — 키도 안 넘긴다
     onDeleteKey: mine ? () => setDelAsk(true) : undefined,
+    open,
+    // (StickyNote 와 같은 이유 — 수정 중에는 안 접는다)
+    onFold: () => { if (!editing) setOpen(false) },
     deps: [open, editing, note.shared.length, replies.length],
   })
 
@@ -830,7 +877,10 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
         // tabIndex 를 줬으므로 지금 어느 쪽지가 Delete 대상인지 보여야 한다
         '&:focus': { outline: 'none' },
         '&:focus-visible': { outline: `2px solid ${th.palette.accent.amber}`, outlineOffset: 2 },
-        '& input': { cursor: 'text', userSelect: 'text' },
+        // 글 쓰는 칸은 손이 아니라 글자 커서(개선요청 #70). input 만 뚫어 두면 수정 화면의
+        // 리치 에디터(contenteditable)가 쪽지의 grab 을 물려받아 '고치는 중인데 끌기 손'이 뜬다.
+        // ※ !important 금지 — 형광펜 모드가 인라인 style 로 마커 커서를 덮는다(richText.tsx)
+        '& input, & textarea, & [contenteditable="true"]': { cursor: 'text', userSelect: 'text' },
       })}
     >
       {!open ? folded : (

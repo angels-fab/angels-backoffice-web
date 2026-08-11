@@ -4,8 +4,6 @@ import Popper from '@mui/material/Popper'
 import ClickAwayListener from '@mui/material/ClickAwayListener'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import Typography from '@mui/material/Typography'
-import IconButton from '@mui/material/IconButton'
-import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
 import { mergeSx } from '@/components/ds/sxMerge'
@@ -18,9 +16,11 @@ import { taskTitle, taskLink, catKind, catIcon, toneVar, toneCss, toneBody, tone
 import ManagerChip from '@/components/ds/ManagerChip'
 import type { CardTone } from './workMeta'
 import { workBodyLines } from './richContent'
+import { CARD_SKIP } from './cardInteractive'
 import SubLine from './SubLine'
 import WorkPinButton from './WorkPinButton'
 import WorkAttachments from './WorkAttachments'
+import TaskLinkButton from './TaskLinkButton'
 import WorkCardNotes, { WORK_CARD_NOTES_ENABLED } from './WorkCardNotes'
 
 export type { CardTone } from './workMeta'
@@ -89,7 +89,13 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
     const swallow = (ev: MouseEvent) => {
       document.removeEventListener('click', swallow, true)
       window.clearTimeout(timer)
-      if (ev.target instanceof Node && el.contains(ev.target)) { ev.stopPropagation(); ev.preventDefault() }
+      if (!(ev.target instanceof Node) || !el.contains(ev.target)) return
+      // 카드 안의 버튼·링크는 살린다 — 그리드의 선택 판정은 어차피 CARD_SKIP 으로 이들을 건너뛰므로
+      // 삼킬 이유가 없는데, 삼키면 팝업을 닫는 김에 누른 링크·별의 **첫 클릭이 조용히 사라진다**
+      // (preventDefault 가 앵커의 새 탭 열기를 취소한다). 개선요청 62로 링크가 클립 바로 옆에 오면서
+      // '첨부 보고 → 링크 열기'가 흔한 동선이 됐다.
+      if (ev.target instanceof Element && ev.target.closest(CARD_SKIP)) return
+      ev.stopPropagation(); ev.preventDefault()
     }
     document.addEventListener('click', swallow, true)
     // 클릭이 끝내 안 오는 경우(드래그로 빠짐·포커스 이동 등) 대비 안전망
@@ -203,19 +209,13 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
           ) : (
             <Typography variant="body2" sx={{ color: 'text.disabled' }}>상세 내용 없음</Typography>
           )}
-          {link && (
-            <Box sx={{ mt: 0.25 }}>
-              <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련 자료" onClick={(e) => e.stopPropagation()} sx={{ color: 'text.secondary' }}>
-                <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
-              </IconButton>
-            </Box>
-          )}
         </Box>
         {/* 메타 줄 — **내용 아래**. 위(제목 바로 밑)로 올려보니 제목과 내용 사이에 턱이 생겨
             매번 부서·날짜를 지나쳐야 본문에 닿았다. 아래에 두면 content가 flex:1이라 이 줄이 카드
             바닥에 붙고, 같은 행 카드끼리 높이가 맞아 줄도 저절로 나란히 선다(사용자 확정 2026-07-26).
             첨부는 별도 푸터 트레이를 두면 구역이 하나 더 생겨 과했다 → 여기 아이콘+건수로 접고 클릭 시 목록. */}
-        {(hasMeta || atts.length > 0) && (
+        {/* 링크만 있고 부서·날짜·첨부가 없는 업무도 이 줄이 서야 링크 아이콘의 자리가 유지된다(개선요청 62) */}
+        {(hasMeta || atts.length > 0 || !!link) && (
           <Box
             sx={{
               display: 'flex', alignItems: 'baseline', flexWrap: 'wrap',
@@ -227,40 +227,46 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             {dateMetas.map((m) => (
               <MetaItem key={m.label} label={m.label} value={m.value} />
             ))}
-            {atts.length > 0 && (
-              <Box
-                component="button"
-                type="button"
-                aria-label={`첨부파일 ${atts.length}건 보기`}
-                aria-haspopup="dialog"
-                aria-expanded={!!attAnchor}
-                // 같은 버튼 재클릭 = 닫기(토글).
-                // el을 **핸들러 안에서 먼저 붙잡는다** — React는 핸들러가 끝나면 e.currentTarget을 null로
-                // 되돌리는데, setState 갱신함수는 그 뒤에 실행될 수 있어 anchor가 null로 들어갔다.
-                // 그래서 닫은 뒤 다시 눌러도 안 열리고 한 번 더 눌러야 열렸다(사용자 지적).
-                onClick={(e) => {
-                  e.stopPropagation()
-                  const el = e.currentTarget
-                  // 첨부를 눌러도 그 카드가 선택되게(다른 카드가 선택돼 있어도 이 카드로 옮겨온다).
-                  // 선택 '전환'이지 토글이 아니라, 이미 선택된 카드에서 다시 눌러도 해제되지 않는다.
-                  onRequestSelect?.()
-                  setAttAnchor((prev) => (prev ? null : el))
-                }}
-                sx={(th) => ({
-                  ml: 'auto', alignSelf: 'center', flexShrink: 0,
-                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                  px: 0.75, py: 0.375, font: 'inherit', cursor: 'pointer',
-                  // 테두리 없이 아이콘+숫자만. 존재는 채도가 아니라 크기로 알린다(본문과 같은 14px)
-                  fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight,
-                  color: 'text.secondary', bgcolor: 'transparent', border: 'none',
-                  borderRadius: `${radius.chip}px`,
-                  transition: `background-color ${motion.base}, color ${motion.base}`,
-                  '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.09), color: 'text.primary' },
-                  '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 1 },
-                })}
-              >
-                <AttachFileIcon sx={{ fontSize: iconSize.action }} />
-                {atts.length}
+            {/* 관련링크 · 첨부 — 한 자리에 모아 오른쪽 끝(개선요청 62). 둘 중 하나만 있어도 성립한다 */}
+            {(!!link || atts.length > 0) && (
+              <Box sx={{ ml: 'auto', alignSelf: 'center', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                {/* 호버 미리보기는 TaskLinkButton 안에 있다(개선요청 67) — 아이콘이 옮겨가도 함께 따라온다 */}
+                {link && <TaskLinkButton url={link} sx={{ p: 0.5 }} />}
+                {atts.length > 0 && (
+                  <Box
+                    component="button"
+                    type="button"
+                    aria-label={`첨부파일 ${atts.length}건 보기`}
+                    aria-haspopup="dialog"
+                    aria-expanded={!!attAnchor}
+                    // 같은 버튼 재클릭 = 닫기(토글).
+                    // el을 **핸들러 안에서 먼저 붙잡는다** — React는 핸들러가 끝나면 e.currentTarget을 null로
+                    // 되돌리는데, setState 갱신함수는 그 뒤에 실행될 수 있어 anchor가 null로 들어갔다.
+                    // 그래서 닫은 뒤 다시 눌러도 안 열리고 한 번 더 눌러야 열렸다(사용자 지적).
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const el = e.currentTarget
+                      // 첨부를 눌러도 그 카드가 선택되게(다른 카드가 선택돼 있어도 이 카드로 옮겨온다).
+                      // 선택 '전환'이지 토글이 아니라, 이미 선택된 카드에서 다시 눌러도 해제되지 않는다.
+                      onRequestSelect?.()
+                      setAttAnchor((prev) => (prev ? null : el))
+                    }}
+                    sx={(th) => ({
+                      display: 'inline-flex', alignItems: 'center', gap: '4px',
+                      px: 0.75, py: 0.375, font: 'inherit', cursor: 'pointer',
+                      // 테두리 없이 아이콘+숫자만. 존재는 채도가 아니라 크기로 알린다(본문과 같은 14px)
+                      fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight,
+                      color: 'text.secondary', bgcolor: 'transparent', border: 'none',
+                      borderRadius: `${radius.chip}px`,
+                      transition: `background-color ${motion.base}, color ${motion.base}`,
+                      '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.09), color: 'text.primary' },
+                      '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 1 },
+                    })}
+                  >
+                    <AttachFileIcon sx={{ fontSize: iconSize.action }} />
+                    {atts.length}
+                  </Box>
+                )}
               </Box>
             )}
           </Box>
