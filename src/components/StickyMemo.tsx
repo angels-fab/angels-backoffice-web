@@ -70,6 +70,12 @@ import type { ReplyRow } from '@/api/sheets'
  * 그래서 기준을 본문 칸으로 옮기고 단위도 px으로 바꿨다 — 표는 폭·행 높이가 고정이라
  * 비율보다 px이 '표의 그 지점 옆'을 그대로 지킨다. 기준이 달라 v1 값은 이어 쓸 수 없어 키를 새로 뒀다
  * (v1 좌표를 가진 쪽지는 기본 자리로 한 번 돌아가고, 다시 옮기면 그 자리에 굳는다).
+ *
+ * 2026-08-11(개선요청 63) — 레이어를 fixed 에서 **문서에 붙는 방식**으로 바꾸면서도 키는 그대로 둔다.
+ * 단위(px)도 원점(본문 칸 좌상단)도 그대로고 세로에 스크롤 항 하나가 더해질 뿐인데, 저장 당시
+ * 스크롤은 대부분 0이었다(MainLayout 이 경로마다 window.scrollTo(0,0)). 또 옛 clamp 가 세로를
+ * 한 화면 안으로 묶어 놨어서 어긋나도 '문서 첫 화면 안, 의도보다 조금 위'가 최대치다.
+ * v1 때와 달리 값이 무의미해지지 않으므로 키를 새로 두지 않았다 — docs/fix-memo-scroll-anchor.md.
  */
 const POS_KEY = 'memo.pos2'
 type Pos = { x: number; y: number }
@@ -98,8 +104,6 @@ function glowBox(strokes: MemoStroke[]) {
   return { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2 }
 }
 
-/** 상단바 높이 — 레이어 상단 기준(구 index.css body padding-top 53과 같은 값) */
-const TOPBAR_H = 53
 /** PC 사이드바 레일 폭 — 레이어 좌측 기준(SideNav 64px 레일) */
 const RAIL_W = 64
 /** 펼친 쪽지 폭 */
@@ -132,14 +136,18 @@ function slotPx(layer: HTMLElement, n: number): { x: number; y: number } {
   const maxX = layer.clientWidth + side - PIN         // 오른쪽 여백 끝
   const anchor = document.querySelector('[data-memo-anchor]')
   const l = layer.getBoundingClientRect()
-  const baseX = anchor
-    ? anchor.getBoundingClientRect().left + anchor.getBoundingClientRect().width / 2 - l.left - PIN / 2
-    : maxX - 16
+  const a = anchor?.getBoundingClientRect()
+  const baseX = a ? a.left + a.width / 2 - l.left - PIN / 2 : maxX - 16
+  // 세로 기준은 **지금 화면에서 콘텐츠가 시작하는 줄**(상단바 아래 모서리)이다(개선요청 63).
+  // 레이어가 문서에 붙은 뒤로 상수(8)로 두면 스크롤을 내린 채 만든 쪽지가 문서 맨 위, 즉 보이지 않는
+  // 곳에 생긴다. 상단바는 sticky 라 rect.bottom 이 곧 그 줄이고, 맨 위에서는 값이 예전과 똑같다(8).
+  const hdr = (anchor?.closest('header') ?? document.querySelector('header'))?.getBoundingClientRect()
+  const baseY = Math.max(0, (hdr ? hdr.bottom : 0) - l.top + ANCHOR_GAP)
   const perRow = Math.max(1, Math.floor((maxX - baseX) / SLOT) + 1)
   const row = Math.floor(n / perRow), col = n % perRow
   return {
     x: Math.min(Math.max(baseX + col * SLOT, minX), Math.max(maxX, minX)),
-    y: Math.min(ANCHOR_GAP + row * SLOT, Math.max(H - PIN, 0)),
+    y: Math.min(baseY + row * SLOT, Math.max(H - PIN, 0)),
   }
 }
 
@@ -150,8 +158,11 @@ function slotPx(layer: HTMLElement, n: number): { x: number; y: number } {
  * 둘 수 없었다. 기준(원점)과 범위는 별개 문제다 — 원점은 본문 좌상단으로 유지해야 해상도가 바뀌어도
  * 표의 같은 지점 옆에 남고, 범위만 넓히면 여백에도 놓을 수 있다. 여백으로 나간 쪽지는 x가 음수이거나
  * 본문 폭을 넘는 값으로 저장된다.
- * 위로도 상단바(로고 줄)까지 올릴 수 있다(minY = -TOPBAR_H, 사용자 요청 2026-08-05).
- * 쪽지 층(z 90)이 상단바(z 50)보다 위라 가려지지 않고, 레이어에 overflow 를 걸지 않아 밖으로 나가도 잘리지 않는다.
+ * 세로 범위는 **레이어 = 문서 전체**(개선요청 63). 위로 상단바까지 올리던 규칙(minY = -53,
+ * 2026-08-05 요청)은 폐기했다 — 레이어가 문서에 붙은 뒤로 그 띠는 스크롤 0이면 상단바가 덮고
+ * 스크롤을 내리면 화면 밖이라, 어느 경우에도 보이지 않는 자리가 됐다.
+ * ⚠ 이 clamp 가 유일한 방어선이다. 범위를 벗어난 쪽지는 fixed 때와 달리 **문서에 스크롤바를 만든다**.
+ * 레이어에 overflow 를 걸지 않아 좌우 여백으로 나가도 잘리지는 않는다.
  */
 function dragBounds(layer: HTMLElement, el: HTMLElement) {
   const outerW = layer.parentElement?.clientWidth ?? layer.clientWidth
@@ -159,8 +170,8 @@ function dragBounds(layer: HTMLElement, el: HTMLElement) {
   return {
     minX: -side,
     maxX: Math.max(-side, layer.clientWidth + side - el.offsetWidth),
-    minY: -TOPBAR_H,
-    maxY: Math.max(-TOPBAR_H, layer.clientHeight - el.offsetHeight),
+    minY: 0,
+    maxY: Math.max(0, layer.clientHeight - el.offsetHeight),
   }
 }
 
@@ -202,7 +213,7 @@ function useNoteDrag(opts: {
   const { key, pos, layerRef, onMoveEnd, onTapToggle, onDeleteKey, open, onFold, deps } = opts
   const elRef = useRef<HTMLDivElement>(null)
   const [live, setLive] = useState<Pos>(pos)
-  const drag = useRef({ on: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0 })
+  const drag = useRef({ on: false, moved: false, sx: 0, sy: 0, ox: 0, oy: 0, kx: 0, ky: 0 })
   // 놓는 순간 저장할 좌표는 ref로 따로 들고 간다 — state(live)는 마지막 move가 아직 반영 안 됐을 수 있다
   const latest = useRef<Pos>(pos)
   const place = (p: Pos) => { latest.current = p; setLive(p) }
@@ -234,7 +245,13 @@ function useNoteDrag(opts: {
     const pull = () => { if (!drag.current.on) place(clamp(pos)) }
     pull()
     window.addEventListener('resize', pull)
-    return () => window.removeEventListener('resize', pull)
+    // 레이어 높이 = 문서 높이가 됐으므로(개선요청 63) 목록이 늦게 도착하거나 필터·펼침으로 문서가
+    // 늘고 줄면 되당김 기준도 바뀐다 — 창 크기만 보면 첫 페인트 때 당겨진 자리에 굳는다.
+    // (쪽지는 절대배치라 레이어 높이에 기여하지 않으므로 되먹임 루프는 생기지 않는다)
+    const layerEl = layerRef.current
+    const ro = new ResizeObserver(pull)
+    if (layerEl) ro.observe(layerEl)
+    return () => { window.removeEventListener('resize', pull); ro.disconnect() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clamp, pos, ...deps])
 
@@ -274,7 +291,10 @@ function useNoteDrag(opts: {
     if (!el) return
     // 누른 쪽지에 포커스를 준다 — Delete 키가 '지금 누른 그 쪽지'에 가게 하는 기준점이다
     try { el.focus({ preventScroll: true }) } catch { /* 포커스 실패해도 끌기는 동작 */ }
-    drag.current = { on: true, moved: false, sx: e.clientX, sy: e.clientY, ox: el.offsetLeft, oy: el.offsetTop }
+    // kx·ky = 누른 순간의 스크롤(개선요청 63). 레이어가 문서에 붙어 있어 끄는 도중 휠을 굴리면
+    // 레이어 원점이 함께 움직인다 — 그만큼 더해 주지 않으면 쪽지가 손에서 미끄러진다
+    // (포인터 캡처는 휠을 막지 않는다).
+    drag.current = { on: true, moved: false, sx: e.clientX, sy: e.clientY, ox: el.offsetLeft, oy: el.offsetTop, kx: window.scrollX, ky: window.scrollY }
     // 끄는 동안은 화면 어디서든 '쥔 손'(개선요청 #70). :active 만으로는 끌기 범위 끝에서 쪽지가
     // 멈추는 순간 포인터가 쪽지 밖으로 나가 커서가 화살표로 돌아온다(업무 카드 드래그와 같은 처리)
     document.body.style.cursor = 'grabbing'
@@ -287,11 +307,16 @@ function useNoteDrag(opts: {
     const layer = layerRef.current, el = elRef.current
     if (!layer || !el) return
     const dx = e.clientX - d.sx, dy = e.clientY - d.sy
-    if (Math.abs(dx) > DRAG_SLOP || Math.abs(dy) > DRAG_SLOP) { d.moved = true }
+    // 끄는 도중 스크롤된 만큼 보정 — 손이 가리키는 문서 지점을 그대로 따라가게
+    const kx = window.scrollX - d.kx, ky = window.scrollY - d.ky
+    // '끈 것'인지의 판정에도 스크롤을 넣는다(개선요청 63) — 쪽지를 쥔 채 휠로 화면을 내린 경우
+    // 손가락은 제자리여도 **문서 기준으로는 옮긴 것**이다. 안 넣으면 손을 뗄 때 제자리 클릭으로
+    // 판정돼 옮긴 자리가 저장되지 않고 원래 자리로 되돌아간다(실측).
+    if (Math.abs(dx + kx) > DRAG_SLOP || Math.abs(dy + ky) > DRAG_SLOP) { d.moved = true }
     const b = dragBounds(layer, el)
     place({
-      x: Math.min(Math.max(d.ox + dx, b.minX), b.maxX),
-      y: Math.min(Math.max(d.oy + dy, b.minY), b.maxY),
+      x: Math.min(Math.max(d.ox + dx + kx, b.minX), b.maxX),
+      y: Math.min(Math.max(d.oy + dy + ky, b.minY), b.maxY),
     })
   }
 
@@ -1177,7 +1202,7 @@ export default function StickyMemoLayer() {
    *
    * 경로 매칭은 **쪽지와 같은 규칙**(matchesPath — 하위 경로 포함)을 쓴다.
    * 완전 일치로 좁혔더니 `/notice` 에서 그린 그림이 `/notice/12` 로 딥링크할 때 사라졌다.
-   * 두 경로는 같은 목록 화면이고 레이어는 스크롤도 안 따라가므로 픽셀 단위로 같은 자리다 —
+   * 두 경로는 같은 목록 화면이고 레이어 원점도 같으므로(문서 좌상단 기준) 같은 자리에 찍힌다 —
    * 한 번의 조작으로 만든 그림과 쪽지가 서로 다른 규칙으로 나타나면 그게 더 이상하다.
    */
   const hereDraw = useMemo(
@@ -1553,8 +1578,11 @@ export default function StickyMemoLayer() {
     <Box
       aria-label="화면 메모"
       sx={{
-        position: 'fixed',
-        top: `${TOPBAR_H}px`,
+        // 문서에 붙는다(개선요청 63). fixed 였을 때는 스크롤해도 뷰포트에 붙어 쪽지·그림이 화면을
+        // 따라다녔다. 기준 사각형은 MainLayout 셸 상자(상단바 아래 ~ 문서 끝)라 top 은 0이고,
+        // 높이도 그 상자를 따라가므로 문서 어디에나 쪽지를 놓을 수 있다.
+        position: 'absolute',
+        top: 0,
         left: `${RAIL_W}px`,
         right: 0,
         bottom: 0,

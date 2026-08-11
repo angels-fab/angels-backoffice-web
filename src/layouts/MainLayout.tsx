@@ -66,16 +66,20 @@ export default function MainLayout() {
   return (
     <>
       <TopBar />
-      {/* 앱 골격: 좌 사이드바 + 우 콘텐츠(구 .app-shell/.app-content) */}
-      <Box sx={{ display: 'flex', flex: 1, width: '100%', alignItems: 'stretch' }}>
+      {/* 앱 골격: 좌 사이드바 + 우 콘텐츠(구 .app-shell/.app-content)
+          position:relative = 쪽지 레이어의 기준 사각형. 이 상자는 상단바 바로 아래에서 문서 끝까지를
+          덮으므로(사이드바가 height:calc(100vh-53px)로 최소 한 화면을 보장한다) 레이어는 top:0 만으로
+          '상단바 아래 ~ 문서 끝'을 얻는다.
+          ⚠ 여기에 transform·filter·contain 을 걸지 말 것 — 안쪽 position:fixed(그리기 도구막대)가 갇힌다. */}
+      <Box sx={{ display: 'flex', flex: 1, width: '100%', alignItems: 'stretch', position: 'relative' }}>
         <SideNav />
         <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <Outlet />
         </Box>
+        {/* 이 화면에 붙은 개선요청 쪽지·그림(PC 전용) — 문서에 붙어 콘텐츠와 함께 스크롤된다(개선요청 63) */}
+        <StickyMemoLayer />
       </Box>
       <BottomNav />
-      {/* 이 화면에 붙은 개선요청 쪽지(PC 전용) — 콘텐츠 위에 고정으로 뜬다 */}
-      <StickyMemoLayer />
       {/* 새 기능 안내(개인화) — 팀원+ 로그인 후 계정당 1회(whatsnew.seen 버전 저장) */}
       <WhatsNewDialog />
     </>
