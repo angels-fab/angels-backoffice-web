@@ -25,7 +25,7 @@ import { updateImprovement, createReply, deleteImprovement, createImprovement } 
 import type { MemoStroke } from '@/api/improve'
 import { fetchPageDrawings, createPageDrawing, updatePageDrawing, deletePageDrawing, linkDrawingToRequest } from '@/api/pageDrawings'
 import type { PageDrawing } from '@/api/pageDrawings'
-import { createPageNote, updatePageNote, deletePageNote, createPageNoteReply, deletePageNoteReply } from '@/api/pageNotes'
+import { createPageNote, updatePageNote, deletePageNote, createPageNoteReply, deletePageNoteReply, convertNoteToImprovement, convertImprovementToNote } from '@/api/pageNotes'
 import type { PageNote, PageNoteReply } from '@/api/pageNotes'
 import { fetchAuthors } from '@/api/works'
 import { MemoKindPicker, SharePicker, DEFAULT_MEMO_KIND, PAGE_NOTES_CHANGED, notifyPageNotesChanged } from '@/components/memoKind'
@@ -34,7 +34,7 @@ import GroupOutlinedIcon from '@mui/icons-material/GroupOutlined'
 import MemoDraw, { StrokeShape, MEMO_DRAW_EVENT } from '@/components/MemoDraw'
 import BorderColorIcon from '@mui/icons-material/BorderColor'
 import { useRole } from '@/auth/role'
-import { memosForPath, visibleMemos, pathToLocation, firstLine, matchesPath } from '@/utils/improveMemo'
+import { memosForPath, visibleMemos, pathToLocation, locationToPath, firstLine, matchesPath } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import { RichBodyView } from '@/utils/richBody'
 import ButtonBase from '@mui/material/ButtonBase'
@@ -373,9 +373,11 @@ interface NoteProps {
   onMoveEnd: (num: string, pos: Pos) => void
   /** 처음부터 펼친 채로 — 그리기 직후 방금 만든 쪽지에만 쓴다 */
   defaultOpen?: boolean
+  /** 일반메모로 되돌린 뒤 — 새 메모 id를 준다(부모가 자리를 물려주고 목록을 다시 읽는다) */
+  onConverted: (noteId: number) => void
 }
 
-function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, onMoveEnd, defaultOpen }: NoteProps) {
+function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, onMoveEnd, defaultOpen, onConverted }: NoteProps) {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const snack = useSnack()
@@ -392,6 +394,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
   const [stOpen, setStOpen] = useState(false)                                        // 상태 메뉴 열림
   const [delAsk, setDelAsk] = useState(false)                                        // 요청 삭제 확인
   const [statusAsk, setStatusAsk] = useState<{ status: string; reason: string } | null>(null) // 종결 확인(+사유)
+  const [kindAsk, setKindAsk] = useState(false)                                      // 일반메모로 되돌리기 확인
 
   // 쪽지↔그림 짝짓기(hover/onActive)는 2026-08-06 그림 분리로 사라졌다 —
   // 이제 그림이 자기 위에서 직접 빛나므로 압정이 신호를 보낼 이유가 없다.
@@ -451,6 +454,26 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
     if (next === st) return
     if (isSettled(next)) setStatusAsk({ status: next, reason: item.reason || '' })
     else void saveStatus(next, '')
+  }
+
+  /**
+   * 일반메모로 되돌리기 (개선요청 71) — 게시판에서 내려오고 개인 메모가 된다.
+   * 답글도 함께 옮겨진다. 되돌릴 권한은 **삭제와 같은 기준**(담당자)이라 canDelete 를 그대로 쓴다.
+   */
+  const toPlain = async () => {
+    setBusy(true)
+    try {
+      // 지금 화면 경로가 아니라 **요청의 개선위치**를 따른다 — 그래야 원래 뜨던 화면에 그대로 남는다
+      const path = locationToPath(item.loc) || '/'
+      const noteId = await convertImprovementToNote({ num: item.num, path })
+      setKindAsk(false)
+      snack(`요청 #${item.num}을 일반메모로 되돌렸습니다. 게시판에서는 사라집니다.`, 'success')
+      onConverted(noteId)
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '일반메모로 되돌리지 못했습니다', 'error')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const startEdit = () => {
@@ -577,6 +600,15 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
                 <Tooltip title="제목·내용 수정">
                   <IconButton size="small" aria-label="메모 수정" onClick={startEdit} sx={{ color: 'text.secondary', p: 0.5 }}>
                     <EditIcon sx={{ fontSize: iconSize.body }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {/* 갈래 바꾸기 — 요청메모 → 일반메모(개선요청 71). 삭제와 같은 권한이라 canDelete 로 묶는다 */}
+              {canDelete && !editing && (
+                <Tooltip title="일반메모로 되돌리기">
+                  <IconButton size="small" aria-label="일반메모로 되돌리기" onClick={() => setKindAsk(true)} disabled={busy} sx={{ color: 'text.secondary', p: 0.5 }}>
+                    {/* 일반메모의 접힌 모양(ChatIcon)과 같은 그림 — 버튼이 '무엇으로 바뀌는지'를 보여 준다 */}
+                    <ChatIcon sx={{ fontSize: iconSize.body }} />
                   </IconButton>
                 </Tooltip>
               )}
@@ -718,6 +750,15 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
         onClose={() => setDelAsk(false)}
       />
       <ConfirmDialog
+        open={kindAsk}
+        title={`요청 #${item.num}을 일반메모로 되돌릴까요?`}
+        description={`개선요청 게시판에서 사라지고 내 개인 메모가 됩니다. 답글 ${replies.length}건도 함께 옮겨집니다. 상태는 없어지지만 번호 #${item.num}은 기억해 두었다가, 다시 요청메모로 올리면 그대로 돌아옵니다.`}
+        confirmLabel="되돌리기"
+        busy={busy}
+        onConfirm={toPlain}
+        onClose={() => setKindAsk(false)}
+      />
+      <ConfirmDialog
         open={!!statusAsk}
         title={`상태를 '${statusAsk?.status || ''}'로 바꿀까요?`}
         /* 보류·불가는 사유가 필수 — 게시판과 같은 규칙. ConfirmDialog 는 본문을 description 으로 받는다. */
@@ -773,7 +814,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
  * 답글은 없다 — 요청메모의 답글은 improvement_replies(요청번호 기준)라 그대로 쓸 수 없고,
  * 개인 메모에 스레드가 필요한지가 아직 정해지지 않았다.
  */
-function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd, onChanged, onReplied, defaultOpen }: {
+function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd, onChanged, onReplied, defaultOpen, onConverted }: {
   note: PageNote
   /** 이 메모의 답글 — 작성자와 공유받은 사람이 주고받는다 */
   replies: PageNoteReply[]
@@ -788,6 +829,8 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
   onChanged: () => void
   onReplied: () => void
   defaultOpen?: boolean
+  /** 요청메모로 바꾼 뒤 — 새 요청번호를 준다(부모가 자리를 물려주고 목록을 다시 읽는다) */
+  onConverted: (num: number) => void
 }) {
   const snack = useSnack()
   const [open, setOpen] = useState(!!defaultOpen)
@@ -796,6 +839,7 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
   const [eContent, setEContent] = useState('')
   const [eShared, setEShared] = useState<string[]>([])
   const [delAsk, setDelAsk] = useState(false)
+  const [kindAsk, setKindAsk] = useState(false)
   const [reply, setReply] = useState('')
 
   const { elRef, live, handlers } = useNoteDrag({
@@ -871,8 +915,29 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
     }
   }
 
+  /**
+   * 요청메모로 바꾸기 (개선요청 71) — 개선요청 게시판에 '접수'로 올라가고 답글도 함께 간다.
+   * 공유 대상은 따라가지 않는다: 요청메모의 열람 범위는 작성자+포털 관리자로 이미 정해져 있어
+   * 지목 공유라는 개념 자체가 없다. 그래서 확인창에서 미리 알린다.
+   */
+  const toRequest = async () => {
+    setBusy(true)
+    try {
+      const loc = pathToLocation(note.path) || '기타'
+      const num = await convertNoteToImprovement({ id: note.id, loc, title: firstLine(note.content) })
+      setKindAsk(false)
+      snack(`요청메모 #${num}으로 올렸습니다. 개선요청 게시판에서 볼 수 있습니다.`, 'success')
+      onConverted(num)
+      notifyPageNotesChanged()
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '요청메모로 바꾸지 못했습니다', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const folded = (
-    // 접힌 모양이 요청메모(압정)와 달라야 한 눈에 갈래가 구분된다(사용자 지시 2026-08-06)
+    // 접힌 모양이 요청메모(전구)와 달라야 한 눈에 갈래가 구분된다(사용자 지시 2026-08-06)
     <Box sx={(th) => ({ display: 'grid', placeItems: 'center', width: 34, height: 34, color: th.palette.accent.amber })}>
       <ChatIcon sx={{ fontSize: iconSize.header }} />
     </Box>
@@ -933,6 +998,15 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
                 <Tooltip title="내용·공유 수정">
                   <IconButton size="small" aria-label="메모 수정" onClick={startEdit} sx={{ color: 'text.secondary', p: 0.5 }}>
                     <EditIcon sx={{ fontSize: iconSize.body }} />
+                  </IconButton>
+                </Tooltip>
+              )}
+              {/* 갈래 바꾸기 — 일반메모 → 요청메모(개선요청 71). 내가 쓴 메모만 */}
+              {mine && !editing && (
+                <Tooltip title="요청메모로 바꾸기">
+                  <IconButton size="small" aria-label="요청메모로 바꾸기" onClick={() => setKindAsk(true)} disabled={busy} sx={{ color: 'text.secondary', p: 0.5 }}>
+                    {/* 바뀌어 갈 갈래의 **접힌 모양 그대로** — 요청메모는 전구다(압정 아님, 사용자 지적 2026-08-12) */}
+                    <LightbulbIcon sx={{ fontSize: iconSize.body }} />
                   </IconButton>
                 </Tooltip>
               )}
@@ -1064,6 +1138,19 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
         busy={busy}
         onConfirm={remove}
         onClose={() => setDelAsk(false)}
+      />
+      <ConfirmDialog
+        open={kindAsk}
+        title="이 메모를 요청메모로 바꿀까요?"
+        description={
+          (note.originNum ? `원래 번호 #${note.originNum}으로 돌아갑니다. ` : '') +
+          `개선요청 게시판에 '접수'로 올라가고, 답글 ${replies.length}건도 함께 갑니다.` +
+          (note.shared.length > 0 ? ` 지금 공유한 ${note.shared.length}명은 따라가지 않습니다 — 요청메모는 작성자와 포털 관리자가 봅니다.` : '')
+        }
+        confirmLabel="요청메모로"
+        busy={busy}
+        onConfirm={toRequest}
+        onClose={() => setKindAsk(false)}
       />
     </>
   )
@@ -1328,6 +1415,20 @@ export default function StickyMemoLayer() {
   const savePos = useCallback((key: string, pos: Pos) => {
     if (!usLoadedOk) return
     dispatch(putSetting({ key: POS_KEY, value: { ...(saved || {}), [key]: pos } }))
+  }, [dispatch, saved, usLoadedOk])
+
+  /**
+   * 갈래를 바꾼 메모에 **있던 자리를 물려준다**(개선요청 71) — 저장 키가 요청번호 ↔ 'n{id}' 로
+   * 바뀌기 때문에, 안 옮기면 자리 배정 effect 가 빈 슬롯을 새로 잡아 쪽지가 딴 데로 튄다.
+   * 옛 키는 지운다(안 지우면 사라진 메모의 자리가 '찬 자리'로 남아 뒤에 오는 쪽지를 밀어낸다).
+   */
+  const carryPos = useCallback((fromKey: string, toKey: string) => {
+    if (!usLoadedOk) return
+    const next = { ...(saved || {}) }
+    const p = next[fromKey]
+    delete next[fromKey]
+    if (p) next[toKey] = p
+    dispatch(putSetting({ key: POS_KEY, value: next }))
   }, [dispatch, saved, usLoadedOk])
 
   /**
@@ -1852,6 +1953,11 @@ export default function StickyMemoLayer() {
               user={user}
               onMoveEnd={onMoveEnd}
               defaultOpen={t.num === openNum}
+              onConverted={(noteId) => {
+                carryPos(t.num, `n${noteId}`)
+                void reloadNotes()
+                dispatch(loadImproveData())
+              }}
             />
           )
         })}
@@ -1874,6 +1980,11 @@ export default function StickyMemoLayer() {
               onChanged={() => void reloadNotes()}
               onReplied={() => void reloadNotes()}
               defaultOpen={n.id === openNoteId}
+              onConverted={(num) => {
+                carryPos(`n${n.id}`, String(num))
+                void reloadNotes()
+                dispatch(loadImproveData())
+              }}
             />
           )
         })}

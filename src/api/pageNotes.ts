@@ -35,14 +35,21 @@ export interface PageNote {
    */
   x: number | null
   y: number | null
+  /**
+   * 요청메모에서 되돌아온 메모의 **원래 요청번호** — 다시 올릴 때 이 번호를 되찾는다(개선요청 71).
+   * 번호는 사람이 기억하고 대화에서 부르는 이름이라 왕복했다고 바뀌면 안 된다.
+   * 처음부터 일반메모로 쓴 것은 null(그때는 새 번호를 받는다).
+   */
+  originNum: number | null
 }
 
 interface Row {
   id: number; path: string; author: string; content: string; shared: unknown
   drawing_id: number | null; target: string | null; x: number | null; y: number | null
+  origin_num: number | null
 }
 
-const SELECT = 'id, path, author, content, shared, drawing_id, target, x, y'
+const SELECT = 'id, path, author, content, shared, drawing_id, target, x, y, origin_num'
 
 const toNote = (r: Row): PageNote => ({
   id: Number(r.id),
@@ -54,6 +61,7 @@ const toNote = (r: Row): PageNote => ({
   target: r.target,
   x: r.x === null ? null : Number(r.x),
   y: r.y === null ? null : Number(r.y),
+  originNum: r.origin_num === null ? null : Number(r.origin_num),
 })
 
 /** 업무카드 대상 키 — 대상 종류를 늘릴 때 여기만 늘린다 */
@@ -165,6 +173,34 @@ export async function deletePageNoteReply(id: number): Promise<void> {
   )
   if (error) throw new Error(error.message || '답글 삭제에 실패했습니다')
   if (!data || data.length === 0) throw new Error('내가 쓴 답글만 지울 수 있습니다.')
+}
+
+/**
+ * 메모 갈래 전환 (개선요청 71) — 두 갈래는 저장소가 남남이라 '전환'은 행을 옮기는 일이다.
+ * 만들기·답글 옮기기·원본 지우기가 전부 되거나 전부 안 되도록 서버 RPC(트랜잭션)가 수행한다.
+ * 위치↔경로 대응의 정본은 src/utils/improveMemo.ts 라, 값을 여기서 만들지 않고 부르는 쪽이 넘긴다.
+ */
+
+/** 일반메모 → 요청메모(개선요청). 내가 쓴 메모만. 새 요청번호를 돌려준다 */
+export async function convertNoteToImprovement(p: { id: number; loc: string; title: string }): Promise<number> {
+  await ensureSession()
+  const { data, error } = await withTimeout(
+    supabase.rpc('note_to_improvement', { p_id: p.id, p_loc: p.loc, p_title: p.title }),
+    DB_TIMEOUT, '요청메모로 바꾸기',
+  )
+  if (error) throw new Error(error.message || '요청메모로 바꾸지 못했습니다')
+  return Number(data)
+}
+
+/** 요청메모 → 일반메모. 담당자만(게시판 행이 사라지므로 삭제와 같은 기준). 새 메모 id를 돌려준다 */
+export async function convertImprovementToNote(p: { num: number | string; path: string }): Promise<number> {
+  await ensureSession()
+  const { data, error } = await withTimeout(
+    supabase.rpc('improvement_to_note', { p_num: Number(p.num), p_path: p.path }),
+    DB_TIMEOUT, '일반메모로 되돌리기',
+  )
+  if (error) throw new Error(error.message || '일반메모로 되돌리지 못했습니다')
+  return Number(data)
 }
 
 export async function deletePageNote(id: number): Promise<void> {
