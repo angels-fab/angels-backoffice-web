@@ -11,6 +11,8 @@ import IconButton from '@mui/material/IconButton'
 import Typography from '@mui/material/Typography'
 import CloseIcon from '@mui/icons-material/Close'
 import EditNoteIcon from '@mui/icons-material/EditNote'
+import LockIcon from '@mui/icons-material/Lock'
+import LockOpenIcon from '@mui/icons-material/LockOpen'
 import { createWork, updateWork } from '@/api/works'
 import { useRole } from '@/auth/role'
 import type { WorkItem } from '@/types'
@@ -29,7 +31,7 @@ interface Props {
 // 업무 등록/수정 모달 — 게시자/비밀번호는 로그인한 관리자 정보를 자동 사용(재입력 없음).
 // 상세 Drawer(포털) 위에 뜨도록 body로 포털한다. 오류는 모달 내(.merror)에 표시.
 export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
-  const { user, authKey } = useRole()
+  const { user, uid, authKey } = useRole()
   const isEdit = !!editing
   const [cat, setCat] = useState('')
   const [task, setTask] = useState('')
@@ -44,6 +46,13 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
   const [link, setLink] = useState('')
   const [remind, setRemind] = useState(false)
   const [chief, setChief] = useState(false)
+  const [isPrivate, setIsPrivate] = useState(false)
+  /**
+   * 비공개를 바꿀 수 있는 사람 — 신규 등록이거나, 내가 만든 업무이거나, 만든 사람 기록이 없는
+   * 옛 업무(기능 도입 전 등록분은 owner_uid 가 비어 있다. 잠글 사람이 정해져 있지 않으므로 허용).
+   * 남이 만든 공개 업무를 잠가 그 사람 화면에서 없애 버리는 것만 막는다.
+   */
+  const canPrivate = !editing || !editing.ownerUid || editing.ownerUid === uid
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -65,6 +74,7 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
     setLink(e?.link || '')
     setRemind(e?.remind ?? false)
     setChief(e?.chief ?? false)
+    setIsPrivate(e?.isPrivate ?? false)
   }, [open, editing])
 
   const submit = async (ev: FormEvent) => {
@@ -79,6 +89,8 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
       cat: cat.trim(), task: task.trim(), dept: dept.trim(), mat: mat.trim(),
       start, plan, time: time.trim(), loc: loc.trim(), mgr: mgr.trim(),
       status, link: link.trim(), remind, chief,
+      // 바꿀 권한이 없으면 아예 안 보낸다(undefined=기존 값 보존) — 폼 초기값이 그대로 되돌아가는 것도 막는다
+      ...(canPrivate ? { isPrivate } : {}),
     }
     try {
       if (editing) {
@@ -149,6 +161,30 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 0.5 }}>
           <FormControlLabel control={<Checkbox size="small" checked={remind} onChange={(e) => setRemind(e.target.checked)} />} label="긴급 업무로 표시 (Remind)" />
           <FormControlLabel control={<Checkbox size="small" checked={chief} disabled={status === '완료'} onChange={(e) => setChief(e.target.checked)} />} label={status === '완료' ? '검토 필요 (완료 시 자동 해제)' : '검토 필요 표시'} />
+        </Box>
+
+        {/* 비공개(개선요청 68) — 다른 체크와 성격이 달라(공유 범위 자체를 바꾼다) 한 줄을 따로 준다.
+            남이 만든 업무는 잠근다: 켜는 순간 그 사람 화면에서 업무가 사라지고, 소유자가 아닌 이상
+            되돌릴 수도 없다(삭제와 달리 휴지통도 없다). */}
+        <Box>
+          <FormControlLabel
+            control={
+              <Checkbox
+                size="small"
+                icon={<LockOpenIcon sx={{ fontSize: iconSize.action }} />}
+                checkedIcon={<LockIcon sx={{ fontSize: iconSize.action }} />}
+                checked={isPrivate}
+                disabled={!canPrivate}
+                onChange={(e) => setIsPrivate(e.target.checked)}
+              />
+            }
+            label={canPrivate ? '나만 보기 (비공개)' : '나만 보기 — 만든 사람만 바꿀 수 있습니다'}
+          />
+          {isPrivate && canPrivate && (
+            <Typography variant="body2" sx={{ color: 'text.secondary', pl: 4, mt: -0.5 }}>
+              이 업무는 내 계정에서만 보입니다. 다른 팀원과 관리자의 목록·달력·검색에서 사라집니다.
+            </Typography>
+          )}
         </Box>
 
         {error && <Typography color="error" variant="body2">{error}</Typography>}

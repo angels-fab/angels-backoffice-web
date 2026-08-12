@@ -52,6 +52,12 @@ interface RoleContextValue {
   ready: boolean
   /** 로그인한 담당자 이름(게시자명) — profiles.name */
   user: string | null
+  /**
+   * 로그인 계정 id(auth.users.id) — DB 행의 소유자(owner_uid)와 대조하는 용도.
+   * 이름(user)은 바뀔 수 있고 담당자는 남에게 넘어가므로 '내 것인가' 판정은 이 값으로만 한다.
+   * 비밀이 아니다(자기 자신의 id). 게스트는 null. (개선요청 68)
+   */
+  uid: string | null
   /** '로그인됨' 표식(비밀 아님) — 쓰기 게이트 truthy 판정용. 값은 서버로 안 감(인증=세션+RLS). */
   authKey: string | null
   /** 사번+비밀번호 로그인(Supabase Auth). 'ok'/'fail'/'pending'(승인 대기) */
@@ -69,6 +75,7 @@ const RoleContext = createContext<RoleContextValue>({
   loggedIn: false,
   ready: false,
   user: null,
+  uid: null,
   authKey: null,
   login: async () => 'fail',
   signUp: async () => ({ ok: false }),
@@ -95,6 +102,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<Role>('guest')
   const [ready, setReady] = useState(false)
   const [user, setUser] = useState<string | null>(null)
+  const [uid, setUid] = useState<string | null>(null)
   const [authKey, setAuthKey] = useState<string | null>(null)
 
   // 세션 복원 — supabase-js가 저장한 세션에서 이름·역할 재구성(authKey는 기존 localStorage 유지분)
@@ -114,6 +122,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
             await supabase.auth.signOut() // 승인 대기 계정 — 세션 있어도 접근 없음(게스트 취급)
           } else {
             setUser(p.name)
+            setUid(session.user.id)
             setRole(p.role)
             setAuthKey(SESSION_MARK)
           }
@@ -127,6 +136,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setRole('guest')
         setUser(null)
+        setUid(null)
         setAuthKey(null)
       }
     })
@@ -151,6 +161,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('adminUser')
     localStorage.removeItem('adminKey')
     setUser(p.name)
+    setUid(res.data.user.id)
     setRole(p.role)
     setAuthKey(SESSION_MARK)
     return 'ok'
@@ -182,7 +193,7 @@ export function RoleProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', isMaintainer: user === MAINTAINER, isMember: role === 'member' || role === 'admin', loggedIn: role !== 'guest', ready, user, authKey, login, signUp, logout }}>
+    <RoleContext.Provider value={{ role, isAdmin: role === 'admin', isMaintainer: user === MAINTAINER, isMember: role === 'member' || role === 'admin', loggedIn: role !== 'guest', ready, user, uid, authKey, login, signUp, logout }}>
       {children}
     </RoleContext.Provider>
   )

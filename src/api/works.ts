@@ -28,6 +28,8 @@ interface WorksTableRow {
   content_fmt: string
   deleted_at: string
   attachments: NoticeFile[] | null
+  is_private: boolean
+  owner_uid: string | null
 }
 
 const toWorkRow = (r: WorksTableRow): WorkRow => ({
@@ -40,7 +42,15 @@ const toWorkRow = (r: WorksTableRow): WorkRow => ({
   contentFmt: r.content_fmt,
   deletedAt: r.deleted_at,
   attachments: Array.isArray(r.attachments) ? r.attachments : [],
+  isPrivate: !!r.is_private,
+  ownerUid: r.owner_uid || '',
 })
+
+/** 로그인 계정 id — 비공개로 켤 때 소유자를 기록하는 데만 쓴다(비로그인이면 null) */
+const currentUid = async (): Promise<string | null> => {
+  const { data } = await supabase.auth.getSession()
+  return data.session?.user.id ?? null
+}
 
 const todayKst = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 
@@ -75,6 +85,8 @@ export async function createWork(p: WorkInput): Promise<number> {
         link: p.link || '', remind: !!p.remind, chief: rules.chief,
         content_fmt: p.contentFmt ?? '',
         attachments: p.attachments || [],
+        // owner_uid 는 DB 기본값 auth.uid() 가 채운다 — 등록은 언제나 '내가 만든 것'이라 보낼 필요가 없다
+        is_private: !!p.isPrivate,
       })
       .select('num')
       .single(),
@@ -112,6 +124,15 @@ export async function updateWork(p: WorkInput & { num: string | number; prevStat
   // 첨부는 명시적으로 전달될 때만 갱신(undefined=기존 보존) — WorkWrite 등 미전달 경로에서 첨부 유실 방지
   if (p.attachments !== undefined) patch.attachments = p.attachments
   await ensureSession()
+  /**
+   * 비공개도 명시 전달일 때만 갱신. 켤 때는 소유자를 **나로 기록해야** 한다 —
+   * RLS(works_update_member)의 WITH CHECK 가 `owner_uid = auth.uid()` 를 요구하므로,
+   * 소유자가 비어 있는 옛 업무(기능 도입 전 155건)는 이 값을 안 보내면 저장 자체가 거부된다.
+   */
+  if (p.isPrivate !== undefined) {
+    patch.is_private = p.isPrivate
+    if (p.isPrivate) patch.owner_uid = await currentUid()
+  }
   const { error } = await withTimeout(supabase.from('works').update(patch).eq('num', Number(p.num)), DB_TIMEOUT, '업무 수정')
   if (error) fail(error, '업무 수정에 실패했습니다')
 }

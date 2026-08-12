@@ -124,6 +124,7 @@ function toForm(t: WorkItem): NewTaskForm {
     link: t.link || '',
     chief: !!t.chief,
     attachments: t.attachments || [],
+    isPrivate: !!t.isPrivate,
   }
 }
 
@@ -656,6 +657,7 @@ export default function Work() {
         remind: false, chief: form.chief,
         contentFmt: cf.value,
         attachments: form.attachments,
+        isPrivate: form.isPrivate,
       })
       setSavingNew(false)
       setComposing(false)
@@ -690,6 +692,8 @@ export default function Work() {
       form.mgr.trim() !== (item.mgr || '') ||
       form.link.trim() !== (item.link || '') ||
       form.chief !== !!item.chief ||
+      // 비공개만 켜고 끄는 것도 '고친 것'이다 — 빠뜨리면 자물쇠만 눌렀을 때 조용히 안 저장된다
+      form.isPrivate !== !!item.isPrivate ||
       attachKey(form.attachments) !== attachKey(item.attachments)
     )
   }
@@ -723,6 +727,7 @@ export default function Work() {
         link: form.link.trim(), remind: item.remind, chief: form.chief,
         contentFmt: cf.value,
         attachments: form.attachments,
+        isPrivate: form.isPrivate,
       })
       // 수정 성공 후: 기존 첨부 중 제거된 파일을 스토리지에서 정리(best-effort, 공지와 동일)
       const keptPaths = new Set(form.attachments.map((a) => a.path))

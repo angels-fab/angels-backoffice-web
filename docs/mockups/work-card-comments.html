@@ -1,0 +1,246 @@
+<meta charset="utf-8">
+<title>업무카드 코멘트 스레드 시안 (개선요청 68)</title>
+<style>
+  :root{
+    --bg:#F4F6F9; --surface:#FFFFFF; --text:#1B2434; --text2:#5C6879; --line:#DFE4EC; --accent:#3E77C2; --warn:#C25B4E;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0B0D12; --surface:#141821; --text:#EEF2F8; --text2:#9FA9B9; --line:#28303F; --accent:#5C9AE0; --warn:#E08078; }
+  }
+  :root[data-theme="dark"]{ --bg:#0B0D12; --surface:#141821; --text:#EEF2F8; --text2:#9FA9B9; --line:#28303F; --accent:#5C9AE0; --warn:#E08078; }
+  :root[data-theme="light"]{ --bg:#F4F6F9; --surface:#FFFFFF; --text:#1B2434; --text2:#5C6879; --line:#DFE4EC; --accent:#3E77C2; --warn:#C25B4E; }
+
+  html,body{background:var(--bg);color:var(--text);margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;line-height:1.55}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 20px 70px;display:flex;flex-direction:column;gap:18px}
+  .hd .tag{display:inline-block;font-size:11px;font-weight:700;color:var(--accent);border:1px solid var(--accent);
+    border-radius:999px;padding:1px 9px;margin-bottom:9px;letter-spacing:.04em}
+  .hd h1{font-size:20px;font-weight:700;letter-spacing:-.3px;margin:0 0 6px}
+  .hd p{margin:0;font-size:13px;color:var(--text2);max-width:70ch}
+  .note{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:12px 14px;font-size:12.5px;color:var(--text2)}
+  .note b{color:var(--text)}
+
+  h2{font-size:15px;font-weight:700;margin:22px 0 0;letter-spacing:-.2px}
+  h2 em{font-style:normal;color:var(--text2);font-weight:600;font-size:12.5px;margin-left:8px}
+  .pros{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;margin:2px 0 0}
+  .pros span{display:inline-flex;gap:6px;align-items:flex-start;max-width:46ch}
+  .pros .k{font-weight:700;flex:none}
+  .pros .good .k{color:var(--accent)} .pros .bad .k{color:var(--warn)}
+
+  /* ── 앱 화면 재현 무대 (실제 포털 다크 팔레트) ── */
+  .stage{
+    --f-ink:#0F1117; --f-panel:#141821; --f-border:#293244; --f-border2:#232C3A;
+    --f-text:#FFFFFF; --f-text2:#AAB4C3; --f-text3:#7D8899;
+    --f-blue:#5491DA; --f-purple:#9B7BD4; --f-green:#4FA97A;
+    background:var(--f-ink);border:1px solid var(--f-border2);border-radius:12px;padding:18px;color:var(--f-text);font-size:13px}
+  .stage *{box-sizing:border-box}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+
+  /* 업무카드 — TaskAccordion 구조(머리 / 본문 / 메타 줄) */
+  .card{border:1px solid var(--f-border2);border-radius:12px;background:var(--f-panel);overflow:hidden;display:flex;flex-direction:column}
+  .head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;
+    border-bottom:1px solid rgba(84,145,218,.14);background:rgba(84,145,218,.09)}
+  .chip{font-size:11px;font-weight:600;border-radius:8px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px;
+    border:1px solid rgba(84,145,218,.45);background:rgba(84,145,218,.14);color:#A9C9F0;white-space:nowrap}
+  .chip.gray{border-color:rgba(170,180,195,.4);background:rgba(170,180,195,.12);color:var(--f-text2)}
+  .chip.purple{border-color:rgba(155,123,212,.45);background:rgba(155,123,212,.15);color:#C6B0EC}
+  .chip svg{width:12px;height:12px;fill:currentColor}
+  .title{flex:1;min-width:110px;font-size:13.5px;font-weight:600}
+  .mgr{width:22px;height:22px;border-radius:50%;background:rgba(79,169,122,.22);border:1px solid rgba(79,169,122,.5);
+    color:#8FD6B0;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+  .body{padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
+  .line{font-size:12.5px;color:var(--f-text2)}
+  .meta{display:flex;align-items:center;gap:10px;padding:8px 14px;border-top:1px solid var(--f-border2);
+    font-size:11.5px;color:var(--f-text3)}
+  .meta .sp{flex:1}
+  .iconbtn{border:none;background:none;color:var(--f-text3);display:inline-flex;align-items:center;gap:3px;
+    font:inherit;font-size:11.5px;cursor:pointer;padding:2px 4px;border-radius:6px}
+  .iconbtn svg{width:15px;height:15px;fill:currentColor}
+  .iconbtn:hover{color:var(--f-text);background:rgba(255,255,255,.07)}
+  .iconbtn.on{color:#A9C9F0}
+
+  /* 코멘트 스레드 조각 */
+  .thread{border-top:1px solid var(--f-border2);background:rgba(255,255,255,.02);padding:10px 14px;display:flex;flex-direction:column;gap:10px}
+  .cmt{display:flex;gap:8px;align-items:flex-start}
+  .av{width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:700;background:rgba(84,145,218,.2);border:1px solid rgba(84,145,218,.45);color:#A9C9F0}
+  .av.b{background:rgba(155,123,212,.2);border-color:rgba(155,123,212,.45);color:#C6B0EC}
+  .cmt .who{font-size:11.5px;font-weight:700;color:var(--f-text)}
+  .cmt .when{font-size:10.5px;color:var(--f-text3);margin-left:6px;font-weight:500}
+  .cmt .txt{font-size:12.5px;color:var(--f-text2);margin-top:1px}
+  .compose{display:flex;gap:8px;align-items:center}
+  .compose .box{flex:1;border:1px solid var(--f-border);border-radius:8px;background:rgba(0,0,0,.25);
+    padding:6px 10px;font-size:12px;color:var(--f-text3)}
+  .send{border:none;border-radius:8px;background:var(--f-blue);color:#fff;padding:6px 10px;display:inline-flex;cursor:pointer}
+  .send svg{width:15px;height:15px;fill:currentColor}
+
+  /* B안 상세 포털(Drawer) */
+  .drawer{border:1px solid var(--f-border2);border-radius:12px;background:var(--f-panel);overflow:hidden;max-width:640px}
+  .dhead{padding:12px 16px;border-bottom:1px solid var(--f-border2);display:flex;align-items:center;gap:8px}
+  .dhead .t{font-size:15px;font-weight:700;flex:1}
+  .tabs{display:flex;gap:2px;padding:8px 16px 0;border-bottom:1px solid var(--f-border2)}
+  .tab{font-size:12px;font-weight:600;color:var(--f-text3);padding:6px 12px 8px;border-bottom:2px solid transparent;cursor:pointer}
+  .tab.on{color:#A9C9F0;border-bottom-color:var(--f-blue)}
+  .tab .n{font-size:10.5px;background:rgba(84,145,218,.25);color:#A9C9F0;border-radius:999px;padding:0 5px;margin-left:5px}
+  .dbody{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+
+  /* C안 팝오버 */
+  .pop-stage{position:relative;padding-bottom:190px}
+  .pop{position:absolute;left:120px;top:150px;width:320px;border:1px solid var(--f-border);border-radius:12px;
+    background:var(--f-panel);box-shadow:0 12px 32px rgba(0,0,0,.5);z-index:2}
+  .pop .ph{padding:9px 13px;border-bottom:1px solid var(--f-border2);font-size:12px;font-weight:700;color:var(--f-text2)}
+  .pop .thread{border-top:none}
+  .arrow{position:absolute;left:150px;top:139px;width:12px;height:12px;background:var(--f-panel);
+    border-left:1px solid var(--f-border);border-top:1px solid var(--f-border);transform:rotate(45deg);z-index:3}
+</style>
+
+<div class="wrap">
+  <div class="hd">
+    <span class="tag">개선요청 68 · 시안</span>
+    <h1>업무카드 코멘트 스레드 — 어디에 붙일 것인가</h1>
+    <p><b>최종(2026-08-13): 카드 아래 오른쪽 팝업으로 구현.</b> 처음 A안(카드 안 펼침)으로 구현했다가,
+       "스레드는 카드를 확장하는 게 아니라 임시로 열어 보는 것"이라는 지적(붉은 네모 지시)으로 C안 계열
+       팝업으로 바꿨습니다 — 열어도 격자가 안 움직이고, 말풍선 재클릭·카드·바깥 클릭·Escape로 닫힙니다.
+       C안의 대가였던 "쓰다 바깥 클릭에 닫힘"은 감수한 것입니다. 아래 세 안은 결정 근거로 남겨 둡니다.</p>
+  </div>
+
+  <div class="note">
+    <b>공통 전제</b> — 코멘트는 업무 1건에 딸린 시간순 글타래이고, 쓴 사람만 고치고 지웁니다(포털개선요청 답글과 같은 규칙).
+    비공개 업무(같은 요청메모의 앞 절반, 이미 적용됨)의 코멘트는 그 업무를 볼 수 있는 사람에게만 보입니다.
+  </div>
+
+  <h2>A안 — 카드 안에서 펼치기 <em>메타 줄의 말풍선을 누르면 카드가 아래로 늘어난다</em></h2>
+  <div class="pros">
+    <span class="good"><span class="k">좋은 점</span>목록을 떠나지 않고 읽고 쓴다. 클릭 1번.</span>
+    <span class="bad"><span class="k">대가</span>카드 높이가 제각각이 되어 격자가 어긋난다. 코멘트가 길면 카드가 화면을 먹는다.</span>
+  </div>
+  <div class="stage">
+    <div class="grid">
+      <div class="card">
+        <div class="head">
+          <span class="chip">회의</span>
+          <span class="title">클린룸 기류 검토 회의</span>
+          <span class="mgr">조</span>
+        </div>
+        <div class="body">
+          <div class="line">● 3차 도면 반영분 확인</div>
+          <div class="line">● 급배기 밸런스 재산정 요청</div>
+        </div>
+        <div class="meta">
+          시설팀 · 08-14
+          <span class="sp"></span>
+          <button class="iconbtn on"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>3</button>
+          <button class="iconbtn"><svg viewBox="0 0 24 24"><path d="M16.5 6v11.5a4 4 0 1 1-8 0V5a2.5 2.5 0 0 1 5 0v10.5a1 1 0 1 1-2 0V6H10v9.5a2.5 2.5 0 0 0 5 0V5a4 4 0 0 0-8 0v12.5a5.5 5.5 0 0 0 11 0V6h-1.5z"/></svg>2</button>
+        </div>
+        <div class="thread">
+          <div class="cmt">
+            <span class="av">박</span>
+            <div><span class="who">박주봉</span><span class="when">어제 16:20</span>
+              <div class="txt">급배기 재산정은 설비팀 회신 뒤에 하는 게 맞겠습니다.</div></div>
+          </div>
+          <div class="cmt">
+            <span class="av b">신</span>
+            <div><span class="who">신현진</span><span class="when">오늘 09:05</span>
+              <div class="txt">회신 왔습니다. 오후에 수치 공유드릴게요.</div></div>
+          </div>
+          <div class="compose">
+            <div class="box">코멘트 남기기…</div>
+            <button class="send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="head">
+          <span class="chip gray">검토</span>
+          <span class="title">장비 반입 동선 도면</span>
+          <span class="chip purple">Check</span>
+          <span class="mgr">신</span>
+        </div>
+        <div class="body"><div class="line">● 1F 하역장 → 클린룸 경로 확정</div></div>
+        <div class="meta">시설팀 · 08-18<span class="sp"></span>
+          <button class="iconbtn"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>B안 — 상세 포털의 탭 <em>카드를 열면 나오는 상세 화면에 ‘코멘트’ 탭을 하나 더 둔다 · 카드에는 건수만</em></h2>
+  <div class="pros">
+    <span class="good"><span class="k">좋은 점</span>목록 격자가 하나도 안 흔들린다. 코멘트가 100개여도 상관없다. 읽기 폭이 넓다.</span>
+    <span class="bad"><span class="k">대가</span>카드에서 코멘트를 보려면 클릭 1번을 더 해야 한다.</span>
+  </div>
+  <div class="stage">
+    <div class="drawer">
+      <div class="dhead"><span class="chip">회의</span><span class="t">클린룸 기류 검토 회의</span><span class="mgr">조</span></div>
+      <div class="tabs">
+        <div class="tab">내용</div>
+        <div class="tab on">코멘트<span class="n">3</span></div>
+        <div class="tab">변경이력</div>
+      </div>
+      <div class="dbody">
+        <div class="cmt">
+          <span class="av">박</span>
+          <div><span class="who">박주봉</span><span class="when">어제 16:20</span>
+            <div class="txt">급배기 재산정은 설비팀 회신 뒤에 하는 게 맞겠습니다. 지금 수치로 잡으면 두 번 일합니다.</div></div>
+        </div>
+        <div class="cmt">
+          <span class="av b">신</span>
+          <div><span class="who">신현진</span><span class="when">오늘 09:05</span>
+            <div class="txt">회신 왔습니다. 오후에 수치 공유드릴게요.</div></div>
+        </div>
+        <div class="cmt">
+          <span class="av">조</span>
+          <div><span class="who">조성범</span><span class="when">오늘 09:31</span>
+            <div class="txt">확인했습니다. 공유되면 예정일 한 주 당기겠습니다.</div></div>
+        </div>
+        <div class="compose">
+          <div class="box">코멘트 남기기…</div>
+          <button class="send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>C안 — 카드 위 팝오버 <em>첨부 팝오버와 같은 방식으로 카드 옆에 떠오른다</em></h2>
+  <div class="pros">
+    <span class="good"><span class="k">좋은 점</span>격자도 안 흔들리고 목록도 안 떠난다. 이미 첨부에서 쓰는 익숙한 동작.</span>
+    <span class="bad"><span class="k">대가</span>좁은 화면(모바일)에서 카드를 덮는다. 글을 쓰는 중에 바깥을 누르면 닫히는 사고가 잦다.</span>
+  </div>
+  <div class="stage pop-stage">
+    <div class="grid" style="max-width:640px">
+      <div class="card">
+        <div class="head"><span class="chip">회의</span><span class="title">클린룸 기류 검토 회의</span><span class="mgr">조</span></div>
+        <div class="body"><div class="line">● 3차 도면 반영분 확인</div><div class="line">● 급배기 밸런스 재산정 요청</div></div>
+        <div class="meta">시설팀 · 08-14<span class="sp"></span>
+          <button class="iconbtn on"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>3</button>
+        </div>
+      </div>
+    </div>
+    <div class="arrow"></div>
+    <div class="pop">
+      <div class="ph">코멘트 3</div>
+      <div class="thread">
+        <div class="cmt"><span class="av">박</span><div><span class="who">박주봉</span><span class="when">어제 16:20</span>
+          <div class="txt">설비팀 회신 뒤에 하는 게 맞겠습니다.</div></div></div>
+        <div class="cmt"><span class="av b">신</span><div><span class="who">신현진</span><span class="when">오늘 09:05</span>
+          <div class="txt">회신 왔습니다. 오후에 공유드릴게요.</div></div></div>
+        <div class="compose">
+          <div class="box">코멘트 남기기…</div>
+          <button class="send"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2>추천 <em>B안</em></h2>
+  <div class="note">
+    업무현황은 <b>카드 격자</b>가 핵심 화면이고, 최근 작업이 계속 “카드 높이·자리를 흔들지 않는 것”을 지켜 왔습니다(모바일 축소·메타 줄 정리).
+    A안은 그 전제를 정면으로 깹니다. C안은 모바일에서 카드를 덮고, 글을 쓰다 바깥을 눌러 닫히는 사고가 이미 다른 화면에서 나왔습니다.
+    <b>B안은 카드에 건수 하나만 더하고 나머지를 상세로 보냅니다</b> — 마침 상세에는 변경이력(개선요청 66)도 들어올 자리라 탭이 자연스럽습니다.
+  </div>
+  <div class="note">
+    <b>구현 전에 정할 것 3가지</b> — ① 알림: 코멘트가 달리면 담당자에게 알릴 것인가(지금 포털엔 알림 수단이 없어 배지 정도가 현실적).
+    ② 수정·삭제: 쓴 사람만인가, 관리자도인가. ③ 완료된 업무에도 코멘트를 계속 받을 것인가.
+  </div>
+</div>

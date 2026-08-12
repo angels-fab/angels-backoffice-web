@@ -6,6 +6,8 @@ import InputBase from '@mui/material/InputBase'
 import Tooltip from '@mui/material/Tooltip'
 import CircularProgress from '@mui/material/CircularProgress'
 import CheckIcon from '@mui/icons-material/Check'
+import LockIcon from '@mui/icons-material/Lock'
+import LockOpenIcon from '@mui/icons-material/LockOpen'
 import CloseIcon from '@mui/icons-material/Close'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
@@ -39,6 +41,8 @@ export interface NewTaskForm {
   chief: boolean
   /** 첨부파일 — 업로드 완료된 항목만(Storage work-files 저장). 미변경 시 기존 값 유지 */
   attachments: NoticeFile[]
+  /** 비공개(나만 보기) — 만든 사람만 보고 고친다. 최종 판정은 DB RLS(개선요청 68) */
+  isPrivate: boolean
 }
 
 /** 작성 중 첨부 1건의 로컬 상태 — 완료(done)만 저장 대상, 업로드중/실패는 UI 표시용 */
@@ -123,6 +127,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
   const [loc, setLoc] = useState(initial?.loc ?? '')
   const [link, setLink] = useState(initial?.link ?? '')
   const [chief, setChief] = useState(initial?.chief ?? false)
+  const [isPrivate, setIsPrivate] = useState(initial?.isPrivate ?? false)
   // 첨부파일 — 파일별 업로드 상태 추적(업로드중/완료/실패). 완료 항목만 저장.
   // 수정 모드면 기존 첨부를 done으로 복원(그 경로는 sessionPaths에 넣지 않아 취소 시 삭제되지 않음).
   const [uploads, setUploads] = useState<Upload[]>(
@@ -213,7 +218,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
   const removeUpload = (key: string) => setUploads((prev) => prev.filter((u) => u.key !== key))
 
   // 입력값 존재 여부를 부모에 보고 — 뷰 전환 시 작성 중 내용 손실 방지(확인 안내). body=일반 텍스트(빈값 판정용)
-  const dirty = !!(cat || title || body || mgr || start || plan || dept || time || loc || link || chief) || uploads.length > 0
+  const dirty = !!(cat || title || body || mgr || start || plan || dept || time || loc || link || chief || isPrivate) || uploads.length > 0
   useEffect(() => {
     onDirtyChange?.(dirty)
   }, [dirty, onDirtyChange])
@@ -230,7 +235,7 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
     const orphans = [...sessionPaths.current].filter((p) => !finalPaths.has(p))
     if (orphans.length) void removeWorkFiles(orphans).catch(() => {})
     orphans.forEach((p) => sessionPaths.current.delete(p))
-    onSave({ cat, title, body, bodyFmt, mgr, start, plan, dept, time, loc, link, chief, attachments })
+    onSave({ cat, title, body, bodyFmt, mgr, start, plan, dept, time, loc, link, chief, attachments, isPrivate })
   }
 
   // 취소 — 저장 안 하므로 이번 세션에 새로 올린 파일 전부 정리(기존 첨부는 보존)
@@ -286,6 +291,22 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <LinkButton value={link} onChange={setLink} />
           <AttachButton count={attachCount} onFiles={onPickFiles} disabled={saving} />
+          {/* 비공개(개선요청 68) — 여기가 **업무를 만드는 실제 경로**다(수정 모달은 상세에서만 열린다).
+              만든 뒤에 잠그는 것도 되지만, 처음부터 남에게 안 보이게 만들 길이 없으면 반쪽이다. */}
+          <Tooltip title={isPrivate ? '나만 보기 — 켜짐(다른 팀원과 관리자에게 안 보임)' : '나만 보기 (비공개)'}>
+            <IconButton
+              size="small"
+              aria-label="나만 보기(비공개) 토글"
+              aria-pressed={isPrivate}
+              onClick={() => setIsPrivate((v) => !v)}
+              disabled={saving}
+              sx={(th) => ({ p: 0.5, color: isPrivate ? th.palette.accentText.blue : 'text.secondary' })}
+            >
+              {isPrivate
+                ? <LockIcon sx={{ fontSize: iconSize.action }} />
+                : <LockOpenIcon sx={{ fontSize: iconSize.action }} />}
+            </IconButton>
+          </Tooltip>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
           <Tooltip title={uploading ? '업로드 중…' : '저장'}>

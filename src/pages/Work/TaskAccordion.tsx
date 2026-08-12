@@ -3,6 +3,8 @@ import Box from '@mui/material/Box'
 import Popper from '@mui/material/Popper'
 import ClickAwayListener from '@mui/material/ClickAwayListener'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined'
+import LockIcon from '@mui/icons-material/Lock'
 import Typography from '@mui/material/Typography'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
@@ -22,6 +24,8 @@ import WorkPinButton from './WorkPinButton'
 import WorkAttachments from './WorkAttachments'
 import TaskLinkButton from './TaskLinkButton'
 import WorkCardNotes, { WORK_CARD_NOTES_ENABLED } from './WorkCardNotes'
+import WorkCardComments from './WorkCardComments'
+import { useAppSelector } from '@/store/hooks'
 
 export type { CardTone } from './workMeta'
 
@@ -70,6 +74,14 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
   const link = taskLink(t)
   const atts = t.attachments || []
   const [attAnchor, setAttAnchor] = useState<HTMLElement | null>(null)
+  /**
+   * 코멘트 팝업(개선요청 68) — 처음엔 카드 안 펼침(A안)이었는데 **팝업으로 바꿨다**(사용자 지시 2026-08-13).
+   * 스레드는 카드를 아래로 '확장'하는 것이 아니라 '임시로 열어 보는' 것이라, 펼칠 때 옆 카드가
+   * 밀리면 안 된다. 카드 밖(붉은 네모 = 카드 아래 오른쪽)에 띄우면 격자는 한 픽셀도 안 움직인다.
+   */
+  const [cmtAnchor, setCmtAnchor] = useState<HTMLElement | null>(null)
+  // 지워져 자리만 남은 코멘트("삭제된 코멘트입니다")는 건수에 안 넣는다 — 배지는 읽을 것의 수다
+  const commentCount = useAppSelector((s) => s.workComments.items.filter((c) => c.num === t.num && !c.deleted).length)
   const cardRef = useRef<HTMLDivElement | null>(null)
   /**
    * 첨부 팝업을 바깥 클릭으로 닫을 때, 그 클릭이 카드 선택까지 건드리지 않게 **한 번만 삼킨다**.
@@ -110,7 +122,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
     { label: '예정', value: t.plan ? fmtDate(t.plan) : '' },
     { label: '완료', value: t.end ? fmtDate(t.end) : '' },
   ].filter((m) => (m.value || '').trim())
-  const hasMeta = !!deptMeta || dateMetas.length > 0
+  // hasMeta 는 없앴다 — 코멘트 버튼이 늘 있어 메타 줄의 표시 조건 자체가 사라졌다(개선요청 68)
 
   return (
     <Box
@@ -190,6 +202,8 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
         <Typography variant="body1" sx={{ flex: 1, minWidth: 120, fontWeight: weight.semibold, wordBreak: 'break-word' }}>{taskTitle(t)}</Typography>
         {/* 우측 묶음 — Check · 담당자 · 별을 한 덩어리로. 제목 길이와 무관하게 셋이 오른쪽 끝에 붙는다 */}
         <Box sx={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* 비공개(개선요청 68) — 남의 화면엔 이 카드 자체가 없으므로, 이 칩은 '나만 보고 있다'는 표시다 */}
+          {t.isPrivate && <StatusChip status="neutral" icon={<LockIcon />} label="나만 보기" />}
           {t.chief && <StatusChip status="purple" label="Check" />}
           <ManagerChip name={t.mgr} />
           {/* 관심 업무 별 토글(개인화 D-2) — 계정별 저장, 홈 '관심 업무' 섹션에 고정 표시 */}
@@ -214,9 +228,10 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             매번 부서·날짜를 지나쳐야 본문에 닿았다. 아래에 두면 content가 flex:1이라 이 줄이 카드
             바닥에 붙고, 같은 행 카드끼리 높이가 맞아 줄도 저절로 나란히 선다(사용자 확정 2026-07-26).
             첨부는 별도 푸터 트레이를 두면 구역이 하나 더 생겨 과했다 → 여기 아이콘+건수로 접고 클릭 시 목록. */}
-        {/* 링크만 있고 부서·날짜·첨부가 없는 업무도 이 줄이 서야 링크 아이콘의 자리가 유지된다(개선요청 62) */}
-        {(hasMeta || atts.length > 0 || !!link) && (
-          <Box
+        {/* 링크만 있고 부서·날짜·첨부가 없는 업무도 이 줄이 서야 링크 아이콘의 자리가 유지된다(개선요청 62).
+            코멘트 버튼이 생기면서(개선요청 68) 이 줄은 **언제나** 선다 — 조건을 없앤 이유다.
+            부서·날짜·첨부·링크가 하나도 없던 업무에는 구분선 한 줄이 새로 생긴다(감수한 대가). */}
+        <Box
             sx={{
               display: 'flex', alignItems: 'baseline', flexWrap: 'wrap',
               columnGap: 2, rowGap: 0.75,
@@ -227,11 +242,40 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             {dateMetas.map((m) => (
               <MetaItem key={m.label} label={m.label} value={m.value} />
             ))}
-            {/* 관련링크 · 첨부 — 한 자리에 모아 오른쪽 끝(개선요청 62). 둘 중 하나만 있어도 성립한다 */}
-            {(!!link || atts.length > 0) && (
-              <Box sx={{ ml: 'auto', alignSelf: 'center', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                {/* 호버 미리보기는 TaskLinkButton 안에 있다(개선요청 67) — 아이콘이 옮겨가도 함께 따라온다 */}
-                {link && <TaskLinkButton url={link} sx={{ p: 0.5 }} />}
+            {/* 코멘트 · 관련링크 · 첨부 — 한 자리에 모아 오른쪽 끝(개선요청 62·68). 하나만 있어도 성립한다 */}
+            <Box sx={{ ml: 'auto', alignSelf: 'center', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              {/* 코멘트(개선요청 68) — 건수가 0이어도 버튼은 늘 있다. 없으면 첫 코멘트를 달 길이 없다 */}
+              <Box
+                component="button"
+                type="button"
+                aria-label={`코멘트 ${commentCount}건 ${cmtAnchor ? '닫기' : '열기'}`}
+                aria-haspopup="dialog"
+                aria-expanded={!!cmtAnchor}
+                // 같은 버튼 재클릭 = 닫기(토글). el 붙잡기는 첨부 버튼과 같은 이유(아래 주석).
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const el = e.currentTarget
+                  onRequestSelect?.()
+                  setAttAnchor(null) // 첨부 팝업과 동시에 열리면 겹친다 — 한 번에 하나만
+                  setCmtAnchor((prev) => (prev ? null : el))
+                }}
+                sx={(th) => ({
+                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  px: 0.75, py: 0.375, font: 'inherit', cursor: 'pointer',
+                  fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight,
+                  color: cmtAnchor ? 'text.primary' : 'text.secondary',
+                  bgcolor: cmtAnchor ? alpha(th.palette.text.primary, 0.09) : 'transparent',
+                  border: 'none', borderRadius: `${radius.chip}px`,
+                  transition: `background-color ${motion.base}, color ${motion.base}`,
+                  '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.09), color: 'text.primary' },
+                  '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 1 },
+                })}
+              >
+                <ChatBubbleOutlineIcon sx={{ fontSize: iconSize.action }} />
+                {commentCount > 0 && commentCount}
+              </Box>
+              {/* 호버 미리보기는 TaskLinkButton 안에 있다(개선요청 67) — 아이콘이 옮겨가도 함께 따라온다 */}
+              {link && <TaskLinkButton url={link} sx={{ p: 0.5 }} />}
                 {atts.length > 0 && (
                   <Box
                     component="button"
@@ -249,6 +293,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
                       // 첨부를 눌러도 그 카드가 선택되게(다른 카드가 선택돼 있어도 이 카드로 옮겨온다).
                       // 선택 '전환'이지 토글이 아니라, 이미 선택된 카드에서 다시 눌러도 해제되지 않는다.
                       onRequestSelect?.()
+                      setCmtAnchor(null) // 코멘트 팝업과 동시에 열리면 겹친다 — 한 번에 하나만
                       setAttAnchor((prev) => (prev ? null : el))
                     }}
                     sx={(th) => ({
@@ -267,11 +312,10 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
                     {atts.length}
                   </Box>
                 )}
-              </Box>
-            )}
-          </Box>
-        )}
+            </Box>
+        </Box>
       </Box>
+
 
       {/* 이 업무에 박아 넣은 일반메모 — **지금은 꺼져 있다**(WorkCardNotes 의 WORK_CARD_NOTES_ENABLED).
           카드의 자식이라 순서·필터·뷰가 바뀌어도 함께 움직인다
@@ -306,6 +350,39 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             }}
           >
             <WorkAttachments attachments={atts} variant="card" />
+          </Box>
+        </ClickAwayListener>
+      </Popper>
+
+      {/* 코멘트 팝업(개선요청 68 — 팝업으로 확정, 사용자 지시 2026-08-13 붉은 네모 = 카드 아래 오른쪽).
+          카드 밖에 뜨므로 열어도 격자가 한 픽셀도 안 움직인다.
+          닫기 = 말풍선 재클릭(토글) · 카드 클릭 · 바깥 클릭 · Escape — 전부 첨부 팝업과 같은 길.
+          카드/바깥 클릭은 ClickAwayListener 가 받고, 그 클릭이 카드 선택을 건드리지 않게 한 번 삼킨다. */}
+      <Popper open={!!cmtAnchor} anchorEl={cmtAnchor} placement="bottom-end" sx={{ zIndex: (th) => th.zIndex.modal }}>
+        <ClickAwayListener
+          mouseEvent="onMouseDown"
+          touchEvent="onTouchStart"
+          onClickAway={(e) => {
+            if (cmtAnchor && e.target instanceof Node && cmtAnchor.contains(e.target)) return
+            // 팝업이 띄운 확인창(삭제 ConfirmDialog)은 portal 이라 DOM 상 '바깥'이다 — 그 클릭에
+            // 팝업이 닫히면 확인창만 덩그러니 남는다(StickyMemo 의 portal 예외와 같은 이유)
+            if (e.target instanceof Element && e.target.closest('.MuiModal-root, .MuiPopper-root')) return
+            setCmtAnchor(null)
+            swallowNextClickInCard()
+          }}
+        >
+          <Box
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setCmtAnchor(null) } }}
+            sx={{
+              mt: 0.5, width: { xs: 280, sm: 380 },
+              // paper 가 아니라 elevated — 카드도 paper 라서 다크에서 팝업이 카드 위에 녹아 안 보였다
+              // (사용자 지적 2026-08-13). elevated = '떠 있는 표면' 전용색이라 의미도 이쪽이 맞다.
+              bgcolor: 'background.elevated', border: '1px solid', borderColor: 'divider',
+              borderRadius: `${radius.button}px`, boxShadow: shadow.lg, overflow: 'hidden',
+            }}
+          >
+            <WorkCardComments num={t.num} />
           </Box>
         </ClickAwayListener>
       </Popper>

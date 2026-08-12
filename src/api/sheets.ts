@@ -192,6 +192,10 @@ export interface WorkRow {
   deletedAt: string
   /** 첨부파일 목록 — Storage 비공개 버킷(work-files) 저장. 없으면 [] */
   attachments: NoticeFile[]
+  /** 비공개(나만 보기) — 만든 사람만 보이고 고칠 수 있다. DB RLS가 최종 판정(개선요청 68) */
+  isPrivate: boolean
+  /** 만든 사람 계정 id — 비공개 전환 권한 판정용. 이관 전 기존 업무는 '' */
+  ownerUid: string
 }
 
 /** 업무 목록 읽기 — 백엔드가 헤더명으로 행을 객체로 변환해 반환 */
@@ -234,6 +238,11 @@ export interface WorkInput {
    * undefined(미전달)면 백엔드는 기존 첨부를 보존한다(빈 배열로 덮어쓰지 않음).
    */
   attachments?: NoticeFile[]
+  /**
+   * 비공개(나만 보기) — **명시적으로 전달할 때만** 저장/갱신된다(contentFmt와 동일 규칙).
+   * true 로 켤 때 소유자(owner_uid)를 현재 계정으로 함께 기록한다(개선요청 68).
+   */
+  isPrivate?: boolean
 }
 
 async function postWork(payload: Record<string, unknown>): Promise<{ num?: number }> {

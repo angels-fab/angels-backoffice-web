@@ -33,6 +33,10 @@ export interface WorkItem {
   deletedAt: string
   /** 첨부파일 목록 — Storage 비공개 버킷(work-files) 저장. 공지와 동일한 파일 형태(NoticeFile) */
   attachments?: NoticeFile[]
+  /** 비공개(나만 보기) — 만든 사람만 보인다. 남의 비공개 업무는 목록에 아예 안 실린다(RLS·개선요청 68) */
+  isPrivate: boolean
+  /** 만든 사람 계정 id — 비공개로 바꿀 수 있는 사람인지 판정. 기능 도입 전 업무는 '' */
+  ownerUid: string
 }
 
 /** 개선제안 ('개선사항' 시트) */
