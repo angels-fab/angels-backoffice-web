@@ -607,8 +607,10 @@ export default function Calendar() {
             onChange={(v) => { setView(v); dispatch(putSetting({ key: 'cal.view', value: v })) }}
           />
 
-          {/* 개선 메모(전구) — 제목 줄에 있던 것을 뷰 전환 버튼 바로 오른쪽으로 옮겼다(사용자 지시 2026-08-09) */}
-          {memo.chip}
+          {/* 개선 메모(전구) — 제목 줄에 있던 것을 뷰 전환 버튼 바로 오른쪽으로 옮겼다(사용자 지시 2026-08-09).
+              **모바일에서만** 그린다: PC에는 붙임쪽지가 같은 메모를 이미 띄우고 있어서, 여기 전구가
+              목록/월/주 옆에 붙으면 뷰 전환 버튼이 하나 더 생긴 것처럼 보였다(개선요청 74). */}
+          {isMobile && memo.chip}
 
           {/* 이전 · 오늘 · 다음 — PC 전용. 모바일은 이 줄을 통째로 없애고 달력을 좌우로 밀어 이동한다
               (사용자 지시 2026-08-08 — 툴바가 6줄이나 차지해 달력이 화면 밖으로 밀리던 문제). */}
@@ -650,8 +652,9 @@ export default function Calendar() {
         onToggleCat={toggleCat}
       />
 
-      {/* 개선 메모 패널·스낵바 — 칩을 툴바로 옮겼으므로 패널도 PageHeader 대신 여기서 그린다 */}
-      {memo.panel}
+      {/* 개선 메모 패널·스낵바 — 칩을 툴바로 옮겼으므로 패널도 PageHeader 대신 여기서 그린다.
+          패널은 칩과 한 몸이라 함께 모바일 전용. 스낵바는 폭과 무관하게 남긴다(PageHeader 와 같은 규칙). */}
+      {isMobile && memo.panel}
       {memo.snackbar}
 
       {/* 달력 (풀폭) — 컨테이너 위임: 포인터 위치의 .fc-event를 elementsFromPoint로 찾아

@@ -1,6 +1,8 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import { alpha } from '@mui/material/styles'
+import type { Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 import { layout, radius, typescale } from '@/theme/tokens'
 import { usePageImprovementMemo } from '@/components/PageImprovementMemo'
@@ -42,9 +44,18 @@ export interface PageHeaderProps {
 export default function PageHeader({ title, icon, subtitle, updatedAt, actions, hideTitleOnMobile, suppressImprovementMemo }: PageHeaderProps) {
   const hideOnMobile = hideTitleOnMobile ? { xs: 'none', shell: 'flex' } : undefined
   // 현재 경로에 활성 개선 메모가 있으면 제목 옆 칩 + 아래 패널을 렌더(없으면 모두 null → 변화 없음).
-  // PC에서는 화면 붙임쪽지(StickyMemo)가 같은 메모를 띄우므로 칩·패널은 모바일에서만 — 중복 표시 방지.
+  //
+  // 칩·패널은 **모바일에서만** 그린다 — PC에는 화면 붙임쪽지(StickyMemo)가 같은 메모를 이미 띄운다.
+  // 이 규칙은 처음부터 여기 주석으로 적혀 있었는데 코드에 없었다: PC에서 전구가 쪽지와 헤더에
+  // 두 번 떠 있었다(개선요청 74 — 업무일정에서 목록/월/주 옆에 '버튼 하나가 더 생긴' 것으로 보였다).
+  // 쪽지 레이어의 기준과 같은 분기점을 쓴다(StickyMemoLayer 는 up('shell') 에서만 뜬다).
+  //
+  // 스낵바는 폭과 무관하게 남긴다 — 마지막 메모를 해제한 뒤에도 되돌릴 길을 주는 장치다(CLAUDE.md).
+  const isMobile = useMediaQuery((t: Theme) => t.breakpoints.down('shell'))
   const memo = usePageImprovementMemo()
-  const { chip, panel, snackbar } = suppressImprovementMemo ? { chip: null, panel: null, snackbar: null } : memo
+  const { chip, panel, snackbar } = suppressImprovementMemo
+    ? { chip: null, panel: null, snackbar: null }
+    : { chip: isMobile ? memo.chip : null, panel: isMobile ? memo.panel : null, snackbar: memo.snackbar }
   return (
     // 제목을 감춘 모바일에서는 아래 여백도 없앤다 — 안 그러면 빈 헤더가 24px을 그대로 차지한다
     <Box sx={{ mb: hideTitleOnMobile ? { xs: 0, shell: `${layout.pageHeaderGap}px` } : `${layout.pageHeaderGap}px` }}>
