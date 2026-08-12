@@ -84,8 +84,13 @@ export async function createWork(p: WorkInput): Promise<number> {
   return Number(data!.num)
 }
 
-/** 업무 수정 — contentFmt는 명시적으로 전달될 때만 갱신(undefined=기존 보존, ''=서식 제거) */
-export async function updateWork(p: WorkInput & { num: string | number }): Promise<void> {
+/**
+ * 업무 수정 — contentFmt는 명시적으로 전달될 때만 갱신(undefined=기존 보존, ''=서식 제거)
+ *
+ * @param p.prevStatus 고치기 **전**의 상태. 완료일 자동 채움을 '완료로 새로 넘어오는 순간'으로
+ *   한정하는 데만 쓴다(아래 주석). 안 넘기면 종전 동작(완료면 무조건 오늘)이라 기존 호출부는 무해하다.
+ */
+export async function updateWork(p: WorkInput & { num: string | number; prevStatus?: string }): Promise<void> {
   const patch: Record<string, unknown> = {
     cat: p.cat, task: p.task, dept: p.dept || '', mat: p.mat || '',
     start: p.start || '', plan: p.plan || '', plan_time: p.time || '', loc: p.loc || '',
@@ -93,8 +98,16 @@ export async function updateWork(p: WorkInput & { num: string | number }): Promi
     updated_at: new Date().toISOString(),
     ...applyStatusRules({ status: p.status, end: p.end, chief: p.chief }),
   }
-  // 완료가 아닌 상태에서 end 미전달이면 기존 완료일자 유지(기존 백엔드 동작) — 완료 전환만 자동 채움
-  if (p.status !== '완료' && p.end === undefined) delete patch.end_date
+  /**
+   * 완료일은 **완료로 새로 넘어오는 순간에만** 자동으로 채운다. end 를 명시로 넘기면 그 값이 이긴다.
+   *
+   * 종전 조건은 `p.status !== '완료'` 였다 — 완료가 아니면 기존 완료일을 지키고, 완료면 무조건
+   * applyStatusRules 의 오늘 날짜를 썼다. 그래서 **이미 완료된 업무를 아무 이유로나 저장하면
+   * (장소 한 글자만 고쳐도) 완료일이 오늘로 덮여** 과거 완료일이 사라졌다. 수정 폼도 인라인 편집도
+   * end 를 안 보내므로 항상 걸렸다. (개선요청 66 이력 설계 중 발견, 2026-08-12)
+   */
+  const becameDone = p.status === '완료' && p.prevStatus !== '완료'
+  if (p.end === undefined && !becameDone) delete patch.end_date
   if (p.contentFmt !== undefined) patch.content_fmt = p.contentFmt
   // 첨부는 명시적으로 전달될 때만 갱신(undefined=기존 보존) — WorkWrite 등 미전달 경로에서 첨부 유실 방지
   if (p.attachments !== undefined) patch.attachments = p.attachments

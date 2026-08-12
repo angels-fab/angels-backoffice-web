@@ -716,7 +716,8 @@ export default function Work() {
     try {
       await updateWork({
         num: item.num, author: user, key: authKey,
-        cat: form.cat.trim(), task, status: item.status,
+        // 인라인 수정은 상태를 안 건드린다 — prevStatus 를 같이 넘겨야 완료 업무의 완료일이 오늘로 안 덮인다
+        cat: form.cat.trim(), task, status: item.status, prevStatus: item.status,
         dept: form.dept.trim(), mat: item.mat, start: form.start, plan: form.plan,
         time: form.time.trim(), loc: form.loc.trim(), mgr: form.mgr.trim(),
         link: form.link.trim(), remind: item.remind, chief: form.chief,

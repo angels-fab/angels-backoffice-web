@@ -82,7 +82,8 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
     }
     try {
       if (editing) {
-        await updateWork({ num: editing.num, ...payload })
+        // prevStatus = 고치기 전 상태. 완료 업무를 그대로 다시 저장할 때 완료일이 오늘로 덮이지 않게 한다
+        await updateWork({ num: editing.num, ...payload, prevStatus: editing.status })
         setSaving(false)
         onSaved(Number(editing.num) || 0, true)
       } else {
