@@ -78,7 +78,7 @@ export async function getWorks(): Promise<WorkRow[]> {
 export interface WorkHistoryRow {
   id: number
   num: number
-  /** 상태 · 담당자 · 예정일 · Remind · 내용 · 서식 · 완료일 */
+  /** 상태 · 담당자 · 예정일 · Remind · 내용 · 완료일 ('서식'은 2026-08-13 폐지) */
   field: string
   prev: string
   next: string
@@ -95,6 +95,9 @@ export async function getWorkHistory(): Promise<WorkHistoryRow[]> {
   const { data, error } = await supabase
     .from('work_history')
     .select('id, num, field, prev, next, author, at')
+    // '서식'(형광펜·색)은 2026-08-13 기록을 끊었다. 그 전에 쌓인 3줄이 표에 남아 있어 여기서 뺀다 —
+    // 시계 버튼의 건수까지 한 번에 맞으려면 화면이 아니라 **읽는 지점**에서 걸러야 한다.
+    .neq('field', '서식')
     .order('at', { ascending: false })
   if (error) fail(error, '업무 이력을 불러오지 못했습니다')
   return ((data || []) as WorkHistoryRow[]).map((r) => ({ ...r, num: Number(r.num) }))
