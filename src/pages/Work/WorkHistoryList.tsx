@@ -4,11 +4,11 @@ import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt'
 import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import EditIcon from '@mui/icons-material/Edit'
-import EditNoteIcon from '@mui/icons-material/EditNote'
-import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'
-import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove'
+import AddCircleIcon from '@mui/icons-material/AddCircle'
+import RemoveCircleIcon from '@mui/icons-material/RemoveCircle'
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import PostAddIcon from '@mui/icons-material/PostAdd'
-import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import TitleIcon from '@mui/icons-material/Title'
 import FormatIndentIncreaseIcon from '@mui/icons-material/FormatIndentIncrease'
 import FormatIndentDecreaseIcon from '@mui/icons-material/FormatIndentDecrease'
@@ -46,15 +46,31 @@ function stamp(iso: string): string {
   return `${at('month')}-${at('day')} ${at('hour')}:${at('minute')}`
 }
 
-/** 라벨마다 다른 아이콘 — 무슨 일이 있었는지 글자를 읽기 전에 눈에 들어오게 */
+/**
+ * 라벨마다 다른 아이콘 — 무슨 일이 있었는지 글자를 읽기 전에 눈에 들어오게.
+ *
+ * 처음엔 PlaylistAdd/PlaylistRemove/EditNote 를 썼는데 **셋 다 "가로줄 몇 개 + 작은 기호"**라
+ * 16px에서 실루엣이 같아 보였다(사용자 지적 2026-08-13: "자세히 보면 다른데 알아보기 힘듦").
+ * 그래서 ①윤곽이 서로 다른 모양(꽉 찬 원 · 휴지통 · 양방향 화살표)으로 바꾸고
+ * ②추가·삭제에는 색을 입히고 ③크기를 액션 단으로 키웠다 — 셋을 겹쳐야 멀리서 갈린다.
+ * 색만으로 구분하지는 않는다(원 안 +/− 모양이 이미 다르고, 라벨 글자가 그대로 말해 준다).
+ */
 const LABEL_ICON: Record<string, SvgIconComponent> = {
-  '내용 추가': PlaylistAddIcon,
-  '내용 삭제': PlaylistRemoveIcon,
-  '내용 변경': EditNoteIcon,
+  '내용 추가': AddCircleIcon,
+  '내용 삭제': RemoveCircleIcon,
+  '내용 변경': SwapHorizIcon,
   '제목 변경': TitleIcon,
   '단계 변경': FormatIndentIncreaseIcon,
   '내용 작성': PostAddIcon,
-  '내용 전체 삭제': DeleteSweepIcon,
+  '내용 전체 삭제': DeleteOutlineIcon,
+}
+
+/** 라벨 아이콘 색 — 더한 쪽 초록 · 지운 쪽 빨강, 나머지는 무채색 */
+const LABEL_TONE: Record<string, 'green' | 'red'> = {
+  '내용 추가': 'green',
+  '내용 작성': 'green',
+  '내용 삭제': 'red',
+  '내용 전체 삭제': 'red',
 }
 
 /** 한 번에 펼쳐 두는 항목 수 — 넘치면 접어 두고 눌러서 마저 본다 */
@@ -126,13 +142,21 @@ function BodyRow({ h }: { h: WorkHistoryRow }) {
   const [all, setAll] = useState(false)
   const d = useMemo(() => diffContent(h.prev, h.next), [h.prev, h.next])
   const Icon = LABEL_ICON[d.label]
+  const tone = LABEL_TONE[d.label]
   const shown = all ? d.entries : d.entries.slice(0, PREVIEW_ENTRIES)
   const rest = d.entries.length - shown.length
 
   return (
     <>
       <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        {Icon && <Icon sx={{ fontSize: iconSize.body, color: 'text.disabled' }} />}
+        {Icon && (
+          <Icon
+            sx={(th) => ({
+              fontSize: iconSize.action,
+              color: tone ? th.palette.accentText[tone] : th.palette.text.secondary,
+            })}
+          />
+        )}
         <Box component="span" sx={{ fontWeight: weight.semibold }}>{d.label}</Box>
         {d.count > 0 && (
           <Box component="span" sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
