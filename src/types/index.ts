@@ -37,6 +37,14 @@ export interface WorkItem {
   isPrivate: boolean
   /** 만든 사람 계정 id — 비공개로 바꿀 수 있는 사람인지 판정. 기능 도입 전 업무는 '' */
   ownerUid: string
+  /**
+   * 만들 때 비공개였는가 — **평생 안 바뀐다**(2026-08-13 사용자 확정 규칙).
+   * 처음 공개로 만든 업무는 끝까지 공개고, 처음 비공개로 만든 업무만 그 작성자가 여닫을 수 있다.
+   * 최종 판정은 DB 트리거 works_guard_private.
+   */
+  privateOrigin: boolean
+  /** 만든 사람 이름 — 카드에 표시. 이관 이전 업무(155건)는 '' */
+  author: string
 }
 
 /** 개선제안 ('개선사항' 시트) */

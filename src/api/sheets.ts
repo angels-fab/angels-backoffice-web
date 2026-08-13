@@ -196,6 +196,10 @@ export interface WorkRow {
   isPrivate: boolean
   /** 만든 사람 계정 id — 비공개 전환 권한 판정용. 이관 전 기존 업무는 '' */
   ownerUid: string
+  /** 만들 때 비공개였는가 — 이 값이 true 인 업무만 작성자가 공개/비공개를 오갈 수 있다(2026-08-13) */
+  privateOrigin: boolean
+  /** 만든 사람 이름 — 이관 이전 업무는 '' */
+  author: string
 }
 
 /** 업무 목록 읽기 — 백엔드가 헤더명으로 행을 객체로 변환해 반환 */

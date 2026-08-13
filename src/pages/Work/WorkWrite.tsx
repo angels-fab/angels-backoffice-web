@@ -48,11 +48,14 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
   const [chief, setChief] = useState(false)
   const [isPrivate, setIsPrivate] = useState(false)
   /**
-   * 비공개를 바꿀 수 있는 사람 — 신규 등록이거나, 내가 만든 업무이거나, 만든 사람 기록이 없는
-   * 옛 업무(기능 도입 전 등록분은 owner_uid 가 비어 있다. 잠글 사람이 정해져 있지 않으므로 허용).
-   * 남이 만든 공개 업무를 잠가 그 사람 화면에서 없애 버리는 것만 막는다.
+   * 비공개를 바꿀 수 있는가 — **만들 때 정해진다**(2026-08-13 사용자 확정).
+   *   · 새로 등록: 언제나 고를 수 있다.
+   *   · 처음 비공개로 만든 업무: 그 **작성자 본인만** 공개↔비공개를 오간다.
+   *   · 처음 공개로 만든 업무: 누구도 잠글 수 없다(옛 업무 155건도 여기에 해당).
+   * 종전 규칙("소유자가 비어 있으면 허용")은 옛 업무 전부를 아무나 잠글 수 있게 열어 뒀었다.
+   * 최종 판정은 DB 트리거 works_guard_private — 이 값은 화면에서 미리 막아 주는 층이다.
    */
-  const canPrivate = !editing || !editing.ownerUid || editing.ownerUid === uid
+  const canPrivate = !editing || (!!editing.privateOrigin && !!editing.ownerUid && editing.ownerUid === uid)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -164,8 +167,10 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
         </Box>
 
         {/* 비공개(개선요청 68) — 다른 체크와 성격이 달라(공유 범위 자체를 바꾼다) 한 줄을 따로 준다.
-            남이 만든 업무는 잠근다: 켜는 순간 그 사람 화면에서 업무가 사라지고, 소유자가 아닌 이상
-            되돌릴 수도 없다(삭제와 달리 휴지통도 없다). */}
+            2026-08-13 확정: 공개/비공개는 **만들 때** 정해지고, 처음 비공개로 만든 업무만
+            그 작성자가 여닫는다. 그래서 못 바꾸는 카드에서는 이 줄을 아예 감춘다 —
+            눌리지 않는 체크는 "왜 안 되지"만 남긴다. */}
+        {(canPrivate || isPrivate) && (
         <Box>
           <FormControlLabel
             control={
@@ -186,6 +191,7 @@ export default function WorkWrite({ open, onClose, editing, onSaved }: Props) {
             </Typography>
           )}
         </Box>
+        )}
 
         {error && <Typography color="error" variant="body2">{error}</Typography>}
 

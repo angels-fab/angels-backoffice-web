@@ -281,6 +281,9 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             }}
           >
             {deptMeta && <MetaItem label={deptMeta.label} value={deptMeta.value} />}
+            {/* 작성자(2026-08-13 사용자 요청) — 담당자와 다른 축이라 머리 칩이 아니라 메타 줄에 둔다.
+                이관 이전 업무 155건은 기록이 없어 빈 값이고, 그때는 줄을 만들지 않는다(빈칸이 더 헷갈린다) */}
+            {(t.author || '').trim() && <MetaItem label="작성" value={t.author} />}
             {dateMetas.map((m) => (
               <MetaItem key={m.label} label={m.label} value={m.value} />
             ))}

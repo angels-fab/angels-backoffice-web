@@ -30,6 +30,9 @@ interface WorksTableRow {
   attachments: NoticeFile[] | null
   is_private: boolean
   owner_uid: string | null
+  /** 만들 때 비공개였는가 — 평생 안 바뀐다(트리거 works_guard_private 가 지킨다) */
+  private_origin: boolean
+  author: string
 }
 
 const toWorkRow = (r: WorksTableRow): WorkRow => ({
@@ -44,13 +47,9 @@ const toWorkRow = (r: WorksTableRow): WorkRow => ({
   attachments: Array.isArray(r.attachments) ? r.attachments : [],
   isPrivate: !!r.is_private,
   ownerUid: r.owner_uid || '',
+  privateOrigin: !!r.private_origin,
+  author: r.author || '',
 })
-
-/** 로그인 계정 id — 비공개로 켤 때 소유자를 기록하는 데만 쓴다(비로그인이면 null) */
-const currentUid = async (): Promise<string | null> => {
-  const { data } = await supabase.auth.getSession()
-  return data.session?.user.id ?? null
-}
 
 const todayKst = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' })
 
@@ -157,14 +156,14 @@ export async function updateWork(p: WorkInput & { num: string | number; prevStat
   if (p.attachments !== undefined) patch.attachments = p.attachments
   await ensureSession()
   /**
-   * 비공개도 명시 전달일 때만 갱신. 켤 때는 소유자를 **나로 기록해야** 한다 —
-   * RLS(works_update_member)의 WITH CHECK 가 `owner_uid = auth.uid()` 를 요구하므로,
-   * 소유자가 비어 있는 옛 업무(기능 도입 전 155건)는 이 값을 안 보내면 저장 자체가 거부된다.
+   * 비공개도 명시 전달일 때만 갱신.
+   *
+   * **소유자를 여기서 바꾸지 않는다**(2026-08-13). 종전엔 잠글 때 owner_uid 를 나로 덮어썼는데,
+   * 그게 "남의 업무를 잠가 원작성자 화면에서 지워 버리는" 길이었다 — 소유자 검사가 자기 자신을
+   * 상대로 이뤄져 언제나 통과했기 때문이다. 지금은 트리거 works_guard_private 가 소유자·태생을
+   * 얼려 두고, **처음 비공개로 만든 업무를 그 작성자가 여닫을 때만** 통과시킨다.
    */
-  if (p.isPrivate !== undefined) {
-    patch.is_private = p.isPrivate
-    if (p.isPrivate) patch.owner_uid = await currentUid()
-  }
+  if (p.isPrivate !== undefined) patch.is_private = p.isPrivate
   const { error } = await withTimeout(supabase.from('works').update(patch).eq('num', Number(p.num)), DB_TIMEOUT, '업무 수정')
   if (error) fail(error, '업무 수정에 실패했습니다')
 }

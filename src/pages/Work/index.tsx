@@ -109,7 +109,7 @@ const cmp = (a: WorkItem, b: WorkItem) => dateSortValue(b.start) - dateSortValue
 const cmpChief = (a: WorkItem, b: WorkItem) => (b.chief ? 1 : 0) - (a.chief ? 1 : 0) || cmp(a, b)
 
 // 업무 → 인라인 편집 폼 값 (task 첫 줄=제목, 나머지=본문 / 본문 글머리 '- ' → 화면 '• ')
-function toForm(t: WorkItem): NewTaskForm {
+function toForm(t: WorkItem, uid?: string): NewTaskForm {
   const lines = String(t.task || '').split(/\r?\n/)
   return {
     cat: t.cat || '',
@@ -126,6 +126,8 @@ function toForm(t: WorkItem): NewTaskForm {
     chief: !!t.chief,
     attachments: t.attachments || [],
     isPrivate: !!t.isPrivate,
+    // 처음 비공개로 만든 **내** 업무만 여닫을 수 있다(2026-08-13 사용자 확정). 서버 트리거가 최종 판정.
+    canPrivate: !!t.privateOrigin && !!t.ownerUid && !!uid && t.ownerUid === uid,
   }
 }
 
@@ -230,7 +232,7 @@ export default function Work() {
   const { items, trashed, error, errorMsg, loading: workLoading, updatedAt } = useAppSelector((s) => s.work)
   const workReady = useAppSelector((s) => s.work.ready)
   // 쓰기 게이트 = 구성원 이상(2026-08-05 개방). 관리자는 isMember 에 포함되므로 종전과 동일하게 전부 가능.
-  const { isMember, user, authKey } = useRole()
+  const { isMember, user, authKey, uid } = useRole()
   // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 업무를 읽음 처리.
   // error 게이트 필수: 로드 실패도 ready=true라, 없으면 실패(빈 목록)를 '새 글 0'으로 오인해 seen을 지움
   useMarkSeen('work', useMemo(() => items.filter(isWorkNew).map((t) => String(t.num)), [items]), workReady && !error)
@@ -1226,7 +1228,7 @@ export default function Work() {
         key={t.id}
         saving={savingEdit}
         options={editOptionsFor(t)}
-        initial={toForm(t)}
+        initial={toForm(t, uid ?? undefined)}
         onCancel={() => setEditingId(null)}
         onSave={(form) => handleSaveEdit(t, form)}
       />

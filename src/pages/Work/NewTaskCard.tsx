@@ -43,6 +43,12 @@ export interface NewTaskForm {
   attachments: NoticeFile[]
   /** 비공개(나만 보기) — 만든 사람만 보고 고친다. 최종 판정은 DB RLS(개선요청 68) */
   isPrivate: boolean
+  /**
+   * 잠금을 여닫을 수 있는가 — **새로 만들 때는 언제나 가능**, 고칠 때는 처음 비공개로 만든
+   * 내 업무일 때만(2026-08-13 사용자 확정). 폼은 이 값만 보고, 판정은 부르는 쪽이 한다.
+   * 서버(트리거 works_guard_private)가 최종 판정이므로 이건 '누르기 전에 알려 주는' 층이다.
+   */
+  canPrivate?: boolean
 }
 
 /** 작성 중 첨부 1건의 로컬 상태 — 완료(done)만 저장 대상, 업로드중/실패는 UI 표시용 */
@@ -128,6 +134,8 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
   const [link, setLink] = useState(initial?.link ?? '')
   const [chief, setChief] = useState(initial?.chief ?? false)
   const [isPrivate, setIsPrivate] = useState(initial?.isPrivate ?? false)
+  // 새로 만드는 카드(initial 없음)는 언제나 고를 수 있다 — 고치는 중일 때만 부르는 쪽 판정을 따른다
+  const canPrivate = initial ? initial.canPrivate !== false : true
   // 첨부파일 — 파일별 업로드 상태 추적(업로드중/완료/실패). 완료 항목만 저장.
   // 수정 모드면 기존 첨부를 done으로 복원(그 경로는 sessionPaths에 넣지 않아 취소 시 삭제되지 않음).
   const [uploads, setUploads] = useState<Upload[]>(
@@ -293,20 +301,31 @@ export default function NewTaskCard({ saving, options, initial, onCancel, onSave
           <AttachButton count={attachCount} onFiles={onPickFiles} disabled={saving} />
           {/* 비공개(개선요청 68) — 여기가 **업무를 만드는 실제 경로**다(수정 모달은 상세에서만 열린다).
               만든 뒤에 잠그는 것도 되지만, 처음부터 남에게 안 보이게 만들 길이 없으면 반쪽이다. */}
-          <Tooltip title={isPrivate ? '나만 보기 — 켜짐(다른 팀원과 관리자에게 안 보임)' : '나만 보기 (비공개)'}>
-            <IconButton
-              size="small"
-              aria-label="나만 보기(비공개) 토글"
-              aria-pressed={isPrivate}
-              onClick={() => setIsPrivate((v) => !v)}
-              disabled={saving}
-              sx={(th) => ({ p: 0.5, color: isPrivate ? th.palette.accentText.blue : 'text.secondary' })}
-            >
-              {isPrivate
-                ? <LockIcon sx={{ fontSize: iconSize.action }} />
-                : <LockOpenIcon sx={{ fontSize: iconSize.action }} />}
-            </IconButton>
-          </Tooltip>
+          {/* 공개/비공개는 **만들 때 정해진다**(2026-08-13 사용자 확정). 처음 공개로 만든 업무는
+              끝까지 공개라 여기서 잠글 수 없고, 처음 비공개로 만든 업무만 그 작성자가 여닫는다.
+              그래서 못 바꾸는 카드에서는 버튼을 아예 감춘다 — 눌리지 않는 자물쇠는 오해만 부른다. */}
+          {(canPrivate || isPrivate) && (
+            <Tooltip title={
+              !canPrivate ? '비공개는 만든 사람만 바꿀 수 있습니다'
+              : isPrivate ? '나만 보기 — 켜짐(다른 팀원과 관리자에게 안 보임)'
+              : '나만 보기 (비공개)'
+            }>
+              <span>
+                <IconButton
+                  size="small"
+                  aria-label="나만 보기(비공개) 토글"
+                  aria-pressed={isPrivate}
+                  onClick={() => setIsPrivate((v) => !v)}
+                  disabled={saving || !canPrivate}
+                  sx={(th) => ({ p: 0.5, color: isPrivate ? th.palette.accentText.blue : 'text.secondary' })}
+                >
+                  {isPrivate
+                    ? <LockIcon sx={{ fontSize: iconSize.action }} />
+                    : <LockOpenIcon sx={{ fontSize: iconSize.action }} />}
+                </IconButton>
+              </span>
+            </Tooltip>
+          )}
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25, flexShrink: 0 }}>
           <Tooltip title={uploading ? '업로드 중…' : '저장'}>
