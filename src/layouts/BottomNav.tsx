@@ -124,11 +124,11 @@ export default function BottomNav() {
             {navItem('/calendar', '일정', <CalendarMonthIcon />)}
             {navItem('/notice', '공지', <CampaignIcon />, noticeCnt)}
             {/* 메뉴 — 나머지 목적지·계정을 바텀시트로. 뒤에 새 개선요청이 있으면 배지 */}
-            {actionItem('메뉴', <MenuIcon />, () => setMenuOpen(true), improveCnt, menuOpen)}
+            {actionItem('메뉴', <MenuIcon />, () => setMenuOpen((v) => !v), improveCnt, menuOpen)}
           </>
         ) : loggedIn ? (
           // 유관자 — 팀 업무 탭 없이 홈 + 메뉴(행사·바로가기·계정)
-          actionItem('메뉴', <MenuIcon />, () => setMenuOpen(true), 0, menuOpen)
+          actionItem('메뉴', <MenuIcon />, () => setMenuOpen((v) => !v), 0, menuOpen)
         ) : (
           actionItem('로그인', <LockOpenIcon />, () => setLoginOpen(true))
         )}
