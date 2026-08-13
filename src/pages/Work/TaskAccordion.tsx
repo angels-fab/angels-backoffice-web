@@ -11,7 +11,9 @@ import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
 import { mergeSx } from '@/components/ds/sxMerge'
 import { iconSize, motion, radius, shadow, typescale, weight } from '@/theme/tokens'
+import Tooltip from '@mui/material/Tooltip'
 import { StatusChip, focusRingSx } from '@/components/ds'
+import { statusTextColor } from '@/components/ds/StatusChip'
 import { fmtDate } from '@/utils/date'
 import { isWorkNew } from '@/utils/newPost'
 import type { WorkItem } from '@/types'
@@ -212,7 +214,29 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
           transition: 'background-color .16s ease',
         }}
       >
-        {t.cat && <StatusChip status={catKind(t.cat)} icon={catIcon(t.cat)} label={t.cat} />}
+        {/* 업무구분 — 칩을 빼고 **대표 아이콘만** 남긴다(개선요청 83). 색은 칩이 쓰던 것과 같은
+            statusTextColor 라 "행정=파랑·예산=빨강"이 그대로 읽히고, 글자칸이 빠진 만큼 제목이 넓어진다.
+            크기는 칩 안(13px)이 아니라 제목(14px)에 맞춰 18px — 홀로 서면 그만큼 커야 눈에 든다.
+            이름은 툴팁으로 남긴다(아이콘 6종은 색+모양으로 구분되지만 처음 보는 사람에겐 이름이 필요하다).
+            아이콘이 없는 구분(현재 AI반도체연구원·MoC 3건)은 글자로 적는다 — 안 그리면 구분이 사라진다. */}
+        {t.cat && (catIcon(t.cat)
+          ? (
+            <Tooltip title={t.cat}>
+              <Box
+                component="span"
+                aria-label={`업무구분 ${t.cat}`}
+                sx={(th) => ({
+                  flexShrink: 0, display: 'inline-flex', alignItems: 'center',
+                  color: statusTextColor(th, catKind(t.cat)),
+                  '& svg': { fontSize: iconSize.action },
+                })}
+              >
+                {catIcon(t.cat)}
+              </Box>
+            </Tooltip>
+          )
+          : <Box component="span" sx={{ flexShrink: 0, fontSize: typescale.caption.size, color: 'text.secondary' }}>{t.cat}</Box>
+        )}
         {/* 새 업무 N 배지 — 진행중+발의 7일(공지 N칩과 동일 디자인). 제목 말줄임과 안 겹치게 flexShrink:0 */}
         {isWorkNew(t) && (
           <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (th) => th.palette.accent.red, color: (th) => th.palette.getContrastText(th.palette.accent.red), fontSize: typescale.micro.size, fontWeight: weight.bold, lineHeight: 1 }}>N</Box>
