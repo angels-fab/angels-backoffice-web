@@ -71,6 +71,11 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
       anchor="bottom"
       open={open}
       onClose={onClose}
+      /* ★ 모달의 **뿌리 요소**까지 띄워야 탭이 눌린다(2026-08-13 사용자 지적으로 발견).
+         MUI Modal 의 root 는 `position:fixed; inset:0; z-index:1200` 인 **투명한 판**이라,
+         딤만 올려도 이 판이 화면 전체를 덮은 채 탭을 통째로 삼켰다("하단버튼이 하나도 안 먹힘").
+         실측으로 확인: 이 판이 있으면 탭 지점의 elementFromPoint 가 판, 띄우면 탭 버튼이 잡힌다. */
+      sx={{ bottom: 'var(--bottom-nav-h)' }}
       slotProps={{
         /* 시트를 **하단 탭바 위에서 멈춘다**(개선요청 80). MUI 기본은 bottom:0 이라 탭바를 덮었고,
            딤(backdrop)도 화면 전체를 덮어 탭을 눌러도 시트만 닫혔다. 둘 다 같은 높이만큼 띄운다.

@@ -137,8 +137,17 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
   // 칩이 4개면 글자 처리가 3가지로 갈려 시끄러웠고, 부서·날짜는 "걸러낼 분류"가 아니라 그냥 값이라
   // 칩이라는 그릇이 맞지 않았다.
   const deptMeta = (t.dept || '').trim() ? { label: '부서', value: t.dept as string } : null
+  /**
+   * 작성자는 **발의 날짜 뒤 괄호**에 붙인다(2026-08-13 사용자 지시) — 한 칸을 새로 쓰지 않고
+   * "언제 · 누가"를 한 덩어리로 읽게. 발의 날짜가 없는 업무는 갈 곳이 없으므로 '작성자 ○○○' 로 따로 선다.
+   * 둘 다 없으면(이관 이전 업무 155건은 작성자 기록이 없다) 아무것도 안 그린다.
+   */
+  const author = (t.author || '').trim()
+  const startDate = t.start ? fmtDate(t.start) : ''
   const dateMetas: { label: string; value: string }[] = [
-    { label: '발의', value: t.start ? fmtDate(t.start) : '' },
+    startDate
+      ? { label: '발의', value: author ? `${startDate} (${author})` : startDate }
+      : { label: '작성자', value: author },
     { label: '예정', value: t.plan ? fmtDate(t.plan) : '' },
     { label: '완료', value: t.end ? fmtDate(t.end) : '' },
   ].filter((m) => (m.value || '').trim())
@@ -281,9 +290,6 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             }}
           >
             {deptMeta && <MetaItem label={deptMeta.label} value={deptMeta.value} />}
-            {/* 작성자(2026-08-13 사용자 요청) — 담당자와 다른 축이라 머리 칩이 아니라 메타 줄에 둔다.
-                이관 이전 업무 155건은 기록이 없어 빈 값이고, 그때는 줄을 만들지 않는다(빈칸이 더 헷갈린다) */}
-            {(t.author || '').trim() && <MetaItem label="작성" value={t.author} />}
             {dateMetas.map((m) => (
               <MetaItem key={m.label} label={m.label} value={m.value} />
             ))}
