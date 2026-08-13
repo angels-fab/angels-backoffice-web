@@ -1301,7 +1301,8 @@ export default function StickyMemoLayer() {
    * 이 화면의 일반메모 — 서버가 이미 '내 것 + 공유받은 것'만 준다(RLS).
    * 그림과 달리 포털 관리자도 예외가 아니다 — 그게 요청메모와 갈리는 지점이다.
    */
-  // target 이 있는 메모는 업무카드 안에 박혀 있으므로 이 레이어가 그리지 않는다(WorkCardNotes 담당)
+  // target 이 있는 메모는 옛 '업무카드 안 메모'라 이 레이어가 그리지 않는다
+  // (그 기능은 2026-08-12 지웠고 새로 생기지 않는다 — 남은 옛 행에 대한 방어)
   const hereNotes = useMemo(
     () => notes.filter((n) => !n.target && matchesPath(pathname, n.path)),
     [notes, pathname],

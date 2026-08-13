@@ -71,6 +71,35 @@ export async function getWorks(): Promise<WorkRow[]> {
   return ((data || []) as WorksTableRow[]).map(toWorkRow)
 }
 
+/**
+ * 업무 변경 이력 한 줄 — works 트리거(works_log_changes)가 남긴다. 앱은 **읽기만** 한다.
+ * 정본 SQL·설계 근거는 docs/db/work-history.sql · docs/work-history-recording.md
+ */
+export interface WorkHistoryRow {
+  id: number
+  num: number
+  /** 상태 · 담당자 · 예정일 · Remind · 내용 · 서식 · 완료일 */
+  field: string
+  prev: string
+  next: string
+  author: string
+  /** ISO 타임스탬프 */
+  at: string
+}
+
+/**
+ * 이력 전체 읽기 — 건수가 작아(연 200줄 안팎) 한 번에 받아 화면에서 업무별로 나눈다.
+ * 카드마다 물으면 156번 왕복이 된다. RLS 가 팀원 이상만 통과시키므로 게스트는 0줄을 받는다.
+ */
+export async function getWorkHistory(): Promise<WorkHistoryRow[]> {
+  const { data, error } = await supabase
+    .from('work_history')
+    .select('id, num, field, prev, next, author, at')
+    .order('at', { ascending: false })
+  if (error) fail(error, '업무 이력을 불러오지 못했습니다')
+  return ((data || []) as WorkHistoryRow[]).map((r) => ({ ...r, num: Number(r.num) }))
+}
+
 /** 업무 신규 등록 → 새 번호 반환(자동 채번) */
 export async function createWork(p: WorkInput): Promise<number> {
   const rules = applyStatusRules(p)

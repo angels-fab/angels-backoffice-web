@@ -56,7 +56,8 @@ import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { isWorkNew } from '@/utils/newPost'
 import { useMarkSeen } from '@/layouts/useNavBadges'
 import { loadWorkData, patchWorkItems, softDeleteWorkItems, restoreWorkItems, purgeWorkItems } from '@/store/slices/workSlice'
-import { createWork, deleteWork, restoreWorks, purgeWorks, updateWork, fetchAuthors, updateWorkStatuses, removeWorkFiles } from '@/api/works'
+import { createWork, deleteWork, restoreWorks, purgeWorks, updateWork, fetchAuthors, updateWorkStatuses, removeWorkFiles, getWorkHistory } from '@/api/works'
+import type { WorkHistoryRow } from '@/api/works'
 import { putSetting } from '@/store/slices/userSettingsSlice'
 import type { WorkStatusChange } from '@/api/sheets'
 import { useRole } from '@/auth/role'
@@ -361,6 +362,25 @@ export default function Work() {
   useEffect(() => {
     fetchAuthors().then(setAuthors).catch(() => setAuthors(null))
   }, [])
+
+  /**
+   * 변경 이력(개선요청 66) — **한 번에 다 받아 업무별로 나눈다.** 카드마다 물으면 156번 왕복이 된다.
+   * 연 200줄 안팎이라 통째로 받아도 가볍다. 게스트는 RLS 가 0줄을 주므로 시계 아이콘 자체가 안 뜬다.
+   * items 가 바뀔 때(=업무 목록을 다시 불러왔을 때) 함께 새로 받는다 — 수정 직후 이력이 바로 반영된다.
+   */
+  const [historyMap, setHistoryMap] = useState<Record<string, WorkHistoryRow[]>>({})
+  useEffect(() => {
+    let alive = true
+    getWorkHistory()
+      .then((rows) => {
+        if (!alive) return
+        const m: Record<string, WorkHistoryRow[]> = {}
+        for (const r of rows) (m[String(r.num)] ||= []).push(r)
+        setHistoryMap(m)
+      })
+      .catch(() => { /* 이력은 곁정보 — 못 받아도 화면은 그대로 */ })
+    return () => { alive = false }
+  }, [items])
 
   // 통합검색 딥링크(/work?focus=<id>) → 해당 업무 상세 Drawer 자동 오픈
   useEffect(() => {
@@ -1211,7 +1231,7 @@ export default function Work() {
         onSave={(form) => handleSaveEdit(t, form)}
       />
     ) : (
-      <TaskAccordion key={t.id} t={t} tone={tone} selected={selected.has(t.num)} onRequestSelect={() => selectOnly(t.num)} people={authors || []} />
+      <TaskAccordion key={t.id} t={t} tone={tone} selected={selected.has(t.num)} onRequestSelect={() => selectOnly(t.num)} history={historyMap[String(t.num)]} />
     )
 
   return (

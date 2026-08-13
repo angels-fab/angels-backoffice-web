@@ -25,8 +25,9 @@ export interface PageNote {
   /** 딸린 그림 id — 없으면 null */
   drawingId: number | null
   /**
-   * 박아 넣을 대상 — 지금은 업무카드만(`work:{num}`). 있으면 **화면에 떠 있지 않고 그 카드 안에** 그려진다.
-   * 카드의 자식이라 순서가 바뀌든 걸러지든 저절로 따라간다 — 좌표도 감시 장치도 필요 없다.
+   * 박아 넣을 대상 — **지금은 아무도 쓰지 않는다.** 업무카드 안 메모(WorkCardNotes)가 쓰던 칸인데
+   * 그 기능을 지웠다(2026-08-12 사용자 지시, 개선요청 66). 값을 넣는 곳이 없어 항상 null 이다.
+   * 읽는 쪽만 남겨 둔 이유는 옛 행이 남아 있을 경우 쪽지 레이어가 그것을 걸러 낼 수 있게 하기 위함.
    */
   target: string | null
   /**
@@ -64,9 +65,6 @@ const toNote = (r: Row): PageNote => ({
   originNum: r.origin_num === null ? null : Number(r.origin_num),
 })
 
-/** 업무카드 대상 키 — 대상 종류를 늘릴 때 여기만 늘린다 */
-export const workTarget = (num: string | number) => `work:${num}`
-
 /** RLS 가 이미 '내 것 + 공유받은 것'으로 걸러 주므로 조건 없이 받는다 */
 export async function fetchPageNotes(): Promise<PageNote[]> {
   const { data, error } = await supabase
@@ -83,8 +81,6 @@ export async function createPageNote(p: {
   content: string
   shared?: string[]
   drawingId?: number | null
-  /** 업무카드 안에 박아 넣을 때 — workTarget(num). 주면 좌표는 안 쓴다 */
-  target?: string | null
   /** 떠 있는 쪽지의 작성자 자리 — 공유받은 사람의 첫 자리가 된다 */
   x?: number | null
   y?: number | null
@@ -95,7 +91,7 @@ export async function createPageNote(p: {
       .from('page_notes')
       .insert({
         path: p.path, content: p.content, shared: p.shared || [], drawing_id: p.drawingId ?? null,
-        target: p.target ?? null, x: p.x ?? null, y: p.y ?? null,
+        x: p.x ?? null, y: p.y ?? null,
       })
       .select(SELECT)
       .single(),

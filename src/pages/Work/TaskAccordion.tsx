@@ -5,6 +5,7 @@ import ClickAwayListener from '@mui/material/ClickAwayListener'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutlineOutlined'
 import LockIcon from '@mui/icons-material/Lock'
+import HistoryIcon from '@mui/icons-material/History'
 import Typography from '@mui/material/Typography'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
@@ -23,9 +24,10 @@ import SubLine from './SubLine'
 import WorkPinButton from './WorkPinButton'
 import WorkAttachments from './WorkAttachments'
 import TaskLinkButton from './TaskLinkButton'
-import WorkCardNotes, { WORK_CARD_NOTES_ENABLED } from './WorkCardNotes'
 import WorkCardComments from './WorkCardComments'
 import { useAppSelector } from '@/store/hooks'
+import WorkHistoryList from './WorkHistoryList'
+import type { WorkHistoryRow } from '@/api/works'
 
 export type { CardTone } from './workMeta'
 
@@ -43,8 +45,8 @@ export interface TaskAccordionProps {
    * 버튼을 눌러도 카드가 선택되게 하려면 이 경로가 따로 필요하다.
    */
   onRequestSelect?: () => void
-  /** 공유 대상 후보(profiles 이름) — 카드에 박는 메모의 공유 칸에 쓴다 */
-  people?: string[]
+  /** 이 업무의 변경 이력(최신순) — 없으면 시계 버튼 자체가 안 뜬다(개선요청 66) */
+  history?: WorkHistoryRow[]
 }
 
 /**
@@ -60,6 +62,21 @@ export interface TaskAccordionProps {
  * 아니라 값의 시작점에 맞춰 들어가야 하기 때문(행잉 인덴트). 라벨이 전부 두 글자라 칸 폭이 같아
  * 항목끼리도 세로로 정렬된다. gap은 공백 한 칸보다 조금 넓게 — 11px 글자의 공백은 3px라 붙어 보였다.
  */
+/**
+ * 메타 줄 오른쪽 아이콘 버튼(이력·첨부) 공통 모양 — 테두리 없이 아이콘+숫자만.
+ * 존재는 채도가 아니라 크기로 알린다(본문과 같은 14px).
+ */
+const metaBtnSx = (th: Theme) => ({
+  display: 'inline-flex', alignItems: 'center', gap: '4px',
+  px: 0.75, py: 0.375, font: 'inherit', cursor: 'pointer',
+  fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight,
+  color: 'text.secondary', bgcolor: 'transparent', border: 'none',
+  borderRadius: `${radius.chip}px`,
+  transition: `background-color ${motion.base}, color ${motion.base}`,
+  '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.09), color: 'text.primary' },
+  '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 1 },
+})
+
 function MetaItem({ label, value, sx }: { label: string; value: string; sx?: SxProps<Theme> }) {
   return (
     <Box sx={mergeSx({ display: 'flex', gap: '6px', alignItems: 'baseline' }, sx)}>
@@ -69,7 +86,7 @@ function MetaItem({ label, value, sx }: { label: string; value: string; sx?: SxP
   )
 }
 
-export default function TaskAccordion({ t, tone, selected = false, onSelect, onRequestSelect, people = [] }: TaskAccordionProps) {
+export default function TaskAccordion({ t, tone, selected = false, onSelect, onRequestSelect, history = [] }: TaskAccordionProps) {
   const subs = workBodyLines(t)
   const link = taskLink(t)
   const atts = t.attachments || []
@@ -82,6 +99,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
   const [cmtAnchor, setCmtAnchor] = useState<HTMLElement | null>(null)
   // 지워져 자리만 남은 코멘트("삭제된 코멘트입니다")는 건수에 안 넣는다 — 배지는 읽을 것의 수다
   const commentCount = useAppSelector((s) => s.workComments.items.filter((c) => c.num === t.num && !c.deleted).length)
+  const [histAnchor, setHistAnchor] = useState<HTMLElement | null>(null)
   const cardRef = useRef<HTMLDivElement | null>(null)
   /**
    * 첨부 팝업을 바깥 클릭으로 닫을 때, 그 클릭이 카드 선택까지 건드리지 않게 **한 번만 삼킨다**.
@@ -242,7 +260,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             {dateMetas.map((m) => (
               <MetaItem key={m.label} label={m.label} value={m.value} />
             ))}
-            {/* 코멘트 · 관련링크 · 첨부 — 한 자리에 모아 오른쪽 끝(개선요청 62·68). 하나만 있어도 성립한다 */}
+            {/* 코멘트 · 이력 · 관련링크 · 첨부 — 한 자리에 모아 오른쪽 끝(개선요청 62·66·68). 하나만 있어도 성립한다 */}
             <Box sx={{ ml: 'auto', alignSelf: 'center', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 0.25 }}>
               {/* 코멘트(개선요청 68) — 건수가 0이어도 버튼은 늘 있다. 없으면 첫 코멘트를 달 길이 없다 */}
               <Box
@@ -256,7 +274,8 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
                   e.stopPropagation()
                   const el = e.currentTarget
                   onRequestSelect?.()
-                  setAttAnchor(null) // 첨부 팝업과 동시에 열리면 겹친다 — 한 번에 하나만
+                  setAttAnchor(null) // 첨부·이력 팝업과 동시에 열리면 겹친다 — 한 번에 하나만
+                  setHistAnchor(null)
                   setCmtAnchor((prev) => (prev ? null : el))
                 }}
                 sx={(th) => ({
@@ -274,6 +293,28 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
                 <ChatBubbleOutlineIcon sx={{ fontSize: iconSize.action }} />
                 {commentCount > 0 && commentCount}
               </Box>
+              {/* 이력이 있는 카드에만 시계가 뜬다 — 없는 카드까지 아이콘을 달면 156장이 다 시끄러워진다 */}
+              {history.length > 0 && (
+                <Box
+                  component="button"
+                  type="button"
+                  aria-label={`변경 이력 ${history.length}건 보기`}
+                  aria-haspopup="dialog"
+                  aria-expanded={!!histAnchor}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    const el = e.currentTarget
+                    onRequestSelect?.()
+                    setAttAnchor(null)
+                    setCmtAnchor(null)
+                    setHistAnchor((prev) => (prev ? null : el))
+                  }}
+                  sx={metaBtnSx}
+                >
+                  <HistoryIcon sx={{ fontSize: iconSize.action }} />
+                  {history.length}
+                </Box>
+              )}
               {/* 호버 미리보기는 TaskLinkButton 안에 있다(개선요청 67) — 아이콘이 옮겨가도 함께 따라온다 */}
               {link && <TaskLinkButton url={link} sx={{ p: 0.5 }} />}
                 {atts.length > 0 && (
@@ -293,20 +334,11 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
                       // 첨부를 눌러도 그 카드가 선택되게(다른 카드가 선택돼 있어도 이 카드로 옮겨온다).
                       // 선택 '전환'이지 토글이 아니라, 이미 선택된 카드에서 다시 눌러도 해제되지 않는다.
                       onRequestSelect?.()
-                      setCmtAnchor(null) // 코멘트 팝업과 동시에 열리면 겹친다 — 한 번에 하나만
+                      setCmtAnchor(null) // 코멘트·이력 팝업과 동시에 열리면 겹친다 — 한 번에 하나만
+                      setHistAnchor(null)
                       setAttAnchor((prev) => (prev ? null : el))
                     }}
-                    sx={(th) => ({
-                      display: 'inline-flex', alignItems: 'center', gap: '4px',
-                      px: 0.75, py: 0.375, font: 'inherit', cursor: 'pointer',
-                      // 테두리 없이 아이콘+숫자만. 존재는 채도가 아니라 크기로 알린다(본문과 같은 14px)
-                      fontSize: typescale.emphasis.size, fontWeight: typescale.emphasis.weight,
-                      color: 'text.secondary', bgcolor: 'transparent', border: 'none',
-                      borderRadius: `${radius.chip}px`,
-                      transition: `background-color ${motion.base}, color ${motion.base}`,
-                      '&:hover': { bgcolor: alpha(th.palette.text.primary, 0.09), color: 'text.primary' },
-                      '&:focus-visible': { outline: 2, outlineColor: 'primary.main', outlineOffset: 1 },
-                    })}
+                    sx={metaBtnSx}
                   >
                     <AttachFileIcon sx={{ fontSize: iconSize.action }} />
                     {atts.length}
@@ -315,12 +347,6 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             </Box>
         </Box>
       </Box>
-
-
-      {/* 이 업무에 박아 넣은 일반메모 — **지금은 꺼져 있다**(WorkCardNotes 의 WORK_CARD_NOTES_ENABLED).
-          카드의 자식이라 순서·필터·뷰가 바뀌어도 함께 움직인다
-          (좌표를 쓰지 않는 이유는 WorkCardNotes 주석 참고, 2026-08-07 사용자 지시) */}
-      {WORK_CARD_NOTES_ENABLED && <WorkCardNotes num={t.num} people={people} />}
 
       {/* 첨부 목록 — 메타 줄의 클립 버튼에서 펼침. 내용은 기존 파일칩 그리드 그대로(다운로드 동작 동일).
           Portal이라 DOM은 카드 밖이지만 React 트리로는 안쪽이라, 카드 선택이 안 걸리게 클릭을 막는다. */}
@@ -383,6 +409,32 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             }}
           >
             <WorkCardComments num={t.num} />
+          </Box>
+        </ClickAwayListener>
+      </Popper>
+
+      {/* 변경 이력 — 메타 줄의 시계 버튼에서 펼침. 첨부 팝오버와 **완전히 같은 방식**이라
+          닫힘·카드 선택 유지 동작이 이미 검증돼 있다(위 주석 참고, 개선요청 66) */}
+      <Popper open={!!histAnchor} anchorEl={histAnchor} placement="bottom-end" sx={{ zIndex: (th) => th.zIndex.modal }}>
+        <ClickAwayListener
+          mouseEvent="onMouseDown"
+          touchEvent="onTouchStart"
+          onClickAway={(e) => {
+            if (histAnchor && e.target instanceof Node && histAnchor.contains(e.target)) return
+            setHistAnchor(null)
+            swallowNextClickInCard()
+          }}
+        >
+          <Box
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setHistAnchor(null) } }}
+            sx={{
+              mt: 0.5, p: 1.5, width: { xs: 280, sm: 420 },
+              bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider',
+              borderRadius: `${radius.button}px`, boxShadow: shadow.lg,
+            }}
+          >
+            <WorkHistoryList rows={history} />
           </Box>
         </ClickAwayListener>
       </Popper>
