@@ -1,14 +1,32 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Box from '@mui/material/Box'
 import ArrowRightAltIcon from '@mui/icons-material/ArrowRightAlt'
+import AddIcon from '@mui/icons-material/Add'
+import RemoveIcon from '@mui/icons-material/Remove'
+import EditIcon from '@mui/icons-material/Edit'
+import EditNoteIcon from '@mui/icons-material/EditNote'
+import PlaylistAddIcon from '@mui/icons-material/PlaylistAdd'
+import PlaylistRemoveIcon from '@mui/icons-material/PlaylistRemove'
+import PostAddIcon from '@mui/icons-material/PostAdd'
+import DeleteSweepIcon from '@mui/icons-material/DeleteSweep'
+import TitleIcon from '@mui/icons-material/Title'
+import FormatIndentIncreaseIcon from '@mui/icons-material/FormatIndentIncrease'
+import FormatIndentDecreaseIcon from '@mui/icons-material/FormatIndentDecrease'
+import type { SvgIconComponent } from '@mui/icons-material'
+import { alpha } from '@mui/material/styles'
 import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 import type { WorkHistoryRow } from '@/api/works'
+import { diffContent } from './contentDiff'
+import type { DiffEntry, DiffPiece } from './contentDiff'
 
 /**
  * 업무 변경 이력 목록 — 카드의 시계 버튼에서 펼치는 팝오버 내용(개선요청 66).
  *
  * 읽기 전용이다. 기록은 DB 트리거가 하고 앱은 손대지 않는다(docs/db/work-history.sql).
  * 소급이 안 되므로 **켠 날 이전의 변경은 없다** — 그 사실을 목록 끝에 한 줄로 알린다.
+ *
+ * 본문 이력은 **바뀐 곳만** 보여준다(2026-08-13 사용자 지시). 전문을 다 펼치면
+ * "모두 나오긴 하는데 어디가 바뀐지 안 보이는" 상태가 된다 — 계산은 contentDiff.ts.
  */
 
 /**
@@ -28,47 +46,145 @@ function stamp(iso: string): string {
   return `${at('month')}-${at('day')} ${at('hour')}:${at('minute')}`
 }
 
-/** 본문·서식처럼 값을 나란히 못 보여주는 항목인가 — 글이 길어 팝오버를 삼킨다 */
-const isBody = (field: string) => field === '내용' || field === '서식'
+/** 라벨마다 다른 아이콘 — 무슨 일이 있었는지 글자를 읽기 전에 눈에 들어오게 */
+const LABEL_ICON: Record<string, SvgIconComponent> = {
+  '내용 추가': PlaylistAddIcon,
+  '내용 삭제': PlaylistRemoveIcon,
+  '내용 변경': EditNoteIcon,
+  '제목 변경': TitleIcon,
+  '단계 변경': FormatIndentIncreaseIcon,
+  '내용 작성': PostAddIcon,
+  '내용 전체 삭제': DeleteSweepIcon,
+}
+
+/** 한 번에 펼쳐 두는 항목 수 — 넘치면 접어 두고 눌러서 마저 본다 */
+const PREVIEW_ENTRIES = 5
+
+/**
+ * 지운 말 / 더한 말 한 조각.
+ * 색만으로 구분하지 않는다 — 지운 말에는 취소선이 함께 붙고, 줄 앞에는 아이콘이 선다.
+ */
+function Piece({ p }: { p: DiffPiece }) {
+  if (p.mark === 'same') return <Box component="span">{p.text}</Box>
+  const add = p.mark === 'add'
+  return (
+    <Box
+      component="span"
+      sx={(th) => ({
+        // 12% 틴트는 토큰 주석이 대비를 보장한 값이다(tokens.ts accent 절) — 더 진하게 올리지 말 것
+        bgcolor: alpha(add ? th.palette.accent.green : th.palette.accent.red, 0.12),
+        color: add ? th.palette.accentText.green : th.palette.accentText.red,
+        fontWeight: add ? weight.semibold : weight.regular,
+        textDecoration: add ? 'none' : 'line-through',
+        borderRadius: `${radius.chip}px`,
+        px: '2px',
+      })}
+    >
+      {p.text}
+    </Box>
+  )
+}
+
+/** 바뀐 곳 한 줄 — 왼쪽 아이콘으로 종류, 오른쪽 글에서 낱말 단위로 어디가 바뀌었는지 */
+function DiffLine({ e }: { e: DiffEntry }) {
+  const Icon =
+    e.kind === 'add' ? AddIcon
+    : e.kind === 'del' ? RemoveIcon
+    : e.kind === 'indent' ? (e.indent > (e.indentFrom ?? 0) ? FormatIndentIncreaseIcon : FormatIndentDecreaseIcon)
+    : EditIcon
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: '15px 1fr', columnGap: 0.5, alignItems: 'start' }}>
+      <Icon
+        sx={(th) => ({
+          fontSize: iconSize.caption,
+          mt: '3px',
+          color:
+            e.kind === 'add' ? th.palette.accentText.green
+            : e.kind === 'del' ? th.palette.accentText.red
+            : th.palette.text.disabled,
+        })}
+      />
+      {/* 줄 앞 들여쓰기(2칸 = 한 단계)를 그대로 살린다 — 어느 항목 아래의 변경인지가 이걸로 읽힌다 */}
+      <Box
+        sx={{
+          pl: `${Math.min(e.indent, 8) * 5}px`,
+          fontSize: typescale.small.size,
+          lineHeight: 1.7,
+          wordBreak: 'break-word',
+          color: e.kind === 'del' ? 'text.secondary' : 'text.primary',
+        }}
+      >
+        {e.pieces.map((p, i) => <Piece key={i} p={p} />)}
+      </Box>
+    </Box>
+  )
+}
+
+/** 본문 이력 한 줄 — 라벨(무슨 일이 있었나) + 펼치면 바뀐 곳 목록 */
+function BodyRow({ h }: { h: WorkHistoryRow }) {
+  const [open, setOpen] = useState(false)
+  const [all, setAll] = useState(false)
+  const d = useMemo(() => diffContent(h.prev, h.next), [h.prev, h.next])
+  const Icon = LABEL_ICON[d.label]
+  const shown = all ? d.entries : d.entries.slice(0, PREVIEW_ENTRIES)
+  const rest = d.entries.length - shown.length
+
+  return (
+    <>
+      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+        {Icon && <Icon sx={{ fontSize: iconSize.body, color: 'text.disabled' }} />}
+        <Box component="span" sx={{ fontWeight: weight.semibold }}>{d.label}</Box>
+        {d.count > 0 && (
+          <Box component="span" sx={{ color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+            {d.count}곳
+          </Box>
+        )}
+      </Box>
+      {h.author && <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}> · {h.author}</Box>}
+      {d.entries.length > 0 && (
+        <Box
+          component="button"
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          sx={{
+            ml: 0.75, p: 0, font: 'inherit', fontSize: typescale.caption.size, cursor: 'pointer',
+            bgcolor: 'transparent', border: 'none', color: 'primary.main', textDecoration: 'underline',
+          }}
+        >
+          {open ? '접기' : '바뀐 곳 보기'}
+        </Box>
+      )}
+      {open && (
+        <Box sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {shown.map((e, i) => <DiffLine key={i} e={e} />)}
+          {rest > 0 && (
+            <Box
+              component="button"
+              type="button"
+              onClick={() => setAll(true)}
+              sx={{
+                alignSelf: 'flex-start', p: 0, font: 'inherit', fontSize: typescale.caption.size, cursor: 'pointer',
+                bgcolor: 'transparent', border: 'none', color: 'primary.main', textDecoration: 'underline',
+              }}
+            >
+              {rest}곳 더 보기
+            </Box>
+          )}
+        </Box>
+      )}
+    </>
+  )
+}
 
 function Row({ h }: { h: WorkHistoryRow }) {
-  const [openBody, setOpenBody] = useState(false)
-  const body = isBody(h.field)
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: '78px 1fr', columnGap: 1.25, alignItems: 'baseline' }}>
       <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', fontVariantNumeric: 'tabular-nums' }}>
         {stamp(h.at)}
       </Box>
       <Box sx={{ minWidth: 0, fontSize: typescale.body.size, lineHeight: 1.6 }}>
-        {body ? (
-          <>
-            <Box component="span">{h.field === '내용' ? '내용 수정' : '서식 변경'}</Box>
-            {h.author && <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}> · {h.author}</Box>}
-            {/* 이전 글은 접어 둔다 — 펼쳐 두면 이력 한 줄이 팝오버를 다 차지한다 */}
-            {h.field === '내용' && !!h.prev && (
-              <Box
-                component="button"
-                type="button"
-                onClick={() => setOpenBody((v) => !v)}
-                sx={{
-                  ml: 0.75, p: 0, font: 'inherit', fontSize: typescale.caption.size, cursor: 'pointer',
-                  bgcolor: 'transparent', border: 'none', color: 'primary.main', textDecoration: 'underline',
-                }}
-              >
-                {openBody ? '접기' : '이전 글 보기'}
-              </Box>
-            )}
-            {openBody && (
-              <Box sx={(th) => ({
-                mt: 0.5, p: 1, maxHeight: 160, overflowY: 'auto',
-                border: `1px solid ${th.palette.divider}`, borderRadius: `${radius.chip}px`,
-                bgcolor: 'background.elevated',
-                fontSize: typescale.small.size, color: 'text.secondary', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-              })}>
-                {h.prev}
-              </Box>
-            )}
-          </>
+        {h.field === '내용' ? (
+          <BodyRow h={h} />
         ) : (
           <>
             <Box component="span" sx={{ color: 'text.secondary' }}>{h.field} </Box>
@@ -86,7 +202,7 @@ function Row({ h }: { h: WorkHistoryRow }) {
 export default function WorkHistoryList({ rows }: { rows: WorkHistoryRow[] }) {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-      <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: typescale.emphasis.weight, letterSpacing: '0.04em', color: 'text.disabled' }}>
+      <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.semibold, letterSpacing: '0.04em', color: 'text.disabled' }}>
         변경 이력
       </Box>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxHeight: 280, overflowY: 'auto' }}>

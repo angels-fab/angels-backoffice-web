@@ -430,7 +430,8 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setHistAnchor(null) } }}
             sx={{
               mt: 0.5, p: 1.5, width: { xs: 280, sm: 420 },
-              bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider',
+              // 코멘트 팝업과 같은 이유로 elevated — 카드도 paper 라 다크에서 팝업이 카드 위에 녹는다
+              bgcolor: 'background.elevated', border: '1px solid', borderColor: 'divider',
               borderRadius: `${radius.button}px`, boxShadow: shadow.lg,
             }}
           >
