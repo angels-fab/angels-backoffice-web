@@ -12,7 +12,7 @@ import { useRole } from '@/auth/role'
 import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
 import { fetchAttendees, addAttendee, removeAttendee, fetchSubmissions, type AttendeeRow, type EventSubmissionRow } from '@/api/events'
 import { EventCardInner, EventDrawerDetail, type AttendControl } from './eventCard'
-import MobileCarousel from './MobileCarousel'
+import MobileEventList from './MobileEventList'
 import EndedList from './EndedList'
 import SubmitEventModal from './SubmitEventModal'
 import SubmissionsAdmin from './SubmissionsAdmin'
@@ -52,7 +52,7 @@ export default function Events() {
   const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true })
   const [tab, setTab] = useState<Tab>('active')
   const [openId, setOpenId] = useState<string | null>(null)
-  const [endedDetail, setEndedDetail] = useState<FabEvent | null>(null)
+  const [detailEvent, setDetailEvent] = useState<FabEvent | null>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const [attendees, setAttendees] = useState<AttendeeRow[]>([])
   const [attBusy, setAttBusy] = useState(false)
@@ -124,14 +124,14 @@ export default function Events() {
 
   // Escape로 열린 카드/상세 닫기 (PC 그리드·종료 상세 패널)
   useEffect(() => {
-    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') { setOpenId(null); setEndedDetail(null) } }
+    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') { setOpenId(null); setDetailEvent(null) } }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   // 종료 상세 패널 바깥 클릭 시 닫기 — 단, 목록 행 클릭은 '전환'(닫지 않음), 패널 안 클릭은 유지
   useEffect(() => {
-    if (!endedDetail) return
+    if (!detailEvent) return
     const onDown = (ev: MouseEvent) => {
       const t = ev.target as HTMLElement
       if (panelRef.current?.contains(t)) return       // 패널 내부 → 유지
@@ -139,11 +139,11 @@ export default function Events() {
       // 전용 data 속성으로 둔다 — 클래스는 룩이 바뀌면 사라지는데 이건 기능이라 같이 죽으면 안 된다.
       if (t.closest('[data-ended-list] tbody tr')) return
       if (t.closest('.MuiPopover-root, .MuiModal-root')) return // 관리자 참석자 관리 팝오버 등 → 유지
-      setEndedDetail(null)                              // 그 외 바깥 → 닫기
+      setDetailEvent(null)                              // 그 외 바깥 → 닫기
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
-  }, [endedDetail])
+  }, [detailEvent])
 
   return (
     <PageContainer>
@@ -185,7 +185,11 @@ export default function Events() {
               <EmptyState icon={<CoPresentIcon />} title="진행 중이거나 예정된 행사가 없습니다" description="새 행사가 등록되면 여기에 표시됩니다." />
             </AppCard>
           ) : isMobile ? (
-            <MobileCarousel events={active} getAttend={attendFor} />
+            /* 모바일은 압축 목록 — 가로 캐러셀이던 것을 세로 목록으로(개선요청 72, 1번 안).
+               탭하면 종료 행사와 **같은 상세 패널**이 열린다(포스터를 화면 폭으로 크게 본다) */
+            <AppCard padding={0}>
+              <MobileEventList events={active} onOpen={(e) => setDetailEvent((prev) => (prev?.id === e.id ? null : e))} />
+            </AppCard>
           ) : (
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' }, gap: '14px', alignItems: 'start' }}>
               {active.map((e) => (
@@ -198,12 +202,12 @@ export default function Events() {
             <EmptyState icon={<CoPresentIcon />} title="종료된 행사가 없습니다" />
           </AppCard>
         ) : (
-          <AppCard padding={0} sx={{ transition: 'margin-right .22s ease', ...(endedDetail && { mr: { md: '396px' } }) }}>
+          <AppCard padding={0} sx={{ transition: 'margin-right .22s ease', ...(detailEvent && { mr: { md: '396px' } }) }}>
             {/* 같은 행사를 다시 누르면 닫힘(토글), 다른 행사면 전환. 참석 스위치·관리는 목록 안에서. */}
             <EndedList
               events={endedView}
-              selectedId={endedDetail?.id ?? null}
-              onPick={(e) => setEndedDetail((prev) => (prev?.id === e.id ? null : e))}
+              selectedId={detailEvent?.id ?? null}
+              onPick={(e) => setDetailEvent((prev) => (prev?.id === e.id ? null : e))}
               attByEvent={attByEvent}
               user={user}
               isMember={isMember}
@@ -219,20 +223,22 @@ export default function Events() {
 
       {/* 종료 행사 상세 — 비모달 고정 패널(상단바 아래 오른쪽). 목록은 계속 클릭 가능(다른 행사 연속 열람),
           바깥 클릭·X·Esc로 닫힘. 포스터를 풀사이즈로 보여주고 그 아래에 상세(EventDrawerDetail). */}
-      {endedDetail && (
+      {detailEvent && (
         <Box
           ref={panelRef}
           role="dialog"
-          aria-label={`${endedDetail.title} 상세`}
+          aria-label={`${detailEvent.title} 상세`}
           sx={{
-            position: 'fixed', top: { xs: 48, md: 54 }, right: 0, bottom: { xs: 60, md: 0 },
+            // 모바일 상단바 49 · 하단탭 --bottom-nav-h(69+safe-area) 에 맞춘다.
+            // 종전 48/60 은 옛 상단바(53)·짐작값이라 위는 1px 겹치고 아래는 9px 이 탭바에 깔렸다.
+            position: 'fixed', top: { xs: 49, md: 54 }, right: 0, bottom: { xs: 'var(--bottom-nav-h)', md: 0 },
             width: 380, maxWidth: '92vw', zIndex: z.sidePanel,
             bgcolor: 'background.default', borderLeft: 1, borderColor: 'divider',
             boxShadow: '-8px 0 26px rgba(0,0,0,.42)', /* design-lint-ok(shadow): 우측 패널이 왼쪽으로 드리우는 가로 그림자 — 토큰 3단은 전부 아래 방향(0 +Npx)이라 대체 불가 */ p: 1.5, overflowY: 'auto',
           }}
         >
           <IconButton
-            onClick={() => setEndedDetail(null)}
+            onClick={() => setDetailEvent(null)}
             aria-label="상세 닫기"
             size="small"
             sx={{ position: 'absolute', top: 12, right: 12, zIndex: 4, bgcolor: 'rgba(0,0,0,.5)', color: 'common.white', '&:hover': { bgcolor: 'rgba(0,0,0,.72)' } }}
@@ -240,7 +246,7 @@ export default function Events() {
             <CloseIcon fontSize="small" />
           </IconButton>
           {/* 상세 드로어는 참석자 이름만 읽기전용 표시(조작은 목록에서). endedView가 DB 이름을 병합해 전달 */}
-          <EventDrawerDetail e={endedDetail} />
+          <EventDrawerDetail e={detailEvent} />
         </Box>
       )}
 
