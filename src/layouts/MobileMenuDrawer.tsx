@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Drawer from '@mui/material/Drawer'
 import Box from '@mui/material/Box'
@@ -14,6 +15,9 @@ import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import LinkIcon from '@mui/icons-material/Link'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
+import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows'
+import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone'
+import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
 import { useRole, ROLE_LABEL } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
 import { NavBadge } from '@/components/ds'
@@ -43,6 +47,10 @@ interface NavRow {
 
 export default function MobileMenuDrawer({ open, onClose }: Props) {
   const navigate = useNavigate()
+  // PC 보기 전환 — 상단바에서 여기로 옮겨 왔다(2026-08-13 사용자 지시).
+  // isTouchDevice 는 마운트 때 한 번만 본다(상단바와 같은 규칙 — 화면 폭이 아니라 기기 종류 판정이라 안 바뀐다).
+  const [touch] = useState(isTouchDevice)
+  const [desktopView, setDesktopView] = useState(isForceDesktop)
   const { pathname } = useLocation()
   const { role, loggedIn, isMember, isAdmin, user, logout } = useRole()
   const badges = useNavBadges()
@@ -149,6 +157,36 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
           )
         })}
       </List>
+
+      {/* 화면 — 상단바에 있던 PC 보기 전환(2026-08-13 사용자 지시로 이동).
+          누르면 시트를 닫는다: 레이아웃 폭이 통째로 바뀌므로 열린 시트를 남겨 두면 어색하다. */}
+      {touch && (
+        <>
+          <Divider sx={{ my: 0.5 }} />
+          <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>
+            화면
+          </Typography>
+          <List dense sx={{ pt: 0.5 }}>
+            <ListItemButton
+              onClick={() => {
+                const next = !desktopView
+                setForceDesktop(next)
+                setDesktopView(next)
+                onClose()
+              }}
+              sx={{ py: 1 }}
+            >
+              <ListItemIcon sx={{ minWidth: 40, color: desktopView ? 'primary.main' : 'text.secondary' }}>
+                {desktopView ? <PhoneIphoneIcon /> : <DesktopWindowsIcon />}
+              </ListItemIcon>
+              <ListItemText
+                slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }}
+                primary={desktopView ? '모바일 보기로' : '데스크톱(PC) 보기로'}
+              />
+            </ListItemButton>
+          </List>
+        </>
+      )}
 
       {loggedIn && (
         <>

@@ -209,13 +209,21 @@ export default function TopBar() {
         {/* 모바일은 버튼 사이를 4px 로 좁힌다 — 팀원으로 로그인하면 메모·알림이 더 붙어
             8px 간격으로는 375px 화면에서 14~37px 이 모자랐다(실측). 버튼 크기(32)는 그대로다. */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, shell: 1 } }}>
+          {/* PC 보기 전환 — 모바일에서는 **햄버거 메뉴 안으로** 옮겼다(2026-08-13 사용자 지시).
+              상단바가 좁아 자주 안 쓰는 토글이 자리를 차지할 이유가 없다.
+              다만 **로그인 안 한 사람에게는 메뉴 자체가 없어**(하단탭이 홈·로그인 둘뿐) 여기 남긴다 —
+              옮기기만 하면 게스트는 PC 보기로 갈 길이 사라진다. */}
           {touch && (
             <Tooltip title={desktopView ? '모바일 보기로' : '데스크톱(PC) 보기로'}>
               <IconButton
                 aria-label={desktopView ? '모바일 보기로 전환' : '데스크톱 보기로 전환'}
                 onClick={toggleDesktopView}
                 size="small"
-                sx={{ width: control.topbar, height: control.topbar, color: desktopView ? 'primary.main' : 'text.secondary' }}
+                sx={{
+                  width: control.topbar, height: control.topbar,
+                  color: desktopView ? 'primary.main' : 'text.secondary',
+                  display: loggedIn ? { xs: 'none', shell: 'inline-flex' } : 'inline-flex',
+                }}
               >
                 {desktopView ? <PhoneIphoneIcon sx={{ fontSize: iconSize.header }} /> : <DesktopWindowsIcon sx={{ fontSize: iconSize.header }} />}
               </IconButton>
