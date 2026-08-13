@@ -10,6 +10,8 @@ import LockOpenIcon from '@mui/icons-material/LockOpen'
 import LogoutIcon from '@mui/icons-material/Logout'
 import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows'
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone'
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined'
+import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined'
 import Switch from '@mui/material/Switch'
 import { alpha, styled } from '@mui/material/styles'
 import { useRole, ROLE_LABEL } from '@/auth/role'
@@ -136,7 +138,14 @@ export default function TopBar() {
           role="button"
           tabIndex={0}
           title="메인화면으로"
-          sx={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flexShrink: 0 }}
+          sx={{
+            display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+            // 모바일에서는 **줄어들 수 있어야 한다**. flexShrink:0 이던 브랜드 덩어리(257px)가
+            // 오른쪽 버튼들을 화면 밖으로 밀어내고 있었다 — 375px 화면에서 56px 초과(로그인 시 144px+),
+            // 다크모드 스위치가 통째로 잘려 있었다(개선요청 79 실측). 자리가 모자라면 로고가 먼저 줄어든다.
+            flexShrink: { xs: 1, shell: 0 },
+            minWidth: 0,
+          }}
         >
           {/*
             로고 이미지에는 'ANGELS 첨단AI반도체팹센터 | FAB 구축 포털 시스템'이 통째로 박혀 있어
@@ -155,7 +164,13 @@ export default function TopBar() {
               안에서 마크가 y 41~349 에 있어 위 여백 41 · 아래 여백 113 으로 위쪽에 붙어 있기 때문이다
               (캔버스로 실측). 그래서 **상자보다 큰 45px 로 그려 넣어** 마크 자체가 상자 세로 가운데에
               오게 한다(45 기준 마크는 4.0~33.9 → 위아래 여백 4.0/4.1). 남는 아래쪽은 잘린다. */}
-          <Box sx={{ height: { xs: 34, shell: 38 }, width: { xs: 153, shell: 172 }, flexShrink: 0, overflow: 'hidden' }}>
+          <Box sx={{
+            height: { xs: 34, shell: 38 },
+            width: { xs: 153, shell: 172 },
+            // 모바일에선 상한으로만 쓴다 — 좁으면 로고 오른쪽이 더 잘릴 뿐, 버튼을 밀지 않는다
+            maxWidth: '100%', flexShrink: { xs: 1, shell: 0 }, minWidth: 0,
+            overflow: 'hidden',
+          }}>
             <Box
               component="img"
               src={topbarLogo}
@@ -173,9 +188,13 @@ export default function TopBar() {
           </Box>
           {/* 구분선 — 종전 로고 이미지 안의 밝은 세로줄을 대신한다. divider 토큰은 그보다 훨씬 옅어
               선이 사라진 것처럼 보였다(사용자 지적) → 글자와 같은 잉크를 옅게 쓴다. */}
-          <Box sx={(th) => ({ width: '1px', height: 26, bgcolor: alpha(th.palette.text.primary, 0.35), flexShrink: 0 })} />
+          {/* 구분선·포털 이름은 **PC 전용**(개선요청 79) — 모바일에서 이 둘이 104px 을 먹어
+              오른쪽 버튼들이 화면 밖으로 밀려났다. 로고 이미지에 이미 이름이 박혀 있고,
+              모바일은 하단 탭바가 현재 위치를 알려 주므로 글자가 없어도 길을 잃지 않는다. */}
+          <Box sx={(th) => ({ display: { xs: 'none', shell: 'block' }, width: '1px', height: 26, bgcolor: alpha(th.palette.text.primary, 0.35), flexShrink: 0 })} />
           <Typography
             sx={{
+              display: { xs: 'none', shell: 'block' },
               fontSize: { xs: typescale.cardTitle.size, shell: typescale.pageTitle.size },
               fontWeight: weight.bold,
               lineHeight: 1,
@@ -187,7 +206,9 @@ export default function TopBar() {
           </Typography>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/* 모바일은 버튼 사이를 4px 로 좁힌다 — 팀원으로 로그인하면 메모·알림이 더 붙어
+            8px 간격으로는 375px 화면에서 14~37px 이 모자랐다(실측). 버튼 크기(32)는 그대로다. */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, shell: 1 } }}>
           {touch && (
             <Tooltip title={desktopView ? '모바일 보기로' : '데스크톱(PC) 보기로'}>
               <IconButton
@@ -226,12 +247,28 @@ export default function TopBar() {
           )}
           {/* 알림 센터 — 로그인 사용자만(읽음 상태가 계정에 저장되므로 게스트에겐 제 역할을 못 한다) */}
           {loggedIn && <NotificationBell />}
+          {/* 다크모드 — PC는 스위치, 모바일은 같은 일을 하는 32px 아이콘 버튼.
+              스위치는 58px 로 상단바에서 가장 넓은 부품이라, 좁은 화면에선 26px 을 돌려받는 쪽이 낫다.
+              게스트도 쓰는 기능이라 메뉴 드로어(로그인 전용)로 옮기지 않고 상단바에 남긴다. */}
           <Tooltip title={mode === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}>
             <ThemeSwitch
+              sx={{ display: { xs: 'none', shell: 'inline-flex' } }}
               checked={mode === 'dark'}
               onChange={toggleTheme}
               slotProps={{ input: { 'aria-label': mode === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환' } }}
             />
+          </Tooltip>
+          <Tooltip title={mode === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}>
+            <IconButton
+              aria-label={mode === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
+              onClick={toggleTheme}
+              size="small"
+              sx={{ width: control.topbar, height: control.topbar, display: { xs: 'inline-flex', shell: 'none' }, color: 'text.secondary' }}
+            >
+              {mode === 'dark'
+                ? <LightModeOutlinedIcon sx={{ fontSize: iconSize.header }} />
+                : <DarkModeOutlinedIcon sx={{ fontSize: iconSize.header }} />}
+            </IconButton>
           </Tooltip>
           {/* 계정 컨트롤(칩·로그아웃·로그인)은 PC 전용 — 모바일은 하단 탭바/메뉴 드로어가 담당(상단바 잘림 방지).
               구 .d-only 클래스를 반응형 display 로 이관 */}

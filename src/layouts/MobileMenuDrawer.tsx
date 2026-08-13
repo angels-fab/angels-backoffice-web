@@ -72,19 +72,28 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
       open={open}
       onClose={onClose}
       slotProps={{
+        /* 시트를 **하단 탭바 위에서 멈춘다**(개선요청 80). MUI 기본은 bottom:0 이라 탭바를 덮었고,
+           딤(backdrop)도 화면 전체를 덮어 탭을 눌러도 시트만 닫혔다. 둘 다 같은 높이만큼 띄운다.
+           safe-area 는 탭바가 이미 자기 padding 으로 먹으므로 여기서 다시 더하지 않는다. */
         paper: {
           sx: {
             bgcolor: 'background.paper',
             borderTopLeftRadius: radius.modal,
             borderTopRightRadius: radius.modal,
-            pb: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+            bottom: 'var(--bottom-nav-h)',
+            maxHeight: 'calc(100% - var(--bottom-nav-h))',
+            pb: 1.25,
           },
         },
+        backdrop: { sx: { bottom: 'var(--bottom-nav-h)' } },
       }}
+      /* 딤 밖(=탭바)을 눌렀을 때 그 탭이 실제로 눌리게 — 포커스 가둠을 풀지 않으면
+         MUI FocusTrap 이 포커스를 시트로 되돌려 첫 탭이 먹힌다 */
+      disableEnforceFocus
     >
       <Box sx={{ width: 36, height: 4, borderRadius: `${radius.pill}px`, bgcolor: 'divider', mx: 'auto', mt: 1.25, mb: 0.5 }} />
 
-      <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>
+      <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled', textAlign: 'right' }}>
         이동
       </Typography>
       <List dense sx={{ pt: 0.5 }}>
@@ -92,8 +101,10 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
           const active = isActive(r.path)
           const memo = memoCounts[r.path] || 0 // 이미 볼 수 있는 것만 세어 둔 값
           return (
-            <ListItemButton key={r.path} selected={active} onClick={() => go(r.path)} sx={{ py: 1 }}>
-              <ListItemIcon sx={{ minWidth: 40, color: active ? 'primary.main' : 'text.secondary' }}>
+            /* 오른손 엄지로 닿는 쪽에 붙인다(개선요청 80) — row-reverse 라 아이콘이 오른쪽 끝,
+               글자가 그 왼쪽에 오른쪽 맞춤으로 선다. minWidth 40 을 지우지 않으면 아이콘과 글자 사이가 벌어진다. */
+            <ListItemButton key={r.path} selected={active} onClick={() => go(r.path)} sx={{ py: 1, flexDirection: 'row-reverse', textAlign: 'right' }}>
+              <ListItemIcon sx={{ minWidth: 0, ml: 1.5, color: active ? 'primary.main' : 'text.secondary' }}>
                 {r.icon}
               </ListItemIcon>
               {/* 아이폰식 위첨자 배지(D7 표준) — 메뉴명 우상단, 빨강=새 글·앰버=메모. 행 오른쪽 배지 폐지 */}
@@ -122,7 +133,8 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
                       </Box>
                     )}
                     {((r.badge || 0) > 0 || memo > 0) && (
-                      <Box component="span" sx={{ position: 'absolute', left: '100%', top: -7, ml: '3px', display: 'inline-flex', gap: '3px' }}>
+                      /* 우측정렬이라 배지를 라벨 **왼쪽** 바깥으로 뒤집는다 — 오른쪽에 두면 아이콘과 겹친다 */
+                      <Box component="span" sx={{ position: 'absolute', right: '100%', top: -7, mr: '3px', display: 'inline-flex', gap: '3px' }}>
                         <NavBadge count={r.badge || 0} kind="new" />
                         <NavBadge count={memo} kind="memo" />
                       </Box>
@@ -138,14 +150,14 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
       {loggedIn && (
         <>
           <Divider sx={{ my: 0.5 }} />
-          <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>
+          <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled', textAlign: 'right' }}>
             계정{user ? ` · ${user}` : ''} · {ROLE_LABEL[role]}
           </Typography>
           <List dense sx={{ pt: 0.5 }}>
             {/* 설정 = 로그인 전원(본인 비밀번호 변경). 가입 승인·권한 변경은 페이지 안에서 관리자에게만. */}
             {loggedIn && (
-              <ListItemButton selected={isActive('/settings')} onClick={() => go('/settings')} sx={{ py: 1 }}>
-                <ListItemIcon sx={{ minWidth: 40, color: isActive('/settings') ? 'primary.main' : 'text.secondary' }}>
+              <ListItemButton selected={isActive('/settings')} onClick={() => go('/settings')} sx={{ py: 1, flexDirection: 'row-reverse', textAlign: 'right' }}>
+                <ListItemIcon sx={{ minWidth: 0, ml: 1.5, color: isActive('/settings') ? 'primary.main' : 'text.secondary' }}>
                   <SettingsIcon />
                 </ListItemIcon>
                 <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary="설정" />
@@ -156,9 +168,9 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
                 onClose()
                 logout()
               }}
-              sx={{ py: 1 }}
+              sx={{ py: 1, flexDirection: 'row-reverse', textAlign: 'right' }}
             >
-              <ListItemIcon sx={{ minWidth: 40, color: 'text.secondary' }}>
+              <ListItemIcon sx={{ minWidth: 0, ml: 1.5, color: 'text.secondary' }}>
                 <LogoutIcon />
               </ListItemIcon>
               <ListItemText slotProps={{ primary: { sx: { fontSize: typescale.emphasis.size } } }} primary="로그아웃" />

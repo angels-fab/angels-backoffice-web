@@ -93,8 +93,9 @@ export default function BottomNav() {
   const isActive = (path: string) =>
     path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(path + '/')
 
+  // 메뉴 시트가 열린 채로도 탭이 눌리므로(개선요청 80), 이동할 땐 시트를 함께 닫는다
   const navItem = (path: string, label: string, icon: JSX.Element, badge = 0) => (
-    <Box component="button" sx={itemSx(isActive(path))} onClick={() => navigate(path)}>
+    <Box component="button" sx={itemSx(isActive(path))} onClick={() => { setMenuOpen(false); navigate(path) }}>
       <Box component="span" sx={icoWrapSx}>
         {icon}
         <Badge n={badge} />
