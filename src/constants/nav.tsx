@@ -7,6 +7,7 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import FlagIcon from '@mui/icons-material/Flag'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
+import LocalLibraryIcon from '@mui/icons-material/LocalLibrary'
 import LinkIcon from '@mui/icons-material/Link'
 import SettingsIcon from '@mui/icons-material/Settings'
 
@@ -54,6 +55,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { icon: <CoPresentIcon />, label: '학술·교육·전시', path: '/events' },
       { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badgeKey: 'improve', team: true },
+      // 자료실(개선요청 86) — 웹사이트·유용한 정보 링크 모음(중요 문서는 NAS 담당)
+      { icon: <LocalLibraryIcon />, label: '자료실', path: '/resources', team: true },
       { icon: <LinkIcon />, label: '바로가기', path: '/links' },
       // 설정 = 로그인 전원(비밀번호 변경). 사용자 관리 섹션만 페이지 안에서 관리자에게 열린다.
       { icon: <SettingsIcon />, label: '설정', path: '/settings', team: true },

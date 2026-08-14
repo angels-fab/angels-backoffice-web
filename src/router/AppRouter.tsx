@@ -10,6 +10,7 @@ import Links from '@/pages/Links'
 import Events from '@/pages/Events'
 import Settings from '@/pages/Settings'
 import Improve from '@/pages/Improve'
+import Resources from '@/pages/Resources'
 import Milestone from '@/pages/Milestone'
 import RequireAuth from '@/auth/RequireAuth'
 import RequireMember from '@/auth/RequireMember'
@@ -39,6 +40,8 @@ export function AppRouter() {
         {/* 행사·바로가기 — 로그인(유관자 포함) 열람 */}
         <Route path="/links" element={<RequireAuth><Links /></RequireAuth>} />
         <Route path="/improve" element={<RequireMember><Improve /></RequireMember>} />
+        {/* 자료실(개선요청 86) — 팀 내부 참고 링크 모음이라 팀원 이상 */}
+        <Route path="/resources" element={<RequireMember><Resources /></RequireMember>} />
         {/* 구축 로드맵 전용 페이지 제거 — 콘텐츠는 홈으로 이관. /roadmap 접근은 전역 규칙(홈 리다이렉트) */}
         <Route path="/events" element={<RequireAuth><Events /></RequireAuth>} />
         {/* 설정 — 로그인 전원. 페이지를 등급별로 나누지 않는 이유: 내부가 이미 갈려 있다

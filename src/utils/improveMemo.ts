@@ -20,6 +20,7 @@ export const MEMO_LOCATION_PATH: Record<string, string> = {
   '학술·교육·전시': '/events',
   '포털개선요청': '/improve',
   '구축 로드맵': '/', // 전용 페이지 폐지 — 홈으로 이관되어 홈 경로에 메모 표시
+  '자료실': '/resources',
   '바로가기': '/links',
   '설정': '/settings',
   // '포털'(포털 전체)은 특정 페이지가 없어 매핑하지 않음 → 메모 대상 없음(핀 비활성)
