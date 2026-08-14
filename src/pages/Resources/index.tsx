@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
@@ -12,22 +12,28 @@ import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
+import UploadFileIcon from '@mui/icons-material/UploadFile'
+import CloseIcon from '@mui/icons-material/Close'
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
 import {
   ContentSection, PageContainer, PageHeader, EmptyState, FormDialog, ConfirmDialog, ErrorBanner,
 } from '@/components/ds'
-import { FormField, SelectField } from '@/components/ds/fields'
+import { FormField } from '@/components/ds/fields'
 import { useSnack } from '@/components/ds/snack'
 import { useRole } from '@/auth/role'
+import { AttachmentIcon, formatBytes } from '@/pages/Notice/attachmentUI'
 import {
-  RESOURCE_CATS, getResources, addResource, updateResource, deleteResource,
-  type ResourceItem,
+  RESOURCE_CATS, RESOURCE_FILE_MAX, getResources, addResource, updateResource, deleteResource,
+  uploadResourceFile, downloadResourceBlob, removeResourceFiles,
+  type ResourceItem, type ResourceFile,
 } from '@/api/resources'
 import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 
 /**
- * 자료실 (개선요청 86, 1안 카드 그리드) — 웹사이트·유용한 정보 링크 모음.
- * 중요 업무문서는 NAS 담당(사용자 방침 2026-08-14) — 업로드 없이 링크·메모 중심,
- * "일하면서 생각날 때 보는" 용도. 카드 클릭 = 새 탭으로 열기(주소 없는 정보 메모는 카드만).
+ * 자료실 (개선요청 86, 1안 카드 그리드) — 웹사이트·유용한 정보 링크 모음 + 첨부(50MB).
+ * 중요 업무문서는 NAS 담당(사용자 방침 2026-08-14) — "일하면서 생각날 때 보는" 용도.
+ * 카드 클릭 = 새 탭으로 열기(주소 없는 정보 메모는 카드만), 첨부 칩 = 원본 다운로드.
+ * 등록창 배치(사용자 지시 2026-08-15): 분류=제목 옆 칩(필수) / 제목 → 내용 / 하단에 주소·첨부(드래그앤드랍).
  */
 
 /** 주소에서 도메인(host) — 파비콘·캡션용. 프로토콜 없이 적어도 통하게 보정 */
@@ -42,6 +48,17 @@ function hrefOf(url: string): string {
   return url.includes('://') ? url : `https://${url}`
 }
 
+/** 작성 중 첨부 1건 상태 — 완료(done)만 저장 대상(공지 폼과 같은 규칙) */
+type Upload = {
+  key: string
+  name: string
+  size: number
+  type: string
+  status: 'uploading' | 'done' | 'error'
+  path?: string
+  error?: string
+}
+
 export default function Resources() {
   const { user } = useRole()
   const snack = useSnack()
@@ -49,14 +66,19 @@ export default function Resources() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [catFilter, setCatFilter] = useState('전체')
-  // 작성/수정 다이얼로그 — editing=null 이면 신규
+  // 작성/수정 다이얼로그 — editing=null 이면 신규. 분류는 필수(빈 값이면 등록 잠김)
   const [dlg, setDlg] = useState<{ editing: ResourceItem | null } | null>(null)
-  const [fCat, setFCat] = useState(RESOURCE_CATS[0])
+  const [fCat, setFCat] = useState('')
   const [fTitle, setFTitle] = useState('')
-  const [fUrl, setFUrl] = useState('')
   const [fNote, setFNote] = useState('')
+  const [fUrl, setFUrl] = useState('')
+  const [uploads, setUploads] = useState<Upload[]>([])
+  const [dragOver, setDragOver] = useState(false)
+  const sessionPaths = useRef<Set<string>>(new Set())
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [saving, setSaving] = useState(false)
   const [confirmDel, setConfirmDel] = useState<ResourceItem | null>(null)
+  const uploading = uploads.some((u) => u.status === 'uploading')
 
   const load = async () => {
     try {
@@ -76,21 +98,67 @@ export default function Resources() {
   )
 
   const openNew = () => {
-    setFCat(RESOURCE_CATS[0]); setFTitle(''); setFUrl(''); setFNote('')
+    setFCat(''); setFTitle(''); setFNote(''); setFUrl('')
+    setUploads([]); sessionPaths.current = new Set()
     setDlg({ editing: null })
   }
   const openEdit = (r: ResourceItem) => {
-    setFCat(RESOURCE_CATS.includes(r.cat) ? r.cat : RESOURCE_CATS[0])
-    setFTitle(r.title); setFUrl(r.url); setFNote(r.note)
+    setFCat(RESOURCE_CATS.includes(r.cat) ? r.cat : '')
+    setFTitle(r.title); setFNote(r.note); setFUrl(r.url)
+    setUploads(r.attachments.map((a) => ({ key: a.path, name: a.name, size: a.size, type: a.type, status: 'done' as const, path: a.path })))
+    sessionPaths.current = new Set()
     setDlg({ editing: r })
   }
+
+  // 파일 선택/드랍 공용 — 파일별 자리 먼저 만들고 순차 업로드(한 건 실패해도 나머지 진행, 공지와 동일)
+  const pickFiles = async (list: FileList | File[] | null) => {
+    const files = Array.from(list || [])
+    if (files.length === 0) return
+    const picked = files.map((file) => ({ file, key: crypto.randomUUID() }))
+    setUploads((prev) => [
+      ...prev,
+      ...picked.map(({ file, key }) => ({ key, name: file.name, size: file.size, type: file.type || '', status: 'uploading' as const })),
+    ])
+    for (const { file, key } of picked) {
+      try {
+        const meta = await uploadResourceFile(file)
+        sessionPaths.current.add(meta.path)
+        setUploads((prev) => prev.map((u) => (u.key === key ? { ...u, status: 'done', path: meta.path } : u)))
+      } catch (e) {
+        setUploads((prev) => prev.map((u) => (u.key === key ? { ...u, status: 'error', error: e instanceof Error ? e.message : '업로드 실패' } : u)))
+      }
+    }
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+  const removeUpload = (key: string) => setUploads((prev) => prev.filter((u) => u.key !== key))
+
+  const closeDialog = (cancelled: boolean) => {
+    if (cancelled) {
+      // 취소 — 이번에 새로 올린 파일은 저장 안 되므로 정리(기존 첨부는 보존)
+      const news = Array.from(sessionPaths.current)
+      if (news.length) void removeResourceFiles(news).catch(() => {})
+    }
+    setDlg(null)
+  }
+
   const save = async () => {
     if (saving) return
+    if (!fCat) return snack('분류를 선택해주세요.', 'error')
     if (!fTitle.trim()) return snack('제목을 입력해주세요.', 'error')
     setSaving(true)
     try {
-      if (dlg?.editing) await updateResource(dlg.editing.num, { cat: fCat, title: fTitle, url: fUrl, note: fNote })
-      else await addResource({ cat: fCat, title: fTitle, url: fUrl, note: fNote, author: user || '' })
+      const attachments: ResourceFile[] = uploads
+        .filter((u) => u.status === 'done' && u.path)
+        .map((u) => ({ name: u.name, path: u.path as string, size: u.size, type: u.type }))
+      // 이번 세션에 올렸다 뺀 파일 + (수정 시) 기존 첨부 중 제거된 파일 = orphan 정리
+      const finalPaths = new Set(attachments.map((a) => a.path))
+      const orphans = [
+        ...Array.from(sessionPaths.current).filter((p) => !finalPaths.has(p)),
+        ...(dlg?.editing?.attachments || []).map((a) => a.path).filter((p) => !finalPaths.has(p)),
+      ]
+      if (dlg?.editing) await updateResource(dlg.editing.num, { cat: fCat, title: fTitle, url: fUrl, note: fNote, attachments })
+      else await addResource({ cat: fCat, title: fTitle, url: fUrl, note: fNote, attachments, author: user || '' })
+      if (orphans.length) void removeResourceFiles(orphans).catch(() => {})
       setDlg(null)
       snack(dlg?.editing ? '자료를 수정했습니다.' : '자료를 등록했습니다.', 'success')
       void load()
@@ -106,10 +174,25 @@ export default function Resources() {
     setConfirmDel(null)
     try {
       await deleteResource(target.num)
+      // 자료가 지워졌으면 그 첨부도 정리(best-effort)
+      if (target.attachments.length) void removeResourceFiles(target.attachments.map((a) => a.path)).catch(() => {})
       snack('자료를 삭제했습니다.', 'success')
       void load()
     } catch (e) {
       snack(e instanceof Error ? e.message : '삭제 실패', 'error')
+    }
+  }
+  // 첨부 다운로드 — Blob + 앵커 download(한글 파일명 유지, 공지와 동일 방식)
+  const downloadFile = async (a: ResourceFile) => {
+    try {
+      const blob = await downloadResourceBlob(a.path)
+      const url = URL.createObjectURL(blob)
+      const el = document.createElement('a')
+      el.href = url; el.download = a.name || 'file'
+      document.body.appendChild(el); el.click(); el.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      snack(e instanceof Error ? e.message : '다운로드 실패', 'error')
     }
   }
 
@@ -214,6 +297,34 @@ export default function Resources() {
                       {r.note}
                     </Box>
                   )}
+                  {/* 첨부 칩 — 카드가 링크(<a>)여도 칩 클릭은 다운로드만(전파 차단) */}
+                  {r.attachments.length > 0 && (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                      {r.attachments.map((a) => (
+                        <Box
+                          key={a.path}
+                          component="button"
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); void downloadFile(a) }}
+                          sx={(th) => ({
+                            font: 'inherit', textAlign: 'left', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, pl: 0.75, pr: 1, py: '3px',
+                            borderRadius: `${radius.chip}px`, bgcolor: alpha(th.palette.text.primary, 0.05),
+                            border: `1px solid ${th.palette.divider}`, color: 'text.primary',
+                            '&:hover': { borderColor: th.palette.primary.main },
+                          })}
+                        >
+                          <AttachmentIcon type={a.type} name={a.name} size={16} />
+                          <Box component="span" sx={{ fontSize: typescale.small.size, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {a.name}
+                          </Box>
+                          <Box component="span" sx={{ ml: 'auto', fontSize: typescale.caption.size, color: 'text.disabled', flex: 'none' }}>
+                            {formatBytes(a.size)}
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 'auto', pt: 0.25, minWidth: 0 }}>
                     <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.semibold, px: '7px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: alpha(th.palette.accent.blue, 0.14), color: th.palette.accentText.blue, flex: 'none' })}>
                       {r.cat || '기타'}
@@ -221,7 +332,7 @@ export default function Resources() {
                     <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {r.author ? `${r.author} · ` : ''}{r.date.slice(5).replace('-', '/')}
                     </Box>
-                    {/* 수정·삭제 — 호버 시 표시(모바일은 항상 옅게 보임). 링크 카드 안 버튼이라 내비 전파 차단 */}
+                    {/* 수정·삭제 — 호버 시 표시(모바일은 항상 보임). 링크 카드 안 버튼이라 내비 전파 차단 */}
                     <Box className="rs-acts" /* design-lint-ok(class): 부모 sx '&:hover .rs-acts' 호버 타깃 — 전역 CSS 아님(Links lk-ext 동일 패턴) */ sx={{ ml: 'auto', display: 'flex', gap: 0.25, opacity: { xs: 1, shell: 0 }, transition: 'opacity .15s' }}>
                       <Tooltip title="수정">
                         <IconButton
@@ -252,24 +363,110 @@ export default function Resources() {
 
       <FormDialog
         open={!!dlg}
-        onClose={() => { if (!saving) setDlg(null) }}
+        onClose={() => { if (!saving) closeDialog(true) }}
         icon={<LocalLibraryIcon />}
         title={dlg?.editing ? '자료 수정' : '자료 등록'}
         busy={saving}
+        titleExtra={
+          /* 분류 = 제목 옆 필수 칩(사용자 지시 2026-08-15) — 안 고르면 등록 잠김 */
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', minWidth: 0 }}>
+            {RESOURCE_CATS.map((c) => {
+              const active = fCat === c
+              return (
+                <Box
+                  key={c}
+                  component="button"
+                  type="button"
+                  onClick={() => setFCat(c)}
+                  aria-pressed={active}
+                  sx={(th) => ({
+                    font: 'inherit', fontSize: typescale.small.size, fontWeight: weight.semibold, cursor: 'pointer',
+                    px: 1, py: '3px', borderRadius: `${radius.pill}px`, border: '1px solid', flex: 'none',
+                    ...(active
+                      ? { bgcolor: th.palette.accent.blue, borderColor: th.palette.accent.blue, color: 'common.white' }
+                      : { bgcolor: 'transparent', borderColor: th.palette.divider, color: 'text.secondary' }),
+                  })}
+                >
+                  {c}
+                </Box>
+              )
+            })}
+          </Box>
+        }
         footer={
           <>
-            <Button onClick={() => setDlg(null)} disabled={saving}>취소</Button>
-            <Button variant="contained" onClick={save} disabled={saving || !fTitle.trim()}>
+            <Button onClick={() => closeDialog(true)} disabled={saving}>취소</Button>
+            <Button variant="contained" onClick={save} disabled={saving || uploading || !fTitle.trim() || !fCat}>
               {saving ? <CircularProgress size={16} thickness={5} color="inherit" /> : dlg?.editing ? '저장' : '등록'}
             </Button>
           </>
         }
       >
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          <SelectField label="분류" value={fCat} onChange={setFCat} options={RESOURCE_CATS} />
           <FormField label="제목" value={fTitle} onChange={setFTitle} autoFocus required />
-          <FormField label="주소(선택)" value={fUrl} onChange={setFUrl} placeholder="https://… (비우면 링크 없는 정보 메모)" />
-          <FormField label="메모(선택)" value={fNote} onChange={setFNote} multiline minRows={3} placeholder="어떤 자료인지, 언제 보면 좋은지" />
+          <FormField label="내용(선택)" value={fNote} onChange={setFNote} multiline minRows={3} placeholder="어떤 자료인지, 언제 보면 좋은지" />
+          {/* 하단 — 주소·첨부(사용자 지시 배치) */}
+          <FormField label="주소(선택)" value={fUrl} onChange={setFUrl} placeholder="https://… (비우면 링크 없는 정보 카드)" />
+          <Box>
+            <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => void pickFiles(e.target.files)} />
+            <Box
+              role="button" tabIndex={0} aria-label="파일 첨부"
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); void pickFiles(e.dataTransfer.files) }}
+              sx={(th) => ({
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, py: 2, px: 1.5,
+                borderRadius: `${radius.input}px`, border: '1.5px dashed', cursor: 'pointer', textAlign: 'center',
+                transition: 'border-color .15s, background-color .15s',
+                ...(dragOver
+                  ? { borderColor: th.palette.primary.main, bgcolor: alpha(th.palette.primary.main, 0.06) }
+                  : { borderColor: th.palette.divider, '&:hover': { borderColor: th.palette.primary.main } }),
+              })}
+            >
+              <UploadFileIcon sx={{ fontSize: iconSize.header, color: 'text.disabled' }} />
+              <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary' }}>
+                파일을 끌어다 놓거나 눌러서 선택
+              </Box>
+              <Box sx={{ fontSize: typescale.caption.size, color: 'text.disabled' }}>
+                파일당 최대 {Math.round(RESOURCE_FILE_MAX / 1024 / 1024)}MB
+              </Box>
+            </Box>
+            {uploads.length > 0 && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 0.75 }}>
+                {uploads.map((u) => {
+                  const err = u.status === 'error'
+                  return (
+                    <Box
+                      key={u.key}
+                      sx={(th) => ({
+                        display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, pl: 0.75, pr: 0.25, py: '3px',
+                        borderRadius: `${radius.chip}px`,
+                        bgcolor: err ? alpha(th.palette.error.main, 0.08) : alpha(th.palette.text.primary, 0.05),
+                        border: `1px solid ${err ? alpha(th.palette.error.main, 0.5) : th.palette.divider}`,
+                      })}
+                    >
+                      {u.status === 'uploading'
+                        ? <CircularProgress size={14} thickness={5} />
+                        : err
+                          ? <ErrorOutlineIcon color="error" sx={{ fontSize: iconSize.body }} />
+                          : <AttachmentIcon type={u.type} name={u.name} size={16} />}
+                      <Box component="span" sx={{ fontSize: typescale.small.size, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: err ? 'error.main' : 'text.primary' }}>
+                        {u.name}
+                      </Box>
+                      <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', flex: 'none' }}>
+                        {err ? (u.error || '업로드 실패') : formatBytes(u.size)}
+                      </Box>
+                      <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => removeUpload(u.key)} sx={{ ml: 'auto', p: '2px', color: 'text.disabled' }}>
+                        <CloseIcon sx={{ fontSize: iconSize.caption }} />
+                      </IconButton>
+                    </Box>
+                  )
+                })}
+              </Box>
+            )}
+          </Box>
         </Box>
       </FormDialog>
 

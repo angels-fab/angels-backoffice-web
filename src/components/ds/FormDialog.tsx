@@ -12,6 +12,8 @@ export interface FormDialogProps {
   /** 헤더 좌측 아이콘 (MUI 아이콘, primary 색 적용) */
   icon?: ReactNode
   title: string
+  /** 제목 바로 옆 부속(칩 선택 등) — 자료실 분류칩(2026-08-15)이 첫 사용 */
+  titleExtra?: ReactNode
   /** 본문(스크롤 영역) */
   children: ReactNode
   /** 하단 고정 액션(취소=text, 저장=contained primary 원칙) */
@@ -41,6 +43,7 @@ export default function FormDialog({
   onClose,
   icon,
   title,
+  titleExtra,
   children,
   footer,
   width = 560,
@@ -58,9 +61,12 @@ export default function FormDialog({
             {icon}
           </Box>
         )}
-        <Typography component="h2" variant="h4" sx={{ flex: 1, minWidth: 0 }}>
+        <Typography component="h2" variant="h4" sx={{ minWidth: 0 }}>
           {title}
         </Typography>
+        {/* titleExtra 가 제목 옆에 앉고, 스페이서가 종전 제목 flex:1 몫을 대신해 X는 그대로 우측 끝 */}
+        {titleExtra}
+        <Box sx={{ flex: 1 }} />
         <IconButton size="small" aria-label="닫기" disabled={busy} onClick={onClose} sx={{ color: 'text.disabled' }}>
           <CloseIcon fontSize="small" />
         </IconButton>

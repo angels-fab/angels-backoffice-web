@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import Box from '@mui/material/Box'
 import TableRow from '@mui/material/TableRow'
 import TableCell from '@mui/material/TableCell'
@@ -92,16 +93,35 @@ type Upload = {
 
 const inputSx = (th: Theme) => ({ ...inlineFieldSx(th), py: 0.4 })
 
-export function LinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function LinkField({ value, onChange, variant = 'icon' }: { value: string; onChange: (v: string) => void; variant?: 'icon' | 'pill' }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const active = !!value.trim()
   return (
     <>
-      <Tooltip title={active ? '관련자료(첨부) 편집' : '관련자료(첨부) 추가'}>
-        <IconButton size="small" aria-label="관련자료" onClick={(e) => setAnchor(e.currentTarget)} sx={(th) => ({ color: active ? th.palette.accent.blue : 'text.disabled', p: 0.5 })}>
-          <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
-        </IconButton>
-      </Tooltip>
+      {variant === 'pill' ? (
+        /* 파일 첨부 버튼과 같은 점선 알약(모바일 시트 — 사용자 지시 2026-08-15: 첨부 옆·같은 디자인) */
+        <Box
+          role="button" tabIndex={0} aria-label="관련자료 링크"
+          onClick={(e) => setAnchor(e.currentTarget as HTMLElement)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAnchor(e.currentTarget as HTMLElement) } }}
+          sx={(th) => ({
+            display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 1, py: '5px', borderRadius: `${radius.pill}px`,
+            border: '1px dashed', cursor: 'pointer',
+            fontSize: typescale.small.size, fontWeight: weight.semibold, flex: 'none', transition: 'color .15s, border-color .15s',
+            ...(active
+              ? { borderColor: th.palette.primary.main, color: th.palette.primary.main }
+              : { borderColor: th.palette.divider, color: 'text.secondary', '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main } }),
+          })}
+        >
+          <OpenInNewIcon sx={{ fontSize: iconSize.body }} />URL 추가
+        </Box>
+      ) : (
+        <Tooltip title={active ? '관련자료(첨부) 편집' : '관련자료(첨부) 추가'}>
+          <IconButton size="small" aria-label="관련자료" onClick={(e) => setAnchor(e.currentTarget)} sx={(th) => ({ color: active ? th.palette.accent.blue : 'text.disabled', p: 0.5 })}>
+            <OpenInNewIcon sx={{ fontSize: iconSize.action }} />
+          </IconButton>
+        </Tooltip>
+      )}
       <Popover open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: `${radius.button}px`, mt: 0.5 } } }}>
         <Box sx={{ p: 1.5, width: 300 }}>
           <Box sx={{ fontSize: typescale.small.size, color: 'text.secondary', mb: 0.5 }}>관련자료 / 첨부 링크</Box>
@@ -353,11 +373,11 @@ export function TargetPicker({ f }: { f: ReturnType<typeof useNoticeComposeForm>
 }
 
 /** 첨부 영역(파일 첨부 버튼 + 상태 칩 그리드 + 업로드중 안내) — PC 폼·모바일 시트 공용 */
-export function AttachmentArea({ f }: { f: ReturnType<typeof useNoticeComposeForm> }) {
+export function AttachmentArea({ f, extra }: { f: ReturnType<typeof useNoticeComposeForm>; extra?: ReactNode }) {
   return (
     <>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-        <Box sx={{ display: 'flex' }}>
+        <Box sx={{ display: 'flex', gap: 0.75 }}>
           <input ref={f.fileInputRef} type="file" multiple hidden onChange={(e) => void f.onPickFiles(e.target.files)} />
           <Box
             role="button" tabIndex={0} aria-label="파일 첨부"
@@ -372,6 +392,8 @@ export function AttachmentArea({ f }: { f: ReturnType<typeof useNoticeComposeFor
           >
             <AttachFileIcon sx={{ fontSize: iconSize.body }} />파일 첨부
           </Box>
+          {/* 모바일 시트가 URL 추가 알약을 여기 옆에 꽂는다(사용자 지시 2026-08-15) */}
+          {extra}
         </Box>
         {f.uploads.length > 0 && (
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 0.75 }}>

@@ -97,7 +97,6 @@ export default function NoticeComposeSheet({ open, mode, notice, saving, deptOpt
             </Box>
           )}
           <PinPeriodPopover anchor={pinAnchor} onClose={() => setPinAnchor(null)} end={f.end} setEnd={f.setEnd} />
-          <LinkField value={f.refLink} onChange={f.setRefLink} />
         </Box>
 
         <InputBase
@@ -127,7 +126,8 @@ export default function NoticeComposeSheet({ open, mode, notice, saving, deptOpt
           <TargetPicker f={f} />
         </Box>
 
-        <AttachmentArea f={f} />
+        {/* URL 추가 = 파일 첨부 옆·같은 점선 알약(사용자 지시 2026-08-15) */}
+        <AttachmentArea f={f} extra={<LinkField variant="pill" value={f.refLink} onChange={f.setRefLink} />} />
       </Box>
     </Dialog>
   )
