@@ -120,7 +120,8 @@ function CatDrop({ value, onChange }: { value: string; onChange: (v: string) => 
       renderValue={(v) => (v ? <span>{v}</span> : <Box component="span" sx={{ color: 'text.disabled' }}>분류</Box>)}
       MenuProps={{ slotProps: { paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' } } } }}
       sx={(th) => ({
-        ...inputSx(th), width: 88, maxWidth: '100%', height: 32,
+        // 이 폭이 표 **전체 분류 열**을 밀어올린다 — 모바일에선 68 로(개선요청 81)
+        ...inputSx(th), width: { xs: 68, shell: 88 }, maxWidth: '100%', height: 32,
         '& .MuiSelect-select': { p: 0, pl: '8px !important', pr: '22px !important', minHeight: '0 !important', display: 'flex', alignItems: 'center' },
         '& .MuiSelect-icon': { right: 2, color: 'text.secondary' },
       })}
@@ -250,8 +251,10 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
             sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{mode === 'new' ? author : (notice?.author || '-')}</TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
+        {/* 작성자·작성일은 모바일에서 **목록 행·헤더가 이미 숨기는 열**이다(index.tsx). 폼만 안 숨겨서
+            폼을 여는 순간 그 두 열이 되살아나 표가 374 → 502px 로 부풀었다(개선요청 81 실측). */}
+        <TableCell sx={{ display: { xs: 'none', shell: 'table-cell' }, textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{mode === 'new' ? author : (notice?.author || '-')}</TableCell>
+        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }, textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell />
         {/* 더보기 열 자리 — 이 폼은 팀원에게만 렌더되므로 목록 표의 더보기 열이 항상 있다(빠지면 폼 배경이 오른쪽 끝까지 안 닿음) */}
         <TableCell />

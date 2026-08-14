@@ -51,7 +51,10 @@ export default function PageContainer({
         mx: 'auto',
         px: { xs: `${layout.pageXMobile}px`, sm: `${layout.pageX}px` },
         pt: disableTop ? 0 : `${layout.pageTop}px`,
-        pb: `${layout.pageBottom}px`,
+        /* 모바일은 하단 탭바가 페이지 위를 덮는다. pb 60 은 탭바(69 + iOS 홈 인디케이터)보다 작아
+           마지막 줄이 탭바 아래로 들어갔다(아이폰에서 약 43px). 보정하려던 index.css 의
+           `main{padding-bottom:…}` 은 이 경로에 <main> 요소가 없어 죽어 있었다(개선요청 81). */
+        pb: { xs: 'calc(var(--bottom-nav-h) + 16px)', shell: `${layout.pageBottom}px` },
       }, sx)}
     >
       {children}

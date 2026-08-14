@@ -128,7 +128,8 @@ export default function NoticeDetail({ notice, canEdit, canDelete, onEdit, onDel
 
       <Box
         sx={{
-          fontSize: typescale.emphasis.size, lineHeight: 1.7, color: 'text.secondary', borderTop: 1, borderColor: 'divider', pt: 2,
+          // wordBreak — 공용 richBody viewSx 엔 있는데 여기만 빠져 있었다. 긴 URL 이 올라오면 넘친다
+          fontSize: typescale.emphasis.size, lineHeight: 1.7, color: 'text.secondary', borderTop: 1, borderColor: 'divider', pt: 2, wordBreak: 'break-word',
           '& a': { color: 'primary.main' },
           '& img': { maxWidth: '100%', borderRadius: `${radius.card}px` },
           '& p': { m: 0, mb: 1 },

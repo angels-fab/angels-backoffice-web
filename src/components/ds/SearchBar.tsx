@@ -40,7 +40,9 @@ export default function SearchBar({
       size="small"
       autoFocus={autoFocus}
       // 옆에 서는 액션 버튼과 같은 높이(control.height) — 둘이 짝으로 읽히려면 위아래 변이 맞아야 한다
-      sx={mergeSx({ width, '& .MuiOutlinedInput-root': { height: control.height } }, sx)}
+      // maxWidth·minWidth 가 없으면 받은 width(예: 200)가 좁은 화면에서 그대로 버텨,
+      // 옆에 선 액션 버튼을 툴바 밖으로 밀어낸다(개선요청 81 — 375px 이하에서 실측)
+      sx={mergeSx({ width, maxWidth: '100%', minWidth: 0, '& .MuiOutlinedInput-root': { height: control.height } }, sx)}
       slotProps={{
         input: {
           startAdornment: (
