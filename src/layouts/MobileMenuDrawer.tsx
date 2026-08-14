@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Drawer from '@mui/material/Drawer'
 import Box from '@mui/material/Box'
@@ -8,12 +9,6 @@ import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
 import Divider from '@mui/material/Divider'
 import Typography from '@mui/material/Typography'
-import MonitorIcon from '@mui/icons-material/Monitor'
-import FlagIcon from '@mui/icons-material/Flag'
-import CoPresentIcon from '@mui/icons-material/CoPresent'
-import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
-import LocalLibraryIcon from '@mui/icons-material/LocalLibrary'
-import LinkIcon from '@mui/icons-material/Link'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
 import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows'
@@ -23,6 +18,7 @@ import { useRole, ROLE_LABEL } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
 import { NavBadge } from '@/components/ds'
 import { useNavBadges } from './useNavBadges'
+import { NAV_ITEMS } from '@/constants/nav'
 import { memoCountByPath, visibleMemos } from '@/utils/improveMemo'
 import { alpha } from '@mui/material/styles'
 import { radius, typescale } from '@/theme/tokens'
@@ -37,14 +33,16 @@ interface Props {
 }
 
 interface NavRow {
-  icon: JSX.Element
+  icon: ReactNode
   label: string
   path: string
-  memberOnly?: boolean
   badge?: number
   /** 준비중 메뉴 — 이름 옆 앰버 칩 */
   wip?: boolean
 }
+
+/** 하단 탭바가 이미 맡은 목적지 + 계정 구역의 설정 — 드로어 '이동' 목록에서 뺀다 */
+const TAB_PATHS = new Set(['/', '/work', '/calendar', '/notice', '/settings'])
 
 export default function MobileMenuDrawer({ open, onClose }: Props) {
   const navigate = useNavigate()
@@ -65,17 +63,13 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
   }
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/')
 
-  // 하단 탭에 없는 목적지(장비관리는 /equipment 안에서 도입/운영 탭으로 분기)
-  // 장비·개선요청 = 팀원 이상 / 행사·바로가기 = 유관자 포함 전체 로그인
-  const rows: NavRow[] = [
-    { icon: <MonitorIcon />, label: '장비관리', path: '/equipment', memberOnly: true },
-    // 마일스톤 = 게스트 포함 로그인 전원 열람(개선요청 90) — memberOnly 해제
-    { icon: <FlagIcon />, label: '마일스톤', path: '/milestone', wip: true },
-    { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve, memberOnly: true },
-    { icon: <LocalLibraryIcon />, label: '자료실', path: '/resources', memberOnly: true },
-    { icon: <CoPresentIcon />, label: '학술·교육·전시', path: '/events' },
-    { icon: <LinkIcon />, label: '바로가기', path: '/links' },
-  ].filter((r) => !r.memberOnly || isMember)
+  // 하단 탭에 없는 목적지 — **PC 사이드바와 같은 출처(NAV_GROUPS)에서 파생**한다(2026-08-15 사용자 지시:
+  // "PC와 순서가 다르다"). 손으로 관리하던 목록이라 메뉴를 넣을 때마다 순서가 어긋났다.
+  // 노출 규칙도 SideNav 와 동일: adminOnly=관리자 / team=팀원 이상 / 그 외 전체.
+  const rows: NavRow[] = NAV_ITEMS
+    .filter((it) => !TAB_PATHS.has(it.path))
+    .filter((it) => (it.adminOnly ? isAdmin : it.team ? isMember : true))
+    .map((it) => ({ icon: it.icon, label: it.label, path: it.path, wip: it.wip, badge: it.badgeKey ? badges[it.badgeKey] : undefined }))
 
   return (
     <Drawer
