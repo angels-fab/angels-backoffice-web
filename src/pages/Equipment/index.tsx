@@ -17,10 +17,7 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogActions from '@mui/material/DialogActions'
 import MonitorIcon from '@mui/icons-material/Monitor'
-import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
-import UndoIcon from '@mui/icons-material/Undo'
-import RedoIcon from '@mui/icons-material/Redo'
 import EditCalendarIcon from '@mui/icons-material/EditCalendar'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
@@ -753,33 +750,15 @@ export default function Equipment() {
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {/* 구성원 쓰기 개방(2026-08-05) */}
+            {/* 실행취소·다시실행·새로고침 버튼 삭제(요청메모 89).
+                실행취소/다시실행은 **단축키(Ctrl+Z / Ctrl+Shift+Z)로 계속 동작한다** — 기능을 없앤 게
+                아니라 상단 버튼만 뺐다. 새로고침은 브라우저 새로고침과 겹치고, 실패 시에는 아래
+                배너가 '다시 시도'를 준다. */}
             {isMember && (
-              <>
-                <IconButton aria-label="실행취소" title="실행취소 (Ctrl+Z)" onClick={undo} disabled={!undoStack.length} size="small" sx={{ color: 'text.secondary' }}>
-                  <UndoIcon sx={{ fontSize: iconSize.header }} />
-                </IconButton>
-                <IconButton aria-label="다시실행" title="다시실행 (Ctrl+Shift+Z)" onClick={redo} disabled={!redoStack.length} size="small" sx={{ color: 'text.secondary' }}>
-                  <RedoIcon sx={{ fontSize: iconSize.header }} />
-                </IconButton>
-                <Button variant="contained" size="small" startIcon={<AddIcon />} sx={{ minHeight: control.height }} onClick={() => { setEditBatchCodes([]); setEditTarget(null); setWriteOpen(true) }}>
-                  장비 추가
-                </Button>
-              </>
+              <Button variant="contained" size="small" startIcon={<AddIcon />} sx={{ minHeight: control.height }} onClick={() => { setEditBatchCodes([]); setEditTarget(null); setWriteOpen(true) }}>
+                장비 추가
+              </Button>
             )}
-            {/* 편집 중 새로고침 금지 — 서버 원본이 미저장 드래그/리사이즈를 경고 없이 덮어쓰던 문제(백로그 B3).
-                「편집 종료」는 이미 저장/취소를 묻는데 새로고침만 그 보호를 우회했다.
-                disabled 버튼은 title이 안 뜨므로 span으로 감싸 이유를 보여준다. */}
-            <Box
-              component="span"
-              title={editMode
-                ? '편집 중에는 새로고침할 수 없습니다 — 저장 안 된 변경이 사라지지 않도록 막아둡니다. 먼저 「편집 종료」로 저장하거나 취소하세요.'
-                : '새로고침'}
-              sx={{ display: 'inline-flex' }}
-            >
-              <IconButton aria-label="새로고침" onClick={() => dispatch(loadEqData())} disabled={loading || editMode} size="small" sx={{ color: 'text.secondary' }}>
-                <RefreshIcon sx={{ fontSize: iconSize.header }} />
-              </IconButton>
-            </Box>
           </Box>
         }
       />

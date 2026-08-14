@@ -26,7 +26,6 @@ import TextField from '@mui/material/TextField'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
 import PriorityHighIcon from '@mui/icons-material/PriorityHigh'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
-import RefreshIcon from '@mui/icons-material/Refresh'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
@@ -170,7 +169,7 @@ type DraftCard = { key: number; id: string; urgent: boolean; title: string; loc:
 
 export default function Improve() {
   const dispatch = useAppDispatch()
-  const { items, ready, loading, error } = useAppSelector((s) => s.improve)
+  const { items, ready, error } = useAppSelector((s) => s.improve)
   const replies = useAppSelector((s) => s.reply.items)
   const { isMember, isAdmin, user, authKey } = useRole()
   // 내 기준 새 글 배지(개인화) — 페이지 진입 시 현재 새 글을 읽음 처리.
@@ -684,11 +683,8 @@ export default function Improve() {
         icon={<LightbulbOutlinedIcon />}
         title="포털개선요청"
         updatedAt={error ? '불러오기 실패' : undefined}
-        actions={
-          <IconButton aria-label="새로고침" onClick={() => dispatch(loadImproveData())} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-            <RefreshIcon sx={{ fontSize: iconSize.header }} />
-          </IconButton>
-        }
+        /* 새로고침 버튼 삭제(요청메모 88) — 브라우저 새로고침과 겹치고,
+           불러오기에 실패하면 아래 배너가 '다시 시도'를 이미 준다 */
       />
 
       {/* 불러오기 실패 — '요청 없음'으로 오해하지 않게 정직하게 알리고 재시도 제공(백로그 C2).
