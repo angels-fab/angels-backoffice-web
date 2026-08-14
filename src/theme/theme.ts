@@ -239,10 +239,12 @@ function buildTheme(mode: Mode): Theme {
             backgroundColor: p.surface,
             '& .MuiOutlinedInput-notchedOutline': { borderColor: p.border },
             '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: p.textMuted },
-            '&.Mui-focused': { boxShadow: focusRing },
+            // (구) 포커스 = 1px 테두리 + 3px 광륜(focusRing) — 광륜은 상자를 따라 그려져
+            // 떠오른 라벨 밑을 **그대로 관통**했다(2026-08-15 사용자 캡처 '테두리랑 겹침').
+            // MUI 표준(2px 테두리)으로 회귀 — 테두리는 노치(legend 틈)가 라벨 자리에서 끊어 준다.
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
               borderColor: accent.blue,
-              borderWidth: 1,
+              borderWidth: 2,
             },
           },
         },
