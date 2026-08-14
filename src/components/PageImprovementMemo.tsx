@@ -459,7 +459,10 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
             overflowY: 'auto',
             border: `1px solid ${alpha(th.palette.accent.amber, 0.35)}`,
             borderRadius: `${radius.card}px`,
-            background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.1)}, ${th.palette.background.paper} 52%)`,
+            // 인라인 시절의 앰버 그라데이션을 그대로 가져왔더니 뒤 목록이 비쳐 보였다(사용자 지적
+            // 2026-08-14). background 단축속성이 배경색을 지우는데 그라데이션 시작이 10% 앰버라
+            // 반투명 창이 됐던 것. 떠 있는 표면은 **불투명**이 원칙 — 코멘트 팝업과 같은 elevated.
+            bgcolor: 'background.elevated',
           }),
         },
       }}
