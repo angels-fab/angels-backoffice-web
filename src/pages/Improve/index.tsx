@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Box from '@mui/material/Box'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import Checkbox from '@mui/material/Checkbox'
 import { TintChip } from '@/components/FilterChip'
 import Button from '@mui/material/Button'
@@ -556,6 +557,9 @@ export default function Improve() {
 
   const stop = (e: React.MouseEvent) => e.stopPropagation()
 
+  // 모바일 = 셸 분기(768) 아래 — 표 대신 카드(개선요청 87). 공지와 같은 기준.
+  const isMobile = useMediaQuery((th: Theme) => th.breakpoints.down('shell'))
+
   // 더보기 메뉴 실행 — 전파를 막고 기존 핸들러를 그대로 호출한 뒤 메뉴를 닫는다
   const closeMenu = () => setMenuFor(null)
   const menuAct = (fn: (t: ImprovementItem) => void) => (e: React.MouseEvent) => {
@@ -677,6 +681,153 @@ export default function Improve() {
     ]
   }
 
+  /**
+   * 모바일 카드 한 장(개선요청 87) — 375px 에서 표(구성원 10열 최소폭 약 922px)는 63%가 화면 밖이었다.
+   * 공지 모바일 카드와 같은 3줄 구성: ①칩·핀·더보기 ②제목 ③번호·작성자·날짜·비고.
+   * 탭하면 그 자리에서 내용·답글이 펼쳐진다(표의 아코디언과 같은 데이터·컴포넌트).
+   * 모바일에서 버리는 것: 선택 체크박스(일괄삭제) — ⋮ 의 개별 삭제로 대신한다.
+   */
+  const renderMobileCard = (t: ImprovementItem) => {
+    const open = openId === t.id
+    const rm = remarkOf(t)
+    const st = normStatus(t.status)
+    const editable = canEdit
+    const removable = canDelete(t)
+    const isNew = isImproveNew(t)
+    const rowReplies = repliesByReq[t.num] || []
+    const toggle = () => toggleRow(t.id)
+    const memoOn = t.memo === true
+    const memoTarget = locationToPath(t.loc)
+    const memoBlocked = !memoOn && (!memoTarget || isSettled(t.status))
+    const onHeaderTap = (e: React.MouseEvent) => {
+      const el = e.target as HTMLElement
+      if (el.closest('button, input, textarea, a, [contenteditable], [role="combobox"]')) return
+      toggle()
+    }
+    return (
+      <Box
+        key={t.id}
+        sx={(th) => ({
+          border: '1px solid', borderColor: open ? alpha(th.palette.accent.blue, 0.5) : 'divider',
+          borderRadius: `${radius.card}px`, mb: 1.25, overflow: 'hidden',
+          bgcolor: open ? alpha(th.palette.accent.blue, 0.08) : 'background.paper',
+        })}
+      >
+        <Box onClick={onHeaderTap} sx={{ p: '11px 13px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+            {editable ? (
+              <Select
+                value={st}
+                onChange={(e) => onStatusChange(t, e.target.value)}
+                disabled={savingId === t.id}
+                variant="standard"
+                disableUnderline
+                IconComponent={() => null}
+                renderValue={(v) => <StatusChip status={impKind(v)} label={v} />}
+                sx={{ '& .MuiSelect-select': { p: 0, pr: '0 !important' } }}
+              >
+                {IMP_STATUSES.map((s) => <MenuItem key={s} value={s} sx={{ fontSize: typescale.body.size }}>{s}</MenuItem>)}
+              </Select>
+            ) : (
+              <StatusChip status={impKind(st)} label={st || '-'} />
+            )}
+            {t.loc && <LocChip label={t.loc} />}
+            {isNew && (
+              <Box component="span" sx={{ fontSize: typescale.micro.size, fontWeight: weight.semibold, letterSpacing: '0.06em', color: 'accentText.red' }}>NEW</Box>
+            )}
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              {canEdit && (
+                <IconButton
+                  size="small"
+                  aria-label={memoOn ? '메모 해제' : '해당 페이지에 띄우기'}
+                  disabled={memoBlocked || savingId === t.id}
+                  onClick={(e) => { e.stopPropagation(); void toggleMemo(t, !memoOn) }}
+                  sx={(th) => ({ color: memoOn ? th.palette.accent.amber : 'text.disabled', p: 0.5 })}
+                >
+                  {memoOn ? <PushPinIcon sx={{ fontSize: iconSize.action }} /> : <PushPinOutlinedIcon sx={{ fontSize: iconSize.action }} />}
+                </IconButton>
+              )}
+              {canEdit && (
+                <IconButton size="small" aria-label="더보기" onClick={(e) => { e.stopPropagation(); setMenuFor({ el: e.currentTarget, t }) }} sx={{ color: 'text.secondary', p: 0.5 }}>
+                  <MoreVertIcon sx={{ fontSize: iconSize.action }} />
+                </IconButton>
+              )}
+            </Box>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+            {t.urgent && <PriorityHighIcon sx={{ fontSize: iconSize.action, color: 'error.main', flexShrink: 0 }} />}
+            <Box component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.medium, color: 'text.primary', minWidth: 0, wordBreak: 'break-word' }}>{t.title}</Box>
+            {rowReplies.length > 0 && (
+              <Box component="span" sx={(th) => ({ flexShrink: 0, display: 'inline-flex', alignItems: 'center', height: 18, px: '7px', borderRadius: `${radius.button}px`, fontSize: typescale.caption.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1, whiteSpace: 'nowrap', color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.14), border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}` })}>답글 +{rowReplies.length}</Box>
+            )}
+            {t.link && (
+              <IconButton component="a" href={t.link} target="_blank" rel="noopener noreferrer" size="small" aria-label="관련자료" onClick={stop} sx={{ color: 'info.main', p: 0.25, flexShrink: 0 }}>
+                <OpenInNewIcon sx={{ fontSize: iconSize.body }} />
+              </IconButton>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: typescale.small.size, color: 'text.disabled', flexWrap: 'wrap' }}>
+            <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>#{t.num}</Box>
+            <Box component="span">{t.author || '-'}</Box>
+            <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>{fmtDate(t.date)}</Box>
+            {rm.kind === 'date' && <Box component="span" sx={{ color: 'info.main', fontVariantNumeric: 'tabular-nums' }}>{fmtDate(rm.text)}</Box>}
+            {rm.kind === 'reason' && !!rm.text && (
+              <Box component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'text.secondary' }}>{rm.text}</Box>
+            )}
+          </Box>
+        </Box>
+        <Collapse in={open} timeout="auto" unmountOnExit>
+          <Box sx={(th) => ({ bgcolor: alpha(th.palette.accent.blue, 0.06), px: 1.5, py: 1.25 })}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 2 }}>
+              <Box sx={{ fontSize: typescale.body.size, color: 'text.primary', lineHeight: 1.7, py: 0.5, flex: 1, minWidth: 0 }}>
+                {t.content ? <RichBodyView html={t.content} /> : '내용 없음'}
+              </Box>
+              {(editable || removable) && (
+                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0, pt: 0.25 }} onClick={stop}>
+                  {editable && <IconButton size="small" aria-label="수정" onClick={() => openEdit(t)} sx={{ color: 'text.secondary' }}><EditIcon sx={{ fontSize: iconSize.action }} /></IconButton>}
+                  {removable && <IconButton size="small" color="error" aria-label="삭제" onClick={() => setDeleteDlg(t)}><DeleteOutlineIcon sx={{ fontSize: iconSize.action }} /></IconButton>}
+                </Box>
+              )}
+            </Box>
+            <ReplyThread
+              key={t.id}
+              replies={rowReplies}
+              isAdmin={isMember}
+              user={user}
+              busy={replyBusy}
+              onCreate={(content) => createReplyH(t.num, content)}
+              onEdit={editReplyH}
+              onRequestDelete={(r) => setDelReply(r)}
+            />
+          </Box>
+        </Collapse>
+      </Box>
+    )
+  }
+
+  /** 모바일 수정 카드 — 표의 인라인 수정(renderEditRow)과 같은 상태·저장 핸들러를 세로로 배치 */
+  const renderMobileEdit = (t: ImprovementItem) => (
+    <Box key={`edit-${t.id}`} sx={(th) => ({ border: '1px solid', borderColor: alpha(th.palette.accent.green, 0.5), borderRadius: `${radius.card}px`, mb: 1.25, p: '11px 13px', bgcolor: alpha(th.palette.accent.green, 0.06), display: 'flex', flexDirection: 'column', gap: 1 })}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        <UrgentBox on={cUrgent} onToggle={() => setCUrgent((v) => !v)} />
+        <DropField value={cLoc} onChange={setCLoc} options={locOptions} placeholder="위치" />
+        <LinkField value={cLink} onChange={setCLink} />
+      </Box>
+      <InputBase
+        value={cTitle}
+        onChange={(e) => setCTitle(e.target.value)}
+        placeholder="제목"
+        inputProps={{ 'aria-label': '제목' }}
+        sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
+      />
+      <RichBodyEditor value={cContent} onChange={setCContent} placeholder="요청내용" ariaLabel="요청내용" fontSize={13} minHeight={64} framed />
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+        <Button size="small" onClick={() => setEditingId(null)} disabled={saving} sx={{ color: 'text.secondary' }}>취소</Button>
+        <Button size="small" variant="contained" color="success" onClick={() => void handleEdit(t)} disabled={saving}>{saving ? '저장 중…' : '저장'}</Button>
+      </Box>
+    </Box>
+  )
+
   return (
     <PageContainer>
       <PageHeader
@@ -714,7 +865,9 @@ export default function Improve() {
         <FilterToolbar
           label="상태"
           search={<SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·위치 검색" width={200} />}
-          actions={isMember ? ( // 구성원 쓰기 개방(2026-08-05)
+          actions={isMember && !isMobile ? ( // 구성원 쓰기 개방(2026-08-05)
+            // 모바일은 숨긴다(개선요청 87) — 작성 폼이 표 행 구조라 카드 목록에 못 끼우고,
+            // 모바일의 새 요청 창구는 상단바 전구(요청메모)가 이미 담당한다.
             <Button
               onClick={() => (composing ? requestClose() : void openCompose())}
               startIcon={<AddIcon />}
@@ -782,6 +935,17 @@ export default function Improve() {
           </Box>
         )}
 
+        {isMobile ? (
+          /* 모바일은 표를 아예 안 쓴다(개선요청 87) — 375px 에서 표의 63%가 화면 밖이었다.
+             공지와 같은 카드 목록. 새 요청 작성은 상단바 전구(요청메모)가 이미 모바일 창구다. */
+          <Box>
+            {!ready && listed.length === 0 && <Box sx={{ py: 3, textAlign: 'center' }}><LoadingState /></Box>}
+            {ready && listed.length === 0 && (
+              <Box sx={{ py: 3, textAlign: 'center', color: 'text.disabled', fontSize: typescale.body.size }}>해당하는 요청이 없습니다</Box>
+            )}
+            {listed.map((t) => (editingId === t.id ? renderMobileEdit(t) : renderMobileCard(t)))}
+          </Box>
+        ) : (
         <AppCard padding={0} sx={{ overflowX: 'auto' }}>
           {/* '& th, & td'(특이도 0,1,1)는 셀 sx를 이겨 헤더 밑줄(--th-line)까지 죽인다 — 쓰지 말 것.
               구분선 색·여백은 theme MuiTableCell 담당, 여기서는 본문 줄바꿈만 막는다. */}
@@ -913,7 +1077,7 @@ export default function Improve() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: iconSize.action, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
                         {/* 제목은 14px + 주 톤으로 이미 식별자 — 굵기는 강조 상태에만 쓴다(전부 굵으면 신호가 사라짐) */}
-                        <Box component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.medium, color: 'text.primary' }}>{t.title}</Box>
+                        <Box component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.medium, color: 'text.primary', overflowWrap: 'anywhere' }}>{t.title}</Box>
                         {/* 제목 → 최근글 N칩 → 답글 +N칩 → 링크 순. 모두 줄어들지 않게 flexShrink:0 */}
                         {isNew && (
                           <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: typescale.micro.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1 }}>N</Box>
@@ -1040,6 +1204,7 @@ export default function Improve() {
             </TableBody>
           </Table>
         </AppCard>
+        )}
       </ContentSection>
 
       {/* 목록 더보기 메뉴 — 펼치지 않고 바로 처리. 수정 = 로그인 관리자 전체 / 삭제 = 담당자(작성자)만 */}
