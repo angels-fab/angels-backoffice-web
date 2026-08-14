@@ -16,8 +16,10 @@ import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 import NoticeBodyEditor from './NoticeBodyEditor'
 import {
   CatDrop, LinkField, TargetPicker, AttachmentArea, useNoticeComposeForm,
+  PinPeriodPopover, pinShort,
   type NoticeFormValues,
 } from './NoticeCompose'
+import { useState } from 'react'
 
 const fieldSx = (th: Theme) => ({ ...inlineFieldSx(th), py: 0.4 })
 
@@ -41,6 +43,8 @@ export default function NoticeComposeSheet({ open, mode, notice, saving, deptOpt
 }) {
   const f = useNoticeComposeForm({ mode, notice, onSave, onCancel })
   const busy = saving || f.uploading
+  // 압정 기한 미니팝업(85번 B안) — 켜는 순간 열림, 끄면 기한도 함께 해제 (PC 폼과 같은 규칙)
+  const [pinAnchor, setPinAnchor] = useState<HTMLElement | null>(null)
   return (
     <Dialog
       open={open}
@@ -68,7 +72,10 @@ export default function NoticeComposeSheet({ open, mode, notice, saving, deptOpt
             <IconButton
               aria-label="중요(상단강조)"
               aria-pressed={f.pinned}
-              onClick={() => f.setPinned((v) => !v)}
+              onClick={(e) => {
+                if (f.pinned) { f.setPinned(false); f.setEnd('') }
+                else { f.setPinned(true); setPinAnchor(e.currentTarget) }
+              }}
               size="small"
               sx={(th) => ({
                 color: f.pinned ? th.palette.accentText.amber : 'text.disabled',
@@ -79,6 +86,17 @@ export default function NoticeComposeSheet({ open, mode, notice, saving, deptOpt
               <PushPinIcon sx={{ fontSize: iconSize.action }} />
             </IconButton>
           </Tooltip>
+          {/* 기한 캡션 — 누르면 미니팝업 재열기(기한만 바꿀 때 압정을 껐다 켤 필요 없게) */}
+          {f.pinned && f.end && (
+            <Box
+              role="button" tabIndex={0} aria-label="고정 기한 변경"
+              onClick={(e) => setPinAnchor(e.currentTarget as HTMLElement)}
+              sx={(th) => ({ fontSize: typescale.caption.size, color: th.palette.accentText.amber, cursor: 'pointer', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' })}
+            >
+              ~{pinShort(f.end)}
+            </Box>
+          )}
+          <PinPeriodPopover anchor={pinAnchor} onClose={() => setPinAnchor(null)} end={f.end} setEnd={f.setEnd} />
           <LinkField value={f.refLink} onChange={f.setRefLink} />
         </Box>
 

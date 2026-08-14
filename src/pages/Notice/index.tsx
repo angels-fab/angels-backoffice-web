@@ -172,7 +172,7 @@ export default function Notice() {
     if (!v.body) return snack('내용을 입력해주세요.', 'error')
     setSaving(true)
     try {
-      const newNum = await addNotice({ key: authKey, author: user, cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref, attachments: v.attachments, date: todaySeoul() })
+      const newNum = await addNotice({ key: authKey, author: user, cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, end: v.end, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref, attachments: v.attachments, date: todaySeoul() })
       setComposing(false)
       dispatch(loadNoticeData())
       snack('공지를 등록했습니다.', 'success')
@@ -194,7 +194,7 @@ export default function Notice() {
       await updateNotice({
         num: n.num, key: authKey, author: user,
         cat: v.cat, title: v.title, body: v.body, pinned: v.pinned, dept: v.dept, deptMgr: v.deptMgr, target: v.target, ref: v.ref,
-        attachments: v.attachments, end: n.end, date: n.date,
+        attachments: v.attachments, end: v.end, date: n.date,
       })
       // 수정 성공 후: 기존 첨부 중 제거된 파일을 스토리지에서 정리(best-effort)
       const keptPaths = new Set(v.attachments.map((a) => a.path))

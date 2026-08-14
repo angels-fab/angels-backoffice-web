@@ -5,6 +5,7 @@ import TableCell from '@mui/material/TableCell'
 import InputBase from '@mui/material/InputBase'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import MenuList from '@mui/material/MenuList'
 import Popover from '@mui/material/Popover'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
@@ -73,6 +74,8 @@ export interface NoticeFormValues {
   deptMgr: string
   target: string
   pinned: boolean
+  /** 고정 기한(공지 종료일 yyyy-MM-dd, ''=무기한) — 지나면 상단고정 자동 해제(요청메모 85) */
+  end: string
   attachments: NoticeFile[]
 }
 
@@ -106,6 +109,84 @@ export function LinkField({ value, onChange }: { value: string; onChange: (v: st
         </Box>
       </Popover>
     </>
+  )
+}
+
+// 압정 기한 프리셋 날짜 계산 — todaySeoul() 문자열 기준. toISOString(UTC 변환)은 KST 자정에서
+// 하루 밀리므로 로컬 필드로 직접 포맷한다.
+function fmtYmd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+function addDaysYmd(base: string, days: number): string {
+  const d = new Date(`${base}T00:00:00`)
+  d.setDate(d.getDate() + days)
+  return fmtYmd(d)
+}
+function addMonthYmd(base: string): string {
+  const d = new Date(`${base}T00:00:00`)
+  d.setMonth(d.getMonth() + 1)
+  return fmtYmd(d)
+}
+/** '2026-08-21' → '8/21' — 압정 옆 기한 캡션·프리셋 보조표기 */
+export function pinShort(ymd: string): string {
+  const m = ymd.match(/^\d{4}-(\d{2})-(\d{2})$/)
+  return m ? `${Number(m[1])}/${Number(m[2])}` : ymd
+}
+
+/**
+ * 압정 고정 기한 미니팝업(요청메모 85, B안) — 압정을 켜는 순간 떠서 언제까지 고정할지 고른다.
+ * 값은 공지 **종료일(end)** 에 저장 — 종료일이 지나면 기존 규칙(pinnedCopies 필터)이
+ * 상단고정을 자동 해제하고 NEW 표시도 함께 끈다. 새 DB 열 없음.
+ */
+export function PinPeriodPopover({ anchor, onClose, end, setEnd }: {
+  anchor: HTMLElement | null
+  onClose: () => void
+  end: string
+  setEnd: (v: string) => void
+}) {
+  const today = todaySeoul()
+  const presets = [
+    { label: '무기한', value: '' },
+    { label: '1주', value: addDaysYmd(today, 7) },
+    { label: '2주', value: addDaysYmd(today, 14) },
+    { label: '1개월', value: addMonthYmd(today) },
+  ]
+  const pick = (v: string) => { setEnd(v); onClose() }
+  return (
+    <Popover
+      open={!!anchor}
+      anchorEl={anchor}
+      onClose={onClose}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      slotProps={{ paper: { sx: { bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: `${radius.button}px`, mt: 0.5 } } }}
+    >
+      <Box sx={{ py: 0.5, width: 184 }}>
+        <Box sx={{ px: 1.5, py: 0.5, fontSize: typescale.caption.size, color: 'text.secondary' }}>언제까지 고정할까요</Box>
+        {/* MenuItem 은 MenuList 컨텍스트 안에서만 동작(밖에 두면 MenuListContext missing 으로 크래시) */}
+        <MenuList dense disablePadding>
+          {presets.map((p) => (
+            <MenuItem key={p.label} selected={end === p.value} onClick={() => pick(p.value)} sx={{ fontSize: typescale.body.size, minHeight: 0, py: 0.75, display: 'flex' }}>
+              {p.label}
+              {p.value && (
+                <Box component="span" sx={{ ml: 'auto', pl: 1.5, fontSize: typescale.small.size, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+                  ~ {pinShort(p.value)}
+                </Box>
+              )}
+            </MenuItem>
+          ))}
+        </MenuList>
+        {/* 날짜 직접 선택 — 모바일은 시스템 피커, PC는 달력 아이콘/직접 입력 */}
+        <Box sx={{ px: 1.5, pt: 0.75, pb: 0.5, mt: 0.5, borderTop: '1px solid', borderColor: 'divider' }}>
+          <InputBase
+            type="date"
+            value={end}
+            onChange={(e) => { if (e.target.value) pick(e.target.value) }}
+            inputProps={{ min: today, 'aria-label': '고정 기한 날짜 직접 선택' }}
+            sx={(th) => ({ ...inputSx(th), width: '100%', py: 0.25, fontSize: typescale.body.size })}
+          />
+        </Box>
+      </Box>
+    </Popover>
   )
 }
 
@@ -159,6 +240,8 @@ export function useNoticeComposeForm({ mode, notice, onSave, onCancel }: {
   const [dept, setDept] = useState(notice?.dept || '')
   const [deptMgr, setDeptMgr] = useState(notice?.deptMgr || '')
   const [pinned, setPinned] = useState(notice?.pinned || false)
+  // 고정 기한 = 공지 종료일(end) — 압정 미니팝업(85번 B안)이 채우고, ''=무기한.
+  const [end, setEnd] = useState(notice?.end || '')
   // 신규: 기본 센터(전체) / 편집: 저장값 복원
   const [targets, setTargets] = useState<string[]>(
     mode === 'new' ? TARGET_MEMBERS.map((m) => m.name) : parseTargets(notice?.target || ''),
@@ -215,7 +298,7 @@ export function useNoticeComposeForm({ mode, notice, onSave, onCancel }: {
     const orphans = Array.from(sessionPaths.current).filter((p) => !finalPaths.has(p))
     if (orphans.length) void removeNoticeFiles(orphans).catch(() => {})
     orphans.forEach((p) => sessionPaths.current.delete(p))
-    onSave({ cat, title: title.trim(), body: body.trim(), ref: refLink.trim(), dept: dept.trim(), deptMgr: deptMgr.trim(), target: targetLabel(targets), pinned, attachments })
+    onSave({ cat, title: title.trim(), body: body.trim(), ref: refLink.trim(), dept: dept.trim(), deptMgr: deptMgr.trim(), target: targetLabel(targets), pinned, end, attachments })
   }
   // 취소 — 저장 안 하므로 이번 세션에 새로 올린 파일 전부 정리(기존 첨부는 보존)
   const cancel = () => {
@@ -226,7 +309,7 @@ export function useNoticeComposeForm({ mode, notice, onSave, onCancel }: {
 
   return {
     cat, setCat, title, setTitle, body, setBody, refLink, setRefLink,
-    dept, setDept, deptMgr, setDeptMgr, pinned, setPinned,
+    dept, setDept, deptMgr, setDeptMgr, pinned, setPinned, end, setEnd,
     targets, toggleTarget, setAllTargets, setStaffTargets, isAllTargets, isStaffTargets,
     uploads, sortedUploads, uploading, fileInputRef, onPickFiles, removeUpload,
     save, cancel, dateStr,
@@ -335,9 +418,15 @@ export function AttachmentArea({ f }: { f: ReturnType<typeof useNoticeComposeFor
 /** 공지 작성/수정 인라인 행 — 표 열(번호·분류·제목·작성자·작성일)에 맞춘 2행 구조. */
 export default function NoticeCompose({ mode, notice, author, saving, deptOptions, deptMgrOptions, onSave, onCancel }: NoticeComposeProps) {
   const f = useNoticeComposeForm({ mode, notice, onSave, onCancel })
-  const { cat, setCat, title, setTitle, body, setBody, refLink, setRefLink, dept, setDept, deptMgr, setDeptMgr, pinned, setPinned, uploading, save, cancel, dateStr } = f
+  const { cat, setCat, title, setTitle, body, setBody, refLink, setRefLink, dept, setDept, deptMgr, setDeptMgr, pinned, setPinned, end, setEnd, uploading, save, cancel, dateStr } = f
   const amber = (th: Theme) => alpha(th.palette.accent.amber, 0.07)
   const stop = (e: React.MouseEvent) => e.stopPropagation()
+  // 압정 기한 미니팝업(85번 B안) — 켜는 순간 열림, 끄면 기한도 함께 해제
+  const [pinAnchor, setPinAnchor] = useState<HTMLElement | null>(null)
+  const togglePin = (el: HTMLElement) => {
+    if (pinned) { setPinned(false); setEnd('') }
+    else { setPinned(true); setPinAnchor(el) }
+  }
 
   return (
     <>
@@ -347,8 +436,8 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
           <Tooltip title={pinned ? '중요(상단강조) 해제' : '중요(상단강조)'}>
             <Box
               role="checkbox" aria-checked={pinned} aria-label="중요(상단강조)" tabIndex={0}
-              onClick={() => setPinned((v) => !v)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPinned((v) => !v) } }}
+              onClick={(e) => togglePin(e.currentTarget)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePin(e.currentTarget as HTMLElement) } }}
               sx={(th) => ({
                 width: 26, height: 26, mx: 'auto', borderRadius: `${radius.chip}px`, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid',
@@ -360,6 +449,18 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
               <PushPinIcon sx={{ fontSize: iconSize.body }} />
             </Box>
           </Tooltip>
+          {/* 기한 캡션 — 누르면 미니팝업 재열기(기한만 바꿀 때 압정을 껐다 켤 필요 없게) */}
+          {pinned && end && (
+            <Box
+              role="button" tabIndex={0} aria-label="고정 기한 변경"
+              onClick={(e) => setPinAnchor(e.currentTarget as HTMLElement)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPinAnchor(e.currentTarget as HTMLElement) } }}
+              sx={(th) => ({ mt: '2px', fontSize: typescale.caption.size, color: th.palette.accentText.amber, cursor: 'pointer', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' })}
+            >
+              ~{pinShort(end)}
+            </Box>
+          )}
+          <PinPeriodPopover anchor={pinAnchor} onClose={() => setPinAnchor(null)} end={end} setEnd={setEnd} />
         </TableCell>
         <TableCell onClick={stop}><CatDrop value={cat} onChange={setCat} /></TableCell>
         <TableCell onClick={stop}>
