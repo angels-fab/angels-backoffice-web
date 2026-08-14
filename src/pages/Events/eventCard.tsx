@@ -14,7 +14,8 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import CheckIcon from '@mui/icons-material/Check'
 import { alpha, darken } from '@mui/material/styles'
 import type { Theme } from '@mui/material/styles'
-import { eventStatus, fmtEventDate, type FabEvent, type EventAccent } from '@/constants/events'
+import HowToRegIcon from '@mui/icons-material/HowToReg'
+import { eventStatus, fmtEventDate, regStatus, type FabEvent, type EventAccent } from '@/constants/events'
 import { domain, radius, iconSize, typescale, weight } from '@/theme/tokens'
 
 // 포스터 없을 때 카드 배경 그라데이션 — 정본은 tokens.domain.events.grad (P1-2 승격)
@@ -277,6 +278,7 @@ export interface AttendControl {
  */
 export function EventCardInner({ e, open, attend }: { e: FabEvent; open: boolean; attend?: AttendControl }) {
   const st = eventStatus(e.start, e.end)
+  const reg = regStatus(e.regEnd)
   // 참석 버튼 라벨 — 진행중이면 '참석 중', 예정이면 '참석 예정'(종료는 목록형이라 여기 안 옴)
   const attendLabel = st.tone === 'green' ? '참석 중' : '참석 예정'
   return (
@@ -345,8 +347,30 @@ export function EventCardInner({ e, open, attend }: { e: FabEvent; open: boolean
       {/* 기본 하단 오버레이: 제목 + 일시 (열리면 페이드아웃) */}
       <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 2, p: '13px 13px 14px', opacity: open ? 0 : 1, pointerEvents: open ? 'none' : 'auto', transition: 'opacity 160ms ease', '@media (prefers-reduced-motion: reduce)': { transition: 'none' } }}>
         <CardTitle title={e.title} />
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: { xs: typescale.small.size, sm: typescale.body.size }, fontWeight: weight.medium, color: 'common.white', bgcolor: 'rgba(255,255,255,.16)', backdropFilter: 'blur(3px)', px: 1.1, py: '4px', borderRadius: `${radius.pill}px` }}>
-          <EventIcon sx={{ fontSize: iconSize.body }} /> {fmtEventDate(e.start, e.end)}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: { xs: typescale.small.size, sm: typescale.body.size }, fontWeight: weight.medium, color: 'common.white', bgcolor: 'rgba(255,255,255,.16)', backdropFilter: 'blur(3px)', px: 1.1, py: '4px', borderRadius: `${radius.pill}px` }}>
+            <EventIcon sx={{ fontSize: iconSize.body }} /> {fmtEventDate(e.start, e.end)}
+          </Box>
+          {/* 등록 마감 — PC 카드에도 없던 정보다(2026-08-13 사용자 요청).
+              카드가 크게 보여주던 D-n 은 행사일 기준이라, 정작 신청 여부를 정할 날짜가 안 보였다.
+              포스터 위라 색이 아니라 **밝기**로 구분한다(임박=흰 알약, 그 외=반투명). */}
+          {reg && (
+            <Box
+              component="span"
+              sx={{
+                display: 'inline-flex', alignItems: 'center', gap: 0.5,
+                fontSize: { xs: typescale.caption.size, sm: typescale.small.size },
+                fontWeight: weight.semibold,
+                px: 1, py: '4px', borderRadius: `${radius.pill}px`,
+                backdropFilter: 'blur(3px)',
+                ...(reg.tone === 'amber'
+                  ? { color: 'rgba(0,0,0,.86)', bgcolor: 'rgba(255,255,255,.88)' } // design-lint-ok(hex): 포스터 위 오버레이 — 테마색이 아니라 사진 대비용 고정 명도
+                  : { color: 'rgba(255,255,255,.86)', bgcolor: 'rgba(255,255,255,.16)' }), // design-lint-ok(hex): 위와 동일(포스터 위 스크림)
+              }}
+            >
+              <HowToRegIcon sx={{ fontSize: iconSize.body }} /> {reg.label}
+            </Box>
+          )}
         </Box>
       </Box>
 

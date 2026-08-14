@@ -55,6 +55,14 @@ export interface FabEvent {
   posterBg?: string
   /** 안내문·하단 텍스트가 많은 포스터: 팝업 정보 영역을 강한 검정 스크림으로 덮어 겹침 방지. 기본(여백 있는 포스터)은 옅은 그라데이션 */
   darkInfo?: boolean
+  /**
+   * 사전등록·신청 **마감일**(YYYY-MM-DD) — 목록에 띄우려고 따로 둔 칸(2026-08-13 사용자 요청).
+   *
+   * 같은 내용이 summary 문구 안에도 있지만("사전등록 2026.06.15~08.14"), 그건 사람이 읽는 글이라
+   * 날짜를 판정에 쓸 수 없다. 마감이 지났는지 임박했는지는 화면이 계산해야 하므로 값으로 둔다.
+   * 마감일이 공지되지 않은 행사는 비워 둔다 — 없는 날짜를 지어내지 않는다.
+   */
+  regEnd?: string
   /** 간략 내용(불릿) — 첫 항목은 개요(회차·규모) */
   summary?: EventSummaryItem[]
   /** 포스터 없을 때 카드 배경 그라데이션 */
@@ -99,6 +107,7 @@ export const FAB_EVENTS: FabEvent[] = [
 
     posterBg: 'rgb(52,58,71)',
     accent: 'blue',
+    regEnd: '2026-06-19',
     summary: [
       { label: '사전등록', value: '2026.06.05 ~ 06.19' },
       { label: '초록마감', value: '2026.04.03 (채택 통보 4.24)' },
@@ -170,6 +179,7 @@ export const FAB_EVENTS: FabEvent[] = [
     posterBg: 'rgb(6,12,28)',
     darkInfo: true,
     accent: 'blue',
+    regEnd: '2026-06-29',
     summary: [
       { label: '논문마감', value: '2026.06.08 (결과통보 6.15)' },
       { label: '사전등록', value: '~2026.06.29' },
@@ -217,6 +227,7 @@ export const FAB_EVENTS: FabEvent[] = [
     poster: 'events/ssa2026.jpg',
     posterBg: 'rgb(3,15,20)', // 포스터 하단 가장자리 실측 평균
     accent: 'green',
+    regEnd: '2026-08-14',
     summary: [
       { label: '신청기간', value: '사전등록 2026.06.15~08.14 · 이후 현장등록' },
       { label: '참가비', value: '3일권 일반·기업체 50만원 / 학생 32만원 (1일권 25만·15만)' },
@@ -258,6 +269,7 @@ export const FAB_EVENTS: FabEvent[] = [
     posterFocus: { x: 50, y: 14 }, // 상단 타이틀·일시 영역(세로로 긴 포스터라 위쪽을 잡는다)
     posterBg: 'rgb(6,10,18)', // 포스터 하단 다크 네이비
     darkInfo: true, // 하단이 문의처·후원 텍스트로 빼곡한 어두운 포스터
+    regEnd: '2026-07-31',
     summary: [
       { label: '등록', value: '사전등록 마감(7.31) · 현장등록 일반 40만원·학생 30만원' },
       { label: '정원', value: '선착순 50명 · PAL 시설투어 20명(사전등록자 한정)' },
@@ -300,6 +312,7 @@ export const FAB_EVENTS: FabEvent[] = [
     posterBg: 'rgb(15,13,30)',
     darkInfo: true,
     accent: 'red',
+    regEnd: '2026-10-12',
     summary: [
       { label: '입장', value: '사전등록(~10/12) 무료 · 현장등록 20,000원' },
       { label: '전시', value: '메모리·시스템 반도체, 반도체 장비·부품·소재·설비·센서 등' },
@@ -322,6 +335,31 @@ export function eventStatus(startISO: string, endISO?: string): EventStatus {
   if (today.getTime() >= s.getTime()) return { label: '진행중', tone: 'green' }
   const days = Math.ceil((s.getTime() - today.getTime()) / 86400000)
   return { label: `D-${days}`, tone: 'amber' }
+}
+
+export interface RegStatus {
+  label: string
+  /** amber = 임박·오늘 / gray = 이미 마감 / plain = 아직 여유 */
+  tone: 'amber' | 'gray' | 'plain'
+}
+
+/**
+ * 등록 마감 상태 — 마감일이 공지된 행사만(없으면 null, 화면은 아무것도 안 그린다).
+ *
+ * 목록이 크게 보여주던 D-n 은 **행사일**까지 남은 날인데, 갈지 말지 정할 때 필요한 건 **등록 마감**이다.
+ * 실제로 ssa2026 은 행사가 D-11 인데 사전등록은 오늘 끝났다 — 상세를 열어야만 보이던 정보다.
+ */
+export function regStatus(regEndISO?: string): RegStatus | null {
+  if (!regEndISO) return null
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const end = new Date(`${regEndISO}T00:00:00`)
+  const days = Math.round((end.getTime() - today.getTime()) / 86400000)
+  const md = regEndISO.slice(5).replace('-', '.')
+  if (days < 0) return { label: '등록 마감', tone: 'gray' }
+  if (days === 0) return { label: '등록 오늘 마감', tone: 'amber' }
+  if (days <= 7) return { label: `등록 D-${days} (~${md})`, tone: 'amber' }
+  return { label: `등록 ~${md}`, tone: 'plain' }
 }
 
 /** 표시용 날짜 — 같은 연·월이면 끝은 일만, 같은 연 다른 월이면 끝은 월.일, 다른 연이면 전체 */

@@ -3,7 +3,8 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import { EmptyState } from '@/components/ds'
-import { fmtEventDate, type FabEvent } from '@/constants/events'
+import { alpha } from '@mui/material/styles'
+import { fmtEventDate, regStatus, type FabEvent } from '@/constants/events'
 import { iconSize, radius, typescale, weight } from '@/theme/tokens'
 import { EventCatChip, EventStatusChip } from './eventCard'
 
@@ -28,6 +29,7 @@ const THUMB_H = Math.round((THUMB_W * 1122) / 800)
 
 function Row({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
   const url = e.poster ? `${import.meta.env.BASE_URL}${e.poster}` : undefined
+  const reg = regStatus(e.regEnd)
   return (
     <Box
       role="button"
@@ -71,6 +73,25 @@ function Row({ e, onOpen }: { e: FabEvent; onOpen: () => void }) {
         >
           {e.title}
         </Box>
+        {/* 등록 마감 — 갈지 말지 정할 때 필요한 건 행사일이 아니라 이 날짜다(2026-08-13 사용자 요청).
+            마감일이 공지 안 된 행사는 아무것도 안 그린다. */}
+        {reg && (
+          <Box
+            component="span"
+            sx={(th) => ({
+              alignSelf: 'flex-start',
+              fontSize: typescale.caption.size, fontWeight: weight.semibold,
+              borderRadius: `${radius.chip}px`, px: '6px', py: '1px',
+              ...(reg.tone === 'amber'
+                ? { color: th.palette.accentText.amber, bgcolor: alpha(th.palette.accent.amber, 0.14) }
+                : reg.tone === 'gray'
+                  ? { color: 'text.disabled', bgcolor: alpha(th.palette.text.primary, 0.06) }
+                  : { color: 'text.secondary', bgcolor: alpha(th.palette.text.primary, 0.06) }),
+            })}
+          >
+            {reg.label}
+          </Box>
+        )}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0, fontSize: typescale.small.size, color: 'text.secondary' }}>
           <Box component="span" sx={{ flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{fmtEventDate(e.start, e.end)}</Box>
           {e.venue && (
