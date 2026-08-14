@@ -21,8 +21,8 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import { TintChip } from '@/components/FilterChip'
 import CampaignIcon from '@mui/icons-material/Campaign'
-import SearchIcon from '@mui/icons-material/Search'
 import EditNoteIcon from '@mui/icons-material/EditNote'
+import AddIcon from '@mui/icons-material/Add'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import PushPinIcon from '@mui/icons-material/PushPin'
@@ -91,8 +91,6 @@ export default function Notice() {
   const isMobile = useMediaQuery(theme.breakpoints.down('shell'))
   const [selCats, setSelCats] = useState<string[]>([]) // 빈 배열 = 전체
   const [query, setQuery] = useState('')
-  // 모바일 헤더의 돋보기 — 누르면 검색창으로 펼쳐진다(요청메모 91)
-  const [searchOpen, setSearchOpen] = useState(false)
   const [composing, setComposing] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
@@ -433,28 +431,16 @@ export default function Notice() {
         /* 새로고침 버튼 삭제(요청메모 91). 브라우저 새로고침이 같은 일을 하고,
            불러오기에 실패하면 아래 ErrorBanner 가 '다시 시도'를 이미 준다(onRetry={refresh}).
 
-           대신 **모바일에서만** 검색·새 공지를 여기로 올린다(요청메모 91) — 필터박스 안에 있던
-           검색창 200px + 버튼이 세로 115px 을 먹고 있었다. 돋보기는 누르면 왼쪽으로 펼쳐진다
-           (헤더 액션이 오른쪽 정렬이라 자라는 방향이 자연히 왼쪽이다). */
-        actions={isMobile ? (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-            {searchOpen ? (
-              // 비어 있을 때 포커스를 잃으면 도로 접는다 — 닫기 버튼을 따로 두지 않기 위해.
-              // SearchBar 에 onBlur prop 이 없어 감싼 Box 에서 받는다(포커스가 자식에서 빠질 때도 올라온다)
-              <Box onBlur={() => { if (!query.trim()) setSearchOpen(false) }} sx={{ display: 'inline-flex' }}>
-                <SearchBar value={query} onChange={setQuery} placeholder="제목·작성자 검색" autoFocus width={200} />
-              </Box>
-            ) : (
-              <IconButton aria-label="검색 열기" onClick={() => setSearchOpen(true)} size="small" sx={{ color: 'text.secondary' }}>
-                <SearchIcon sx={{ fontSize: iconSize.header }} />
-              </IconButton>
-            )}
-            {isMember && (
-              <IconButton aria-label="새 공지" onClick={startCompose} size="small" sx={{ color: composing ? 'primary.main' : 'text.secondary' }}>
-                <EditNoteIcon sx={{ fontSize: iconSize.header }} />
-              </IconButton>
-            )}
-          </Box>
+           대신 **모바일에서만** 새 공지를 여기로 올린다(요청메모 91) — 필터박스 안에 있던
+           검색창 200px + 버튼이 세로 115px 을 먹고 있었다.
+           페이지 자체 검색은 모바일에서 **두지 않는다**(사용자 확정 2026-08-14) — 상단바의
+           통합검색(Ctrl+K)이 공지 제목·작성자·내용까지 이미 검색하고 해당 공지로 바로 연다.
+           같은 돋보기가 두 개 나란히 뜨면 어느 쪽을 눌러야 할지부터 헷갈린다.
+           아이콘은 연필이 아니라 **더하기** — 행사·장비의 '새 항목' 버튼과 같은 관습. */
+        actions={isMobile && isMember ? (
+          <IconButton aria-label="새 공지" onClick={startCompose} size="small" sx={{ color: composing ? 'primary.main' : 'text.secondary' }}>
+            <AddIcon sx={{ fontSize: iconSize.header }} />
+          </IconButton>
         ) : undefined}
       />
 
