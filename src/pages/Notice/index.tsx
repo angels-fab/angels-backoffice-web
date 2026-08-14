@@ -21,7 +21,6 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import { TintChip } from '@/components/FilterChip'
 import CampaignIcon from '@mui/icons-material/Campaign'
-import RefreshIcon from '@mui/icons-material/Refresh'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
@@ -78,7 +77,7 @@ export default function Notice() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const { num } = useParams()
-  const { items, ready, loading, error } = useAppSelector((s) => s.notice)
+  const { items, ready, error } = useAppSelector((s) => s.notice)
   // 공지 작성/수정 = 팀원(member)+관리자. (게스트·유관자는 열람만)
   // 삭제만 예외 — 작성자 본인 또는 포털 관리자(2026-08-05)
   const { isMember, isAdmin, user, authKey } = useRole()
@@ -428,11 +427,8 @@ export default function Notice() {
         icon={<CampaignIcon />}
         title="공지사항"
         updatedAt={error ? '불러오기 실패' : undefined}
-        actions={
-          <IconButton aria-label="새로고침" onClick={refresh} disabled={loading} size="small" sx={{ color: 'text.secondary' }}>
-            <RefreshIcon sx={{ fontSize: iconSize.header }} />
-          </IconButton>
-        }
+        /* 새로고침 버튼 삭제(요청메모 91). 브라우저 새로고침이 같은 일을 하고,
+           불러오기에 실패하면 아래 ErrorBanner 가 '다시 시도'를 이미 준다(onRetry={refresh}). */
       />
 
       {/* 불러오기 실패 — '공지 없음'으로 오해하지 않게 정직하게 알리고 재시도 제공(백로그 C2).
