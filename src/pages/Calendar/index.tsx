@@ -31,7 +31,7 @@ import ChipContent, { type ChipContentProps } from './ChipContent'
 import EventPopover, { type EventDetail } from './EventPopover'
 import CalEventWrite, { type CalDraft } from './CalEventWrite'
 import { updateCalEvent } from '@/api/calendar'
-import { iconSize, radius, control, typescale, weight } from '@/theme/tokens'
+import { iconSize, layout, radius, control, typescale, weight } from '@/theme/tokens'
 import { usePageImprovementMemo } from '@/components/PageImprovementMemo'
 import AddIcon from '@mui/icons-material/Add'
 import { useRole } from '@/auth/role'
@@ -160,6 +160,10 @@ export default function Calendar() {
   // 모바일 기간 이동 스와이프 — 이전·다음 버튼을 없앤 대신(사용자 지시 2026-08-08) 달력을 좌우로 민다.
   // fired: 한 번의 손가락 동작에서 두 달이 넘어가지 않게 하는 잠금.
   const swipe = useRef<{ id: number; x0: number; y0: number; fired: boolean } | null>(null)
+  /** 방금 스와이프한 방향(1=다음, -1=이전) — datesSet 에서 새 기간이 밀려 들어오는 효과를 한 번 준다(요청메모 82) */
+  const swipeFx = useRef(0)
+  /** 효과를 걸 달력 래퍼 — FullCalendar DOM 이 아니라 우리 상자를 움직인다(FC 재렌더와 안 얽히게) */
+  const calBoxRef = useRef<HTMLDivElement | null>(null)
 
   // 일정 문자열('yyyy-MM-dd' 또는 'yyyy-MM-ddTHH:mm')을 delta(년/월/일/ms)만큼 이동 — KST 문자열 산술(타임존 무관)
   const shiftDt = (v: string, d: { years?: number; months?: number; days?: number; milliseconds?: number }) => {
@@ -576,24 +580,6 @@ export default function Calendar() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px 8px', mb: 2 }}>
         {/* 왼쪽 그룹 */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, flexWrap: 'wrap', order: 1 }}>
-          {/* 뷰 전환 좌측의 짧은 기간 라벨 — 이전·다음 버튼을 없앤 모바일에서 '지금 몇 월인지'를 알려 주는
-              유일한 표시다(사용자 지시 2026-08-09). 일간에서는 누르면 월간으로 돌아가는 뒤로가기도 겸한다. */}
-          {isMobile && (
-            <Box
-              component={view === 'day' ? 'button' : 'span'}
-              {...(view === 'day' ? { onClick: () => setView('month'), 'aria-label': `${shortLabel} — 월간으로 돌아가기` } : {})}
-              sx={{
-                display: 'inline-flex', alignItems: 'center', gap: '2px', flex: 'none',
-                fontSize: typescale.cardTitle.size, fontWeight: weight.bold, letterSpacing: '-0.03em', whiteSpace: 'nowrap',
-                color: 'text.primary', fontFamily: 'inherit',
-                ...(view === 'day' ? { border: 'none', bgcolor: 'transparent', p: 0, cursor: 'pointer' } : {}),
-              }}
-            >
-              {view === 'day' && <ChevronLeftIcon sx={{ fontSize: iconSize.header, ml: '-4px' }} />}
-              {shortLabel}
-            </Box>
-          )}
-
           {/* 월/주 토글 */}
           <SegTabs
             ariaLabel="달력 보기 전환"
@@ -606,6 +592,25 @@ export default function Calendar() {
             value={view === 'day' ? 'month' : view}
             onChange={(v) => { setView(v); dispatch(putSetting({ key: 'cal.view', value: v })) }}
           />
+
+          {/* 짧은 기간 라벨 — 이전·다음 버튼을 없앤 모바일에서 '지금 몇 월인지'를 알려 주는 유일한 표시.
+              목록/월/주 버튼 **오른쪽**에, 글자는 한 단 큰 18px(요청메모 82 — 종전엔 버튼 왼쪽 16px).
+              일간에서는 누르면 월간으로 돌아가는 뒤로가기도 겸한다(2026-08-09). */}
+          {isMobile && (
+            <Box
+              component={view === 'day' ? 'button' : 'span'}
+              {...(view === 'day' ? { onClick: () => setView('month'), 'aria-label': `${shortLabel} — 월간으로 돌아가기` } : {})}
+              sx={{
+                display: 'inline-flex', alignItems: 'center', gap: '2px', flex: 'none',
+                fontSize: typescale.sectionTitle.size, fontWeight: weight.bold, letterSpacing: '-0.03em', whiteSpace: 'nowrap',
+                color: 'text.primary', fontFamily: 'inherit',
+                ...(view === 'day' ? { border: 'none', bgcolor: 'transparent', p: 0, cursor: 'pointer' } : {}),
+              }}
+            >
+              {view === 'day' && <ChevronLeftIcon sx={{ fontSize: iconSize.header, ml: '-4px' }} />}
+              {shortLabel}
+            </Box>
+          )}
 
           {/* 개선 메모(전구) — 제목 줄에 있던 것을 뷰 전환 버튼 바로 오른쪽으로 옮겼다(사용자 지시 2026-08-09).
               **모바일에서만** 그린다: PC에는 붙임쪽지가 같은 메모를 이미 띄우고 있어서, 여기 전구가
@@ -662,10 +667,13 @@ export default function Calendar() {
           호버 상세는 포인터를 따라다니고(기존 동작 유지), 클릭은 그 자리에 고정. */}
       <Box sx={{ minWidth: 0, position: 'relative' }}>
         <Box
+          ref={calBoxRef}
           className="fc-theme-angels fc-team"
           // pan-y: 세로 스크롤은 브라우저에 맡기고 가로는 우리가 받는다. 이게 없으면 가로로 미는 순간
           // 브라우저가 페이지 가로 패닝(.page{overflow-x:auto})을 가져가며 pointercancel 이 떨어져 스와이프가 죽는다.
-          sx={{ touchAction: isMobile ? 'pan-y' : undefined }}
+          // 모바일은 페이지 좌우 여백(16px)을 상쇄해 화면 끝까지 채운다(요청메모 82 — 구글캘린더처럼).
+          // 뷰마다 폭이 널뛰지 않게 월간만이 아니라 달력 전체에 준다. 외곽 세로선 제거는 index.css 모바일 블록.
+          sx={{ touchAction: isMobile ? 'pan-y' : undefined, mx: { xs: `-${layout.pageXMobile}px`, shell: 0 } }}
           // 새 일정 제스처(월간·구성원): 빈 날짜 칸을 누르는 순간 '(새 일정)' 막대 생성 → 드래그로 기간 확장 → 놓으면 모달.
           // 사용자 확정: "누를 때부터 막대" — 셀 틴트(FC selectable) 대신 임시 일정 막대가 처음부터 보인다.
           onPointerDown={(e) => {
@@ -722,6 +730,7 @@ export default function Calendar() {
                 createDrag.current = null // 같은 손짓으로 떴던 '(새 일정)' 막대는 취소
                 setDraft(null)
                 dragClickSuppress.current = Date.now() + 400
+                swipeFx.current = dx < 0 ? 1 : -1 // 새 기간이 민 방향에서 들어오는 효과용(datesSet 에서 소비)
                 shift(dx < 0 ? 1 : -1) // 왼쪽으로 밀면 다음 기간
                 return
               }
@@ -868,7 +877,22 @@ export default function Calendar() {
             eventDisplay="block"
             eventContent={(arg) => renderEventContent(arg, isMobile)}
             // 실제 보이는 날짜 범위(activeStart/activeEnd) → 종류별 건수 집계 기준. 이동·뷰전환 시 즉시 갱신.
-            datesSet={(arg) => setVisRange({ start: arg.start, end: arg.end })}
+            datesSet={(arg) => {
+              setVisRange({ start: arg.start, end: arg.end })
+              /* 스와이프 전환 효과(요청메모 82) — 새 기간이 민 방향에서 살짝 밀려 들어온다.
+                 FC 는 제자리 재렌더라 두 달이 나란히 미끄러지는 완전한 슬라이드는 못 만들고,
+                 단방향 들어오기가 현실적인 최선. WAAPI 라 연속 스와이프에도 매번 다시 걸린다.
+                 prefers-reduced-motion 이면 걸지 않는다. */
+              const dir = swipeFx.current
+              swipeFx.current = 0
+              const el = calBoxRef.current
+              if (dir && el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                el.animate(
+                  [{ transform: `translateX(${dir * 28}px)`, opacity: 0.35 }, { transform: 'none', opacity: 1 }],
+                  { duration: 220, easing: 'ease-out' },
+                )
+              }
+            }}
             // 각 segment(.fc-event) → 원본 상세 매핑만 등록. 실제 hit 판정은 컨테이너 위임이 담당.
             // 같은 날 줄서기: 초안 막대(sortPri=1)는 기존 일정 뒤로
             eventOrder="sortPri,start,-duration,allDay,title"

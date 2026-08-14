@@ -1028,6 +1028,12 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   /* 모바일 월간(개선요청 #59) — 칸이 ≈66px(주말 숨김 5열)뿐이라 칩 여백을 좁혀 제목 몫을 52px로 확보한다.
      칩 안 배치(당일 2줄 / 구간 1줄)는 ChipContent 의 compact 가 담당. 주 시간표·목록 뷰는 건드리지 않으려고
      dayGridMonth 뷰로 한정한다. 날짜 숫자는 구글캘린더 모바일 실측(12px)에 맞추고 자간은 제목과 같은 -0.05em. */
+  /* 달력을 화면 끝까지(요청메모 82, 구글캘린더처럼) — 래퍼가 페이지 여백을 상쇄하므로(mx -16)
+     화면 끝에 닿는 세로선·모서리를 걷는다. 구글캘린더도 외곽 세로선이 없다. */
+  .fc-theme-angels .fc{border-left:0;border-right:0;border-radius:0}
+  .fc-theme-angels .fc-scrollgrid{border-left:0}
+  .fc-theme-angels th:last-child,.fc-theme-angels td:last-child{border-right:0}
+  .fc-theme-angels .fc-list{border-left:0;border-right:0}
   .fc-team .fc-dayGridMonth-view .fc-daygrid-event{padding:2px 3px 2px 5px;border-width:0 0 0 2px}
   .fc-team .fc-dayGridMonth-view .fc-daygrid-day-number{font-size:12px;letter-spacing:-0.05em}
   /* 목록 뷰 — 기본 td 여백 8/14px은 375px 화면에서 제목칸을 크게 깎는다 */
