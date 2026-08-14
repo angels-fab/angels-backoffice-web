@@ -15,6 +15,14 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import CloseIcon from '@mui/icons-material/Close'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined'
+import WorkIcon from '@mui/icons-material/Work'
+import SchoolIcon from '@mui/icons-material/School'
+import MenuBookIcon from '@mui/icons-material/MenuBook'
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
+import AppsIcon from '@mui/icons-material/Apps'
+import type { SvgIconComponent } from '@mui/icons-material'
+import type { Theme } from '@mui/material/styles'
+import { TintChip } from '@/components/FilterChip'
 import {
   ContentSection, PageContainer, PageHeader, EmptyState, FormDialog, ConfirmDialog, ErrorBanner,
 } from '@/components/ds'
@@ -35,6 +43,18 @@ import { iconSize, radius, typescale, weight } from '@/theme/tokens'
  * 카드 클릭 = 새 탭으로 열기(주소 없는 정보 메모는 카드만), 첨부 칩 = 원본 다운로드.
  * 등록창 배치(사용자 지시 2026-08-15): 분류=제목 옆 칩(필수) / 제목 → 내용 / 하단에 주소·첨부(드래그앤드랍).
  */
+
+/**
+ * 분류별 색·아이콘 — 업무일정 종류칩(CalFilterBar CatChip)·업무현황 구분칩과 같은 문법
+ * (TintChip 틴트 .18/테두리 .6/높이 24, 아이콘 13px raw accent — 사용자 지시 2026-08-15 디자인 채택).
+ */
+const CAT_META: Record<string, { color: (t: Theme) => string; icon: SvgIconComponent }> = {
+  '업무': { color: (t) => t.palette.accent.blue, icon: WorkIcon },
+  '교육': { color: (t) => t.palette.accent.green, icon: SchoolIcon },
+  '참고': { color: (t) => t.palette.accent.purple, icon: MenuBookIcon },
+  '기타': { color: (t) => t.palette.text.secondary, icon: MoreHorizIcon },
+}
+const catMetaOf = (cat: string) => CAT_META[cat] ?? CAT_META['기타']
 
 /** 주소에서 도메인(host) — 파비콘·캡션용. 프로토콜 없이 적어도 통하게 보정 */
 function hostOf(url: string): string {
@@ -209,27 +229,39 @@ export default function Resources() {
       />
       {error && <ErrorBanner message={error} onRetry={() => { setLoading(true); void load() }} />}
       <ContentSection last>
-        {/* 분류 칩 필터 — 시안 1안 상단 줄 */}
+        {/* 분류 칩 필터 — 업무일정 종류칩과 같은 TintChip 규격(사용자 지시 2026-08-15) */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap', mb: 1.5 }}>
-          {['전체', ...RESOURCE_CATS].map((c) => {
-            const active = catFilter === c
+          <TintChip
+            on={catFilter === '전체'}
+            color={(t: Theme) => t.palette.text.secondary}
+            hover
+            ariaLabel={`전체 ${items.length}건`}
+            onToggle={() => setCatFilter('전체')}
+            sx={{ p: '4px 9px' }}
+          >
+            <AppsIcon sx={{ fontSize: iconSize.caption, color: 'text.secondary' }} />
+            <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.semibold, color: catFilter === '전체' ? 'text.primary' : 'text.secondary' }}>전체</Box>
+            <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.secondary' }}>{items.length}</Box>
+          </TintChip>
+          {RESOURCE_CATS.map((c) => {
+            const meta = catMetaOf(c)
+            const Icon = meta.icon
+            const on = catFilter === c
+            const count = items.filter((r) => r.cat === c).length
             return (
-              <Box
+              <TintChip
                 key={c}
-                component="button"
-                type="button"
-                onClick={() => setCatFilter(c)}
-                aria-pressed={active}
-                sx={(th) => ({
-                  font: 'inherit', fontSize: typescale.small.size, fontWeight: weight.semibold, cursor: 'pointer',
-                  px: 1.25, py: '4px', borderRadius: `${radius.pill}px`, border: '1px solid',
-                  ...(active
-                    ? { bgcolor: th.palette.accent.blue, borderColor: th.palette.accent.blue, color: 'common.white' }
-                    : { bgcolor: 'transparent', borderColor: th.palette.divider, color: 'text.secondary' }),
-                })}
+                on={on}
+                color={meta.color}
+                hover
+                ariaLabel={`${c} ${count}건${on ? '' : ' (해제됨)'}`}
+                onToggle={() => setCatFilter(on ? '전체' : c)}
+                sx={{ p: '4px 9px' }}
               >
-                {c}
-              </Box>
+                <Icon sx={(t: Theme) => ({ fontSize: iconSize.caption, color: meta.color(t) })} />
+                <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.semibold, color: on ? 'text.primary' : 'text.secondary' }}>{c}</Box>
+                <Box component="span" sx={{ fontSize: typescale.small.size, color: 'text.secondary' }}>{count}</Box>
+              </TintChip>
             )
           })}
         </Box>
@@ -326,7 +358,8 @@ export default function Resources() {
                     </Box>
                   )}
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 'auto', pt: 0.25, minWidth: 0 }}>
-                    <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.semibold, px: '7px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: alpha(th.palette.accent.blue, 0.14), color: th.palette.accentText.blue, flex: 'none' })}>
+                    {/* 카드 분류칩 — 필터칩과 같은 색 문법(틴트 .18/테두리 .6), 작게 */}
+                    <Box component="span" sx={(th) => { const c = catMetaOf(r.cat).color(th); return { fontSize: typescale.caption.size, fontWeight: weight.semibold, px: '7px', py: '2px', borderRadius: `${radius.pill}px`, bgcolor: alpha(c, 0.18), border: `1px solid ${alpha(c, 0.6)}`, color: 'text.primary', flex: 'none' } }}>
                       {r.cat || '기타'}
                     </Box>
                     <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -368,27 +401,17 @@ export default function Resources() {
         title={dlg?.editing ? '자료 수정' : '자료 등록'}
         busy={saving}
         titleExtra={
-          /* 분류 = 제목 옆 필수 칩(사용자 지시 2026-08-15) — 안 고르면 등록 잠김 */
+          /* 분류 = 제목 옆 필수 칩(TintChip 단일선택) — 안 고르면 등록 잠김 */
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', minWidth: 0 }}>
             {RESOURCE_CATS.map((c) => {
-              const active = fCat === c
+              const meta = catMetaOf(c)
+              const Icon = meta.icon
+              const on = fCat === c
               return (
-                <Box
-                  key={c}
-                  component="button"
-                  type="button"
-                  onClick={() => setFCat(c)}
-                  aria-pressed={active}
-                  sx={(th) => ({
-                    font: 'inherit', fontSize: typescale.small.size, fontWeight: weight.semibold, cursor: 'pointer',
-                    px: 1, py: '3px', borderRadius: `${radius.pill}px`, border: '1px solid', flex: 'none',
-                    ...(active
-                      ? { bgcolor: th.palette.accent.blue, borderColor: th.palette.accent.blue, color: 'common.white' }
-                      : { bgcolor: 'transparent', borderColor: th.palette.divider, color: 'text.secondary' }),
-                  })}
-                >
-                  {c}
-                </Box>
+                <TintChip key={c} on={on} color={meta.color} hover ariaLabel={`분류 ${c}`} onToggle={() => setFCat(c)} sx={{ p: '4px 9px' }}>
+                  <Icon sx={(t: Theme) => ({ fontSize: iconSize.caption, color: meta.color(t) })} />
+                  <Box component="span" sx={{ fontSize: typescale.small.size, fontWeight: weight.semibold, color: on ? 'text.primary' : 'text.secondary' }}>{c}</Box>
+                </TintChip>
               )
             })}
           </Box>
