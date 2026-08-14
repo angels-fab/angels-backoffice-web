@@ -163,9 +163,12 @@ export default function Calendar() {
   const dragClickSuppress = useRef(0) // 드래그 드롭 직후 합성 click이 팝오버를 고정하는 것 방지
   // 모바일 기간 이동 스와이프 — 이전·다음 버튼을 없앤 대신(사용자 지시 2026-08-08) 달력을 좌우로 민다.
   // fired: 한 번의 손가락 동작에서 두 달이 넘어가지 않게 하는 잠금.
-  const swipe = useRef<{ id: number; x0: number; y0: number; fired: boolean } | null>(null)
+  /** 기간 이동 스와이프 — pending=방향 판정 전 / h=가로 확정(달력이 손가락을 따라옴) / off=세로 스크롤에 양보 */
+  const swipe = useRef<{ id: number; x0: number; y0: number; mode: 'pending' | 'h' | 'off'; dx: number } | null>(null)
   /** 방금 스와이프한 방향(1=다음, -1=이전) — datesSet 에서 새 기간이 밀려 들어오는 효과를 한 번 준다(요청메모 82) */
   const swipeFx = useRef(0)
+  /** 모바일 월간 달력 고정 높이(px) — 한 달이 한 페이지에 꽉 차게(2026-08-15 사용자 지시). null=auto */
+  const [fitH, setFitH] = useState<number | null>(null)
   /** 효과를 걸 달력 래퍼 — FullCalendar DOM 이 아니라 우리 상자를 움직인다(FC 재렌더와 안 얽히게) */
   const calBoxRef = useRef<HTMLDivElement | null>(null)
 
@@ -288,6 +291,25 @@ export default function Calendar() {
     if (error && !loading) dispatch(loadCalEvents())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // 모바일 월간 — 한 달이 한 페이지에 꽉 차게: 달력 위 요소들과 하단 탭바를 뺀 나머지를 그리드에 준다.
+  // (height='auto' + 칸 min-height 114px 구조는 화면보다 길어 세로 스크롤이 났었다 — 실측 599px vs 가용 554px)
+  useLayoutEffect(() => {
+    if (!(isMobile && view === 'month')) {
+      setFitH(null)
+      return
+    }
+    const measure = () => {
+      const el = calBoxRef.current
+      if (!el) return
+      const navH = document.getElementById('bottom-nav')?.getBoundingClientRect().height ?? 57
+      const h = Math.round(window.innerHeight - el.getBoundingClientRect().top - navH - 16)
+      setFitH(Math.max(360, h)) // 아주 낮은 화면에선 360 밑으로 짜부라뜨리지 않음(그 땐 스크롤)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [isMobile, view])
 
   // 바깥 클릭·Esc로 고정 상세 닫기 (eventClick은 stopPropagation으로 이 핸들러에 안 닿음)
   useEffect(() => {
@@ -685,13 +707,15 @@ export default function Calendar() {
           // 브라우저가 페이지 가로 패닝(.page{overflow-x:auto})을 가져가며 pointercancel 이 떨어져 스와이프가 죽는다.
           // 모바일은 페이지 좌우 여백(16px)을 상쇄해 화면 끝까지 채운다(요청메모 82 — 구글캘린더처럼).
           // 뷰마다 폭이 널뛰지 않게 월간만이 아니라 달력 전체에 준다. 외곽 세로선 제거는 index.css 모바일 블록.
-          sx={{ touchAction: isMobile ? 'pan-y' : undefined, mx: { xs: `-${layout.pageXMobile}px`, shell: 0 } }}
+          sx={{ touchAction: isMobile ? 'pan-y' : undefined, mx: { xs: `-${layout.pageXMobile}px`, shell: 0 }, height: fitH ? `${fitH}px` : 'auto' }}
           // 새 일정 제스처(월간·구성원): 빈 날짜 칸을 누르는 순간 '(새 일정)' 막대 생성 → 드래그로 기간 확장 → 놓으면 모달.
           // 사용자 확정: "누를 때부터 막대" — 셀 틴트(FC selectable) 대신 임시 일정 막대가 처음부터 보인다.
           onPointerDown={(e) => {
-            // 기간 이동 스와이프 등록 — 일정 위에서 시작한 손짓은 FullCalendar 의 열기·이동에 양보한다
-            if (isMobile && e.pointerType !== 'mouse' && !findEvAt(e.clientX, e.clientY)) {
-              swipe.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, fired: false }
+            // 기간 이동 스와이프 등록 — **일정 위에서 시작해도** 등록한다(2026-08-15 사용자 지적:
+            // 일정에서 시작한 스와이프가 상세를 열어버림). 탭이면 pending 그대로 끝나 click 이 진행되고,
+            // 가로로 끌리면 h 로 확정되며 이후 click 은 dragClickSuppress 가 삼킨다.
+            if (isMobile && e.pointerType !== 'mouse') {
+              swipe.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, mode: 'pending', dx: 0 }
             }
             // 모바일 월간은 이 제스처를 쓰지 않는다 — 날짜를 누르면 그날 시간표로 들어가는 쪽으로 바뀌었다(onClick)
             if (!isMember || view !== 'month' || e.button !== 0 || isMobile) return // 구성원 쓰기 개방(2026-08-05)
@@ -711,7 +735,44 @@ export default function Calendar() {
             setDraft({ start: d, end: d, title: '' })
           }}
           onPointerUp={(e) => {
-            if (swipe.current?.id === e.pointerId) swipe.current = null
+            // 스와이프 놓기 — 임계 넘으면 현재 달이 그대로 밀려 나가고(shift), 아니면 스냅백(iOS식)
+            const sw = swipe.current
+            if (sw && sw.id === e.pointerId) {
+              swipe.current = null
+              if (sw.mode === 'h') {
+                const el = calBoxRef.current
+                dragClickSuppress.current = Date.now() + 400
+                createDrag.current = null
+                if (el) {
+                  const w = el.clientWidth || window.innerWidth
+                  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                  el.style.transform = ''
+                  if (Math.abs(sw.dx) > 55) {
+                    const dir = sw.dx < 0 ? 1 : -1
+                    let done = false
+                    const go = () => { if (done) return; done = true; swipeFx.current = dir; shift(dir) }
+                    if (reduced) go()
+                    else {
+                      const exit = el.animate(
+                        [{ transform: `translateX(${sw.dx * 0.9}px)` }, { transform: `translateX(${-dir * w}px)` }],
+                        { duration: 150, easing: 'ease-in' },
+                      )
+                      exit.onfinish = go
+                      setTimeout(go, 200) // 애니메이션이 씹혀도 달은 넘어가게(안전망)
+                    }
+                  } else if (!reduced && sw.dx !== 0) {
+                    el.animate(
+                      [{ transform: `translateX(${sw.dx * 0.9}px)` }, { transform: 'translateX(0)' }],
+                      { duration: 240, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' },
+                    )
+                  }
+                } else if (Math.abs(sw.dx) > 55) {
+                  swipeFx.current = sw.dx < 0 ? 1 : -1
+                  shift(sw.dx < 0 ? 1 : -1)
+                }
+                return
+              }
+            }
             const cd = createDrag.current
             if (!cd || e.pointerId !== cd.pointerId) return
             createDrag.current = null
@@ -725,6 +786,7 @@ export default function Calendar() {
           }}
           onPointerCancel={() => {
             swipe.current = null
+            if (calBoxRef.current) calBoxRef.current.style.transform = ''
             if (createDrag.current) {
               createDrag.current = null
               setDraft(null)
@@ -733,18 +795,24 @@ export default function Calendar() {
           onPointerMove={(e) => {
             const x = e.clientX
             const y = e.clientY
-            // 기간 이동 스와이프 — 가로가 세로보다 뚜렷하게 우세할 때만(세로 스크롤과 헷갈리지 않게)
+            // 기간 이동 스와이프 — 방향이 확정되면 달력이 손가락을 따라온다(아이폰식, 2026-08-15).
+            // 넘길지 말지는 pointerUp 에서 결정(임계 55px). 세로 우세면 off = 스크롤에 양보.
             const sw = swipe.current
-            if (sw && e.pointerId === sw.id && !sw.fired) {
+            if (sw && e.pointerId === sw.id) {
               const dx = x - sw.x0
-              if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(y - sw.y0) * 1.6) {
-                sw.fired = true // 한 손짓에 한 칸만
-                createDrag.current = null // 같은 손짓으로 떴던 '(새 일정)' 막대는 취소
-                setDraft(null)
-                dragClickSuppress.current = Date.now() + 400
-                swipeFx.current = dx < 0 ? 1 : -1 // 새 기간이 민 방향에서 들어오는 효과용(datesSet 에서 소비)
-                shift(dx < 0 ? 1 : -1) // 왼쪽으로 밀면 다음 기간
-                return
+              const dy = y - sw.y0
+              if (sw.mode === 'pending' && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+                sw.mode = Math.abs(dx) > Math.abs(dy) * 1.2 ? 'h' : 'off'
+                if (sw.mode === 'h') {
+                  createDrag.current = null // 같은 손짓으로 떴던 '(새 일정)' 막대는 취소
+                  setDraft(null)
+                }
+              }
+              if (sw.mode === 'h') {
+                sw.dx = dx
+                const el = calBoxRef.current
+                if (el) el.style.transform = `translateX(${dx * 0.9}px)` // 0.9 = 살짝 저항감
+                return // 끌리는 동안 호버·생성 로직 중단
               }
             }
             // 새 일정 드래그 중 — 기간 확장(마우스) / 이동 크면 스크롤로 간주해 취소(터치)
@@ -891,17 +959,18 @@ export default function Calendar() {
             // 실제 보이는 날짜 범위(activeStart/activeEnd) → 종류별 건수 집계 기준. 이동·뷰전환 시 즉시 갱신.
             datesSet={(arg) => {
               setVisRange({ start: arg.start, end: arg.end })
-              /* 스와이프 전환 효과(요청메모 82) — 새 기간이 민 방향에서 살짝 밀려 들어온다.
-                 FC 는 제자리 재렌더라 두 달이 나란히 미끄러지는 완전한 슬라이드는 못 만들고,
-                 단방향 들어오기가 현실적인 최선. WAAPI 라 연속 스와이프에도 매번 다시 걸린다.
+              /* 스와이프 전환 효과 — 나간 방향 반대편에서 새 달이 **화면 폭만큼** 밀려 들어온다
+                 (아이폰식, 2026-08-15). 나가기는 pointerUp 이 담당(전체 폭), 여기는 들어오기 절반.
+                 FC 는 제자리 재렌더라 두 달 동시 슬라이드는 불가 — 나가기→갈아끼움→들어오기 3박자.
                  prefers-reduced-motion 이면 걸지 않는다. */
               const dir = swipeFx.current
               swipeFx.current = 0
               const el = calBoxRef.current
               if (dir && el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                const w = el.clientWidth || 360
                 el.animate(
-                  [{ transform: `translateX(${dir * 28}px)`, opacity: 0.35 }, { transform: 'none', opacity: 1 }],
-                  { duration: 220, easing: 'ease-out' },
+                  [{ transform: `translateX(${dir * w}px)` }, { transform: 'none' }],
+                  { duration: 280, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' },
                 )
               }
             }}
@@ -921,9 +990,10 @@ export default function Calendar() {
               if (lockedEl.current === info.el) closePop()
             }}
             // 초안 막대가 열려 있는 동안은 한 줄 여유(+1) — 일정 3건인 날에서 미리보기가 '+N건'으로 접히지 않게(적대 리뷰 확정)
-            dayMaxEvents={view === 'month' ? (draft ? 4 : 3) : false}
+            // 모바일 월간(fitH)은 true = 칸 높이에 맞춰 자동 제한(한 페이지 꽉 채움 규칙과 짝)
+            dayMaxEvents={view === 'month' ? (fitH ? true : draft ? 4 : 3) : false}
             moreLinkContent={(arg) => `+${arg.num}건`}
-            height="auto"
+            height={fitH ? '100%' : 'auto'}
             dayCellContent={(arg) => String(arg.date.getDate())}
             // 키보드 접근 — 일정에 tabindex 부여(Tab 순회 가능). 열기는 컨테이너 onKeyDown이 담당
             eventInteractive

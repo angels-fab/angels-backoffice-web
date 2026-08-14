@@ -92,9 +92,10 @@ function CatChip({ icon: Icon, label, color, count, on, rotate, onToggle }: {
 }
 
 /**
- * 달력 상단 가로 필터 바 — 팀원(알약 토글) + 일정 종류(아이콘 칩).
+ * 달력 상단 가로 필터 바 — **한 줄**: 왼쪽 해당자(알약) | 구분선 | 오른쪽 일정 종류(아이콘 칩).
+ * (2026-08-15 사용자 지시 — 칩필터는 거의 안 쓰므로 두 줄 몫의 세로를 달력에 돌려준다.
+ *  해당자 옆에 종류를 바로 붙이면 밸런스가 안 맞아 가운데 구분선으로 두 무리를 가른다.)
  * 일반 클릭=단일선택(재클릭 시 해제/전체) / Shift+클릭=추가선택(PC).
- * 복수선택 버튼은 삭제됨(사용자 지시 2026-08-09) — 모바일에는 추가선택 수단이 없다.
  */
 export default function CalFilterBar({ members, onToggleMember, cats, onToggleCat }: CalFilterBarProps) {
   return (
@@ -102,31 +103,30 @@ export default function CalFilterBar({ members, onToggleMember, cats, onToggleCa
       // 박스 경량화(캘린더 UI 점검 #9) — 테두리 카드였던 것을 투명 스트립으로: 달력이 위로 올라와 시원해짐
       sx={{
         containerType: 'inline-size',
-        display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '8px',
+        ...ROW,
         mb: 1.75, px: '2px', userSelect: 'none',
       }}
     >
-      {/* 팀원 */}
-      <Box sx={ROW}>
-        <Box sx={{ ...STRIP, gap: 0.75 }}>
-          {members.map(({ member, on }) => (
-            <MemberPill key={member.id} m={member} on={on} onToggle={(add) => onToggleMember(member.id, add)} />
-          ))}
-        </Box>
+      {/* 해당자(팀원) — 왼쪽 무리 */}
+      <Box sx={{ ...STRIP, gap: 0.75 }}>
+        {members.map(({ member, on }) => (
+          <MemberPill key={member.id} m={member} on={on} onToggle={(add) => onToggleMember(member.id, add)} />
+        ))}
       </Box>
 
-      {/* 일정 종류 (0건 종류는 상위에서 숨김 처리) */}
-      <Box sx={ROW}>
-        <Box sx={{ ...STRIP, gap: '6px' }}>
-          {cats.map((c) => (
-            <CatChip
-              key={c.id}
-              icon={CAT_ICON[c.id]} label={c.label} color={c.color} count={c.count} on={c.on}
-              rotate={c.id === 'trip_intl'}
-              onToggle={(add) => onToggleCat(c.id, add)}
-            />
-          ))}
-        </Box>
+      {/* 가운데 구분선 — 두 칩 무리의 경계 */}
+      <Box sx={{ width: '1px', alignSelf: 'stretch', my: '3px', bgcolor: 'divider', flex: 'none' }} />
+
+      {/* 일정 종류 — 오른쪽 무리 (0건 종류는 상위에서 숨김 처리) */}
+      <Box sx={{ ...STRIP, gap: '6px' }}>
+        {cats.map((c) => (
+          <CatChip
+            key={c.id}
+            icon={CAT_ICON[c.id]} label={c.label} color={c.color} count={c.count} on={c.on}
+            rotate={c.id === 'trip_intl'}
+            onToggle={(add) => onToggleCat(c.id, add)}
+          />
+        ))}
       </Box>
     </Box>
   )

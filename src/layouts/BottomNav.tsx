@@ -10,7 +10,7 @@ import MenuIcon from '@mui/icons-material/Menu'
 import LockOpenIcon from '@mui/icons-material/LockOpen'
 import { useRole } from '@/auth/role'
 import { NavBadge } from '@/components/ds'
-import { motion, radius, weight, z, typescale } from '@/theme/tokens'
+import { motion, z } from '@/theme/tokens'
 import { useNavBadges } from './useNavBadges'
 import MobileMenuDrawer from './MobileMenuDrawer'
 import AdminLoginDialog from '@/components/AdminLoginDialog'
@@ -39,41 +39,42 @@ const navSx = (t: Theme) => ({
   display: { xs: 'flex', shell: 'none' },
 })
 
-/** 탭 하나 — 세로 스택(아이콘 + 라벨) + 활성 시 아래 3px 인디케이터 */
+/** 탭 하나 — 아이콘 단독(메뉴명 삭제, 2026-08-15 사용자 지시) + 활성 시 **탭바 상단 라인**이 켜짐 */
 const itemSx = (active: boolean) => (t: Theme) => ({
   flex: 1,
+  position: 'relative',
   background: 'none',
   border: 'none',
   color: active ? t.palette.accentText.blue : t.palette.text.secondary,
   fontFamily: 'inherit',
   cursor: 'pointer',
   display: 'flex',
-  flexDirection: 'column',
   alignItems: 'center',
-  gap: '3px',
-  padding: '5px 2px',
-  // 크롬 최소 단(micro 10) — 배지·탭 라벨 전용. 사다리 바닥
-  fontSize: typescale.micro.size,
-  fontWeight: weight.medium,
+  justifyContent: 'center',
+  padding: '8px 2px', // 28 + 16 = 터치 타깃 44px
   transition: `color ${motion.base}`,
   WebkitTapHighlightColor: 'transparent',
-  '&::after': {
+  // 활성 표시 = 메뉴박스 상단 테두리 구간이 파랗게 켜지는 세그먼트.
+  // -7px = nav 위 패딩 6px + 테두리 1px — 정확히 borderTop 위에 얹힌다(라벨 아래 알약바 폐지).
+  '&::before': {
     content: '""',
-    display: 'block',
-    width: '16px',
-    height: '3px',
-    borderRadius: `${radius.pill}px`,
+    position: 'absolute',
+    top: '-7px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: '32px',
+    height: '2px',
     background: active ? t.palette.accent.blue : 'transparent',
-    marginTop: '2px',
+    transition: `background ${motion.base}`,
   },
 })
 
-/** 아이콘 + 배지 겹침 래퍼 — 아이콘 23px은 사다리(13/16/18/20) 밖이라 리터럴 유지 */
+/** 아이콘 + 배지 겹침 래퍼 — 라벨을 없앤 만큼 아이콘 23→28px(사다리 밖 리터럴, 탭바 전용) */
 const icoWrapSx = {
   position: 'relative',
   display: 'inline-flex',
   lineHeight: 1,
-  '& svg': { width: '23px', height: '23px', display: 'block' },
+  '& svg': { width: '28px', height: '28px', display: 'block' },
 }
 
 /**
@@ -94,23 +95,22 @@ export default function BottomNav() {
     path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(path + '/')
 
   // 메뉴 시트가 열린 채로도 탭이 눌리므로(개선요청 80), 이동할 땐 시트를 함께 닫는다
+  // 메뉴명은 화면에서 지웠으므로(아이콘 단독) 접근성 이름은 aria-label 로 남긴다
   const navItem = (path: string, label: string, icon: JSX.Element, badge = 0) => (
-    <Box component="button" sx={itemSx(isActive(path))} onClick={() => { setMenuOpen(false); navigate(path) }}>
+    <Box component="button" aria-label={label} sx={itemSx(isActive(path))} onClick={() => { setMenuOpen(false); navigate(path) }}>
       <Box component="span" sx={icoWrapSx}>
         {icon}
         <Badge n={badge} />
       </Box>
-      {label}
     </Box>
   )
 
   const actionItem = (label: string, icon: JSX.Element, onClick: () => void, badge = 0, active = false) => (
-    <Box component="button" sx={itemSx(active)} onClick={onClick}>
+    <Box component="button" aria-label={label} sx={itemSx(active)} onClick={onClick}>
       <Box component="span" sx={icoWrapSx}>
         {icon}
         <Badge n={badge} />
       </Box>
-      {label}
     </Box>
   )
 

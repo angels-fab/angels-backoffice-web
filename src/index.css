@@ -7,9 +7,10 @@
      컴포넌트에서 colorScheme를 개별 지정하지 말 것(라이트에서 검은 피커가 뜬다). */
   color-scheme: dark;
   /* 모바일 하단 탭바 높이 — 본문 여백과 메뉴 드로어가 **같은 값**을 봐야 한다(개선요청 80).
-     69 = 아이콘 23 + 라벨줄 12 + 안쪽 여백·표시선 22 + nav 여백 12. 값이 흩어지면 드로어가
-     탭바를 덮거나 뜬다. iOS 홈 인디케이터 몫은 탭바가 자기 padding 으로 흡수하므로 여기 더한다. */
-  --bottom-nav-h: calc(69px + env(safe-area-inset-bottom, 0px));
+     57 = 테두리 1 + nav 여백 12(6×2) + 버튼 44(아이콘 28 + 패딩 16) — 메뉴명 삭제·아이콘 확대
+     (2026-08-15). 값이 흩어지면 드로어가 탭바를 덮거나 뜬다.
+     iOS 홈 인디케이터 몫은 탭바가 자기 padding 으로 흡수하므로 여기 더한다. */
+  --bottom-nav-h: calc(57px + env(safe-area-inset-bottom, 0px));
   /* SaaS 다크 토큰 — src/theme/tokens.ts 와 동일 값 미러링(정본은 tokens.ts).
      STEP2: Pure Black(#000 계열) → 현대적 SaaS 다크(#0F1117). 페이지 이관 시 점진 제거. */
   /* 표면 램프 — 다크는 "표면 밝기"가 깊이를 만든다(그림자 아님). 정본 tokens.ts darkPalette.
@@ -1041,6 +1042,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   .fc-team .fc-timeGridWeek-view .fc-daygrid-event{padding:2px 5px;border-width:0}
   .fc-team .fc-timeGridWeek-view .fc-timegrid-event{padding:2px 5px;border-width:0}
   .fc-team .fc-dayGridMonth-view .fc-daygrid-day-number{font-size:12px;letter-spacing:-0.05em}
+  /* 한 달 = 한 페이지(2026-08-15) — 고정 114px 칸을 풀어 컨테이너 높이(fitH)에 맞춰 늘고 줄게.
+     0 이 아니라 100% — FC 기본값 복원(0 이면 칸 속(frame)이 26px로 짜부라져 일정이 다 접혔다, 실측) */
+  .fc-team .fc-dayGridMonth-view .fc-daygrid-day-frame{min-height:100%}
   /* 목록 뷰 — 기본 td 여백 8/14px은 375px 화면에서 제목칸을 크게 깎는다 */
   .fc-team .fc-list-table td{padding:7px 8px}
 }
