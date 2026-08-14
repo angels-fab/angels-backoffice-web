@@ -230,12 +230,8 @@ function buildTheme(mode: Mode): Theme {
           },
         },
       },
-      MuiInputBase: {
-        styleOverrides: {
-          // 모바일 입력 16px — iOS 사파리 포커스 자동 확대(줌) 방지. 데스크톱 밀도는 그대로.
-          input: { '@media (max-width:768px)': { fontSize: 16 } },
-        },
-      },
+      // (구) 모바일 입력 16px 강제 — iOS 자동 확대 방지용이었으나 폼 글자만 튀게 크던 원인
+      // (2026-08-14 사용자 지적). 같은 효과를 index.html viewport maximum-scale=1 로 이관하고 제거.
       MuiOutlinedInput: {
         styleOverrides: {
           root: {

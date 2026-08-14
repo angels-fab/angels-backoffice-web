@@ -2,7 +2,9 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- maximum-scale=1: iOS 사파리의 '작은 입력창 포커스 시 자동 확대' 방지(입력 글자를 16px로
+         키우던 테마 규칙의 대체 — 사용자 손가락 핀치 줌은 iOS 10+ 에서 이 값과 무관하게 항상 됨) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <script>
       try {
         if (localStorage.getItem('forceDesktop') === '1') {
