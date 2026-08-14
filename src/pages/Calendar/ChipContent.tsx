@@ -249,12 +249,21 @@ export default function ChipContent({ participants, catKey, catColor, time, titl
   //  · 해당자는 안 그린다 — 윗줄 예산 52px이 아이콘 13 + 시간 30 + 간격 3 = 46px으로 이미 찬다.
   //    (색점 3개를 더하면 71px로 넘친다 — 시안에서 실측 확인)
   if (compact) {
-    // 제목만 한 줄(모바일 월간, 2026-08-14) — 아이콘·시간을 지우고 칸 전체를 제목이 쓴다.
+    // 제목만(모바일 월간·주간, 2026-08-14) — 아이콘·시간을 지우고 칸 전체를 제목이 쓴다.
     // 숨긴 정보는 탭하면 뜨는 상세 카드가 보여 준다. 당일/멀티데이 구분 없이 같은 모양.
+    // 주간 시간일정은 칸이 세로로 넉넉하면(twoLine) 두 줄까지, 그 외(월간·종일행·낮은 칸)는 한 줄.
     if (titleOnly) {
+      const clamp2 = variant === 'timed' && twoLine
       return (
         <Box ref={rootRef} sx={{ display: 'flex', alignItems: 'center', minWidth: 0, width: '100%', overflow: 'hidden' }}>
-          <Box component="span" sx={titleSx}>{title}</Box>
+          <Box
+            component="span"
+            sx={clamp2
+              ? { ...titleSx, whiteSpace: 'normal', display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflowWrap: 'anywhere' }
+              : titleSx}
+          >
+            {title}
+          </Box>
         </Box>
       )
     }

@@ -96,9 +96,9 @@ function renderEventContent(arg: EventContentArg, isMobile: boolean) {
   // 모바일 월간·주간은 칸이 좁아 2줄 배치(compact). 목록은 행이 가로로 넓으니 종류칩 배치(catChip).
   const compact = isMobile && (arg.view.type === 'dayGridMonth' || arg.view.type === 'timeGridWeek')
   const catChip = arg.view.type === 'listMonth'
-  // 모바일 월간은 **제목만 한 줄**(2026-08-14 사용자 지시) — 아이콘·시간은 탭하면 뜨는 상세 카드로.
-  // 주간(timeGridWeek)은 그대로 — 지시가 월간보기 한정이고, 시간표에선 시간이 곧 정보다.
-  const titleOnly = isMobile && arg.view.type === 'dayGridMonth'
+  // 모바일 월간·주간은 **제목만**(2026-08-14 사용자 지시) — 아이콘·시간은 탭하면 뜨는 상세 카드로.
+  // 월간은 한 줄, 주간 시간일정은 칸이 세로로 넉넉하면 두 줄까지(ChipContent titleOnly).
+  const titleOnly = compact
   return (
     <Box sx={{ display: 'flex', width: '100%', minWidth: 0 }}>
       <ChipContent
@@ -256,13 +256,13 @@ export default function Calendar() {
   }
 
   // 일정 열기(마우스 클릭·키보드 Enter 공용) — 구성원=수정 모달 바로, 열람=그 자리 고정 상세(재실행=닫기).
-  // 예외: **모바일 월간은 구성원도 상세 카드 먼저**(2026-08-14 사용자 지시) — 칩이 제목만 남아
+  // 예외: **모바일 월간·주간은 구성원도 상세 카드 먼저**(2026-08-14 사용자 지시) — 칩이 제목만 남아
   // 시간·종류를 볼 길이 상세뿐이고, 탭하자마자 수정 모달이 덮치면 '보기'가 불가능하다.
   // 수정은 카드 안 '수정' 버튼으로(EventPopover 에 이미 있던 버튼 — 이 경로로 처음 실사용된다).
   const openEventAt = (el: HTMLElement, x: number, y: number) => {
     const evId = idMap.current.get(el)
-    const mobileMonthDetail = isMobile && view === 'month'
-    if (isMember && evId && !mobileMonthDetail) { // 구성원 쓰기 개방(2026-08-05)
+    const mobileCardDetail = isMobile && (view === 'month' || view === 'timeweek')
+    if (isMember && evId && !mobileCardDetail) { // 구성원 쓰기 개방(2026-08-05)
       const ev = allEvents.find((e2) => e2.id === evId)
       closePop()
       if (ev) setWrite({ mode: 'edit', event: ev, initialDate: ev.start.slice(0, 10) })
