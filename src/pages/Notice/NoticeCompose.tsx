@@ -89,7 +89,7 @@ type Upload = {
 
 const inputSx = (th: Theme) => ({ ...inlineFieldSx(th), py: 0.4 })
 
-function LinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function LinkField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null)
   const active = !!value.trim()
   return (
@@ -109,7 +109,7 @@ function LinkField({ value, onChange }: { value: string; onChange: (v: string) =
   )
 }
 
-function CatDrop({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function CatDrop({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <Select
       value={NOTICE_CATS.includes(value) ? value : ''}
@@ -142,8 +142,16 @@ export interface NoticeComposeProps {
   onCancel: () => void
 }
 
-/** 공지 작성/수정 인라인 행 — 표 열(번호·분류·제목·작성자·작성일)에 맞춘 2행 구조. */
-export default function NoticeCompose({ mode, notice, author, saving, deptOptions, deptMgrOptions, onSave, onCancel }: NoticeComposeProps) {
+/**
+ * 폼의 상태·업로드·저장 규칙 전부 — **PC 표 폼과 모바일 전체화면 시트가 이 훅 하나를 같이 쓴다**
+ * (요청메모 91 A안). 로직을 복제하면 첨부 고아 정리 같은 규칙이 곧 어긋난다.
+ */
+export function useNoticeComposeForm({ mode, notice, onSave, onCancel }: {
+  mode: 'new' | 'edit'
+  notice?: Notice
+  onSave: (v: NoticeFormValues) => void
+  onCancel: () => void
+}) {
   const [cat, setCat] = useState(notice && NOTICE_CATS.includes(notice.cat) ? notice.cat : '일반')
   const [title, setTitle] = useState(notice?.title || '')
   const [body, setBody] = useState(notice?.body || '')
@@ -169,8 +177,6 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
   const sessionPaths = useRef<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const dateStr = mode === 'new' ? todaySeoul() : (notice?.date || '')
-  const amber = (th: Theme) => alpha(th.palette.accent.amber, 0.07)
-  const stop = (e: React.MouseEvent) => e.stopPropagation()
   const toggleTarget = (name: string) => setTargets((prev) => (prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name]))
   const setAllTargets = () => setTargets(TARGET_MEMBERS.map((m) => m.name))
   const setStaffTargets = () => setTargets(STAFF_MEMBERS.map((m) => m.name))
@@ -217,6 +223,121 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
     if (news.length) void removeNoticeFiles(news).catch(() => {})
     onCancel()
   }
+
+  return {
+    cat, setCat, title, setTitle, body, setBody, refLink, setRefLink,
+    dept, setDept, deptMgr, setDeptMgr, pinned, setPinned,
+    targets, toggleTarget, setAllTargets, setStaffTargets, isAllTargets, isStaffTargets,
+    uploads, sortedUploads, uploading, fileInputRef, onPickFiles, removeUpload,
+    save, cancel, dateStr,
+  }
+}
+
+/** 해당자 선택(프리셋 + 팀원 동그라미 칩) — PC 폼·모바일 시트 공용 */
+export function TargetPicker({ f }: { f: ReturnType<typeof useNoticeComposeForm> }) {
+  return (
+    <>
+      <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.bold, letterSpacing: '0.04em', color: 'text.disabled', ml: 0.5 }}>해당자</Box>
+      {/* 프리셋 — 센터(전체)=4명 자동선택 / 센터(직원)=신현진 제외 3명 */}
+      <Box role="button" tabIndex={0} aria-label="센터(전체) 선택" onClick={f.setAllTargets} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f.setAllTargets() } }} sx={presetSx(f.isAllTargets)}>센터(전체)</Box>
+      <Box role="button" tabIndex={0} aria-label="센터(직원) 선택" onClick={f.setStaffTargets} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f.setStaffTargets() } }} sx={presetSx(f.isStaffTargets)}>센터(직원)</Box>
+      {/* 팀원 동그라미 칩 — 선택=컬러, 해제=흑백(동그라미는 잘 보임) */}
+      {TARGET_MEMBERS.map((m) => {
+        const on = f.targets.includes(m.name)
+        return (
+          <Box
+            key={m.id}
+            role="checkbox" aria-checked={on} aria-label={`해당자 ${m.name}${on ? '' : ' (해제됨)'}`} tabIndex={0}
+            title={m.name}
+            onClick={() => f.toggleTarget(m.name)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f.toggleTarget(m.name) } }}
+            // 배경만 동적(사람색)이라 style 에 남기고, 글자색은 토큰으로 — 솔리드 사람색 칩 위
+            // 흰 글자는 이 저장소 공통 패턴(ChipContent NamePill·WeekBoard·eventCard와 같은 자리)
+            style={{ backgroundColor: m.color, filter: on ? 'none' : 'grayscale(1)', opacity: on ? 1 : 0.6 }}
+            sx={{
+              width: 32, height: 32, borderRadius: radius.circle, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'common.white',
+              fontSize: typescale.body.size, fontWeight: weight.bold, letterSpacing: '-0.5px', cursor: 'pointer', flex: 'none',
+              transition: 'opacity .15s, filter .15s',
+            }}
+          >
+            {given(m.name)}
+          </Box>
+        )
+      })}
+    </>
+  )
+}
+
+/** 첨부 영역(파일 첨부 버튼 + 상태 칩 그리드 + 업로드중 안내) — PC 폼·모바일 시트 공용 */
+export function AttachmentArea({ f }: { f: ReturnType<typeof useNoticeComposeForm> }) {
+  return (
+    <>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        <Box sx={{ display: 'flex' }}>
+          <input ref={f.fileInputRef} type="file" multiple hidden onChange={(e) => void f.onPickFiles(e.target.files)} />
+          <Box
+            role="button" tabIndex={0} aria-label="파일 첨부"
+            onClick={() => f.fileInputRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f.fileInputRef.current?.click() } }}
+            sx={(th) => ({
+              display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 1, py: '5px', borderRadius: `${radius.pill}px`,
+              border: '1px dashed', borderColor: th.palette.divider, color: 'text.secondary', cursor: 'pointer',
+              fontSize: typescale.small.size, fontWeight: weight.semibold, flex: 'none', transition: 'color .15s, border-color .15s',
+              '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main },
+            })}
+          >
+            <AttachFileIcon sx={{ fontSize: iconSize.body }} />파일 첨부
+          </Box>
+        </Box>
+        {f.uploads.length > 0 && (
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 0.75 }}>
+            {f.sortedUploads.map((u) => {
+              const err = u.status === 'error'
+              return (
+                <Tooltip key={u.key} title={err ? (u.error || '업로드 실패') : u.name} disableHoverListener={false}>
+                  <Box
+                    sx={(th) => ({
+                      display: 'flex', alignItems: 'center', gap: 0.5, width: '100%', minWidth: 0, pl: 0.85, pr: 0.25, py: '3px',
+                      borderRadius: `${radius.chip}px`, bgcolor: err ? alpha(th.palette.error.main, 0.08) : alpha(th.palette.text.primary, 0.05),
+                      border: `1px solid ${err ? alpha(th.palette.error.main, 0.5) : th.palette.divider}`,
+                      opacity: u.status === 'uploading' ? 0.7 : 1,
+                    })}
+                  >
+                    {u.status === 'uploading'
+                      ? <CircularProgress size={13} thickness={5} sx={{ flex: 'none' }} />
+                      : err
+                        ? <ErrorOutlineIcon sx={{ fontSize: iconSize.body, color: 'error.main', flex: 'none' }} />
+                        : <AttachmentIcon type={u.type} name={u.name} size={17} />}
+                    <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: typescale.small.size, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
+                    <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', flex: 'none' }}>
+                      {u.status === 'uploading' ? '업로드 중' : err ? '실패' : formatBytes(u.size)}
+                    </Box>
+                    {u.status !== 'uploading' && (
+                      <Tooltip title="첨부 제거">
+                        <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => f.removeUpload(u.key)} sx={{ p: 0.25, flex: 'none', color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
+                          <CloseIcon sx={{ fontSize: iconSize.caption }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Box>
+                </Tooltip>
+              )
+            })}
+          </Box>
+        )}
+      </Box>
+      {f.uploading && <Box sx={{ fontSize: typescale.caption.size, color: 'text.disabled', mt: -0.25 }}>파일 업로드 중… 완료 후 저장하세요.</Box>}
+    </>
+  )
+}
+
+/** 공지 작성/수정 인라인 행 — 표 열(번호·분류·제목·작성자·작성일)에 맞춘 2행 구조. */
+export default function NoticeCompose({ mode, notice, author, saving, deptOptions, deptMgrOptions, onSave, onCancel }: NoticeComposeProps) {
+  const f = useNoticeComposeForm({ mode, notice, onSave, onCancel })
+  const { cat, setCat, title, setTitle, body, setBody, refLink, setRefLink, dept, setDept, deptMgr, setDeptMgr, pinned, setPinned, uploading, save, cancel, dateStr } = f
+  const amber = (th: Theme) => alpha(th.palette.accent.amber, 0.07)
+  const stop = (e: React.MouseEvent) => e.stopPropagation()
 
   return (
     <>
@@ -271,94 +392,13 @@ export default function NoticeCompose({ mode, notice, author, saving, deptOption
               <Box sx={{ width: 80, maxWidth: '100%' }}>
                 <ComboField value={deptMgr} onChange={setDeptMgr} options={deptMgrOptions} placeholder="담당자" ariaLabel="부서담당자" />
               </Box>
-              <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.bold, letterSpacing: '0.04em', color: 'text.disabled', ml: 0.5 }}>해당자</Box>
-              {/* 프리셋 — 센터(전체)=4명 자동선택 / 센터(직원)=신현진 제외 3명 */}
-              <Box role="button" tabIndex={0} aria-label="센터(전체) 선택" onClick={setAllTargets} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAllTargets() } }} sx={presetSx(isAllTargets)}>센터(전체)</Box>
-              <Box role="button" tabIndex={0} aria-label="센터(직원) 선택" onClick={setStaffTargets} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStaffTargets() } }} sx={presetSx(isStaffTargets)}>센터(직원)</Box>
-              {/* 팀원 동그라미 칩 — 선택=컬러, 해제=흑백(동그라미는 잘 보임) */}
-              {TARGET_MEMBERS.map((m) => {
-                const on = targets.includes(m.name)
-                return (
-                  <Box
-                    key={m.id}
-                    role="checkbox" aria-checked={on} aria-label={`해당자 ${m.name}${on ? '' : ' (해제됨)'}`} tabIndex={0}
-                    title={m.name}
-                    onClick={() => toggleTarget(m.name)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTarget(m.name) } }}
-                    // 배경만 동적(사람색)이라 style 에 남기고, 글자색은 토큰으로 — 솔리드 사람색 칩 위
-                    // 흰 글자는 이 저장소 공통 패턴(ChipContent NamePill·WeekBoard·eventCard와 같은 자리)
-                    style={{ backgroundColor: m.color, filter: on ? 'none' : 'grayscale(1)', opacity: on ? 1 : 0.6 }}
-                    sx={{
-                      width: 32, height: 32, borderRadius: radius.circle, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'common.white',
-                      fontSize: typescale.body.size, fontWeight: weight.bold, letterSpacing: '-0.5px', cursor: 'pointer', flex: 'none',
-                      transition: 'opacity .15s, filter .15s',
-                    }}
-                  >
-                    {given(m.name)}
-                  </Box>
-                )
-              })}
+              <TargetPicker f={f} />
             </Box>
             <Box sx={(th) => ({ ...inputSx(th), width: '100%', py: '8px', px: '10px' })}>
               <NoticeBodyEditor value={body} onChange={setBody} placeholder="내용 (굵게·목록 등 서식 지원)" />
             </Box>
             {/* 첨부파일 — 파일 선택 버튼(한 줄) + 파일별 상태 칩(그리드 정렬·말줄임·반응형). 업로드는 즉시(팀원+, RLS 검증) */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-              <Box sx={{ display: 'flex' }}>
-                <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => onPickFiles(e.target.files)} />
-                <Box
-                  role="button" tabIndex={0} aria-label="파일 첨부"
-                  onClick={() => fileInputRef.current?.click()}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
-                  sx={(th) => ({
-                    display: 'inline-flex', alignItems: 'center', gap: 0.4, px: 1, py: '5px', borderRadius: `${radius.pill}px`,
-                    border: '1px dashed', borderColor: th.palette.divider, color: 'text.secondary', cursor: 'pointer',
-                    fontSize: typescale.small.size, fontWeight: weight.semibold, flex: 'none', transition: 'color .15s, border-color .15s',
-                    '&:hover': { borderColor: th.palette.primary.main, color: th.palette.primary.main },
-                  })}
-                >
-                  <AttachFileIcon sx={{ fontSize: iconSize.body }} />파일 첨부
-                </Box>
-              </Box>
-              {uploads.length > 0 && (
-                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 0.75 }}>
-                  {sortedUploads.map((u) => {
-                    const err = u.status === 'error'
-                    return (
-                      <Tooltip key={u.key} title={err ? (u.error || '업로드 실패') : u.name} disableHoverListener={false}>
-                        <Box
-                          sx={(th) => ({
-                            display: 'flex', alignItems: 'center', gap: 0.5, width: '100%', minWidth: 0, pl: 0.85, pr: 0.25, py: '3px',
-                            borderRadius: `${radius.chip}px`, bgcolor: err ? alpha(th.palette.error.main, 0.08) : alpha(th.palette.text.primary, 0.05),
-                            border: `1px solid ${err ? alpha(th.palette.error.main, 0.5) : th.palette.divider}`,
-                            opacity: u.status === 'uploading' ? 0.7 : 1,
-                          })}
-                        >
-                          {u.status === 'uploading'
-                            ? <CircularProgress size={13} thickness={5} sx={{ flex: 'none' }} />
-                            : err
-                              ? <ErrorOutlineIcon sx={{ fontSize: iconSize.body, color: 'error.main', flex: 'none' }} />
-                              : <AttachmentIcon type={u.type} name={u.name} size={17} />}
-                          <Box component="span" sx={{ flex: 1, minWidth: 0, fontSize: typescale.small.size, color: err ? 'error.main' : 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</Box>
-                          <Box component="span" sx={{ fontSize: typescale.caption.size, color: 'text.disabled', flex: 'none' }}>
-                            {u.status === 'uploading' ? '업로드 중' : err ? '실패' : formatBytes(u.size)}
-                          </Box>
-                          {u.status !== 'uploading' && (
-                            <Tooltip title="첨부 제거">
-                              <IconButton size="small" aria-label={`${u.name} 제거`} onClick={() => removeUpload(u.key)} sx={{ p: 0.25, flex: 'none', color: 'text.disabled', '&:hover': { color: 'error.main' } }}>
-                                <CloseIcon sx={{ fontSize: iconSize.caption }} />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                        </Box>
-                      </Tooltip>
-                    )
-                  })}
-                </Box>
-              )}
-            </Box>
-            {uploading && <Box sx={{ fontSize: typescale.caption.size, color: 'text.disabled', mt: -0.25 }}>파일 업로드 중… 완료 후 저장하세요.</Box>}
+            <AttachmentArea f={f} />
           </Box>
         </TableCell>
         <TableCell onClick={stop} sx={{ textAlign: 'center', verticalAlign: 'top', pt: 1 }}>

@@ -58,6 +58,7 @@ import type { Notice as NoticeItem } from '@/types'
 import { noticeCatStatus } from './noticeMeta'
 import NoticeDetail from './NoticeDetail'
 import NoticeCompose, { NOTICE_CATS, type NoticeFormValues } from './NoticeCompose'
+import NoticeComposeSheet from './NoticeComposeSheet'
 
 const refUrl = (ref: string) => String(ref || '').match(/https?:\/\/[^\s]+/)?.[0] ?? null
 
@@ -141,6 +142,8 @@ export default function Notice() {
    * 그중 한 장이 위와 같은 공지면 실질 정보가 2건으로 줄어든다. PC 동작은 그대로 둔다.
    */
   const pinnedNums = useMemo(() => new Set(pinnedCopies.map((n) => n.num)), [pinnedCopies])
+  // 모바일 수정 시트의 대상 공지 — editingId 로 찾는다
+  const editingNotice = useMemo(() => (editingId == null ? null : items.find((n) => n.id === editingId) ?? null), [items, editingId])
   const listRows = useMemo(
     () => (isMobile ? filtered.filter((n) => !pinnedNums.has(n.num)) : filtered),
     [isMobile, filtered, pinnedNums],
@@ -506,21 +509,26 @@ export default function Notice() {
              375px 에서 표 최소폭이 374.3px 이라 33px 이 잘려 나갔고 하필 더보기(⋮)가 잘렸다.
              여백을 깎아 버티는 대신 열 개수와 화면 폭의 연결을 끊는다 — 열이 또 늘어도 안 터진다. */
           <Box>
-            {isMember && composing && (
-              <Table size="small" sx={{ ...dataTableSx, mb: 1.25 }}><TableBody>
-                <NoticeCompose mode="new" author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={handleSaveNew} onCancel={() => setComposing(false)} />
-              </TableBody></Table>
-            )}
+            {/* 작성·수정은 목록에 끼우지 않는다 — 전체화면 시트가 담당(요청메모 91, A안).
+                표 행(tr) 폼을 표 한 겹에 싸서 끼우던 종전 방식이 '조잡하다'는 지적의 원인. */}
             {pinnedCopies.map((n) => renderMobileCard(n, true))}
-            {listRows.map((n) =>
-              editingId === n.id ? (
-                <Table key={`edit-${n.num}`} size="small" sx={{ ...dataTableSx, mb: 1.25 }}><TableBody>
-                  <NoticeCompose mode="edit" notice={n} author={n.author} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={(v) => handleSaveEdit(n, v)} onCancel={() => setEditingId(null)} />
-                </TableBody></Table>
-              ) : renderMobileCard(n, false),
-            )}
+            {listRows.map((n) => renderMobileCard(n, false))}
             {listRows.length === 0 && pinnedCopies.length === 0 && (
               <EmptyState size="sm" title="공지사항이 없습니다" />
+            )}
+            {isMember && (
+              <NoticeComposeSheet
+                // key = 대상 공지 — 다른 공지로 갈아탈 때 폼 상태가 남지 않게 새로 만든다
+                key={editingNotice ? `edit-${editingNotice.num}` : 'new'}
+                open={composing || !!editingNotice}
+                mode={editingNotice ? 'edit' : 'new'}
+                notice={editingNotice ?? undefined}
+                saving={saving}
+                deptOptions={deptOptions}
+                deptMgrOptions={deptMgrOptions}
+                onSave={(v) => (editingNotice ? handleSaveEdit(editingNotice, v) : handleSaveNew(v))}
+                onCancel={() => { setComposing(false); setEditingId(null) }}
+              />
             )}
           </Box>
         ) : (
