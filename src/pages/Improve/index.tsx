@@ -1071,7 +1071,11 @@ export default function Improve() {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                         {t.urgent && <Tooltip title="긴급"><PriorityHighIcon sx={{ fontSize: iconSize.action, color: 'error.main', flexShrink: 0 }} /></Tooltip>}
                         {/* 제목은 14px + 주 톤으로 이미 식별자 — 굵기는 강조 상태에만 쓴다(전부 굵으면 신호가 사라짐) */}
-                        <Box component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.medium, color: 'text.primary', overflowWrap: 'anywhere' }}>{t.title}</Box>
+                        {/* whiteSpace 를 **span 에 직접** 준다 — 표의 `'& td':{nowrap}`(0-1-1)가 셀 sx 의
+                            normal(0-1-0)을 이겨서 제목이 한 줄 통짜가 됐고, 긴 제목 하나(#80, 715px)가
+                            표 전체를 1431px 로 밀어 가로스크롤을 만들었다(1366px 실측, 요청메모 87).
+                            overflowWrap 은 nowrap 아래에서 아무 일도 안 한다 — 줄바꿈 허용이 먼저다. */}
+                        <Box component="span" sx={{ fontSize: typescale.emphasis.size, fontWeight: weight.medium, color: 'text.primary', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>{t.title}</Box>
                         {/* 제목 → 최근글 N칩 → 답글 +N칩 → 링크 순. 모두 줄어들지 않게 flexShrink:0 */}
                         {isNew && (
                           <Box component="span" sx={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 15, height: 15, px: '2px', borderRadius: `${radius.chip}px`, bgcolor: (t) => t.palette.accent.red, color: (t) => t.palette.getContrastText(t.palette.accent.red), fontSize: typescale.micro.size, fontWeight: typescale.cardTitle.weight, lineHeight: 1 }}>N</Box>
