@@ -17,6 +17,7 @@ import MenuItem from '@mui/material/MenuItem'
 import ListItemIcon from '@mui/material/ListItemIcon'
 import ListItemText from '@mui/material/ListItemText'
 import { alpha, useTheme } from '@mui/material/styles'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import { TintChip } from '@/components/FilterChip'
 import CampaignIcon from '@mui/icons-material/Campaign'
@@ -40,6 +41,8 @@ import {
   LoadingState,
   FilterToolbar,
   dataTableSx,
+  mobileTableCardSx,
+  DataCell,
   statusTextColor,
   useSnack,
   ConfirmDialog,
@@ -86,6 +89,8 @@ export default function Notice() {
   // error 게이트 필수: 로드 실패도 ready=true라, 없으면 실패(빈 목록)를 '새 글 0'으로 오인해 seen을 지움
   useMarkSeen('notice', useMemo(() => items.filter((n) => n.isNew).map((n) => String(n.num)), [items]), ready && !error)
   const theme = useTheme()
+  // 모바일 = 셸 분기(768) 아래 — 표가 카드로 바뀌는 구간과 같은 기준
+  const isMobile = useMediaQuery(theme.breakpoints.down('shell'))
   const [selCats, setSelCats] = useState<string[]>([]) // 빈 배열 = 전체
   const [query, setQuery] = useState('')
   const [composing, setComposing] = useState(false)
@@ -132,6 +137,16 @@ export default function Notice() {
   const isExpired = (n: NoticeItem) => !!n.end && n.end < today
   // 상단고정 복사본 — 종료된 공지는 상단고정 자동 해제(아래 일반 목록엔 그대로 남음)
   const pinnedCopies = useMemo(() => filtered.filter((n) => n.pinned && !(n.end && n.end < today)), [filtered, today])
+  /**
+   * 모바일 목록에서는 **고정 복사본의 원본을 뺀다**(개선요청 81).
+   * PC 는 한 화면에 20행이 다 보여 중복이 값싼 장치지만, 모바일은 첫 화면에 3장뿐이라
+   * 그중 한 장이 위와 같은 공지면 실질 정보가 2건으로 줄어든다. PC 동작은 그대로 둔다.
+   */
+  const pinnedNums = useMemo(() => new Set(pinnedCopies.map((n) => n.num)), [pinnedCopies])
+  const listRows = useMemo(
+    () => (isMobile ? filtered.filter((n) => !pinnedNums.has(n.num)) : filtered),
+    [isMobile, filtered, pinnedNums],
+  )
 
   const stop = (e: MouseEvent) => e.stopPropagation()
 
@@ -263,11 +278,13 @@ export default function Notice() {
                 </Box>
               )}
           </TableCell>
-          <TableCell align="center"><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
-          {/* 아코디언 활성 영역 = 제목 셀만(행 전체 아님) */}
+          <DataCell label="분류"><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></DataCell>
+          {/* 아코디언 활성 영역 = 제목 셀만(행 전체 아님).
+              data-title="1" — 모바일 카드에서 이 셀이 맨 위 제목 줄이 된다(mobileTableCardSx 와 짝) */}
           <TableCell
             role="button"
             tabIndex={0}
+            data-title="1"
             aria-label={`공지: ${n.title}`}
             aria-expanded={open}
             onClick={toggle}
@@ -292,12 +309,12 @@ export default function Notice() {
               )}
             </Box>
           </TableCell>
-          <TableCell align="center" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', display: { xs: 'none', sm: 'table-cell' } }}>{n.author || '-'}</TableCell>
+          <DataCell label="작성자" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', display: { xs: 'flex', sm: 'table-cell' } }}>{n.author || '-'}</DataCell>
           {/* 날짜만 — 구 펼침 화살표는 삭제했다(2026-08-01). 클릭 대상은 제목 셀인데 화살표는 이 셀에
               있어서 눌러도 아무 일이 없는 가짜 버튼이었고, 펼칠 수 있다는 신호는 제목 셀 호버가 이미 준다. */}
-          <TableCell align="center" sx={{ color: 'text.secondary', fontFamily: 'monospace', whiteSpace: 'nowrap', display: { xs: 'none', md: 'table-cell' } }}>
+          <DataCell label="작성일" sx={{ color: 'text.secondary', fontFamily: 'monospace', whiteSpace: 'nowrap', display: { xs: 'flex', md: 'table-cell' } }}>
             {n.date}
-          </TableCell>
+          </DataCell>
           {/* 첨부 유무 — DS 표준 첨부 표식 = AttachFile 클립(손그림 플로피 SVG 폐지, 사용자 확정 2026-07-13) */}
           <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
             {!!n.attachments?.length && (
@@ -401,7 +418,11 @@ export default function Notice() {
         ) : (
           <AppCard padding={0} sx={{ overflow: 'hidden' }}>
             <Box sx={{ overflowX: 'auto' }}>
-              <Table size="small" sx={{ minWidth: { xs: 0, md: 640 }, ...dataTableSx }}>
+              {/* 모바일은 표를 **세로 카드**로 바꾼다(개선요청 81, A안).
+                  375px 에서 표 최소폭이 374.3px 이라 33px 이 잘려 나갔고 하필 더보기(⋮)가 잘렸다.
+                  여백을 깎아 버티는 대신 열 개수와 화면 폭의 연결을 끊는다 — 열이 또 늘어도 안 터진다.
+                  장치는 새로 만들지 않았다: 장비·장비운영이 이미 쓰는 mobileTableCardSx + DataCell. */}
+              <Table size="small" sx={(th) => ({ minWidth: { xs: 0, md: 640 }, ...dataTableSx, ...mobileTableCardSx(th) })}>
                 <TableHead>
                   {/* 정렬은 셀 align prop 으로만 — 구 dataTableHeadSx 의 '& th'(특이도 0-1-1)가
                       셀 sx(0-1-0)를 이겨서 여기 적힌 정렬이 조용히 죽고 있었다(작성일이 실제로 그랬다).
@@ -425,13 +446,13 @@ export default function Notice() {
                       그라데이션 구분선은 제거 — 고정글은 압정 아이콘·굵은 제목·떠오른 배경으로 이미 구분되고,
                       그라데이션은 앱 어디에도 없는 장식이라 이질적이었음(사용자 확정) */}
                   {pinnedCopies.length > 0 && pinnedCopies.map((n) => renderRow(n, true))}
-                  {filtered.length === 0 && (
+                  {listRows.length === 0 && pinnedCopies.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={isMember ? 7 : 6} sx={{ textAlign: 'center', color: 'text.disabled', py: 3 }}>공지사항이 없습니다</TableCell>
                     </TableRow>
                   )}
                   {/* 전체 최신순(원본) */}
-                  {filtered.map((n) =>
+                  {listRows.map((n) =>
                     isMember && editingId === n.id
                       // key는 renderRow 원본 행과 동일한 String(n.num) 사용 — n.id(위치기반 idx+1)를 쓰면
                       // 다른 행의 n.num과 충돌(id=13-num)해 React 재조정이 깨지고 저장 후 폼/스피너가 안 사라짐.

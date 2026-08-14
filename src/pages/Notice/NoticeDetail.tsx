@@ -106,9 +106,10 @@ export default function NoticeDetail({ notice, canEdit, canDelete, onEdit, onDel
       setZipping(false)
     }
   }
-  // 내용 왼쪽을 분류열(번호열 폭 뒤) 왼쪽에 정렬 — 번호열 48px + 셀 좌패딩 ≈ 64px 들여쓰기
+  // 내용 왼쪽을 분류열(번호열 폭 뒤) 왼쪽에 정렬 — 번호열 48px + 셀 좌패딩 ≈ 64px 들여쓰기.
+  // 이건 **PC 표 열 정렬용**이라 모바일에선 본문 폭만 깎았다(292px) — 카드 목록엔 맞출 열이 없다(개선요청 81)
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: '16px 18px 20px 64px', bgcolor: 'background.default', borderBottom: 1, borderColor: 'divider' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, p: { xs: '14px 16px 18px', shell: '16px 18px 20px 64px' }, bgcolor: 'background.default', borderBottom: 1, borderColor: 'divider' }}>
       {/* 상단: (좌) 부서·해당자 / (우) 수정·삭제 아이콘. 분류칩·작성자·작성일은 제거(제목행에 분류칩 존재) */}
       {(dept || target || canEdit) && (
         <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1.5 }}>
