@@ -452,7 +452,8 @@ function ChipDialog({ mode, round, defs, chip, onClose, onSubmit }: {
   return (
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ fontSize: typescale.cardTitle.size, fontWeight: typescale.cardTitle.weight }}>{mode === 'add' ? '지표 추가' : `${chip?.label} 수정`} · {round.round}차</DialogTitle>
-      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: '8px !important' }}>
+      {/* pt 10px = 떠오르는 라벨 몫(8px 이면 1px 잘림 — 자료실과 같은 클리핑, 2026-08-15) */}
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pt: '10px !important' }}>
         {mode === 'add' && (
           <>
             <TextField size="small" label="지표명" value={label} onChange={(e) => setLabel(e.target.value)} autoFocus

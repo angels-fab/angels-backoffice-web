@@ -71,7 +71,9 @@ export default function FormDialog({
           <CloseIcon fontSize="small" />
         </IconButton>
       </Box>
-      <Box sx={{ px: 3, pb: footer ? 1.5 : 3, overflowY: 'auto' }}>{children}</Box>
+      {/* pt 10px = 떠오르는 라벨 몫 — 첫 필드의 shrink 라벨이 위로 9px 돌출하는데, overflow:auto 가
+          클리핑 맥락을 만들어 pt 0 이면 헤더에 잘렸다(자료실 실측 9px, 2026-08-15 사용자 캡처) */}
+      <Box sx={{ px: 3, pt: '10px', pb: footer ? 1.5 : 3, overflowY: 'auto' }}>{children}</Box>
       {footer != null && (
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, px: 3, pb: 2.5, pt: 1 }}>{footer}</Box>
       )}
