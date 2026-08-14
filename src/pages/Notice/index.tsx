@@ -41,8 +41,6 @@ import {
   LoadingState,
   FilterToolbar,
   dataTableSx,
-  mobileTableCardSx,
-  DataCell,
   statusTextColor,
   useSnack,
   ConfirmDialog,
@@ -235,6 +233,80 @@ export default function Notice() {
 
   const showEmpty = ready && filtered.length === 0 && !composing
 
+  /**
+   * 모바일 카드 한 장(개선요청 81, 2안) — 표를 그대로 카드로 접는 공용 장치를 쓰지 않는 이유:
+   * 그 장치는 셀 하나를 "이름 … 값" 한 줄로 만들기 때문에, 압정·더보기처럼 값만 있는 칸까지
+   * 제 줄을 차지해 카드가 다섯 줄이 됐다(사용자 지적, 화면 확인). 그래서 전용 마크업을 둔다.
+   *
+   * 구성 3줄: ①압정·분류칩·NEW·더보기 ②제목 ③작성자·날짜·첨부
+   */
+  const renderMobileCard = (n: NoticeItem, isCopy: boolean) => {
+    const rowKey = isCopy ? `pin-${n.num}` : String(n.num)
+    const open = openKey === rowKey
+    const link = refUrl(n.ref)
+    const toggle = () => setOpenKey(open ? null : rowKey)
+    return (
+      <Box
+        key={rowKey}
+        sx={(th) => ({
+          border: '1px solid', borderColor: open ? alpha(th.palette.accent.blue, 0.5) : 'divider',
+          borderRadius: `${radius.card}px`, mb: 1.25, overflow: 'hidden',
+          bgcolor: open ? alpha(th.palette.accent.blue, 0.08) : 'background.paper',
+        })}
+      >
+        <Box
+          role="button"
+          tabIndex={0}
+          aria-expanded={open}
+          aria-label={`공지: ${n.title}`}
+          onClick={toggle}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle() } }}
+          sx={{ p: '11px 13px', cursor: 'pointer' }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.75 }}>
+            {isCopy && <PushPinIcon sx={{ fontSize: iconSize.caption, color: 'accentText.amber' }} />}
+            <StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} />
+            {/* 새 글 — 빨간 사각 칩이 촌스럽다는 지적(2026-08-14)으로 글자만 남겼다 */}
+            {n.isNew && (
+              <Box component="span" sx={{ fontSize: typescale.micro.size, fontWeight: weight.semibold, letterSpacing: '0.06em', color: 'accentText.red' }}>NEW</Box>
+            )}
+            {isExpired(n) && <StatusChip status="neutral" label="종료" />}
+            <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 0.25 }}>
+              {link && (
+                <IconButton component="a" href={link} target="_blank" rel="noopener noreferrer" size="small" aria-label="첨부/관련자료 열기" onClick={stop} sx={{ color: 'info.main', p: 0.5 }}>
+                  <OpenInNewIcon sx={{ fontSize: iconSize.body }} />
+                </IconButton>
+              )}
+              {isMember && (
+                <IconButton
+                  size="small"
+                  aria-label="더보기"
+                  onClick={(e) => { e.stopPropagation(); setMenuFor({ el: e.currentTarget, n }) }}
+                  sx={{ color: 'text.secondary', p: 0.5 }}
+                >
+                  <MoreVertIcon sx={{ fontSize: iconSize.action }} />
+                </IconButton>
+              )}
+            </Box>
+          </Box>
+          <Box sx={{ fontSize: typescale.emphasis.size, fontWeight: isCopy ? weight.bold : weight.medium, lineHeight: 1.5, color: isExpired(n) ? 'text.secondary' : 'text.primary', wordBreak: 'break-word' }}>
+            {n.dept ? `[${n.dept}] ` : ''}{n.title}
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.75, fontSize: typescale.small.size, color: 'text.disabled' }}>
+            <Box component="span">{n.author || '-'}</Box>
+            <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>{n.date}</Box>
+            {!!n.attachments?.length && (
+              <AttachFileIcon aria-label={`첨부파일 ${n.attachments.length}개`} sx={{ fontSize: iconSize.body, ml: 'auto' }} />
+            )}
+          </Box>
+        </Box>
+        <Collapse in={open} timeout="auto" unmountOnExit>
+          <NoticeDetail notice={n} canEdit={isMember} canDelete={canDelete(n)} onEdit={startEdit} onDelete={setDeleteTarget} />
+        </Collapse>
+      </Box>
+    )
+  }
+
   // 공지 한 행(원본/복사본 공용). isCopy=상단 중요 복사본(압정·볼드·떠오른 표면), 아니면 일반(번호).
   const renderRow = (n: NoticeItem, isCopy: boolean) => {
     const rowKey = isCopy ? `pin-${n.num}` : String(n.num)
@@ -278,13 +350,12 @@ export default function Notice() {
                 </Box>
               )}
           </TableCell>
-          <DataCell label="분류"><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></DataCell>
+          <TableCell align="center"><StatusChip status={noticeCatStatus(n.cat)} label={n.cat || '공지'} /></TableCell>
           {/* 아코디언 활성 영역 = 제목 셀만(행 전체 아님).
-              data-title="1" — 모바일 카드에서 이 셀이 맨 위 제목 줄이 된다(mobileTableCardSx 와 짝) */}
+              모바일은 이 표를 쓰지 않는다 — 아래 renderMobileCard 가 따로 그린다(개선요청 81) */}
           <TableCell
             role="button"
             tabIndex={0}
-            data-title="1"
             aria-label={`공지: ${n.title}`}
             aria-expanded={open}
             onClick={toggle}
@@ -309,12 +380,12 @@ export default function Notice() {
               )}
             </Box>
           </TableCell>
-          <DataCell label="작성자" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', display: { xs: 'flex', sm: 'table-cell' } }}>{n.author || '-'}</DataCell>
+          <TableCell align="center" sx={{ color: 'text.secondary', whiteSpace: 'nowrap', display: { xs: 'none', sm: 'table-cell' } }}>{n.author || '-'}</TableCell>
           {/* 날짜만 — 구 펼침 화살표는 삭제했다(2026-08-01). 클릭 대상은 제목 셀인데 화살표는 이 셀에
               있어서 눌러도 아무 일이 없는 가짜 버튼이었고, 펼칠 수 있다는 신호는 제목 셀 호버가 이미 준다. */}
-          <DataCell label="작성일" sx={{ color: 'text.secondary', fontFamily: 'monospace', whiteSpace: 'nowrap', display: { xs: 'flex', md: 'table-cell' } }}>
+          <TableCell align="center" sx={{ color: 'text.secondary', fontFamily: 'monospace', whiteSpace: 'nowrap', display: { xs: 'none', md: 'table-cell' } }}>
             {n.date}
-          </DataCell>
+          </TableCell>
           {/* 첨부 유무 — DS 표준 첨부 표식 = AttachFile 클립(손그림 플로피 SVG 폐지, 사용자 확정 2026-07-13) */}
           <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
             {!!n.attachments?.length && (
@@ -415,14 +486,32 @@ export default function Notice() {
         ) : showEmpty ? (
           // 불러오기 실패로 비었으면 위 배너가 이미 설명 — '없습니다'를 겹쳐 띄우면 데이터가 원래 없는 걸로 오해됨
           error && items.length === 0 ? null : <AppCard padding={0}><EmptyState size="sm" title="공지사항이 없습니다" /></AppCard>
+        ) : isMobile ? (
+          /* 모바일은 표를 아예 안 쓴다(개선요청 81, A안 + 2안 카드).
+             375px 에서 표 최소폭이 374.3px 이라 33px 이 잘려 나갔고 하필 더보기(⋮)가 잘렸다.
+             여백을 깎아 버티는 대신 열 개수와 화면 폭의 연결을 끊는다 — 열이 또 늘어도 안 터진다. */
+          <Box>
+            {isMember && composing && (
+              <Table size="small" sx={{ ...dataTableSx, mb: 1.25 }}><TableBody>
+                <NoticeCompose mode="new" author={user || '-'} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={handleSaveNew} onCancel={() => setComposing(false)} />
+              </TableBody></Table>
+            )}
+            {pinnedCopies.map((n) => renderMobileCard(n, true))}
+            {listRows.map((n) =>
+              editingId === n.id ? (
+                <Table key={`edit-${n.num}`} size="small" sx={{ ...dataTableSx, mb: 1.25 }}><TableBody>
+                  <NoticeCompose mode="edit" notice={n} author={n.author} saving={saving} deptOptions={deptOptions} deptMgrOptions={deptMgrOptions} onSave={(v) => handleSaveEdit(n, v)} onCancel={() => setEditingId(null)} />
+                </TableBody></Table>
+              ) : renderMobileCard(n, false),
+            )}
+            {listRows.length === 0 && pinnedCopies.length === 0 && (
+              <EmptyState size="sm" title="공지사항이 없습니다" />
+            )}
+          </Box>
         ) : (
           <AppCard padding={0} sx={{ overflow: 'hidden' }}>
             <Box sx={{ overflowX: 'auto' }}>
-              {/* 모바일은 표를 **세로 카드**로 바꾼다(개선요청 81, A안).
-                  375px 에서 표 최소폭이 374.3px 이라 33px 이 잘려 나갔고 하필 더보기(⋮)가 잘렸다.
-                  여백을 깎아 버티는 대신 열 개수와 화면 폭의 연결을 끊는다 — 열이 또 늘어도 안 터진다.
-                  장치는 새로 만들지 않았다: 장비·장비운영이 이미 쓰는 mobileTableCardSx + DataCell. */}
-              <Table size="small" sx={(th) => ({ minWidth: { xs: 0, md: 640 }, ...dataTableSx, ...mobileTableCardSx(th) })}>
+              <Table size="small" sx={{ minWidth: { xs: 0, md: 640 }, ...dataTableSx }}>
                 <TableHead>
                   {/* 정렬은 셀 align prop 으로만 — 구 dataTableHeadSx 의 '& th'(특이도 0-1-1)가
                       셀 sx(0-1-0)를 이겨서 여기 적힌 정렬이 조용히 죽고 있었다(작성일이 실제로 그랬다).
