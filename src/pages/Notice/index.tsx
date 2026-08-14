@@ -438,8 +438,10 @@ export default function Notice() {
            같은 돋보기가 두 개 나란히 뜨면 어느 쪽을 눌러야 할지부터 헷갈린다.
            아이콘은 연필이 아니라 **더하기** — 행사·장비의 '새 항목' 버튼과 같은 관습. */
         actions={isMobile && isMember ? (
-          <IconButton aria-label="새 공지" onClick={startCompose} size="small" sx={{ color: composing ? 'primary.main' : 'text.secondary' }}>
-            <AddIcon sx={{ fontSize: iconSize.header }} />
+          /* 아이콘 24 = 제목 '공지사항'(22px)과 눈높이가 맞는 사다리 값(중간값 금지 규칙).
+             20이면 굵은 제목 옆에서 눌려 보였다(사용자 지적 2026-08-14). */
+          <IconButton aria-label="새 공지" onClick={startCompose} sx={{ color: composing ? 'primary.main' : 'text.secondary' }}>
+            <AddIcon sx={{ fontSize: iconSize.feature }} />
           </IconButton>
         ) : undefined}
       />
