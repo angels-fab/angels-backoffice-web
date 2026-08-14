@@ -21,6 +21,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import { TintChip } from '@/components/FilterChip'
 import CampaignIcon from '@mui/icons-material/Campaign'
+import SearchIcon from '@mui/icons-material/Search'
 import EditNoteIcon from '@mui/icons-material/EditNote'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
@@ -90,6 +91,8 @@ export default function Notice() {
   const isMobile = useMediaQuery(theme.breakpoints.down('shell'))
   const [selCats, setSelCats] = useState<string[]>([]) // 빈 배열 = 전체
   const [query, setQuery] = useState('')
+  // 모바일 헤더의 돋보기 — 누르면 검색창으로 펼쳐진다(요청메모 91)
+  const [searchOpen, setSearchOpen] = useState(false)
   const [composing, setComposing] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
@@ -428,7 +431,31 @@ export default function Notice() {
         title="공지사항"
         updatedAt={error ? '불러오기 실패' : undefined}
         /* 새로고침 버튼 삭제(요청메모 91). 브라우저 새로고침이 같은 일을 하고,
-           불러오기에 실패하면 아래 ErrorBanner 가 '다시 시도'를 이미 준다(onRetry={refresh}). */
+           불러오기에 실패하면 아래 ErrorBanner 가 '다시 시도'를 이미 준다(onRetry={refresh}).
+
+           대신 **모바일에서만** 검색·새 공지를 여기로 올린다(요청메모 91) — 필터박스 안에 있던
+           검색창 200px + 버튼이 세로 115px 을 먹고 있었다. 돋보기는 누르면 왼쪽으로 펼쳐진다
+           (헤더 액션이 오른쪽 정렬이라 자라는 방향이 자연히 왼쪽이다). */
+        actions={isMobile ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+            {searchOpen ? (
+              // 비어 있을 때 포커스를 잃으면 도로 접는다 — 닫기 버튼을 따로 두지 않기 위해.
+              // SearchBar 에 onBlur prop 이 없어 감싼 Box 에서 받는다(포커스가 자식에서 빠질 때도 올라온다)
+              <Box onBlur={() => { if (!query.trim()) setSearchOpen(false) }} sx={{ display: 'inline-flex' }}>
+                <SearchBar value={query} onChange={setQuery} placeholder="제목·작성자 검색" autoFocus width={200} />
+              </Box>
+            ) : (
+              <IconButton aria-label="검색 열기" onClick={() => setSearchOpen(true)} size="small" sx={{ color: 'text.secondary' }}>
+                <SearchIcon sx={{ fontSize: iconSize.header }} />
+              </IconButton>
+            )}
+            {isMember && (
+              <IconButton aria-label="새 공지" onClick={startCompose} size="small" sx={{ color: composing ? 'primary.main' : 'text.secondary' }}>
+                <EditNoteIcon sx={{ fontSize: iconSize.header }} />
+              </IconButton>
+            )}
+          </Box>
+        ) : undefined}
       />
 
       {/* 불러오기 실패 — '공지 없음'으로 오해하지 않게 정직하게 알리고 재시도 제공(백로그 C2).
@@ -446,11 +473,13 @@ export default function Notice() {
       )}
 
       <ContentSection title="공지 목록" count={`${filtered.length}건`} last>
-        {/* 상단 필터 바 — 공용 FilterToolbar(박스+칩+검색+새글). 분류 칩은 아이콘 없이(사용자 확정). */}
+        {/* 상단 필터 바 — 공용 FilterToolbar(박스+칩+검색+새글). 분류 칩은 아이콘 없이(사용자 확정).
+            모바일에서는 검색·새 공지가 위 제목줄로 올라갔다(요청메모 91) — 여기 두면 필터박스가
+            세로 115px 을 먹어 첫 화면 카드 수를 깎는다. PC 는 그대로. */}
         <FilterToolbar
           label="분류"
-          search={<SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" width={200} />}
-          actions={isMember ? (
+          search={isMobile ? undefined : <SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" width={200} />}
+          actions={isMember && !isMobile ? (
             <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: iconSize.action }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap', minHeight: control.height }}>
               새 공지
             </Button>
