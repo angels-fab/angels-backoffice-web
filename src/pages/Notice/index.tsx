@@ -460,7 +460,9 @@ export default function Notice() {
         />
       )}
 
-      <ContentSection title="공지 목록" count={`${filtered.length}건`} last>
+      {/* '공지 목록 N건' 라벨 삭제(2026-08-14 사용자 지시) — 페이지 제목이 이미 '공지사항'이고
+          건수는 분류 칩이 종류별로 보여준다. 같은 정보를 세 번째로 말하며 세로만 먹었다. */}
+      <ContentSection last>
         {/* 상단 필터 바 — 공용 FilterToolbar(박스+칩+검색+새글). 분류 칩은 아이콘 없이(사용자 확정).
             모바일에서는 검색·새 공지가 위 제목줄로 올라갔다(요청메모 91) — 여기 두면 필터박스가
             세로 115px 을 먹어 첫 화면 카드 수를 깎는다. PC 는 그대로. */}

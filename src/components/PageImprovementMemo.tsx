@@ -1,8 +1,9 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
+import Popover from '@mui/material/Popover'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
@@ -32,11 +33,12 @@ import { IMP_STATUSES, impKind, needsReason, normStatus, isSettled } from '@/pag
 import { radius, iconSize, typescale, weight } from '@/theme/tokens'
 
 /** '개선 메모 N' 칩 — 제목 옆. 클릭 시 패널 토글(열 때 각 항목은 접힌 상태로 시작). */
-function MemoChip({ count, open, onToggle }: { count: number; open: boolean; onToggle: () => void }) {
+function MemoChip({ count, open, onToggle, anchorRef }: { count: number; open: boolean; onToggle: () => void; anchorRef?: React.Ref<HTMLButtonElement> }) {
   return (
     <Box
       component="button"
       type="button"
+      ref={anchorRef}
       onClick={onToggle}
       aria-expanded={open}
       aria-label={`개선 메모 ${count}건${open ? ' 접기' : ' 펼치기'}`}
@@ -160,11 +162,16 @@ function MemoRow({
   }
   return (
     <Box sx={{ py: 1.25, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}>
-      <Box onClick={onHeaderTap} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', cursor: 'pointer' }}>
-        <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
+      {/* 두 줄 구성(2026-08-14 사용자 지시) — 제목줄엔 번호·제목만, 메타(작성자·위치·상태·버튼)는 아랫줄.
+          종전엔 한 줄 flexWrap 이라 제목이 짧으면 작성자가 제목 옆으로 올라와 붙었다(#85 에서 확인). */}
+      <Box onClick={onHeaderTap} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, cursor: 'pointer' }}>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+        <Box component="span" sx={(th) => ({ flexShrink: 0, fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
           요청 #{t.num}
         </Box>
-        <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: weight.bold, color: 'text.primary', minWidth: 0 }}>{t.title}</Box>
+        <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: weight.bold, color: 'text.primary', minWidth: 0, wordBreak: 'break-word' }}>{t.title}</Box>
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: typescale.caption.size, color: 'text.secondary' }}>
           <PersonOutlineIcon sx={{ fontSize: iconSize.caption }} />{t.author || '-'}
         </Box>
@@ -206,6 +213,7 @@ function MemoRow({
             메모 해제
           </Button>
         </Box>
+      </Box>
       </Box>
       {open && (
         <Box sx={{ mt: 1 }}>
@@ -265,6 +273,8 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const replyItems = useAppSelector((s) => s.reply.items)
 
   const [open, setOpen] = useState(false)
+  // 팝오버 닻 — 제목 옆 전구 칩(2026-08-14 팝오버 전환)
+  const chipRef = useRef<HTMLButtonElement | null>(null)
   const [openNum, setOpenNum] = useState<string | null>(null) // 내용+답글 통합 펼침 — 한 번에 하나만
   const [removingNum, setRemovingNum] = useState<string | null>(null)
   const [replyBusy, setReplyBusy] = useState(false)
@@ -425,17 +435,34 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
     }
   }
 
-  const chip = <MemoChip count={memos.length} open={open} onToggle={toggleOpen} />
+  const chip = <MemoChip count={memos.length} open={open} onToggle={toggleOpen} anchorRef={chipRef} />
 
-  const panel = open ? (
-    <Box
-      sx={(th) => ({
-        mt: 1.25,
-        border: `1px solid ${alpha(th.palette.accent.amber, 0.35)}`,
-        borderRadius: `${radius.card}px`,
-        overflow: 'hidden',
-        background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.1)}, ${th.palette.background.paper} 52%)`,
-      })}
+  /**
+   * 팝오버로 띄운다(2026-08-14 사용자 지시) — 종전엔 제목 아래 인라인이라 패널을 열면
+   * 공지 목록 전체가 그만큼 아래로 밀렸다. 팝오버는 떠 있어서 목록이 한 픽셀도 안 움직인다.
+   * 세로는 화면의 70%까지, 넘치면 팝오버 안에서 스크롤.
+   */
+  const panel = (
+    <Popover
+      open={open}
+      anchorEl={chipRef.current}
+      onClose={() => setOpen(false)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      disableScrollLock
+      slotProps={{
+        paper: {
+          sx: (th) => ({
+            mt: 1,
+            width: 'min(calc(100vw - 24px), 520px)',
+            maxHeight: '70vh',
+            overflowY: 'auto',
+            border: `1px solid ${alpha(th.palette.accent.amber, 0.35)}`,
+            borderRadius: `${radius.card}px`,
+            background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.1)}, ${th.palette.background.paper} 52%)`,
+          }),
+        },
+      }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.75, py: 1, borderBottom: '1px solid', borderColor: (th) => alpha(th.palette.accent.amber, 0.18) }}>
         <Box sx={(th) => ({ fontSize: typescale.small.size, fontWeight: weight.heavy, color: th.palette.accentText.amber })}>이 화면에서 확인할 개선요청</Box>
@@ -463,8 +490,8 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
           />
         ))}
       </Box>
-    </Box>
-  ) : null
+    </Popover>
+  )
 
   return { chip, panel, snackbar }
 }
