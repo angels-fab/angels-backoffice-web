@@ -89,7 +89,7 @@ export default function ReplyThread({ replies, isAdmin, user, busy, onCreate, on
                 </Box>
                 {editing ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-                    <RichBodyEditor value={editText} onChange={setEditText} ariaLabel="답글 수정" fontSize={typescale.body.size} minHeight={48} framed onCtrlEnter={() => void saveEdit(r)} />
+                    <RichBodyEditor value={editText} onChange={setEditText} ariaLabel="답글 수정" fontSize={typescale.body.size} minHeight={48} framed toolbar={false} onCtrlEnter={() => void saveEdit(r)} />
                     <Box sx={{ display: 'flex', gap: 0.5, justifyContent: 'flex-end' }}>
                       <Button size="small" onClick={() => setEditingId(null)} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
                       <Button size="small" variant="contained" color="success" onClick={() => saveEdit(r)} disabled={busy || !editText.trim()}>저장</Button>
@@ -115,7 +115,7 @@ export default function ReplyThread({ replies, isAdmin, user, busy, onCreate, on
               ariaLabel="답글 입력"
               fontSize={typescale.body.size}
               minHeight={48}
-              framed
+              framed toolbar={false}
               onCtrlEnter={() => void submit()}
             />
           </Box>

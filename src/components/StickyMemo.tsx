@@ -638,7 +638,7 @@ function StickyNote({ item, replies, pos, layerRef, canEdit, canDelete, user, on
                   ariaLabel="메모 내용"
                   fontSize={typescale.small.size}
                   minHeight={64}
-                  framed
+                  framed toolbar={false}
                   onCtrlEnter={() => void saveEdit()}
                 />
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
@@ -1030,7 +1030,7 @@ function PlainNote({ note, replies, pos, layerRef, mine, user, people, onMoveEnd
                   ariaLabel="메모 내용"
                   fontSize={typescale.small.size}
                   minHeight={64}
-                  framed
+                  framed toolbar={false}
                   onCtrlEnter={() => void save()}
                 />
                 <SharePicker people={people} value={eShared} onChange={setEShared} disabled={busy} />

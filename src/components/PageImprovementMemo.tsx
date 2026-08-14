@@ -228,7 +228,7 @@ function MemoRow({
                 ariaLabel="메모 내용"
                 fontSize={typescale.small.size}
                 minHeight={64}
-                framed
+                framed toolbar={false}
                 onCtrlEnter={() => void submitEdit()}
               />
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>

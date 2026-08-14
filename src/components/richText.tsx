@@ -458,13 +458,19 @@ export interface RichBodyEditorProps {
   onCtrlEnter?: () => void
   /** 축소 툴바(밑줄·취소선·들여쓰기·내어쓰기 숨김) — 짧은 코멘트용 */
   compact?: boolean
+  /**
+   * false = 서식 툴바를 아예 안 그린다(2026-08-14 사용자 지시 — 메모 수정란·답글).
+   * 짧은 글 입력엔 툴바가 자리만 먹는다. 서식 있는 옛 글은 그대로 보이고(에디터가 HTML 을 다루므로)
+   * Ctrl+B 같은 단축키도 살아 있다 — 버튼만 없앤 것.
+   */
+  toolbar?: boolean
 }
 
 /**
  * 공용 리치 본문 에디터(HTML in/out) — 공지·포털개선요청(게시글/답글)·데모 코멘트가 공유.
- * RichToolbar 항상 표시. 저장은 getHTML() → 표시는 utils/richBody의 RichBodyView.
+ * 저장은 getHTML() → 표시는 utils/richBody의 RichBodyView. 툴바는 toolbar=false 로 숨길 수 있다.
  */
-export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSize = 13, minHeight = 64, framed = false, onCtrlEnter, compact = false }: RichBodyEditorProps) {
+export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSize = 13, minHeight = 64, framed = false, onCtrlEnter, compact = false, toolbar = true }: RichBodyEditorProps) {
   const editor = useEditor({
     extensions: [
       Document, Paragraph, Text,
@@ -494,7 +500,7 @@ export function RichBodyEditor({ value, onChange, placeholder, ariaLabel, fontSi
         }),
       })}
     >
-      <RichToolbar editor={editor} compact={compact} />
+      {toolbar && <RichToolbar editor={editor} compact={compact} />}
       <Box
         sx={{
           '& .ProseMirror': {
