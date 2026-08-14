@@ -588,8 +588,8 @@ export default function Improve() {
             sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{user || '-'}</TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{fmtDate(todaySeoul())}</TableCell>
+        <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' },  textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{user || '-'}</TableCell>
+        <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' },  textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{fmtDate(todaySeoul())}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status="neutral" label="접수" /></TableCell>
         <TableCell sx={{ textAlign: 'center' }}>
           <Tooltip title="이 요청 삭제"><span><IconButton size="small" color="error" aria-label={`요청 ${idx + 1} 삭제`} onClick={() => removeCard(c.key)} disabled={savingDraft || publishing}><DeleteOutlineIcon sx={{ fontSize: iconSize.action }} /></IconButton></span></Tooltip>
@@ -644,8 +644,8 @@ export default function Improve() {
             sx={(th) => ({ ...inputSx(th), width: '100%', height: 32 })}
           />
         </TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{author}</TableCell>
-        <TableCell sx={{ textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
+        <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' },  textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size }}>{author}</TableCell>
+        <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' },  textAlign: 'center', color: 'text.secondary', fontSize: typescale.body.size, fontVariantNumeric: 'tabular-nums' }}>{dateStr}</TableCell>
         <TableCell sx={{ textAlign: 'center' }}><StatusChip status={stKind} label={stLabel} /></TableCell>
         <TableCell />
         {/* 작업 메모·더보기 열 자리(수정 중에는 비움) */}
@@ -852,15 +852,9 @@ export default function Improve() {
         />
       )}
 
-      {/* 헤더 건수 — 상태 칩이나 검색어가 걸려 있으면 '전체 N건 중 M건'으로 걸러진 상태임을 드러낸다.
-          필터가 없으면(빈 선택 = 전체 + 검색어 없음) 기존처럼 'N건'. */}
-      <ContentSection
-        title="개선요청 목록"
-        count={selected.size > 0 || query.trim() !== ''
-          ? `전체 ${items.length}건 중 ${listed.length}건`
-          : `${listed.length}건`}
-        last
-      >
+      {/* '개선요청 목록 N건' 라벨 삭제(2026-08-14 사용자 지시 — 공지와 같은 정리).
+          페이지 제목이 이미 '포털개선요청'이고 건수는 상태 칩이 상태별로 보여준다. */}
+      <ContentSection last>
         {/* 상태 필터 — 공용 FilterToolbar(공지와 동일 박스+검색+새글). 0건 상태 숨김·재클릭=전체·Shift=중복. */}
         <FilterToolbar
           label="상태"
@@ -970,8 +964,8 @@ export default function Improve() {
                 <TableCell align="center" sx={{ width: '1%' }}>번호</TableCell>
                 <TableCell align="center" sx={{ width: '1%' }}>개선위치</TableCell>
                 <TableCell align="left" sx={{ width: '100%' }}>제목</TableCell>
-                <TableCell align="center" sx={{ width: '1%' }}>작성자</TableCell>
-                <TableCell align="center" sx={{ width: '1%' }}>제안일자</TableCell>
+                <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' },  width: '1%' }}>작성자</TableCell>
+                <TableCell align="center" sx={{ display: { xs: 'none', lg: 'table-cell' },  width: '1%' }}>제안일자</TableCell>
                 <TableCell align="center" sx={{ width: '1%' }}>상태</TableCell>
                 <TableCell align="center" sx={{ width: '1%' }}>비고</TableCell>
                 {memoCol && <TableCell align="center" sx={{ width: '1%' }}>작업 메모</TableCell>}
@@ -1093,8 +1087,8 @@ export default function Improve() {
                         )}
                       </Box>
                     </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{t.author || '-'}</TableCell>
-                    <TableCell sx={{ fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>{fmtDate(t.date)}</TableCell>
+                    <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' },  color: 'text.secondary' }}>{t.author || '-'}</TableCell>
+                    <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' },  fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>{fmtDate(t.date)}</TableCell>
                     <TableCell onClick={stop} sx={{ cursor: editable ? 'pointer' : 'not-allowed' }}>
                       {editable ? (
                         <Select

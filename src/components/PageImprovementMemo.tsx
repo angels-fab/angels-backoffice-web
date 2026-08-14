@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
@@ -7,19 +7,22 @@ import Popover from '@mui/material/Popover'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
+import IconButton from '@mui/material/IconButton'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
+import Tooltip from '@mui/material/Tooltip'
 import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined'
-import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import EditIcon from '@mui/icons-material/Edit'
+import PushPinIcon from '@mui/icons-material/PushPin'
+import SendIcon from '@mui/icons-material/Send'
 import { alpha } from '@mui/material/styles'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
-import { addReply, patchReply, removeReply } from '@/store/slices/replySlice'
-import { updateImprovement, createReply, updateReply, deleteReply } from '@/api/improve'
+import { addReply } from '@/store/slices/replySlice'
+import { updateImprovement, createReply } from '@/api/improve'
 import type { ReplyRow } from '@/api/sheets'
 import { RichBodyView } from '@/utils/richBody'
 import { RichBodyEditor } from '@/components/richText'
@@ -27,8 +30,7 @@ import { useRole } from '@/auth/role'
 import { memosForPath, visibleMemos, firstLine } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
-import ReplyThread from '@/pages/Improve/ReplyThread'
-import { StatusChip, useSnack, ConfirmDialog } from '@/components/ds'
+import { StatusChip, useSnack } from '@/components/ds'
 import { IMP_STATUSES, impKind, needsReason, normStatus, isSettled } from '@/pages/Improve/improveMeta'
 import { radius, iconSize, typescale, weight } from '@/theme/tokens'
 
@@ -70,72 +72,42 @@ function MemoChip({ count, open, onToggle, anchorRef }: { count: number; open: b
   )
 }
 
-/** 답글 +N 칩 — 포털개선요청 게시판과 동일 디자인(파란색, 점 없음). 삭제 안 된 답글 수. */
-function ReplyCountChip({ count, onClick }: { count: number; onClick: () => void }) {
-  return (
-    <Box
-      component="button"
-      type="button"
-      onClick={onClick}
-      aria-label={`답글 ${count}건`}
-      sx={(th) => ({
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 18,
-        px: '7px',
-        borderRadius: `${radius.button}px`,
-        border: `1px solid ${alpha(th.palette.accent.blue, 0.4)}`,
-        bgcolor: alpha(th.palette.accent.blue, 0.14),
-        color: th.palette.accentText.blue,
-        font: 'inherit',
-        fontSize: typescale.caption.size,
-        fontWeight: weight.bold,
-        lineHeight: 1,
-        whiteSpace: 'nowrap',
-        cursor: 'pointer',
-        '&:hover': { bgcolor: alpha(th.palette.accent.blue, 0.22) },
-        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2 },
-      })}
-    >
-      답글 +{count}
-    </Box>
-  )
-}
-
-/** 메모 한 건 — 번호·제목·작성자·개선위치 + 답글 +N + 펼치면 내용·답글 통합 표시. */
+/**
+ * 메모 한 장 — **PC 붙임쪽지와 같은 모습**(2026-08-14 사용자 지시: "캡처화면처럼").
+ * 앰버 그라데이션 머리(전구·요청번호·상태칩·연필·핀) + 내용 + 작성자·위치·게시판 + 답글.
+ * 내용은 항상 펼쳐져 있다 — 쪽지에 접기가 없듯 여기도 펼치기 버튼이 없다.
+ *
+ * 여러 장이면 **직각으로 맞붙는다**: 첫 장만 위 모서리, 끝 장만 아래 모서리가 둥글고
+ * 맞붙는 변은 직각(사용자 지시). 겹치는 테두리는 mt -1px 로 한 줄로 합친다.
+ */
 function MemoRow({
-  t, replies, open, onToggle, onRemove, removing, isAdmin, user, replyBusy, onCreateReply, onEditReply, onRequestDeleteReply,
-  onStatusChange, savingStatus, onSaveContent,
+  t, replies, first, last, isAdmin, user, replyBusy, onCreateReply, onRemove, removing,
+  onStatusChange, savingStatus, onSaveContent, onGoBoard,
 }: {
   t: ImprovementItem
   replies: ReplyRow[]
-  open: boolean
-  onToggle: () => void
-  onRemove: () => void
-  removing: boolean
+  first: boolean
+  last: boolean
   isAdmin: boolean
   user: string | null
   replyBusy: boolean
   onCreateReply: (reqNum: string, content: string) => Promise<void>
-  onEditReply: (id: string, content: string) => Promise<void>
-  onRequestDeleteReply: (r: ReplyRow) => void
+  onRemove: () => void
+  removing: boolean
   onStatusChange: (status: string) => void
   savingStatus: boolean
   /** 본문 수정 저장 — 실패 시 throw(편집 상태를 유지해야 다시 시도할 수 있다) */
   onSaveContent: (body: string) => Promise<void>
+  onGoBoard: () => void
 }) {
   const st = normStatus(t.status)
-  /**
-   * 본문 수정(요청메모 91) — PC 는 붙임쪽지의 연필로 고치는데 그 레이어가 PC 전용이라
-   * 모바일(이 패널)에는 수정 길이 없었다. 쪽지와 같은 리치 에디터·같은 저장 경로를 그대로 쓴다.
-   */
   const [editing, setEditing] = useState(false)
   const [eContent, setEContent] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
+  const [reply, setReply] = useState('')
   const startEdit = () => {
     setEContent(t.content || t.title || '')
     setEditing(true)
-    if (!open) onToggle() // 접힌 채로는 에디터가 안 보인다 — 먼저 펼친다
   }
   const submitEdit = async () => {
     const body = eContent.trim()
@@ -150,35 +122,38 @@ function MemoRow({
       setSavingEdit(false)
     }
   }
-  /**
-   * 카드 어디를 눌러도 펼치기/접기(요청메모 91) — 종전엔 '펼치기' 버튼만 토글이라 44px 미만
-   * 과녁을 정확히 맞혀야 했다. 안의 버튼·선택칸 클릭은 토글로 번지면 안 되므로 걸러낸다
-   * (StickyMemo 의 isInteractive 와 같은 잣대). 펼친 본문(답글 입력 등)은 이 판 밖이다.
-   */
-  const onHeaderTap = (e: React.MouseEvent) => {
-    const el = e.target as HTMLElement
-    if (el.closest('button, input, textarea, a, [contenteditable], [role="combobox"]')) return
-    onToggle()
+  const sendReply = async () => {
+    const v = reply.trim()
+    if (!v || replyBusy) return
+    try {
+      await onCreateReply(t.num, v)
+      setReply('')
+    } catch {
+      /* 실패 스낵바는 부모가 — 입력은 남겨 다시 보낼 수 있게 */
+    }
   }
+  const corner = `${radius.card}px`
   return (
-    <Box sx={{ py: 1.25, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}>
-      {/* 두 줄 구성(2026-08-14 사용자 지시) — 제목줄엔 번호·제목만, 메타(작성자·위치·상태·버튼)는 아랫줄.
-          종전엔 한 줄 flexWrap 이라 제목이 짧으면 작성자가 제목 옆으로 올라와 붙었다(#85 에서 확인). */}
-      <Box onClick={onHeaderTap} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, cursor: 'pointer' }}>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
-        <Box component="span" sx={(th) => ({ flexShrink: 0, fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
+    <Box
+      sx={(th) => ({
+        border: `1px solid ${alpha(th.palette.accent.amber, 0.5)}`,
+        bgcolor: 'background.paper',
+        borderRadius: `${first ? corner : 0} ${first ? corner : 0} ${last ? corner : 0} ${last ? corner : 0}`,
+        mt: first ? 0 : '-1px',
+        overflow: 'hidden',
+      })}
+    >
+      <Box
+        sx={(th) => ({
+          display: 'flex', alignItems: 'center', gap: 0.75, px: 1.25, py: 1,
+          borderBottom: '1px solid', borderColor: 'divider',
+          background: `linear-gradient(100deg, ${alpha(th.palette.accent.amber, 0.13)}, transparent 70%)`,
+        })}
+      >
+        <LightbulbIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+        <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
           요청 #{t.num}
         </Box>
-        <Box component="span" sx={{ fontSize: typescale.body.size, fontWeight: weight.bold, color: 'text.primary', minWidth: 0, wordBreak: 'break-word' }}>{t.title}</Box>
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-        <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: typescale.caption.size, color: 'text.secondary' }}>
-          <PersonOutlineIcon sx={{ fontSize: iconSize.caption }} />{t.author || '-'}
-        </Box>
-        <Box component="span" sx={(th) => ({ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: typescale.caption.size, color: th.palette.accentText.blue, bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: `${radius.pill}px` })}>
-          <PlaceOutlinedIcon sx={{ fontSize: iconSize.caption }} />{t.loc || '-'}
-        </Box>
-        {/* 상태 — 메인 보드와 동일 값·색. 관리자는 여기서 바로 변경(보류·완료·불가는 확인 팝업). */}
         {isAdmin ? (
           <Select
             value={st}
@@ -195,77 +170,129 @@ function MemoRow({
         ) : (
           <StatusChip status={impKind(st)} label={st || '-'} />
         )}
-        {replies.length > 0 && <ReplyCountChip count={replies.length} onClick={onToggle} />}
-        <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
-          <Button size="small" onClick={startEdit} disabled={editing} sx={{ minWidth: 0, fontSize: typescale.small.size, color: 'text.secondary', px: 1 }}>
-            수정
-          </Button>
+        <Box sx={{ ml: 'auto', display: 'flex', gap: 0.25 }}>
+          {!editing && (
+            <Tooltip title="제목·내용 수정">
+              <IconButton size="small" aria-label="메모 수정" onClick={startEdit} sx={{ color: 'text.secondary', p: 0.5 }}>
+                <EditIcon sx={{ fontSize: iconSize.body }} />
+              </IconButton>
+            </Tooltip>
+          )}
+          <Tooltip title="메모 해제">
+            <span>
+              <IconButton size="small" aria-label="메모 해제" onClick={onRemove} disabled={removing} sx={(th) => ({ color: th.palette.accent.amber, p: 0.5 })}>
+                <PushPinIcon sx={{ fontSize: iconSize.body }} />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Box>
+      </Box>
+
+      <Box sx={{ px: 1.5, pt: 1.25, pb: 1.5 }}>
+        {editing ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <RichBodyEditor
+              value={eContent}
+              onChange={setEContent}
+              placeholder="내용"
+              ariaLabel="메모 내용"
+              fontSize={typescale.small.size}
+              minHeight={64}
+              framed
+              toolbar={false}
+              onCtrlEnter={() => void submitEdit()}
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+              <Button size="small" onClick={() => setEditing(false)} disabled={savingEdit} sx={{ color: 'text.secondary' }}>취소</Button>
+              <Button size="small" variant="contained" onClick={() => void submitEdit()} disabled={savingEdit || !eContent.trim()}>
+                {savingEdit ? '저장 중…' : '저장'}
+              </Button>
+            </Box>
+          </Box>
+        ) : (
+          <RichBodyView
+            html={t.content || t.title}
+            sx={{ fontSize: typescale.body.size, lineHeight: 1.65, color: 'text.primary', maxHeight: 200, overflowY: 'auto' }}
+          />
+        )}
+
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mt: 1.25 }}>
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: typescale.caption.size, color: 'text.secondary' }}>
+            <PersonOutlineIcon sx={{ fontSize: iconSize.caption }} />{t.author || '-'}
+          </Box>
+          <Box
+            component="span"
+            sx={(th) => ({
+              fontSize: typescale.caption.size, color: 'accentText.blue',
+              bgcolor: alpha(th.palette.accent.blue, 0.13), px: '7px', py: '2px', borderRadius: `${radius.pill}px`,
+            })}
+          >
+            {t.loc || '-'}
+          </Box>
           <Button
             size="small"
-            onClick={onToggle}
-            aria-expanded={open}
-            startIcon={open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-            sx={{ minWidth: 0, fontSize: typescale.small.size, color: 'text.secondary', px: 1 }}
+            endIcon={<OpenInNewIcon sx={{ fontSize: iconSize.caption }} />}
+            onClick={onGoBoard}
+            sx={{ ml: 'auto', minWidth: 0, px: 0.75, fontSize: typescale.caption.size, color: 'text.secondary' }}
           >
-            {open ? '접기' : '펼치기'}
-          </Button>
-          <Button size="small" color="warning" onClick={onRemove} disabled={removing} sx={{ minWidth: 0, fontSize: typescale.small.size, px: 1 }}>
-            메모 해제
+            게시판
           </Button>
         </Box>
-      </Box>
-      </Box>
-      {open && (
-        <Box sx={{ mt: 1 }}>
-          {/* 1·2: 개선요청 내용 — 수정 중엔 쪽지(StickyMemo)와 같은 리치 에디터.
-              평문 textarea 로 받으면 서식 있는 글의 태그가 그대로 드러난다 */}
-          {editing ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <RichBodyEditor
-                value={eContent}
-                onChange={setEContent}
-                placeholder="내용"
-                ariaLabel="메모 내용"
-                fontSize={typescale.small.size}
-                minHeight={64}
-                framed toolbar={false}
-                onCtrlEnter={() => void submitEdit()}
-              />
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
-                <Button size="small" onClick={() => setEditing(false)} disabled={savingEdit} sx={{ color: 'text.secondary' }}>취소</Button>
-                <Button size="small" variant="contained" onClick={() => void submitEdit()} disabled={savingEdit || !eContent.trim()}>
-                  {savingEdit ? '저장 중…' : '저장'}
-                </Button>
+
+        {replies.length > 0 && (
+          <Box sx={{ mt: 1.25, display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 132, overflowY: 'auto' }}>
+            {replies.map((r) => (
+              <Box key={r.id} sx={{ bgcolor: 'background.elevated', borderRadius: `${radius.chip}px`, px: 1, py: 0.75 }}>
+                <Box component="span" sx={{ fontSize: typescale.caption.size, fontWeight: weight.bold, color: 'text.primary', mr: 0.75 }}>
+                  {r.author || '-'}
+                </Box>
+                <RichBodyView html={r.content} sx={{ display: 'inline', fontSize: typescale.caption.size, color: 'text.secondary' }} />
               </Box>
-            </Box>
-          ) : (
-            <Box sx={{ fontSize: typescale.body.size, color: 'text.secondary', lineHeight: 1.7 }}>
-              {t.content ? <RichBodyView html={t.content} /> : '내용 없음'}
-            </Box>
-          )}
-          {/* 3·4·5·6: 답글 +N · 목록 · 입력창 · 등록 (게시판과 동일 데이터/컴포넌트) */}
-          <ReplyThread
-            replies={replies}
-            isAdmin={isAdmin}
-            user={user}
-            busy={replyBusy}
-            onCreate={(content) => onCreateReply(t.num, content)}
-            onEdit={onEditReply}
-            onRequestDelete={onRequestDeleteReply}
-          />
-        </Box>
-      )}
+            ))}
+          </Box>
+        )}
+
+        {user && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.25 }}>
+            <TextField
+              size="small"
+              fullWidth
+              value={reply}
+              onChange={(e) => setReply(e.target.value)}
+              // isComposing 검사가 없으면 한글 조합을 Enter 로 확정하는 순간 답글이 전송된다
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); void sendReply() } }}
+              placeholder="답글 달기"
+              disabled={replyBusy}
+              slotProps={{ htmlInput: { 'aria-label': '답글 입력' } }}
+              sx={{ '& .MuiInputBase-input': { fontSize: typescale.small.size, py: 0.75 } }}
+            />
+            <IconButton
+              size="small"
+              aria-label="답글 등록"
+              onClick={() => void sendReply()}
+              disabled={replyBusy || !reply.trim()}
+              sx={{ flexShrink: 0, bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.dark' } }}
+            >
+              <SendIcon sx={{ fontSize: iconSize.body }} />
+            </IconButton>
+          </Box>
+        )}
+      </Box>
     </Box>
   )
 }
 
 /**
  * 현재 경로의 개선 메모를 PageHeader에 결합하는 훅.
- * 반환: 제목 옆 칩 / 제목 아래 패널 / (스낵바·답글삭제 Dialog는 관리자에게 항상 렌더).
- * 게스트·메모 없음 → chip/panel은 null. 답글은 포털개선요청과 동일 시트·API·replySlice·ReplyThread 재사용.
+ * 반환: 제목 옆 칩 / 전구에 닻을 둔 팝오버(쪽지 모습 카드 묶음) / (상태변경 Dialog는 관리자에게 항상 렌더).
+ * 게스트·메모 없음 → chip/panel은 null.
+ *
+ * 카드 모습은 PC 붙임쪽지(StickyMemo)와 같다(2026-08-14 사용자 지시) — 답글도 쪽지처럼
+ * 단순 목록 + 한 줄 입력. 답글 수정·삭제는 게시판이 담당한다.
  */
 export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; snackbar: ReactNode } {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const { isAdmin, isMember, user, authKey } = useRole()
   const dispatch = useAppDispatch()
   const snack = useSnack()
@@ -273,12 +300,10 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const replyItems = useAppSelector((s) => s.reply.items)
 
   const [open, setOpen] = useState(false)
-  // 팝오버 닻 — 제목 옆 전구 칩(2026-08-14 팝오버 전환)
+  // 팝오버 닻 — 제목 옆 전구 칩
   const chipRef = useRef<HTMLButtonElement | null>(null)
-  const [openNum, setOpenNum] = useState<string | null>(null) // 내용+답글 통합 펼침 — 한 번에 하나만
   const [removingNum, setRemovingNum] = useState<string | null>(null)
   const [replyBusy, setReplyBusy] = useState(false)
-  const [delReply, setDelReply] = useState<ReplyRow | null>(null)
   const [savingStatusNum, setSavingStatusNum] = useState<string | null>(null)
   const [statusDlg, setStatusDlg] = useState<{ row: ImprovementItem; status: string; value: string } | null>(null)
 
@@ -292,7 +317,7 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
     return m
   }, [replyItems])
 
-  // ── 답글 (게시판과 동일 API·낙관적 업데이트 → 두 화면 즉시 동기화) ──
+  // 답글 등록 — 게시판과 동일 API·낙관적 업데이트(두 화면 즉시 동기화)
   const createReplyH = async (reqNum: string, content: string) => {
     if (!user || !authKey) { snack('로그인이 필요합니다.', 'error'); throw new Error('no-auth') }
     setReplyBusy(true)
@@ -305,34 +330,6 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
       setReplyBusy(false)
       snack(err instanceof Error ? err.message : '답글 등록 실패', 'error')
       throw err
-    }
-  }
-  const editReplyH = async (id: string, content: string) => {
-    if (!user || !authKey) { snack('로그인이 필요합니다.', 'error'); throw new Error('no-auth') }
-    setReplyBusy(true)
-    try {
-      const { edited } = await updateReply({ author: user, key: authKey, id, content })
-      dispatch(patchReply({ id, content, edited: edited || `${todaySeoul()} 00:00` }))
-      setReplyBusy(false)
-      snack('답글을 수정했습니다.', 'success')
-    } catch (err) {
-      setReplyBusy(false)
-      snack(err instanceof Error ? err.message : '답글 수정 실패', 'error')
-      throw err
-    }
-  }
-  const confirmDelReply = async () => {
-    if (!delReply || !user || !authKey) return
-    setReplyBusy(true)
-    try {
-      await deleteReply({ author: user, key: authKey, id: delReply.id })
-      dispatch(removeReply(delReply.id))
-      setReplyBusy(false)
-      setDelReply(null)
-      snack('답글을 삭제했습니다.', 'success')
-    } catch (err) {
-      setReplyBusy(false)
-      snack(err instanceof Error ? err.message : '답글 삭제 실패', 'error')
     }
   }
 
@@ -364,49 +361,34 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   }
 
   // 개선 메모를 볼 수 있는 사람 = 로그인한 구성원. 무엇이 보이는지는 memos(작성자 본인 + 관리자)가 가른다.
-  // 종전에는 유지보수자(조성범) 1인 전용이었는데, 자기 메모는 본인이 봐야 한다는 지시로 기준을 옮겼다(2026-08-05).
   const admin = isMember && !!authKey
-  // 답글 삭제 + 상태변경 확인 Dialog — 유지보수자에게 항상 렌더(패널 상태와 무관). 스낵바는 전역 useSnack.
+  // 상태변경 확인 Dialog — 관리자에게 항상 렌더(패널 상태와 무관). 스낵바는 전역 useSnack.
   const snackbar = admin ? (
-    <>
-      <ConfirmDialog
-        open={!!delReply}
-        destructive
-        title="답글을 삭제할까요?"
-        description="삭제하면 목록과 답글 수에서 제외됩니다."
-        confirmLabel="삭제"
-        busy={replyBusy}
-        onConfirm={confirmDelReply}
-        onClose={() => setDelReply(null)}
-      />
-      {/* 상태 변경 확인(보류·완료·불가) — 보류·불가는 사유 입력 */}
-      <Dialog open={!!statusDlg} onClose={() => savingStatusNum === null && setStatusDlg(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
-        <DialogTitle>상태를 '{statusDlg?.status}'(으)로 변경할까요?</DialogTitle>
-        <DialogContent>
-          <Box sx={{ fontSize: typescale.body.size, color: 'text.secondary', mb: statusDlg && needsReason(statusDlg.status) ? 1.5 : 0 }}>「{statusDlg?.row.title}」</Box>
-          {statusDlg && needsReason(statusDlg.status) && (
-            <TextField
-              autoFocus fullWidth multiline minRows={3}
-              value={statusDlg.value}
-              onChange={(e) => setStatusDlg((p) => (p ? { ...p, value: e.target.value } : p))}
-              placeholder={`${statusDlg.status} 사유를 입력해주세요.`}
-              disabled={savingStatusNum !== null}
-            />
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setStatusDlg(null)} disabled={savingStatusNum !== null} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button variant="contained" onClick={applyStatusDlg} disabled={savingStatusNum !== null}>{savingStatusNum !== null ? '변경 중…' : '변경'}</Button>
-        </DialogActions>
-      </Dialog>
-    </>
+    <Dialog open={!!statusDlg} onClose={() => savingStatusNum === null && setStatusDlg(null)} fullWidth maxWidth="xs" slotProps={{ paper: { sx: { bgcolor: 'background.paper' } } }}>
+      <DialogTitle>상태를 '{statusDlg?.status}'(으)로 변경할까요?</DialogTitle>
+      <DialogContent>
+        <Box sx={{ fontSize: typescale.body.size, color: 'text.secondary', mb: statusDlg && needsReason(statusDlg.status) ? 1.5 : 0 }}>「{statusDlg?.row.title}」</Box>
+        {statusDlg && needsReason(statusDlg.status) && (
+          <TextField
+            autoFocus fullWidth multiline minRows={3}
+            value={statusDlg.value}
+            onChange={(e) => setStatusDlg((p) => (p ? { ...p, value: e.target.value } : p))}
+            placeholder={`${statusDlg.status} 사유를 입력해주세요.`}
+            disabled={savingStatusNum !== null}
+          />
+        )}
+      </DialogContent>
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={() => setStatusDlg(null)} disabled={savingStatusNum !== null} sx={{ color: 'text.secondary' }}>취소</Button>
+        <Button variant="contained" onClick={applyStatusDlg} disabled={savingStatusNum !== null}>{savingStatusNum !== null ? '변경 중…' : '변경'}</Button>
+      </DialogActions>
+    </Dialog>
   ) : null
 
-  // 게스트 또는 이 페이지에 메모 없음 → 칩·패널 미표시(스낵바·Dialog만 유지)
+  // 게스트 또는 이 페이지에 메모 없음 → 칩·패널 미표시(Dialog만 유지)
   if (!admin || memos.length === 0) return { chip: null, panel: null, snackbar }
 
-  const toggleOpen = () => setOpen((o) => { const next = !o; if (next) setOpenNum(null); return next })
-  const toggleRow = (num: string) => setOpenNum((prev) => (prev === num ? null : num))
+  const toggleOpen = () => setOpen((o) => !o)
 
   // 본문 수정 저장 — 쪽지(StickyMemo saveEdit)와 같은 규칙: 게시판 제목은 내용 첫 줄에서 다시 만든다
   const saveContent = async (t: ImprovementItem, body: string) => {
@@ -438,9 +420,8 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const chip = <MemoChip count={memos.length} open={open} onToggle={toggleOpen} anchorRef={chipRef} />
 
   /**
-   * 팝오버로 띄운다(2026-08-14 사용자 지시) — 종전엔 제목 아래 인라인이라 패널을 열면
-   * 공지 목록 전체가 그만큼 아래로 밀렸다. 팝오버는 떠 있어서 목록이 한 픽셀도 안 움직인다.
-   * 세로는 화면의 70%까지, 넘치면 팝오버 안에서 스크롤.
+   * 팝오버(2026-08-14) — 인라인이면 패널을 열 때 목록 전체가 밀린다. 카드가 쪽지 모습을
+   * 갖췄으므로 팝오버 종이는 **투명 틀**이 된다: 테두리·배경 없이 카드 묶음만 띄운다.
    */
   const panel = (
     <Popover
@@ -452,47 +433,38 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
       disableScrollLock
       slotProps={{
         paper: {
-          sx: (th) => ({
+          sx: {
             mt: 1,
             width: 'min(calc(100vw - 24px), 520px)',
             maxHeight: '70vh',
             overflowY: 'auto',
-            border: `1px solid ${alpha(th.palette.accent.amber, 0.35)}`,
+            bgcolor: 'transparent',
+            backgroundImage: 'none',
+            boxShadow: 'none', // design-lint-ok(shadow): 그림자 부여가 아니라 제거 — 팝오버 종이를 투명 틀로 만들어 쪽지 카드만 띄운다
             borderRadius: `${radius.card}px`,
-            // 인라인 시절의 앰버 그라데이션을 그대로 가져왔더니 뒤 목록이 비쳐 보였다(사용자 지적
-            // 2026-08-14). background 단축속성이 배경색을 지우는데 그라데이션 시작이 10% 앰버라
-            // 반투명 창이 됐던 것. 떠 있는 표면은 **불투명**이 원칙 — 코멘트 팝업과 같은 elevated.
-            bgcolor: 'background.elevated',
-          }),
+          },
         },
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.75, py: 1, borderBottom: '1px solid', borderColor: (th) => alpha(th.palette.accent.amber, 0.18) }}>
-        <Box sx={(th) => ({ fontSize: typescale.small.size, fontWeight: weight.heavy, color: th.palette.accentText.amber })}>이 화면에서 확인할 개선요청</Box>
-        <Button size="small" onClick={() => setOpen(false)} sx={{ minWidth: 0, fontSize: typescale.small.size, color: 'text.secondary', px: 1 }}>접기</Button>
-      </Box>
-      <Box sx={{ px: 1.75 }}>
-        {memos.map((t) => (
-          <MemoRow
-            key={t.num}
-            t={t}
-            replies={repliesByReq[t.num] || []}
-            open={openNum === t.num}
-            onToggle={() => toggleRow(t.num)}
-            onRemove={() => void removeMemo(t)}
-            removing={removingNum === t.num}
-            isAdmin={isAdmin}
-            user={user}
-            replyBusy={replyBusy}
-            onCreateReply={createReplyH}
-            onEditReply={editReplyH}
-            onRequestDeleteReply={(r) => setDelReply(r)}
-            onStatusChange={(status) => onStatusChange(t, status)}
-            onSaveContent={(body) => saveContent(t, body)}
-            savingStatus={savingStatusNum === t.num}
-          />
-        ))}
-      </Box>
+      {memos.map((t, i) => (
+        <MemoRow
+          key={t.num}
+          t={t}
+          replies={repliesByReq[t.num] || []}
+          first={i === 0}
+          last={i === memos.length - 1}
+          isAdmin={isAdmin}
+          user={user}
+          replyBusy={replyBusy}
+          onCreateReply={createReplyH}
+          onRemove={() => void removeMemo(t)}
+          removing={removingNum === t.num}
+          onStatusChange={(status) => onStatusChange(t, status)}
+          onSaveContent={(body) => saveContent(t, body)}
+          savingStatus={savingStatusNum === t.num}
+          onGoBoard={() => { setOpen(false); navigate('/improve') }}
+        />
+      ))}
     </Popover>
   )
 
