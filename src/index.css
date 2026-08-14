@@ -1034,7 +1034,9 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
   .fc-theme-angels .fc-scrollgrid{border-left:0}
   .fc-theme-angels th:last-child,.fc-theme-angels td:last-child{border-right:0}
   .fc-theme-angels .fc-list{border-left:0;border-right:0}
-  .fc-team .fc-dayGridMonth-view .fc-daygrid-event{padding:2px 3px 2px 5px;border-width:0 0 0 2px}
+  /* 좌측 띠 제거(요청메모 84) — 66px 칸에서 띠+안여백 7px이 글자 두 자 몫이었다.
+     색은 40% 배경(index.tsx, C안)이 대신 나른다. */
+  .fc-team .fc-dayGridMonth-view .fc-daygrid-event{padding:2px 3px;border-width:0}
   .fc-team .fc-dayGridMonth-view .fc-daygrid-day-number{font-size:12px;letter-spacing:-0.05em}
   /* 목록 뷰 — 기본 td 여백 8/14px은 375px 화면에서 제목칸을 크게 깎는다 */
   .fc-team .fc-list-table td{padding:7px 8px}

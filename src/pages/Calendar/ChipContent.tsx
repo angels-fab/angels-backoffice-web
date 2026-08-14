@@ -66,6 +66,11 @@ export interface ChipContentProps {
    * 시간은 FullCalendar 가 왼쪽 셀에 따로 그리고, 그 셀을 12px로 줄여 제목칸이 넓어진 만큼 쓴다.
    */
   catChip?: boolean
+  /**
+   * 제목만 한 줄(2026-08-14 사용자 지시 — 모바일 월간). 아이콘·시간을 지워 66px 칸을 제목이
+   * 전부 쓴다. 숨긴 정보는 탭하면 뜨는 상세 카드가 보여 준다(EventPopover).
+   */
+  titleOnly?: boolean
 }
 
 /** 이름이 보이는 알약형 칩(첫 해당자·주간 전체) */
@@ -124,7 +129,7 @@ function NameRow({ participants }: { participants: Participant[] }) {
   )
 }
 
-export default function ChipContent({ participants, catKey, catColor, time, title, variant = 'daygrid', multiDay, compact, catChip }: ChipContentProps) {
+export default function ChipContent({ participants, catKey, catColor, time, title, variant = 'daygrid', multiDay, compact, catChip, titleOnly }: ChipContentProps) {
   const Icon = CAT_ICON[catKey]
   // 아이콘 색은 채움색(catColor)이 아니라 글자용 짝 — 자기 색 18% 틴트 위에 원색을 얹으면
   // 라이트에서 2.0:1(비문자 기준 3:1 미달)로 사라진다. 칩에 종류 '글자'가 없어 이 아이콘이 유일한 표식.
@@ -244,6 +249,15 @@ export default function ChipContent({ participants, catKey, catColor, time, titl
   //  · 해당자는 안 그린다 — 윗줄 예산 52px이 아이콘 13 + 시간 30 + 간격 3 = 46px으로 이미 찬다.
   //    (색점 3개를 더하면 71px로 넘친다 — 시안에서 실측 확인)
   if (compact) {
+    // 제목만 한 줄(모바일 월간, 2026-08-14) — 아이콘·시간을 지우고 칸 전체를 제목이 쓴다.
+    // 숨긴 정보는 탭하면 뜨는 상세 카드가 보여 준다. 당일/멀티데이 구분 없이 같은 모양.
+    if (titleOnly) {
+      return (
+        <Box ref={rootRef} sx={{ display: 'flex', alignItems: 'center', minWidth: 0, width: '100%', overflow: 'hidden' }}>
+          <Box component="span" sx={titleSx}>{title}</Box>
+        </Box>
+      )
+    }
     const cIconSx = { ...iconSx, fontSize: iconSize.caption }
     // 구간 막대 / 낮은 시간일정(2줄이 잘리는 높이)은 1줄로
     if ((variant === 'daygrid' && multiDay) || (variant === 'timed' && !twoLine)) {

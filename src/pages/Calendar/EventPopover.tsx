@@ -24,6 +24,11 @@ interface Props {
   locked?: boolean
   /** 수정 진입(관리자·고정 상태에서만 버튼 노출) — 부모가 작성 모달을 연다 */
   onEdit?: () => void
+  /**
+   * 탭한 칩의 좌상단(viewport 좌표) — 주면 카드가 **그 자리에 좌상단을 고정하고 우하단으로
+   * 피어나는** 모양이 된다(2026-08-14 사용자 지시, 모바일 월간). 없으면 종전 마우스 기준 배치.
+   */
+  anchorRect?: { left: number; top: number }
 }
 
 /**
@@ -32,7 +37,7 @@ interface Props {
  * 호버 상태에서는 pointer-events:none 으로 포인터를 가리지 않아 hover가 반복 해제되지 않는다.
  * 닫기는 부모가 담당(호버 leave / 바깥 클릭 / Esc / 같은 일정 재클릭).
  */
-export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
+export default function EventPopover({ detail, x, y, locked, onEdit, anchorRect }: Props) {
   const ref = useRef<HTMLDivElement | null>(null)
   const [pos, setPos] = useState<{ left: number; top: number; ready: boolean }>({ left: x + 14, top: y + 16, ready: false })
 
@@ -41,6 +46,31 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
     if (!el) return
     const r = el.getBoundingClientRect()
     const m = 10
+    if (anchorRect) {
+      /* 칩 자리에서 피어나는 카드(모바일 월간) — 좌상단을 칩 좌상단에 두고 우하단으로 커진다.
+         화면 가장자리에선 카드를 안으로 당기되, transform-origin 을 원래 칩 지점으로 보정해
+         시각적으로는 여전히 칩에서 피어난다.
+         크기는 transform 무시 값(offsetWidth/Height)으로 잰다 — 개발모드 효과 재실행이
+         확대 애니메이션 도중의 축소된 rect(75px)를 읽으면 경계 보정이 풀려 카드가 삐져나간다(실측). */
+      el.getAnimations().forEach((a) => a.cancel())
+      const w = el.offsetWidth
+      const h = el.offsetHeight
+      let left = anchorRect.left
+      let top = anchorRect.top
+      if (left + w > window.innerWidth - m) left = window.innerWidth - m - w
+      if (left < m) left = m
+      if (top + h > window.innerHeight - m) top = window.innerHeight - m - h
+      if (top < m) top = m
+      el.style.transformOrigin = `${Math.max(0, anchorRect.left - left)}px ${Math.max(0, anchorRect.top - top)}px`
+      setPos({ left, top, ready: true })
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        el.animate(
+          [{ transform: 'scale(0.25)', opacity: 0.3 }, { transform: 'scale(1)', opacity: 1 }],
+          { duration: 200, easing: 'ease-out' },
+        )
+      }
+      return
+    }
     let left = x + 14 // 포인터 오른쪽으로 살짝 띄움
     let top = y + 16
     if (left + r.width > window.innerWidth - m) left = x - r.width - 14 // 오른쪽 공간 부족 → 포인터 왼쪽
@@ -49,7 +79,7 @@ export default function EventPopover({ detail, x, y, locked, onEdit }: Props) {
     if (top + r.height > window.innerHeight - m) top = y - r.height - 12 // 아래 공간 부족 → 위로 뒤집기
     if (top < m) top = m
     setPos({ left, top, ready: true })
-  }, [x, y, detail])
+  }, [x, y, detail, anchorRect])
 
   return (
     <Box
