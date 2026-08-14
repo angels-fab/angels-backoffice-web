@@ -35,8 +35,9 @@ export function AppRouter() {
         {/* 장비관리 — 팀원 이상 열람(편집은 페이지 내 관리자 게이트). 유관자 제한열람은 추후 */}
         <Route path="/equipment" element={<RequireMember><Equipment /></RequireMember>} />
         <Route path="/equipment-ops" element={<RequireMember><EquipmentOps /></RequireMember>} />
-        {/* 마일스톤(팹 구축~개소 실행계획 현황판) — 팀원 이상 열람, 상태 편집은 관리자 */}
-        <Route path="/milestone" element={<RequireMember><Milestone /></RequireMember>} />
+        {/* 마일스톤(팹 구축~개소 실행계획 현황판) — 게스트 포함 로그인 전원 열람(개선요청 90),
+            편집은 페이지 안에서 isMember 게이트 + RLS(member+)가 이중으로 막는다 */}
+        <Route path="/milestone" element={<RequireAuth><Milestone /></RequireAuth>} />
         {/* 행사·바로가기 — 로그인(유관자 포함) 열람 */}
         <Route path="/links" element={<RequireAuth><Links /></RequireAuth>} />
         <Route path="/improve" element={<RequireMember><Improve /></RequireMember>} />

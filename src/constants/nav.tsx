@@ -47,7 +47,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { icon: <CalendarMonthIcon />, label: '업무일정', path: '/calendar', team: true },
       { icon: <AssessmentIcon />, label: '업무현황', path: '/work', badgeKey: 'work', team: true },
       { icon: <MonitorIcon />, label: '장비관리', path: '/equipment', team: true },
-      { icon: <FlagIcon />, label: '마일스톤', path: '/milestone', team: true, wip: true },
+      // 게스트 포함 로그인 전원 열람(개선요청 90) — team 플래그 제거, 편집은 페이지 내 isMember 게이트
+      { icon: <FlagIcon />, label: '마일스톤', path: '/milestone', wip: true },
     ],
   },
   {

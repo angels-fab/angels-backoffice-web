@@ -12,6 +12,7 @@ import MonitorIcon from '@mui/icons-material/Monitor'
 import FlagIcon from '@mui/icons-material/Flag'
 import CoPresentIcon from '@mui/icons-material/CoPresent'
 import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined'
+import LocalLibraryIcon from '@mui/icons-material/LocalLibrary'
 import LinkIcon from '@mui/icons-material/Link'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
@@ -68,8 +69,10 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
   // 장비·개선요청 = 팀원 이상 / 행사·바로가기 = 유관자 포함 전체 로그인
   const rows: NavRow[] = [
     { icon: <MonitorIcon />, label: '장비관리', path: '/equipment', memberOnly: true },
-    { icon: <FlagIcon />, label: '마일스톤', path: '/milestone', memberOnly: true, wip: true },
+    // 마일스톤 = 게스트 포함 로그인 전원 열람(개선요청 90) — memberOnly 해제
+    { icon: <FlagIcon />, label: '마일스톤', path: '/milestone', wip: true },
     { icon: <LightbulbOutlinedIcon />, label: '포털개선요청', path: '/improve', badge: badges.improve, memberOnly: true },
+    { icon: <LocalLibraryIcon />, label: '자료실', path: '/resources', memberOnly: true },
     { icon: <CoPresentIcon />, label: '학술·교육·전시', path: '/events' },
     { icon: <LinkIcon />, label: '바로가기', path: '/links' },
   ].filter((r) => !r.memberOnly || isMember)
