@@ -94,10 +94,10 @@ function renderEventContent(arg: EventContentArg, isMobile: boolean) {
   // 칩(제목 셀) 안에서 시간을 또 표시하면 중복 노출됨 → 목록에서는 칩 시간 생략.
   const time = arg.view.type === 'listMonth' ? '' : chip.time
   // 모바일 월간·주간은 칸이 좁아 2줄 배치(compact). 목록은 행이 가로로 넓으니 종류칩 배치(catChip).
-  const compact = isMobile && (arg.view.type === 'dayGridMonth' || arg.view.type === 'timeGridWeek')
+  const compact = isMobile && (arg.view.type === 'dayGridMonth' || arg.view.type === 'dayGridCont' || arg.view.type === 'timeGridWeek')
   const catChip = arg.view.type === 'listMonth'
-  // 모바일 월간·주간은 **제목만**(2026-08-14 사용자 지시) — 아이콘·시간은 탭하면 뜨는 상세 카드로.
-  // 월간은 한 줄, 주간 시간일정은 칸이 세로로 넉넉하면 두 줄까지(ChipContent titleOnly).
+  // 모바일 월간(연속 스크롤 dayGridCont 포함)·주간은 **제목만**(2026-08-14 사용자 지시) —
+  // 아이콘·시간은 탭하면 뜨는 상세 카드로. 월간 한 줄, 주간 시간일정은 넉넉하면 두 줄(titleOnly).
   const titleOnly = compact
   return (
     <Box sx={{ display: 'flex', width: '100%', minWidth: 0 }}>
@@ -167,8 +167,19 @@ export default function Calendar() {
   const swipe = useRef<{ id: number; x0: number; y0: number; mode: 'pending' | 'h' | 'off'; dx: number } | null>(null)
   /** 방금 스와이프한 방향(1=다음, -1=이전) — datesSet 에서 새 기간이 밀려 들어오는 효과를 한 번 준다(요청메모 82) */
   const swipeFx = useRef(0)
-  /** 모바일 월간 달력 고정 높이(px) — 한 달이 한 페이지에 꽉 차게(2026-08-15 사용자 지시). null=auto */
+  /** 나가기 애니메이션(fill:forwards) — 새 기간 재렌더까지 화면 밖에 잡아 둔다. datesSet 진입 직전 cancel.
+      (fill 없이는 나가기 종료→재렌더 사이에 옛 달이 제자리로 튀어 한 프레임 번쩍였다 — "버벅임", 2026-08-15) */
+  const exitAnim = useRef<Animation | null>(null)
+  /** 모바일 월간 달력 고정 높이(px) — 세로 연속 스크롤의 창 높이(2026-08-15 사용자 지시). null=auto */
   const [fitH, setFitH] = useState<number | null>(null)
+  /** 모바일 월간 연속 스크롤 창 — anchor 달 기준 뒤로 back달·앞으로 fwd달을 이어 그린다.
+      가장자리에 닿으면 한 달씩 늘려 "아래로 내리면 9월이 이어지는" 구글식 무한 스크롤(2026-08-15) */
+  const [contWin, setContWin] = useState({ back: 1, fwd: 3 })
+  /** 위쪽으로 달을 붙이기 직전의 scrollHeight — 렌더 후 그 증가분만큼 scrollTop 을 보정(점프 방지) */
+  const prependFix = useRef<number | null>(null)
+  /** 스크롤 위치의 달 라벨(예: '9월') — 연속 스크롤에선 anchor 가 아니라 화면 위 첫 칸이 기준 */
+  const [contLabel, setContLabel] = useState('')
+  const contScrollRaf = useRef(0) // 마지막 스크롤 처리 시각(ms) — 80ms 시간 스로틀
   /** 효과를 걸 달력 래퍼 — FullCalendar DOM 이 아니라 우리 상자를 움직인다(FC 재렌더와 안 얽히게) */
   const calBoxRef = useRef<HTMLDivElement | null>(null)
 
@@ -332,15 +343,77 @@ export default function Calendar() {
     }
   }, [])
 
-  // 뷰/기준일 변경 시 FullCalendar 동기화 (월=dayGridMonth / 주(시간표)=timeGridWeek).
+  // 뷰/기준일 변경 시 FullCalendar 동기화 (월=dayGridMonth, 모바일 월=dayGridCont(연속) / 주=timeGridWeek).
   // changeView는 flushSync를 유발하므로 렌더 단계 밖(setTimeout)에서 호출.
   useEffect(() => {
-    const fcView = view === 'month' ? 'dayGridMonth' : view === 'agenda' ? 'listMonth' : view === 'day' ? 'timeGridDay' : 'timeGridWeek'
+    const fcView = view === 'month' ? (isMobile ? 'dayGridCont' : 'dayGridMonth') : view === 'agenda' ? 'listMonth' : view === 'day' ? 'timeGridDay' : 'timeGridWeek'
     const id = setTimeout(() => {
       calRef.current?.getApi().changeView(fcView, keyOf(anchor))
     }, 0)
     return () => clearTimeout(id)
-  }, [anchor, view])
+  }, [anchor, view, isMobile])
+
+  // 연속 스크롤 범위 — anchor 달 -back ~ +fwd (yyyy-MM-dd). anchor 가 바뀌면 창을 초기화.
+  const contRange = useMemo(() => ({
+    start: keyOf(new Date(anchor.getFullYear(), anchor.getMonth() - contWin.back, 1)),
+    end: keyOf(new Date(anchor.getFullYear(), anchor.getMonth() + contWin.fwd, 1)),
+  }), [anchor, contWin])
+  useEffect(() => { setContWin({ back: 1, fwd: 3 }) }, [anchor])
+
+  // 진입·anchor 변경 시 anchor 달의 첫 주가 창 맨 위로 오게 스크롤(FC 재렌더를 기다렸다가)
+  useEffect(() => {
+    if (!(isMobile && view === 'month')) return
+    const t = setTimeout(() => {
+      const box = calBoxRef.current
+      if (!box) return
+      const ym = keyOf(anchor).slice(0, 7)
+      // 1일이 주말이면 칸이 없다(주말 숨김 5열) — 그 달의 첫 **보이는** 날을 찾는다
+      let row: Element | null = null
+      for (let d = 1; d <= 4 && !row; d++) {
+        row = box.querySelector(`[data-date="${ym}-${String(d).padStart(2, '0')}"]`)?.closest('tr') ?? null
+      }
+      if (row) {
+        const delta = row.getBoundingClientRect().top - box.getBoundingClientRect().top - 30 // 30 = 요일 헤더 몫
+        box.scrollTop += delta
+      }
+      setContLabel(`${anchor.getMonth() + 1}월`)
+    }, 80)
+    return () => clearTimeout(t)
+  }, [isMobile, view, anchor])
+
+  // 스크롤 — ① 위 첫 칸의 달로 라벨 갱신 ② 가장자리에서 창 확장(위는 scrollTop 보정으로 점프 방지).
+  // rAF 스로틀은 백그라운드 탭·헤드리스에서 멈추므로 시간 스로틀(80ms)로.
+  const onContScroll = () => {
+    if (!(isMobile && view === 'month')) return
+    const now = performance.now()
+    if (now - contScrollRaf.current < 80) return
+    contScrollRaf.current = now
+    const box = calBoxRef.current
+    if (!box) return
+    const br = box.getBoundingClientRect()
+    const cell = document.elementFromPoint(br.left + br.width / 2, br.top + 46)?.closest('[data-date]')
+    const d = cell?.getAttribute('data-date')
+    if (d) {
+      const label = `${Number(d.slice(5, 7))}월`
+      setContLabel((p) => (p === label ? p : label))
+    }
+    if (box.scrollTop < 150 && contWin.back < 12 && prependFix.current === null) {
+      prependFix.current = box.scrollHeight
+      setContWin((w) => ({ ...w, back: w.back + 1 }))
+    } else if (box.scrollHeight - box.scrollTop - box.clientHeight < 300 && contWin.fwd < 24) {
+      setContWin((w) => ({ ...w, fwd: w.fwd + 1 }))
+    }
+  }
+  // 위로 붙인 달만큼 scrollTop 보정 — 보정 전 프레임이 그려지지 않게 layout 단계에서
+  useLayoutEffect(() => {
+    if (prependFix.current === null) return
+    const t = setTimeout(() => {
+      const box = calBoxRef.current
+      if (box && prependFix.current !== null) box.scrollTop += box.scrollHeight - prependFix.current
+      prependFix.current = null
+    }, 0)
+    return () => clearTimeout(t)
+  }, [contWin.back])
 
   // 뷰·기간·필터 변경 시 열려있던 상세 닫기(스테일 방지)
   useEffect(() => {
@@ -542,9 +615,10 @@ export default function Calendar() {
 
   // 툴바 왼쪽 짧은 라벨 — 뷰 전환 버튼 좌측에 굵게(사용자 지시 2026-08-09).
   // 일간은 어느 날에 들어와 있는지가 핵심이라 날짜·요일까지 쓴다.
+  // 모바일 월간(연속 스크롤)은 anchor 가 아니라 **화면 위 첫 칸의 달**(contLabel)이 진실.
   const shortLabel = view === 'day'
     ? `${anchor.getMonth() + 1}월 ${anchor.getDate()}일 (${'일월화수목금토'[anchor.getDay()]})`
-    : `${anchor.getMonth() + 1}월`
+    : (isMobile && view === 'month' && contLabel) || `${anchor.getMonth() + 1}월`
 
   const periodLabel = useMemo(() => {
     if (view === 'day') return `${anchor.getFullYear()}년 ${anchor.getMonth() + 1}월 ${anchor.getDate()}일`
@@ -707,14 +781,16 @@ export default function Calendar() {
           // 브라우저가 페이지 가로 패닝(.page{overflow-x:auto})을 가져가며 pointercancel 이 떨어져 스와이프가 죽는다.
           // 모바일은 페이지 좌우 여백(16px)을 상쇄해 화면 끝까지 채운다(요청메모 82 — 구글캘린더처럼).
           // 뷰마다 폭이 널뛰지 않게 월간만이 아니라 달력 전체에 준다. 외곽 세로선 제거는 index.css 모바일 블록.
-          sx={{ touchAction: isMobile ? 'pan-y' : undefined, mx: { xs: `-${layout.pageXMobile}px`, shell: 0 }, height: fitH ? `${fitH}px` : 'auto' }}
+          sx={{ touchAction: isMobile ? 'pan-y' : undefined, mx: { xs: `-${layout.pageXMobile}px`, shell: 0 }, height: fitH ? `${fitH}px` : 'auto', overflowY: fitH ? 'auto' : undefined, overscrollBehaviorY: fitH ? 'contain' : undefined }}
+          onScroll={onContScroll}
           // 새 일정 제스처(월간·구성원): 빈 날짜 칸을 누르는 순간 '(새 일정)' 막대 생성 → 드래그로 기간 확장 → 놓으면 모달.
           // 사용자 확정: "누를 때부터 막대" — 셀 틴트(FC selectable) 대신 임시 일정 막대가 처음부터 보인다.
           onPointerDown={(e) => {
             // 기간 이동 스와이프 등록 — **일정 위에서 시작해도** 등록한다(2026-08-15 사용자 지적:
             // 일정에서 시작한 스와이프가 상세를 열어버림). 탭이면 pending 그대로 끝나 click 이 진행되고,
             // 가로로 끌리면 h 로 확정되며 이후 click 은 dragClickSuppress 가 삼킨다.
-            if (isMobile && e.pointerType !== 'mouse') {
+            // 월간(모바일)은 세로 연속 스크롤이 내비게이션(2026-08-15) — 가로 스와이프는 주간·목록만
+            if (isMobile && e.pointerType !== 'mouse' && view !== 'month') {
               swipe.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, mode: 'pending', dx: 0 }
             }
             // 모바일 월간은 이 제스처를 쓰지 않는다 — 날짜를 누르면 그날 시간표로 들어가는 쪽으로 바뀌었다(onClick)
@@ -755,8 +831,9 @@ export default function Calendar() {
                     else {
                       const exit = el.animate(
                         [{ transform: `translateX(${sw.dx * 0.9}px)` }, { transform: `translateX(${-dir * w}px)` }],
-                        { duration: 150, easing: 'ease-in' },
+                        { duration: 150, easing: 'ease-in', fill: 'forwards' },
                       )
+                      exitAnim.current = exit
                       exit.onfinish = go
                       setTimeout(go, 200) // 애니메이션이 씹혀도 달은 넘어가게(안전망)
                     }
@@ -966,6 +1043,10 @@ export default function Calendar() {
               const dir = swipeFx.current
               swipeFx.current = 0
               const el = calBoxRef.current
+              // 화면 밖에 잡아 두던 나가기(fill:forwards)를 여기서 풀고 곧바로 들어오기 시작 —
+              // 같은 프레임에 이어져 옛 달이 제자리로 튀는 번쩍임이 없다
+              exitAnim.current?.cancel()
+              exitAnim.current = null
               if (dir && el && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 const w = el.clientWidth || 360
                 el.animate(
@@ -993,8 +1074,18 @@ export default function Calendar() {
             // 모바일 월간(fitH)은 true = 칸 높이에 맞춰 자동 제한(한 페이지 꽉 채움 규칙과 짝)
             dayMaxEvents={view === 'month' ? (fitH ? true : draft ? 4 : 3) : false}
             moreLinkContent={(arg) => `+${arg.num}건`}
-            height={fitH ? '100%' : 'auto'}
-            dayCellContent={(arg) => String(arg.date.getDate())}
+            height="auto"
+            // 연속 스크롤 뷰(모바일 월간) — anchor 달 -back ~ +fwd 를 한 그리드로 이어 그린다
+            views={{ dayGridCont: { type: 'dayGrid', visibleRange: contRange } }}
+            // 연속 스크롤에선 달 경계 표시가 날짜 숫자뿐 — 매달 **첫 보이는 날**에 'N월 N일'을 굵게.
+            // 1일이 주말이면 칸이 숨어서(주말 숨김 5열) 그 달 표식이 통째로 사라진다 — 월요일 2·3일이 대신 맡는다
+            dayCellContent={(arg) => {
+              const d = arg.date.getDate()
+              const monthStart = arg.view.type === 'dayGridCont' && (d === 1 || (arg.date.getDay() === 1 && d <= 3))
+              return monthStart
+                ? <Box component="b" sx={{ color: 'accentText.blue' }}>{`${arg.date.getMonth() + 1}월 ${d}일`}</Box>
+                : String(d)
+            }}
             // 키보드 접근 — 일정에 tabindex 부여(Tab 순회 가능). 열기는 컨테이너 onKeyDown이 담당
             eventInteractive
           />

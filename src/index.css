@@ -7,10 +7,10 @@
      컴포넌트에서 colorScheme를 개별 지정하지 말 것(라이트에서 검은 피커가 뜬다). */
   color-scheme: dark;
   /* 모바일 하단 탭바 높이 — 본문 여백과 메뉴 드로어가 **같은 값**을 봐야 한다(개선요청 80).
-     57 = 테두리 1 + nav 여백 12(6×2) + 버튼 44(아이콘 28 + 패딩 16) — 메뉴명 삭제·아이콘 확대
-     (2026-08-15). 값이 흩어지면 드로어가 탭바를 덮거나 뜬다.
+     66 = 떠 있는 알약 그룹 56(테두리 2 + 안여백 10 + 아이콘알약 38 + 버튼여백 6) + 바닥 띄움 10
+     (너츠169식 플로팅 바, 2026-08-15). 값이 흩어지면 드로어가 탭바를 덮거나 뜬다.
      iOS 홈 인디케이터 몫은 탭바가 자기 padding 으로 흡수하므로 여기 더한다. */
-  --bottom-nav-h: calc(57px + env(safe-area-inset-bottom, 0px));
+  --bottom-nav-h: calc(66px + env(safe-area-inset-bottom, 0px));
   /* SaaS 다크 토큰 — src/theme/tokens.ts 와 동일 값 미러링(정본은 tokens.ts).
      STEP2: Pure Black(#000 계열) → 현대적 SaaS 다크(#0F1117). 페이지 이관 시 점진 제거. */
   /* 표면 램프 — 다크는 "표면 밝기"가 깊이를 만든다(그림자 아님). 정본 tokens.ts darkPalette.
@@ -1039,12 +1039,20 @@ main{flex:1;display:flex;flex-direction:column;align-items:center;padding:36px 2
      색은 40% 배경(index.tsx, C안)이 대신 나른다. 주간(시간표·종일행)도 동일(2026-08-14 지시).
      좌우 5px = 상하 시각 여백(패딩 2px+행간 반틈 ≈4.4px)과 맞춤 — 3px는 "엄청 좁다"(사용자). */
   .fc-team .fc-dayGridMonth-view .fc-daygrid-event,
+  .fc-team .fc-dayGridCont-view .fc-daygrid-event,
   .fc-team .fc-timeGridWeek-view .fc-daygrid-event{padding:2px 5px;border-width:0}
   .fc-team .fc-timeGridWeek-view .fc-timegrid-event{padding:2px 5px;border-width:0}
-  .fc-team .fc-dayGridMonth-view .fc-daygrid-day-number{font-size:12px;letter-spacing:-0.05em}
-  /* 한 달 = 한 페이지(2026-08-15) — 고정 114px 칸을 풀어 컨테이너 높이(fitH)에 맞춰 늘고 줄게.
-     0 이 아니라 100% — FC 기본값 복원(0 이면 칸 속(frame)이 26px로 짜부라져 일정이 다 접혔다, 실측) */
-  .fc-team .fc-dayGridMonth-view .fc-daygrid-day-frame{min-height:100%}
+  .fc-team .fc-dayGridMonth-view .fc-daygrid-day-number,
+  .fc-team .fc-dayGridCont-view .fc-daygrid-day-number{font-size:12px;letter-spacing:-0.05em}
+  /* (구) 한 달 = 한 페이지 → **세로 연속 스크롤**로 교체(2026-08-15 재지시). 칸은 고정 104px —
+     한 화면에 약 5주가 들어오고, 아래로 내리면 다음 달이 이어진다. */
+  /* !important — FC가 액체 계산의 잔재를 **인라인 min-height**(46px 실측)로 칸에 박아 CSS를 이긴다 */
+  .fc-team .fc-dayGridCont-view .fc-daygrid-day-frame{min-height:104px !important}
+  /* 연속 뷰의 .fc 는 스크롤 상자(fitH) 안에서 **내용만큼 자라야** 한다 — 기본 flex:1이면 576px로
+     눌려 FC가 행을 46px로 균등 압축(인라인 min-height)해 스크롤이 아예 안 생겼다(실측) */
+  .fc-team:has(.fc-dayGridCont-view) .fc{flex:none;height:auto;overflow:visible}
+  /* 요일 헤더는 스크롤 창 위에 고정(구글캘린더식) — 배경이 없으면 일정이 비쳐 보인다 */
+  .fc-team .fc-dayGridCont-view th{position:sticky;top:0;z-index:5;background:var(--ink2)}
   /* 목록 뷰 — 기본 td 여백 8/14px은 375px 화면에서 제목칸을 크게 깎는다 */
   .fc-team .fc-list-table td{padding:7px 8px}
 }

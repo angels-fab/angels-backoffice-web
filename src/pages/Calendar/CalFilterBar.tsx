@@ -1,4 +1,5 @@
 import Box from '@mui/material/Box'
+import { alpha } from '@mui/material/styles'
 import GroupsIcon from '@mui/icons-material/Groups'
 import WorkIcon from '@mui/icons-material/Work'
 import SchoolIcon from '@mui/icons-material/School'
@@ -47,6 +48,10 @@ const CAT_ICON: Record<RealCat, SvgIconComponent> = {
 // '팀원'·'종류' 라벨은 삭제했다: 알약(사람)과 틴트칩(종류)의 모양이 이미 갈래를 말해 주고,
 // 모바일에서 툴바가 여섯 줄까지 늘어나 달력이 화면 밖으로 밀리던 게 더 큰 문제였다.
 const ROW = { display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 } as const
+
+// 모바일 칩 띠 오른쪽 끝 페이드 — "칩이 더 있는지 가늠이 안 된다"(2026-08-15) → 끝을 흐려
+// 이어짐을 암시한다. 다 보여도 마지막 칩 가장자리만 살짝 옅어지는 정도라 비용이 없다.
+const FADE_MASK = 'linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent)'
 
 // 스크롤 되는 칩 띠 — 스크롤바는 감춘다(모바일은 손가락, PC는 넘칠 일이 드물다)
 const STRIP = {
@@ -107,18 +112,19 @@ export default function CalFilterBar({ members, onToggleMember, cats, onToggleCa
         mb: 1.75, px: '2px', userSelect: 'none',
       }}
     >
-      {/* 해당자(팀원) — 왼쪽 무리 */}
-      <Box sx={{ ...STRIP, gap: 0.75 }}>
+      {/* 해당자(팀원) — 왼쪽 무리. PC(shell+)는 내용 폭만 차지해 구분선이 바로 옆에 붙는다
+          (2026-08-15 사용자 지시). 모바일은 절반씩 나눠 양쪽 다 가로 스크롤. */}
+      <Box sx={{ ...STRIP, gap: 0.75, flex: { xs: 1, shell: '0 0 auto' }, maskImage: { xs: FADE_MASK, shell: 'none' } }}>
         {members.map(({ member, on }) => (
           <MemberPill key={member.id} m={member} on={on} onToggle={(add) => onToggleMember(member.id, add)} />
         ))}
       </Box>
 
-      {/* 가운데 구분선 — 두 칩 무리의 경계 */}
-      <Box sx={{ width: '1px', alignSelf: 'stretch', my: '3px', bgcolor: 'divider', flex: 'none' }} />
+      {/* 구분선 — 두 칩 무리의 경계. divider 토큰은 "너무 흐릿"(사용자) → 잉크 30% */}
+      <Box sx={(th) => ({ width: '1px', alignSelf: 'stretch', my: '3px', bgcolor: alpha(th.palette.text.primary, 0.3), flex: 'none' })} />
 
       {/* 일정 종류 — 오른쪽 무리 (0건 종류는 상위에서 숨김 처리) */}
-      <Box sx={{ ...STRIP, gap: '6px' }}>
+      <Box sx={{ ...STRIP, gap: '6px', maskImage: { xs: FADE_MASK, shell: 'none' } }}>
         {cats.map((c) => (
           <CatChip
             key={c.id}
