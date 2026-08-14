@@ -9,6 +9,7 @@ import Tooltip from '@mui/material/Tooltip'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import ChatIcon from '@mui/icons-material/Chat'
+import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import { alpha } from '@mui/material/styles'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { loadImproveData } from '@/store/slices/improveSlice'
@@ -50,6 +51,13 @@ export default function MemoComposeButton() {
    */
   const isDesktop = useMediaQuery((th: Theme) => th.breakpoints.up('shell'))
   const [kind, setKind] = useState<MemoKind>(DEFAULT_MEMO_KIND)
+  /**
+   * 실제로 저장될 갈래 — 모바일은 언제나 요청메모다(위 주석). 종전엔 저장 분기만 이 판정을 하고
+   * 아이콘·placeholder·공유칸은 state(kind='plain')를 그대로 봐서, **저장은 요청메모인데 겉모습은
+   * 일반메모**인 어긋남이 났다(요청메모 91 — 문구 '메모 내용', 골라도 무시되는 공유칸까지).
+   * 화면과 저장이 전부 이 값 하나를 보게 해서 어긋날 길을 없앤다.
+   */
+  const effectiveKind: MemoKind = isDesktop ? kind : 'req'
   const [shared, setShared] = useState<string[]>([])
   const [people, setPeople] = useState<string[]>([])
   /** 일반메모 경로 목록 — 버튼 옆 건수에 요청메모와 함께 센다 */
@@ -107,8 +115,7 @@ export default function MemoComposeButton() {
     if (!body) return snack('내용을 입력해주세요.', 'error')
     setBusy(true)
     try {
-      // 모바일에서 갈래 선택을 감췄어도 state 는 남아 있을 수 있다 — 저장 직전에 한 번 더 막는다
-      if (kind === 'plain' && isDesktop) {
+      if (effectiveKind === 'plain') {
         // 일반메모 — 개선요청을 만들지 않는다. 상태도 요청번호도 연동 게시판도 없다.
         // 어느 화면이든 남길 수 있다('기타' 예외 없음 — 게시판이 아니라 pathname 으로 자리를 잡으므로)
         await createPageNote({ path: pathname, content: body, shared })
@@ -145,14 +152,14 @@ export default function MemoComposeButton() {
   return (
     <>
       {/* data-memo-anchor = 새 쪽지의 기본 자리 기준점(StickyMemo가 이 버튼 바로 아래에 붙인다) */}
-      <Tooltip title={total > 0 ? `화면 메모 — 이 화면 ${here}건 / 전체 ${total}건` : '이 화면에 메모 붙이기'}>
+      <Tooltip title={total > 0 ? `화면 메모 — 이 화면 ${here}건 / 전체 ${total}건` : (isDesktop ? '이 화면에 메모 붙이기' : '요청메모 남기기')}>
         <ButtonBase
           ref={anchorRef}
           data-memo-anchor=""
           onClick={() => setOpen((o) => !o)}
           aria-haspopup="dialog"
           aria-expanded={open}
-          aria-label="이 화면에 메모 붙이기"
+          aria-label={isDesktop ? '이 화면에 메모 붙이기' : '요청메모 남기기'}
           /* 상단바 컨트롤은 '테두리 없이 옅은 면으로만 구분'이 정본(바로 옆 통합검색과 같은 처리).
              앰버 채움+앰버 테두리로 두면 상단바에서 혼자 튀고, 무엇보다 그 테두리(amber 50%)가
              배경 대비 라이트 1.44:1 · 다크 2.88:1 로 WCAG 1.4.11(비텍스트 3:1) 미달이라
@@ -174,8 +181,9 @@ export default function MemoComposeButton() {
           })}
         >
           {/* 글자 '메모' 대신 아이콘 — 옆의 '화면에 그리기'와 같은 모양의 한 쌍이 된다
-              (사용자 지시 2026-08-06). 건수 배지는 그대로 — 이 화면에 몇 건인지가 이 버튼의 핵심 정보다 */}
-          <ChatIcon sx={{ fontSize: iconSize.header }} />
+              (사용자 지시 2026-08-06). 건수 배지는 그대로 — 이 화면에 몇 건인지가 이 버튼의 핵심 정보다.
+              모바일은 전구 — 여기서 만들 수 있는 건 요청메모뿐인데 말풍선(일반메모 아이콘)이면 거짓말이다(요청메모 91) */}
+          {isDesktop ? <ChatIcon sx={{ fontSize: iconSize.header }} /> : <LightbulbIcon sx={{ fontSize: iconSize.header }} />}
           {here > 0 && (
             <Box
               component="span"
@@ -207,9 +215,11 @@ export default function MemoComposeButton() {
         {/* 제목 줄에 갈래 선택을 함께 둔다(사용자 지시 2026-08-06) — 제목 오른쪽 빈자리로.
             모바일에서는 일반메모를 띄울 자리가 없어 선택을 감추고 요청메모로 간다(위 isDesktop 주석). */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 2 }}>
-          <ChatIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
+          {isDesktop
+            ? <ChatIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
+            : <LightbulbIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />}
           <Box component="span" sx={{ fontSize: typescale.cardTitle.size, fontWeight: weight.heavy, whiteSpace: 'nowrap' }}>
-            메모 남기기
+            {isDesktop ? '메모 남기기' : '요청메모 남기기'}
           </Box>
           {isDesktop && (
             <Box sx={{ ml: 'auto' }}>
@@ -228,12 +238,14 @@ export default function MemoComposeButton() {
           autoFocus fullWidth size="small" multiline minRows={3}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder={kind === 'plain' ? '메모 내용' : '요청 내용'}
+          placeholder={effectiveKind === 'plain' ? '메모 내용' : '요청 내용'}
           slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
           disabled={busy}
         />
-        {/* 공유는 일반메모만 — 요청메모의 열람 범위는 작성자 + 포털 관리자로 정해져 있다 */}
-        {kind === 'plain' && (
+        {/* 공유는 일반메모만 — 요청메모의 열람 범위는 작성자 + 포털 관리자로 정해져 있다.
+            effectiveKind 로 판정해야 한다: 종전엔 kind('plain')를 봐서 모바일에도 공유칸이 떴는데,
+            모바일 저장은 요청메모라 골라 봐야 완전히 무시됐다(요청메모 91). */}
+        {effectiveKind === 'plain' && (
           <Box sx={{ mt: 1 }}>
             <SharePicker people={people.filter((p) => p !== user)} value={shared} onChange={setShared} disabled={busy} />
           </Box>

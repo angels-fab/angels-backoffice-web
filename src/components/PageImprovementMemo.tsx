@@ -21,8 +21,9 @@ import { addReply, patchReply, removeReply } from '@/store/slices/replySlice'
 import { updateImprovement, createReply, updateReply, deleteReply } from '@/api/improve'
 import type { ReplyRow } from '@/api/sheets'
 import { RichBodyView } from '@/utils/richBody'
+import { RichBodyEditor } from '@/components/richText'
 import { useRole } from '@/auth/role'
-import { memosForPath, visibleMemos } from '@/utils/improveMemo'
+import { memosForPath, visibleMemos, firstLine } from '@/utils/improveMemo'
 import { todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import ReplyThread from '@/pages/Improve/ReplyThread'
@@ -102,7 +103,7 @@ function ReplyCountChip({ count, onClick }: { count: number; onClick: () => void
 /** 메모 한 건 — 번호·제목·작성자·개선위치 + 답글 +N + 펼치면 내용·답글 통합 표시. */
 function MemoRow({
   t, replies, open, onToggle, onRemove, removing, isAdmin, user, replyBusy, onCreateReply, onEditReply, onRequestDeleteReply,
-  onStatusChange, savingStatus,
+  onStatusChange, savingStatus, onSaveContent,
 }: {
   t: ImprovementItem
   replies: ReplyRow[]
@@ -118,11 +119,48 @@ function MemoRow({
   onRequestDeleteReply: (r: ReplyRow) => void
   onStatusChange: (status: string) => void
   savingStatus: boolean
+  /** 본문 수정 저장 — 실패 시 throw(편집 상태를 유지해야 다시 시도할 수 있다) */
+  onSaveContent: (body: string) => Promise<void>
 }) {
   const st = normStatus(t.status)
+  /**
+   * 본문 수정(요청메모 91) — PC 는 붙임쪽지의 연필로 고치는데 그 레이어가 PC 전용이라
+   * 모바일(이 패널)에는 수정 길이 없었다. 쪽지와 같은 리치 에디터·같은 저장 경로를 그대로 쓴다.
+   */
+  const [editing, setEditing] = useState(false)
+  const [eContent, setEContent] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const startEdit = () => {
+    setEContent(t.content || t.title || '')
+    setEditing(true)
+    if (!open) onToggle() // 접힌 채로는 에디터가 안 보인다 — 먼저 펼친다
+  }
+  const submitEdit = async () => {
+    const body = eContent.trim()
+    if (!body) return
+    setSavingEdit(true)
+    try {
+      await onSaveContent(body)
+      setEditing(false)
+    } catch {
+      /* 실패 스낵바는 부모가 띄운다 — 편집 상태 유지 */
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+  /**
+   * 카드 어디를 눌러도 펼치기/접기(요청메모 91) — 종전엔 '펼치기' 버튼만 토글이라 44px 미만
+   * 과녁을 정확히 맞혀야 했다. 안의 버튼·선택칸 클릭은 토글로 번지면 안 되므로 걸러낸다
+   * (StickyMemo 의 isInteractive 와 같은 잣대). 펼친 본문(답글 입력 등)은 이 판 밖이다.
+   */
+  const onHeaderTap = (e: React.MouseEvent) => {
+    const el = e.target as HTMLElement
+    if (el.closest('button, input, textarea, a, [contenteditable], [role="combobox"]')) return
+    onToggle()
+  }
   return (
     <Box sx={{ py: 1.25, borderBottom: '1px solid', borderColor: 'divider', '&:last-of-type': { borderBottom: 0 } }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+      <Box onClick={onHeaderTap} sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', cursor: 'pointer' }}>
         <Box component="span" sx={(th) => ({ fontSize: typescale.caption.size, fontWeight: weight.heavy, color: th.palette.accentText.amber, fontVariantNumeric: 'tabular-nums' })}>
           요청 #{t.num}
         </Box>
@@ -152,6 +190,9 @@ function MemoRow({
         )}
         {replies.length > 0 && <ReplyCountChip count={replies.length} onClick={onToggle} />}
         <Box sx={{ display: 'flex', gap: 0.5, ml: 'auto' }}>
+          <Button size="small" onClick={startEdit} disabled={editing} sx={{ minWidth: 0, fontSize: typescale.small.size, color: 'text.secondary', px: 1 }}>
+            수정
+          </Button>
           <Button
             size="small"
             onClick={onToggle}
@@ -168,10 +209,32 @@ function MemoRow({
       </Box>
       {open && (
         <Box sx={{ mt: 1 }}>
-          {/* 1·2: 개선요청 내용 */}
-          <Box sx={{ fontSize: typescale.body.size, color: 'text.secondary', lineHeight: 1.7 }}>
-            {t.content ? <RichBodyView html={t.content} /> : '내용 없음'}
-          </Box>
+          {/* 1·2: 개선요청 내용 — 수정 중엔 쪽지(StickyMemo)와 같은 리치 에디터.
+              평문 textarea 로 받으면 서식 있는 글의 태그가 그대로 드러난다 */}
+          {editing ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <RichBodyEditor
+                value={eContent}
+                onChange={setEContent}
+                placeholder="내용"
+                ariaLabel="메모 내용"
+                fontSize={typescale.small.size}
+                minHeight={64}
+                framed
+                onCtrlEnter={() => void submitEdit()}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.5 }}>
+                <Button size="small" onClick={() => setEditing(false)} disabled={savingEdit} sx={{ color: 'text.secondary' }}>취소</Button>
+                <Button size="small" variant="contained" onClick={() => void submitEdit()} disabled={savingEdit || !eContent.trim()}>
+                  {savingEdit ? '저장 중…' : '저장'}
+                </Button>
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{ fontSize: typescale.body.size, color: 'text.secondary', lineHeight: 1.7 }}>
+              {t.content ? <RichBodyView html={t.content} /> : '내용 없음'}
+            </Box>
+          )}
           {/* 3·4·5·6: 답글 +N · 목록 · 입력창 · 등록 (게시판과 동일 데이터/컴포넌트) */}
           <ReplyThread
             replies={replies}
@@ -335,6 +398,19 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const toggleOpen = () => setOpen((o) => { const next = !o; if (next) setOpenNum(null); return next })
   const toggleRow = (num: string) => setOpenNum((prev) => (prev === num ? null : num))
 
+  // 본문 수정 저장 — 쪽지(StickyMemo saveEdit)와 같은 규칙: 게시판 제목은 내용 첫 줄에서 다시 만든다
+  const saveContent = async (t: ImprovementItem, body: string) => {
+    if (!user || !authKey) { snack('로그인이 필요합니다.', 'error'); throw new Error('no-auth') }
+    try {
+      await updateImprovement({ author: user, key: authKey, num: t.num, title: firstLine(body), content: body })
+      snack('수정했습니다.', 'success')
+      dispatch(loadImproveData())
+    } catch (err) {
+      snack(err instanceof Error ? err.message : '수정에 실패했습니다', 'error')
+      throw err
+    }
+  }
+
   const removeMemo = async (t: ImprovementItem) => {
     if (!user || !authKey) return snack('로그인이 필요합니다.', 'error')
     setRemovingNum(t.num)
@@ -382,6 +458,7 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
             onEditReply={editReplyH}
             onRequestDeleteReply={(r) => setDelReply(r)}
             onStatusChange={(status) => onStatusChange(t, status)}
+            onSaveContent={(body) => saveContent(t, body)}
             savingStatus={savingStatusNum === t.num}
           />
         ))}
