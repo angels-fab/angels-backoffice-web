@@ -13,7 +13,7 @@ import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
 import DesktopWindowsIcon from '@mui/icons-material/DesktopWindows'
 import PhoneIphoneIcon from '@mui/icons-material/PhoneIphone'
-import { isForceDesktop, setForceDesktop, isTouchDevice } from '@/utils/viewportMode'
+import { isForceDesktop, setForceDesktop } from '@/utils/viewportMode'
 import { useRole, ROLE_LABEL } from '@/auth/role'
 import { useAppSelector } from '@/store/hooks'
 import { NavBadge } from '@/components/ds'
@@ -47,8 +47,7 @@ const TAB_PATHS = new Set(['/', '/work', '/calendar', '/notice', '/settings'])
 export default function MobileMenuDrawer({ open, onClose }: Props) {
   const navigate = useNavigate()
   // PC 보기 전환 — 상단바에서 여기로 옮겨 왔다(2026-08-13 사용자 지시).
-  // isTouchDevice 는 마운트 때 한 번만 본다(상단바와 같은 규칙 — 화면 폭이 아니라 기기 종류 판정이라 안 바뀐다).
-  const [touch] = useState(isTouchDevice)
+  // 기기 판정(isTouchDevice)은 더 보지 않는다 — 아래 '화면' 구역 주석 참조.
   const [desktopView, setDesktopView] = useState(isForceDesktop)
   const { pathname } = useLocation()
   const { role, loggedIn, isMember, isAdmin, user, logout } = useRole()
@@ -158,8 +157,14 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
       {/* 화면 — 상단바에 있던 PC 보기 전환(2026-08-13 사용자 지시로 이동).
           누르면 시트를 닫는다: 레이아웃 폭이 통째로 바뀌므로 열린 시트를 남겨 두면 어색하다.
           **포털 관리자에게만 보인다**(요청메모 95). 실수로 켜도 갇히지는 않는다 — 데스크톱 보기는
-          viewport 를 1280 으로 잡아 shell(768) 을 넘으므로 상단바 토글이 다시 나타난다. */}
-      {touch && isAdmin && (
+          viewport 를 1280 으로 잡아 shell(768) 을 넘으므로 상단바 토글이 다시 나타난다.
+
+          기기 판정(isTouchDevice)은 조건에서 뺐다(2026-08-16 사용자 지시). 이 시트는 하단탭이
+          띄우는데 하단탭 자체가 shell(768) 미만에서만 나오므로, "PC 에선 숨긴다"는 목적은 이미
+          분기점이 달성한다. 남겨 두면 PC 창을 좁혀 확인할 때 관리자조차 항목을 못 봤다(실제 신고).
+          단, 진짜 데스크톱 브라우저에서는 눌러도 폭이 안 바뀐다 — viewport meta 는 폰 브라우저만
+          해석한다. 선택은 저장되므로 같은 계정으로 폰에서 열면 PC 보기로 뜬다. */}
+      {isAdmin && (
         <>
           <Divider sx={{ my: 0.5 }} />
           <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>
