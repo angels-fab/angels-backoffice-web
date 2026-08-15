@@ -1689,6 +1689,14 @@ export default function StickyMemoLayer() {
         right: 0,
         bottom: 0,
         pointerEvents: 'none',   // 레이어 자체는 클릭을 통과시키고, 쪽지만 받는다(pointer-events는 상속된다)
+        // 창을 반으로 줄이면 화면이 떨던 것(2026-08-16 사용자 신고). 오른쪽에 둔 쪽지가 범위를 넘으면
+        // 문서에 가로 스크롤바가 생기고(위 dragBounds 주석의 경고), 그 폭 변화를 ResizeObserver 가
+        // 되당김으로 받아 → 스크롤바가 사라지고 → 폭이 또 바뀌어 → 저장 좌표 기준으로 다시 나가는
+        // 고리가 돈다. 여기서 가로 넘침을 잘라 고리의 첫 마디를 끊는다.
+        // hidden 이 아니라 clip 인 이유: hidden 은 스크롤 컨테이너를 만들어 상단바 sticky 를 깨뜨린다.
+        // clip 은 세로 visible 과 공존하므로 문서 높이 전체를 쓰는 이 레이어에 그대로 맞는다.
+        // 좌우 여백에 놓은 쪽지는 이 레이어가 화면 전폭이라 잘리지 않는다(잘리는 건 화면 밖뿐).
+        overflowX: 'clip',
         zIndex: z.stickyMemo,
       }}
     >
