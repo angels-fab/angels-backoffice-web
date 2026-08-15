@@ -156,8 +156,10 @@ export default function MobileMenuDrawer({ open, onClose }: Props) {
       </List>
 
       {/* 화면 — 상단바에 있던 PC 보기 전환(2026-08-13 사용자 지시로 이동).
-          누르면 시트를 닫는다: 레이아웃 폭이 통째로 바뀌므로 열린 시트를 남겨 두면 어색하다. */}
-      {touch && (
+          누르면 시트를 닫는다: 레이아웃 폭이 통째로 바뀌므로 열린 시트를 남겨 두면 어색하다.
+          **포털 관리자에게만 보인다**(요청메모 95). 실수로 켜도 갇히지는 않는다 — 데스크톱 보기는
+          viewport 를 1280 으로 잡아 shell(768) 을 넘으므로 상단바 토글이 다시 나타난다. */}
+      {touch && isAdmin && (
         <>
           <Divider sx={{ my: 0.5 }} />
           <Typography variant="caption" sx={{ px: 2.5, pt: 1, color: 'text.disabled' }}>
