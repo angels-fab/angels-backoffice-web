@@ -1,15 +1,16 @@
 {
-  "total": 16,
+  "total": 20,
   "totals": {
     "hex": 0,
     "font": 0,
     "weight": 1,
-    "radius": 1,
+    "radius": 3,
     "shadow": 0,
     "z": 0,
-    "class": 14
+    "class": 16
   },
   "files": {
+    "src/layouts/BottomNav.tsx": 4,
     "src/pages/Equipment/DemoResults.tsx": 3,
     "src/pages/Work/WorkAttachments.tsx": 3,
     "src/pages/Calendar/CalEventWrite.tsx": 1,
