@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { displayBullet } from './workMeta'
-import { plainLineToBodyLine, RunSpans, type BodyLine } from './richContent'
+import { plainLineToBodyLine, lineColorVar, RunSpans, type BodyLine } from './richContent'
 
 /**
  * 업무 내용 한 줄 표시. 글머리기호(-, •, ①, 1. 등)를 분리해, 본문이 줄바꿈되면
@@ -24,8 +24,9 @@ export default function SubLine({ line, bodyLine }: { line?: string; bodyLine?: 
     <Box sx={{ display: 'flex', gap: 0.75, ml: `${bl.indentPx}px`, py: 0.25 }}>
       {bl.marker ? (
         <>
-          {/* 기호는 본문보다 한 단 흐리게 — 내용이 먼저 읽히게 */}
-          <Typography variant="body2" component="span" sx={{ flexShrink: 0, color: tone === 'text.primary' ? 'text.secondary' : 'text.disabled' }}>{displayBullet(bl.marker)}</Typography>
+          {/* 기호는 본문보다 한 단 흐리게 — 내용이 먼저 읽히게.
+              단, 줄 전체를 한 색으로 칠했으면 기호도 그 색을 따른다(요청메모 93) */}
+          <Typography variant="body2" component="span" sx={{ flexShrink: 0, color: lineColorVar(bl.runs) ?? (tone === 'text.primary' ? 'text.secondary' : 'text.disabled') }}>{displayBullet(bl.marker)}</Typography>
           <Typography variant="body2" component="span" sx={bodySx}><RunSpans runs={bl.runs} /></Typography>
         </>
       ) : (

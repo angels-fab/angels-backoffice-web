@@ -328,6 +328,23 @@ export function fmtSignature(raw: unknown): string {
   return JSON.stringify(sigBlocks(doc.content))
 }
 
+/**
+ * 줄 전체가 한 가지 글자색이면 그 색 CSS 변수 — 글머리 기호가 본문 색을 따라가는 판정(요청메모 93).
+ * 공백뿐인 런은 무시. 줄 안에 색이 섞였거나 일부만 칠했으면 null — 기호는 기본 톤을 지킨다
+ * (한 단어 강조에 기호까지 물들면 강조가 줄 전체로 번져 보인다).
+ */
+export function lineColorVar(runs: Run[]): string | null {
+  let tok: Exclude<ColorToken, 'default'> | null = null
+  for (const r of runs) {
+    if (!r.text.trim()) continue
+    const c = r.marks.color && r.marks.color !== 'default' ? r.marks.color : null
+    if (!c) return null
+    if (tok === null) tok = c
+    else if (tok !== c) return null
+  }
+  return tok ? COLOR_VAR[tok] : null
+}
+
 // ── 렌더 ──
 export function runStyle(m: RunMarks): CSSProperties {
   const s: CSSProperties = {}
