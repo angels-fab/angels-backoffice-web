@@ -142,7 +142,7 @@ export default function TodaySection() {
       onAction={() => navigate('/calendar')}
     >
       {!ready ? (
-        <LoadingState size="md" />
+        <LoadingState skeleton rows={3} />
       ) : list.length === 0 ? (
         <EmptyState size="sm" title="오늘 예정된 일정이 없습니다" />
       ) : (

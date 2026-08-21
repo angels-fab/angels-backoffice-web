@@ -55,7 +55,7 @@ export default function NoticeSection() {
         onAction={() => navigate('/notice')}
       >
         {!ready ? (
-          <LoadingState size="md" />
+          <LoadingState skeleton rows={3} />
         ) : recent.length === 0 ? (
           <EmptyState size="sm" title="새로 올라온 공지가 없습니다" />
         ) : (

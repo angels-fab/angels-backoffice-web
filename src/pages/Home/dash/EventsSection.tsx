@@ -62,7 +62,7 @@ export default function EventsSection() {
       onAction={() => navigate('/events')}
     >
       {!att ? (
-        <LoadingState size="md" />
+        <LoadingState skeleton rows={3} />
       ) : !head ? (
         <EmptyState size="sm" title="신청한 행사가 없습니다" />
       ) : (

@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import { mergeSx } from './sxMerge'
 import CircularProgress from '@mui/material/CircularProgress'
+import Skeleton from '@mui/material/Skeleton'
 import Typography from '@mui/material/Typography'
 import type { SxProps, Theme } from '@mui/material/styles'
 
@@ -9,6 +10,10 @@ export interface LoadingStateProps {
   label?: string
   /** sm=행/셀 안, md=카드/페이지 영역 (EmptyState와 대칭) */
   size?: 'sm' | 'md'
+  /** 스켈레톤 표현(요청메모 92) — 스피너 대신 내용 골격(칩·제목·값 줄)을 잡아 둔다. 홈 카드용 */
+  skeleton?: boolean
+  /** 스켈레톤 줄 수 — 실제 내용의 줄 수와 비슷하게 (기본 3) */
+  rows?: number
   sx?: SxProps<Theme>
 }
 
@@ -22,8 +27,23 @@ export interface LoadingStateProps {
  * {!ready ? <LoadingState /> : <List .../>}
  * <LoadingState size="sm" label="이력 불러오는 중…" />
  */
-export default function LoadingState({ label = '불러오는 중…', size = 'md', sx }: LoadingStateProps) {
+export default function LoadingState({ label = '불러오는 중…', size = 'md', skeleton, rows = 3, sx }: LoadingStateProps) {
   const sm = size === 'sm'
+  if (skeleton) {
+    // 줄 골격 = 홈 카드 행(HomeRow)의 [칩·제목·오른쪽 값] — 로딩이 끝나면 같은 자리에 실제 행이 들어선다.
+    // 문구는 화면에서 빼고 보조기기에만 남긴다(role=status 유지) — 스켈레톤 자체가 "불러오는 중"의 표현.
+    return (
+      <Box role="status" aria-live="polite" aria-label={label} sx={mergeSx({ py: 0.5 }, sx)}>
+        {Array.from({ length: rows }, (_, i) => (
+          <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 0.75 }}>
+            <Skeleton variant="rounded" width={44} height={20} sx={{ flexShrink: 0 }} />
+            <Skeleton variant="text" sx={{ flex: 1 }} />
+            <Skeleton variant="text" width={40} sx={{ flexShrink: 0 }} />
+          </Box>
+        ))}
+      </Box>
+    )
+  }
   return (
     <Box
       role="status"

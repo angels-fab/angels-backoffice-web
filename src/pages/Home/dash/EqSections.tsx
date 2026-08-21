@@ -64,7 +64,7 @@ export function EqIntroSection() {
       onAction={() => navigate('/equipment')}
     >
       {!ready ? (
-        <LoadingState size="md" />
+        <LoadingState skeleton rows={2} />
       ) : (
         <Box>
           <Line first label="도입중" units={u['도입중']} types={eq.typesBy['도입중']} />
@@ -90,7 +90,7 @@ export function EqOpsSection() {
       onAction={() => navigate('/equipment-ops')}
     >
       {!ready ? (
-        <LoadingState size="md" />
+        <LoadingState skeleton rows={2} />
       ) : (
         <Box>
           <Line first label="비가동" units={u['비가동']} types={eq.typesBy['비가동']} />

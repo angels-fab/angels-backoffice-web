@@ -43,7 +43,7 @@ export default function WorkStatusSection() {
       onAction={() => navigate('/work')}
     >
       {!ready ? (
-        <LoadingState size="md" />
+        <LoadingState skeleton rows={3} />
       ) : rows.length === 0 ? (
         <EmptyState size="sm" title="진행 중인 업무가 없습니다" />
       ) : (
