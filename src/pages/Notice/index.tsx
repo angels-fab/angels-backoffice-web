@@ -21,7 +21,6 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import { TintChip } from '@/components/FilterChip'
 import CampaignIcon from '@mui/icons-material/Campaign'
-import EditNoteIcon from '@mui/icons-material/EditNote'
 import AddIcon from '@mui/icons-material/Add'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
@@ -472,8 +471,8 @@ export default function Notice() {
         <FilterToolbar
           label="분류"
           search={isMobile ? undefined : <SearchBar value={query} onChange={setQuery} placeholder="제목·작성자·분류 검색" width={200} />}
-          actions={isMember && !isMobile ? (
-            <Button variant={composing ? 'contained' : 'outlined'} size="small" startIcon={<EditNoteIcon sx={{ fontSize: iconSize.action }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap', minHeight: control.height }}>
+          actions={isMember && !isMobile ? ( // 새글 버튼 전 페이지 통일(요청메모 98) — contained + AddIcon + '새 ○○'. 연필(EditNote)도 더하기로
+            <Button variant="contained" size="small" startIcon={<AddIcon sx={{ fontSize: iconSize.action }} />} onClick={startCompose} sx={{ whiteSpace: 'nowrap', minHeight: control.height }}>
               새 공지
             </Button>
           ) : undefined}

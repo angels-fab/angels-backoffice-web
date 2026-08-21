@@ -730,7 +730,7 @@ export default function Calendar() {
                 sx={{ minHeight: control.height }}
                 onClick={() => setWrite({ mode: 'add', event: null, initialDate: todayKey })}
               >
-                일정 추가
+                새 일정
               </Button>
             )}
             <IconButton

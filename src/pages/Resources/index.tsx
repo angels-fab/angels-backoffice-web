@@ -35,7 +35,7 @@ import {
   uploadResourceFile, downloadResourceBlob, removeResourceFiles,
   type ResourceItem, type ResourceFile,
 } from '@/api/resources'
-import { iconSize, radius, typescale, weight } from '@/theme/tokens'
+import { control, iconSize, radius, typescale, weight } from '@/theme/tokens'
 
 /**
  * 자료실 (개선요청 86, 1안 카드 그리드) — 웹사이트·유용한 정보 링크 모음 + 첨부(50MB).
@@ -222,8 +222,8 @@ export default function Resources() {
         icon={<LocalLibraryIcon />}
         title="자료실"
         actions={
-          <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={openNew}>
-            자료 등록
+          <Button variant="contained" size="small" startIcon={<AddIcon />} sx={{ minHeight: control.height }} onClick={openNew}>
+            새 자료
           </Button>
         }
       />

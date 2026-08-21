@@ -7,7 +7,7 @@ import CoPresentIcon from '@mui/icons-material/CoPresent'
 import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import { PageContainer, PageHeader, ContentSection, AppCard, EmptyState, SegTabs, ConfirmDialog, useSnack } from '@/components/ds'
-import { radius, z } from '@/theme/tokens'
+import { control, radius, z } from '@/theme/tokens'
 import { useRole } from '@/auth/role'
 import { FAB_EVENTS, eventStatus, type FabEvent } from '@/constants/events'
 import { fetchAttendees, addAttendee, removeAttendee, fetchSubmissions, type AttendeeRow, type EventSubmissionRow } from '@/api/events'
@@ -158,7 +158,7 @@ export default function Events() {
                   신청 대기 {pendingCount}
                 </Button>
               )}
-              <Button variant="contained" size="small" startIcon={<AddIcon />} onClick={() => setSubmitOpen(true)}>
+              <Button variant="contained" size="small" startIcon={<AddIcon />} sx={{ minHeight: control.height }} onClick={() => setSubmitOpen(true)}>
                 새 행사
               </Button>
             </Box>

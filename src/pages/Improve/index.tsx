@@ -865,7 +865,8 @@ export default function Improve() {
             <Button
               onClick={() => (composing ? requestClose() : void openCompose())}
               startIcon={<AddIcon />}
-              variant={composing ? 'contained' : 'outlined'}
+              // 새글 버튼 전 페이지 통일(요청메모 98) — 항상 contained. 작성 중 표시는 폼 자체가 한다
+              variant="contained"
               size="small"
               sx={{ whiteSpace: 'nowrap', minHeight: control.height }}
             >

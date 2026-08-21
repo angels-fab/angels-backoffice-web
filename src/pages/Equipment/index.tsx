@@ -756,7 +756,7 @@ export default function Equipment() {
                 배너가 '다시 시도'를 준다. */}
             {isMember && (
               <Button variant="contained" size="small" startIcon={<AddIcon />} sx={{ minHeight: control.height }} onClick={() => { setEditBatchCodes([]); setEditTarget(null); setWriteOpen(true) }}>
-                장비 추가
+                새 장비
               </Button>
             )}
           </Box>
