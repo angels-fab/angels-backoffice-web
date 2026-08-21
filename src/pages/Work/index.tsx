@@ -329,6 +329,10 @@ export default function Work() {
 
   // 복수선택(Cmd/Ctrl·Shift — PC 전용, 모바일은 카드 스와이프 액션이 대체) + KPI 드롭존 드래그 상태 + 상태 저장 직렬화 큐
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  // 모바일 아코디언으로 펼친 카드 번호(요청메모 97) — 공지의 openKey 와 같은 '한 번에 하나'.
+  // selected 를 재사용하지 않는 이유: 그리드 탭 선택은 **터치에서 의도적으로 꺼져 있다**
+  // (ReorderableTaskGrid onClickCapture '선택은 PC 전용') — 실제 폰에서는 탭해도 selected 가 안 바뀐다.
+  const [mobileOpenNum, setMobileOpenNum] = useState<string | null>(null)
   const isMobile = useMediaQuery('(max-width:768px)', { noSsr: true }) // 모바일=카드 스와이프 액션 활성
   const [reorderMode, setReorderMode] = useState(false) // 진행중 순서 편집(흔들림) 모드 — 모바일 액션 시트에서 진입
   // 모바일 필터카드 A안(사용자 확정 2026-08-09) — 칩 2줄만 표면에 두고 나머지는 접는다.
@@ -994,7 +998,7 @@ export default function Work() {
   // ── 복수선택 ──
   const clearSelection = useCallback(() => { setSelected(new Set()); selAnchor.current = null }, [])
   // 목록 이동·필터·검색 변경·로그아웃 시 해제
-  useEffect(() => { clearSelection() }, [view, selCats, selMgrs, query, user, clearSelection])
+  useEffect(() => { clearSelection(); setMobileOpenNum(null) }, [view, selCats, selMgrs, query, user, clearSelection])
   // ESC — 1순위 상세 드로어 닫기(빈 배경 클릭과 동일 의미), 없으면 선택 종료(입력란 포커스 제외)
   const pickedRef = useRef(picked)
   pickedRef.current = picked
@@ -1224,7 +1228,7 @@ export default function Work() {
         onSave={(form) => handleSaveEdit(t, form)}
       />
     ) : (
-      <TaskAccordion key={t.id} t={t} tone={tone} selected={selected.has(t.num)} onRequestSelect={() => selectOnly(t.num)} history={historyMap[String(t.num)]} />
+      <TaskAccordion key={t.id} t={t} tone={tone} selected={selected.has(t.num)} mobileOpen={mobileOpenNum === t.num} onMobileToggle={() => setMobileOpenNum((v) => (v === t.num ? null : t.num))} onRequestSelect={() => selectOnly(t.num)} history={historyMap[String(t.num)]} />
     )
 
   return (

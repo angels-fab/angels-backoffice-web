@@ -51,6 +51,10 @@ export interface TaskAccordionProps {
   onRequestSelect?: () => void
   /** 이 업무의 변경 이력(최신순) — 없으면 시계 버튼 자체가 안 뜬다(개선요청 66) */
   history?: WorkHistoryRow[]
+  /** 모바일 아코디언 열림(요청메모 97) — 페이지가 카드 번호 하나로 쥔다(공지 openKey 식 '한 번에 하나') */
+  mobileOpen?: boolean
+  /** 모바일에서 카드 탭 = 이 토글 — 그리드 탭 선택이 터치에선 꺼져 있어 selected 로는 못 연다 */
+  onMobileToggle?: () => void
 }
 
 /**
@@ -90,16 +94,19 @@ function MetaItem({ label, value, sx }: { label: string; value: string; sx?: SxP
   )
 }
 
-export default function TaskAccordion({ t, tone, selected = false, onSelect, onRequestSelect, history = [] }: TaskAccordionProps) {
+export default function TaskAccordion({ t, tone, selected = false, onSelect, onRequestSelect, history = [], mobileOpen = false, onMobileToggle }: TaskAccordionProps) {
   /**
    * 모바일 아코디언(요청메모 97) — 접힘 = 제목·메타만, 탭하면 업무내용이 펼쳐진다(공지 감각).
-   * 열림 상태를 따로 두지 않고 **selected 를 그대로 쓴다**: 그리드의 탭 처리(일반 탭=단일 선택,
-   * 같은 카드 재탭=해제, 다른 카드 탭=갈아탐)가 공지 아코디언의 '한 번에 하나' 문법과 정확히 같고,
-   * 선택 틴트(상태 대표색 진해짐)가 공지의 '열린 카드 = 물든 카드' 표현까지 대신한다.
-   * PC 는 종전대로 항상 펼침(정적).
+   * 처음엔 selected 를 열림으로 썼으나 **그리드 탭 선택이 터치에선 의도적으로 꺼져 있어**
+   * (onClickCapture '선택은 PC 전용') 실제 폰에서 안 열렸다(사용자 신고 2026-08-22). 그래서
+   * 페이지가 mobileOpenNum 하나로 쥐는 전용 상태를 받는다 — 공지 openKey 와 같은 '한 번에 하나'.
+   * 탭 흐름: 터치 클릭은 그리드 캡처가 그냥 통과시키므로 카드 루트 onClick 까지 버블돼 여기서 토글.
+   * PC 는 종전대로 항상 펼침(정적)이고 onClick 도 종전 onSelect 경로 그대로.
    */
   const isMobile = useMediaQuery(shellMq, { noSsr: true })
-  const bodyOpen = !isMobile || selected
+  const bodyOpen = !isMobile || mobileOpen
+  /** 열린 카드 = 물든 카드(공지 감각) — 모바일 열림에도 선택과 같은 강조 스타일을 입힌다 */
+  const lit = selected || (isMobile && mobileOpen)
   const subs = workBodyLines(t)
   const link = taskLink(t)
   const atts = t.attachments || []
@@ -172,13 +179,22 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
       aria-pressed={selected}
       aria-expanded={isMobile ? bodyOpen : undefined}
       aria-label={`업무: ${taskTitle(t)}`}
-      onClick={() => onSelect?.()}
+      onClick={(e) => {
+        // 모바일 = 아코디언 토글(요청메모 97). 그리드 캡처가 터치 클릭을 통과시켜 여기 닿는다.
+        // 카드 안 버튼·링크(코멘트·첨부·별 등)는 각자 일이 있으므로 토글에서 제외(CARD_SKIP).
+        if (isMobile) {
+          if (e.target instanceof Element && e.target.closest(CARD_SKIP)) return
+          onMobileToggle?.()
+          return
+        }
+        onSelect?.()
+      }}
       onKeyDown={(e) => {
         if (e.target !== e.currentTarget) return // 내부 버튼(별·링크)의 Enter/Space를 삼키지 않음(AppCard와 동일 가드)
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
           // onSelect가 없으면(그리드 셀이 클릭을 처리) 네이티브 클릭으로 위임 — Enter/Space = 클릭 동등
-          if (onSelect) onSelect()
+          if (!isMobile && onSelect) onSelect()
           else (e.currentTarget as HTMLElement).click()
         }
       }}
@@ -206,7 +222,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
           // 선택 > 호버 — 선택 시 :hover에도 선택 스타일을 재선언해 유지(.selected:hover에서 호버로 안 돌아감)
           // 첨부 팝업이 열려 있어도 호버는 끄지 않는다 — 팝업을 띄워둔 채 다른 카드를 훑고 고르는
           // 흐름이 막히면 안 된다(사용자 확정). 닫는 클릭만 이 카드 선택에 영향을 안 주게 처리한다.
-          ...(selected
+          ...(lit
             ? {
                 ...sel,
                 '& .task-head': { bgcolor: c(0.21) },
@@ -288,7 +304,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             <Typography variant="body2" sx={{ color: 'text.disabled' }}>상세 내용 없음</Typography>
           )
           return isMobile ? (
-            <Collapse in={selected} timeout="auto" unmountOnExit>
+            <Collapse in={mobileOpen} timeout="auto" unmountOnExit>
               <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>{contentBody}</Box>
             </Collapse>
           ) : (
