@@ -75,6 +75,49 @@ function rgba(hex: string, a: number) {
 // (구글캘린더식 — 사용자 지시 2026-08-09). 여기서 시간대를 누르거나 끌어 일정을 만든다.
 type ViewKey = 'month' | 'timeweek' | 'agenda' | 'day'
 
+/** 워터마크 년도 글자 크기(px) — 월은 여기서 출발해 폭이 년도와 같아지도록 커진다 */
+const WM_YEAR_FS = 88
+
+/**
+ * 달력 월 워터마크(요청메모 102) — 그 달을 년도 위·월 아래 두 줄로 달력에 흐릿하게 겹친다.
+ * 처음엔 창에 고정하고 스크롤 위치의 달을 보여 줬는데, 스크롤 중 "이게 몇월인지 분간이 안 된다"는
+ * 후속 지시(2026-08-22)로 **각 달의 세로 중앙에 하나씩 박아 내용과 함께 스크롤**되게 바꿨다.
+ * top = 스크롤 콘텐츠 기준 그 달의 세로 중앙(px) — 스크롤 상자의 absolute 자식이라 같이 흐른다.
+ * 두 줄은 렌더 폭이 같아야 한다(사용자 예시: 2026 과 8월 의 글자 너비 동일) — 월을 년도와 같은
+ * 크기로 그린 숨은 측정용 span 폭과 년도 폭의 비율만큼 월 글자를 키운다. useLayoutEffect 라
+ * 첫 페인트 전에 맞춰져 크기가 튀는 프레임은 없다.
+ * '뒤에 배치'를 겹침(z 위)으로 구현한 이유: .fc 루트가 불투명 배경(var(--ink2))이라 진짜 뒤에
+ * 두면 안 보인다. 투명도를 낮춰 얹으면 빈 칸에서만 드러나고 일정 칩 위에서는 사실상 안 보인다
+ * (메모의 취지 "일정이 잘 보이게" 그대로).
+ */
+function MonthWatermark({ y, m, top }: { y: number; m: number; top: number }) {
+  const yearRef = useRef<HTMLSpanElement | null>(null)
+  const probeRef = useRef<HTMLSpanElement | null>(null)
+  const [monthFs, setMonthFs] = useState(WM_YEAR_FS)
+  useLayoutEffect(() => {
+    const yw = yearRef.current?.getBoundingClientRect().width
+    const mw = probeRef.current?.getBoundingClientRect().width
+    if (yw && mw) setMonthFs(WM_YEAR_FS * (yw / mw))
+  }, [y, m])
+  return (
+    <Box aria-hidden sx={{ position: 'absolute', left: 0, right: 0, top: `${top}px`, transform: 'translateY(-50%)', zIndex: 1, display: 'flex', justifyContent: 'center', pointerEvents: 'none' }}>
+      <Box
+        sx={{
+          position: 'relative', textAlign: 'center', lineHeight: 1, fontWeight: weight.bold,
+          fontVariantNumeric: 'tabular-nums', userSelect: 'none',
+          // 다크는 흰 글자가 같은 투명도에서 더 묻혀 한 단 진하게 — 두 테마 실측으로 맞춘 값
+          color: (th) => alpha(th.palette.text.primary, th.palette.mode === 'dark' ? 0.075 : 0.06),
+        }}
+      >
+        <Box component="span" ref={yearRef} sx={{ display: 'inline-block', fontSize: `${WM_YEAR_FS}px` }}>{y}</Box>
+        <Box component="span" sx={{ display: 'block', fontSize: `${monthFs}px`, mt: '4px' }}>{m}월</Box>
+        {/* 측정용 — 년도와 같은 크기의 월. 보이지 않게 절대배치로 흐름에서 뺀다 */}
+        <Box component="span" ref={probeRef} sx={{ position: 'absolute', left: 0, top: 0, visibility: 'hidden', whiteSpace: 'nowrap', fontSize: `${WM_YEAR_FS}px` }}>{m}월</Box>
+      </Box>
+    </Box>
+  )
+}
+
 function renderEventContent(arg: EventContentArg, isMobile: boolean) {
   // 새 일정 초안 막대(모달 열림 중 미리보기) — 단순 흰 글자 바
   if (arg.event.extendedProps.draft) {
@@ -177,8 +220,8 @@ export default function Calendar() {
   const [contWin, setContWin] = useState({ back: 1, fwd: 3 })
   /** 위쪽으로 달을 붙이기 직전의 scrollHeight — 렌더 후 그 증가분만큼 scrollTop 을 보정(점프 방지) */
   const prependFix = useRef<number | null>(null)
-  /** 스크롤 위치의 달 라벨(예: '9월') — 연속 스크롤에선 anchor 가 아니라 화면 위 첫 칸이 기준 */
-  const [contLabel, setContLabel] = useState('')
+  /** 스크롤 위치의 년·월 — 연속 스크롤에선 anchor 가 아니라 화면 위 첫 칸이 기준(툴바 라벨·월 워터마크 공용) */
+  const [contYM, setContYM] = useState<{ y: number; m: number } | null>(null)
   const contScrollRaf = useRef(0) // 마지막 스크롤 처리 시각(ms) — 80ms 시간 스로틀
   /** 효과를 걸 달력 래퍼 — FullCalendar DOM 이 아니라 우리 상자를 움직인다(FC 재렌더와 안 얽히게) */
   const calBoxRef = useRef<HTMLDivElement | null>(null)
@@ -376,7 +419,7 @@ export default function Calendar() {
         const delta = row.getBoundingClientRect().top - box.getBoundingClientRect().top - 30 // 30 = 요일 헤더 몫
         box.scrollTop += delta
       }
-      setContLabel(`${anchor.getMonth() + 1}월`)
+      setContYM({ y: anchor.getFullYear(), m: anchor.getMonth() + 1 })
     }, 80)
     return () => clearTimeout(t)
   }, [isMobile, view, anchor])
@@ -394,8 +437,9 @@ export default function Calendar() {
     const cell = document.elementFromPoint(br.left + br.width / 2, br.top + 46)?.closest('[data-date]')
     const d = cell?.getAttribute('data-date')
     if (d) {
-      const label = `${Number(d.slice(5, 7))}월`
-      setContLabel((p) => (p === label ? p : label))
+      const y = Number(d.slice(0, 4))
+      const m = Number(d.slice(5, 7))
+      setContYM((p) => (p && p.y === y && p.m === m ? p : { y, m }))
     }
     if (box.scrollTop < 150 && contWin.back < 12 && prependFix.current === null) {
       prependFix.current = box.scrollHeight
@@ -515,6 +559,40 @@ export default function Calendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allEvents, visRange, showWeekends, selMembers, selCats, searchTrim])
 
+  // 각 달 워터마크의 세로 중앙(스크롤 콘텐츠 기준 px) — 달마다 첫·끝 보이는 날의 행으로 잰다.
+  // 요청메모 102 후속(2026-08-22): 창 고정으로는 스크롤 중 몇월인지 분간이 안 돼, 달 안에 박아 함께 흐르게.
+  // 행 높이는 일정이 채워지며 나중에 변하므로(그리드 확장·필터도 마찬가지) ResizeObserver 로 따라잡는다.
+  const [wmPos, setWmPos] = useState<{ key: string; y: number; m: number; top: number }[]>([])
+  useLayoutEffect(() => {
+    if (!(isMobile && view === 'month' && fitH !== null)) { setWmPos([]); return }
+    const box = calBoxRef.current
+    if (!box) return
+    const compute = () => {
+      const boxTop = box.getBoundingClientRect().top
+      const list: { key: string; y: number; m: number; top: number }[] = []
+      const end = parseKey(contRange.end)
+      for (let d = parseKey(contRange.start); d < end; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) {
+        const ym = keyOf(d).slice(0, 7)
+        const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+        // 1일·말일이 주말이면 칸이 없다(주말 숨김 5열) — 앞뒤로 며칠 물러나며 보이는 날을 찾는다
+        let firstRow: Element | null = null
+        for (let dd = 1; dd <= 4 && !firstRow; dd++) firstRow = box.querySelector(`[data-date="${ym}-${pad(dd)}"]`)?.closest('tr') ?? null
+        let lastRow: Element | null = null
+        for (let dd = lastDay; dd >= lastDay - 3 && !lastRow; dd--) lastRow = box.querySelector(`[data-date="${ym}-${pad(dd)}"]`)?.closest('tr') ?? null
+        if (!firstRow || !lastRow) continue
+        const t = firstRow.getBoundingClientRect().top - boxTop + box.scrollTop
+        const b = lastRow.getBoundingClientRect().bottom - boxTop + box.scrollTop
+        list.push({ key: ym, y: d.getFullYear(), m: d.getMonth() + 1, top: (t + b) / 2 })
+      }
+      // 위치가 실제로 달라졌을 때만 상태 갱신 — ResizeObserver 콜백에서 무한 재렌더를 막는다
+      setWmPos((p) => (p.length === list.length && p.every((x, i) => x.key === list[i].key && Math.abs(x.top - list[i].top) < 1) ? p : list))
+    }
+    compute()
+    const ro = new ResizeObserver(compute)
+    ro.observe(box.querySelector('.fc-daygrid-body') ?? box)
+    return () => ro.disconnect()
+  }, [isMobile, view, fitH, contRange, ready, visibleCount])
+
   const sidebarMembers = useMemo(
     () => MEMBERS.map((m) => ({ member: m, on: memberSelected(m.id) })),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -615,10 +693,10 @@ export default function Calendar() {
 
   // 툴바 왼쪽 짧은 라벨 — 뷰 전환 버튼 좌측에 굵게(사용자 지시 2026-08-09).
   // 일간은 어느 날에 들어와 있는지가 핵심이라 날짜·요일까지 쓴다.
-  // 모바일 월간(연속 스크롤)은 anchor 가 아니라 **화면 위 첫 칸의 달**(contLabel)이 진실.
+  // 모바일 월간(연속 스크롤)은 anchor 가 아니라 **화면 위 첫 칸의 달**(contYM)이 진실.
   const shortLabel = view === 'day'
     ? `${anchor.getMonth() + 1}월 ${anchor.getDate()}일 (${'일월화수목금토'[anchor.getDay()]})`
-    : (isMobile && view === 'month' && contLabel) || `${anchor.getMonth() + 1}월`
+    : (isMobile && view === 'month' && contYM && `${contYM.m}월`) || `${anchor.getMonth() + 1}월`
 
   const periodLabel = useMemo(() => {
     if (view === 'day') return `${anchor.getFullYear()}년 ${anchor.getMonth() + 1}월 ${anchor.getDate()}일`
@@ -781,7 +859,8 @@ export default function Calendar() {
           // 브라우저가 페이지 가로 패닝(.page{overflow-x:auto})을 가져가며 pointercancel 이 떨어져 스와이프가 죽는다.
           // 모바일은 페이지 좌우 여백(16px)을 상쇄해 화면 끝까지 채운다(요청메모 82 — 구글캘린더처럼).
           // 뷰마다 폭이 널뛰지 않게 월간만이 아니라 달력 전체에 준다. 외곽 세로선 제거는 index.css 모바일 블록.
-          sx={{ touchAction: isMobile ? 'pan-y' : undefined, mx: { xs: `-${layout.pageXMobile}px`, shell: 0 }, height: fitH ? `${fitH}px` : 'auto', overflowY: fitH ? 'auto' : undefined, overscrollBehaviorY: fitH ? 'contain' : undefined }}
+          // position:relative — 달별 워터마크(absolute 자식)가 이 상자를 기준으로 콘텐츠와 함께 스크롤되게(요청메모 102 후속)
+          sx={{ position: 'relative', touchAction: isMobile ? 'pan-y' : undefined, mx: { xs: `-${layout.pageXMobile}px`, shell: 0 }, height: fitH ? `${fitH}px` : 'auto', overflowY: fitH ? 'auto' : undefined, overscrollBehaviorY: fitH ? 'contain' : undefined }}
           onScroll={onContScroll}
           // 새 일정 제스처(월간·구성원): 빈 날짜 칸을 누르는 순간 '(새 일정)' 막대 생성 → 드래그로 기간 확장 → 놓으면 모달.
           // 사용자 확정: "누를 때부터 막대" — 셀 틴트(FC selectable) 대신 임시 일정 막대가 처음부터 보인다.
@@ -972,6 +1051,8 @@ export default function Calendar() {
             openEventAt(el, Math.round(r.left + r.width / 2), Math.round(r.bottom))
           }}
         >
+          {/* 달별 월 워터마크 — 스크롤 상자의 absolute 자식이라 달력과 함께 흐른다(요청메모 102 후속) */}
+          {wmPos.map((w) => <MonthWatermark key={w.key} y={w.y} m={w.m} top={w.top} />)}
           <FullCalendar
             ref={calRef}
             plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
