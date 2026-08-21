@@ -3,12 +3,15 @@ import { useLocation } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import ButtonBase from '@mui/material/ButtonBase'
+import Dialog from '@mui/material/Dialog'
+import IconButton from '@mui/material/IconButton'
 import Popover from '@mui/material/Popover'
 import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import type { Theme } from '@mui/material/styles'
 import ChatIcon from '@mui/icons-material/Chat'
+import CloseIcon from '@mui/icons-material/Close'
 import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import { alpha } from '@mui/material/styles'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
@@ -200,63 +203,86 @@ export default function MemoComposeButton() {
         </ButtonBase>
       </Tooltip>
 
-      <Popover
-        open={open}
-        anchorEl={anchorRef.current}
-        onClose={close}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        // 스크롤 잠금을 끄는 이유: MUI 기본값은 body에 padding-right(스크롤바 폭)를 넣어 상단바를
-        // 왼쪽으로 밀어낸다. 그 상태에서 새 쪽지의 기본 자리를 재면 버튼 위치가 그만큼 어긋난다.
-        // 상단바는 sticky라 스크롤해도 제자리에 있으므로 잠글 이유도 없다.
-        disableScrollLock
-        slotProps={{ paper: { sx: { mt: 1, width: 340, p: 2, bgcolor: 'background.paper', borderRadius: `${radius.modal}px` } } }}
-      >
-        {/* 제목 줄에 갈래 선택을 함께 둔다(사용자 지시 2026-08-06) — 제목 오른쪽 빈자리로.
-            모바일에서는 일반메모를 띄울 자리가 없어 선택을 감추고 요청메모로 간다(위 isDesktop 주석). */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 2 }}>
-          {isDesktop
-            ? <ChatIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
-            : <LightbulbIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />}
-          <Box component="span" sx={{ fontSize: typescale.cardTitle.size, fontWeight: weight.heavy, whiteSpace: 'nowrap' }}>
-            {isDesktop ? '메모 남기기' : '요청메모 남기기'}
-          </Box>
-          {isDesktop && (
+      {isDesktop ? (
+        <Popover
+          open={open}
+          anchorEl={anchorRef.current}
+          onClose={close}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          // 스크롤 잠금을 끄는 이유: MUI 기본값은 body에 padding-right(스크롤바 폭)를 넣어 상단바를
+          // 왼쪽으로 밀어낸다. 그 상태에서 새 쪽지의 기본 자리를 재면 버튼 위치가 그만큼 어긋난다.
+          // 상단바는 sticky라 스크롤해도 제자리에 있으므로 잠글 이유도 없다.
+          disableScrollLock
+          slotProps={{ paper: { sx: { mt: 1, width: 340, p: 2, bgcolor: 'background.paper', borderRadius: `${radius.modal}px` } } }}
+        >
+          {/* 제목 줄에 갈래 선택을 함께 둔다(사용자 지시 2026-08-06) — 제목 오른쪽 빈자리로 */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 2 }}>
+            <ChatIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
+            <Box component="span" sx={{ fontSize: typescale.cardTitle.size, fontWeight: weight.heavy, whiteSpace: 'nowrap' }}>
+              메모 남기기
+            </Box>
             <Box sx={{ ml: 'auto' }}>
               <MemoKindPicker value={kind} onChange={setKind} disabled={busy} />
             </Box>
+          </Box>
+          {/* 칸은 하나 — '한 줄 요약'을 없앴다(사용자 지시 2026-08-05).
+              게시판 제목은 내용 첫 줄에서 자동으로 만든다(improveMemo.firstLine). */}
+          <TextField
+            autoFocus fullWidth size="small" multiline minRows={3}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={effectiveKind === 'plain' ? '메모 내용' : '요청 내용'}
+            slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
+            disabled={busy}
+          />
+          {/* 공유는 일반메모만 — 요청메모의 열람 범위는 작성자 + 포털 관리자로 정해져 있다.
+              effectiveKind 로 판정해야 한다: 종전엔 kind('plain')를 봐서 모바일에도 공유칸이 떴는데,
+              모바일 저장은 요청메모라 골라 봐야 완전히 무시됐다(요청메모 91). */}
+          {effectiveKind === 'plain' && (
+            <Box sx={{ mt: 1 }}>
+              <SharePicker people={people.filter((p) => p !== user)} value={shared} onChange={setShared} disabled={busy} />
+            </Box>
           )}
-        </Box>
-        {!isDesktop && (
-          <Box sx={{ fontSize: typescale.caption.size, color: 'text.secondary', mb: 1.5 }}>
-            일반메모는 PC에서만 쓸 수 있어 <b style={{ color: 'inherit' }}>요청메모</b>로 올립니다.
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.5 }}>
+            <Button size="small" onClick={close} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
+            <Button size="small" variant="contained" onClick={save} disabled={busy || !content.trim()}>
+              {busy ? '붙이는 중…' : '붙이기'}
+            </Button>
           </Box>
-        )}
-        {/* 칸은 하나 — '한 줄 요약'을 없앴다(사용자 지시 2026-08-05).
-            게시판 제목은 내용 첫 줄에서 자동으로 만든다(improveMemo.firstLine). */}
-        <TextField
-          autoFocus fullWidth size="small" multiline minRows={3}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder={effectiveKind === 'plain' ? '메모 내용' : '요청 내용'}
-          slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
-          disabled={busy}
-        />
-        {/* 공유는 일반메모만 — 요청메모의 열람 범위는 작성자 + 포털 관리자로 정해져 있다.
-            effectiveKind 로 판정해야 한다: 종전엔 kind('plain')를 봐서 모바일에도 공유칸이 떴는데,
-            모바일 저장은 요청메모라 골라 봐야 완전히 무시됐다(요청메모 91). */}
-        {effectiveKind === 'plain' && (
-          <Box sx={{ mt: 1 }}>
-            <SharePicker people={people.filter((p) => p !== user)} value={shared} onChange={setShared} disabled={busy} />
+        </Popover>
+      ) : (
+        /* 모바일 = 전체화면 시트(요청메모 100, 2026-08-22) — 팝오버는 키보드가 열리는 순간
+           상단바와 함께 레이아웃 뷰포트째 밀려나 "상단바가 숨거나 고정 풀린" 것으로 보였다.
+           시트는 화면 전부가 제 것이라 밀려날 상단바가 없다 — 공지 모바일 작성과 같은 A안 문법. */
+        <Dialog open={open} fullScreen onClose={() => { if (!busy) close() }} slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <IconButton aria-label="닫기" onClick={close} disabled={busy} size="small" sx={{ color: 'text.secondary' }}>
+              <CloseIcon sx={{ fontSize: iconSize.header }} />
+            </IconButton>
+            <LightbulbIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accentText.amber })} />
+            <Box component="span" sx={{ flex: 1, fontSize: typescale.cardTitle.size, fontWeight: weight.heavy }}>
+              요청메모 남기기
+            </Box>
+            <Button variant="contained" size="small" onClick={save} disabled={busy || !content.trim()}>
+              {busy ? '붙이는 중…' : '붙이기'}
+            </Button>
           </Box>
-        )}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.5 }}>
-          <Button size="small" onClick={close} disabled={busy} sx={{ color: 'text.secondary' }}>취소</Button>
-          <Button size="small" variant="contained" onClick={save} disabled={busy || !content.trim()}>
-            {busy ? '붙이는 중…' : '붙이기'}
-          </Button>
-        </Box>
-      </Popover>
+          <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+            <Box sx={{ fontSize: typescale.caption.size, color: 'text.secondary' }}>
+              보고 있던 화면이 개선위치가 되고, 게시판 제목은 내용 첫 줄로 만들어집니다.
+            </Box>
+            <TextField
+              autoFocus fullWidth size="small" multiline minRows={5}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              placeholder="요청 내용"
+              slotProps={{ htmlInput: { 'aria-label': '메모 내용' } }}
+              disabled={busy}
+            />
+          </Box>
+        </Dialog>
+      )}
     </>
   )
 }

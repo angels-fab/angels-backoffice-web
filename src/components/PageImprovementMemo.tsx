@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
-import Popover from '@mui/material/Popover'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
@@ -13,6 +12,7 @@ import MenuItem from '@mui/material/MenuItem'
 import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import LightbulbIcon from '@mui/icons-material/Lightbulb'
+import CloseIcon from '@mui/icons-material/Close'
 import PersonOutlineIcon from '@mui/icons-material/PersonOutlined'
 import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import EditIcon from '@mui/icons-material/Edit'
@@ -420,32 +420,28 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const chip = <MemoChip count={memos.length} open={open} onToggle={toggleOpen} anchorRef={chipRef} />
 
   /**
-   * 팝오버(2026-08-14) — 인라인이면 패널을 열 때 목록 전체가 밀린다. 카드가 쪽지 모습을
-   * 갖췄으므로 팝오버 종이는 **투명 틀**이 된다: 테두리·배경 없이 카드 묶음만 띄운다.
+   * 전체화면 시트(요청메모 99·100, 2026-08-22) — 종전 팝오버는 화면에는 고정돼 보여도
+   * 폰에서 **키보드가 열리는 순간**(본문 수정·답글) 상단바와 함께 레이아웃 뷰포트째 밀려났다.
+   * 이 칩·패널은 모바일 전용(개선요청 74)이라 시트로 바꿔도 PC는 영향이 없고, 시트는 화면
+   * 전부가 제 것이라 "항상 그 자리"가 구조로 보장된다 — 공지 모바일 작성과 같은 A안 문법.
    */
   const panel = (
-    <Popover
+    <Dialog
       open={open}
-      anchorEl={chipRef.current}
+      fullScreen
       onClose={() => setOpen(false)}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-      disableScrollLock
-      slotProps={{
-        paper: {
-          sx: {
-            mt: 1,
-            width: 'min(calc(100vw - 24px), 520px)',
-            maxHeight: '70vh',
-            overflowY: 'auto',
-            bgcolor: 'transparent',
-            backgroundImage: 'none',
-            boxShadow: 'none', // design-lint-ok(shadow): 그림자 부여가 아니라 제거 — 팝오버 종이를 투명 틀로 만들어 쪽지 카드만 띄운다
-            borderRadius: `${radius.card}px`,
-          },
-        },
-      }}
+      slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}
     >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <IconButton aria-label="닫기" onClick={() => setOpen(false)} size="small" sx={{ color: 'text.secondary' }}>
+          <CloseIcon sx={{ fontSize: iconSize.header }} />
+        </IconButton>
+        <LightbulbIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+        <Box component="span" sx={{ flex: 1, fontSize: typescale.cardTitle.size, fontWeight: weight.bold }}>
+          개선 메모 {memos.length}건
+        </Box>
+      </Box>
+      <Box sx={{ flex: 1, overflowY: 'auto', p: 1.5 }}>
       {memos.map((t, i) => (
         <MemoRow
           key={t.num}
@@ -465,7 +461,8 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
           onGoBoard={() => { setOpen(false); navigate('/improve') }}
         />
       ))}
-    </Popover>
+      </Box>
+    </Dialog>
   )
 
   return { chip, panel, snackbar }
