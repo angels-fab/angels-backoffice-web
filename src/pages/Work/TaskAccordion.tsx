@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import Box from '@mui/material/Box'
+import Collapse from '@mui/material/Collapse'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import Popper from '@mui/material/Popper'
 import ClickAwayListener from '@mui/material/ClickAwayListener'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
@@ -10,7 +12,7 @@ import Typography from '@mui/material/Typography'
 import { alpha } from '@mui/material/styles'
 import type { SxProps, Theme } from '@mui/material/styles'
 import { mergeSx } from '@/components/ds/sxMerge'
-import { iconSize, motion, radius, shadow, typescale, weight } from '@/theme/tokens'
+import { iconSize, motion, radius, shadow, shellMq, typescale, weight } from '@/theme/tokens'
 import Tooltip from '@mui/material/Tooltip'
 import { StatusChip, focusRingSx } from '@/components/ds'
 import { statusTextColor } from '@/components/ds/StatusChip'
@@ -89,6 +91,15 @@ function MetaItem({ label, value, sx }: { label: string; value: string; sx?: SxP
 }
 
 export default function TaskAccordion({ t, tone, selected = false, onSelect, onRequestSelect, history = [] }: TaskAccordionProps) {
+  /**
+   * 모바일 아코디언(요청메모 97) — 접힘 = 제목·메타만, 탭하면 업무내용이 펼쳐진다(공지 감각).
+   * 열림 상태를 따로 두지 않고 **selected 를 그대로 쓴다**: 그리드의 탭 처리(일반 탭=단일 선택,
+   * 같은 카드 재탭=해제, 다른 카드 탭=갈아탐)가 공지 아코디언의 '한 번에 하나' 문법과 정확히 같고,
+   * 선택 틴트(상태 대표색 진해짐)가 공지의 '열린 카드 = 물든 카드' 표현까지 대신한다.
+   * PC 는 종전대로 항상 펼침(정적).
+   */
+  const isMobile = useMediaQuery(shellMq, { noSsr: true })
+  const bodyOpen = !isMobile || selected
   const subs = workBodyLines(t)
   const link = taskLink(t)
   const atts = t.attachments || []
@@ -159,6 +170,7 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
       role="button"
       tabIndex={0}
       aria-pressed={selected}
+      aria-expanded={isMobile ? bodyOpen : undefined}
       aria-label={`업무: ${taskTitle(t)}`}
       onClick={() => onSelect?.()}
       onKeyDown={(e) => {
@@ -262,10 +274,11 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
         </Box>
       </Box>
 
-      {/* 본문 — flex:1로 남는 높이 흡수(메타 줄을 카드 바닥에 고정) */}
-      <Box sx={{ flex: 1, px: 1.75, py: 1.5, display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-        <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {subs.length > 0 ? (
+      {/* 본문 — flex:1로 남는 높이 흡수(메타 줄을 카드 바닥에 고정).
+          모바일은 내용을 Collapse 로 감싼다(요청메모 97) — 접힘 = 제목·메타만, gap 도 접힘에선 0 */}
+      <Box sx={{ flex: 1, px: 1.75, py: 1.5, display: 'flex', flexDirection: 'column', gap: bodyOpen ? 1.25 : 0 }}>
+        {(() => {
+          const contentBody = subs.length > 0 ? (
             <Box sx={{ display: 'flex', flexDirection: 'column' }}>
               {subs.map((l, i) => (
                 <SubLine key={i} bodyLine={l} />
@@ -273,8 +286,15 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             </Box>
           ) : (
             <Typography variant="body2" sx={{ color: 'text.disabled' }}>상세 내용 없음</Typography>
-          )}
-        </Box>
+          )
+          return isMobile ? (
+            <Collapse in={selected} timeout="auto" unmountOnExit>
+              <Box sx={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>{contentBody}</Box>
+            </Collapse>
+          ) : (
+            <Box sx={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>{contentBody}</Box>
+          )
+        })()}
         {/* 메타 줄 — **내용 아래**. 위(제목 바로 밑)로 올려보니 제목과 내용 사이에 턱이 생겨
             매번 부서·날짜를 지나쳐야 본문에 닿았다. 아래에 두면 content가 flex:1이라 이 줄이 카드
             바닥에 붙고, 같은 행 카드끼리 높이가 맞아 줄도 저절로 나란히 선다(사용자 확정 2026-07-26).
@@ -286,7 +306,8 @@ export default function TaskAccordion({ t, tone, selected = false, onSelect, onR
             sx={{
               display: 'flex', alignItems: 'baseline', flexWrap: 'wrap',
               columnGap: 2, rowGap: 0.75,
-              pt: 1.25, borderTop: `1px solid ${toneCss(0.28)}`,
+              // 접힘(모바일)에선 구분선을 뺀다 — 내용 없이 머리 밑에 선이 겹으로 서는 것 방지(요청메모 97)
+              ...(bodyOpen ? { pt: 1.25, borderTop: `1px solid ${toneCss(0.28)}` } : {}),
             }}
           >
             {deptMeta && <MetaItem label={deptMeta.label} value={deptMeta.value} />}
