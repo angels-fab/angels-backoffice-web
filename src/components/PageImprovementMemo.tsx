@@ -32,7 +32,8 @@ import { todaySeoul } from '@/utils/date'
 import type { ImprovementItem } from '@/types'
 import { StatusChip, useSnack } from '@/components/ds'
 import { IMP_STATUSES, impKind, needsReason, normStatus, isSettled } from '@/pages/Improve/improveMeta'
-import { radius, iconSize, typescale, weight } from '@/theme/tokens'
+import Portal from '@mui/material/Portal'
+import { radius, iconSize, typescale, weight, shadow, z } from '@/theme/tokens'
 
 /** '개선 메모 N' 칩 — 제목 옆. 클릭 시 패널 토글(열 때 각 항목은 접힌 상태로 시작). */
 function MemoChip({ count, open, onToggle, anchorRef }: { count: number; open: boolean; onToggle: () => void; anchorRef?: React.Ref<HTMLButtonElement> }) {
@@ -300,6 +301,8 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const replyItems = useAppSelector((s) => s.reply.items)
 
   const [open, setOpen] = useState(false)
+  /** 떠 있는 패널의 위쪽 자리 — 열 때 상단바(sticky) 아래 모서리를 한 번 재서 고정(요청메모 99) */
+  const [panelTop, setPanelTop] = useState(64)
   // 팝오버 닻 — 제목 옆 전구 칩
   const chipRef = useRef<HTMLButtonElement | null>(null)
   const [removingNum, setRemovingNum] = useState<string | null>(null)
@@ -388,7 +391,12 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   // 게스트 또는 이 페이지에 메모 없음 → 칩·패널 미표시(Dialog만 유지)
   if (!admin || memos.length === 0) return { chip: null, panel: null, snackbar }
 
-  const toggleOpen = () => setOpen((o) => !o)
+  const toggleOpen = () => {
+    // 상단바는 sticky 라 화면 기준 아래 모서리가 스크롤과 무관하게 일정 — 그 밑에 패널을 붙인다
+    const hdr = document.querySelector('header')?.getBoundingClientRect()
+    if (hdr) setPanelTop(Math.round(hdr.bottom) + 8)
+    setOpen((o) => !o)
+  }
 
   // 본문 수정 저장 — 쪽지(StickyMemo saveEdit)와 같은 규칙: 게시판 제목은 내용 첫 줄에서 다시 만든다
   const saveContent = async (t: ImprovementItem, body: string) => {
@@ -420,28 +428,48 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
   const chip = <MemoChip count={memos.length} open={open} onToggle={toggleOpen} anchorRef={chipRef} />
 
   /**
-   * 전체화면 시트(요청메모 99·100, 2026-08-22) — 종전 팝오버는 화면에는 고정돼 보여도
-   * 폰에서 **키보드가 열리는 순간**(본문 수정·답글) 상단바와 함께 레이아웃 뷰포트째 밀려났다.
-   * 이 칩·패널은 모바일 전용(개선요청 74)이라 시트로 바꿔도 PC는 영향이 없고, 시트는 화면
-   * 전부가 제 것이라 "항상 그 자리"가 구조로 보장된다 — 공지 모바일 작성과 같은 A안 문법.
+   * 떠 있는 고정 패널(요청메모 99, 2026-08-22) — "메모는 그 자리에, 화면만 스크롤".
+   * 종전 팝오버는 화면에 고정돼 보였지만 **모달**이라 폰에서 뒤 화면을 스크롤할 수 없었다:
+   * 바깥을 터치하면 배경막이 닫아 버리고, 안을 터치하면 목록만 스크롤됐다. 그래서 배경막이
+   * 없는 position:fixed 상자를 Portal 로 띄운다 — 페이지는 그대로 손가락에 반응하고 패널은
+   * 상단바 아래 그 자리에 남는다. 닫기는 X 또는 칩 재탭(칩은 스크롤되어 나갈 수 있어 X 가 필수).
+   * 이 칩·패널은 모바일 전용(개선요청 74)이라 PC 는 영향이 없다.
+   * (전체화면 시트로 한 번 갔다가 되돌렸다 — 시트는 뒤 화면을 아예 못 보게 해 요지와 반대였다)
    */
-  const panel = (
-    <Dialog
-      open={open}
-      fullScreen
-      onClose={() => setOpen(false)}
-      slotProps={{ paper: { sx: { bgcolor: 'background.default' } } }}
-    >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <IconButton aria-label="닫기" onClick={() => setOpen(false)} size="small" sx={{ color: 'text.secondary' }}>
-          <CloseIcon sx={{ fontSize: iconSize.header }} />
-        </IconButton>
-        <LightbulbIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
-        <Box component="span" sx={{ flex: 1, fontSize: typescale.cardTitle.size, fontWeight: weight.bold }}>
-          개선 메모 {memos.length}건
+  const panel = open ? (
+    <Portal>
+      <Box
+        role="dialog"
+        aria-label={`개선 메모 ${memos.length}건`}
+        sx={{
+          position: 'fixed',
+          top: panelTop,
+          left: 12,
+          right: 12,
+          // 하단 탭바는 덮지 않는다 — 패널이 길어도 탭바 위에서 멈추고 안에서 스크롤
+          maxHeight: `calc(100dvh - ${panelTop}px - var(--bottom-nav-h) - 12px)`,
+          display: 'flex',
+          flexDirection: 'column',
+          zIndex: z.stickyMemo, // 상단바(95) 아래·본문 위 — PC 쪽지 층과 같은 자리
+          bgcolor: 'background.elevated',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: `${radius.modal}px`,
+          boxShadow: shadow.lg,
+          overflow: 'hidden',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1, borderBottom: '1px solid', borderColor: 'divider', flexShrink: 0 }}>
+          <LightbulbIcon sx={(th) => ({ fontSize: iconSize.body, color: th.palette.accent.amber })} />
+          <Box component="span" sx={{ flex: 1, fontSize: typescale.cardTitle.size, fontWeight: weight.bold }}>
+            개선 메모 {memos.length}건
+          </Box>
+          <IconButton aria-label="닫기" onClick={() => setOpen(false)} size="small" sx={{ color: 'text.secondary' }}>
+            <CloseIcon sx={{ fontSize: iconSize.header }} />
+          </IconButton>
         </Box>
-      </Box>
-      <Box sx={{ flex: 1, overflowY: 'auto', p: 1.5 }}>
+        {/* overscroll-contain: 목록 끝에서 손가락을 더 밀어도 뒤 페이지로 새지 않게 */}
+        <Box sx={{ overflowY: 'auto', overscrollBehavior: 'contain', p: 1.5 }}>
       {memos.map((t, i) => (
         <MemoRow
           key={t.num}
@@ -461,9 +489,10 @@ export function usePageImprovementMemo(): { chip: ReactNode; panel: ReactNode; s
           onGoBoard={() => { setOpen(false); navigate('/improve') }}
         />
       ))}
+        </Box>
       </Box>
-    </Dialog>
-  )
+    </Portal>
+  ) : null
 
   return { chip, panel, snackbar }
 }
