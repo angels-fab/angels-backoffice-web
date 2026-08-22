@@ -69,11 +69,12 @@ export default function NotificationBell() {
           aria-label={count > 0 ? `알림 ${count}건 열기` : '알림 열기'}
           onClick={(e) => setAnchor(e.currentTarget)}
           size="small"
-          sx={{ width: control.topbar, height: control.topbar, color: 'text.secondary' }}
+          // 모바일 상단바 아이콘 버튼은 36/24(요청메모 96 C안) — PC 는 32/20 그대로
+          sx={{ width: { xs: control.height, shell: control.topbar }, height: { xs: control.height, shell: control.topbar }, color: 'text.secondary' }}
         >
           {/* 0건이어도 벨은 남긴다 — 아이콘이 사라지면 옆 요소가 밀려 상단바가 흔들린다(사용자 결정) */}
           <Badge badgeContent={count} color="error" overlap="circular" sx={{ '& .MuiBadge-badge': { fontSize: typescale.micro.size, height: 16, minWidth: 16 } }}>
-            <NotificationsNoneIcon sx={{ fontSize: iconSize.header }} />
+            <NotificationsNoneIcon sx={{ fontSize: { xs: iconSize.feature, shell: iconSize.header } }} />
           </Badge>
         </IconButton>
       </Tooltip>

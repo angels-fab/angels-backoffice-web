@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
+import Badge from '@mui/material/Badge'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import ButtonBase from '@mui/material/ButtonBase'
@@ -172,8 +173,11 @@ export default function MemoComposeButton() {
              배경 대비 라이트 1.44:1 · 다크 2.88:1 로 WCAG 1.4.11(비텍스트 3:1) 미달이라
              라이트에서는 테두리가 보이지도 않았다(2026-08-05 실측). 색은 건수 배지에만 남긴다. */
           sx={(th) => ({
-            display: 'inline-flex', alignItems: 'center', gap: 0.75,
-            height: control.topbar, px: 1.25, flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 0.75,
+            // 모바일은 옆 아이콘 버튼들과 같은 36x36 정사각(요청메모 96 C안) — 건수는 모서리 배지로 가므로
+            // 가로로 늘어날 이유가 없다(종전 63px). PC 는 아이콘+인라인 배지 32 그대로.
+            height: { xs: control.height, shell: control.topbar }, width: { xs: control.height, shell: 'auto' },
+            px: { xs: 0, shell: 1.25 }, flexShrink: 0,
             border: 'none', borderRadius: `${radius.input}px`,
             // 평소엔 면 없이 아이콘만 — 상단바의 다른 버튼(검색·알림)과 같은 규칙이다.
             // 상시 채움은 '지금 눌린 것'처럼 읽혀 이 버튼만 튀었다(2026-08-06 사용자 지적).
@@ -190,19 +194,38 @@ export default function MemoComposeButton() {
           {/* 글자 '메모' 대신 아이콘 — 옆의 '화면에 그리기'와 같은 모양의 한 쌍이 된다
               (사용자 지시 2026-08-06). 건수 배지는 그대로 — 이 화면에 몇 건인지가 이 버튼의 핵심 정보다.
               모바일은 전구 — 여기서 만들 수 있는 건 요청메모뿐인데 말풍선(일반메모 아이콘)이면 거짓말이다(요청메모 91) */}
-          {isDesktop ? <ChatIcon sx={{ fontSize: iconSize.header }} /> : <LightbulbIcon sx={{ fontSize: iconSize.header }} />}
-          {here > 0 && (
-            <Box
-              component="span"
+          {isDesktop ? (
+            <>
+              <ChatIcon sx={{ fontSize: iconSize.header }} />
+              {here > 0 && (
+                <Box
+                  component="span"
+                  sx={(th) => ({
+                    display: 'inline-grid', placeItems: 'center', minWidth: 17, height: 17, px: '4px',
+                    borderRadius: `${radius.pill}px`, bgcolor: th.palette.accent.amber,
+                    color: th.palette.getContrastText(th.palette.accent.amber),
+                    fontSize: typescale.caption.size, fontWeight: weight.heavy, lineHeight: 1,
+                  })}
+                >
+                  {here}
+                </Box>
+              )}
+            </>
+          ) : (
+            /* 모바일 건수 = 알림 벨과 같은 모서리 위첨자(요청메모 96) — 종전엔 아이콘 옆 알약이라
+               "배지가 아이콘과 멀고 알림 배지와 자리가 다르다"는 지적. 크기·자리 규격은 NotificationBell 과 동일, 색만 앰버 */
+            <Badge
+              badgeContent={here}
+              overlap="circular"
               sx={(th) => ({
-                display: 'inline-grid', placeItems: 'center', minWidth: 17, height: 17, px: '4px',
-                borderRadius: `${radius.pill}px`, bgcolor: th.palette.accent.amber,
-                color: th.palette.getContrastText(th.palette.accent.amber),
-                fontSize: typescale.caption.size, fontWeight: weight.heavy, lineHeight: 1,
+                '& .MuiBadge-badge': {
+                  fontSize: typescale.micro.size, height: 16, minWidth: 16, fontWeight: weight.heavy,
+                  bgcolor: th.palette.accent.amber, color: th.palette.getContrastText(th.palette.accent.amber),
+                },
               })}
             >
-              {here}
-            </Box>
+              <LightbulbIcon sx={{ fontSize: iconSize.feature }} />
+            </Badge>
           )}
         </ButtonBase>
       </Tooltip>

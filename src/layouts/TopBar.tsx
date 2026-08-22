@@ -220,20 +220,21 @@ export default function TopBar() {
                 onClick={toggleDesktopView}
                 size="small"
                 sx={{
-                  width: control.topbar, height: control.topbar,
+                  // 모바일 상단바 아이콘 버튼은 36/24(요청메모 96 C안) — PC 는 32/20 그대로
+                  width: { xs: control.height, shell: control.topbar }, height: { xs: control.height, shell: control.topbar },
                   color: desktopView ? 'primary.main' : 'text.secondary',
                   display: loggedIn ? { xs: 'none', shell: 'inline-flex' } : 'inline-flex',
                 }}
               >
-                {desktopView ? <PhoneIphoneIcon sx={{ fontSize: iconSize.header }} /> : <DesktopWindowsIcon sx={{ fontSize: iconSize.header }} />}
+                {desktopView ? <PhoneIphoneIcon sx={{ fontSize: { xs: iconSize.feature, shell: iconSize.header } }} /> : <DesktopWindowsIcon sx={{ fontSize: { xs: iconSize.feature, shell: iconSize.header } }} />}
               </IconButton>
             </Tooltip>
           )}
           {/* 통합검색 — 아이콘 버튼 하나로 통일(PC·모바일 공통, 사용자 결정).
               단축키 안내는 툴팁이 맡는다. 실제 입력은 다이얼로그가 한다. */}
           <Tooltip title={`통합검색 (${modKey}+K)`}>
-            <IconButton aria-label={`통합검색 열기 (${modKey}+K)`} onClick={() => setSearchOpen(true)} size="small" sx={{ width: control.topbar, height: control.topbar, color: 'text.secondary' }}>
-              <SearchIcon sx={{ fontSize: iconSize.header }} />
+            <IconButton aria-label={`통합검색 열기 (${modKey}+K)`} onClick={() => setSearchOpen(true)} size="small" sx={{ width: { xs: control.height, shell: control.topbar }, height: { xs: control.height, shell: control.topbar }, color: 'text.secondary' }}>
+              <SearchIcon sx={{ fontSize: { xs: iconSize.feature, shell: iconSize.header } }} />
             </IconButton>
           </Tooltip>
           {/* 이 화면에 메모 붙이기 — 게시판 폼을 거치지 않는 개선요청 입력 창구(쓰기 권한자만 렌더) */}
@@ -271,11 +272,12 @@ export default function TopBar() {
               aria-label={mode === 'dark' ? '라이트 모드로 전환' : '다크 모드로 전환'}
               onClick={toggleTheme}
               size="small"
-              sx={{ width: control.topbar, height: control.topbar, display: { xs: 'inline-flex', shell: 'none' }, color: 'text.secondary' }}
+              // 모바일 전용 버튼이라 바로 36/24(요청메모 96 C안)
+              sx={{ width: control.height, height: control.height, display: { xs: 'inline-flex', shell: 'none' }, color: 'text.secondary' }}
             >
               {mode === 'dark'
-                ? <LightModeOutlinedIcon sx={{ fontSize: iconSize.header }} />
-                : <DarkModeOutlinedIcon sx={{ fontSize: iconSize.header }} />}
+                ? <LightModeOutlinedIcon sx={{ fontSize: iconSize.feature }} />
+                : <DarkModeOutlinedIcon sx={{ fontSize: iconSize.feature }} />}
             </IconButton>
           </Tooltip>
           {/* 계정 컨트롤(칩·로그아웃·로그인)은 PC 전용 — 모바일은 하단 탭바/메뉴 드로어가 담당(상단바 잘림 방지).
